@@ -548,56 +548,53 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
       <p>سنعدّ المنصة حسب مادتك وصفوفك — يستغرق دقيقتين فقط</p>
     </div>
     <div class="setup-steps">
-      <span class="setup-step active" id="step-1">1. الصفوف والشعب</span>
-      <span class="setup-step" id="step-2">2. المادة والدروس</span>
+      <span class="setup-step active" id="step-1">1. الفصل والمادة</span>
+      <span class="setup-step" id="step-2">2. الصفوف والشعب</span>
     </div>
  
-    <!-- Step 1: Grades & Classes -->
+    <!-- Step 1: Semester & Subject -->
     <div id="setup-step-1">
       <div class="setup-card">
+        <h3>📅 اختر الفصل الدراسي</h3>
+        <p>أي فصل تجهّز خطته الآن؟</p>
+        <div class="grades-grid" id="semester-grid">
+          <button class="class-chip-btn" id="sem-1" onclick="selectSemester('الفصل الأول',this)">الفصل الأول</button>
+          <button class="class-chip-btn" id="sem-2" onclick="selectSemester('الفصل الثاني',this)">الفصل الثاني</button>
+        </div>
+      </div>
+      <div class="setup-card" id="subject-card" style="display:none">
+        <h3>📖 اختر المادة</h3>
+        <p>المواد المتاحة لهذا الفصل</p>
+        <div class="grades-grid" id="subject-grid"></div>
+      </div>
+      <div class="setup-nav">
+        <div></div>
+        <button class="setup-btn primary" onclick="goToStep2()">التالي: الصفوف ←</button>
+      </div>
+    </div>
+ 
+    <!-- Step 2: Grades & Sections -->
+    <div id="setup-step-2" style="display:none">
+      <div class="setup-card">
         <h3>🏫 اختر الصفوف التي تدرّسها</h3>
-        <p>يمكنك اختيار أكثر من صف</p>
+        <p>الصفوف المتاحة لهذه المادة في هذا الفصل</p>
         <div class="grades-grid" id="grades-grid"></div>
       </div>
       <div class="setup-card" id="classes-card" style="display:none">
         <h3>👥 حدّد الشعب لكل صف</h3>
-        <p>اضغط على الشعبة لاختيارها، أو اكتب اسماً مخصصاً وأضفه</p>
+        <p>اضغط على الشعبة لاختيارها (12 شعبة جاهزة لكل صف)</p>
         <div class="grade-classes-list" id="grade-classes-list"></div>
       </div>
-      <div class="setup-nav">
-        <div></div>
-        <button class="setup-btn primary" onclick="goToStep2()">التالي: الدروس ←</button>
-      </div>
-    </div>
- 
-    <!-- Step 2: Subject & Lessons -->
-    <div id="setup-step-2" style="display:none">
-      <div class="setup-card">
-        <h3>📖 اسم المادة</h3>
-        <p>اكتب اسم المادة التي تدرّسها</p>
-        <input type="text" class="subject-inp" id="subject-inp" placeholder="مثال: الرياضيات، اللغة العربية، العلوم..."/>
-      </div>
-      <div class="setup-card">
-        <h3>📚 أضف الدروس لكل صف</h3>
-        <p>الصق دروس كل صف. <strong style="color:var(--gold)">السطر الأول في كل مجموعة = اسم الوحدة</strong>، ثم الدروس تحتها، والسطر الفاضي يفصل بين الوحدات.</p>
-        <div class="grade-tabs" id="grade-tabs"></div>
-        <div id="grade-lessons-inputs"></div>
-        <div class="lessons-hint">
-          <strong>مثال:</strong><br/>
-          القياس<br/>
-          قياس الكتلة والسعة<br/>
-          تحويل الوقت<br/>
-          المناطق الزمنية<br/>
-          <br/>
-          البيانات<br/>
-          الجداول والرسوم البيانية<br/>
-          المخططات الدائرية
-        </div>
+      <div class="setup-card" id="lessons-preview-card" style="display:none">
+        <h3>📚 الدروس الجاهزة</h3>
+        <p>سيتم تحميل الدروس تلقائياً حسب اختيارك — لا حاجة لكتابتها</p>
+        <div id="lessons-preview" style="font-size:13px;color:var(--muted)"></div>
       </div>
       <div class="setup-nav">
         <button class="setup-btn secondary" onclick="goToStep1()">← رجوع</button>
         <button class="setup-btn primary" onclick="finishSetup()">ابدأ الاستخدام 🚀</button>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -931,7 +928,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
 let currentUser=null,displayName='';
 let googleAccessToken=null;   // توكن Google لرفع الملفات على Drive
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
-const MAX_FILE_SIZE=750*1024*1024; // 750MB حد رفع منطقي
+const MAX_FILE_SIZE=500*1024*1024; // 500MB حد رفع
  
 // ─── تسجيل الدخول بحساب Google ───
 async function signInWithGoogle(){
@@ -1021,7 +1018,7 @@ async function ensureDriveFolder(){
 // يرفع الملف على Drive ويرجّع كائن متوافق مع باقي الكود
 async function driveUpload(file,fileName){
   if(!googleAccessToken){toast('❌ صلاحية Google منتهية. سجّل الدخول من جديد',true);return null;}
-  if(file.size>MAX_FILE_SIZE){toast('❌ الملف أكبر من 750MB',true);return null;}
+  if(file.size>MAX_FILE_SIZE){toast('❌ الملف أكبر من 500MB',true);return null;}
   try{
     const folderId=await ensureDriveFolder();
     const metadata={name:fileName,parents:[folderId]};
@@ -1227,9 +1224,6 @@ async function bootApp(session){
 // ══ SETUP SCREEN ══════════════════════════════════════
 let setupSelectedGrades=[];
 let setupClasses={};  // {gradeNum: [className,...]}
-let setupSubject='';
-let setupLessons={}; // {gradeNum: rawText}
-let activeGradeTab=null;
  
 const GRADE_COLORS=['#e74c3c','#e8b86d','#f0c060','#27ae60','#3498db','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#8bc34a','#ff5722'];
  
@@ -1237,24 +1231,16 @@ function showSetupScreen(){
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  buildGradesGrid();
-}
-function buildGradesGrid(){
-  const grid=document.getElementById('grades-grid');
-  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  grid.innerHTML=Array.from({length:12},(_,i)=>{
-    const n=i+1;const sel=setupSelectedGrades.includes(n);
-    return `<div class="grade-chip ${sel?'selected':''}" onclick="toggleGrade(${n})" id="gchip-${n}">الصف ${arabicNums[i]}</div>`;
-  }).join('');
-}
-function toggleGrade(n){
-  const idx=setupSelectedGrades.indexOf(n);
-  if(idx>=0)setupSelectedGrades.splice(idx,1);
-  else setupSelectedGrades.push(n);
-  setupSelectedGrades.sort((a,b)=>a-b);
-  document.querySelectorAll('.grade-chip').forEach(c=>c.classList.remove('selected'));
-  setupSelectedGrades.forEach(g=>document.getElementById('gchip-'+g)?.classList.add('selected'));
-  buildClassesSection();
+  // إعادة ضبط حالة الإعداد والبدء من الخطوة الأولى (الفصل)
+  setupSemester='';setupSubject='';setupSelectedGrades=[];setupClasses={};curriculumCache=null;
+  document.getElementById('setup-step-1').style.display='block';
+  document.getElementById('setup-step-2').style.display='none';
+  document.getElementById('step-1').classList.add('active');document.getElementById('step-1').classList.remove('done');
+  document.getElementById('step-2').classList.remove('active');
+  document.getElementById('subject-card').style.display='none';
+  document.getElementById('classes-card').style.display='none';
+  document.getElementById('lessons-preview-card').style.display='none';
+  document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
 }
 function buildClassesSection(){
   const card=document.getElementById('classes-card');
@@ -1264,7 +1250,7 @@ function buildClassesSection(){
   const list=document.getElementById('grade-classes-list');
   list.innerHTML=setupSelectedGrades.map(g=>{
     if(!setupClasses[g])setupClasses[g]=[];
-    const presets=[`${g}/1`,`${g}/2`,`${g}/3`,`${g}/4`,`${g}/5`];
+    const presets=[`${g}/1`,`${g}/2`,`${g}/3`,`${g}/4`,`${g}/5`,`${g}/6`,`${g}/7`,`${g}/8`,`${g}/9`,`${g}/10`,`${g}/11`,`${g}/12`];
     const chips=presets.map(p=>`<button class="class-chip-btn ${setupClasses[g].includes(p)?'sel':''}" onclick="toggleClass(${g},'${p}',this)">${p}</button>`).join('');
     const selected=setupClasses[g].filter(c=>!presets.includes(c));
     const custom=selected.map(c=>`<button class="class-chip-btn sel" onclick="toggleClass(${g},'${c}',this)">${c}</button>`).join('');
@@ -1286,16 +1272,68 @@ function addCustomClass(e,grade){
   }
   e.target.value='';
 }
-function goToStep2(){
-  const hasGrades=setupSelectedGrades.length>0;
-  const hasClasses=setupSelectedGrades.every(g=>(setupClasses[g]||[]).length>0);
-  if(!hasGrades){toast('❌ اختر صفاً واحداً على الأقل',true);return;}
-  if(!hasClasses){toast('❌ أضف شعبة واحدة على الأقل لكل صف',true);return;}
+// ── حالة الإعداد الجديدة ──
+let setupSemester='';        // الفصل المختار
+let setupSubject='';         // المادة المختارة
+let curriculumCache=null;    // كل صفوف الفهرس للفصل+المادة
+ 
+function selectSemester(sem,btn){
+  setupSemester=sem;
+  document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  setupSubject='';setupSelectedGrades=[];setupClasses={};
+  loadSubjectsForSemester();
+}
+async function loadSubjectsForSemester(){
+  const card=document.getElementById('subject-card');
+  const grid=document.getElementById('subject-grid');
+  card.style.display='block';
+  grid.innerHTML='<p style="color:var(--muted)">جارٍ تحميل المواد...</p>';
+  try{
+    const {data,error}=await sb.from('curriculum').select('subject').eq('semester',setupSemester);
+    if(error||!data||!data.length){
+      grid.innerHTML='<p style="color:var(--muted)">لا توجد مواد مُجهّزة لهذا الفصل بعد. تواصل مع المشرف.</p>';
+      return;
+    }
+    const subjects=[...new Set(data.map(r=>r.subject))].sort();
+    grid.innerHTML=subjects.map(s=>`<button class="class-chip-btn" onclick="selectSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
+  }catch(e){grid.innerHTML='<p style="color:var(--muted)">تعذّر تحميل المواد</p>';}
+}
+function selectSubject(subj,btn){
+  setupSubject=subj;
+  document.querySelectorAll('#subject-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+async function goToStep2(){
+  if(!setupSemester){toast('❌ اختر الفصل الدراسي',true);return;}
+  if(!setupSubject){toast('❌ اختر المادة',true);return;}
+  // حمّل كل فهرس هذا الفصل+المادة مرة واحدة
+  try{
+    const {data,error}=await sb.from('curriculum').select('*')
+      .eq('semester',setupSemester).eq('subject',setupSubject).order('sort');
+    if(error||!data||!data.length){toast('❌ لا توجد دروس مُجهّزة لهذا الاختيار',true);return;}
+    curriculumCache=data;
+  }catch(e){toast('❌ تعذّر تحميل الدروس',true);return;}
   document.getElementById('setup-step-1').style.display='none';
   document.getElementById('setup-step-2').style.display='block';
   document.getElementById('step-1').classList.remove('active');document.getElementById('step-1').classList.add('done');
   document.getElementById('step-2').classList.add('active');
-  buildLessonsSection();
+  buildGradesGrid();
+}
+function buildGradesGrid(){
+  // الصفوف المتاحة فعلياً في الفهرس لهذا الفصل+المادة
+  const grid=document.getElementById('grades-grid');
+  const grades=[...new Set(curriculumCache.map(r=>r.grade))].sort((a,b)=>a-b);
+  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
+  grid.innerHTML=grades.map(g=>`<button class="class-chip-btn ${setupSelectedGrades.includes(g)?'sel':''}" onclick="toggleSetupGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`).join('');
+}
+function toggleSetupGrade(g,btn){
+  const i=setupSelectedGrades.indexOf(g);
+  if(i>=0){setupSelectedGrades.splice(i,1);btn.classList.remove('sel');delete setupClasses[g];}
+  else{setupSelectedGrades.push(g);btn.classList.add('sel');setupClasses[g]=[];}
+  setupSelectedGrades.sort((a,b)=>a-b);
+  buildClassesSection();
+  updateLessonsPreview();
 }
 function goToStep1(){
   document.getElementById('setup-step-2').style.display='none';
@@ -1303,49 +1341,40 @@ function goToStep1(){
   document.getElementById('step-2').classList.remove('active');
   document.getElementById('step-1').classList.remove('done');document.getElementById('step-1').classList.add('active');
 }
-function buildLessonsSection(){
+function updateLessonsPreview(){
+  const card=document.getElementById('lessons-preview-card');
+  const box=document.getElementById('lessons-preview');
+  if(!setupSelectedGrades.length){card.style.display='none';return;}
+  card.style.display='block';
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  const tabs=document.getElementById('grade-tabs');
-  const inputs=document.getElementById('grade-lessons-inputs');
-  if(!activeGradeTab||!setupSelectedGrades.includes(activeGradeTab))activeGradeTab=setupSelectedGrades[0];
-  tabs.innerHTML=setupSelectedGrades.map(g=>`<button class="grade-tab-btn ${g===activeGradeTab?'active':''}" onclick="switchGradeTab(${g})">${arabicNums[g-1]} الصف ${g}</button>`).join('');
-  inputs.innerHTML=setupSelectedGrades.map(g=>`<div id="grade-input-${g}" style="display:${g===activeGradeTab?'block':'none'}"><textarea class="lessons-textarea" id="lessons-text-${g}" placeholder="الصق دروس الصف ${g} هنا...">${setupLessons[g]||''}</textarea></div>`).join('');
+  box.innerHTML=setupSelectedGrades.map(g=>{
+    const rows=curriculumCache.filter(r=>r.grade===g);
+    const units=[...new Set(rows.map(r=>r.unit))].length;
+    return `✅ الصف ${arabicNums[g-1]}: ${rows.length} درس ضمن ${units} وحدة`;
+  }).join('<br/>');
 }
-function switchGradeTab(g){
-  setupSelectedGrades.forEach(n=>{
-    const ta=document.getElementById('lessons-text-'+n);if(ta)setupLessons[n]=ta.value;
-    const inp=document.getElementById('grade-input-'+n);if(inp)inp.style.display='none';
+// بناء وحدات/دروس صف من الفهرس
+function buildUnitsFromCurriculum(grade){
+  const rows=curriculumCache.filter(r=>r.grade===grade).sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const unitsMap={};const order=[];
+  rows.forEach((r,idx)=>{
+    if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
+    unitsMap[r.unit].push({id:`g${grade}_${idx}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,name:r.lesson});
   });
-  activeGradeTab=g;
-  document.querySelectorAll('.grade-tab-btn').forEach(b=>b.classList.remove('active'));
-  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  document.getElementById('grade-tabs').innerHTML=setupSelectedGrades.map(n=>`<button class="grade-tab-btn ${n===g?'active':''}" onclick="switchGradeTab(${n})">${arabicNums[n-1]} الصف ${n}</button>`).join('');
-  const inp=document.getElementById('grade-input-'+g);if(inp)inp.style.display='block';
-}
-function parseLessons(text){
-  // Returns [{unitName, lessons:[{id,name}]}]
-  const units=[];const blocks=text.trim().split(/\n\s*\n/);
-  blocks.forEach((block,bi)=>{
-    const lines=block.trim().split('\n').map(l=>l.trim()).filter(l=>l);
-    if(!lines.length)return;
-    const unitName=lines[0];
-    const lessons=lines.slice(1).map((name,li)=>({id:`g${bi}_l${li}_${Date.now()}`,name}));
-    if(lessons.length)units.push({name:unitName,lessons});
-  });
-  return units;
+  return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
 async function finishSetup(){
-  // Save lessons text
-  setupSelectedGrades.forEach(g=>{const ta=document.getElementById('lessons-text-'+g);if(ta)setupLessons[g]=ta.value;});
-  const subject=document.getElementById('subject-inp').value.trim()||'المادة';
-  // Build config
+  if(!setupSelectedGrades.length){toast('❌ اختر صفاً واحداً على الأقل',true);return;}
+  const noClasses=setupSelectedGrades.some(g=>!(setupClasses[g]||[]).length);
+  if(noClasses){toast('❌ اختر شعبة واحدة على الأقل لكل صف',true);return;}
+  const subject=setupSubject;
   const grades=setupSelectedGrades.map((g,gi)=>({
     num:g,
     subject,
     classes:(setupClasses[g]||[]).map((cls,ci)=>({id:`cls_${g}_${ci}`,name:cls,color:GRADE_COLORS[(gi*3+ci)%GRADE_COLORS.length]})),
-    units:parseLessons(setupLessons[g]||''),
+    units:buildUnitsFromCurriculum(g),
   }));
-  const config={grades,subject,setupDone:true};
+  const config={grades,subject,semester:setupSemester,setupDone:true};
   await dbSave({teacher_config:config,plan_state:{},arc_meta:{},cv_items:[],cv_profile:{},lesson_files:{},arc_categories:DEFAULT_CATS,timetable_config:{},class_config:{},students:{},grades:{},grade_types:[],reminders_config:{enabled:false,minutes:10}});
   document.getElementById('setup-screen').classList.add('hidden');
   const data=await dbLoad();
