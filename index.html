@@ -552,7 +552,7 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
       <span class="setup-step" id="step-2">2. الصفوف والشعب</span>
     </div>
  
-    <!-- Step 1: Semester & Subject -->
+    <!-- Step 1: Semester & Subjects -->
     <div id="setup-step-1">
       <div class="setup-card">
         <h3>📅 اختر الفصل الدراسي</h3>
@@ -563,8 +563,8 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
         </div>
       </div>
       <div class="setup-card" id="subject-card" style="display:none">
-        <h3>📖 اختر المادة</h3>
-        <p>المواد المتاحة لهذا الفصل</p>
+        <h3>📖 اختر المواد التي تدرّسها</h3>
+        <p>يمكنك اختيار أكثر من مادة (مثال: فيزياء + كيمياء + أحياء)</p>
         <div class="grades-grid" id="subject-grid"></div>
       </div>
       <div class="setup-nav">
@@ -573,17 +573,13 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
       </div>
     </div>
  
-    <!-- Step 2: Grades & Sections -->
+    <!-- Step 2: Per-subject Grades & Sections -->
     <div id="setup-step-2" style="display:none">
       <div class="setup-card">
-        <h3>🏫 اختر الصفوف التي تدرّسها</h3>
-        <p>الصفوف المتاحة لهذه المادة في هذا الفصل</p>
-        <div class="grades-grid" id="grades-grid"></div>
-      </div>
-      <div class="setup-card" id="classes-card" style="display:none">
-        <h3>👥 حدّد الشعب لكل صف</h3>
-        <p>اضغط على الشعبة لاختيارها (12 شعبة جاهزة لكل صف)</p>
-        <div class="grade-classes-list" id="grade-classes-list"></div>
+        <h3>🏫 حدّد الصفوف والشعب لكل مادة</h3>
+        <p>اختر تبويب المادة، ثم صفوفها وشعبها</p>
+        <div class="grade-tabs" id="subject-tabs"></div>
+        <div id="subject-setup-body"></div>
       </div>
       <div class="setup-card" id="lessons-preview-card" style="display:none">
         <h3>📚 الدروس الجاهزة</h3>
@@ -1222,9 +1218,6 @@ async function bootApp(session){
 })();
  
 // ══ SETUP SCREEN ══════════════════════════════════════
-let setupSelectedGrades=[];
-let setupClasses={};  // {gradeNum: [className,...]}
- 
 const GRADE_COLORS=['#e74c3c','#e8b86d','#f0c060','#27ae60','#3498db','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#8bc34a','#ff5722'];
  
 function showSetupScreen(){
@@ -1232,56 +1225,28 @@ function showSetupScreen(){
   document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // إعادة ضبط حالة الإعداد والبدء من الخطوة الأولى (الفصل)
-  setupSemester='';setupSubject='';setupSelectedGrades=[];setupClasses={};curriculumCache=null;
+  setupSemester='';setupSubjects=[];setupData={};curriculumBySubject={};setupActiveSubject='';
   document.getElementById('setup-step-1').style.display='block';
   document.getElementById('setup-step-2').style.display='none';
   document.getElementById('step-1').classList.add('active');document.getElementById('step-1').classList.remove('done');
   document.getElementById('step-2').classList.remove('active');
   document.getElementById('subject-card').style.display='none';
-  document.getElementById('classes-card').style.display='none';
   document.getElementById('lessons-preview-card').style.display='none';
   document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
 }
-function buildClassesSection(){
-  const card=document.getElementById('classes-card');
-  if(!setupSelectedGrades.length){card.style.display='none';return;}
-  card.style.display='block';
-  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  const list=document.getElementById('grade-classes-list');
-  list.innerHTML=setupSelectedGrades.map(g=>{
-    if(!setupClasses[g])setupClasses[g]=[];
-    const presets=[`${g}/1`,`${g}/2`,`${g}/3`,`${g}/4`,`${g}/5`,`${g}/6`,`${g}/7`,`${g}/8`,`${g}/9`,`${g}/10`,`${g}/11`,`${g}/12`];
-    const chips=presets.map(p=>`<button class="class-chip-btn ${setupClasses[g].includes(p)?'sel':''}" onclick="toggleClass(${g},'${p}',this)">${p}</button>`).join('');
-    const selected=setupClasses[g].filter(c=>!presets.includes(c));
-    const custom=selected.map(c=>`<button class="class-chip-btn sel" onclick="toggleClass(${g},'${c}',this)">${c}</button>`).join('');
-    return `<div class="grade-class-row"><h4>📚 الصف ${arabicNums[g-1]}</h4><div class="class-chips-wrap" id="cls-wrap-${g}">${chips}${custom}<input type="text" class="add-class-inp" placeholder="+ إضافة" onkeydown="addCustomClass(event,${g})"/></div></div>`;
-  }).join('');
-}
-function toggleClass(grade,name,btn){
-  const idx=setupClasses[grade].indexOf(name);
-  if(idx>=0){setupClasses[grade].splice(idx,1);btn.classList.remove('sel');}
-  else{setupClasses[grade].push(name);btn.classList.add('sel');}
-}
-function addCustomClass(e,grade){
-  if(e.key!=='Enter')return;
-  const val=e.target.value.trim();if(!val)return;
-  if(!setupClasses[grade].includes(val)){
-    setupClasses[grade].push(val);
-    const btn=document.createElement('button');btn.className='class-chip-btn sel';btn.textContent=val;btn.onclick=function(){toggleClass(grade,val,this);};
-    e.target.parentNode.insertBefore(btn,e.target);
-  }
-  e.target.value='';
-}
-// ── حالة الإعداد الجديدة ──
-let setupSemester='';        // الفصل المختار
-let setupSubject='';         // المادة المختارة
-let curriculumCache=null;    // كل صفوف الفهرس للفصل+المادة
+// ── حالة الإعداد ──
+let setupSemester='';
+let setupSubjects=[];          // المواد المختارة
+let setupActiveSubject='';     // تبويب المادة النشط في خطوة 2
+let curriculumBySubject={};    // {subject: [rows]}
+// لكل مادة: صفوفها وشعبها → setupData[subject] = {grades:[], classes:{gradeNum:[...]}}
+let setupData={};
  
 function selectSemester(sem,btn){
   setupSemester=sem;
   document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  setupSubject='';setupSelectedGrades=[];setupClasses={};
+  setupSubjects=[];setupData={};curriculumBySubject={};
   loadSubjectsForSemester();
 }
 async function loadSubjectsForSemester(){
@@ -1296,43 +1261,86 @@ async function loadSubjectsForSemester(){
       return;
     }
     const subjects=[...new Set(data.map(r=>r.subject))].sort();
-    grid.innerHTML=subjects.map(s=>`<button class="class-chip-btn" onclick="selectSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
+    grid.innerHTML=subjects.map(s=>`<button class="class-chip-btn" data-subj="${s.replace(/"/g,'&quot;')}" onclick="toggleSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
   }catch(e){grid.innerHTML='<p style="color:var(--muted)">تعذّر تحميل المواد</p>';}
 }
-function selectSubject(subj,btn){
-  setupSubject=subj;
-  document.querySelectorAll('#subject-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
+function toggleSubject(subj,btn){
+  const i=setupSubjects.indexOf(subj);
+  if(i>=0){setupSubjects.splice(i,1);btn.classList.remove('sel');delete setupData[subj];}
+  else{setupSubjects.push(subj);btn.classList.add('sel');setupData[subj]={grades:[],classes:{}};}
 }
 async function goToStep2(){
   if(!setupSemester){toast('❌ اختر الفصل الدراسي',true);return;}
-  if(!setupSubject){toast('❌ اختر المادة',true);return;}
-  // حمّل كل فهرس هذا الفصل+المادة مرة واحدة
+  if(!setupSubjects.length){toast('❌ اختر مادة واحدة على الأقل',true);return;}
+  // حمّل فهرس كل مادة مختارة
   try{
-    const {data,error}=await sb.from('curriculum').select('*')
-      .eq('semester',setupSemester).eq('subject',setupSubject).order('sort');
-    if(error||!data||!data.length){toast('❌ لا توجد دروس مُجهّزة لهذا الاختيار',true);return;}
-    curriculumCache=data;
+    for(const subj of setupSubjects){
+      if(curriculumBySubject[subj])continue;
+      const {data,error}=await sb.from('curriculum').select('*')
+        .eq('semester',setupSemester).eq('subject',subj).order('sort');
+      if(error||!data||!data.length){toast('❌ لا توجد دروس مُجهّزة للمادة: '+subj,true);return;}
+      curriculumBySubject[subj]=data;
+    }
   }catch(e){toast('❌ تعذّر تحميل الدروس',true);return;}
   document.getElementById('setup-step-1').style.display='none';
   document.getElementById('setup-step-2').style.display='block';
   document.getElementById('step-1').classList.remove('active');document.getElementById('step-1').classList.add('done');
   document.getElementById('step-2').classList.add('active');
-  buildGradesGrid();
+  setupActiveSubject=setupSubjects[0];
+  buildSubjectTabs();
+  buildSubjectSetupBody();
 }
-function buildGradesGrid(){
-  // الصفوف المتاحة فعلياً في الفهرس لهذا الفصل+المادة
-  const grid=document.getElementById('grades-grid');
-  const grades=[...new Set(curriculumCache.map(r=>r.grade))].sort((a,b)=>a-b);
+function buildSubjectTabs(){
+  const tabs=document.getElementById('subject-tabs');
+  tabs.innerHTML=setupSubjects.map(s=>{
+    const done=(setupData[s]&&setupData[s].grades.length)?' ✓':'';
+    return `<button class="grade-tab-btn ${s===setupActiveSubject?'active':''}" onclick="switchSubjectTab('${s.replace(/'/g,"\\'")}')">${s}${done}</button>`;
+  }).join('');
+}
+function switchSubjectTab(s){
+  setupActiveSubject=s;
+  buildSubjectTabs();
+  buildSubjectSetupBody();
+}
+function buildSubjectSetupBody(){
+  const s=setupActiveSubject;
+  const cur=curriculumBySubject[s]||[];
+  const grades=[...new Set(cur.map(r=>r.grade))].sort((a,b)=>a-b);
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  grid.innerHTML=grades.map(g=>`<button class="class-chip-btn ${setupSelectedGrades.includes(g)?'sel':''}" onclick="toggleSetupGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`).join('');
+  const sel=setupData[s]||{grades:[],classes:{}};
+  let html=`<div style="margin:10px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">📖 ${s} — اختر الصفوف:</div>`;
+  html+=`<div class="grades-grid">`+grades.map(g=>
+    `<button class="class-chip-btn ${sel.grades.includes(g)?'sel':''}" onclick="toggleSubjGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`
+  ).join('')+`</div>`;
+  // شعب كل صف مختار
+  if(sel.grades.length){
+    html+=`<div style="margin:14px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">👥 حدّد الشعب (12 شعبة جاهزة لكل صف):</div>`;
+    sel.grades.forEach(g=>{
+      const presets=Array.from({length:12},(_,i)=>`${g}/${i+1}`);
+      const chosen=sel.classes[g]||[];
+      html+=`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">الصف ${arabicNums[g-1]}</div><div class="grades-grid">`+
+        presets.map(p=>`<button class="class-chip-btn ${chosen.includes(p)?'sel':''}" onclick="toggleSubjClass(${g},'${p}',this)">${p}</button>`).join('')+
+        `</div></div>`;
+    });
+  }
+  document.getElementById('subject-setup-body').innerHTML=html;
+  updateLessonsPreview();
 }
-function toggleSetupGrade(g,btn){
-  const i=setupSelectedGrades.indexOf(g);
-  if(i>=0){setupSelectedGrades.splice(i,1);btn.classList.remove('sel');delete setupClasses[g];}
-  else{setupSelectedGrades.push(g);btn.classList.add('sel');setupClasses[g]=[];}
-  setupSelectedGrades.sort((a,b)=>a-b);
-  buildClassesSection();
+function toggleSubjGrade(g,btn){
+  const d=setupData[setupActiveSubject];
+  const i=d.grades.indexOf(g);
+  if(i>=0){d.grades.splice(i,1);delete d.classes[g];}
+  else{d.grades.push(g);d.classes[g]=[];}
+  d.grades.sort((a,b)=>a-b);
+  buildSubjectTabs();
+  buildSubjectSetupBody();
+}
+function toggleSubjClass(g,cls,btn){
+  const d=setupData[setupActiveSubject];
+  d.classes[g]=d.classes[g]||[];
+  const i=d.classes[g].indexOf(cls);
+  if(i>=0){d.classes[g].splice(i,1);btn.classList.remove('sel');}
+  else{d.classes[g].push(cls);btn.classList.add('sel');}
   updateLessonsPreview();
 }
 function goToStep1(){
@@ -1344,37 +1352,56 @@ function goToStep1(){
 function updateLessonsPreview(){
   const card=document.getElementById('lessons-preview-card');
   const box=document.getElementById('lessons-preview');
-  if(!setupSelectedGrades.length){card.style.display='none';return;}
-  card.style.display='block';
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  box.innerHTML=setupSelectedGrades.map(g=>{
-    const rows=curriculumCache.filter(r=>r.grade===g);
-    const units=[...new Set(rows.map(r=>r.unit))].length;
-    return `✅ الصف ${arabicNums[g-1]}: ${rows.length} درس ضمن ${units} وحدة`;
-  }).join('<br/>');
+  let lines=[];
+  setupSubjects.forEach(s=>{
+    const d=setupData[s];if(!d||!d.grades.length)return;
+    const cur=curriculumBySubject[s]||[];
+    d.grades.forEach(g=>{
+      const rows=cur.filter(r=>r.grade===g);
+      const units=[...new Set(rows.map(r=>r.unit))].length;
+      lines.push(`✅ ${s} — الصف ${arabicNums[g-1]}: ${rows.length} درس / ${units} وحدة`);
+    });
+  });
+  if(!lines.length){card.style.display='none';return;}
+  card.style.display='block';
+  box.innerHTML=lines.join('<br/>');
 }
-// بناء وحدات/دروس صف من الفهرس
-function buildUnitsFromCurriculum(grade){
-  const rows=curriculumCache.filter(r=>r.grade===grade).sort((a,b)=>(a.sort||0)-(b.sort||0));
+function buildUnitsFromRows(rows){
+  const sorted=rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
   const unitsMap={};const order=[];
-  rows.forEach((r,idx)=>{
+  sorted.forEach((r,idx)=>{
     if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
-    unitsMap[r.unit].push({id:`g${grade}_${idx}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,name:r.lesson});
+    unitsMap[r.unit].push({id:`l${idx}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,name:r.lesson});
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
 async function finishSetup(){
-  if(!setupSelectedGrades.length){toast('❌ اختر صفاً واحداً على الأقل',true);return;}
-  const noClasses=setupSelectedGrades.some(g=>!(setupClasses[g]||[]).length);
-  if(noClasses){toast('❌ اختر شعبة واحدة على الأقل لكل صف',true);return;}
-  const subject=setupSubject;
-  const grades=setupSelectedGrades.map((g,gi)=>({
-    num:g,
-    subject,
-    classes:(setupClasses[g]||[]).map((cls,ci)=>({id:`cls_${g}_${ci}`,name:cls,color:GRADE_COLORS[(gi*3+ci)%GRADE_COLORS.length]})),
-    units:buildUnitsFromCurriculum(g),
-  }));
-  const config={grades,subject,semester:setupSemester,setupDone:true};
+  // تحقق: كل مادة لها صف واحد على الأقل، وكل صف له شعبة
+  const chosenSubjects=setupSubjects.filter(s=>setupData[s]&&setupData[s].grades.length);
+  if(!chosenSubjects.length){toast('❌ اختر صفاً واحداً على الأقل لمادة واحدة',true);return;}
+  for(const s of chosenSubjects){
+    const d=setupData[s];
+    for(const g of d.grades){
+      if(!(d.classes[g]||[]).length){toast(`❌ اختر شعبة للصف في مادة ${s}`,true);return;}
+    }
+  }
+  // ابنِ grades: كل (مادة+صف) عنصر مستقل
+  const grades=[];let ci=0;
+  chosenSubjects.forEach(s=>{
+    const d=setupData[s];
+    const cur=curriculumBySubject[s]||[];
+    d.grades.forEach(g=>{
+      const rows=cur.filter(r=>r.grade===g);
+      grades.push({
+        num:g,
+        subject:s,
+        classes:(d.classes[g]||[]).map((cls,k)=>({id:`cls_${s}_${g}_${k}`.replace(/\s/g,'_'),name:cls,color:GRADE_COLORS[(ci++)%GRADE_COLORS.length]})),
+        units:buildUnitsFromRows(rows),
+      });
+    });
+  });
+  const config={grades,subjects:chosenSubjects,subject:chosenSubjects[0],semester:setupSemester,setupDone:true};
   await dbSave({teacher_config:config,plan_state:{},arc_meta:{},cv_items:[],cv_profile:{},lesson_files:{},arc_categories:DEFAULT_CATS,timetable_config:{},class_config:{},students:{},grades:{},grade_types:[],reminders_config:{enabled:false,minutes:10}});
   document.getElementById('setup-screen').classList.add('hidden');
   const data=await dbLoad();
@@ -1395,7 +1422,7 @@ let state={};let arcMeta={};let arcCategories=[];let cvItems=[];let cvProfile={}
 let lessonFiles={};let timetableConfig=null;let classConfig=null;let ttEditing=false;let ttBackup=null;
 let students={};let grades={};let gradeTypes=[];let remindersConfig={enabled:false,minutes:10};
 let activeGradesClass=null;let reminderState={};let teacherConfig=null;
-let currentTrackerGrade=null;
+let currentTrackerIdx=0;
  
 const DEFAULT_PERIODS=[
   {num:1,start:'7:25 AM',end:'8:05 AM'},{num:2,start:'8:10 AM',end:'8:50 AM'},
@@ -1561,7 +1588,7 @@ const get=id=>state[id]||{done:false,date:'',sessions:'',notes:'',classes:{}};
  
 function allLessons(){
   if(!teacherConfig||!teacherConfig.grades)return[];
-  const grade=teacherConfig.grades.find(g=>g.num===currentTrackerGrade)||teacherConfig.grades[0];
+  const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
   if(!grade)return[];
   return grade.units.flatMap(u=>u.lessons);
 }
@@ -1569,15 +1596,20 @@ function allLessons(){
 function buildGradeFilterBar(){
   if(!teacherConfig||!teacherConfig.grades)return;
   const bar=document.getElementById('grade-filter-bar');
-  if(teacherConfig.grades.length<=1){bar.style.display='none';if(teacherConfig.grades[0])currentTrackerGrade=teacherConfig.grades[0].num;return;}
+  if(teacherConfig.grades.length<=1){bar.style.display='none';currentTrackerIdx=0;return;}
   bar.style.display='flex';
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  if(!currentTrackerGrade)currentTrackerGrade=teacherConfig.grades[0].num;
-  bar.innerHTML=teacherConfig.grades.map(g=>`<button class="grade-filter-btn ${g.num===currentTrackerGrade?'active':''}" onclick="switchTrackerGrade(${g.num},this)">الصف ${arabicNums[g.num-1]}</button>`).join('');
+  if(currentTrackerIdx==null||currentTrackerIdx>=teacherConfig.grades.length)currentTrackerIdx=0;
+  // لو فيه أكثر من مادة، أظهر اسم المادة مع الصف لتمييزها
+  const multiSubject=new Set(teacherConfig.grades.map(g=>g.subject)).size>1;
+  bar.innerHTML=teacherConfig.grades.map((g,idx)=>{
+    const label=multiSubject?`${g.subject} — الصف ${arabicNums[(g.num||1)-1]}`:`الصف ${arabicNums[(g.num||1)-1]}`;
+    return `<button class="grade-filter-btn ${idx===currentTrackerIdx?'active':''}" onclick="switchTrackerGrade(${idx},this)">${label}</button>`;
+  }).join('');
 }
  
-function switchTrackerGrade(num,btn){
-  currentTrackerGrade=num;
+function switchTrackerGrade(idx,btn){
+  currentTrackerIdx=idx;
   document.querySelectorAll('.grade-filter-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   buildTracker();applyFilter();update();
@@ -1586,8 +1618,8 @@ function switchTrackerGrade(num,btn){
 function buildTracker(){
   if(!teacherConfig||!teacherConfig.grades){document.getElementById('sections').innerHTML='';return;}
   buildGradeFilterBar();
-  if(!currentTrackerGrade)currentTrackerGrade=teacherConfig.grades[0]?.num;
-  const grade=teacherConfig.grades.find(g=>g.num===currentTrackerGrade)||teacherConfig.grades[0];
+  if(currentTrackerIdx==null||currentTrackerIdx>=teacherConfig.grades.length)currentTrackerIdx=0;
+  const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
   if(!grade){document.getElementById('sections').innerHTML='';return;}
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
   document.getElementById('tracker-title').textContent=`${grade.subject||teacherConfig.subject||'الخطة'} — الصف ${arabicNums[(grade.num||1)-1]}`;
@@ -1608,7 +1640,7 @@ function buildTracker(){
       card.querySelector('.lesson-top').addEventListener('click',()=>{const cur=get(lesson.id);cur.done=!cur.done;state[lesson.id]=cur;card.classList.toggle('done',cur.done);toast(cur.done?'✅ درس منجز':'↩️ إلغاء',cur.done?'ok':false);applyFilter();update();scheduleSave();});
       card.querySelectorAll('.class-chip').forEach(chip=>{chip.addEventListener('click',()=>{const cls=chip.dataset.class;const cur=get(lesson.id);if(!cur.classes)cur.classes={};cur.classes[cls]=!cur.classes[cls];state[lesson.id]=cur;const col=classConfig[cls]?.color||'var(--gold)';chip.classList.toggle('checked',cur.classes[cls]);if(cur.classes[cls]){chip.style.borderColor=col;chip.style.background=hexToRgba(col,.12);chip.querySelector('.chip-check').style.cssText=`background:${col};border-color:${col};color:#fff;`;}else{chip.style.borderColor='';chip.style.background='';chip.querySelector('.chip-check').style.cssText='';}
         // Auto-complete: if all classes checked → mark done
-        const grade=teacherConfig?.grades?.find(g=>g.num===currentTrackerGrade)||teacherConfig?.grades?.[0];
+        const grade=teacherConfig?.grades?.[currentTrackerIdx]||teacherConfig?.grades?.[0];
         if(grade){const allChecked=grade.classes.every(c=>cur.classes[c.id]);if(allChecked&&!cur.done){cur.done=true;state[lesson.id]=cur;card.classList.add('done');toast('✅ كل الشعب خلصت — درس منجز','ok');applyFilter();update();}}
         scheduleSave();});});
       card.querySelectorAll('[data-f]').forEach(inp=>{inp.addEventListener('change',()=>{const cur=get(lesson.id);cur[inp.dataset.f]=inp.value;state[lesson.id]=cur;scheduleSave();});if(inp.tagName==='TEXTAREA'){inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';});setTimeout(()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';},0);}});
@@ -1667,7 +1699,7 @@ function update(){
   const msgs=['ابدأ أول درس 🚀','بداية رائعة! 💪','نص الطريق 🔥','شارف على الإنجاز ⚡','قريب جداً 🎯','أتممت الفصل 🏆'];
   document.getElementById('motiv').textContent=msgs[pct===0?0:pct<25?1:pct<50?2:pct<75?3:pct<100?4:5];
   if(teacherConfig&&teacherConfig.grades){
-    const grade=teacherConfig.grades.find(g=>g.num===currentTrackerGrade)||teacherConfig.grades[0];
+    const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
     if(grade){grade.units.forEach((unit,ui)=>{const ls=unit.lessons,sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;const pg=document.getElementById('prg-u'+ui);if(pg)pg.textContent=sd+'/'+ls.length+' دروس';const br=document.getElementById('bar-u'+ui);if(br)br.style.width=sp+'%';});}
   }
 }
@@ -1970,7 +2002,7 @@ function renderStats(){
   }
   const secsEl=document.getElementById('stats-sections');
   if(teacherConfig&&teacherConfig.grades){
-    const grade=teacherConfig.grades.find(g=>g.num===currentTrackerGrade)||teacherConfig.grades[0];
+    const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
     if(grade){secsEl.innerHTML=grade.units.map(unit=>{const ls=unit.lessons,sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;return`<div class="chart-row"><span class="chart-row-label">📚 ${unit.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${sp}%;background:linear-gradient(90deg,var(--red),var(--gold))">${sp}% (${sd}/${ls.length})</div></div></div>`;}).join('');}
   }
   const maxC=Math.max(...allCls.map(cls=>classCounts[cls.id]||0),1);
@@ -2121,4 +2153,3 @@ let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
 </body>
-</html>
