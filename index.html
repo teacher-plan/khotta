@@ -552,7 +552,7 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
       <span class="setup-step" id="step-2">2. الصفوف والشعب</span>
     </div>
  
-    <!-- Step 1: Semester & Subjects -->
+    <!-- Step 1: Semester & Grades -->
     <div id="setup-step-1">
       <div class="setup-card">
         <h3>📅 اختر الفصل الدراسي</h3>
@@ -562,24 +562,24 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
           <button class="class-chip-btn" id="sem-2" onclick="selectSemester('الفصل الثاني',this)">الفصل الثاني</button>
         </div>
       </div>
-      <div class="setup-card" id="subject-card" style="display:none">
-        <h3>📖 اختر المواد التي تدرّسها</h3>
-        <p>يمكنك اختيار أكثر من مادة (مثال: فيزياء + كيمياء + أحياء)</p>
-        <div class="grades-grid" id="subject-grid"></div>
+      <div class="setup-card" id="grade-card" style="display:none">
+        <h3>🏫 اختر الصفوف التي تدرّسها</h3>
+        <p>يمكنك اختيار أكثر من صف</p>
+        <div class="grades-grid" id="grade-grid"></div>
       </div>
       <div class="setup-nav">
         <div></div>
-        <button class="setup-btn primary" onclick="goToStep2()">التالي: الصفوف ←</button>
+        <button class="setup-btn primary" onclick="goToStep2()">التالي: المواد ←</button>
       </div>
     </div>
  
-    <!-- Step 2: Per-subject Grades & Sections -->
+    <!-- Step 2: Per-grade Subjects & Sections -->
     <div id="setup-step-2" style="display:none">
       <div class="setup-card">
-        <h3>🏫 حدّد الصفوف والشعب لكل مادة</h3>
-        <p>اختر تبويب المادة، ثم صفوفها وشعبها</p>
-        <div class="grade-tabs" id="subject-tabs"></div>
-        <div id="subject-setup-body"></div>
+        <h3>📖 حدّد المواد والشعب لكل صف</h3>
+        <p>اختر تبويب الصف، ثم مواده وشعبه</p>
+        <div class="grade-tabs" id="grade-tabs"></div>
+        <div id="grade-setup-body"></div>
       </div>
       <div class="setup-card" id="lessons-preview-card" style="display:none">
         <h3>📚 الدروس الجاهزة</h3>
@@ -1189,44 +1189,43 @@ function showSetupScreen(){
   document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // إعادة ضبط حالة الإعداد والبدء من الخطوة الأولى (الفصل)
-  setupSemester='';setupSubjects=[];setupData={};curriculumBySubject={};setupActiveSubject='';
+  setupSemester='';setupGrades=[];setupData={};curriculumBySubject={};gradeSubjectsMap={};setupActiveGrade=null;
   document.getElementById('setup-step-1').style.display='block';
   document.getElementById('setup-step-2').style.display='none';
   document.getElementById('step-1').classList.add('active');document.getElementById('step-1').classList.remove('done');
   document.getElementById('step-2').classList.remove('active');
-  document.getElementById('subject-card').style.display='none';
+  document.getElementById('grade-card').style.display='none';
   document.getElementById('lessons-preview-card').style.display='none';
   document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
 }
 // ── حالة الإعداد ──
 let setupSemester='';
-let setupSubjects=[];          // المواد المختارة
-let setupActiveSubject='';     // تبويب المادة النشط في خطوة 2
-let curriculumBySubject={};    // {subject: [rows]} المحتوى الفعلي
-let subjectGradesMap={};       // {subject: Set(grades)} هيكل المواد لكل صف
-// لكل مادة: صفوفها وشعبها → setupData[subject] = {grades:[], classes:{gradeNum:[...]}}
+let gradeSubjectsMap={};       // {grade: [subjects]} مواد كل صف من جدول subjects
+let curriculumBySubject={};    // {"subject|grade": [rows]} المحتوى الفعلي
+// لكل صف: مواده وشعبه → setupData[gradeNum] = {subjects:[], classes:[]}
 let setupData={};
+let setupGrades=[];            // الصفوف المختارة
+let setupActiveGrade=null;     // تبويب الصف النشط
  
 function selectSemester(sem,btn){
   setupSemester=sem;
   document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  setupSubjects=[];setupData={};curriculumBySubject={};
-  loadSubjectsForSemester();
+  setupGrades=[];setupData={};curriculumBySubject={};
+  loadGradesForSemester();
 }
-async function loadSubjectsForSemester(){
-  const card=document.getElementById('subject-card');
-  const grid=document.getElementById('subject-grid');
+async function loadGradesForSemester(){
+  const card=document.getElementById('grade-card');
+  const grid=document.getElementById('grade-grid');
   card.style.display='block';
-  grid.innerHTML='<p style="color:var(--muted)">جارٍ تحميل المواد...</p>';
+  grid.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
   try{
     // اقرأ هيكل المواد من جدول subjects (المرحلة 1)
     let rows=[];
-    const r1=await sb.from('subjects').select('subject,grade').eq('semester',setupSemester);
+    const r1=await sb.from('subjects').select('subject,grade,sort').eq('semester',setupSemester);
     if(!r1.error&&r1.data&&r1.data.length){
       rows=r1.data;
     }else{
-      // احتياط: لو جدول subjects فاضي، استنتج من المحتوى الموجود
       const r2=await sb.from('curriculum').select('subject,grade').eq('semester',setupSemester);
       if(r2.error||!r2.data||!r2.data.length){
         grid.innerHTML='<p style="color:var(--muted)">لا توجد مواد مُجهّزة لهذا الفصل بعد. تواصل مع المشرف.</p>';
@@ -1234,99 +1233,91 @@ async function loadSubjectsForSemester(){
       }
       rows=r2.data;
     }
-    // خريطة: لكل مادة → صفوفها المتاحة
-    subjectGradesMap={};
-    rows.forEach(r=>{
-      if(!subjectGradesMap[r.subject])subjectGradesMap[r.subject]=new Set();
-      subjectGradesMap[r.subject].add(r.grade);
+    // خريطة: لكل صف → مواده (مرتبة حسب sort)
+    gradeSubjectsMap={};
+    rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0)).forEach(r=>{
+      if(!gradeSubjectsMap[r.grade])gradeSubjectsMap[r.grade]=[];
+      if(!gradeSubjectsMap[r.grade].includes(r.subject))gradeSubjectsMap[r.grade].push(r.subject);
     });
-    const subjects=Object.keys(subjectGradesMap).sort();
-    grid.innerHTML=subjects.map(s=>`<button class="class-chip-btn" data-subj="${s.replace(/"/g,'&quot;')}" onclick="toggleSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
-  }catch(e){grid.innerHTML='<p style="color:var(--muted)">تعذّر تحميل المواد</p>';}
+    const grades=Object.keys(gradeSubjectsMap).map(Number).sort((a,b)=>a-b);
+    const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
+    grid.innerHTML=grades.map(g=>`<button class="class-chip-btn ${setupGrades.includes(g)?'sel':''}" onclick="toggleSetupGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`).join('');
+  }catch(e){grid.innerHTML='<p style="color:var(--muted)">تعذّر التحميل</p>';}
 }
-function toggleSubject(subj,btn){
-  const i=setupSubjects.indexOf(subj);
-  if(i>=0){setupSubjects.splice(i,1);btn.classList.remove('sel');delete setupData[subj];}
-  else{setupSubjects.push(subj);btn.classList.add('sel');setupData[subj]={grades:[],classes:{}};}
+function toggleSetupGrade(g,btn){
+  const i=setupGrades.indexOf(g);
+  if(i>=0){setupGrades.splice(i,1);btn.classList.remove('sel');delete setupData[g];}
+  else{setupGrades.push(g);btn.classList.add('sel');setupData[g]={subjects:[],classes:{}};}
+  setupGrades.sort((a,b)=>a-b);
 }
 async function goToStep2(){
   if(!setupSemester){toast('❌ اختر الفصل الدراسي',true);return;}
-  if(!setupSubjects.length){toast('❌ اختر مادة واحدة على الأقل',true);return;}
-  // حمّل محتوى كل مادة مختارة (إن وُجد — المواد بلا محتوى مسموحة)
-  try{
-    for(const subj of setupSubjects){
-      if(curriculumBySubject[subj])continue;
-      const {data}=await sb.from('curriculum').select('*')
-        .eq('semester',setupSemester).eq('subject',subj).order('sort');
-      curriculumBySubject[subj]=data||[]; // فاضي = محتوى لم يُرفع بعد
-    }
-  }catch(e){toast('❌ تعذّر تحميل الدروس',true);return;}
+  if(!setupGrades.length){toast('❌ اختر صفاً واحداً على الأقل',true);return;}
   document.getElementById('setup-step-1').style.display='none';
   document.getElementById('setup-step-2').style.display='block';
   document.getElementById('step-1').classList.remove('active');document.getElementById('step-1').classList.add('done');
   document.getElementById('step-2').classList.add('active');
-  setupActiveSubject=setupSubjects[0];
-  buildSubjectTabs();
-  buildSubjectSetupBody();
+  setupActiveGrade=setupGrades[0];
+  buildGradeTabs();
+  buildGradeSetupBody();
 }
-function buildSubjectTabs(){
-  const tabs=document.getElementById('subject-tabs');
-  tabs.innerHTML=setupSubjects.map(s=>{
-    const done=(setupData[s]&&setupData[s].grades.length)?' ✓':'';
-    return `<button class="grade-tab-btn ${s===setupActiveSubject?'active':''}" onclick="switchSubjectTab('${s.replace(/'/g,"\\'")}')">${s}${done}</button>`;
+function buildGradeTabs(){
+  const tabs=document.getElementById('grade-tabs');
+  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
+  tabs.innerHTML=setupGrades.map(g=>{
+    const d=setupData[g];
+    const done=(d&&d.subjects.length)?' ✓':'';
+    return `<button class="grade-tab-btn ${g===setupActiveGrade?'active':''}" onclick="switchGradeTab(${g})">الصف ${arabicNums[g-1]}${done}</button>`;
   }).join('');
 }
-function switchSubjectTab(s){
-  setupActiveSubject=s;
-  buildSubjectTabs();
-  buildSubjectSetupBody();
+function switchGradeTab(g){
+  setupActiveGrade=g;
+  buildGradeTabs();
+  buildGradeSetupBody();
 }
-function buildSubjectSetupBody(){
-  const s=setupActiveSubject;
-  const cur=curriculumBySubject[s]||[];
-  const hasContent=cur.length>0;
-  // الصفوف المتاحة: من هيكل المواد (subjects) إن وُجد، وإلا من المحتوى
-  let grades;
-  if(subjectGradesMap[s]&&subjectGradesMap[s].size){
-    grades=[...subjectGradesMap[s]].sort((a,b)=>a-b);
-  }else{
-    grades=[...new Set(cur.map(r=>r.grade))].sort((a,b)=>a-b);
-  }
+// حمّل محتوى مادة+صف عند الحاجة (للمعاينة)
+async function ensureContent(subject,grade){
+  const key=subject+'|'+grade;
+  if(curriculumBySubject[key])return curriculumBySubject[key];
+  try{
+    const {data}=await sb.from('curriculum').select('*')
+      .eq('semester',setupSemester).eq('subject',subject).eq('grade',grade).order('sort');
+    curriculumBySubject[key]=data||[];
+  }catch(e){curriculumBySubject[key]=[];}
+  return curriculumBySubject[key];
+}
+function buildGradeSetupBody(){
+  const g=setupActiveGrade;
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
-  const sel=setupData[s]||{grades:[],classes:{}};
-  let html='';
-  if(!hasContent){
-    html+=`<div style="background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:13px;color:var(--gold);font-weight:700">📚 محتوى مادة "${s}" سيتم رفعه قريباً<div style="font-weight:400;font-size:12px;color:var(--muted);margin-top:5px">يمكنك اختيار الصفوف والشعب الآن، وستظهر الدروس تلقائياً عند رفع المحتوى</div></div>`;
-  }
-  html+=`<div style="margin:10px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">📖 ${s} — اختر الصفوف:</div>`;
-  html+=`<div class="grades-grid">`+grades.map(g=>
-    `<button class="class-chip-btn ${sel.grades.includes(g)?'sel':''}" onclick="toggleSubjGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`
+  const subjects=gradeSubjectsMap[g]||[];
+  const sel=setupData[g]||{subjects:[],classes:{}};
+  let html=`<div style="margin:10px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">📖 الصف ${arabicNums[g-1]} — اختر المواد التي تدرّسها:</div>`;
+  html+=`<div class="grades-grid">`+subjects.map(s=>
+    `<button class="class-chip-btn ${sel.subjects.includes(s)?'sel':''}" onclick="toggleGradeSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`
   ).join('')+`</div>`;
-  // شعب كل صف مختار
-  if(sel.grades.length){
-    html+=`<div style="margin:14px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">👥 حدّد الشعب (12 شعبة جاهزة لكل صف):</div>`;
-    sel.grades.forEach(g=>{
-      const presets=Array.from({length:12},(_,i)=>`${g}/${i+1}`);
-      const chosen=sel.classes[g]||[];
-      html+=`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">الصف ${arabicNums[g-1]}</div><div class="grades-grid">`+
-        presets.map(p=>`<button class="class-chip-btn ${chosen.includes(p)?'sel':''}" onclick="toggleSubjClass(${g},'${p}',this)">${p}</button>`).join('')+
-        `</div></div>`;
-    });
+  // شعب الصف (مشتركة لكل مواد هذا الصف)
+  if(sel.subjects.length){
+    const presets=Array.from({length:12},(_,i)=>`${g}/${i+1}`);
+    const chosen=sel.classes[g]||[];
+    html+=`<div style="margin:14px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">👥 حدّد شعب الصف ${arabicNums[g-1]} (12 شعبة جاهزة):</div>`;
+    html+=`<div class="grades-grid">`+
+      presets.map(p=>`<button class="class-chip-btn ${chosen.includes(p)?'sel':''}" onclick="toggleGradeClass('${p}',this)">${p}</button>`).join('')+
+      `</div>`;
   }
-  document.getElementById('subject-setup-body').innerHTML=html;
+  document.getElementById('grade-setup-body').innerHTML=html;
   updateLessonsPreview();
 }
-function toggleSubjGrade(g,btn){
-  const d=setupData[setupActiveSubject];
-  const i=d.grades.indexOf(g);
-  if(i>=0){d.grades.splice(i,1);delete d.classes[g];}
-  else{d.grades.push(g);d.classes[g]=[];}
-  d.grades.sort((a,b)=>a-b);
-  buildSubjectTabs();
-  buildSubjectSetupBody();
+function toggleGradeSubject(subj,btn){
+  const d=setupData[setupActiveGrade];
+  const i=d.subjects.indexOf(subj);
+  if(i>=0){d.subjects.splice(i,1);btn.classList.remove('sel');}
+  else{d.subjects.push(subj);btn.classList.add('sel');}
+  buildGradeTabs();
+  buildGradeSetupBody();
 }
-function toggleSubjClass(g,cls,btn){
-  const d=setupData[setupActiveSubject];
+function toggleGradeClass(cls,btn){
+  const g=setupActiveGrade;
+  const d=setupData[g];
   d.classes[g]=d.classes[g]||[];
   const i=d.classes[g].indexOf(cls);
   if(i>=0){d.classes[g].splice(i,1);btn.classList.remove('sel');}
@@ -1339,24 +1330,23 @@ function goToStep1(){
   document.getElementById('step-2').classList.remove('active');
   document.getElementById('step-1').classList.remove('done');document.getElementById('step-1').classList.add('active');
 }
-function updateLessonsPreview(){
+async function updateLessonsPreview(){
   const card=document.getElementById('lessons-preview-card');
   const box=document.getElementById('lessons-preview');
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
   let lines=[];
-  setupSubjects.forEach(s=>{
-    const d=setupData[s];if(!d||!d.grades.length)return;
-    const cur=curriculumBySubject[s]||[];
-    d.grades.forEach(g=>{
-      const rows=cur.filter(r=>r.grade===g);
+  for(const g of setupGrades){
+    const d=setupData[g];if(!d||!d.subjects.length)continue;
+    for(const s of d.subjects){
+      const rows=await ensureContent(s,g);
       if(rows.length){
         const units=[...new Set(rows.map(r=>r.unit))].length;
-        lines.push(`✅ ${s} — الصف ${arabicNums[g-1]}: ${rows.length} درس / ${units} وحدة`);
+        lines.push(`✅ الصف ${arabicNums[g-1]} — ${s}: ${rows.length} درس / ${units} وحدة`);
       }else{
-        lines.push(`🕓 ${s} — الصف ${arabicNums[g-1]}: المحتوى قيد الإعداد`);
+        lines.push(`🕓 الصف ${arabicNums[g-1]} — ${s}: المحتوى قيد الإعداد`);
       }
-    });
-  });
+    }
+  }
   if(!lines.length){card.style.display='none';return;}
   card.style.display='block';
   box.innerHTML=lines.join('<br/>');
@@ -1365,7 +1355,6 @@ function updateLessonsPreview(){
 // نفس الدرس يأخذ نفس الـ id دائماً → المرفقات تبقى مرتبطة به حتى بعد سنوات
 function stableLessonId(semester,subject,grade,unit,lesson){
   const raw=`${semester}|${subject}|${grade}|${unit}|${lesson}`;
-  // هاش بسيط ثابت (djb2) → سلسلة آمنة بلا مسافات/رموز
   let h=5381;
   for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}
   return 'L'+h.toString(36);
@@ -1380,31 +1369,29 @@ function buildUnitsFromRows(rows,semester,subject){
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
 async function finishSetup(){
-  // تحقق: كل مادة لها صف واحد على الأقل، وكل صف له شعبة
-  const chosenSubjects=setupSubjects.filter(s=>setupData[s]&&setupData[s].grades.length);
-  if(!chosenSubjects.length){toast('❌ اختر صفاً واحداً على الأقل لمادة واحدة',true);return;}
-  for(const s of chosenSubjects){
-    const d=setupData[s];
-    for(const g of d.grades){
-      if(!(d.classes[g]||[]).length){toast(`❌ اختر شعبة للصف في مادة ${s}`,true);return;}
-    }
+  // تحقق: كل صف له مادة واحدة على الأقل وشعبة واحدة
+  const chosenGrades=setupGrades.filter(g=>setupData[g]&&setupData[g].subjects.length);
+  if(!chosenGrades.length){toast('❌ اختر مادة واحدة على الأقل لصف واحد',true);return;}
+  for(const g of chosenGrades){
+    const d=setupData[g];
+    if(!(d.classes[g]||[]).length){toast(`❌ اختر شعبة للصف ${g}`,true);return;}
   }
-  // ابنِ grades: كل (مادة+صف) عنصر مستقل
+  // ابنِ grades: كل (صف+مادة) عنصر مستقل
   const grades=[];let ci=0;
-  chosenSubjects.forEach(s=>{
-    const d=setupData[s];
-    const cur=curriculumBySubject[s]||[];
-    d.grades.forEach(g=>{
-      const rows=cur.filter(r=>r.grade===g);
+  for(const g of chosenGrades){
+    const d=setupData[g];
+    for(const s of d.subjects){
+      const rows=await ensureContent(s,g);
       grades.push({
         num:g,
         subject:s,
         classes:(d.classes[g]||[]).map((cls,k)=>({id:`cls_${s}_${g}_${k}`.replace(/\s/g,'_'),name:cls,color:GRADE_COLORS[(ci++)%GRADE_COLORS.length]})),
         units:buildUnitsFromRows(rows,setupSemester,s),
       });
-    });
-  });
-  const config={grades,subjects:chosenSubjects,subject:chosenSubjects[0],semester:setupSemester,setupDone:true};
+    }
+  }
+  const allSubjects=[...new Set(grades.map(x=>x.subject))];
+  const config={grades,subjects:allSubjects,subject:allSubjects[0],semester:setupSemester,setupDone:true};
   // حافظ على البيانات القديمة: المرفقات لا تُمسح (الـ id ثابت فترجع تلقائياً)
   // وأرشِف الإعداد السابق احتياطياً
   const prev=await dbLoad().catch(()=>null);
@@ -2193,4 +2180,3 @@ let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
 </body>
-</html>
