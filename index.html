@@ -1367,12 +1367,21 @@ function updateLessonsPreview(){
   card.style.display='block';
   box.innerHTML=lines.join('<br/>');
 }
-function buildUnitsFromRows(rows){
+// id ثابت لكل درس: مبني على (الفصل|المادة|الصف|الوحدة|الدرس)
+// نفس الدرس يأخذ نفس الـ id دائماً → المرفقات تبقى مرتبطة به حتى بعد سنوات
+function stableLessonId(semester,subject,grade,unit,lesson){
+  const raw=`${semester}|${subject}|${grade}|${unit}|${lesson}`;
+  // هاش بسيط ثابت (djb2) → سلسلة آمنة بلا مسافات/رموز
+  let h=5381;
+  for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}
+  return 'L'+h.toString(36);
+}
+function buildUnitsFromRows(rows,semester,subject){
   const sorted=rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
   const unitsMap={};const order=[];
-  sorted.forEach((r,idx)=>{
+  sorted.forEach(r=>{
     if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
-    unitsMap[r.unit].push({id:`l${idx}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,name:r.lesson});
+    unitsMap[r.unit].push({id:stableLessonId(semester,subject,r.grade,r.unit,r.lesson),name:r.lesson});
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
@@ -1397,12 +1406,36 @@ async function finishSetup(){
         num:g,
         subject:s,
         classes:(d.classes[g]||[]).map((cls,k)=>({id:`cls_${s}_${g}_${k}`.replace(/\s/g,'_'),name:cls,color:GRADE_COLORS[(ci++)%GRADE_COLORS.length]})),
-        units:buildUnitsFromRows(rows),
+        units:buildUnitsFromRows(rows,setupSemester,s),
       });
     });
   });
   const config={grades,subjects:chosenSubjects,subject:chosenSubjects[0],semester:setupSemester,setupDone:true};
-  await dbSave({teacher_config:config,plan_state:{},arc_meta:{},cv_items:[],cv_profile:{},lesson_files:{},arc_categories:DEFAULT_CATS,timetable_config:{},class_config:{},students:{},grades:{},grade_types:[],reminders_config:{enabled:false,minutes:10}});
+  // حافظ على البيانات القديمة: المرفقات لا تُمسح (الـ id ثابت فترجع تلقائياً)
+  // وأرشِف الإعداد السابق احتياطياً
+  const prev=await dbLoad().catch(()=>null);
+  const archive=(prev&&prev.config_archive)?prev.config_archive:[];
+  if(prev&&prev.teacher_config&&prev.teacher_config.setupDone){
+    archive.push({archivedAt:new Date().toISOString(),teacher_config:prev.teacher_config});
+    if(archive.length>20)archive.shift(); // احتفظ بآخر 20 إعداد
+  }
+  await dbSave({
+    teacher_config:config,
+    config_archive:archive,
+    // نُبقي المرفقات والحالة كما هي (لا نصفّرها) — الـ id الثابت يعيد ربطها
+    lesson_files:(prev&&prev.lesson_files)||{},
+    plan_state:(prev&&prev.plan_state)||{},
+    arc_meta:(prev&&prev.arc_meta)||{},
+    cv_items:(prev&&prev.cv_items)||[],
+    cv_profile:(prev&&prev.cv_profile)||{},
+    arc_categories:(prev&&prev.arc_categories)||DEFAULT_CATS,
+    timetable_config:(prev&&prev.timetable_config)||{},
+    class_config:(prev&&prev.class_config)||{},
+    students:(prev&&prev.students)||{},
+    grades:(prev&&prev.grades)||{},
+    grade_types:(prev&&prev.grade_types)||[],
+    reminders_config:(prev&&prev.reminders_config)||{enabled:false,minutes:10}
+  });
   document.getElementById('setup-screen').classList.add('hidden');
   const data=await dbLoad();
   showApp(data);
@@ -2153,3 +2186,4 @@ let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
 </body>
+</html>
