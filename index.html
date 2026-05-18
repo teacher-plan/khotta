@@ -22,6 +22,9 @@ body.light-mode{
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;transition:background .3s,color .3s;}
+/* طبقة رموز المادة (watermark خفيف في الخلفية) */
+body::after{content:var(--subject-glyphs,'');position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:min(34vw,360px);font-weight:800;color:var(--subject-accent,var(--gold));opacity:.035;pointer-events:none;z-index:0;letter-spacing:.08em;white-space:pre-line;text-align:center;line-height:1.15;}
+body.light-mode::after{opacity:.045;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;z-index:0;}
  
 /* ══ AUTH ══ */
@@ -1446,6 +1449,83 @@ const DEFAULT_PERIODS=[
 ];
 const DEFAULT_DAYS=[{id:'sun',name:'أحد'},{id:'mon',name:'أثنين'},{id:'tue',name:'ثلاثاء'},{id:'wed',name:'أربعاء'},{id:'thu',name:'خميس'}];
  
+// ══ ثيمات المواد ══════════════════════════════════════
+// كل مادة فرعية → مادتها الأساسية
+const SUBJECT_BASE={
+  'رياضيات':'الرياضيات','الرياضيات الأساسية':'الرياضيات','الرياضيات المتقدمة':'الرياضيات',
+  'العلوم':'العلوم','أحياء':'العلوم','كيمياء':'العلوم','فيزياء':'العلوم','العلوم البيئية':'العلوم',
+  'ديني قيمي':'التربية الإسلامية','التربية الإسلامية':'التربية الإسلامية',
+  'الدراسات الاجتماعية':'الاجتماعيات','الجغرافيا الاقتصادية':'الاجتماعيات','الجغرافيا والتقنيات الحديثة':'الاجتماعيات','هذا وطني':'الاجتماعيات','العالم من حولي':'الاجتماعيات',
+  'لغتي الجميلة':'اللغة العربية',
+  'لغة إنجليزية':'اللغة الإنجليزية',
+  'تقنية المعلومات':'تقنية المعلومات',
+};
+// لكل مادة أساسية: ألوان الثيم (داكن/فاتح) + رمز الخلفية
+const SUBJECT_THEMES={
+  'الرياضيات':{accent:'#f0c060',accent2:'#d4a030',red:'#c0392b',red2:'#e74c3c',
+    dark:{bg:'#0f0a0a',surface:'#1a1010',card:'#1f1414',border:'#3a2020'},
+    light:{bg:'#f4f0eb',surface:'#fff',card:'#f9f6f2',border:'#d8ccc4'},
+    glyphs:'∑ π √\\n∞ ∫ ≠\\n× ÷ ²'},
+  'العلوم':{accent:'#2ecc71',accent2:'#27ae60',red:'#16a085',red2:'#1abc9c',
+    dark:{bg:'#08120c',surface:'#0e1f15',card:'#12281b',border:'#1d4030'},
+    light:{bg:'#eef6f0',surface:'#fff',card:'#f3faf5',border:'#c8e0d0'},
+    glyphs:'⚛ 🧪\\n🔬 🧬\\n⚗ 🌡'},
+  'التربية الإسلامية':{accent:'#1abc9c',accent2:'#16a085',red:'#27ae60',red2:'#2ecc71',
+    dark:{bg:'#07120f',surface:'#0d1f1a',card:'#112823',border:'#1c4038'},
+    light:{bg:'#edf5f3',surface:'#fff',card:'#f2faf8',border:'#c6ddd8'},
+    glyphs:'☪ ۞\\n﴾ ﴿\\n٭ ❁'},
+  'الاجتماعيات':{accent:'#e67e22',accent2:'#d35400',red:'#cd6133',red2:'#e58e26',
+    dark:{bg:'#120c06',surface:'#1f160d',card:'#281c11',border:'#40301c'},
+    light:{bg:'#f6f1ea',surface:'#fff',card:'#faf5ee',border:'#e0d2c0'},
+    glyphs:'🗺 🌍\\n🧭 ⛰\\n📜 🏛'},
+  'اللغة العربية':{accent:'#e74c3c',accent2:'#c0392b',red:'#a93226',red2:'#e74c3c',
+    dark:{bg:'#120808',surface:'#1f0f0f',card:'#281313',border:'#401e1e'},
+    light:{bg:'#f6edec',surface:'#fff',card:'#faf2f1',border:'#e0c8c6'},
+    glyphs:'ض ص\\nخ ع\\n؏ ﻷ'},
+  'اللغة الإنجليزية':{accent:'#9b59b6',accent2:'#8e44ad',red:'#7d3c98',red2:'#a569bd',
+    dark:{bg:'#0e0812',surface:'#180f1f',card:'#1f1428',border:'#321e40'},
+    light:{bg:'#f2edf6',surface:'#fff',card:'#f7f2fa',border:'#d8c6e0'},
+    glyphs:'A B C\\nX Y Z\\na b c'},
+  'تقنية المعلومات':{accent:'#3498db',accent2:'#2980b9',red:'#2471a3',red2:'#5dade2',
+    dark:{bg:'#070d12',surface:'#0d161f',card:'#111d28',border:'#1c3040'},
+    light:{bg:'#ecf2f6',surface:'#fff',card:'#f1f6fa',border:'#c6d6e0'},
+    glyphs:'< / >\\n0 1 0\\n{ } ;'},
+};
+function detectBaseSubject(cfg){
+  if(!cfg||!cfg.grades||!cfg.grades.length)return null;
+  // أكثر مادة أساسية تكراراً بين صفوف المعلم
+  const count={};
+  cfg.grades.forEach(g=>{
+    const base=SUBJECT_BASE[g.subject]||g.subject;
+    count[base]=(count[base]||0)+1;
+  });
+  let best=null,max=0;
+  Object.keys(count).forEach(b=>{if(count[b]>max){max=count[b];best=b;}});
+  return best;
+}
+function applySubjectTheme(cfg){
+  const base=detectBaseSubject(cfg);
+  const t=SUBJECT_THEMES[base];
+  const root=document.documentElement;
+  const isLight=document.body.classList.contains('light-mode');
+  if(!t){
+    // افتراضي = ثيم الرياضيات (الذهبي)، نظّف أي تخصيص
+    ['--theme-bg','--theme-surface','--theme-card','--theme-border','--theme-gold','--theme-gold2','--theme-red','--theme-red2','--subject-glyphs','--subject-accent'].forEach(v=>root.style.removeProperty(v));
+    return;
+  }
+  const pal=isLight?t.light:t.dark;
+  root.style.setProperty('--bg',pal.bg);
+  root.style.setProperty('--surface',pal.surface);
+  root.style.setProperty('--card',pal.card);
+  root.style.setProperty('--border',pal.border);
+  root.style.setProperty('--gold',t.accent);
+  root.style.setProperty('--gold2',t.accent2);
+  root.style.setProperty('--red',t.red);
+  root.style.setProperty('--red2',t.red2);
+  root.style.setProperty('--subject-glyphs',`"${t.glyphs}"`);
+  root.style.setProperty('--subject-accent',t.accent);
+}
+ 
 function showApp(data){
   document.getElementById('main-nav').style.display='flex';
   document.querySelectorAll('.page')[0].classList.add('active');
@@ -1485,6 +1565,7 @@ function showApp(data){
   }
  
   updateTeacherBanner();
+  applySubjectTheme(teacherConfig);
   renderTimetable();
   renderLegend();
   buildTracker();
@@ -1508,7 +1589,7 @@ function updateTeacherBanner(){
  
 // ══ THEME ═════════════════════════════════════════════
 let isDark=true;
-function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light-mode',!isDark);document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';localStorage.setItem('theme',isDark?'dark':'light');}
+function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light-mode',!isDark);document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';localStorage.setItem('theme',isDark?'dark':'light');if(typeof teacherConfig!=='undefined'&&teacherConfig)applySubjectTheme(teacherConfig);}
 (function(){const t=localStorage.getItem('theme');if(t==='light'){isDark=false;document.body.classList.add('light-mode');document.getElementById('theme-btn').textContent='☀️';}})();
  
 // ══ NAV ════════════════════════════════════════════════
@@ -2180,3 +2261,4 @@ let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
 </body>
+</html>
