@@ -1202,7 +1202,8 @@ function showSetupScreen(){
 let setupSemester='';
 let setupSubjects=[];          // المواد المختارة
 let setupActiveSubject='';     // تبويب المادة النشط في خطوة 2
-let curriculumBySubject={};    // {subject: [rows]}
+let curriculumBySubject={};    // {subject: [rows]} المحتوى الفعلي
+let subjectGradesMap={};       // {subject: Set(grades)} هيكل المواد لكل صف
 // لكل مادة: صفوفها وشعبها → setupData[subject] = {grades:[], classes:{gradeNum:[...]}}
 let setupData={};
  
@@ -1219,12 +1220,27 @@ async function loadSubjectsForSemester(){
   card.style.display='block';
   grid.innerHTML='<p style="color:var(--muted)">جارٍ تحميل المواد...</p>';
   try{
-    const {data,error}=await sb.from('curriculum').select('subject').eq('semester',setupSemester);
-    if(error||!data||!data.length){
-      grid.innerHTML='<p style="color:var(--muted)">لا توجد مواد مُجهّزة لهذا الفصل بعد. تواصل مع المشرف.</p>';
-      return;
+    // اقرأ هيكل المواد من جدول subjects (المرحلة 1)
+    let rows=[];
+    const r1=await sb.from('subjects').select('subject,grade').eq('semester',setupSemester);
+    if(!r1.error&&r1.data&&r1.data.length){
+      rows=r1.data;
+    }else{
+      // احتياط: لو جدول subjects فاضي، استنتج من المحتوى الموجود
+      const r2=await sb.from('curriculum').select('subject,grade').eq('semester',setupSemester);
+      if(r2.error||!r2.data||!r2.data.length){
+        grid.innerHTML='<p style="color:var(--muted)">لا توجد مواد مُجهّزة لهذا الفصل بعد. تواصل مع المشرف.</p>';
+        return;
+      }
+      rows=r2.data;
     }
-    const subjects=[...new Set(data.map(r=>r.subject))].sort();
+    // خريطة: لكل مادة → صفوفها المتاحة
+    subjectGradesMap={};
+    rows.forEach(r=>{
+      if(!subjectGradesMap[r.subject])subjectGradesMap[r.subject]=new Set();
+      subjectGradesMap[r.subject].add(r.grade);
+    });
+    const subjects=Object.keys(subjectGradesMap).sort();
     grid.innerHTML=subjects.map(s=>`<button class="class-chip-btn" data-subj="${s.replace(/"/g,'&quot;')}" onclick="toggleSubject('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
   }catch(e){grid.innerHTML='<p style="color:var(--muted)">تعذّر تحميل المواد</p>';}
 }
@@ -1236,14 +1252,13 @@ function toggleSubject(subj,btn){
 async function goToStep2(){
   if(!setupSemester){toast('❌ اختر الفصل الدراسي',true);return;}
   if(!setupSubjects.length){toast('❌ اختر مادة واحدة على الأقل',true);return;}
-  // حمّل فهرس كل مادة مختارة
+  // حمّل محتوى كل مادة مختارة (إن وُجد — المواد بلا محتوى مسموحة)
   try{
     for(const subj of setupSubjects){
       if(curriculumBySubject[subj])continue;
-      const {data,error}=await sb.from('curriculum').select('*')
+      const {data}=await sb.from('curriculum').select('*')
         .eq('semester',setupSemester).eq('subject',subj).order('sort');
-      if(error||!data||!data.length){toast('❌ لا توجد دروس مُجهّزة للمادة: '+subj,true);return;}
-      curriculumBySubject[subj]=data;
+      curriculumBySubject[subj]=data||[]; // فاضي = محتوى لم يُرفع بعد
     }
   }catch(e){toast('❌ تعذّر تحميل الدروس',true);return;}
   document.getElementById('setup-step-1').style.display='none';
@@ -1269,10 +1284,21 @@ function switchSubjectTab(s){
 function buildSubjectSetupBody(){
   const s=setupActiveSubject;
   const cur=curriculumBySubject[s]||[];
-  const grades=[...new Set(cur.map(r=>r.grade))].sort((a,b)=>a-b);
+  const hasContent=cur.length>0;
+  // الصفوف المتاحة: من هيكل المواد (subjects) إن وُجد، وإلا من المحتوى
+  let grades;
+  if(subjectGradesMap[s]&&subjectGradesMap[s].size){
+    grades=[...subjectGradesMap[s]].sort((a,b)=>a-b);
+  }else{
+    grades=[...new Set(cur.map(r=>r.grade))].sort((a,b)=>a-b);
+  }
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
   const sel=setupData[s]||{grades:[],classes:{}};
-  let html=`<div style="margin:10px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">📖 ${s} — اختر الصفوف:</div>`;
+  let html='';
+  if(!hasContent){
+    html+=`<div style="background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:13px;color:var(--gold);font-weight:700">📚 محتوى مادة "${s}" سيتم رفعه قريباً<div style="font-weight:400;font-size:12px;color:var(--muted);margin-top:5px">يمكنك اختيار الصفوف والشعب الآن، وستظهر الدروس تلقائياً عند رفع المحتوى</div></div>`;
+  }
+  html+=`<div style="margin:10px 0 6px;font-weight:700;font-size:13px;color:var(--gold)">📖 ${s} — اختر الصفوف:</div>`;
   html+=`<div class="grades-grid">`+grades.map(g=>
     `<button class="class-chip-btn ${sel.grades.includes(g)?'sel':''}" onclick="toggleSubjGrade(${g},this)">الصف ${arabicNums[g-1]}</button>`
   ).join('')+`</div>`;
@@ -1323,8 +1349,12 @@ function updateLessonsPreview(){
     const cur=curriculumBySubject[s]||[];
     d.grades.forEach(g=>{
       const rows=cur.filter(r=>r.grade===g);
-      const units=[...new Set(rows.map(r=>r.unit))].length;
-      lines.push(`✅ ${s} — الصف ${arabicNums[g-1]}: ${rows.length} درس / ${units} وحدة`);
+      if(rows.length){
+        const units=[...new Set(rows.map(r=>r.unit))].length;
+        lines.push(`✅ ${s} — الصف ${arabicNums[g-1]}: ${rows.length} درس / ${units} وحدة`);
+      }else{
+        lines.push(`🕓 ${s} — الصف ${arabicNums[g-1]}: المحتوى قيد الإعداد`);
+      }
     });
   });
   if(!lines.length){card.style.display='none';return;}
@@ -1621,6 +1651,10 @@ function buildTracker(){
   const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
   document.getElementById('tracker-title').textContent=`${grade.subject||teacherConfig.subject||'الخطة'} — الصف ${arabicNums[(grade.num||1)-1]}`;
   const sectionsEl=document.getElementById('sections');sectionsEl.innerHTML='';
+  if(!grade.units||!grade.units.length){
+    sectionsEl.innerHTML=`<div style="text-align:center;padding:50px 24px;color:var(--muted)"><div style="font-size:52px;margin-bottom:14px">📚</div><div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px">محتوى هذه المادة قيد الإعداد</div><div style="font-size:13px;line-height:1.7">سيتم رفع دروس "${grade.subject||''}" قريباً.<br/>ستظهر تلقائياً هنا فور توفّرها — بدون أي إعداد إضافي منك.</div></div>`;
+    return;
+  }
   grade.units.forEach((unit,ui)=>{
     const secEl=document.createElement('div');secEl.className='section';secEl.id='sec-u'+ui;
     const doneCount=unit.lessons.filter(l=>get(l.id).done).length;
