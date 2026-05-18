@@ -603,8 +603,6 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
   </div>
   <div class="user-menu-item" onclick="renameTeacher()">✏️ تغيير اسم الترحيب</div>
   <div class="user-menu-item" onclick="reopenSetup()">⚙️ إعادة إعداد الصفوف والدروس</div>
-  <div class="user-menu-item" onclick="exportBackup()">⬇️ تصدير نسخة احتياطية</div>
-  <div class="user-menu-item" onclick="importBackup()">⬆️ استيراد نسخة احتياطية</div>
   <div class="user-menu-item danger" onclick="resetAllData()">🗑️ حذف كل البيانات</div>
 </div>
  
@@ -726,13 +724,13 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
  
 <!-- ══ ARCHIVE ══ -->
 <div class="page" id="page-archive"><div class="wrap">
-  <div class="page-header"><div class="tag">🗂️ الأرشيف</div><h1>أرشيف الفصل الدراسي</h1><p>ملفات محفوظة على هذا الجهاز 💾</p></div>
+  <div class="page-header"><div class="tag">🗂️ الأرشيف</div><h1>أرشيف الفصل الدراسي</h1><p>محفوظ سحابياً ☁️</p></div>
   <div class="storage-bar-wrap">
-    <span class="storage-label">📁 تخزين الجهاز</span>
+    <span class="storage-label">☁️ التخزين السحابي</span>
     <div class="storage-track"><div class="storage-fill" id="stor-fill" style="width:0%"></div></div>
     <span class="storage-pct" id="stor-pct">جاري...</span>
     <span class="sb-badge" id="drive-badge" style="display:none">✅ Drive</span>
-    <span style="font-size:11px;color:var(--muted);width:100%">الملفات تُحفظ داخل متصفحك على هذا الجهاز · صدّر نسخة احتياطية بانتظام</span>
+    <span style="font-size:11px;color:var(--muted);width:100%">بياناتك محفوظة تلقائياً في حسابك السحابي · المرفقات في Google Drive</span>
   </div>
   <!-- المستوى 1: اختيار الصف -->
   <div class="arc-grade-select" id="arc-grade-select">
@@ -763,7 +761,7 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
         <input type="file" accept="application/pdf,image/*" onchange="handleInnerFile(event)"/>
         <div class="dz-icon">📄</div>
         <div class="dz-text">اسحب ملف أو اضغط للاختيار (PDF أو صور)</div>
-        <div class="dz-sub">💾 يُحفظ على جهازك · حتى 8 MB للملف</div>
+        <div class="dz-sub">☁️ يُحفظ على Google Drive · حتى 500 ميجا للملف</div>
         <div class="upload-prog" id="inner-prog"><div class="upload-prog-fill" id="inner-pf"></div></div>
       </div>
     </div>
@@ -839,11 +837,11 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
     <label>العنوان *</label><input id="cv-title-inp" type="text" placeholder="اسم الإنجاز أو المبادرة"/>
     <label>التاريخ</label><input id="cv-date" type="date"/>
     <label>الوصف</label><textarea id="cv-desc" placeholder="اكتب تفاصيل الإنجاز..."></textarea>
-    <label>إرفاق صور أو ملفات (حتى 8 MB)</label>
+    <label>إرفاق صور أو ملفات أو فيديو (حتى 500 ميجا للملف)</label>
     <div style="border:1.5px dashed var(--border);border-radius:9px;padding:12px;text-align:center;position:relative;" id="cv-drop">
-      <input type="file" accept="image/*,application/pdf" multiple id="cv-files-input" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
+      <input type="file" accept="image/*,application/pdf,video/*" multiple id="cv-files-input" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
       <div style="font-size:20px;margin-bottom:4px;">📎</div>
-      <div style="font-size:11px;color:var(--muted);">صور أو PDF — يمكن اختيار أكثر من ملف</div>
+      <div style="font-size:11px;color:var(--muted);">صور · PDF · فيديو — يمكن اختيار أكثر من ملف</div>
     </div>
     <div id="cv-files-preview" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;"></div>
     <div class="modal-btns">
@@ -1065,41 +1063,7 @@ async function getDownloadUrl(fileObj){
   return'';
 }
  
-// ══ تصدير / استيراد نسخة احتياطية ══════════════════════
-async function exportBackup(){
-  try{
-    const d=await dbLoad()||{};
-    const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    const dt=new Date().toISOString().slice(0,10);
-    a.href=url;a.download=`نسخة-خطتي-الفصلية-${dt}.json`;
-    document.body.appendChild(a);a.click();a.remove();
-    URL.revokeObjectURL(url);
-    toast('✅ تم تصدير النسخة الاحتياطية','ok');
-  }catch(e){toast('❌ تعذّر التصدير',true);}
-}
-function importBackup(){
-  const inp=document.createElement('input');
-  inp.type='file';inp.accept='application/json,.json';
-  inp.onchange=e=>{
-    const file=e.target.files[0];if(!file)return;
-    const r=new FileReader();
-    r.onload=async()=>{
-      try{
-        const obj=JSON.parse(r.result);
-        if(!obj||typeof obj!=='object'){toast('❌ ملف غير صالح',true);return;}
-        if(!confirm('سيتم استبدال كل البيانات الحالية بهذه النسخة. متابعة؟'))return;
-        const {error}=await sb.from('profiles').upsert({id:currentUser.id,data:obj,updated_at:new Date().toISOString()});
-        if(error){toast('❌ تعذّر الاستيراد',true);return;}
-        toast('✅ تم الاستيراد، جاري إعادة التحميل...','ok');
-        setTimeout(()=>location.reload(),900);
-      }catch(err){toast('❌ تعذّر قراءة الملف',true);}
-    };
-    r.readAsText(file);
-  };
-  inp.click();
-}
+// ══ حذف كل البيانات ══════════════════════════════════
 async function resetAllData(){
   if(!confirm('⚠️ سيتم حذف جميع بياناتك نهائياً من حسابك السحابي. هل أنت متأكد؟'))return;
   if(!confirm('تأكيد أخير: لا يمكن التراجع. متابعة الحذف؟'))return;
@@ -1131,7 +1095,7 @@ function showUserBadge(){
   if(imgEl)imgEl.src=`data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="%23c0392b"/><text x="20" y="27" font-size="18" text-anchor="middle" fill="white">D</text></svg>')}`;
   const ubn=document.getElementById('ub-name');if(ubn)ubn.textContent=displayName||'حسابي';
   const umn=document.getElementById('um-name');if(umn)umn.textContent=displayName||'حسابي';
-  const ume=document.getElementById('um-email');if(ume)ume.textContent='محفوظ على هذا الجهاز';
+  const ume=document.getElementById('um-email');if(ume)ume.textContent='محفوظ سحابياً ☁️';
   const tb=document.getElementById('teacher-name-banner');if(tb)tb.textContent=displayName||'الأستاذ';
 }
 function toggleUserMenu(e){e.stopPropagation();document.getElementById('user-menu').classList.toggle('show');}
@@ -1669,7 +1633,7 @@ function buildTracker(){
       const chips=grade.classes.map(cls=>{const checked=s.classes[cls.id];const col=cls.color;const style=checked?`border-color:${col};background:${hexToRgba(col,.12)};`:'';const chipCheckStyle=checked?`background:${col};border-color:${col};color:#fff;`:'';return`<div class="class-chip ${checked?'checked':''}" data-class="${cls.id}" style="${style}"><div class="chip-check" style="${chipCheckStyle}">✓</div><span class="chip-label" style="color:${col}">${cls.name}</span></div>`;}).join('');
       const lf=lessonFiles[lesson.id]||[];
       const filesHtml=lf.map(f=>`<div class="lesson-file-item"><span>${f.type&&f.type.startsWith('image/')?'🖼️':'📄'}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="${f.type&&f.type.startsWith('image/')?`viewImg('${f.path}')`:`openPdf('${f.path}','${f.name.replace(/'/g,"\\'")}')`}">👁️</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="deleteLessonFile('${lesson.id}','${f.id}','${f.path}')">🗑️</button></div>`).join('');
-      card.innerHTML=`<div class="lesson-top"><div class="chk">✓</div><div class="lesson-info"><div class="lesson-name">${lesson.name}</div><div class="lesson-unit">${unit.name}</div></div></div><div class="classes-row" onclick="event.stopPropagation()"><span class="classes-label">🏫 الشعب:</span>${chips}</div><div class="notes-row" onclick="event.stopPropagation()"><span class="notes-icon">📝</span><textarea class="notes-input" rows="1" placeholder="ملاحظاتك هنا..." data-f="notes">${s.notes||''}</textarea></div><div class="lesson-files-row" onclick="event.stopPropagation()"><div class="lesson-files-label">📎 ملفات الدرس:<label class="lesson-upload-btn" style="margin-right:auto"><input type="file" accept="application/pdf,image/*" onchange="uploadLessonFile(event,'${lesson.id}')"/>➕ إرفاق</label></div><div class="lesson-files-list" id="lfl-${lesson.id}">${filesHtml}</div></div>`;
+      card.innerHTML=`<div class="lesson-top"><div class="chk">✓</div><div class="lesson-info"><div class="lesson-name">${lesson.name}</div><div class="lesson-unit">${unit.name}</div></div></div><div class="classes-row" onclick="event.stopPropagation()"><span class="classes-label">🏫 الشعب:</span>${chips}</div><div class="notes-row" onclick="event.stopPropagation()"><span class="notes-icon">📝</span><textarea class="notes-input" rows="1" placeholder="ملاحظاتك هنا..." data-f="notes">${s.notes||''}</textarea></div><div class="notes-row" onclick="event.stopPropagation()"><span class="notes-icon">🎬</span><input class="notes-input" type="url" inputmode="url" placeholder="رابط شرح الدرس (يوتيوب...)" data-f="videoUrl" value="${(s.videoUrl||'').replace(/"/g,'&quot;')}"/><button class="arc-btn" style="padding:5px 10px;font-size:11px;flex-shrink:0" onclick="openVideoLink('${lesson.id}')">▶️ فتح</button></div><div class="lesson-files-row" onclick="event.stopPropagation()"><div class="lesson-files-label">📎 ملفات الدرس:<label class="lesson-upload-btn" style="margin-right:auto"><input type="file" accept="application/pdf,image/*" onchange="uploadLessonFile(event,'${lesson.id}')"/>➕ إرفاق</label></div><div class="lesson-files-list" id="lfl-${lesson.id}">${filesHtml}</div></div>`;
       card.querySelector('.lesson-top').addEventListener('click',()=>{const cur=get(lesson.id);cur.done=!cur.done;state[lesson.id]=cur;card.classList.toggle('done',cur.done);toast(cur.done?'✅ درس منجز':'↩️ إلغاء',cur.done?'ok':false);applyFilter();update();scheduleSave();});
       card.querySelectorAll('.class-chip').forEach(chip=>{chip.addEventListener('click',()=>{const cls=chip.dataset.class;const cur=get(lesson.id);if(!cur.classes)cur.classes={};cur.classes[cls]=!cur.classes[cls];state[lesson.id]=cur;const col=classConfig[cls]?.color||'var(--gold)';chip.classList.toggle('checked',cur.classes[cls]);if(cur.classes[cls]){chip.style.borderColor=col;chip.style.background=hexToRgba(col,.12);chip.querySelector('.chip-check').style.cssText=`background:${col};border-color:${col};color:#fff;`;}else{chip.style.borderColor='';chip.style.background='';chip.querySelector('.chip-check').style.cssText='';}
         // Auto-complete: if all classes checked → mark done
@@ -1683,9 +1647,20 @@ function buildTracker(){
   });
 }
  
+function openVideoLink(lessonId){
+  const card=document.querySelector(`.lesson[data-id="${lessonId}"]`);
+  const inp=card?card.querySelector('[data-f="videoUrl"]'):null;
+  let url=((inp?inp.value:'')||get(lessonId).videoUrl||'').trim();
+  if(!url){toast('❌ لا يوجد رابط — الصقه أولاً',true);return;}
+  // احفظ القيمة الحالية قبل الفتح
+  const cur=get(lessonId);cur.videoUrl=inp?inp.value.trim():url;state[lessonId]=cur;scheduleSave();
+  if(!/^https?:\/\//i.test(url))url='https://'+url;
+  window.open(url,'_blank','noopener');
+}
+ 
 async function uploadLessonFile(e,lessonId){
   const file=e.target.files[0];e.target.value='';if(!file)return;
-  if(file.size>MAX_FILE_SIZE){toast('❌ الحد الأقصى 8 MB',true);return;}
+  if(file.size>MAX_FILE_SIZE){toast('❌ الحد الأقصى 500 ميجا',true);return;}
   const fileName=`[درس-${lessonId}] ${file.name}`;
   toast('⬆️ جاري الرفع على Drive...');
   const result=await driveUpload(file,fileName);
@@ -1797,19 +1772,17 @@ async function loadArchive(){
   document.getElementById('arc-inner').classList.remove('active');
   document.getElementById('arc-grade-select').style.display='block';
   buildGradeSelect();
-  // عرض مساحة التخزين داخل المتصفح
-  const quota=await driveGetStorageInfo();
-  if(quota){
-    const used=parseInt(quota.usage||0);
-    const total=parseInt(quota.limit||5242880);
-    const pct=Math.min(100,(used/total)*100).toFixed(1);
-    document.getElementById('stor-fill').style.width=pct+'%';
-    document.getElementById('stor-pct').textContent=fmtSize(used)+' / ~'+fmtSize(total);
-    const badge=document.getElementById('drive-badge');if(badge){badge.style.display='inline-flex';badge.textContent='💾 محلي';}
-  } else {
-    document.getElementById('stor-pct').textContent='التخزين على Google Drive ☁️';
-    const badge=document.getElementById('drive-badge');if(badge){badge.style.display='inline-flex';badge.textContent='✅ Drive';}
-  }
+  // احسب مجموع أحجام مرفقات التطبيق المرفوعة على Drive
+  let totalBytes=0,fileCount=0;
+  Object.values(lessonFiles||{}).forEach(arr=>{
+    (arr||[]).forEach(f=>{totalBytes+=(f.size||0);fileCount++;});
+  });
+  const FREE_QUOTA=15*1024*1024*1024; // 15GB سعة Google المجانية
+  const pct=Math.min(100,(totalBytes/FREE_QUOTA)*100);
+  const pctTxt=pct<0.1?'< 0.1':pct.toFixed(1);
+  document.getElementById('stor-fill').style.width=Math.max(pct,1)+'%';
+  document.getElementById('stor-pct').textContent=`${fmtSize(totalBytes)} من 15GB · ${fileCount} ملف`;
+  const badge=document.getElementById('drive-badge');if(badge){badge.style.display='inline-flex';badge.textContent='✅ Drive';}
 }
 function openArcInner(catId){currentInnerCat=catId;const cat=arcCategories.find(c=>c.id===catId);const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];const gLabel=currentArchiveGrade!=null?` — الصف ${arabicNums[currentArchiveGrade-1]||currentArchiveGrade}`:'';document.getElementById('inner-icon').textContent=cat.icon;document.getElementById('inner-title').textContent=cat.title+gLabel;document.getElementById('arc-main').classList.add('hidden');document.getElementById('arc-inner').classList.add('active');renderInnerItems(catId);}
 function closeArcInner(){currentInnerCat=null;document.getElementById('arc-main').classList.remove('hidden');document.getElementById('arc-inner').classList.remove('active');}
@@ -1844,7 +1817,7 @@ function downloadDriveFile(url,name){
 }
 function handleInnerFile(e){const f=e.target.files[0];if(f)processFile(f,currentInnerCat);e.target.value='';}
 function processFile(file,catId){
-  if(file.size>MAX_FILE_SIZE){toast('❌ الحد الأقصى 8 MB',true);return;}
+  if(file.size>MAX_FILE_SIZE){toast('❌ الحد الأقصى 500 ميجا',true);return;}
   pendingFile={file,name:file.name.replace(/\.[^/.]+$/,''),size:file.size};activeCat=catId;
   const cat=arcCategories.find(c=>c.id===catId);
   document.getElementById('modal-title').textContent=(file.type.startsWith('image/')?'🖼️':'📄')+' '+cat.title;
@@ -2090,7 +2063,7 @@ function saveCvProfile(){
 let cvPendingFiles=[];
 function openCvModal(){document.getElementById('cv-title-inp').value='';document.getElementById('cv-date').value=new Date().toISOString().split('T')[0];document.getElementById('cv-desc').value='';document.getElementById('cv-type').value='achievement';document.getElementById('cv-files-preview').innerHTML='';cvPendingFiles=[];document.getElementById('cv-modal-bg').classList.remove('hidden');}
 function closeCvModal(){document.getElementById('cv-modal-bg').classList.add('hidden');cvPendingFiles=[];}
-document.getElementById('cv-files-input').addEventListener('change',e=>{Array.from(e.target.files).forEach(f=>{if(f.size>MAX_FILE_SIZE){toast('❌ ملف أكبر من 8 MB',true);return;}cvPendingFiles.push(f);});updateCvPreview();e.target.value='';});
+document.getElementById('cv-files-input').addEventListener('change',e=>{Array.from(e.target.files).forEach(f=>{if(f.size>MAX_FILE_SIZE){toast('❌ ملف أكبر من 500 ميجا',true);return;}cvPendingFiles.push(f);});updateCvPreview();e.target.value='';});
 function updateCvPreview(){const preview=document.getElementById('cv-files-preview');preview.innerHTML='';cvPendingFiles.forEach((f,i)=>{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:12px;';row.innerHTML=`<span>${f.type.startsWith('image/')?'🖼️':'📄'}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${f.name}</span><span style="color:var(--muted)">${fmtSize(f.size)}</span><button onclick="removeCvFile(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;">✕</button>`;preview.appendChild(row);});}
 function removeCvFile(i){cvPendingFiles.splice(i,1);updateCvPreview();}
 async function saveCvItem(){
