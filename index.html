@@ -1,3 +1,6 @@
+
+Copy
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -20,6 +23,63 @@ body.light-mode{
   --grid-color:rgba(192,57,43,.04);
   --gold:#b8860b;--gold2:#9a7010;
 }
+/* ══ MATH IDENTITY ══════════════════════════════════════ */
+/* طبقة الجسيمات الرياضية المتحركة */
+#math-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s ease;}
+body.math-mode #math-canvas{opacity:1;}
+ 
+/* شريط العنوان المزخرف بالرياضيات */
+body.math-mode .nav{border-bottom-color:rgba(240,192,96,.25);box-shadow:0 1px 0 rgba(240,192,96,.08);}
+ 
+/* بطاقات الصفوف — خط علوي ذهبي مائل رياضي */
+body.math-mode .cs-card{border-top:3px solid transparent;background-image:linear-gradient(var(--card),var(--card)),linear-gradient(90deg,var(--gold),var(--red2),var(--gold));background-origin:border-box;background-clip:padding-box,border-box;}
+ 
+/* حلقة التقدم الكلي — توهج رياضي */
+body.math-mode .ring svg .fill{filter:drop-shadow(0 0 6px rgba(240,192,96,.5));}
+ 
+/* بطاقة الدرس — إطار رياضي خفيف */
+body.math-mode .lesson{position:relative;overflow:hidden;}
+body.math-mode .lesson::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(240,192,96,.03) 0%,transparent 60%);pointer-events:none;}
+body.math-mode .lesson.done::before{background:linear-gradient(135deg,rgba(240,192,96,.07) 0%,rgba(192,57,43,.04) 100%);}
+ 
+/* ترويسة الصفحة — رمز رياضي خلف العنوان */
+body.math-mode .page-header h1::after{content:'∑';position:absolute;left:-32px;top:50%;transform:translateY(-50%);font-size:0.55em;color:var(--gold);opacity:.15;font-family:'Tajawal',sans-serif;pointer-events:none;}
+body.math-mode .page-header h1{position:relative;}
+ 
+/* كروت الإحصائيات — حدود ذهبية متدرجة */
+body.math-mode .stat-card{border-image:linear-gradient(135deg,rgba(240,192,96,.4),rgba(192,57,43,.2),rgba(240,192,96,.4)) 1;}
+ 
+/* شريط NAV — زر نشط بتوهج */
+body.math-mode .nav-btn.active{box-shadow:0 0 12px rgba(240,192,96,.25),0 0 4px rgba(192,57,43,.2);}
+ 
+/* ══ رمز الإشعاع الرياضي خلف الجدول ══ */
+body.math-mode #page-timetable .teacher-banner .teacher-name{text-shadow:0 0 24px rgba(240,192,96,.3);}
+ 
+/* ══ بطاقة الوحدة — خط يسار ذهبي ══ */
+body.math-mode .section-card{border-right:3px solid var(--gold);border-radius:0 16px 16px 0;}
+ 
+/* ══ أرقام الإحصاء — توهج ══ */
+body.math-mode .stat-card-value,body.math-mode .pct{text-shadow:0 0 14px rgba(240,192,96,.35);}
+ 
+/* ══ الطابع الرياضي على شاشة الإعداد ══ */
+body.math-mode .setup-screen .setup-header h1{text-shadow:0 0 30px rgba(240,192,96,.2);}
+body.math-mode .setup-screen .setup-card{border-color:rgba(240,192,96,.2);}
+body.math-mode .setup-screen .class-chip-btn.sel{box-shadow:0 0 10px rgba(240,192,96,.2);}
+ 
+/* ══ رموز رياضية طافية ══ */
+.math-float{position:fixed;pointer-events:none;z-index:0;font-family:'Tajawal',sans-serif;font-weight:800;color:var(--gold);opacity:0;transition:opacity 1s;user-select:none;animation:mathFloat linear infinite;}
+body.math-mode .math-float{opacity:1;}
+@keyframes mathFloat{0%{transform:translateY(0) rotate(0deg);opacity:0;}10%{opacity:var(--fo,0.06);}90%{opacity:var(--fo,0.06);}100%{transform:translateY(-100vh) rotate(var(--rot,20deg));opacity:0;}}
+ 
+/* ══ شعار المادة في شاشة الدخول ══ */
+body.math-mode .auth-logo{filter:drop-shadow(0 0 10px rgba(240,192,96,.4));}
+body.math-mode .auth-title{text-shadow:0 0 20px rgba(240,192,96,.2);}
+ 
+/* ══ Tooltip معادلة رياضية ══ */
+#math-formula-tip{position:fixed;bottom:28px;right:20px;background:var(--surface);border:1px solid rgba(240,192,96,.3);border-radius:14px;padding:10px 16px;font-family:'Tajawal',sans-serif;font-size:18px;color:var(--gold);opacity:0;transform:translateY(10px);transition:opacity .6s,transform .6s;pointer-events:none;z-index:5;text-align:center;min-width:120px;box-shadow:0 4px 20px rgba(0,0,0,.3);}
+#math-formula-tip.show{opacity:1;transform:translateY(0);}
+#math-formula-tip .mtip-label{font-size:10px;color:var(--muted);display:block;margin-top:2px;font-family:'Cairo',sans-serif;}
+ 
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;transition:background .3s,color .3s;}
 /* طبقة رموز المادة (watermark خفيف في الخلفية) */
@@ -508,6 +568,10 @@ body.light-mode .cv-files{background:rgba(0,0,0,.04);}
 </style>
 </head>
 <body>
+ 
+<!-- Math Identity Layer -->
+<canvas id="math-canvas"></canvas>
+<div id="math-formula-tip"><span id="mtip-formula">a² + b² = c²</span><span class="mtip-label" id="mtip-label">مبرهنة فيثاغورس</span></div>
  
 <div class="sync-bar"><div class="sync-bar-fill" id="sync-bar-fill"></div></div>
 <div class="sync-status" id="sync-status"><div class="sync-dot"></div><span id="sync-text">جاري المزامنة...</span></div>
@@ -1509,8 +1573,9 @@ function applySubjectTheme(cfg){
   const root=document.documentElement;
   const isLight=document.body.classList.contains('light-mode');
   if(!t){
-    // افتراضي = ثيم الرياضيات (الذهبي)، نظّف أي تخصيص
     ['--theme-bg','--theme-surface','--theme-card','--theme-border','--theme-gold','--theme-gold2','--theme-red','--theme-red2','--subject-glyphs','--subject-accent'].forEach(v=>root.style.removeProperty(v));
+    document.body.classList.remove('math-mode');
+    stopMathCanvas();
     return;
   }
   const pal=isLight?t.light:t.dark;
@@ -1524,6 +1589,148 @@ function applySubjectTheme(cfg){
   root.style.setProperty('--red2',t.red2);
   root.style.setProperty('--subject-glyphs',`"${t.glyphs}"`);
   root.style.setProperty('--subject-accent',t.accent);
+  // ══ هوية الرياضيات ══
+  if(base==='الرياضيات'){
+    document.body.classList.add('math-mode');
+    startMathCanvas();
+    spawnMathFloaters();
+    startMathFormulaTips();
+  } else {
+    document.body.classList.remove('math-mode');
+    stopMathCanvas();
+  }
+}
+ 
+// ══ Math Canvas — جسيمات رياضية متحركة ══════════════════
+let mathCanvasRAF=null;
+function startMathCanvas(){
+  const canvas=document.getElementById('math-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const SYMBOLS=['∑','∫','π','∞','√','Δ','∂','∇','≈','≠','±','×','÷','α','β','θ','λ','μ','φ','ω'];
+  let W,H,particles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+  function mkParticle(){
+    return{
+      x:Math.random()*W,y:Math.random()*H,
+      vx:(Math.random()-.5)*.4,vy:-(Math.random()*.6+.2),
+      sym:SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)],
+      size:Math.random()*18+10,
+      alpha:Math.random()*.07+.02,
+      life:Math.random()*400+200,
+      age:0,
+      rot:Math.random()*Math.PI*2,
+      rotV:(Math.random()-.5)*.01
+    };
+  }
+  for(let i=0;i<55;i++){const p=mkParticle();p.age=Math.random()*p.life;particles.push(p);}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const isLight=document.body.classList.contains('light-mode');
+    const color=isLight?'70,40,0':'240,192,96';
+    particles.forEach((p,i)=>{
+      p.age++;p.x+=p.vx;p.y+=p.vy;p.rot+=p.rotV;
+      if(p.age>=p.life){particles[i]=mkParticle();return;}
+      const fade=Math.min(p.age/40,1)*Math.min((p.life-p.age)/40,1);
+      ctx.save();
+      ctx.globalAlpha=p.alpha*fade;
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot);
+      ctx.font=`800 ${p.size}px 'Tajawal',sans-serif`;
+      ctx.fillStyle=`rgba(${color},1)`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(p.sym,0,0);
+      ctx.restore();
+    });
+    // خطوط شبكة رياضية بسيطة — محورا إحداثيات خفيفان
+    const cx=W/2,cy=H/2;
+    ctx.save();
+    ctx.globalAlpha=isLight?.04:.03;
+    ctx.strokeStyle=`rgba(${color},1)`;
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+    // رسم منحنى جيبي خفي
+    ctx.globalAlpha=isLight?.06:.04;
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=2){
+      const y=cy+Math.sin((x/W)*Math.PI*4)*60;
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.restore();
+    mathCanvasRAF=requestAnimationFrame(draw);
+  }
+  if(mathCanvasRAF)cancelAnimationFrame(mathCanvasRAF);
+  draw();
+}
+function stopMathCanvas(){
+  if(mathCanvasRAF){cancelAnimationFrame(mathCanvasRAF);mathCanvasRAF=null;}
+  const canvas=document.getElementById('math-canvas');
+  if(canvas){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);}
+  document.querySelectorAll('.math-float').forEach(el=>el.remove());
+  stopMathFormulaTips();
+}
+ 
+// ══ رموز رياضية طافية كبيرة ══════════════════════════════
+function spawnMathFloaters(){
+  document.querySelectorAll('.math-float').forEach(el=>el.remove());
+  const FLOATERS=[
+    {sym:'∑',size:'clamp(40px,8vw,90px)',left:'5%',dur:'22s',delay:'0s',rot:'15deg',fo:'0.07'},
+    {sym:'π',size:'clamp(35px,7vw,80px)',left:'88%',dur:'28s',delay:'4s',rot:'-12deg',fo:'0.06'},
+    {sym:'√',size:'clamp(30px,6vw,70px)',left:'18%',dur:'35s',delay:'8s',rot:'8deg',fo:'0.05'},
+    {sym:'∞',size:'clamp(28px,5.5vw,65px)',left:'72%',dur:'26s',delay:'2s',rot:'-20deg',fo:'0.07'},
+    {sym:'∫',size:'clamp(32px,6.5vw,75px)',left:'42%',dur:'40s',delay:'6s',rot:'5deg',fo:'0.05'},
+    {sym:'Δ',size:'clamp(26px,5vw,60px)',left:'60%',dur:'32s',delay:'10s',rot:'-8deg',fo:'0.06'},
+    {sym:'θ',size:'clamp(22px,4vw,50px)',left:'30%',dur:'38s',delay:'14s',rot:'18deg',fo:'0.05'},
+    {sym:'²',size:'clamp(20px,4vw,46px)',left:'80%',dur:'24s',delay:'18s',rot:'-5deg',fo:'0.06'},
+  ];
+  FLOATERS.forEach(f=>{
+    const el=document.createElement('div');
+    el.className='math-float';
+    el.textContent=f.sym;
+    el.style.cssText=`left:${f.left};bottom:-80px;font-size:${f.size};--rot:${f.rot};--fo:${f.fo};animation-duration:${f.dur};animation-delay:${f.delay};`;
+    document.body.appendChild(el);
+  });
+}
+ 
+// ══ نصائح معادلات رياضية ══════════════════════════════════
+const MATH_FORMULAS=[
+  {f:'a² + b² = c²',l:'مبرهنة فيثاغورس'},
+  {f:'E = mc²',l:'معادلة أينشتاين'},
+  {f:'πr²',l:'مساحة الدائرة'},
+  {f:'∑(n) = n(n+1)/2',l:'مجموع الأعداد'},
+  {f:'sin²θ + cos²θ = 1',l:'هوية مثلثية'},
+  {f:'(a+b)² = a²+2ab+b²',l:'المربع الكامل'},
+  {f:'x = (-b±√Δ)/2a',l:'قانون الحل'},
+  {f:'∫xⁿdx = xⁿ⁺¹/n+1',l:'التكامل'},
+  {f:'lim→0 (sinx/x) = 1',l:'نهاية مشهورة'},
+  {f:'eⁱπ + 1 = 0',l:'هوية أويلر'},
+];
+let mathTipTimer=null,mathTipIdx=0;
+function startMathFormulaTips(){
+  stopMathFormulaTips();
+  mathTipIdx=Math.floor(Math.random()*MATH_FORMULAS.length);
+  function showTip(){
+    const tip=document.getElementById('math-formula-tip');
+    if(!tip||!document.body.classList.contains('math-mode'))return;
+    const f=MATH_FORMULAS[mathTipIdx%MATH_FORMULAS.length];
+    document.getElementById('mtip-formula').textContent=f.f;
+    document.getElementById('mtip-label').textContent=f.l;
+    tip.classList.add('show');
+    mathTipIdx++;
+    setTimeout(()=>{tip&&tip.classList.remove('show');},4000);
+  }
+  showTip();
+  mathTipTimer=setInterval(showTip,18000);
+}
+function stopMathFormulaTips(){
+  if(mathTipTimer){clearInterval(mathTipTimer);mathTipTimer=null;}
+  const tip=document.getElementById('math-formula-tip');
+  if(tip)tip.classList.remove('show');
 }
  
 function showApp(data){
@@ -1589,7 +1796,7 @@ function updateTeacherBanner(){
  
 // ══ THEME ═════════════════════════════════════════════
 let isDark=true;
-function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light-mode',!isDark);document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';localStorage.setItem('theme',isDark?'dark':'light');if(typeof teacherConfig!=='undefined'&&teacherConfig)applySubjectTheme(teacherConfig);}
+function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light-mode',!isDark);document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';localStorage.setItem('theme',isDark?'dark':'light');if(typeof teacherConfig!=='undefined'&&teacherConfig){applySubjectTheme(teacherConfig);if(document.body.classList.contains('math-mode')){stopMathCanvas();startMathCanvas();}}}
 (function(){const t=localStorage.getItem('theme');if(t==='light'){isDark=false;document.body.classList.add('light-mode');document.getElementById('theme-btn').textContent='☀️';}})();
  
 // ══ NAV ════════════════════════════════════════════════
