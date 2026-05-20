@@ -2379,26 +2379,47 @@ function selectDate(year,month,day){
 }
  
 function renderCalendar(){
+  const calEl=document.getElementById('calendar');
+  if(!calEl){
+    console.error('عنصر التقويم غير موجود!');
+    return;
+  }
+  
   document.getElementById('cal-title').textContent=monthNames[currentMonth]+' '+currentYear;
   const firstDay=new Date(currentYear,currentMonth,1).getDay();
   const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
   const daysInPrevMonth=new Date(currentYear,currentMonth,0).getDate();
   const today=new Date();
   let html='';
+  
+  // رؤوس الأيام
   dayNames.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
-  for(let i=firstDay-1;i>=0;i--)html+=`<div class="cal-day other-month">${daysInPrevMonth-i}</div>`;
+  
+  // أيام الشهر السابق
+  for(let i=firstDay-1;i>=0;i--){
+    html+=`<div class="cal-day other-month">${daysInPrevMonth-i}</div>`;
+  }
+  
+  // أيام الشهر الحالي
   for(let d=1;d<=daysInMonth;d++){
     const isToday=d===today.getDate()&&currentMonth===today.getMonth()&&currentYear===today.getFullYear();
     const key=`${currentYear}-${currentMonth}-${d}`;
     const hasEvent=!!calendarEvents[key];
-    const classes=['cal-day'];
-    if(isToday)classes.push('today');
-    if(hasEvent)classes.push('has-event');
-    html+=`<div class="${classes.join(' ')}" onclick="selectDate(${currentYear},${currentMonth},${d})" title="${calendarEvents[key]||''}">${d}</div>`;
+    let classStr='cal-day';
+    if(isToday)classStr+=' today';
+    if(hasEvent)classStr+=' has-event';
+    const eventTitle=calendarEvents[key]?` title="${calendarEvents[key]}"`:'';
+    html+=`<div class="${classStr}" onclick="selectDate(${currentYear},${currentMonth},${d})"${eventTitle}>${d}</div>`;
   }
+  
+  // أيام الشهر التالي لإكمال الجدول
   const remaining=42-(firstDay+daysInMonth);
-  for(let i=1;i<=remaining;i++)html+=`<div class="cal-day other-month">${i}</div>`;
-  document.getElementById('calendar').innerHTML=html;
+  for(let i=1;i<=remaining;i++){
+    html+=`<div class="cal-day other-month">${i}</div>`;
+  }
+  
+  calEl.innerHTML=html;
+  console.log('تم عرض التقويم:',monthNames[currentMonth],currentYear);
 }
  
 // ══ TASKS ══════════════════════════════════════════════
@@ -2440,10 +2461,11 @@ function deleteTask(idx){
   renderTasks();
 }
  
-// تهيئة التقويم والمهام عند التحميل
-if(document.getElementById('calendar'))renderCalendar();
-if(document.getElementById('tasks-list'))renderTasks();
+// تهيئة التقويم والمهام عند تحميل الصفحة بالكامل
+window.addEventListener('DOMContentLoaded',()=>{
+  if(document.getElementById('calendar'))renderCalendar();
+  if(document.getElementById('tasks-list'))renderTasks();
+});
 </script>
 </body>
 </html>
- 
