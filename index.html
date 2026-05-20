@@ -449,6 +449,26 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .cv-file-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--card);border:1px solid var(--border);border-radius:8px;}
 .cv-file-name{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
  
+/* ══ LIBRARY ══ */
+.library-filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.library-filters select{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:8px 12px;cursor:pointer;outline:none;transition:border-color .2s;}
+.library-filters select:focus{border-color:var(--gold);}
+.lib-section{margin-bottom:24px;}
+.lib-section-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.lib-grade-group{margin-bottom:16px;}
+.lib-grade-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.lib-links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+.lib-link-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:pointer;position:relative;}
+.lib-link-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2);}
+.lib-link-icon{font-size:22px;flex-shrink:0;}
+.lib-link-info{flex:1;min-width:0;}
+.lib-link-title{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lib-link-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.lib-link-delete{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:4px;opacity:0;transition:opacity .2s;}
+.lib-link-card:hover .lib-link-delete{opacity:1;}
+.lib-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+.admin-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--gold),var(--red2));color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-right:6px;}
+ 
 /* ══ SIDEBAR WIDGETS ══ */
 .sidebar-widgets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;max-width:500px;margin-left:auto;margin-right:auto;}
 .widget-card{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:9px;}
@@ -642,6 +662,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <button class="nav-btn" onclick="showPage('grades',this)">📊 الدرجات</button>
   <button class="nav-btn" onclick="showPage('stats',this)">📈 إحصائيات</button>
   <button class="nav-btn" onclick="showPage('archive',this)">🗂️ الأرشيف</button>
+  <button class="nav-btn" onclick="showPage('library',this)">📚 المكتبة</button>
   <button class="nav-btn" onclick="showPage('cv',this)">🏆 السيرة</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
     <img id="ub-img" src="" alt=""/>
@@ -822,6 +843,34 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   </div>
 </div></div>
  
+<!-- ══ LIBRARY ══ -->
+<div class="page" id="page-library"><div class="wrap">
+  <div class="page-header">
+    <div class="tag">📚 المكتبة العامة</div>
+    <h1>مكتبة المعلمين</h1>
+    <p>روابط ومصادر تعليمية مشتركة لجميع المعلمين</p>
+  </div>
+  
+  <!-- زر إضافة (يظهر للمشرف فقط) -->
+  <div id="library-admin-bar" style="display:none;margin-bottom:20px;">
+    <button class="setup-btn primary" onclick="openLibraryModal()">➕ إضافة رابط جديد</button>
+    <span style="margin-right:12px;color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
+  </div>
+  
+  <!-- فلاتر -->
+  <div class="library-filters">
+    <select id="lib-filter-subject" onchange="renderLibrary()">
+      <option value="">📖 جميع المواد</option>
+    </select>
+    <select id="lib-filter-grade" onchange="renderLibrary()">
+      <option value="">🎓 جميع الصفوف</option>
+    </select>
+  </div>
+  
+  <!-- قائمة الروابط -->
+  <div id="library-content"></div>
+</div></div>
+ 
 <!-- ══ CV ══ -->
 <div class="page" id="page-cv"><div class="wrap">
   <div class="page-header"><div class="tag">🏆 السيرة الذاتية</div><h1>إنجازاتي ومبادراتي</h1><p>نبذة شخصية وسجل الإنجازات المهنية</p></div>
@@ -938,6 +987,53 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 <div class="pdf-modal-bg hidden" id="pdf-modal">
   <div class="pdf-top-bar"><span class="pdf-title" id="pdf-title">ملف</span><button class="pdf-close" onclick="closePdf()">✕ إغلاق</button></div>
   <iframe class="pdf-frame" id="pdf-frame" src=""></iframe>
+</div>
+ 
+<!-- Modal إضافة/تعديل رابط المكتبة -->
+<div class="modal-bg hidden" id="library-modal-bg">
+  <div class="modal">
+    <h3 id="lib-modal-title">➕ إضافة رابط جديد</h3>
+    <label>المادة *</label>
+    <select id="lib-subject">
+      <option value="">اختر المادة</option>
+      <option value="الرياضيات">الرياضيات</option>
+      <option value="العلوم">العلوم</option>
+      <option value="التربية الإسلامية">التربية الإسلامية</option>
+      <option value="الاجتماعيات">الاجتماعيات</option>
+      <option value="اللغة العربية">اللغة العربية</option>
+      <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+      <option value="تقنية المعلومات">تقنية المعلومات</option>
+    </select>
+    <label>الصف *</label>
+    <select id="lib-grade">
+      <option value="">اختر الصف</option>
+      <option value="1">الصف الأول</option>
+      <option value="2">الصف الثاني</option>
+      <option value="3">الصف الثالث</option>
+      <option value="4">الصف الرابع</option>
+      <option value="5">الصف الخامس</option>
+      <option value="6">الصف السادس</option>
+      <option value="7">الصف السابع</option>
+      <option value="8">الصف الثامن</option>
+      <option value="9">الصف التاسع</option>
+      <option value="10">الصف العاشر</option>
+      <option value="11">الصف الحادي عشر</option>
+      <option value="12">الصف الثاني عشر</option>
+    </select>
+    <label>العنوان *</label>
+    <input id="lib-title" type="text" placeholder="مثال: شرح الوحدة الأولى"/>
+    <label>رابط Drive *</label>
+    <input id="lib-url" type="text" placeholder="https://drive.google.com/..."/>
+    <label>النوع</label>
+    <select id="lib-type">
+      <option value="file">📄 ملف</option>
+      <option value="folder">📁 مجلد</option>
+    </select>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeLibraryModal()">إلغاء</button>
+      <button class="modal-save" onclick="saveLibraryLink()">حفظ ✅</button>
+    </div>
+  </div>
 </div>
 <div class="img-modal-bg hidden" id="img-modal" onclick="closeImg()">
   <button class="img-close">✕ إغلاق</button>
@@ -1147,7 +1243,11 @@ function showUserBadge(){
   const badge=document.getElementById('user-badge');if(badge)badge.style.display='flex';
   const imgEl=document.getElementById('ub-img');
   if(imgEl)imgEl.src=`data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="%23c0392b"/><text x="20" y="27" font-size="18" text-anchor="middle" fill="white">D</text></svg>')}`;
-  const ubn=document.getElementById('ub-name');if(ubn)ubn.textContent=displayName||'حسابي';
+  const ubn=document.getElementById('ub-name');
+  if(ubn){
+    const adminTag=isAdmin()?'<span class="admin-badge">👑 مشرف</span>':'';
+    ubn.innerHTML=adminTag+(displayName||'حسابي');
+  }
   const umn=document.getElementById('um-name');if(umn)umn.textContent=displayName||'حسابي';
   const ume=document.getElementById('um-email');if(ume)ume.textContent='محفوظ سحابياً ☁️';
   const tb=document.getElementById('teacher-name-banner');if(tb)tb.textContent=displayName||'الأستاذ';
@@ -1623,6 +1723,9 @@ function showApp(data){
   // تهيئة التقويم والمهام
   renderCalendar();
   renderTasks();
+  
+  // تحميل المكتبة العامة
+  loadLibrary();
 }
  
 function updateTeacherBanner(){
@@ -2322,6 +2425,175 @@ function scheduleSave(){
 let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
  
+// ══ LIBRARY ════════════════════════════════════════════
+const ADMIN_EMAIL='teacherplane2026project@gmail.com';
+let libraryLinks=[];
+let editingLinkId=null;
+ 
+function isAdmin(){
+  if(!currentUser)return false;
+  return (currentUser.email||'').toLowerCase().trim()===ADMIN_EMAIL.toLowerCase();
+}
+ 
+async function loadLibrary(){
+  if(!sb)return;
+  try{
+    const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
+    if(error){console.error('خطأ تحميل المكتبة:',error);return;}
+    libraryLinks=data||[];
+    populateLibraryFilters();
+    renderLibrary();
+  }catch(e){console.error('خطأ:',e);}
+}
+ 
+function populateLibraryFilters(){
+  const subjects=[...new Set(libraryLinks.map(l=>l.subject))];
+  const grades=[...new Set(libraryLinks.map(l=>l.grade))].sort((a,b)=>parseInt(a)-parseInt(b));
+  
+  const subSelect=document.getElementById('lib-filter-subject');
+  const grdSelect=document.getElementById('lib-filter-grade');
+  if(!subSelect||!grdSelect)return;
+  
+  const curSub=subSelect.value;
+  const curGrd=grdSelect.value;
+  
+  subSelect.innerHTML='<option value="">📖 جميع المواد</option>'+subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
+  grdSelect.innerHTML='<option value="">🎓 جميع الصفوف</option>'+grades.map(g=>`<option value="${g}">الصف ${g}</option>`).join('');
+  
+  subSelect.value=curSub;
+  grdSelect.value=curGrd;
+}
+ 
+function renderLibrary(){
+  const content=document.getElementById('library-content');
+  const adminBar=document.getElementById('library-admin-bar');
+  if(!content)return;
+  
+  // إظهار شريط المشرف إذا كان المستخدم مشرفاً
+  if(adminBar)adminBar.style.display=isAdmin()?'flex':'none';
+  
+  const filterSub=document.getElementById('lib-filter-subject').value;
+  const filterGrd=document.getElementById('lib-filter-grade').value;
+  
+  let filtered=libraryLinks;
+  if(filterSub)filtered=filtered.filter(l=>l.subject===filterSub);
+  if(filterGrd)filtered=filtered.filter(l=>l.grade===filterGrd);
+  
+  if(!filtered.length){
+    content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(isAdmin()?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
+    return;
+  }
+  
+  // تجميع حسب المادة ثم الصف
+  const grouped={};
+  filtered.forEach(l=>{
+    if(!grouped[l.subject])grouped[l.subject]={};
+    if(!grouped[l.subject][l.grade])grouped[l.subject][l.grade]=[];
+    grouped[l.subject][l.grade].push(l);
+  });
+  
+  let html='';
+  Object.keys(grouped).forEach(subject=>{
+    html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
+    const grades=Object.keys(grouped[subject]).sort((a,b)=>parseInt(a)-parseInt(b));
+    grades.forEach(grade=>{
+      html+=`<div class="lib-grade-group">
+        <div class="lib-grade-label">🎓 الصف ${grade}</div>
+        <div class="lib-links-grid">`;
+      grouped[subject][grade].forEach(link=>{
+        const icon=link.type==='folder'?'📁':'📄';
+        const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
+        html+=`<div class="lib-link-card" onclick="window.open('${link.url}','_blank')">
+          <div class="lib-link-icon">${icon}</div>
+          <div class="lib-link-info">
+            <div class="lib-link-title">${link.title}</div>
+            <div class="lib-link-meta">${link.type==='folder'?'مجلد':'ملف'} • اضغط للفتح</div>
+          </div>
+          ${delBtn}
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    html+=`</div>`;
+  });
+  
+  content.innerHTML=html;
+}
+ 
+function openLibraryModal(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
+  editingLinkId=null;
+  document.getElementById('lib-modal-title').textContent='➕ إضافة رابط جديد';
+  document.getElementById('lib-subject').value='';
+  document.getElementById('lib-grade').value='';
+  document.getElementById('lib-title').value='';
+  document.getElementById('lib-url').value='';
+  document.getElementById('lib-type').value='file';
+  document.getElementById('library-modal-bg').classList.remove('hidden');
+}
+ 
+function closeLibraryModal(){
+  document.getElementById('library-modal-bg').classList.add('hidden');
+  editingLinkId=null;
+}
+ 
+async function saveLibraryLink(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
+  
+  const subject=document.getElementById('lib-subject').value;
+  const grade=document.getElementById('lib-grade').value;
+  const title=document.getElementById('lib-title').value.trim();
+  const url=document.getElementById('lib-url').value.trim();
+  const lnkType=document.getElementById('lib-type').value;
+  
+  if(!subject||!grade||!title||!url){
+    toast('يرجى ملء جميع الحقول',true);
+    return;
+  }
+  
+  if(!url.startsWith('http')){
+    toast('الرابط غير صحيح',true);
+    return;
+  }
+  
+  try{
+    const{error}=await sb.from('library_links').insert({
+      subject,grade,title,url,type:lnkType,
+      created_by:currentUser.email
+    });
+    if(error){
+      console.error(error);
+      toast('فشل الحفظ: '+error.message,true);
+      return;
+    }
+    toast('تم إضافة الرابط بنجاح','ok');
+    closeLibraryModal();
+    loadLibrary();
+  }catch(e){
+    console.error(e);
+    toast('حدث خطأ',true);
+  }
+}
+ 
+async function deleteLibraryLink(id){
+  if(!isAdmin()){toast('فقط المشرف يمكنه الحذف',true);return;}
+  if(!confirm('هل أنت متأكد من حذف هذا الرابط؟'))return;
+  
+  try{
+    const{error}=await sb.from('library_links').delete().eq('id',id);
+    if(error){
+      console.error(error);
+      toast('فشل الحذف',true);
+      return;
+    }
+    toast('تم الحذف','ok');
+    loadLibrary();
+  }catch(e){
+    console.error(e);
+    toast('حدث خطأ',true);
+  }
+}
+ 
 // ══ CALENDAR ═══════════════════════════════════════════
 let currentMonth=new Date().getMonth();
 let currentYear=new Date().getFullYear();
@@ -2473,3 +2745,4 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 </body>
 </html>
+ 
