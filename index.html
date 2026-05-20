@@ -14,6 +14,11 @@
   --white:#f5f0e8;--muted:#a08878;--text:#f0e8e0;--green:#27ae60;
   --grid-color:rgba(192,57,43,.06);
 }
+body.light-mode{
+  --bg:#f4f0eb;--surface:#fff;--card:#f9f6f2;--border:#d8ccc4;
+  --white:#1a1010;--muted:#7a6060;--text:#2a1a1a;
+  --gold:#b8860b;--gold2:#9a7010;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;transition:background .3s,color .3s;}
 /* طبقة 0: تدرّج لوني غني خاص بالمادة */
@@ -100,6 +105,8 @@ body{background-image:var(--subject-glow,none);background-attachment:fixed;}
 .nav-btn{padding:8px 16px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;display:flex;align-items:center;gap:5px;}
 .nav-btn:hover{border-color:var(--gold);color:var(--gold);}
 .nav-btn.active{background:linear-gradient(135deg,var(--red),var(--red2));border-color:var(--red2);color:#fff;}
+.theme-toggle{padding:8px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;}
+.theme-toggle:hover{border-color:var(--gold);color:var(--gold);}
 .user-badge{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:99px;background:var(--card);border:1.5px solid var(--border);font-size:11px;color:var(--muted);font-weight:600;cursor:pointer;transition:all .2s;}
 .user-badge:hover{border-color:var(--gold);color:var(--gold);}
 .user-badge img{width:24px;height:24px;border-radius:50%;}
@@ -442,6 +449,34 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .cv-file-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--card);border:1px solid var(--border);border-radius:8px;}
 .cv-file-name{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
  
+/* ══ SIDEBAR WIDGETS ══ */
+.sidebar-widgets{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0;}
+.widget-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.widget-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-title{font-size:14px;font-weight:700;color:var(--text);}
+.cal-nav-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:16px;transition:all .2s;}
+.cal-nav-btn:hover{border-color:var(--gold);color:var(--gold);}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;}
+.cal-day-header{font-size:10px;color:var(--muted);text-align:center;padding:4px;font-weight:600;}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;cursor:pointer;transition:all .2s;color:var(--text);}
+.cal-day:hover{background:var(--surface);}
+.cal-day.today{background:var(--gold);color:#000;font-weight:700;}
+.cal-day.other-month{color:var(--muted);opacity:.4;}
+.tasks-list{max-height:200px;overflow-y:auto;margin-bottom:10px;}
+.task-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .2s;}
+.task-item:hover{border-color:var(--gold);}
+.task-item.done{opacity:.5;text-decoration:line-through;}
+.task-item.done .task-checkbox{background:var(--gold);border-color:var(--gold);}
+.task-checkbox{width:16px;height:16px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s;}
+.task-text{flex:1;font-size:12px;color:var(--text);}
+.task-delete{color:var(--red);font-size:14px;opacity:0;transition:opacity .2s;}
+.task-item:hover .task-delete{opacity:1;}
+.task-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:'Cairo',sans-serif;outline:none;transition:border-color .2s;}
+.task-input:focus{border-color:var(--gold);}
+.add-task-btn{background:var(--gold);border:none;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000;font-size:16px;font-weight:700;transition:opacity .2s;}
+.add-task-btn:hover{opacity:.8;}
+@media(max-width:768px){.sidebar-widgets{grid-template-columns:1fr;}}
+ 
 /* ══ MODALS ══ */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
 .modal-bg.hidden{display:none;}
@@ -596,6 +631,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
  
 <!-- NAV -->
 <div class="nav" id="main-nav" style="display:none">
+  <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
   <button class="nav-btn active" onclick="showPage('timetable',this)">🗓️ الجدول</button>
   <button class="nav-btn" onclick="showPage('tracker',this)">📚 الخطة</button>
   <button class="nav-btn" onclick="showPage('grades',this)">📊 الدرجات</button>
@@ -643,6 +679,30 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <button class="ccfg-add" onclick="addClassColor()">➕ إضافة شعبة</button>
   </div>
   <div class="legend" id="legend"></div>
+  
+  <!-- التقويم والمهام -->
+  <div class="sidebar-widgets">
+    <!-- التقويم الشهري -->
+    <div class="widget-card">
+      <div class="widget-header">
+        <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
+        <div class="cal-title" id="cal-title">يناير 2026</div>
+        <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+      </div>
+      <div class="calendar" id="calendar"></div>
+    </div>
+    
+    <!-- صندوق المهام -->
+    <div class="widget-card">
+      <div class="widget-header">
+        <span style="font-weight:700;font-size:14px">✓ المهام</span>
+        <button class="add-task-btn" onclick="addTask()">+</button>
+      </div>
+      <div class="tasks-list" id="tasks-list"></div>
+      <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة..." onkeypress="if(event.key==='Enter')addTask()"/>
+    </div>
+  </div>
+  
   <div class="tt-wrap" id="tt-wrap">
     <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
   </div>
@@ -1565,8 +1625,23 @@ function updateTeacherBanner(){
   }
 }
  
-// ══ THEME (وضع ليلي دائم) ═══════════════════════════
+// ══ THEME ═════════════════════════════════════════════
 let isDark=true;
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light-mode',!isDark);
+  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
+  localStorage.setItem('theme',isDark?'dark':'light');
+  if(typeof teacherConfig!=='undefined'&&teacherConfig)applySubjectTheme(teacherConfig);
+}
+(function(){
+  const t=localStorage.getItem('theme');
+  if(t==='light'){
+    isDark=false;
+    document.body.classList.add('light-mode');
+    document.getElementById('theme-btn').textContent='☀️';
+  }
+})();
  
 // ══ NAV ════════════════════════════════════════════════
 function showPage(id,btn){
@@ -2235,6 +2310,76 @@ function scheduleSave(){
 // ══ TOAST ══════════════════════════════════════════════
 let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
+ 
+// ══ CALENDAR ═══════════════════════════════════════════
+let currentMonth=new Date().getMonth();
+let currentYear=new Date().getFullYear();
+const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const dayNames=['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+ 
+function prevMonth(){currentMonth--;if(currentMonth<0){currentMonth=11;currentYear--;}renderCalendar();}
+function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
+ 
+function renderCalendar(){
+  document.getElementById('cal-title').textContent=monthNames[currentMonth]+' '+currentYear;
+  const firstDay=new Date(currentYear,currentMonth,1).getDay();
+  const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  const daysInPrevMonth=new Date(currentYear,currentMonth,0).getDate();
+  const today=new Date();
+  let html='';
+  dayNames.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
+  for(let i=firstDay-1;i>=0;i--)html+=`<div class="cal-day other-month">${daysInPrevMonth-i}</div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=d===today.getDate()&&currentMonth===today.getMonth()&&currentYear===today.getFullYear();
+    html+=`<div class="cal-day${isToday?' today':''}">${d}</div>`;
+  }
+  const remaining=42-(firstDay+daysInMonth);
+  for(let i=1;i<=remaining;i++)html+=`<div class="cal-day other-month">${i}</div>`;
+  document.getElementById('calendar').innerHTML=html;
+}
+ 
+// ══ TASKS ══════════════════════════════════════════════
+let tasks=JSON.parse(localStorage.getItem('userTasks')||'[]');
+ 
+function saveTasks(){localStorage.setItem('userTasks',JSON.stringify(tasks));}
+ 
+function renderTasks(){
+  const list=document.getElementById('tasks-list');
+  if(!tasks.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">لا توجد مهام</div>';return;}
+  list.innerHTML=tasks.map((t,i)=>`
+    <div class="task-item${t.done?' done':''}" onclick="toggleTask(${i})">
+      <div class="task-checkbox">${t.done?'✓':''}</div>
+      <div class="task-text">${t.text}</div>
+      <span class="task-delete" onclick="event.stopPropagation();deleteTask(${i})">✕</span>
+    </div>
+  `).join('');
+}
+ 
+function addTask(){
+  const input=document.getElementById('task-input');
+  const text=input.value.trim();
+  if(!text)return;
+  tasks.push({text,done:false,id:Date.now()});
+  input.value='';
+  saveTasks();
+  renderTasks();
+}
+ 
+function toggleTask(idx){
+  tasks[idx].done=!tasks[idx].done;
+  saveTasks();
+  renderTasks();
+}
+ 
+function deleteTask(idx){
+  tasks.splice(idx,1);
+  saveTasks();
+  renderTasks();
+}
+ 
+// تهيئة التقويم والمهام عند التحميل
+if(document.getElementById('calendar'))renderCalendar();
+if(document.getElementById('tasks-list'))renderTasks();
 </script>
 </body>
 </html>
