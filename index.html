@@ -312,6 +312,21 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .ann-banner-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;}
 .ann-banner-body{font-size:12px;color:var(--text);line-height:1.7;}
 /* ══ USERS ══ */
+.user-msg-btn{background:linear-gradient(135deg,#2980b9,#3498db);border:none;color:#fff;border-radius:99px;padding:5px 12px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.user-msg-btn:hover{opacity:.85;}
+.user-last-seen{font-size:10px;color:var(--muted);margin-top:2px;}
+.user-last-seen.recent{color:#27ae60;}
+.msg-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
+.msg-modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.5);}
+.msg-modal-title{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:14px;font-family:'Tajawal',sans-serif;}
+.msg-modal-to{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.msg-modal-inp{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:9px 12px;outline:none;margin-bottom:10px;transition:border-color .2s;}
+.msg-modal-inp:focus{border-color:var(--gold);}
+.msg-modal-body{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:vertical;min-height:100px;margin-bottom:14px;transition:border-color .2s;}
+.msg-modal-body:focus{border-color:var(--gold);}
+.msg-modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.msg-modal-cancel{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 18px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;}
+.msg-modal-send{background:linear-gradient(135deg,#2980b9,#3498db);border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;}
 .user-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .user-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
 .user-avatar-placeholder{width:34px;height:34px;border-radius:50%;background:var(--card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
@@ -1692,6 +1707,7 @@ async function bootApp(session){
       data.teacher_config.isAdminMode=true;
     }
     showApp(data);
+    startBellPolling();
     return;
   }
   if(!data.teacher_config||!data.teacher_config.grades||!data.teacher_config.grades.length){
@@ -1699,6 +1715,8 @@ async function bootApp(session){
     return;
   }
   showApp(data);
+  // بدء polling للجرس
+  startBellPolling();
 }
 
 (async()=>{
@@ -1719,7 +1737,7 @@ async function bootApp(session){
       if(!currentUser)await bootApp(session);
       else if(session.provider_token)googleAccessToken=session.provider_token;
     }
-    if(event==='SIGNED_OUT'){currentUser=null;googleAccessToken=null;}
+    if(event==='SIGNED_OUT'){currentUser=null;googleAccessToken=null;stopBellPolling();}
   });
 })();
 
@@ -2930,6 +2948,25 @@ function markAllRead(e){
 }
 
 // ════════════════════════════════════════════════════════════════
+// 🔔 تحديث الجرس تلقائياً كل دقيقة
+// ════════════════════════════════════════════════════════════════
+let _bellPollInterval=null;
+
+function startBellPolling(){
+  // تحميل فوري
+  loadAnnouncementBanner();
+  // ثم كل 60 ثانية
+  if(_bellPollInterval)clearInterval(_bellPollInterval);
+  _bellPollInterval=setInterval(()=>{
+    loadAnnouncementBanner();
+  },60000);
+}
+
+function stopBellPolling(){
+  if(_bellPollInterval){clearInterval(_bellPollInterval);_bellPollInterval=null;}
+}
+
+// ════════════════════════════════════════════════════════════════
 // 👥 إدارة المستخدمين
 // ════════════════════════════════════════════════════════════════
 let _allUsers=[];
@@ -2941,26 +2978,42 @@ async function loadAdminUsers(){
   list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
   try{
     // جلب جميع الملفات الشخصية مع البريد
-    const{data,error}=await sb.from('profiles').select('id,email,data,updated_at').order('updated_at',{ascending:false});
-    if(error)throw error;
-    _allUsers=data||[];
-    // استخدام البريد من العمود المستقل أو من data كاحتياط
+    // جلب البيانات من profiles - بدون عمود email لتجنب أخطاء
+    const queryResult=await sb.from('profiles').select('id,data,updated_at').order('updated_at',{ascending:false});
+    if(queryResult.error)throw queryResult.error;
+    _allUsers=queryResult.data||[];
     _allUsers=_allUsers.map(u=>({
       ...u,
-      _email: u.email||(u.data&&u.data.email)||'',
-      // اسم الترحيب: من display_name أولاً، ثم من اسم Google، ثم من البريد
+      _email: (u.data&&u.data.email)||'',
       _name: (u.data&&u.data.display_name)
           || (u.data&&u.data.teacher_name)
           || (u.data&&u.data.full_name)
-          || (u.email?u.email.split('@')[0]:'—'),
+          || ((u.data&&u.data.email)?u.data.email.split('@')[0]:'—'),
       _avatar: (u.data&&(u.data.avatar_url||u.data.photo))||'',
       _config: (u.data&&u.data.teacher_config)||{}
     }));
+    console.log('[loadAdminUsers] عدد المستخدمين:', _allUsers.length, _allUsers);
     if(countEl)countEl.textContent=`${_allUsers.length} معلم مسجل`;
     renderUsersList(_allUsers);
   }catch(e){
+    console.error('[loadAdminUsers] خطأ:', e);
     list.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;
   }
+}
+
+function getLastSeenText(updated_at){
+  if(!updated_at)return{text:'غير معروف',recent:false};
+  const now=new Date();
+  const last=new Date(updated_at);
+  const diffMs=now-last;
+  const diffMins=Math.floor(diffMs/60000);
+  const diffHours=Math.floor(diffMins/60);
+  const diffDays=Math.floor(diffHours/24);
+  if(diffMins<60)return{text:`منذ ${diffMins} دقيقة`,recent:true};
+  if(diffHours<24)return{text:`منذ ${diffHours} ساعة`,recent:true};
+  if(diffDays===1)return{text:'أمس',recent:false};
+  if(diffDays<7)return{text:`منذ ${diffDays} أيام`,recent:false};
+  return{text:last.toLocaleDateString('ar-OM',{month:'short',day:'numeric'}),recent:false};
 }
 
 function renderUsersList(users){
@@ -2976,20 +3029,69 @@ function renderUsersList(users){
     const config=u._config||{};
     const grades=config.grades?config.grades.join('، '):'—';
     const subject=config.subject||'—';
-    const updated=u.updated_at?new Date(u.updated_at).toLocaleDateString('ar-OM',{month:'short',day:'numeric'}):'';
+    const lastSeen=getLastSeenText(u.updated_at);
     const avatar=u._avatar||'';
     const avatarEl=avatar
       ?`<img class="user-avatar" src="${escHtml(avatar)}" onerror="this.parentElement.innerHTML='<div class=\"user-avatar-placeholder\">👤</div>'">`
       :`<div class="user-avatar-placeholder">👤</div>`;
+    const isAdmin=email===ADMIN_EMAIL;
     return `<div class="user-item">
       ${avatarEl}
-      <div class="user-info">
-        <div class="user-name">${idx+1}. ${escHtml(name)}</div>
+      <div class="user-info" style="flex:1;min-width:0">
+        <div class="user-name">${idx+1}. ${escHtml(name)}${isAdmin?' 👑':''}</div>
         ${email?`<div class="user-email">${escHtml(email)}</div>`:'<div class="user-email" style="color:var(--muted);font-style:italic">بريد غير متاح</div>'}
-        <div class="user-meta">📚 ${escHtml(subject)} · صف ${escHtml(grades)}${updated?' · '+updated:''}</div>
+        <div class="user-meta">📚 ${escHtml(subject)} · صف ${escHtml(grades)}</div>
+        <div class="user-last-seen${lastSeen.recent?' recent':''}">🕐 آخر نشاط: ${lastSeen.text}</div>
       </div>
+      ${!isAdmin?`<button class="user-msg-btn" onclick="openMsgModal('${escHtml(u.id)}','${escHtml(name)}','${escHtml(email)}')">✉️ رسالة</button>`:''}
     </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════
+// ✉️ الرسائل الخاصة
+// ════════════════════════════════════════
+let _msgTarget={id:'',name:'',email:''};
+
+function openMsgModal(id,name,email){
+  _msgTarget={id,name,email};
+  document.getElementById('msg-modal-to').textContent=`إلى: ${name}${email?' ('+email+')':''}`;
+  document.getElementById('msg-modal-title-inp').value='';
+  document.getElementById('msg-modal-body-inp').value='';
+  document.getElementById('msg-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('msg-modal-title-inp').focus(),150);
+}
+
+function closeMsgModal(e){
+  if(e&&e.target!==document.getElementById('msg-modal'))return;
+  document.getElementById('msg-modal').style.display='none';
+}
+
+async function sendPrivateMsg(){
+  const title=document.getElementById('msg-modal-title-inp').value.trim();
+  const body=document.getElementById('msg-modal-body-inp').value.trim();
+  if(!title){toast('❌ أدخل عنوان الرسالة',true);return;}
+  if(!body){toast('❌ أدخل نص الرسالة',true);return;}
+  const btn=document.querySelector('.msg-modal-send');
+  btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';
+  try{
+    const{error}=await sb.from('private_messages').insert({
+      to_user_id:_msgTarget.id,
+      to_name:_msgTarget.name,
+      to_email:_msgTarget.email,
+      from_email:currentUser.email,
+      title,body,
+      created_at:new Date().toISOString(),
+      is_read:false
+    });
+    if(error)throw error;
+    toast(`✅ تم إرسال الرسالة إلى ${_msgTarget.name}`);
+    document.getElementById('msg-modal').style.display='none';
+  }catch(e){
+    toast('❌ خطأ في الإرسال: '+(e.message||''),true);
+  }finally{
+    btn.disabled=false;btn.textContent='📨 إرسال';
+  }
 }
 
 function filterUsers(){
@@ -4549,5 +4651,18 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(document.getElementById('tasks-list'))renderTasks();
 });
 </script>
+<!-- مودال الرسالة الخاصة -->
+<div id="msg-modal" class="msg-modal" style="display:none" onclick="closeMsgModal(event)">
+  <div class="msg-modal-card" onclick="event.stopPropagation()">
+    <div class="msg-modal-title">✉️ رسالة خاصة</div>
+    <div class="msg-modal-to" id="msg-modal-to"></div>
+    <input id="msg-modal-title-inp" class="msg-modal-inp" type="text" placeholder="عنوان الرسالة..."/>
+    <textarea id="msg-modal-body-inp" class="msg-modal-body" placeholder="اكتب رسالتك هنا..."></textarea>
+    <div class="msg-modal-actions">
+      <button class="msg-modal-cancel" onclick="closeMsgModal()">إلغاء</button>
+      <button class="msg-modal-send" onclick="sendPrivateMsg()">📨 إرسال</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
