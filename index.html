@@ -1490,7 +1490,14 @@ async function dbSave(payload){
   let ok=false;
   try{
     const current=await dbLoad()||{};
-    const merged={...current,...payload,email:currentUser.email||'',avatar_url:currentUser.user_metadata?.avatar_url||current.avatar_url||'',updated_at:new Date().toISOString()};
+    const gMeta=currentUser.user_metadata||{};
+    const merged={
+      ...current,...payload,
+      email:currentUser.email||'',
+      avatar_url:gMeta.avatar_url||gMeta.picture||current.avatar_url||'',
+      full_name:gMeta.full_name||gMeta.name||current.full_name||'',
+      updated_at:new Date().toISOString()
+    };
     const {error}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:merged,updated_at:new Date().toISOString()});
     ok=!error;
     if(error)console.error('dbSave error:',error);
@@ -2941,7 +2948,11 @@ async function loadAdminUsers(){
     _allUsers=_allUsers.map(u=>({
       ...u,
       _email: u.email||(u.data&&u.data.email)||'',
-      _name: (u.data&&(u.data.display_name||u.data.teacher_name))||'—',
+      // اسم الترحيب: من display_name أولاً، ثم من اسم Google، ثم من البريد
+      _name: (u.data&&u.data.display_name)
+          || (u.data&&u.data.teacher_name)
+          || (u.data&&u.data.full_name)
+          || (u.email?u.email.split('@')[0]:'—'),
       _avatar: (u.data&&(u.data.avatar_url||u.data.photo))||'',
       _config: (u.data&&u.data.teacher_config)||{}
     }));
