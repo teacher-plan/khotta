@@ -2197,29 +2197,32 @@ function closeContentUploader(){
 
 // تحليل النص المُدخل إلى وحدات ودروس
 function parseUploadedContent(text){
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  // تقسيم المحتوى بناءً على سطرين فارغين متتاليين (فواصل الوحدات)
+  const unitBlocks=text.split(/\n\s*\n\s*\n+/).map(b=>b.trim()).filter(b=>b.length>0);
   const units=[];
-  let currentUnit=null;
-  const unitPattern=/^(الوحدة|وحدة|#)/i;
-  const lessonPrefix=/^([-•*●○◦▪▫]|[\d٠-٩]+[.\-)]|\u2022)/;
   
-  for(const line of lines){
-    // هل هذا سطر وحدة؟
-    if(unitPattern.test(line)){
-      let name=line.replace(/^#+\s*/,'').trim();
-      currentUnit={name:name,lessons:[]};
-      units.push(currentUnit);
-    }else{
-      // سطر درس
-      let lesson=line.replace(lessonPrefix,'').trim();
-      // إذا لا توجد وحدة بعد، أنشئ واحدة افتراضية
-      if(!currentUnit){
-        currentUnit={name:'الوحدة الأولى',lessons:[]};
-        units.push(currentUnit);
-      }
-      if(lesson)currentUnit.lessons.push(lesson);
+  for(const block of unitBlocks){
+    const lines=block.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+    if(lines.length===0)continue;
+    
+    // أول سطر = عنوان الوحدة
+    const unitName=lines[0];
+    const lessons=[];
+    
+    // باقي السطور = دروس
+    for(let i=1;i<lines.length;i++){
+      let lesson=lines[i];
+      // إزالة الرموز الشائعة للقوائم (-, •, *, الأرقام، إلخ)
+      lesson=lesson.replace(/^[-•*●○◦▪▫\d٠-٩]+[\.\-\):\s]*/,'').trim();
+      if(lesson)lessons.push(lesson);
+    }
+    
+    // إضافة الوحدة فقط إذا كان لديها درس واحد على الأقل
+    if(lessons.length>0){
+      units.push({name:unitName,lessons:lessons});
     }
   }
+  
   return units;
 }
 
