@@ -2202,27 +2202,32 @@ function closeContentUploader(){
   document.getElementById('content-uploader-modal').style.display='none';
 }
 
-// تحديث قائمة المواد عند تغيير الصف أو الفصل
-function updateUploaderSubjects(){
+// تحديث قائمة المواد من Supabase مباشرة عند تغيير الصف أو الفصل
+async function updateUploaderSubjects(){
   const grade=parseInt(document.getElementById('up-grade').value);
+  const semester=document.getElementById('up-semester').value;
   const sel=document.getElementById('up-subject');
   const prevVal=sel.value;
-  // مواد كل صف
-  const subjectsByGrade={
-    5:['الرياضيات','العلوم','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الدراسات الاجتماعية','التربية الفنية','التربية الموسيقية'],
-    6:['الرياضيات','العلوم','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الدراسات الاجتماعية','التربية الفنية','التربية الموسيقية'],
-    7:['الرياضيات','العلوم','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الدراسات الاجتماعية','تقنية المعلومات'],
-    8:['الرياضيات','العلوم','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الدراسات الاجتماعية','تقنية المعلومات'],
-    9:['الرياضيات','العلوم','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الدراسات الاجتماعية','تقنية المعلومات'],
-    10:['الرياضيات','الرياضيات المتقدمة','الرياضيات الأساسية','كيمياء','أحياء','فيزياء','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الجغرافيا الاقتصادية','تقنية المعلومات'],
-    11:['الرياضيات','الرياضيات المتقدمة','الرياضيات الأساسية','كيمياء','أحياء','فيزياء','اللغة العربية','لغة إنجليزية','التربية الإسلامية','الجغرافيا الاقتصادية','تقنية المعلومات'],
-    12:['الرياضيات','الرياضيات المتقدمة','الرياضيات الأساسية','كيمياء','أحياء','فيزياء','اللغة العربية','لغة إنجليزية','التربية الإسلامية','هذا وطني','العلوم البيئية','الجغرافيا والتقنيات الحديثة','العالم من حولي','تقنية المعلومات']
-  };
-  const subjects=subjectsByGrade[grade]||[];
-  sel.innerHTML='<option value="">— اختر المادة —</option>'+
-    subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
-  // إعادة تحديد القيمة السابقة إن كانت متاحة
-  if(prevVal&&subjects.includes(prevVal))sel.value=prevVal;
+  sel.innerHTML='<option value="">⏳ جاري التحميل...</option>';
+  sel.disabled=true;
+  try{
+    const{data,error}=await sb.from('subjects')
+      .select('subject').eq('grade',grade).eq('semester',semester).order('sort');
+    if(error)throw error;
+    const subjects=[...new Set((data||[]).map(r=>r.subject))];
+    if(!subjects.length){
+      sel.innerHTML='<option value="">— لا توجد مواد لهذا الصف —</option>';
+    }else{
+      sel.innerHTML='<option value="">— اختر المادة —</option>'+
+        subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
+      if(prevVal&&subjects.includes(prevVal))sel.value=prevVal;
+    }
+  }catch(e){
+    sel.innerHTML='<option value="">— خطأ في التحميل —</option>';
+    toast('❌ خطأ في تحميل المواد',true);
+  }finally{
+    sel.disabled=false;
+  }
 }
 
 // تحليل النص المُدخل إلى وحدات ودروس
