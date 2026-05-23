@@ -827,7 +827,24 @@ tbody tr.today{background:rgba(240,192,96,.03);}
         📥 <b>رفع محتوى</b>: لإضافة منهج كامل بشكل دفعة واحدة (الصق وحدات + دروس)<br>
         ⚙️ <b>إدارة الدروس</b>: لتعديل أو حذف دروس فردية موجودة
       </div>
-      <div id="admin-curriculum-summary" style="margin-top:14px"></div>
+      <!-- فلاتر الإحصائيات -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center">
+        <select id="acs-semester" onchange="loadAdminCurriculumSummary()" style="background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:7px 10px;outline:none;cursor:pointer">
+          <option value="الفصل الأول">الفصل الأول</option>
+          <option value="الفصل الثاني">الفصل الثاني</option>
+        </select>
+        <select id="acs-grade" onchange="loadAdminCurriculumSummary()" style="background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:7px 10px;outline:none;cursor:pointer">
+          <option value="5">الصف الخامس</option>
+          <option value="6">الصف السادس</option>
+          <option value="7">الصف السابع</option>
+          <option value="8">الصف الثامن</option>
+          <option value="9">الصف التاسع</option>
+          <option value="10">الصف العاشر</option>
+          <option value="11">الصف الحادي عشر</option>
+          <option value="12">الصف الثاني عشر</option>
+        </select>
+      </div>
+      <div id="admin-curriculum-summary" style="margin-top:10px"></div>
     </div>
   </div>
   
@@ -2058,7 +2075,13 @@ function showPage(id,btn){
   if(id==='grades'){renderGrades();if(isAdmin())loadAdminTemplates();}
   if(id==='stats')renderStats();
   if(id==='library')loadLibrary();
-  if(id==='tracker'&&isAdmin())loadAdminCurriculumSummary();
+  if(id==='tracker'&&isAdmin()){
+    const semEl=document.getElementById('acs-semester');
+    const gradeEl=document.getElementById('acs-grade');
+    if(semEl&&teacherConfig&&teacherConfig.semester)semEl.value=teacherConfig.semester;
+    if(gradeEl&&teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length)gradeEl.value=teacherConfig.grades[0];
+    loadAdminCurriculumSummary();
+  }
 }
 const dayMap2={0:'sun',1:'mon',2:'tue',3:'wed',4:'thu'};
 function currentDayKey(){const d=new Date().getDay();return({0:'sun',1:'mon',2:'tue',3:'wed',4:'thu',5:'fri',6:'sat'})[d];}
@@ -2332,7 +2355,9 @@ async function saveContent(){
     toast(`✅ تم حفظ ${rows.length} درس بنجاح`);
     closeContentUploader();
   }catch(e){
-    toast('❌ خطأ في الحفظ: '+(e.message||'غير معروف'),true);
+    const msg=e.message||e.details||e.hint||JSON.stringify(e)||'غير معروف';
+    console.error('saveContent error:',e);
+    toast('❌ خطأ في الحفظ: '+msg,true);
     saveBtn.disabled=false;
     saveBtn.textContent='💾 حفظ';
   }
@@ -2501,38 +2526,107 @@ function showAdminBanner(){
 async function loadAdminCurriculumSummary(){
   const el=document.getElementById('admin-curriculum-summary');
   if(!el)return;
-  el.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري حساب الإحصائيات...</div>';
+
+  const semEl=document.getElementById('acs-semester');
+  const gradeEl=document.getElementById('acs-grade');
+  const semester=semEl?semEl.value:'الفصل الأول';
+  const grade=gradeEl?parseInt(gradeEl.value):5;
+  const gradeNames={5:'الخامس',6:'السادس',7:'السابع',8:'الثامن',9:'التاسع',10:'العاشر',11:'الحادي عشر',12:'الثاني عشر'};
+
+  el.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
+
   try{
-    const{data,error}=await sb.from('curriculum').select('semester,subject,grade');
-    if(error)throw error;
-    if(!data||!data.length){
-      el.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">📭 لا يوجد محتوى بعد. اضغط "📥 رفع محتوى" للبدء.</div>';
+    // 1. جلب المواد المسجلة لهذا الصف والفصل
+    const{data:subData,error:subErr}=await sb.from('subjects')
+      .select('subject,sort').eq('grade',grade).eq('semester',semester).order('sort');
+    if(subErr)throw subErr;
+
+    // 2. جلب الدروس لهذا الصف والفصل
+    const{data:curData,error:curErr}=await sb.from('curriculum')
+      .select('subject,unit').eq('grade',grade).eq('semester',semester);
+    if(curErr)throw curErr;
+
+    // تجميع بيانات الدروس حسب المادة
+    const lessonMap={};
+    (curData||[]).forEach(r=>{
+      if(!lessonMap[r.subject])lessonMap[r.subject]={lessons:0,units:new Set()};
+      lessonMap[r.subject].lessons++;
+      if(r.unit)lessonMap[r.subject].units.add(r.unit);
+    });
+
+    if(!subData||!subData.length){
+      el.innerHTML=`<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">📭 لا توجد مواد مسجلة للصف ${gradeNames[grade]} - ${semester}</div>`;
       return;
     }
-    // تجميع الإحصائيات
-    const bySubject={};
-    data.forEach(r=>{
-      const k=r.subject;
-      if(!bySubject[k])bySubject[k]={total:0,grades:new Set(),semesters:new Set()};
-      bySubject[k].total++;
-      bySubject[k].grades.add(r.grade);
-      bySubject[k].semesters.add(r.semester);
+
+    let html=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">الصف ${gradeNames[grade]} · ${semester} · ${subData.length} مادة</div>`;
+    html+='<div style="display:flex;flex-direction:column;gap:8px">';
+
+    subData.forEach(s=>{
+      const info=lessonMap[s.subject];
+      if(info){
+        const units=info.units.size;
+        const lessons=info.lessons;
+        html+=`<div style="background:var(--card);border:1px solid var(--border);border-right:3px solid var(--green);border-radius:10px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:15px">✅</span>
+            <span style="font-size:13px;font-weight:700;color:var(--white)">${escHtml(s.subject)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:3px 10px">${units} وحدة · ${lessons} درس</span>
+            <button onclick="previewSubjectContent('${s.subject.replace(/'/g,"\'")}',${grade},'${semester}')"
+              style="background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;border:none;border-radius:99px;padding:4px 12px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer">
+              👁️ معاينة
+            </button>
+          </div>
+        </div>`;
+      }else{
+        html+=`<div style="background:var(--card);border:1px solid var(--border);border-right:3px solid var(--border);border-radius:10px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;opacity:.7">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:15px">⏳</span>
+            <span style="font-size:13px;font-weight:700;color:var(--muted)">${escHtml(s.subject)}</span>
+          </div>
+          <span style="font-size:11px;color:var(--muted)">لم ترفع الدروس بعد</span>
+        </div>`;
+      }
     });
-    const subjects=Object.keys(bySubject).sort();
-    let html='<div style="font-size:12.5px;color:var(--gold);font-weight:700;margin-bottom:8px">📊 الإحصائيات (إجمالي '+data.length+' درس):</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
-    subjects.forEach(s=>{
-      const v=bySubject[s];
-      const grades=[...v.grades].sort((a,b)=>a-b).join('، ');
-      html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px">
-        <div style="font-size:12.5px;font-weight:700;color:var(--white)">${escHtml(s)}</div>
-        <div style="font-size:10.5px;color:var(--muted);margin-top:3px">${v.total} درس · صفوف: ${grades}</div>
-      </div>`;
-    });
+
     html+='</div>';
     el.innerHTML=html;
   }catch(e){
     el.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;
+  }
+}
+
+async function previewSubjectContent(subject,grade,semester){
+  try{
+    const{data,error}=await sb.from('curriculum')
+      .select('unit,lesson,sort').eq('subject',subject).eq('grade',grade).eq('semester',semester).order('sort');
+    if(error)throw error;
+    if(!data||!data.length){toast('لا توجد دروس',true);return;}
+
+    // تجميع حسب الوحدة
+    const units={};
+    data.forEach(r=>{
+      const u=r.unit||'بدون وحدة';
+      if(!units[u])units[u]=[];
+      units[u].push(r.lesson);
+    });
+
+    let msg=`📚 ${subject} - الصف ${grade} - ${semester}
+`;
+    msg+=`${'─'.repeat(30)}
+`;
+    Object.entries(units).forEach(([u,lessons])=>{
+      msg+=`
+📂 ${u} (${lessons.length} درس)
+`;
+      lessons.forEach((l,i)=>{msg+=`  ${i+1}. ${l}
+`;});
+    });
+    alert(msg);
+  }catch(e){
+    toast('❌ خطأ في المعاينة',true);
   }
 }
 
