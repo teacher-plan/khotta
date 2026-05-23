@@ -274,6 +274,32 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .admin-panel-card{background:var(--card);border:1.5px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:20px;}
 .admin-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
 .admin-panel-header h3{margin:0;color:var(--gold);font-family:'Tajawal',sans-serif;font-size:17px;font-weight:800;}
+/* ══ ANNOUNCEMENTS ══ */
+.ann-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.ann-item-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.ann-item-title{font-size:13px;font-weight:700;color:var(--white);}
+.ann-item-date{font-size:10px;color:var(--muted);}
+.ann-item-body{font-size:12px;color:var(--text);line-height:1.7;}
+.ann-item-actions{display:flex;gap:6px;justify-content:flex-end;}
+.ann-del-btn{background:rgba(192,57,43,.15);border:1px solid var(--red);color:var(--red2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;}
+.ann-textarea{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px 13px;outline:none;resize:vertical;min-height:80px;transition:border-color .2s;}
+.ann-textarea:focus{border-color:var(--gold);}
+.ann-inp{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:9px 12px;outline:none;margin-bottom:8px;transition:border-color .2s;}
+.ann-inp:focus{border-color:var(--gold);}
+.ann-banner{background:linear-gradient(135deg,rgba(240,192,96,.12),rgba(192,57,43,.08));border:1.5px solid rgba(240,192,96,.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:none;}
+.ann-banner.show{display:block;}
+.ann-banner-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.ann-banner-body{font-size:12px;color:var(--text);line-height:1.7;}
+/* ══ USERS ══ */
+.user-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.user-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
+.user-avatar-placeholder{width:34px;height:34px;border-radius:50%;background:var(--card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:12.5px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-email{font-size:10.5px;color:var(--muted);direction:ltr;text-align:right;}
+.user-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.users-search{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:9px 12px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.users-search:focus{border-color:var(--gold);}
 .admin-templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
 .template-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px;transition:all .2s;}
 .template-card:hover{border-color:var(--gold);transform:translateY(-2px);}
@@ -811,6 +837,8 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 <!-- ══ TRACKER ══ -->
 <div class="page" id="page-tracker"><div class="wrap">
   <div class="page-header"><div class="tag">📚 الخطة الفصلية</div><h1 id="tracker-title">الخطة الفصلية</h1><p>اضغط على الدرس لما تخلص منه ✅</p></div>
+  <!-- بانر الإعلانات للمعلمين -->
+  <div id="ann-banner-wrap" style="margin-bottom:10px"></div>
   
   <!-- ══ لوحة المشرف (محتوى المناهج) ══ -->
   <div id="admin-content-panel" class="admin-only" style="display:none">
@@ -848,6 +876,43 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     </div>
   </div>
   
+  <!-- ══ لوحة الإعلانات (للمشرف) ══ -->
+  <div id="admin-announcements-panel" class="admin-only" style="display:none">
+    <div class="admin-panel-card">
+      <div class="admin-panel-header">
+        <h3>📢 لوحة الإعلانات</h3>
+        <button class="grade-btn" style="background:linear-gradient(135deg,#e67e22,#f39c12);color:#fff;font-weight:700" onclick="toggleNewAnnForm()">✏️ إعلان جديد</button>
+      </div>
+      <!-- نموذج إعلان جديد -->
+      <div id="new-ann-form" style="display:none;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <input id="ann-title-inp" class="ann-inp" type="text" placeholder="عنوان الإعلان..."/>
+        <textarea id="ann-body-inp" class="ann-textarea" placeholder="نص الإعلان الذي سيظهر لجميع المعلمين..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+          <button onclick="toggleNewAnnForm()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 16px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif">إلغاء</button>
+          <button onclick="saveAnnouncement()" style="background:linear-gradient(135deg,#e67e22,#f39c12);border:none;color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">📢 نشر الإعلان</button>
+        </div>
+      </div>
+      <div id="announcements-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ لوحة إدارة المستخدمين (للمشرف) ══ -->
+  <div id="admin-users-panel" class="admin-only" style="display:none">
+    <div class="admin-panel-card">
+      <div class="admin-panel-header">
+        <h3>👥 المعلمون المسجلون</h3>
+        <button class="grade-btn" onclick="loadAdminUsers()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-weight:700">🔄 تحديث</button>
+      </div>
+      <input id="users-search" class="users-search" type="text" placeholder="🔍 ابحث عن معلم..." oninput="filterUsers()"/>
+      <div id="users-count" style="font-size:11px;color:var(--muted);margin-bottom:10px"></div>
+      <div id="users-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+  </div>
+
   <div class="overall teacher-only">
     <div class="ring">
       <svg viewBox="0 0 100 100">
@@ -2075,12 +2140,17 @@ function showPage(id,btn){
   if(id==='grades'){renderGrades();if(isAdmin())loadAdminTemplates();}
   if(id==='stats')renderStats();
   if(id==='library')loadLibrary();
-  if(id==='tracker'&&isAdmin()){
-    const semEl=document.getElementById('acs-semester');
-    const gradeEl=document.getElementById('acs-grade');
-    if(semEl&&teacherConfig&&teacherConfig.semester)semEl.value=teacherConfig.semester;
-    if(gradeEl&&teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length)gradeEl.value=teacherConfig.grades[0];
-    loadAdminCurriculumSummary();
+  if(id==='tracker'){
+    loadAnnouncementBanner();
+    if(isAdmin()){
+      const semEl=document.getElementById('acs-semester');
+      const gradeEl=document.getElementById('acs-grade');
+      if(semEl&&teacherConfig&&teacherConfig.semester)semEl.value=teacherConfig.semester;
+      if(gradeEl&&teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length)gradeEl.value=teacherConfig.grades[0];
+      loadAdminCurriculumSummary();
+      loadAnnouncements();
+      loadAdminUsers();
+    }
   }
 }
 const dayMap2={0:'sun',1:'mon',2:'tue',3:'wed',4:'thu'};
@@ -2497,17 +2567,21 @@ function updateAdminButtons(){
     },50);
     // إخفاء بانر المعلم
     document.querySelectorAll('.teacher-banner').forEach(el=>el.style.display='none');
-    // إظهار لوحة محتوى المناهج
-    const adminContentPanel=document.getElementById('admin-content-panel');
-    if(adminContentPanel)adminContentPanel.style.removeProperty('display');
+    // إظهار لوحات المشرف
+    ['admin-content-panel','admin-announcements-panel','admin-users-panel'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.removeProperty('display');
+    });
     // تغيير عنوان صفحة الخطة
     const trackerTitle=document.getElementById('tracker-title');
     if(trackerTitle)trackerTitle.textContent='🛠️ لوحة المشرف';
     const trackerPara=document.querySelector('#page-tracker .page-header p');
-    if(trackerPara)trackerPara.textContent='إدارة محتوى المناهج وقوالب الدرجات لكل المعلمين';
+    if(trackerPara)trackerPara.textContent='إدارة محتوى المناهج والإعلانات والمستخدمين';
     // تحميل البيانات
     loadAdminCurriculumSummary();
     loadAdminTemplates();
+    loadAnnouncements();
+    loadAdminUsers();
   }
 }
 
@@ -2628,6 +2702,164 @@ async function previewSubjectContent(subject,grade,semester){
   }catch(e){
     toast('❌ خطأ في المعاينة',true);
   }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 📢 الإعلانات
+// ════════════════════════════════════════════════════════════════
+function toggleNewAnnForm(){
+  const f=document.getElementById('new-ann-form');
+  const isHidden=f.style.display==='none';
+  f.style.display=isHidden?'block':'none';
+  if(isHidden){
+    document.getElementById('ann-title-inp').focus();
+    document.getElementById('ann-title-inp').value='';
+    document.getElementById('ann-body-inp').value='';
+  }
+}
+
+async function saveAnnouncement(){
+  const title=document.getElementById('ann-title-inp').value.trim();
+  const body=document.getElementById('ann-body-inp').value.trim();
+  if(!title){toast('❌ أدخل عنوان الإعلان',true);return;}
+  if(!body){toast('❌ أدخل نص الإعلان',true);return;}
+  try{
+    const{error}=await sb.from('announcements').insert({
+      title,body,
+      created_by:currentUser.email,
+      created_at:new Date().toISOString()
+    });
+    if(error)throw error;
+    toast('✅ تم نشر الإعلان بنجاح');
+    toggleNewAnnForm();
+    loadAnnouncements();
+  }catch(e){
+    toast('❌ خطأ في النشر: '+(e.message||''),true);
+  }
+}
+
+async function deleteAnnouncement(id){
+  if(!confirm('هل تريد حذف هذا الإعلان؟'))return;
+  try{
+    const{error}=await sb.from('announcements').delete().eq('id',id);
+    if(error)throw error;
+    toast('✅ تم حذف الإعلان');
+    loadAnnouncements();
+    loadAnnouncementBanner();
+  }catch(e){
+    toast('❌ خطأ في الحذف',true);
+  }
+}
+
+async function loadAnnouncements(){
+  const list=document.getElementById('announcements-list');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('announcements').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    if(!data||!data.length){
+      list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">📭 لا توجد إعلانات بعد</div>';
+      return;
+    }
+    list.innerHTML=data.map(a=>{
+      const d=new Date(a.created_at);
+      const dateStr=d.toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+      return `<div class="ann-item">
+        <div class="ann-item-header">
+          <span class="ann-item-title">📢 ${escHtml(a.title)}</span>
+          <span class="ann-item-date">${dateStr}</span>
+        </div>
+        <div class="ann-item-body">${escHtml(a.body)}</div>
+        <div class="ann-item-actions">
+          <button class="ann-del-btn" onclick="deleteAnnouncement(${a.id})">🗑️ حذف</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;
+  }
+}
+
+// بانر الإعلانات للمعلمين
+async function loadAnnouncementBanner(){
+  const wrap=document.getElementById('ann-banner-wrap');
+  if(!wrap)return;
+  try{
+    const{data,error}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
+    if(error||!data||!data.length){wrap.innerHTML='';return;}
+    const a=data[0];
+    const d=new Date(a.created_at);
+    const dateStr=d.toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+    wrap.innerHTML=`<div class="ann-banner show">
+      <div class="ann-banner-title">📢 ${escHtml(a.title)} <span style="font-size:10px;font-weight:400;color:var(--muted);margin-right:6px">${dateStr}</span></div>
+      <div class="ann-banner-body">${escHtml(a.body)}</div>
+    </div>`;
+  }catch(e){wrap.innerHTML='';}
+}
+
+// ════════════════════════════════════════════════════════════════
+// 👥 إدارة المستخدمين
+// ════════════════════════════════════════════════════════════════
+let _allUsers=[];
+
+async function loadAdminUsers(){
+  const list=document.getElementById('users-list');
+  const countEl=document.getElementById('users-count');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('profiles').select('id,data,updated_at').order('updated_at',{ascending:false});
+    if(error)throw error;
+    _allUsers=data||[];
+    if(countEl)countEl.textContent=`${_allUsers.length} معلم مسجل`;
+    renderUsersList(_allUsers);
+  }catch(e){
+    list.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;
+  }
+}
+
+function renderUsersList(users){
+  const list=document.getElementById('users-list');
+  if(!list)return;
+  if(!users.length){
+    list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">لا توجد نتائج</div>';
+    return;
+  }
+  list.innerHTML=users.map(u=>{
+    const d=u.data||{};
+    const name=d.display_name||d.teacher_name||'—';
+    const email=d.email||'';
+    const config=d.teacher_config||{};
+    const grade=config.grades?config.grades.join('، '):'—';
+    const subject=config.subject||'—';
+    const updated=u.updated_at?new Date(u.updated_at).toLocaleDateString('ar-OM',{month:'short',day:'numeric'}):'';
+    const avatar=d.avatar_url||d.photo||'';
+    const avatarEl=avatar
+      ?`<img class="user-avatar" src="${escHtml(avatar)}" onerror="this.style.display='none'">`
+      :`<div class="user-avatar-placeholder">👤</div>`;
+    return `<div class="user-item">
+      ${avatarEl}
+      <div class="user-info">
+        <div class="user-name">${escHtml(name)}</div>
+        ${email?`<div class="user-email">${escHtml(email)}</div>`:''}
+        <div class="user-meta">📚 ${escHtml(subject)} · صف ${escHtml(grade)} ${updated?'· آخر تحديث: '+updated:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterUsers(){
+  const q=(document.getElementById('users-search').value||'').toLowerCase();
+  if(!q){renderUsersList(_allUsers);return;}
+  const filtered=_allUsers.filter(u=>{
+    const d=u.data||{};
+    const name=(d.display_name||d.teacher_name||'').toLowerCase();
+    const email=(d.email||'').toLowerCase();
+    const subject=((d.teacher_config||{}).subject||'').toLowerCase();
+    return name.includes(q)||email.includes(q)||subject.includes(q);
+  });
+  renderUsersList(filtered);
 }
 
 // ════════════════════════════════════════════════════════════════
