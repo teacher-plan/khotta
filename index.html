@@ -274,6 +274,34 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .admin-panel-card{background:var(--card);border:1.5px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:20px;}
 .admin-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
 .admin-panel-header h3{margin:0;color:var(--gold);font-family:'Tajawal',sans-serif;font-size:17px;font-weight:800;}
+/* ══ BEHAVIOR ══ */
+.behavior-setup{background:var(--card);border:1.5px solid var(--gold);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.behavior-phone-inp{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:180px;direction:ltr;transition:border-color .2s;}
+.behavior-phone-inp:focus{border-color:var(--gold);}
+.behavior-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.behavior-tab{padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.behavior-tab.active{background:linear-gradient(135deg,var(--red),var(--red2));border-color:var(--red2);color:#fff;}
+.behavior-import-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.behavior-import-box h4{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;}
+.behavior-hint{font-size:11px;color:var(--muted);background:rgba(240,192,96,.06);border:1px solid rgba(240,192,96,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.8;}
+.behavior-textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;outline:none;resize:vertical;min-height:80px;margin-bottom:8px;transition:border-color .2s;direction:rtl;}
+.behavior-textarea:focus{border-color:var(--gold);}
+.behavior-table{width:100%;border-collapse:collapse;font-size:12px;}
+.behavior-table th{background:var(--surface);color:var(--gold);font-weight:700;padding:9px 10px;text-align:right;border-bottom:2px solid var(--border);}
+.behavior-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+.behavior-table tr:hover td{background:var(--surface);}
+.violation-select{background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:11px;padding:5px 8px;outline:none;cursor:pointer;max-width:150px;}
+.send-wa-btn{background:linear-gradient(135deg,#25D366,#128C7E);border:none;color:#fff;border-radius:99px;padding:5px 12px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;}
+.send-wa-btn:hover{opacity:.85;}
+.send-wa-btn:disabled{opacity:.4;cursor:not-allowed;}
+.behavior-empty{text-align:center;padding:30px;color:var(--muted);font-size:13px;}
+.behavior-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.behavior-stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;flex:1;min-width:80px;text-align:center;}
+.behavior-stat-num{font-size:20px;font-weight:800;color:var(--gold);font-family:'Tajawal',sans-serif;}
+.behavior-stat-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+.violation-log{font-size:10px;color:var(--red2);margin-top:2px;}
+.download-template-btn{background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;}
+
 /* ══ BELL NOTIFICATION ══ */
 .bell-wrap{position:relative;display:inline-flex;align-items:center;cursor:pointer;margin-right:auto;}
 .bell-btn{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 6px;border-radius:8px;transition:transform .2s;line-height:1;}
@@ -806,6 +834,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <button class="nav-btn" data-page="library" onclick="showPage('library',this)">📚 المكتبة</button>
   <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)">📢 الإعلانات</button>
   <button class="nav-btn admin-only" data-page="users" onclick="showPage('users',this)">👥 المعلمون</button>
+  <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)">🎓 السلوك</button>
   <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)">🏆 السيرة</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
     <img id="ub-img" src="" alt=""/>
@@ -1253,6 +1282,53 @@ tbody tr.today{background:rgba(240,192,96,.03);}
       <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
     </div>
   </div>
+</div></div>
+
+<!-- ══ BEHAVIOR ══ -->
+<div class="page" id="page-behavior"><div class="wrap">
+  <div class="page-header">
+    <div class="tag">🎓 متابعة السلوك</div>
+    <h1>سجل السلوك والمخالفات</h1>
+    <p>تتبع سلوك الطلاب وإشعار أولياء الأمور فوراً</p>
+  </div>
+
+  <!-- رقم هاتف المعلم -->
+  <div class="behavior-setup">
+    <span style="font-size:13px;font-weight:700;color:var(--gold)">📱 رقم واتساب المعلم:</span>
+    <input id="behavior-teacher-phone" class="behavior-phone-inp" type="tel" placeholder="96812345678" oninput="saveBehaviorPhone()"/>
+    <span style="font-size:11px;color:var(--muted)">يظهر في رسالة ولي الأمر</span>
+  </div>
+
+  <!-- إحصائيات سريعة -->
+  <div class="behavior-stats">
+    <div class="behavior-stat-card"><div class="behavior-stat-num" id="bstat-students">0</div><div class="behavior-stat-lbl">طالب</div></div>
+    <div class="behavior-stat-card"><div class="behavior-stat-num" id="bstat-violations">0</div><div class="behavior-stat-lbl">مخالفة</div></div>
+    <div class="behavior-stat-card"><div class="behavior-stat-num" id="bstat-sent">0</div><div class="behavior-stat-lbl">إشعار أُرسل</div></div>
+  </div>
+
+  <!-- تبويبات الشعب -->
+  <div class="behavior-tabs" id="behavior-tabs"></div>
+
+  <!-- استيراد الطلاب -->
+  <div class="behavior-import-box" id="behavior-import-box">
+    <h4>📥 إضافة طلاب لهذه الشعبة</h4>
+    <div class="behavior-hint">
+      📊 <strong>Excel:</strong> عمودان فقط: <strong>اسم الطالب</strong> و <strong>رقم ولي الأمر</strong> (الصف الأول عناوين)<br>
+      📝 <strong>لصق نص:</strong> كل طالب في سطر بهذا الشكل: <strong>اسم الطالب، رقم ولي الأمر</strong>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="download-template-btn" onclick="downloadBehaviorTemplate()">⬇️ تحميل قالب Excel</button>
+      <label style="background:linear-gradient(135deg,#2980b9,#3498db);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer">
+        📂 رفع Excel
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importBehaviorExcel(event)"/>
+      </label>
+    </div>
+    <textarea id="behavior-paste-area" class="behavior-textarea" placeholder="أو الصق الأسماء والأرقام هنا:&#10;محمد أحمد، 96812345678&#10;سالم علي، 96898765432"></textarea>
+    <button onclick="importBehaviorPaste()" style="background:linear-gradient(135deg,var(--red),var(--red2));border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">✅ إضافة من النص</button>
+  </div>
+
+  <!-- جدول الطلاب -->
+  <div id="behavior-table-wrap"></div>
 </div></div>
 
 <!-- ══ CV ══ -->
@@ -2236,6 +2312,7 @@ function showPage(id,btn){
   if(id==='grades'){renderGrades();if(isAdmin())loadAdminTemplates();}
   if(id==='stats')renderStats();
   if(id==='library')loadLibrary();
+  if(id==='behavior')initBehaviorPage();
   if(id==='announcements')loadAnnouncements();
   if(id==='users')loadAdminUsers();
   if(id==='timetable')loadAnnouncementBanner();
@@ -4281,6 +4358,329 @@ function renderStats(){
   document.getElementById('stats-week').innerHTML=wdays.map(d=>{const sch=timetableConfig.schedule[d.id]||{};const count=Object.values(sch).filter(v=>v).length;return`<div class="week-cell"><div class="wc-day">${d.name}</div><div class="wc-count">${count}</div><div style="font-size:9px;color:var(--muted)">حصة</div></div>`;}).join('');
   const gCard=document.getElementById('stats-grades-card');const hasGrades=allCls.some(cls=>{const sList=students[cls.id]||[];const cols=gradeTypes.filter(c=>c.classKey===cls.id);return sList.length>0&&cols.length>0;});
   if(hasGrades){gCard.style.display='block';document.getElementById('stats-grades').innerHTML=allCls.map(cls=>{const sList=students[cls.id]||[];const cols=gradeTypes.filter(c=>c.classKey===cls.id);let sum=0,cnt=0;sList.forEach(st=>{const sg=(grades[cls.id]||{})[st.id]||{};let pts=0,maxPts=0;cols.forEach(c=>{if(sg[c.id]!=null){pts+=Number(sg[c.id]);maxPts+=Number(c.max);}});if(maxPts>0){sum+=(pts/maxPts)*100;cnt++;}});const avg=cnt?Math.round(sum/cnt):0;return`<div class="chart-row"><span class="chart-row-label" style="color:${cls.color}">${cls.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${avg}%;background:${cls.color}">${avg}%</div></div></div>`;}).join('');}else{gCard.style.display='none';}
+}
+
+// ══ BEHAVIOR ════════════════════════════════════════════
+let behaviorStudents={};   // {classKey: [{id,name,phone}]}
+let behaviorViolations={}; // {studentId: [{type,date,sent}]}
+let activeBehaviorClass='';
+
+const VIOLATION_TYPES=[
+  'تأخر عن الحصة',
+  'غياب بدون عذر',
+  'عدم إنجاز الواجب',
+  'إخلال بالنظام',
+  'استخدام الجوال',
+  'عدم احترام المعلم',
+  'الغش في الاختبار',
+  'مخالفة الزي المدرسي',
+  'أخرى'
+];
+
+function saveBehaviorPhone(){
+  const phone=document.getElementById('behavior-teacher-phone').value.trim();
+  localStorage.setItem('behaviorTeacherPhone',phone);
+}
+
+function loadBehaviorPhone(){
+  const phone=localStorage.getItem('behaviorTeacherPhone')||'';
+  const el=document.getElementById('behavior-teacher-phone');
+  if(el)el.value=phone;
+}
+
+function saveBehaviorData(){
+  localStorage.setItem('behaviorStudents',JSON.stringify(behaviorStudents));
+  localStorage.setItem('behaviorViolations',JSON.stringify(behaviorViolations));
+}
+
+function loadBehaviorData(){
+  try{
+    behaviorStudents=JSON.parse(localStorage.getItem('behaviorStudents')||'{}');
+    behaviorViolations=JSON.parse(localStorage.getItem('behaviorViolations')||'{}');
+  }catch(e){behaviorStudents={};behaviorViolations={};}
+}
+
+function initBehaviorPage(){
+  loadBehaviorData();
+  loadBehaviorPhone();
+  renderBehaviorTabs();
+  updateBehaviorStats();
+}
+
+function getAllClasses2(){
+  // جلب الشعب من نظام الدرجات الحالي
+  const config=teacherConfig||{};
+  const gradesArr=config.grades||[];
+  const classes=[];
+  gradesArr.forEach(g=>{
+    const cls=(config.classes&&config.classes[g])||['أ'];
+    cls.forEach(c=>{
+      classes.push({id:`${g}_${c}`,label:`${g}/${c}`});
+    });
+  });
+  return classes;
+}
+
+function renderBehaviorTabs(){
+  const tabs=document.getElementById('behavior-tabs');
+  if(!tabs)return;
+  const classes=getAllClasses2();
+  if(!classes.length){
+    tabs.innerHTML='<div style="color:var(--muted);font-size:12px">لا توجد شعب - أكمل الإعداد أولاً</div>';
+    return;
+  }
+  if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass)){
+    activeBehaviorClass=classes[0].id;
+  }
+  tabs.innerHTML=classes.map(c=>`
+    <button class="behavior-tab${c.id===activeBehaviorClass?' active':''}" onclick="switchBehaviorClass('${c.id}')">
+      ${c.label}
+      ${(behaviorStudents[c.id]||[]).length?`<span style="font-size:10px;margin-right:4px;opacity:.7">${(behaviorStudents[c.id]||[]).length}</span>`:''}
+    </button>
+  `).join('');
+  renderBehaviorTable();
+}
+
+function switchBehaviorClass(id){
+  activeBehaviorClass=id;
+  renderBehaviorTabs();
+}
+
+function renderBehaviorTable(){
+  const wrap=document.getElementById('behavior-table-wrap');
+  if(!wrap)return;
+  const list=behaviorStudents[activeBehaviorClass]||[];
+
+  if(!list.length){
+    wrap.innerHTML=`<div class="behavior-empty">📭 لا يوجد طلاب في هذه الشعبة<br><span style="font-size:11px">استورد قائمة الطلاب من الأعلى</span></div>`;
+    return;
+  }
+
+  let html=`<table class="behavior-table">
+    <thead><tr>
+      <th>#</th>
+      <th>اسم الطالب</th>
+      <th>رقم ولي الأمر</th>
+      <th>المخالفة</th>
+      <th>إرسال</th>
+      <th>السجل</th>
+    </tr></thead><tbody>`;
+
+  list.forEach((s,idx)=>{
+    const vList=behaviorViolations[s.id]||[];
+    const lastV=vList[vList.length-1];
+    const hasPhone=!!s.phone;
+    html+=`<tr>
+      <td style="color:var(--muted)">${idx+1}</td>
+      <td style="font-weight:700">${escHtml(s.name)}</td>
+      <td>
+        <input type="tel" value="${escHtml(s.phone||'')}" 
+          placeholder="96812345678"
+          style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:11px;padding:4px 8px;outline:none;width:130px;direction:ltr"
+          onchange="updateStudentPhone('${s.id}',this.value)"/>
+      </td>
+      <td>
+        <select class="violation-select" id="vsel_${s.id}">
+          <option value="">اختر المخالفة...</option>
+          ${VIOLATION_TYPES.map(v=>`<option value="${v}">${v}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <button class="send-wa-btn" onclick="sendViolationWA('${s.id}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''}>
+          📤 واتساب
+        </button>
+      </td>
+      <td>
+        <span style="font-size:11px;color:var(--muted)">${vList.length?vList.length+' مخالفة':'-'}</span>
+        ${lastV?`<div class="violation-log">آخر: ${lastV.type}</div>`:''}
+      </td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table>
+  <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <span style="font-size:11px;color:var(--muted)">${list.length} طالب</span>
+    <button onclick="clearBehaviorClass()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif">🗑️ مسح قائمة الشعبة</button>
+  </div>`;
+
+  wrap.innerHTML=html;
+}
+
+function updateStudentPhone(id,phone){
+  const cleaned=phone.replace(/\s/g,'');
+  Object.keys(behaviorStudents).forEach(cls=>{
+    const s=behaviorStudents[cls].find(x=>x.id===id);
+    if(s){s.phone=cleaned;}
+  });
+  saveBehaviorData();
+  updateBehaviorStats();
+}
+
+function sendViolationWA(studentId){
+  const sel=document.getElementById(`vsel_${studentId}`);
+  if(!sel||!sel.value){toast('❌ اختر نوع المخالفة أولاً',true);return;}
+  
+  const cls=activeBehaviorClass;
+  const student=(behaviorStudents[cls]||[]).find(s=>s.id===studentId);
+  if(!student){return;}
+  if(!student.phone){toast('❌ أدخل رقم ولي الأمر أولاً',true);return;}
+
+  const teacherPhone=localStorage.getItem('behaviorTeacherPhone')||'';
+  const teacherName=displayName||'المعلم';
+  const clsLabel=getAllClasses2().find(c=>c.id===cls)?.label||cls;
+  const today=new Date().toLocaleDateString('ar-OM',{year:'numeric',month:'long',day:'numeric'});
+  const violation=sel.value;
+
+  const msg=`السلام عليكم ورحمة الله وبركاته 🌿
+
+ولي أمر الطالب/ *${student.name}*
+
+نود إعلامكم بأنه تم تسجيل المخالفة التالية:
+📋 *المخالفة:* ${violation}
+🏫 *الشعبة:* ${clsLabel}
+📅 *التاريخ:* ${today}
+
+نأمل منكم المتابعة مع الطالب وتوجيهه.
+
+*${teacherName}*${teacherPhone?' | '+teacherPhone:''}
+خطتي الفصلية 📚`;
+
+  // تسجيل المخالفة
+  if(!behaviorViolations[studentId])behaviorViolations[studentId]=[];
+  behaviorViolations[studentId].push({
+    type:violation,
+    date:new Date().toISOString(),
+    sent:true
+  });
+  saveBehaviorData();
+  updateBehaviorStats();
+  renderBehaviorTable();
+
+  // فتح واتساب
+  const phone=student.phone.replace(/[^0-9]/g,'');
+  const url=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+  
+  toast('✅ تم فتح واتساب - اضغط إرسال');
+}
+
+// استيراد من Excel
+async function importBehaviorExcel(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  
+  // تحميل SheetJS
+  if(!window.XLSX){
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    document.head.appendChild(script);
+    await new Promise(r=>script.onload=r);
+  }
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      
+      // تخطي الصف الأول (عناوين)
+      const dataRows=rows.slice(1).filter(r=>r.length>=1&&r[0]);
+      
+      // تحديد أعمدة الاسم والرقم تلقائياً
+      const header=(rows[0]||[]).map(h=>String(h||'').toLowerCase());
+      let nameCol=0,phoneCol=1;
+      
+      // البحث عن العمود بالعنوان
+      header.forEach((h,i)=>{
+        if(h.includes('اسم')||h.includes('name'))nameCol=i;
+        if(h.includes('رقم')||h.includes('phone')||h.includes('هاتف')||h.includes('جوال'))phoneCol=i;
+      });
+
+      const students=dataRows.map(r=>{
+        const nameVal=String(r[nameCol]||'').trim();
+        const phoneVal=String(r[phoneCol]||'').trim().replace(/\s/g,'');
+        // التحقق: الرقم يحتوي على أرقام فقط
+        const isPhone=/^[\d+]+$/.test(phoneVal)&&phoneVal.length>=8;
+        return{
+          id:'bs_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+          name:isPhone?phoneVal:nameVal,
+          phone:isPhone?phoneVal:phoneVal
+        };
+      }).filter(s=>s.name);
+
+      addBehaviorStudents(students);
+    }catch(e){
+      toast('❌ خطأ في قراءة الملف: '+e.message,true);
+    }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value='';
+}
+
+// استيراد من لصق
+function importBehaviorPaste(){
+  const text=document.getElementById('behavior-paste-area').value.trim();
+  if(!text){toast('❌ الصق البيانات أولاً',true);return;}
+  
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+  const students=lines.map(line=>{
+    // فصل الاسم والرقم بالفاصلة أو التاب
+    const parts=line.split(/[,،\t]+/).map(p=>p.trim());
+    let name='',phone='';
+    parts.forEach(p=>{
+      if(/^[\d+]+$/.test(p.replace(/\s/g,''))&&p.length>=8)phone=p.replace(/\s/g,'');
+      else if(p)name=p;
+    });
+    return{id:'bs_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name,phone};
+  }).filter(s=>s.name);
+
+  if(!students.length){toast('❌ لم يتم التعرف على أي طالب',true);return;}
+  addBehaviorStudents(students);
+  document.getElementById('behavior-paste-area').value='';
+}
+
+function addBehaviorStudents(newStudents){
+  if(!behaviorStudents[activeBehaviorClass])behaviorStudents[activeBehaviorClass]=[];
+  const existing=new Set(behaviorStudents[activeBehaviorClass].map(s=>s.name));
+  const added=newStudents.filter(s=>!existing.has(s.name));
+  behaviorStudents[activeBehaviorClass].push(...added);
+  saveBehaviorData();
+  renderBehaviorTabs();
+  updateBehaviorStats();
+  toast(`✅ تم إضافة ${added.length} طالب`);
+}
+
+function clearBehaviorClass(){
+  if(!confirm(`هل تريد مسح قائمة هذه الشعبة؟`))return;
+  behaviorStudents[activeBehaviorClass]=[];
+  saveBehaviorData();
+  renderBehaviorTable();
+  renderBehaviorTabs();
+  updateBehaviorStats();
+  toast('✅ تم المسح');
+}
+
+function updateBehaviorStats(){
+  const totalStudents=Object.values(behaviorStudents).reduce((s,arr)=>s+arr.length,0);
+  const totalViolations=Object.values(behaviorViolations).reduce((s,arr)=>s+arr.length,0);
+  const totalSent=Object.values(behaviorViolations).reduce((s,arr)=>s+arr.filter(v=>v.sent).length,0);
+  const s1=document.getElementById('bstat-students');
+  const s2=document.getElementById('bstat-violations');
+  const s3=document.getElementById('bstat-sent');
+  if(s1)s1.textContent=totalStudents;
+  if(s2)s2.textContent=totalViolations;
+  if(s3)s3.textContent=totalSent;
+}
+
+function downloadBehaviorTemplate(){
+  const csv='\uFEFFاسم الطالب,رقم ولي الأمر\nمحمد أحمد,96812345678\nسالم علي,96898765432';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='قالب_السلوك.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast('✅ تم تحميل القالب');
 }
 
 // ══ CV ════════════════════════════════════════════════
