@@ -2868,11 +2868,28 @@ function saveBellReadIds(ids){
 }
 
 async function loadAnnouncementBanner(){
-  // تحميل الإعلانات وتحديث الجرس
   try{
-    const{data,error}=await sb.from('announcements').select('*').order('created_at',{ascending:false});
-    if(error||!data)return;
-    _bellAnnouncements=data;
+    // جلب الإعلانات العامة
+    const{data:annData,error:annErr}=await sb.from('announcements')
+      .select('*').order('created_at',{ascending:false});
+    if(annErr)return;
+
+    // جلب الرسائل الخاصة لهذا المعلم فقط
+    let msgData=[];
+    if(currentUser){
+      const{data:msgs}=await sb.from('private_messages')
+        .select('*').eq('to_user_id',currentUser.id).order('created_at',{ascending:false});
+      msgData=msgs||[];
+    }
+
+    // دمج المصدرين مع تمييز النوع
+    const announcements=(annData||[]).map(a=>({...a,_type:'ann'}));
+    const messages=msgData.map(m=>({...m,_type:'msg'}));
+
+    // ترتيب حسب التاريخ
+    _bellAnnouncements=[...announcements,...messages]
+      .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
     renderBell();
   }catch(e){}
 }
@@ -2884,7 +2901,9 @@ function renderBell(){
   if(!badge||!list)return;
 
   const readIds=getBellReadIds();
-  const unread=_bellAnnouncements.filter(a=>!readIds.includes(a.id));
+  // مفتاح القراءة: نوع + id
+  const getKey=(a)=>`${a._type}_${a.id}`;
+  const unread=_bellAnnouncements.filter(a=>!readIds.includes(getKey(a)));
 
   // تحديث الشارة
   if(unread.length>0){
@@ -2897,16 +2916,20 @@ function renderBell(){
   if(countEl)countEl.textContent=unread.length>0?`${unread.length} غير مقروء`:'كل شيء مقروء';
 
   if(!_bellAnnouncements.length){
-    list.innerHTML='<div class="bell-drop-empty">📭 لا توجد إعلانات</div>';
+    list.innerHTML='<div class="bell-drop-empty">📭 لا توجد إشعارات</div>';
     return;
   }
 
   list.innerHTML=_bellAnnouncements.map(a=>{
-    const isUnread=!readIds.includes(a.id);
+    const key=getKey(a);
+    const isUnread=!readIds.includes(key);
     const d=new Date(a.created_at);
     const dateStr=d.toLocaleDateString('ar-OM',{month:'short',day:'numeric'});
-    return `<div class="bell-drop-item${isUnread?' unread':''}" onclick="markOneRead(${a.id})">
-      <div class="bell-drop-title">${isUnread?'🔵 ':''}${escHtml(a.title)}</div>
+    const isMsg=a._type==='msg';
+    const icon=isMsg?'✉️':'📢';
+    const label=isMsg?`<span style="font-size:10px;background:rgba(41,128,185,.2);color:#3498db;border-radius:4px;padding:1px 6px;margin-right:4px">رسالة خاصة</span>`:'';
+    return `<div class="bell-drop-item${isUnread?' unread':''}" onclick="markOneReadByKey('${key}')">
+      <div class="bell-drop-title">${isUnread?'🔵 ':''}${icon} ${escHtml(a.title)}${label}</div>
       <div class="bell-drop-body">${escHtml(a.body)}</div>
       <div class="bell-drop-date">${dateStr}</div>
     </div>`;
@@ -2930,9 +2953,14 @@ document.addEventListener('click',function(e){
 });
 
 function markOneRead(id){
+  // للتوافق مع الكود القديم
+  markOneReadByKey(String(id));
+}
+
+function markOneReadByKey(key){
   const readIds=getBellReadIds();
-  if(!readIds.includes(id)){
-    readIds.push(id);
+  if(!readIds.includes(key)){
+    readIds.push(key);
     saveBellReadIds(readIds);
     renderBell();
   }
@@ -2940,8 +2968,8 @@ function markOneRead(id){
 
 function markAllRead(e){
   e.stopPropagation();
-  const ids=_bellAnnouncements.map(a=>a.id);
-  saveBellReadIds(ids);
+  const keys=_bellAnnouncements.map(a=>`${a._type}_${a.id}`);
+  saveBellReadIds(keys);
   renderBell();
   const dd=document.getElementById('bell-dropdown');
   if(dd)dd.classList.remove('show');
