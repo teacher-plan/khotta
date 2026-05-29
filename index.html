@@ -601,6 +601,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .empty-state{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;display:none;}
 .empty-state .emoji{font-size:32px;margin-bottom:8px;}
 .section{margin-bottom:28px;}
+.unit-arrow{font-size:12px;color:var(--muted);transition:transform .25s;flex-shrink:0;}
+.section.collapsed .unit-arrow{transform:rotate(-90deg);}
+.section.collapsed .lessons{display:none;}
+.sec-head:hover{border-color:var(--gold);}
 .sec-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;}
 .sec-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .sec-title{font-size:15px;font-weight:700;color:var(--text);}
@@ -1703,7 +1707,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <!-- رقم هاتف المعلم -->
   <div class="behavior-setup">
     <span style="font-size:13px;font-weight:700;color:var(--gold)">📱 رقم واتساب المعلم:</span>
-    <input id="behavior-teacher-phone" class="behavior-phone-inp" type="tel" placeholder="96812345678" oninput="saveBehaviorPhone()"/>
+    <input id="behavior-teacher-phone" class="behavior-phone-inp" type="tel" placeholder="أدخل رقمك" oninput="saveBehaviorPhone()"/>
     <span style="font-size:11px;color:var(--muted)">يظهر في رسالة ولي الأمر</span>
   </div>
 
@@ -2697,8 +2701,7 @@ async function uploadSetupClassExcel(event, classId){
       _setupStudents[classId]=studentsList;
       
       renderSetupClassesList();
-      const withPhone=studentsList.filter(s=>s.phone&&s.phone.length>0).length;
-      toast(`✅ ${studentsList.length} طالب — ${withPhone} منهم لديهم أرقام`,'ok');
+      toast(`✅ تم تحميل ${studentsList.length} طالب`,'ok');
     }catch(err){
       toast('❌ خطأ في قراءة الملف: '+err.message,true);
     }
@@ -4344,10 +4347,10 @@ function buildTracker(){
     return;
   }
   grade.units.forEach((unit,ui)=>{
-    const secEl=document.createElement('div');secEl.className='section';secEl.id='sec-u'+ui;
+    const secEl=document.createElement('div');secEl.className='section collapsed';secEl.id='sec-u'+ui;
     const doneCount=unit.lessons.filter(l=>get(l.id).done).length;
     const pct=unit.lessons.length?Math.round(doneCount/unit.lessons.length*100):0;
-    secEl.innerHTML=`<div class="sec-head"><div class="sec-icon" style="background:rgba(192,57,43,.12)">📚</div><div><div class="sec-title">${unit.name}</div><div class="sec-sub" id="prg-u${ui}">${doneCount}/${unit.lessons.length} دروس</div></div><div class="sec-bar-wrap"><div class="sec-bar" id="bar-u${ui}" style="width:${pct}%"></div></div></div>`;
+    secEl.innerHTML=`<div class="sec-head" style="cursor:pointer" onclick="toggleUnit('sec-u${ui}')"><div class="sec-icon" style="background:rgba(192,57,43,.12)">📚</div><div style="flex:1"><div class="sec-title">${unit.name}</div><div class="sec-sub" id="prg-u${ui}">${doneCount}/${unit.lessons.length} دروس</div></div><div class="sec-bar-wrap"><div class="sec-bar" id="bar-u${ui}" style="width:${pct}%"></div></div><div class="unit-arrow">▼</div></div>`;
     const lEl=document.createElement('div');lEl.className='lessons';
     unit.lessons.forEach(lesson=>{
       const s=get(lesson.id);if(!s.classes)s.classes={};
@@ -4367,6 +4370,11 @@ function buildTracker(){
     });
     secEl.appendChild(lEl);sectionsEl.appendChild(secEl);
   });
+}
+
+function toggleUnit(secId){
+  const sec=document.getElementById(secId);
+  if(sec)sec.classList.toggle('collapsed');
 }
 
 function openVideoLink(lessonId){
