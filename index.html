@@ -726,7 +726,11 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .grades-table td{padding:6px 7px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);text-align:center;font-size:12px;}
 .grades-table td:first-child{font-weight:700;color:var(--text);text-align:right;padding-right:14px;border-left:none;background:var(--surface);position:sticky;right:0;z-index:1;}
 .grades-table tr:hover td{background:rgba(240,192,96,.04);}
-.grade-input{background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:4px 5px;width:55px;text-align:center;outline:none;transition:all .15s;}
+
+/* ══ CERT PREVIEW MODAL ══ */
+.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:600;padding:20px;}
+.cert-preview-card{background:#1a1010;border-radius:20px;padding:20px;max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center;}
+.grade-input{background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:4px 5px;width:55px;text-align:center;outline:none;transition:all .15s;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;}
 .grade-input:hover{border-color:var(--border);}
 .grade-input:focus{border-color:var(--gold);background:rgba(240,192,96,.05);}
 .grade-input.low{color:#e74c3c;}
@@ -2648,15 +2652,30 @@ async function uploadSetupClassExcel(event, classId){
       const nameKW=['اسم الطالب','الاسم','اسم','student','name','طالب','أسماء'];
       const phoneKW=['الهاتف النقال','هاتف ولي','ولي الأمر','هاتف','جوال','رقم','phone','mobile'];
       let nameCol=-1, phoneCol=-1, headerRow=0;
-      
-      for(let ri=0;ri<Math.min(20,rows.length);ri++){
+
+      // المرور الأول: نبحث عن صف يحتوي على الاسم والهاتف معاً (الأولوية)
+      for(let ri=0;ri<Math.min(50,rows.length);ri++){
         const row=rows[ri]||[];
+        let fn=-1,fp=-1;
         row.forEach((cell,ci)=>{
           const v=String(cell||'').trim().replace(/\u0640/g,'').toLowerCase();
-          if(nameCol<0&&nameKW.some(kw=>v.includes(kw))){nameCol=ci;headerRow=ri;}
-          if(phoneCol<0&&phoneKW.some(kw=>v.includes(kw))){phoneCol=ci;}
+          if(fn<0&&nameKW.some(kw=>v.includes(kw))){fn=ci;}
+          if(fp<0&&phoneKW.some(kw=>v.includes(kw))){fp=ci;}
         });
-        if(nameCol>=0)break;
+        if(fn>=0&&fp>=0){nameCol=fn;phoneCol=fp;headerRow=ri;break;}
+      }
+
+      // المرور الثاني: إذا لم نجد الاثنين معاً، نقبل الاسم فقط
+      if(nameCol<0){
+        for(let ri=0;ri<Math.min(50,rows.length);ri++){
+          const row=rows[ri]||[];
+          row.forEach((cell,ci)=>{
+            const v=String(cell||'').trim().replace(/\u0640/g,'').toLowerCase();
+            if(nameCol<0&&nameKW.some(kw=>v.includes(kw))){nameCol=ci;headerRow=ri;}
+            if(phoneCol<0&&phoneKW.some(kw=>v.includes(kw))){phoneCol=ci;}
+          });
+          if(nameCol>=0)break;
+        }
       }
       
       if(nameCol<0){toast('❌ لم يتم التعرف على عمود الاسم',true);return;}
@@ -2678,7 +2697,8 @@ async function uploadSetupClassExcel(event, classId){
       _setupStudents[classId]=studentsList;
       
       renderSetupClassesList();
-      toast(`✅ تم تحميل ${studentsList.length} طالب`,'ok');
+      const withPhone=studentsList.filter(s=>s.phone&&s.phone.length>0).length;
+      toast(`✅ ${studentsList.length} طالب — ${withPhone} منهم لديهم أرقام`,'ok');
     }catch(err){
       toast('❌ خطأ في قراءة الملف: '+err.message,true);
     }
@@ -2750,7 +2770,6 @@ async function finishSetup(){
     arc_categories:(prev&&prev.arc_categories)||DEFAULT_CATS,
     timetable_config:(prev&&prev.timetable_config)||{},
     class_config:(prev&&prev.class_config)||{},
-    students:(prev&&prev.students)||{},
     grades:(prev&&prev.grades)||{},
     grade_types:(prev&&prev.grade_types)||[],
     reminders_config:(prev&&prev.reminders_config)||{enabled:false,minutes:10}
@@ -4625,7 +4644,17 @@ function renderGradesTable(){
     const sg=(grades[k]||{})[st.id]||{};
     body+=`<tr><td style="text-align:center;color:var(--muted);font-weight:700">${idx+1}</td><td><button class="student-del-btn" onclick="delStudent('${st.id}')">✕</button>${st.name}</td>`;
     let pts=0;
-    cols.forEach(c=>{const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}body+=`<td><input class="grade-input ${cl}" type="number" min="0" max="${c.max}" step="0.5" value="${num!=null?num:''}" onchange="updGrade('${st.id}','${c.id}',this.value)" placeholder="—"/></td>`;});
+    cols.forEach(c=>{
+      const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';
+      if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}
+      // قائمة منسدلة بأعداد كاملة من 0 إلى الدرجة القصوى
+      let options='<option value="">—</option>';
+      for(let i=0;i<=Math.floor(c.max);i++){
+        const selected=(num===i)?'selected':'';
+        options+=`<option value="${i}" ${selected}>${i}</option>`;
+      }
+      body+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${options}</select></td>`;
+    });
     const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
     const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
     body+=`<td style="font-weight:800;color:${tColor}">${totalVal!=null?totalVal+' / '+totalMax:'—'}</td></tr>`;
@@ -5445,20 +5474,34 @@ async function importBehaviorExcel(event){
       let nameCol=-1;
       let phoneCol=-1;
 
+      // المرور الأول: صف يحتوي على الاسم والهاتف معاً
       for(let ri=0;ri<Math.min(50,rows.length);ri++){
         const row=rows[ri];
         let fn=-1,fp=-1;
         row.forEach((cell,ci)=>{
-          // إزالة المدّات العربية (ـ) والمسافات الزائدة قبل المقارنة
           const v=String(cell||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').toLowerCase();
           if(fn<0&&nameKW.some(kw=>v.includes(kw)))fn=ci;
           if(fp<0&&phoneKW.some(kw=>v.includes(kw)))fp=ci;
         });
-        if(fn>=0||fp>=0){
-          headerRowIdx=ri;
-          if(fn>=0)nameCol=fn;
-          if(fp>=0)phoneCol=fp;
-          break;
+        if(fn>=0&&fp>=0){headerRowIdx=ri;nameCol=fn;phoneCol=fp;break;}
+      }
+
+      // المرور الثاني: أحدهما فقط
+      if(headerRowIdx<0){
+        for(let ri=0;ri<Math.min(50,rows.length);ri++){
+          const row=rows[ri];
+          let fn=-1,fp=-1;
+          row.forEach((cell,ci)=>{
+            const v=String(cell||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').toLowerCase();
+            if(fn<0&&nameKW.some(kw=>v.includes(kw)))fn=ci;
+            if(fp<0&&phoneKW.some(kw=>v.includes(kw)))fp=ci;
+          });
+          if(fn>=0||fp>=0){
+            headerRowIdx=ri;
+            if(fn>=0)nameCol=fn;
+            if(fp>=0)phoneCol=fp;
+            break;
+          }
         }
       }
 
@@ -6215,19 +6258,74 @@ body{width:700px;height:490px;overflow:hidden;font-family:'Cairo',sans-serif;}
 
 async function downloadCertificate(studentId, studentName){
   if(!_tsSelectedCol){toast('❌ اختر نوع التقييم أولاً',true);return;}
+  closeTopStudents();
+  await new Promise(r=>setTimeout(r,300));
   toast('⏳ جاري إنشاء الشهادة...');
-  
-  // فتح نافذة الطباعة
+
   const certHTML=generateCertHTML(studentName,_tsSelectedCol.name,activeGradesClass);
-  const win=window.open('','_blank','width=740,height=540');
-  win.document.write(certHTML);
-  win.document.close();
-  win.onload=()=>{
-    setTimeout(()=>{
-      win.print();
-    },800);
-  };
-  toast('✅ الشهادة جاهزة للطباعة أو الحفظ');
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:490px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(certHTML);
+  iframe.contentDocument.close();
+  await new Promise(r=>setTimeout(r,1500));
+
+  try{
+    if(typeof html2canvas==='undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    const certEl=iframe.contentDocument.querySelector('.cert');
+    const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490});
+    const imgSrc=canvas.toDataURL('image/png');
+    const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
+    const canShare=navigator.share&&isMobile;
+
+    const modal=document.createElement('div');
+    modal.className='cert-preview-modal';
+    modal.innerHTML=`
+      <div class="cert-preview-card">
+        <img src="${imgSrc}" alt="شهادة ${studentName}" style="max-width:100%;border-radius:12px;display:block;margin:0 auto;"/>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+          ${canShare
+            ? `<button onclick="shareCert('${imgSrc}','${studentName}')" style="padding:11px 24px;border-radius:99px;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📤 مشاركة</button>`
+            : `<button onclick="downloadCertImg('${imgSrc}','${studentName}')" style="padding:11px 24px;border-radius:99px;border:none;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ تحميل</button>`
+          }
+          <button onclick="this.closest('.cert-preview-modal').remove()" style="padding:11px 24px;border-radius:99px;border:none;background:#3a2020;color:#f5f0e8;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✕ إغلاق</button>
+        </div>
+        ${isMobile&&!canShare?'<div style="color:#a08878;font-size:11px;margin-top:10px;">اضغط مطولاً على الصورة لحفظها في المعرض</div>':''}
+      </div>
+    `;
+    document.body.appendChild(modal);
+    toast('✅ الشهادة جاهزة','ok');
+  }catch(e){
+    toast('❌ حدث خطأ: '+e.message,true);
+  }finally{
+    document.body.removeChild(iframe);
+  }
+}
+
+function downloadCertImg(imgSrc, studentName){
+  const link=document.createElement('a');
+  link.download='شهادة-'+studentName+'.png';
+  link.href=imgSrc;
+  link.click();
+}
+
+async function shareCert(imgSrc, studentName){
+  try{
+    const res=await fetch(imgSrc);
+    const blob=await res.blob();
+    const file=new File([blob],'شهادة-'+studentName+'.png',{type:'image/png'});
+    await navigator.share({files:[file],title:'شهادة تقدير - '+studentName});
+  }catch(e){
+    toast('❌ تعذرت المشاركة',true);
+  }
 }
 
 async function exportAllCertificates(){
@@ -6239,20 +6337,13 @@ async function exportAllCertificates(){
     return val!=null&&!isNaN(val)&&Number(val)===Number(_tsSelectedCol.max);
   });
   if(!topStudents.length)return;
-  
-  toast(`⏳ جاري فتح ${topStudents.length} شهادة...`);
+  // فتح شهادة كل طالب واحدة تلو الأخرى
   for(let i=0;i<topStudents.length;i++){
-    const s=topStudents[i];
-    const certHTML=generateCertHTML(s.name,_tsSelectedCol.name,activeGradesClass);
-    const win=window.open('','_blank','width=740,height=540');
-    if(win){
-      win.document.write(certHTML);
-      win.document.close();
-    }
-    await new Promise(r=>setTimeout(r,400));
+    await downloadCertificate(topStudents[i].id, topStudents[i].name);
+    if(i<topStudents.length-1)await new Promise(r=>setTimeout(r,500));
   }
-  toast('✅ تم فتح جميع الشهادات — اطبعها أو احفظها');
 }
+
 
 // ══ STUDENTS MANAGER (موحّد بين الدرجات والسلوك) ═══════
 let _smgrClassKey=null;
