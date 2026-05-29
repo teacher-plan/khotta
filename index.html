@@ -478,14 +478,6 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .download-template-btn{background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;}
 
 /* ══ BEHAVIOR PREVIEW MODAL ══ */
-
-/* ══ CERT PREVIEW MODAL ══ */
-.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:600;padding:20px;}
-.cert-preview-card{background:#1a1010;border-radius:20px;padding:20px;max-width:95vw;text-align:center;}
-.cert-preview-card img{max-width:100%;border-radius:12px;display:block;margin:0 auto;}
-.cert-preview-hint{color:#a08878;font-size:12px;margin-top:12px;line-height:1.6;}
-.cert-preview-close{margin-top:14px;padding:10px 28px;border-radius:99px;border:none;background:#3a2020;color:#f5f0e8;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
-
 .bprev-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px;}
 .bprev-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:460px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.5);}
 .bprev-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
@@ -734,14 +726,12 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .grades-table td{padding:6px 7px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);text-align:center;font-size:12px;}
 .grades-table td:first-child{font-weight:700;color:var(--text);text-align:right;padding-right:14px;border-left:none;background:var(--surface);position:sticky;right:0;z-index:1;}
 .grades-table tr:hover td{background:rgba(240,192,96,.04);}
-.grade-input{background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:4px 5px;width:55px;text-align:center;outline:none;transition:all .15s;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;}
+.grade-input{background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:4px 5px;width:55px;text-align:center;outline:none;transition:all .15s;}
 .grade-input:hover{border-color:var(--border);}
 .grade-input:focus{border-color:var(--gold);background:rgba(240,192,96,.05);}
 .grade-input.low{color:#e74c3c;}
 .grade-input.mid{color:#f0c060;}
 .grade-input.high{color:#27ae60;}
-/* تحسين مظهر القائمة المنسدلة */
-.grade-input select,.grade-input{background:var(--card);border:1px solid var(--border);}
 .grade-col-head{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .gch-name{font-size:11px;font-weight:700;}
 .gch-max{font-size:9px;color:var(--muted);font-weight:600;}
@@ -4635,19 +4625,7 @@ function renderGradesTable(){
     const sg=(grades[k]||{})[st.id]||{};
     body+=`<tr><td style="text-align:center;color:var(--muted);font-weight:700">${idx+1}</td><td><button class="student-del-btn" onclick="delStudent('${st.id}')">✕</button>${st.name}</td>`;
     let pts=0;
-    cols.forEach(c=>{
-      const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';
-      if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}
-      
-      // إنشاء قائمة منسدلة للدرجات من 0 إلى الدرجة القصوى (أعداد كاملة فقط)
-      let options = '<option value="">—</option>';
-      for(let i = 0; i <= Math.floor(c.max); i++) {
-        const selected = (num === i) ? 'selected' : '';
-        options += `<option value="${i}" ${selected}>${i}</option>`;
-      }
-      
-      body+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${options}</select></td>`;
-    });
+    cols.forEach(c=>{const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}body+=`<td><input class="grade-input ${cl}" type="number" min="0" max="${c.max}" step="0.5" value="${num!=null?num:''}" onchange="updGrade('${st.id}','${c.id}',this.value)" placeholder="—"/></td>`;});
     const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
     const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
     body+=`<td style="font-weight:800;color:${tColor}">${totalVal!=null?totalVal+' / '+totalMax:'—'}</td></tr>`;
@@ -6236,88 +6214,20 @@ body{width:700px;height:490px;overflow:hidden;font-family:'Cairo',sans-serif;}
 }
 
 async function downloadCertificate(studentId, studentName){
-  // إغلاق نافذة المتفوقين أولاً
-  closeTopStudents();
-  await new Promise(r=>setTimeout(r,300));
   if(!_tsSelectedCol){toast('❌ اختر نوع التقييم أولاً',true);return;}
   toast('⏳ جاري إنشاء الشهادة...');
-
+  
+  // فتح نافذة الطباعة
   const certHTML=generateCertHTML(studentName,_tsSelectedCol.name,activeGradesClass);
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:490px;border:none;';
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(certHTML);
-  iframe.contentDocument.close();
-  await new Promise(r=>setTimeout(r,1500));
-
-  try{
-    if(typeof html2canvas==='undefined'){
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        s.onload=res; s.onerror=rej;
-        document.head.appendChild(s);
-      });
-    }
-    const certEl=iframe.contentDocument.querySelector('.cert');
-    const canvas=await html2canvas(certEl,{
-      scale:2, useCORS:true, allowTaint:true,
-      backgroundColor:'#ffffff', width:700, height:490
-    });
-    const imgSrc=canvas.toDataURL('image/png');
-
-    // تحديد إذا كان جوال أو كمبيوتر
-    const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
-    const canShare=navigator.share&&isMobile;
-
-    const modal=document.createElement('div');
-    modal.className='cert-preview-modal';
-    modal.innerHTML=`
-      <div class="cert-preview-card">
-        <img src="${imgSrc}" alt="شهادة ${studentName}" style="max-width:100%;border-radius:12px;display:block;margin:0 auto;"/>
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
-          ${canShare ? `
-            <button onclick="shareCert('${imgSrc}','${studentName}')" style="padding:11px 24px;border-radius:99px;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
-              📤 مشاركة
-            </button>
-          ` : `
-            <button onclick="downloadCertImg('${imgSrc}','${studentName}')" style="padding:11px 24px;border-radius:99px;border:none;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
-              ⬇️ تحميل
-            </button>
-          `}
-          <button onclick="this.closest('.cert-preview-modal').remove()" style="padding:11px 24px;border-radius:99px;border:none;background:#3a2020;color:#f5f0e8;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
-            ✕ إغلاق
-          </button>
-        </div>
-        ${isMobile&&!canShare ? '<div style="color:#a08878;font-size:11px;margin-top:10px;">اضغط مطولاً على الصورة لحفظها في المعرض</div>' : ''}
-      </div>
-    `;
-    document.body.appendChild(modal);
-    toast('✅ الشهادة جاهزة','ok');
-  }catch(e){
-    toast('❌ حدث خطأ: '+e.message,true);
-  }finally{
-    document.body.removeChild(iframe);
-  }
-}
-
-function downloadCertImg(imgSrc, studentName){
-  const link=document.createElement('a');
-  link.download='شهادة-'+studentName+'.png';
-  link.href=imgSrc;
-  link.click();
-}
-
-async function shareCert(imgSrc, studentName){
-  try{
-    const res=await fetch(imgSrc);
-    const blob=await res.blob();
-    const file=new File([blob],'شهادة-'+studentName+'.png',{type:'image/png'});
-    await navigator.share({files:[file],title:'شهادة تقدير - '+studentName});
-  }catch(e){
-    toast('❌ تعذرت المشاركة',true);
-  }
+  const win=window.open('','_blank','width=740,height=540');
+  win.document.write(certHTML);
+  win.document.close();
+  win.onload=()=>{
+    setTimeout(()=>{
+      win.print();
+    },800);
+  };
+  toast('✅ الشهادة جاهزة للطباعة أو الحفظ');
 }
 
 async function exportAllCertificates(){
@@ -6329,88 +6239,1275 @@ async function exportAllCertificates(){
     return val!=null&&!isNaN(val)&&Number(val)===Number(_tsSelectedCol.max);
   });
   if(!topStudents.length)return;
-
-  closeTopStudents();
-  await new Promise(r=>setTimeout(r,300));
-  toast('⏳ جاري إنشاء الشهادات...');
-
-  if(typeof html2canvas==='undefined'){
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      s.onload=res; s.onerror=rej;
-      document.head.appendChild(s);
-    });
-  }
-
-  const images=[];
+  
+  toast(`⏳ جاري فتح ${topStudents.length} شهادة...`);
   for(let i=0;i<topStudents.length;i++){
     const s=topStudents[i];
     const certHTML=generateCertHTML(s.name,_tsSelectedCol.name,activeGradesClass);
-    const iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:490px;border:none;';
-    document.body.appendChild(iframe);
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(certHTML);
-    iframe.contentDocument.close();
-    await new Promise(r=>setTimeout(r,1500));
-    try{
-      const certEl=iframe.contentDocument.querySelector('.cert');
-      const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490});
-      images.push({name:s.name,src:canvas.toDataURL('image/png')});
-    }catch(e){console.error(e);}
-    finally{document.body.removeChild(iframe);}
+    const win=window.open('','_blank','width=740,height=540');
+    if(win){
+      win.document.write(certHTML);
+      win.document.close();
+    }
+    await new Promise(r=>setTimeout(r,400));
   }
+  toast('✅ تم فتح جميع الشهادات — اطبعها أو احفظها');
+}
 
-  if(!images.length){toast('❌ لم يتم توليد أي شهادة',true);return;}
+// ══ STUDENTS MANAGER (موحّد بين الدرجات والسلوك) ═══════
+let _smgrClassKey=null;
+let _smgrContext='grades'; // 'grades' أو 'behavior'
 
-  const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
-  const canShare=navigator.share&&isMobile;
+// ─── فحص الشعب الناقصة لشارة "إكمال الإعداد" ───
+function checkIncompleteSetup(){
+  if(!teacherConfig||!teacherConfig.grades||!teacherConfig.setupDone)return;
+  if(isAdmin())return; // المشرف لا يحتاج هذا
+  const allCls=getAllClasses();
+  const missingClasses=allCls.filter(c=>{
+    const list=students[c.id]||behaviorStudents[c.id]||[];
+    return !list.length;
+  });
+  
+  const userToggle=document.getElementById('user-toggle');
+  const menuItem=document.getElementById('complete-setup-item');
+  
+  // حذف الشارة القديمة
+  const oldBadge=document.getElementById('setup-incomplete-badge');
+  if(oldBadge)oldBadge.remove();
+  
+  if(missingClasses.length){
+    // شارة دائمة على زر الحساب
+    if(userToggle){
+      const badge=document.createElement('span');
+      badge.className='setup-incomplete-badge';
+      badge.id='setup-incomplete-badge';
+      badge.title=`${missingClasses.length} شعبة بحاجة لإكمال`;
+      userToggle.appendChild(badge);
+    }
+    // خانة في القائمة
+    if(menuItem){
+      menuItem.style.display='block';
+      menuItem.textContent=`📋 إكمال الإعداد (${missingClasses.length} شعبة)`;
+    }
+  }else{
+    // اكتمل الإعداد — أخفِ كل شيء نهائياً
+    if(menuItem)menuItem.style.display='none';
+  }
+}
 
-  const cardsHTML=images.map((img,idx)=>`
-    <div style="margin-bottom:20px;text-align:center;">
-      <img src="${img.src}" style="max-width:100%;border-radius:10px;display:block;margin:0 auto;"/>
-      <div style="margin-top:10px;">
-        ${canShare
-          ? `<button onclick="shareCert('${img.src}','${img.name}')" style="padding:10px 22px;border-radius:99px;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📤 مشاركة</button>`
-          : `<button onclick="downloadCertImg('${img.src}','${img.name}')" style="padding:10px 22px;border-radius:99px;border:none;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ تحميل</button>`
-        }
+// ─── فتح مودال إكمال الإعداد ───
+function openCompleteStudentsSetup(){
+  document.getElementById('user-menu').classList.remove('show');
+  const allCls=getAllClasses();
+  const missingClasses=allCls.filter(c=>{
+    const list=students[c.id]||behaviorStudents[c.id]||[];
+    return !list.length;
+  });
+  if(!missingClasses.length){
+    toast('✅ جميع الشعب مكتملة!','ok');
+    return;
+  }
+  
+  // فتح مودال إكمال الإعداد
+  const modal=document.getElementById('complete-setup-modal');
+  if(!modal)return;
+  
+  // بناء قائمة الشعب الناقصة
+  const list=document.getElementById('cs-classes-list');
+  list.innerHTML=missingClasses.map(c=>`
+    <div class="setup-class-row" id="cs-row-${c.id}">
+      <div class="scr-name">📚 ${escHtml(c.gradeName)} — ${escHtml(c.name)}</div>
+      <span class="scr-status empty" id="cs-status-${c.id}">⚠️ فارغة</span>
+      <div class="scr-actions">
+        <label class="scr-upload">
+          📂 رفع Excel
+          <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadCompleteSetupExcel(event,'${c.id}')"/>
+        </label>
       </div>
     </div>
-    ${idx < images.length-1 ? '<hr style="border-color:#3a2020;margin:10px 0"/>' : ''}
   `).join('');
+  
+  modal.style.display='flex';
+}
 
-  const modal=document.createElement('div');
-  modal.className='cert-preview-modal';
-  modal.innerHTML=`
-    <div class="cert-preview-card" style="max-height:85vh;overflow-y:auto;min-width:320px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <span style="color:var(--gold);font-weight:700;font-size:14px;">🏆 شهادات المتفوقين (${images.length})</span>
-        <button onclick="this.closest('.cert-preview-modal').remove()" style="background:#3a2020;color:#f5f0e8;border:none;border-radius:99px;padding:6px 14px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;">✕ إغلاق</button>
-      </div>
-      ${cardsHTML}
+async function uploadCompleteSetupExcel(event, classId){
+  const file=event.target.files[0];
+  if(!file)return;
+  event.target.value='';
+  toast('⏳ جاري قراءة الملف...');
+  
+  if(!window.XLSX){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    document.head.appendChild(s);
+    await new Promise(r=>s.onload=r);
+  }
+  
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      if(!rows.length){toast('❌ الملف فارغ',true);return;}
+      
+      const nameKW=['اسم الطالب','الاسم','اسم','student','name','طالب','أسماء'];
+      const phoneKW=['الهاتف النقال','هاتف ولي','ولي الأمر','هاتف','جوال','رقم','phone','mobile'];
+      let nameCol=-1,phoneCol=-1,headerRow=0;
+      
+      for(let ri=0;ri<Math.min(20,rows.length);ri++){
+        const row=rows[ri]||[];
+        row.forEach((cell,ci)=>{
+          const v=String(cell||'').trim().replace(/ـ/g,'').toLowerCase();
+          if(nameCol<0&&nameKW.some(kw=>v.includes(kw))){nameCol=ci;headerRow=ri;}
+          if(phoneCol<0&&phoneKW.some(kw=>v.includes(kw))){phoneCol=ci;}
+        });
+        if(nameCol>=0)break;
+      }
+      
+      if(nameCol<0){toast('❌ لم يتم التعرف على عمود الاسم',true);return;}
+      
+      const studentsList=[];
+      rows.slice(headerRow+1).forEach(r=>{
+        if(!r)return;
+        const name=String(r[nameCol]||'').trim();
+        const phone=phoneCol>=0?String(r[phoneCol]||'').trim():'';
+        if(name&&name.length>1&&!/^\d+$/.test(name)&&!nameKW.some(kw=>name.toLowerCase().replace(/ـ/g,'').includes(kw))){
+          studentsList.push({
+            id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+            name, phone
+          });
+        }
+      });
+      
+      if(!studentsList.length){toast('❌ لم يتم العثور على طلاب',true);return;}
+      
+      // ترتيب أبجدي وحفظ
+      studentsList.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+      syncStudentsToBoth(classId, studentsList);
+      
+      // تحديث واجهة المودال
+      const row=document.getElementById(`cs-row-${classId}`);
+      const status=document.getElementById(`cs-status-${classId}`);
+      if(row)row.className='setup-class-row has-students';
+      if(status){status.className='scr-status filled';status.textContent=`✓ ${studentsList.length} طالب`;}
+      
+      toast(`✅ تم إضافة ${studentsList.length} طالب`,'ok');
+      
+      // فحص إذا اكتملت جميع الشعب
+      setTimeout(()=>checkIncompleteSetup(),500);
+    }catch(err){
+      toast('❌ خطأ: '+err.message,true);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function openStudentsManager(classKey, context='grades'){
+  _smgrClassKey=classKey;
+  _smgrContext=context;
+  if(!classKey){toast('❌ اختر شعبة أولاً',true);return;}
+  
+  // اسم الشعبة
+  let className='الشعبة';
+  if(context==='grades'){
+    const allCls=getAllClasses();
+    const cls=allCls.find(c=>c.id===classKey);
+    if(cls)className=cls.name;
+  }else{
+    const allCls=getAllClasses();
+    const cls=allCls.find(c=>c.id===classKey);
+    if(cls)className=cls.name;
+  }
+  document.getElementById('smgr-title').textContent=`🖊️ تعديل قائمة طلاب — ${className}`;
+  document.getElementById('smgr-search').value='';
+  document.getElementById('smgr-new-name').value='';
+  document.getElementById('smgr-new-phone').value='';
+  document.getElementById('students-mgr-modal').style.display='flex';
+  renderStudentsManagerList();
+}
+
+function closeStudentsManager(){
+  document.getElementById('students-mgr-modal').style.display='none';
+  // تحديث القسمين بعد الإغلاق
+  if(typeof renderGradesTable==='function')renderGradesTable();
+  if(typeof renderBehaviorTable==='function')renderBehaviorTable();
+  // إعادة فحص الشعب الناقصة
+  checkIncompleteSetup();
+}
+
+function getUnifiedStudents(classKey){
+  // دمج طلاب الدرجات والسلوك (الاسم + الهاتف)
+  const fromGrades=(students[classKey]||[]).map(s=>({...s, phone: s.phone||''}));
+  const fromBehavior=behaviorStudents[classKey]||[];
+  
+  // ابدأ من الدرجات، ثم أضف الهواتف من السلوك بالاسم
+  const merged=fromGrades.map(s=>{
+    const bMatch=fromBehavior.find(b=>b.name===s.name);
+    return{...s, phone: s.phone||bMatch?.phone||''};
+  });
+  
+  // أضف من السلوك إذا لم يكونوا في الدرجات
+  fromBehavior.forEach(b=>{
+    if(!merged.find(m=>m.name===b.name)){
+      merged.push({id:b.id, name:b.name, phone:b.phone||''});
+    }
+  });
+  
+  return merged;
+}
+
+function sortStudentsAr(list){
+  // ترتيب أبجدي بالاسم ثم اسم الأب
+  return [...list].sort((a,b)=>{
+    const aName=(a.name||'').trim();
+    const bName=(b.name||'').trim();
+    return aName.localeCompare(bName,'ar');
+  });
+}
+
+function syncStudentsToBoth(classKey, unifiedList){
+  // كتابة على students (للدرجات)
+  students[classKey]=unifiedList.map(s=>({id:s.id, name:s.name, phone:s.phone||''}));
+  // كتابة على behaviorStudents (للسلوك)
+  if(!behaviorStudents[classKey])behaviorStudents[classKey]=[];
+  behaviorStudents[classKey]=unifiedList.map(s=>({id:s.id, name:s.name, phone:s.phone||''}));
+  scheduleSave();
+}
+
+function renderStudentsManagerList(){
+  const listEl=document.getElementById('smgr-list');
+  const search=(document.getElementById('smgr-search').value||'').trim();
+  let list=getUnifiedStudents(_smgrClassKey);
+  list=sortStudentsAr(list);
+  if(search){
+    list=list.filter(s=>s.name.includes(search)||(s.phone||'').includes(search));
+  }
+  if(!list.length){
+    listEl.innerHTML='<div class="smgr-empty">📭 لا يوجد طلاب — أضف من الأعلى</div>';
+    return;
+  }
+  listEl.innerHTML=list.map((s,i)=>`
+    <div class="smgr-item">
+      <div class="smgr-num">${i+1}</div>
+      <div class="smgr-name">${escHtml(s.name)}</div>
+      ${s.phone?`<div class="smgr-phone">${escHtml(s.phone)}</div>`:''}
+      <button class="smgr-del" onclick="deleteStudentFromList('${s.id}')">🗑️</button>
     </div>
-  `;
-  document.body.appendChild(modal);
-  toast('✅ جاهزة! اضغط مشاركة لكل شهادة','ok');
+  `).join('');
 }
 
-function downloadCertImg(imgSrc, studentName){
-  const link=document.createElement('a');
-  link.download='شهادة-'+studentName+'.png';
-  link.href=imgSrc;
-  link.click();
+function addStudentManually(){
+  const name=document.getElementById('smgr-new-name').value.trim();
+  const phone=document.getElementById('smgr-new-phone').value.trim();
+  if(!name){toast('❌ اكتب اسم الطالب',true);return;}
+  
+  let unified=getUnifiedStudents(_smgrClassKey);
+  // تحقق من التكرار
+  if(unified.some(s=>s.name===name)){
+    toast('❌ هذا الطالب موجود بالفعل',true);
+    return;
+  }
+  unified.push({
+    id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    name, phone
+  });
+  unified=sortStudentsAr(unified);
+  syncStudentsToBoth(_smgrClassKey, unified);
+  
+  document.getElementById('smgr-new-name').value='';
+  document.getElementById('smgr-new-phone').value='';
+  renderStudentsManagerList();
+  toast('✅ تم إضافة الطالب','ok');
 }
 
-async function shareCert(imgSrc, studentName){
+function deleteStudentFromList(studentId){
+  let unified=getUnifiedStudents(_smgrClassKey);
+  const student=unified.find(s=>s.id===studentId);
+  if(!student)return;
+  if(!confirm(`هل تريد حذف الطالب "${student.name}"؟`))return;
+  
+  unified=unified.filter(s=>s.id!==studentId);
+  syncStudentsToBoth(_smgrClassKey, unified);
+  
+  // حذف درجاته ومخالفاته أيضاً
+  if(grades[_smgrClassKey]&&grades[_smgrClassKey][studentId]){
+    delete grades[_smgrClassKey][studentId];
+  }
+  if(behaviorViolations&&behaviorViolations[studentId]){
+    delete behaviorViolations[studentId];
+  }
+  scheduleSave();
+  
+  renderStudentsManagerList();
+  toast('✅ تم حذف الطالب','ok');
+}
+
+// ─── إرسال درجات الطالب عبر واتساب ───
+function sendStudentGradesWA(studentId, classKey){
+  const student=(behaviorStudents[classKey]||[]).find(s=>s.id===studentId)
+              ||(students[classKey]||[]).find(s=>s.id===studentId);
+  if(!student){toast('❌ لم يتم العثور على الطالب',true);return;}
+  if(!student.phone){toast('❌ لا يوجد رقم لولي الأمر',true);return;}
+  
+  // جلب معلومات الشعبة
+  const info=getClassInfoById(classKey);
+  if(!info){toast('❌ خطأ في معلومات الشعبة',true);return;}
+  
+  // جلب الدرجات
+  const cols=gradeTypes.filter(c=>c.classKey===classKey);
+  const studentGrades=(grades[classKey]||{})[studentId]||{};
+  
+  // بناء الرسالة
+  const semesterName=teacherConfig?.semester||'الفصل';
+  let msg=`🎓 *تقرير درجات الطالب*\n\n`;
+  msg+=`📌 *الاسم:* ${student.name}\n`;
+  msg+=`📚 *المادة:* ${info.subject}\n`;
+  msg+=`🏫 *الصف:* ${info.className}\n`;
+  msg+=`📅 *${semesterName}*\n\n`;
+  msg+=`━━━━━━━━━━━━━━\n`;
+  msg+=`📊 *الدرجات:*\n\n`;
+  
+  if(!cols.length){
+    msg+=`(لا توجد تقييمات مسجّلة بعد)\n`;
+  }else{
+    let totalPts=0, totalMax=0, hasAnyGrade=false;
+    cols.forEach(c=>{
+      const val=studentGrades[c.id];
+      if(val!=null&&val!==''&&!isNaN(val)){
+        msg+=`• ${c.name}: *${val}/${c.max}*\n`;
+        totalPts+=Number(val);
+        totalMax+=Number(c.max);
+        hasAnyGrade=true;
+      }else{
+        msg+=`• ${c.name}: _لم يُقيَّم بعد_\n`;
+      }
+    });
+    
+    if(hasAnyGrade){
+      const pct=totalMax>0?Math.round(totalPts/totalMax*100):0;
+      msg+=`\n━━━━━━━━━━━━━━\n`;
+      msg+=`📈 *المجموع: ${totalPts}/${totalMax} (${pct}%)*\n`;
+    }
+  }
+  
+  // اسم المعلم
+  const teacherName=teacherConfig?.display_name||teacherConfig?.teacher_name||'';
+  if(teacherName){
+    msg+=`\nتحياتي،\nأ. ${teacherName}`;
+  }
+  
+  // فتح واتساب
+  const phone=normalizePhone(student.phone);
+  if(!phone){toast('❌ رقم ولي الأمر غير صحيح',true);return;}
+  
+  const encodedMsg=encodeURIComponent(msg);
+  const isMobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
+  const url=isMobile
+    ?`https://wa.me/${phone}?text=${encodedMsg}`
+    :`https://web.whatsapp.com/send?phone=${phone}&text=${encodedMsg}`;
+  window.open(url,'_blank');
+}
+
+function getClassInfoById(classKey){
+  if(!teacherConfig||!teacherConfig.grades)return null;
+  for(const g of teacherConfig.grades){
+    const cls=(g.classes||[]).find(c=>c.id===classKey);
+    if(cls)return{subject:g.subject, grade:g.num, className:cls.name};
+  }
+  return null;
+}
+
+// (normalizePhone موجودة أعلاه)
+
+// ══ INVITES ═════════════════════════════════════════════
+
+function generateInviteCode(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({length:8},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+async function createInvite(){
+  if(!isAdmin())return;
   try{
-    const res=await fetch(imgSrc);
-    const blob=await res.blob();
-    const file=new File([blob],'شهادة-'+studentName+'.png',{type:'image/png'});
-    await navigator.share({files:[file],title:'شهادة تقدير - '+studentName});
+    const code=generateInviteCode();
+    const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+    const{error}=await sb.from('invites').insert({code,expires_at:expiresAt,status:'pending'});
+    if(error)throw error;
+    toast('✅ تم إنشاء رابط الدعوة!','ok');
+    loadInvites();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
+
+async function loadInvites(){
+  if(!isAdmin())return;
+  const list=document.getElementById('invites-list');
+  if(!list)return;
+  try{
+    const{data,error}=await sb.from('invites').select('*').order('created_at',{ascending:false}).limit(20);
+    if(error)throw error;
+
+    // تحديث الحالة: انتهت صلاحيتها
+    const now=new Date();
+    const expired=(data||[]).filter(i=>i.status==='pending'&&new Date(i.expires_at)<now);
+    if(expired.length){
+      await Promise.all(expired.map(i=>sb.from('invites').update({status:'expired'}).eq('id',i.id)));
+      expired.forEach(i=>i.status='expired');
+    }
+
+    if(!data||!data.length){
+      list.innerHTML='<div style="text-align:center;padding:10px;color:var(--muted);font-size:12px">لا توجد دعوات بعد</div>';
+      return;
+    }
+
+    list.innerHTML=data.map(inv=>{
+      const link=`${location.origin}${location.pathname}?invite=${inv.code}`;
+      const expDate=new Date(inv.expires_at).toLocaleString('ar');
+      const statusLabel={pending:'متاح ✅',used:'مستخدم 👤',cancelled:'ملغى ❌',expired:'منتهي ⏰'}[inv.status]||inv.status;
+      const isPending=inv.status==='pending';
+      return `<div class="invite-card">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span class="invite-status ${inv.status}">${statusLabel}</span>
+            ${inv.used_by?`<span style="font-size:11px;color:var(--muted)">→ ${escHtml(inv.used_by)}</span>`:''}
+          </div>
+          <div class="invite-code">${link}</div>
+          <div class="invite-meta" style="margin-top:4px;">
+            ${isPending?`⏰ ينتهي: ${expDate}`:`📅 أُنشئ: ${new Date(inv.created_at).toLocaleString('ar')}`}
+          </div>
+        </div>
+        <div class="invite-actions">
+          ${isPending?`<button class="invite-copy-btn" onclick="copyInviteLink('${link}')">📋 نسخ</button>`:''}
+          ${isPending?`<button class="invite-cancel-btn" onclick="cancelInvite('${inv.id}')">إلغاء</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
   }catch(e){
-    toast('❌ تعذرت المشاركة',true);
+    list.innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">❌ خطأ في التحميل</div>';
   }
 }
 
+function copyInviteLink(link){
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('✅ تم نسخ الرابط!','ok');
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=link;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✅ تم نسخ الرابط!','ok');
+  });
+}
 
+async function cancelInvite(id){
+  if(!confirm('هل تريد إلغاء هذه الدعوة؟'))return;
+  try{
+    const{error}=await sb.from('invites').update({status:'cancelled'}).eq('id',id);
+    if(error)throw error;
+    toast('✅ تم إلغاء الدعوة','ok');
+    loadInvites();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
+
+async function handleInviteOnBoot(code, email){
+  try{
+    const{data,error}=await sb.from('invites').select('*').eq('code',code).maybeSingle();
+    if(error||!data)return false;
+    if(data.status!=='pending')return false;
+    if(new Date(data.expires_at)<new Date()){
+      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+      return false;
+    }
+    // إضافة البريد لـ allowed_emails
+    const{data:existing}=await sb.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+    if(!existing){
+      await sb.from('allowed_emails').insert({email});
+    }
+    // تحديث حالة الدعوة
+    await sb.from('invites').update({
+      status:'used',used_by:email,used_at:new Date().toISOString()
+    }).eq('id',data.id);
+    // إزالة الكود من الرابط
+    history.replaceState({},'',location.pathname);
+    return true;
+  }catch(e){
+    console.warn('handleInviteOnBoot error:',e);
+    return false;
+  }
+}
+
+async function checkInviteCode(){
+  const params=new URLSearchParams(location.search);
+  const code=params.get('invite');
+  if(!code||!currentUser)return;
+  try{
+    const{data,error}=await sb.from('invites').select('*').eq('code',code).maybeSingle();
+    if(error||!data)return;
+    if(data.status!=='pending'){
+      toast('❌ هذا الرابط '+(data.status==='used'?'مستخدم مسبقاً':'منتهي الصلاحية'),true);
+      return;
+    }
+    if(new Date(data.expires_at)<new Date()){
+      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+      toast('❌ انتهت صلاحية هذا الرابط',true);
+      return;
+    }
+    // إضافة البريد لـ allowed_emails
+    const email=currentUser.email;
+    const{data:existing}=await sb.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+    if(!existing){
+      await sb.from('allowed_emails').insert({email});
+    }
+    // تحديث حالة الدعوة
+    await sb.from('invites').update({status:'used',used_by:email,used_at:new Date().toISOString()}).eq('id',data.id);
+    // إزالة الكود من الرابط
+    history.replaceState({},'',location.pathname);
+    toast('✅ تم تفعيل حسابك! مرحباً 🎉','ok');
+  }catch(e){console.warn('invite check error:',e);}
+}
+
+// ══ NETWORK STATUS ═════════════════════════════════════
+function updateOnlineStatus(){
+  const banner=document.getElementById('offline-banner');
+  if(!banner)return;
+  if(navigator.onLine){
+    banner.classList.remove('show');
+  }else{
+    banner.classList.add('show');
+  }
+}
+
+function retryConnection(){
+  if(navigator.onLine){
+    document.getElementById('offline-banner').classList.remove('show');
+    toast('✅ الاتصال يعمل بشكل طبيعي');
+    // إعادة حفظ إذا كان هناك تغييرات معلقة
+    scheduleSave();
+  }else{
+    toast('📵 لا يزال لا يوجد اتصال',true);
+  }
+}
+
+window.addEventListener('online', ()=>{
+  updateOnlineStatus();
+  toast('✅ عاد الاتصال بالإنترنت');
+  scheduleSave();
+});
+window.addEventListener('offline', ()=>{
+  updateOnlineStatus();
+  toast('📵 انقطع الاتصال بالإنترنت',true);
+});
+
+// ══ SURVEYS ════════════════════════════════════════════
+let _surveyQuestions=[];
+let _activeSurvey=null;
+let _surveyAnswers={};
+
+// ─── بناء الاستبيان ───
+function addOptField(){
+  const wrap=document.getElementById('new-q-opts');
+  const div=document.createElement('div');
+  div.className='survey-opt-inp';
+  const n=wrap.querySelectorAll('.new-opt-inp').length+1;
+  div.innerHTML=`<input placeholder="خيار ${n}" class="new-opt-inp"/><button class="survey-opt-del" onclick="removeOpt(this)">✕</button>`;
+  wrap.appendChild(div);
+}
+
+function removeOpt(btn){
+  const wrap=btn.closest('.survey-opts-wrap')||btn.closest('.survey-opt-inp').parentElement;
+  if(wrap.querySelectorAll('.survey-opt-inp').length>2){btn.closest('.survey-opt-inp').remove();}
+  else toast('❌ يجب وجود خيارين على الأقل',true);
+}
+
+function addQuestion(){
+  const text=document.getElementById('new-q-text').value.trim();
+  if(!text){toast('❌ اكتب نص السؤال أولاً',true);return;}
+  const opts=[...document.querySelectorAll('.new-opt-inp')].map(i=>i.value.trim()).filter(v=>v);
+  if(opts.length<2){toast('❌ أضف خيارين على الأقل',true);return;}
+  _surveyQuestions.push({id:'q_'+Date.now(),text,options:opts});
+  renderSurveyBuilder();
+  // إعادة تعيين الحقول
+  document.getElementById('new-q-text').value='';
+  document.querySelectorAll('.new-opt-inp').forEach((inp,i)=>{inp.value='';});
+  toast('✅ تم إضافة السؤال');
+}
+
+function removeQuestion(idx){
+  _surveyQuestions.splice(idx,1);
+  renderSurveyBuilder();
+}
+
+function renderSurveyBuilder(){
+  const list=document.getElementById('survey-q-list');
+  if(!list)return;
+  if(!_surveyQuestions.length){list.innerHTML='';return;}
+  list.innerHTML=_surveyQuestions.map((q,i)=>`
+    <div class="survey-q-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="survey-q-text">${i+1}. ${escHtml(q.text)}</div>
+        <button onclick="removeQuestion(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0">✕</button>
+      </div>
+      <div class="survey-q-options">${q.options.map(o=>`<span class="survey-q-opt">${escHtml(o)}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+function clearSurveyBuilder(){
+  if(!confirm('هل تريد مسح الاستبيان الحالي؟'))return;
+  _surveyQuestions=[];
+  document.getElementById('survey-title').value='';
+  renderSurveyBuilder();
+}
+
+// ─── نشر الاستبيان ───
+async function publishSurvey(){
+  const title=document.getElementById('survey-title').value.trim();
+  if(!title){toast('❌ اكتب عنوان الاستبيان',true);return;}
+  if(!_surveyQuestions.length){toast('❌ أضف سؤالاً واحداً على الأقل',true);return;}
+  try{
+    // إلغاء تفعيل الاستبيانات السابقة
+    await sb.from('surveys').update({is_active:false}).eq('is_active',true);
+    // نشر الاستبيان الجديد
+    const{error}=await sb.from('surveys').insert({
+      title,
+      questions:_surveyQuestions,
+      is_active:true
+    });
+    if(error)throw error;
+    toast('✅ تم نشر الاستبيان للمعلمين!');
+    _surveyQuestions=[];
+    document.getElementById('survey-title').value='';
+    renderSurveyBuilder();
+    loadSurveyResults();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
+
+// ─── إحصائيات الاستبيان ───
+async function loadSurveyResults(){
+  const wrap=document.getElementById('survey-results-wrap');
+  if(!wrap)return;
+  try{
+    const{data:surveys}=await sb.from('surveys').select('*').order('created_at',{ascending:false}).limit(5);
+    if(!surveys||!surveys.length){wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">لا توجد استبيانات منشورة بعد</div>';return;}
+
+    let html='<div class="survey-results"><h4>📊 نتائج الاستبيانات</h4>';
+    for(const survey of surveys){
+      const{data:responses}=await sb.from('survey_responses').select('answers').eq('survey_id',survey.id);
+      const resCount=responses?.length||0;
+      html+=`<div style="margin-bottom:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${escHtml(survey.title)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${resCount} إجابة ${survey.is_active?'<span style="color:var(--green2)">● نشط</span>':'<span style="color:var(--muted)">● منتهي</span>'}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            ${!survey.is_active?`<button onclick="reactivateSurvey('${survey.id}')" style="background:rgba(0,108,53,.15);border:1px solid var(--green);color:var(--green2);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;">▶️ إعادة تفعيل</button>`:''}
+            <button onclick="deactivateSurvey('${survey.id}')" style="background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red2);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;">⏹️ إيقاف</button>
+          </div>
+        </div>`;
+
+      if(resCount>0){
+        const questions=survey.questions||[];
+        questions.forEach(q=>{
+          const counts={};
+          q.options.forEach(o=>counts[o]=0);
+          responses.forEach(r=>{const ans=r.answers[q.id];if(ans&&counts[ans]!==undefined)counts[ans]++;});
+          html+=`<div class="result-q">
+            <div class="result-q-title">${escHtml(q.text)}</div>
+            <div class="result-bar-wrap">
+              ${q.options.map(o=>{
+                const cnt=counts[o]||0;
+                const pct=resCount>0?Math.round(cnt/resCount*100):0;
+                return `<div class="result-bar-row">
+                  <div class="result-bar-label">${escHtml(o)}</div>
+                  <div class="result-bar"><div class="result-bar-fill" style="width:${pct}%"></div></div>
+                  <div class="result-bar-count">${cnt} (${pct}%)</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+        });
+      }else{
+        html+=`<div style="font-size:12px;color:var(--muted);padding:10px 0">لا توجد إجابات بعد</div>`;
+      }
+      html+=`<div style="height:1px;background:var(--border);margin-top:16px;"></div></div>`;
+    }
+    html+='</div>';
+    wrap.innerHTML=html;
+  }catch(e){console.warn('survey results error:',e);}
+}
+
+async function deactivateSurvey(id){
+  await sb.from('surveys').update({is_active:false}).eq('id',id);
+  loadSurveyResults();
+  toast('✅ تم إيقاف الاستبيان');
+}
+
+async function reactivateSurvey(id){
+  await sb.from('surveys').update({is_active:false}).eq('is_active',true);
+  await sb.from('surveys').update({is_active:true}).eq('id',id);
+  loadSurveyResults();
+  toast('✅ تم إعادة تفعيل الاستبيان');
+}
+
+// ─── عرض الاستبيان للمعلم ───
+async function checkActiveSurvey(){
+  if(!currentUser)return;
+  // المشرف لا يرى الاستبيان
+  if(isAdmin())return;
+  try{
+    const{data:surveys}=await sb.from('surveys').select('*').eq('is_active',true).limit(1);
+    if(!surveys||!surveys.length)return;
+    const survey=surveys[0];
+    // تحقق إذا أجاب المعلم مسبقاً
+    const{data:existing}=await sb.from('survey_responses').select('id').eq('survey_id',survey.id).eq('user_id',currentUser.id).maybeSingle();
+    if(existing)return;
+    // عرض الاستبيان
+    _activeSurvey=survey;
+    _surveyAnswers={};
+    showSurveyModal(survey);
+  }catch(e){}
+}
+
+function showSurveyModal(survey){
+  document.getElementById('survey-modal-title').textContent='📋 '+survey.title;
+  const body=document.getElementById('survey-modal-body');
+  body.innerHTML=(survey.questions||[]).map(q=>`
+    <div class="survey-modal-q">
+      <div class="survey-modal-q-title">${escHtml(q.text)}</div>
+      <div class="survey-modal-opts">
+        ${q.options.map(o=>`
+          <label class="survey-modal-opt" id="opt_${q.id}_${escHtml(o).replace(/\s/g,'_')}">
+            <input type="radio" name="q_${q.id}" value="${escHtml(o)}" onchange="selectSurveyOpt('${q.id}','${escHtml(o)}',this)"/>
+            ${escHtml(o)}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('survey-modal-bg').style.display='flex';
+}
+
+function selectSurveyOpt(qId,val,radio){
+  _surveyAnswers[qId]=val;
+  // تحديث التصميم
+  const allOpts=document.querySelectorAll(`[name="q_${qId}"]`);
+  allOpts.forEach(r=>r.closest('.survey-modal-opt').classList.remove('selected'));
+  radio.closest('.survey-modal-opt').classList.add('selected');
+}
+
+async function submitSurvey(){
+  if(!_activeSurvey)return;
+  const questions=_activeSurvey.questions||[];
+  const unanswered=questions.filter(q=>!_surveyAnswers[q.id]);
+  if(unanswered.length){toast(`❌ أجب على جميع الأسئلة (${unanswered.length} متبقية)`,true);return;}
+  try{
+    const{error}=await sb.from('survey_responses').insert({
+      survey_id:_activeSurvey.id,
+      user_id:currentUser.id,
+      answers:_surveyAnswers
+    });
+    if(error)throw error;
+    document.getElementById('survey-modal-bg').style.display='none';
+    toast('✅ شكراً! تم إرسال إجاباتك');
+    _activeSurvey=null;
+    _surveyAnswers={};
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
+
+function closeSurveyModal(e){
+  if(e&&e.target!==document.getElementById('survey-modal-bg'))return;
+  document.getElementById('survey-modal-bg').style.display='none';
+}
+
+// ══ CV ════════════════════════════════════════════════
+function loadTeacherPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const src=ev.target.result;
+    document.getElementById('cv-photo-img').src=src;
+    document.getElementById('cv-photo-img').style.display='block';
+    document.getElementById('cv-photo-placeholder').style.display='none';
+    if(cvProfile)cvProfile.photo=src;
+    saveCvProfile();
+    toast('✅ تم حفظ الصورة','ok');
+  };
+  reader.readAsDataURL(file);
+}
+function loadCvProfile(){
+  if(!cvProfile)return;
+  document.getElementById('cv-pname').value=cvProfile.name||'';
+  document.getElementById('cv-pschool').value=cvProfile.school||'';
+  document.getElementById('cv-psubject').value=cvProfile.subject||teacherConfig?.subject||'';
+  document.getElementById('cv-pyears').value=cvProfile.years||'';
+  document.getElementById('cv-pbio').value=cvProfile.bio||'';
+  // Load photo if saved
+  if(cvProfile.photo){
+    document.getElementById('cv-photo-img').src=cvProfile.photo;
+    document.getElementById('cv-photo-img').style.display='block';
+    document.getElementById('cv-photo-placeholder').style.display='none';
+  }
+}
+function saveCvProfile(){
+  const photo=cvProfile?.photo||'';
+  cvProfile={
+    name:document.getElementById('cv-pname').value.trim(),
+    school:document.getElementById('cv-pschool').value.trim(),
+    subject:document.getElementById('cv-psubject').value.trim(),
+    years:document.getElementById('cv-pyears').value,
+    bio:document.getElementById('cv-pbio').value.trim(),
+    photo,
+  };
+  toast('✅ تم حفظ النبذة','ok');scheduleSave();
+}
+let cvPendingFiles=[];
+function openCvModal(){document.getElementById('cv-title-inp').value='';document.getElementById('cv-date').value=new Date().toISOString().split('T')[0];document.getElementById('cv-desc').value='';document.getElementById('cv-type').value='achievement';document.getElementById('cv-files-preview').innerHTML='';cvPendingFiles=[];document.getElementById('cv-modal-bg').classList.remove('hidden');}
+function closeCvModal(){document.getElementById('cv-modal-bg').classList.add('hidden');cvPendingFiles=[];}
+document.getElementById('cv-files-input').addEventListener('change',e=>{Array.from(e.target.files).forEach(f=>{if(f.size>MAX_FILE_SIZE){toast('❌ ملف أكبر من 500 ميجا',true);return;}cvPendingFiles.push(f);});updateCvPreview();e.target.value='';});
+function updateCvPreview(){const preview=document.getElementById('cv-files-preview');preview.innerHTML='';cvPendingFiles.forEach((f,i)=>{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:12px;';row.innerHTML=`<span>${f.type.startsWith('image/')?'🖼️':'📄'}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${f.name}</span><span style="color:var(--muted)">${fmtSize(f.size)}</span><button onclick="removeCvFile(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;">✕</button>`;preview.appendChild(row);});}
+function removeCvFile(i){cvPendingFiles.splice(i,1);updateCvPreview();}
+async function saveCvItem(){
+  const title=document.getElementById('cv-title-inp').value.trim();if(!title){document.getElementById('cv-title-inp').focus();return;}
+  const btn=document.getElementById('cv-save-btn');btn.disabled=true;btn.textContent='جاري...';
+  const id=Date.now().toString(),type=document.getElementById('cv-type').value,date=document.getElementById('cv-date').value,desc=document.getElementById('cv-desc').value.trim();
+  const attachments=[];
+  for(const file of cvPendingFiles){
+    const fileName=`[سيرة-${id}] ${file.name}`;
+    const result=await driveUpload(file,fileName);
+    if(result)attachments.push({name:file.name,type:file.type,size:file.size,driveId:result.id,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
+  }
+  cvItems.unshift({id,type,title,date,desc,attachments});closeCvModal();renderCv();toast('✅ تم الحفظ','ok');btn.disabled=false;btn.textContent='حفظ ✅';scheduleSave();
+}
+function renderCv(){
+  const timeline=document.getElementById('cv-timeline');const empty=document.getElementById('cv-empty');
+  document.getElementById('cv-count').textContent=cvItems.length+' إنجاز / مبادرة';
+  if(!cvItems.length){empty.style.display='block';timeline.innerHTML='';return;}
+  empty.style.display='none';timeline.innerHTML='';
+  cvItems.forEach(item=>{
+    const el=document.createElement('div');el.className='cv-item';
+    const ds=item.date?new Date(item.date).toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'}):'';
+    const tLabel=item.type==='achievement'?'🏆 إنجاز':'🚀 مبادرة';const tClass=item.type==='achievement'?'type-achievement':'type-initiative';
+    let filesHtml='';
+    if(item.attachments&&item.attachments.length){
+      const rows=item.attachments.map(a=>{
+        const isImg=a.type&&a.type.startsWith('image/');
+        const openUrl=a.previewLink||a.viewLink||'';
+        return`<div class="cv-file-row"><span>${isImg?'🖼️':'📄'}</span><span class="cv-file-name">${a.name}</span><span style="font-size:10px;color:var(--muted)">${fmtSize(a.size)}</span><button class="arc-btn" onclick="openDriveFile('${openUrl}','${a.name.replace(/'/g,"\\'")}')" style="padding:3px 8px;font-size:10px;">👁️</button></div>`;
+      }).join('');
+      filesHtml=`<div class="cv-files"><div class="cv-files-label">📎 المرفقات (${item.attachments.length})</div><div class="cv-files-list">${rows}</div></div>`;
+    }
+    el.innerHTML=`<div class="cv-item-head"><div class="cv-badge">${item.type==='achievement'?'🏆':'🚀'}</div><div class="cv-item-body"><div class="cv-item-title">${item.title}</div><div class="cv-item-meta">${ds?`<span class="cv-item-date">📅 ${ds}</span>`:''}<span class="cv-item-type ${tClass}">${tLabel}</span></div>${item.desc?`<div class="cv-item-desc">${item.desc}</div>`:''}<div class="cv-item-actions"><button class="arc-btn del" onclick="deleteCvItem('${item.id}')">🗑️ حذف</button></div></div></div>${filesHtml}`;
+    timeline.appendChild(el);
+  });
+}
+async function deleteCvItem(id){
+  if(!confirm('تأكيد الحذف؟'))return;
+  const item=cvItems.find(i=>i.id===id);
+  if(item&&item.attachments)for(const a of item.attachments)if(a.driveId)await driveDelete(a.driveId);
+  cvItems=cvItems.filter(i=>i.id!==id);renderCv();toast('🗑️ تم الحذف');scheduleSave();
+}
+
+// ══ PDF/IMG ════════════════════════════════════════════
+function closePdf(){document.getElementById('pdf-modal').classList.add('hidden');document.getElementById('pdf-frame').src='';}
+async function viewImg(url){
+  const real=resolveLocalUrl(url);
+  if(!real){toast('❌ الصورة غير متاحة',true);return;}
+  document.getElementById('img-viewer').src=real;
+  document.getElementById('img-modal').classList.remove('hidden');
+}
+function closeImg(){document.getElementById('img-modal').classList.add('hidden');document.getElementById('img-viewer').src='';}
+
+// ══ REMINDERS ══════════════════════════════════════════
+function parseTime12(str){if(!str)return null;const m=str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/);if(!m)return null;let h=parseInt(m[1]),mn=parseInt(m[2]);const ap=(m[3]||'').toUpperCase();if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;if(!ap&&h<7)h+=12;return h*60+mn;}
+function nowMins(){const d=new Date();return d.getHours()*60+d.getMinutes();}
+function findCurrentAndNextPeriod(){
+  const dayKey=currentDayKey();if(!timetableConfig)return{current:null,next:null};const daySched=timetableConfig.schedule[dayKey]||{};const now=nowMins();let current=null,next=null;
+  timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start),e=parseTime12(p.end);const classKey=daySched[idx];if(s===null||e===null)return;if(now>=s&&now<e){current={idx,period:p,start:s,end:e,classKey,dayKey};}else if(now<s&&!next){if(classKey)next={idx,period:p,start:s,end:e,classKey,dayKey};}});
+  return{current,next};
+}
+function updateCurrentClassBanner(){
+  const banner=document.getElementById('ccb');if(!banner)return;
+  document.querySelectorAll('.cell.current-period').forEach(el=>el.classList.remove('current-period'));
+  const{current}=findCurrentAndNextPeriod();
+  if(current&&current.classKey){const cls=classConfig[current.classKey];banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:current.classKey);document.getElementById('ccb-label').textContent=`الحصة ${current.period.num} • الآن`;document.getElementById('ccb-timer').textContent=(current.end-nowMins())+' د';document.getElementById('ccb-timer-lbl').textContent='المتبقي';}
+  else{const{next}=findCurrentAndNextPeriod();if(next&&next.classKey){const cls=classConfig[next.classKey];const mins=next.start-nowMins();if(mins>0&&mins<=60){banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:next.classKey);document.getElementById('ccb-label').textContent=`الحصة ${next.period.num} • قادمة`;document.getElementById('ccb-timer').textContent=mins+' د';document.getElementById('ccb-timer-lbl').textContent='تبدأ بعد';}else{banner.classList.remove('show');}}else{banner.classList.remove('show');}}
+  checkReminders();
+}
+function checkReminders(){if(!remindersConfig.enabled)return;const dayKey=currentDayKey();const daySched=(timetableConfig&&timetableConfig.schedule[dayKey])||{};const now=nowMins();timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start);const classKey=daySched[idx];if(s===null||!classKey)return;const diff=s-now;const target=remindersConfig.minutes||10;if(diff===target||diff===target-1){const key=`${dayKey}_${idx}_${new Date().toDateString()}`;if(reminderState[key])return;reminderState[key]=true;fireReminder(p,classKey,diff);}});}
+function fireReminder(period,classKey,diff){const cls=classConfig[classKey];const name=cls?cls.name:classKey;const msg=`حصة ${name} تبدأ بعد ${diff} دقيقة`;document.getElementById('reminder-text').textContent=msg;document.getElementById('reminder-toast').classList.add('show');if('Notification' in window&&Notification.permission==='granted'){try{new Notification('تذكير حصة 🔔',{body:msg});}catch(e){}}if(navigator.vibrate)navigator.vibrate([200,100,200]);}
+function dismissReminder(){document.getElementById('reminder-toast').classList.remove('show');}
+function loadRemindersUI(){const t=document.getElementById('rs-toggle');t.classList.toggle('on',remindersConfig.enabled);document.getElementById('rs-mins').value=remindersConfig.minutes||10;}
+function toggleReminders(){remindersConfig.enabled=!remindersConfig.enabled;document.getElementById('rs-toggle').classList.toggle('on',remindersConfig.enabled);if(remindersConfig.enabled&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ تم تفعيل التذكيرات','ok');else toast('🔔 التذكيرات داخل الصفحة فقط');});}else{toast(remindersConfig.enabled?'✅ تم التفعيل':'❌ تم الإيقاف',remindersConfig.enabled?'ok':false);}scheduleSave();}
+function updReminderMins(){const v=parseInt(document.getElementById('rs-mins').value);if(v>0&&v<=60){remindersConfig.minutes=v;scheduleSave();}}
+function testReminder(){fireReminder({num:1},Object.keys(classConfig)[0]||'test',remindersConfig.minutes||10);}
+let watcherInterval;
+function startClassWatcher(){if(watcherInterval)clearInterval(watcherInterval);updateCurrentClassBanner();watcherInterval=setInterval(updateCurrentClassBanner,30000);}
+
+// ══ SAVE ═══════════════════════════════════════════════
+let saveTimer3;
+function scheduleSave(){
+  clearTimeout(saveTimer3);
+  saveTimer3=setTimeout(()=>{
+    // Update classConfig in teacherConfig
+    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||''});
+  },800);
+}
+
+// ══ TOAST ══════════════════════════════════════════════
+let tt2;
+function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
+
+// ══ LIBRARY ════════════════════════════════════════════
+const ADMIN_EMAIL='teacherplane2026project@gmail.com';
+let libraryLinks=[];
+let editingLinkId=null;
+
+function isAdmin(){
+  if(!currentUser)return false;
+  const email=(currentUser.email||'').toLowerCase().trim();
+  return email===ADMIN_EMAIL.toLowerCase();
+}
+
+async function loadLibrary(){
+  if(!sb)return;
+  try{
+    const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
+    if(error){console.error('خطأ تحميل المكتبة:',error);return;}
+    libraryLinks=data||[];
+    populateLibraryFilters();
+    renderLibrary();
+  }catch(e){console.error('خطأ:',e);}
+}
+
+function populateLibraryFilters(){
+  const subjects=[...new Set(libraryLinks.map(l=>l.subject))];
+  const grades=[...new Set(libraryLinks.map(l=>l.grade))].sort((a,b)=>parseInt(a)-parseInt(b));
+  
+  const subSelect=document.getElementById('lib-filter-subject');
+  const grdSelect=document.getElementById('lib-filter-grade');
+  if(!subSelect||!grdSelect)return;
+  
+  const curSub=subSelect.value;
+  const curGrd=grdSelect.value;
+  
+  subSelect.innerHTML='<option value="">📖 جميع المواد</option>'+subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
+  grdSelect.innerHTML='<option value="">🎓 جميع الصفوف</option>'+grades.map(g=>`<option value="${g}">الصف ${g}</option>`).join('');
+  
+  subSelect.value=curSub;
+  grdSelect.value=curGrd;
+}
+
+function renderLibrary(){
+  const content=document.getElementById('library-content');
+  const adminBar=document.getElementById('library-admin-bar');
+  if(!content)return;
+  
+  // إظهار شريط المشرف إذا كان المستخدم مشرفاً
+  if(adminBar)adminBar.style.display=isAdmin()?'flex':'none';
+  
+  const filterSub=document.getElementById('lib-filter-subject').value;
+  const filterGrd=document.getElementById('lib-filter-grade').value;
+  
+  let filtered=libraryLinks;
+  if(filterSub)filtered=filtered.filter(l=>l.subject===filterSub);
+  if(filterGrd)filtered=filtered.filter(l=>l.grade===filterGrd);
+  
+  if(!filtered.length){
+    content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(isAdmin()?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
+    return;
+  }
+  
+  // تجميع حسب المادة ثم الصف
+  const grouped={};
+  filtered.forEach(l=>{
+    if(!grouped[l.subject])grouped[l.subject]={};
+    if(!grouped[l.subject][l.grade])grouped[l.subject][l.grade]=[];
+    grouped[l.subject][l.grade].push(l);
+  });
+  
+  let html='';
+  Object.keys(grouped).forEach(subject=>{
+    html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
+    const grades=Object.keys(grouped[subject]).sort((a,b)=>parseInt(a)-parseInt(b));
+    grades.forEach(grade=>{
+      html+=`<div class="lib-grade-group">
+        <div class="lib-grade-label">🎓 الصف ${grade}</div>
+        <div class="lib-links-grid">`;
+      grouped[subject][grade].forEach(link=>{
+        const icon=link.type==='folder'?'📁':'📄';
+        const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
+        html+=`<div class="lib-link-card" onclick="window.open('${link.url}','_blank')">
+          <div class="lib-link-icon">${icon}</div>
+          <div class="lib-link-info">
+            <div class="lib-link-title">${link.title}</div>
+            <div class="lib-link-meta">${link.type==='folder'?'مجلد':'ملف'} • اضغط للفتح</div>
+          </div>
+          ${delBtn}
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    html+=`</div>`;
+  });
+  
+  content.innerHTML=html;
+}
+
+function openLibraryModal(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
+  editingLinkId=null;
+  document.getElementById('lib-modal-title').textContent='➕ إضافة رابط جديد';
+  document.getElementById('lib-subject').value='';
+  document.getElementById('lib-grade').value='';
+  document.getElementById('lib-title').value='';
+  document.getElementById('lib-url').value='';
+  document.getElementById('lib-type').value='file';
+  document.getElementById('library-modal-bg').classList.remove('hidden');
+}
+
+function closeLibraryModal(){
+  document.getElementById('library-modal-bg').classList.add('hidden');
+  editingLinkId=null;
+}
+
+async function saveLibraryLink(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
+  
+  const subject=document.getElementById('lib-subject').value;
+  const grade=document.getElementById('lib-grade').value;
+  const title=document.getElementById('lib-title').value.trim();
+  const url=document.getElementById('lib-url').value.trim();
+  const lnkType=document.getElementById('lib-type').value;
+  
+  if(!subject||!grade||!title||!url){
+    toast('يرجى ملء جميع الحقول',true);
+    return;
+  }
+  
+  if(!url.startsWith('http')){
+    toast('الرابط غير صحيح',true);
+    return;
+  }
+  
+  try{
+    const{error}=await sb.from('library_links').insert({
+      subject,grade,title,url,type:lnkType,
+      created_by:currentUser.email
+    });
+    if(error){
+      console.error(error);
+      toast('فشل الحفظ: '+error.message,true);
+      return;
+    }
+    toast('تم إضافة الرابط بنجاح','ok');
+    closeLibraryModal();
+    loadLibrary();
+  }catch(e){
+    console.error(e);
+    toast('حدث خطأ',true);
+  }
+}
+
+async function deleteLibraryLink(id){
+  if(!isAdmin()){toast('فقط المشرف يمكنه الحذف',true);return;}
+  if(!confirm('هل أنت متأكد من حذف هذا الرابط؟'))return;
+  
+  try{
+    const{error}=await sb.from('library_links').delete().eq('id',id);
+    if(error){
+      console.error(error);
+      toast('فشل الحذف',true);
+      return;
+    }
+    toast('تم الحذف','ok');
+    loadLibrary();
+  }catch(e){
+    console.error(e);
+    toast('حدث خطأ',true);
+  }
+}
+
+// ══ CALENDAR ═══════════════════════════════════════════
+let currentMonth=new Date().getMonth();
+let currentYear=new Date().getFullYear();
+let calendarEvents=JSON.parse(localStorage.getItem('calendarEvents')||'{}');
+let selectedDate=null;
+const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const dayNames=['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+
+function prevMonth(){currentMonth--;if(currentMonth<0){currentMonth=11;currentYear--;}renderCalendar();}
+function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
+
+function saveCalendarEvents(){localStorage.setItem('calendarEvents',JSON.stringify(calendarEvents));}
+
+function selectDate(year,month,day){
+  const key=`${year}-${month}-${day}`;
+  const input=document.getElementById('event-input');
+  const currentEvent=calendarEvents[key]||'';
+  
+  // إظهار الحدث الحالي إذا كان موجوداً
+  if(currentEvent){
+    const confirmMsg=`الحدث: "${currentEvent}"\n\nاضغط OK للتعديل أو Cancel للحذف`;
+    const userChoice=confirm(confirmMsg);
+    if(!userChoice){
+      delete calendarEvents[key];
+      saveCalendarEvents();
+      renderCalendar();
+      return;
+    }
+  }
+  
+  input.style.display='block';
+  input.value=currentEvent;
+  input.placeholder=`حدث ليوم ${day} ${monthNames[month]}`;
+  input.focus();
+  
+  const saveEvent=()=>{
+    const val=input.value.trim();
+    if(val){
+      calendarEvents[key]=val;
+    }else{
+      delete calendarEvents[key];
+    }
+    saveCalendarEvents();
+    input.style.display='none';
+    input.value='';
+    renderCalendar();
+  };
+  
+  input.onkeypress=(e)=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      saveEvent();
+    }
+  };
+  
+  input.onblur=()=>{
+    setTimeout(saveEvent,150);
+  };
+}
+
+function renderCalendar(){
+  const calEl=document.getElementById('calendar');
+  if(!calEl){
+    console.error('عنصر التقويم غير موجود!');
+    return;
+  }
+  
+  document.getElementById('cal-title').textContent=monthNames[currentMonth]+' '+currentYear;
+  const firstDay=new Date(currentYear,currentMonth,1).getDay();
+  const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  const daysInPrevMonth=new Date(currentYear,currentMonth,0).getDate();
+  const today=new Date();
+  let html='';
+  
+  // رؤوس الأيام
+  dayNames.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
+  
+  // أيام الشهر السابق
+  for(let i=firstDay-1;i>=0;i--){
+    html+=`<div class="cal-day other-month">${daysInPrevMonth-i}</div>`;
+  }
+  
+  // أيام الشهر الحالي
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=d===today.getDate()&&currentMonth===today.getMonth()&&currentYear===today.getFullYear();
+    const key=`${currentYear}-${currentMonth}-${d}`;
+    const hasEvent=!!calendarEvents[key];
+    let classStr='cal-day';
+    if(isToday)classStr+=' today';
+    if(hasEvent)classStr+=' has-event';
+    const eventTitle=calendarEvents[key]?` title="${calendarEvents[key]}"`:'';
+    html+=`<div class="${classStr}" onclick="selectDate(${currentYear},${currentMonth},${d})"${eventTitle}>${d}</div>`;
+  }
+  
+  // أيام الشهر التالي لإكمال الجدول
+  const remaining=42-(firstDay+daysInMonth);
+  for(let i=1;i<=remaining;i++){
+    html+=`<div class="cal-day other-month">${i}</div>`;
+  }
+  
+  calEl.innerHTML=html;
+}
+
+// ══ TASKS ══════════════════════════════════════════════
+let tasks=JSON.parse(localStorage.getItem('userTasks')||'[]');
+
+function saveTasks(){localStorage.setItem('userTasks',JSON.stringify(tasks));}
+
+function renderTasks(){
+  const list=document.getElementById('tasks-list');
+  if(!tasks.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">لا توجد مهام</div>';return;}
+  list.innerHTML=tasks.map((t,i)=>`
+    <div class="task-item${t.done?' done':''}" onclick="toggleTask(${i})">
+      <div class="task-checkbox">${t.done?'✓':''}</div>
+      <div class="task-text">${t.text}</div>
+      <span class="task-delete" onclick="event.stopPropagation();deleteTask(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function addTask(){
+  const input=document.getElementById('task-input');
+  const text=input.value.trim();
+  if(!text)return;
+  tasks.push({text,done:false,id:Date.now()});
+  input.value='';
+  saveTasks();
+  renderTasks();
+}
+
+function toggleTask(idx){
+  tasks[idx].done=!tasks[idx].done;
+  saveTasks();
+  renderTasks();
+}
+
+function deleteTask(idx){
+  tasks.splice(idx,1);
+  saveTasks();
+  renderTasks();
+}
+
+// تهيئة التقويم والمهام عند تحميل الصفحة بالكامل
+window.addEventListener('DOMContentLoaded',()=>{
+  if(document.getElementById('calendar'))renderCalendar();
+  if(document.getElementById('tasks-list'))renderTasks();
+});
+</script>
+<!-- مودال معاينة السلوك -->
+<div id="bprev-modal" class="bprev-modal" style="display:none" onclick="closeBehaviorPreview(event)">
+  <div class="bprev-card" onclick="event.stopPropagation()">
+    <div class="bprev-header">
+      <span class="bprev-title">👁️ معاينة قبل الإضافة</span>
+      <button class="bprev-close" onclick="closeBehaviorPreview()">✕</button>
+    </div>
+    <div class="bprev-body" id="bprev-body"></div>
+    <div class="bprev-footer">
+      <span id="bprev-stats" style="font-size:11px;color:var(--muted);flex:1;align-self:center"></span>
+      <button class="bprev-cancel" onclick="closeBehaviorPreview()">إلغاء</button>
+      <button class="bprev-confirm" onclick="confirmBehaviorPreview()">✅ إضافة</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال الرسالة الخاصة -->
+<div id="msg-modal" class="msg-modal" style="display:none" onclick="closeMsgModal(event)">
+  <div class="msg-modal-card" onclick="event.stopPropagation()">
+    <div class="msg-modal-title">✉️ رسالة خاصة</div>
+    <div class="msg-modal-to" id="msg-modal-to"></div>
+    <input id="msg-modal-title-inp" class="msg-modal-inp" type="text" placeholder="عنوان الرسالة..."/>
+    <textarea id="msg-modal-body-inp" class="msg-modal-body" placeholder="اكتب رسالتك هنا..."></textarea>
+    <div class="msg-modal-actions">
+      <button class="msg-modal-cancel" onclick="closeMsgModal()">إلغاء</button>
+      <button class="msg-modal-send" onclick="sendPrivateMsg()">📨 إرسال</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
