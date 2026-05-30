@@ -6454,14 +6454,28 @@ async function uploadCompleteSetupExcel(event, classId){
       const phoneKW=['الهاتف النقال','هاتف ولي','ولي الأمر','هاتف','جوال','رقم','phone','mobile'];
       let nameCol=-1,phoneCol=-1,headerRow=0;
       
-      for(let ri=0;ri<Math.min(20,rows.length);ri++){
+      // المرور الأول: صف يحتوي الاسم والهاتف معاً
+      for(let ri=0;ri<Math.min(50,rows.length);ri++){
         const row=rows[ri]||[];
+        let fn=-1,fp=-1;
         row.forEach((cell,ci)=>{
           const v=String(cell||'').trim().replace(/ـ/g,'').toLowerCase();
-          if(nameCol<0&&nameKW.some(kw=>v.includes(kw))){nameCol=ci;headerRow=ri;}
-          if(phoneCol<0&&phoneKW.some(kw=>v.includes(kw))){phoneCol=ci;}
+          if(fn<0&&nameKW.some(kw=>v.includes(kw)))fn=ci;
+          if(fp<0&&phoneKW.some(kw=>v.includes(kw)))fp=ci;
         });
-        if(nameCol>=0)break;
+        if(fn>=0&&fp>=0){nameCol=fn;phoneCol=fp;headerRow=ri;break;}
+      }
+      // المرور الثاني: أحدهما فقط
+      if(nameCol<0){
+        for(let ri=0;ri<Math.min(50,rows.length);ri++){
+          const row=rows[ri]||[];
+          row.forEach((cell,ci)=>{
+            const v=String(cell||'').trim().replace(/ـ/g,'').toLowerCase();
+            if(nameCol<0&&nameKW.some(kw=>v.includes(kw))){nameCol=ci;headerRow=ri;}
+            if(phoneCol<0&&phoneKW.some(kw=>v.includes(kw)))phoneCol=ci;
+          });
+          if(nameCol>=0)break;
+        }
       }
       
       if(nameCol<0){toast('❌ لم يتم التعرف على عمود الاسم',true);return;}
