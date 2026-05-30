@@ -4672,20 +4672,26 @@ function renderGradesTable(){
   const allCls=getAllClasses();const cls=allCls.find(c=>c.id===k);if(!cls)return;
   const sList=getUnifiedStudents(k);const cols=gradeTypes.filter(c=>c.classKey===k);
   const wrap=document.getElementById('grades-content');const empty=document.getElementById('grades-empty');
-  if(!sList.length&&!cols.length){return;} // ندع autoLoadTemplateIfEmpty يتولى عرض الرسالة
+  if(!sList.length&&!cols.length){return;}
   empty.style.display='none';wrap.style.display='block';
-  // Calculate total max for summary
   const totalMax=cols.reduce((a,c)=>a+Number(c.max),0);
   let sumPts=0,countSt=0;
   sList.forEach(st=>{const sg=(grades[k]||{})[st.id]||{};let pts=0;cols.forEach(c=>{if(sg[c.id]!=null&&!isNaN(sg[c.id]))pts+=Number(sg[c.id]);});if(totalMax>0){sumPts+=pts;countSt++;}});
   const classAvg=countSt&&totalMax?Math.round(sumPts/countSt):0;
   document.getElementById('grades-summary').innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
   const t=document.getElementById('grades-table');
-  // Header: رقم + الطالب + cols + المجموع الفعلي
-  let head='<thead><tr><th style="min-width:40px;text-align:center">م</th><th>الطالب</th>';
   const canEditCols=isAdmin();
+  // بناء الرأس
+  let head='<thead><tr><th style="min-width:40px;text-align:center">م</th><th>الطالب</th>';
   cols.forEach(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';head+=`<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
   head+=`<th>المجموع / ${totalMax}</th></tr></thead>`;
+  // بناء الجسم — بناء options مرة واحدة لكل عمود ثم إعادة استخدامها
+  const colOptions={};
+  cols.forEach(c=>{
+    let opts='<option value="">—</option>';
+    for(let i=0;i<=Math.floor(c.max);i++)opts+=`<option value="${i}">${i}</option>`;
+    colOptions[c.id]={opts,max:Number(c.max)};
+  });
   let body='<tbody>';
   sList.forEach((st,idx)=>{
     const sg=(grades[k]||{})[st.id]||{};
@@ -4694,13 +4700,10 @@ function renderGradesTable(){
     cols.forEach(c=>{
       const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';
       if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}
-      // قائمة منسدلة بأعداد كاملة من 0 إلى الدرجة القصوى
-      let options='<option value="">—</option>';
-      for(let i=0;i<=Math.floor(c.max);i++){
-        const selected=(num===i)?'selected':'';
-        options+=`<option value="${i}" ${selected}>${i}</option>`;
-      }
-      body+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${options}</select></td>`;
+      // استبدال selected في الـ options المبنية مسبقاً بدل بنائها من جديد
+      let opts=colOptions[c.id].opts;
+      if(num!=null)opts=opts.replace(`<option value="${num}">${num}</option>`,`<option value="${num}" selected>${num}</option>`);
+      body+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${opts}</select></td>`;
     });
     const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
     const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
