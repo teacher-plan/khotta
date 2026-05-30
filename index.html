@@ -3012,7 +3012,7 @@ function showPage(id,btn){
   setTimeout(()=>btn.classList.remove('ripple'),600);
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
-  if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},50);}
+  if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},150);}
 
   if(id==='stats')renderStats();
   if(id==='library')loadLibrary();
@@ -4709,7 +4709,10 @@ function renderGradesTable(){
     const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
     body+=`<td style="font-weight:800;color:${tColor}">${totalVal!=null?totalVal+' / '+totalMax:'—'}</td></tr>`;
   });
-  body+='</tbody>';t.innerHTML=head+body;
+  body+='</tbody>';
+  t.style.opacity='0';
+  t.innerHTML=head+body;
+  requestAnimationFrame(()=>{ t.style.transition='opacity .2s'; t.style.opacity='1'; });
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
