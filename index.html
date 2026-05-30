@@ -9,10 +9,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="خطتي"/>
 <meta name="theme-color" content="#0f0a0a"/>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- تحميل الخطوط بشكل غير متزامن لتجنب تأخير العرض -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/></noscript>
+<!-- Supabase بتأجيل حتى لا يحجب العرض -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <!-- ExcelJS و FileSaver يتم تحميلها lazy عند الحاجة فقط (توفير ~2MB) -->
 <style>
+/* تحسين عرض الخطوط أثناء التحميل */
+@font-face{font-family:'Cairo';font-display:swap;}
+@font-face{font-family:'Tajawal';font-display:swap;}
 :root{
   --bg:#0f0a0a;--surface:#1a1010;--card:#1f1414;--border:#3a2020;
   --gold:#f0c060;--gold2:#d4a030;--red:#c0392b;--red2:#e74c3c;
@@ -2061,11 +2070,19 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
 const GOOGLE_DRIVE_FOLDER_NAME='خطتي الفصلية';
-
 const WHATSAPP='+96876990975';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
-  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
-});
+// تهيئة Supabase بعد تحميل المكتبة (defer)
+let sb=null;
+function initSupabase(){
+  if(window.supabase&&!sb){
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+    });
+  }
+}
+document.addEventListener('DOMContentLoaded',initSupabase);
+// fallback فوري إذا كانت المكتبة محملة مسبقاً
+if(document.readyState!=='loading')initSupabase();
 let currentUser=null,displayName='';
 let googleAccessToken=null;   // توكن Google لرفع الملفات على Drive
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
@@ -6280,7 +6297,8 @@ function generateCertHTML(studentName, colName, classKey){
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@900&family=Scheherazade+New:wght@700&family=Cairo:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@900&family=Scheherazade+New:wght@700&family=Cairo:wght@400;700&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@900&family=Scheherazade+New:wght@700&family=Cairo:wght@400;700&display=swap" media="print" onload="this.media='all'"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:700px;height:490px;overflow:hidden;font-family:'Cairo',sans-serif;}
