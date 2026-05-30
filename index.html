@@ -15,8 +15,8 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap" media="print" onload="this.media='all'"/>
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/></noscript>
-<!-- Supabase بتأجيل حتى لا يحجب العرض -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<!-- Supabase - يجب تحميله قبل باقي الكود -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- ExcelJS و FileSaver يتم تحميلها lazy عند الحاجة فقط (توفير ~2MB) -->
 <style>
 /* تحسين عرض الخطوط أثناء التحميل */
@@ -2071,18 +2071,9 @@ const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
 const GOOGLE_DRIVE_FOLDER_NAME='خطتي الفصلية';
 const WHATSAPP='+96876990975';
-// تهيئة Supabase بعد تحميل المكتبة (defer)
-let sb=null;
-function initSupabase(){
-  if(window.supabase&&!sb){
-    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
-    });
-  }
-}
-document.addEventListener('DOMContentLoaded',initSupabase);
-// fallback فوري إذا كانت المكتبة محملة مسبقاً
-if(document.readyState!=='loading')initSupabase();
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+});
 let currentUser=null,displayName='';
 let googleAccessToken=null;   // توكن Google لرفع الملفات على Drive
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
