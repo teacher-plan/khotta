@@ -4462,9 +4462,16 @@ function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn
 function applyFilter(){
   let vis=0;
   document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
-  document.querySelectorAll('#page-tracker .section').forEach(sec=>{const sv=sec.querySelectorAll('.lesson:not(.hidden)').length;sec.style.display=sv?'':'none';});
+  document.querySelectorAll('#page-tracker .section').forEach(sec=>{
+    // إذا لم تُبنَ الدروس بعد، أبقِ الوحدة ظاهرة دائماً
+    if(!sec._built){sec.style.display='';return;}
+    const sv=sec.querySelectorAll('.lesson:not(.hidden)').length;
+    sec.style.display=sv?'':'none';
+  });
   const emptyEl=document.getElementById('empty');
-  if(vis===0){emptyEl.style.display='block';if(currentFilter==='done'){document.getElementById('empty-emoji').textContent='📚';document.getElementById('empty-msg').textContent='ما خلصت أي درس بعد!';}else if(currentFilter==='remain'){document.getElementById('empty-emoji').textContent='🏆';document.getElementById('empty-msg').textContent='خلصت كل الدروس 🎉';}else{document.getElementById('empty-emoji').textContent='📋';document.getElementById('empty-msg').textContent='لا توجد دروس';}}
+  // اعتبر الوحدات غير المبنية كأن لها دروس
+  const unbuiltCount=document.querySelectorAll('#page-tracker .section:not([data-built])').length;
+  if(vis===0&&unbuiltCount===0){emptyEl.style.display='block';if(currentFilter==='done'){document.getElementById('empty-emoji').textContent='📚';document.getElementById('empty-msg').textContent='ما خلصت أي درس بعد!';}else if(currentFilter==='remain'){document.getElementById('empty-emoji').textContent='🏆';document.getElementById('empty-msg').textContent='خلصت كل الدروس 🎉';}else{document.getElementById('empty-emoji').textContent='📋';document.getElementById('empty-msg').textContent='لا توجد دروس';}}
   else{emptyEl.style.display='none';}
 }
 function update(){
