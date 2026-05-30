@@ -35,14 +35,26 @@ body{background-image:var(--subject-glow,none);background-attachment:fixed;}
 .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:500;}
 .auth-screen.hidden{display:none;}
 .auth-bg-grid{position:absolute;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
-.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:34px 28px;max-width:440px;width:100%;text-align:center;position:relative;box-shadow:0 12px 60px rgba(0,0,0,.5);}
+.auth-card{background:rgba(26,16,16,.9);backdrop-filter:blur(24px);border:1px solid rgba(240,192,96,.2);border-radius:24px;padding:38px 32px;max-width:420px;width:100%;text-align:center;position:relative;z-index:10;box-shadow:0 16px 60px rgba(0,0,0,.6);animation:cardIn .8s cubic-bezier(.16,1,.3,1) forwards;}
+@keyframes cardIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 .auth-logo{font-size:54px;margin-bottom:12px;}
-.auth-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:24px;background:linear-gradient(130deg,var(--white) 20%,var(--gold) 60%,var(--red2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.auth-logo-img{width:78px;height:78px;border-radius:18px;box-shadow:0 8px 28px rgba(192,57,43,.45);border:2px solid rgba(240,192,96,.25);display:block;margin:0 auto 18px;animation:logoPulse 3s ease-in-out infinite;}
+@keyframes logoPulse{0%,100%{box-shadow:0 8px 28px rgba(192,57,43,.4),0 0 0 0 rgba(240,192,96,.3);}50%{box-shadow:0 8px 32px rgba(192,57,43,.55),0 0 0 10px rgba(240,192,96,.0);}}
+.auth-welcome{font-size:11px;letter-spacing:4px;color:var(--gold);font-family:'Tajawal',sans-serif;margin-bottom:6px;opacity:.8;}
+.auth-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:26px;background:linear-gradient(130deg,var(--white) 20%,var(--gold) 60%,var(--red2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+.auth-tagline{color:var(--muted);font-size:13px;margin-bottom:8px;line-height:1.7;}
+.auth-divider{width:48px;height:2px;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:99px;margin:14px auto 18px;}
+.auth-features{display:flex;justify-content:center;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.auth-feature{font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:99px;padding:4px 12px;}
 .auth-sub{color:var(--muted);font-size:13px;margin-bottom:26px;line-height:1.6;}
-.google-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 20px;border-radius:12px;border:none;background:#fff;color:#2a1a1a;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .2s;box-shadow:0 2px 6px rgba(0,0,0,.15);}
-.google-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(0,0,0,.25);}
+.google-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 20px;border-radius:14px;border:none;background:#fff;color:#2a1a1a;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .2s;box-shadow:0 2px 6px rgba(0,0,0,.15);}
+.google-btn:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.35);}
 .google-btn:disabled{opacity:.6;cursor:not-allowed;}
 .auth-footer{font-size:11px;color:var(--muted);margin-top:20px;line-height:1.6;}
+.floating-icon{position:absolute;pointer-events:none;font-size:var(--size);animation:floatIcon var(--dur) ease-in-out infinite var(--delay) both;filter:drop-shadow(0 0 8px rgba(240,192,96,.9)) drop-shadow(0 0 20px rgba(240,192,96,.5));}
+@keyframes floatIcon{0%{opacity:0;transform:translateY(4px) rotate(var(--r0)) scale(.85);}20%{opacity:.75;}50%{opacity:.55;transform:translateY(-14px) rotate(var(--r1)) scale(1.05);}80%{opacity:.75;}100%{opacity:0;transform:translateY(4px) rotate(var(--r0)) scale(.85);}}
+.auth-spark{position:absolute;pointer-events:none;width:var(--sw);height:var(--sw);border-radius:50%;background:radial-gradient(circle,#fff9e0,#f0c060,transparent);animation:sparkAnim var(--sd) ease-in-out infinite var(--sdel) both;filter:blur(.4px);}
+@keyframes sparkAnim{0%{opacity:0;transform:translate(0,0) scale(0);}30%{opacity:1;transform:translate(var(--sx),var(--sy)) scale(1);}60%{opacity:.5;transform:translate(calc(var(--sx)*1.6),calc(var(--sy)*1.6)) scale(.6);}100%{opacity:0;transform:translate(calc(var(--sx)*2.2),calc(var(--sy)*2.2)) scale(0);}}
 .auth-denied{display:none;}.auth-denied.show{display:block;}
 .auth-form-state{display:block;}.auth-form-state.hide{display:none;}
 .denied-icon{font-size:48px;margin-bottom:10px;}
@@ -970,9 +982,16 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <div class="auth-bg-grid"></div>
   <div class="auth-card">
     <div class="onboard-state show" id="auth-login" style="display:block">
-      <div class="auth-logo">📚</div>
+      <img class="auth-logo-img" src="/khotta/khottah_icon_180.png" onerror="this.outerHTML='<div class=&quot;auth-logo&quot;>📚</div>'" alt="خطتي الفصلية"/>
+      <div class="auth-welcome">مرحباً بك في</div>
       <div class="auth-title">خطتي الفصلية</div>
-      <div class="auth-sub">منصة المعلم لإدارة الجدول والخطة الفصلية<br/>سجّل الدخول بحساب Google للبدء</div>
+      <div class="auth-tagline">منصتك الذكية لإدارة الخطة والجدول والدرجات</div>
+      <div class="auth-divider"></div>
+      <div class="auth-features">
+        <div class="auth-feature">📅 جدول الحصص</div>
+        <div class="auth-feature">📚 الخطة الفصلية</div>
+        <div class="auth-feature">📊 الدرجات</div>
+      </div>
       <button class="google-btn" id="google-signin-btn" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         <span id="google-btn-text">تسجيل الدخول بحساب Google</span>
@@ -7667,6 +7686,45 @@ function deleteTask(idx){
 window.addEventListener('DOMContentLoaded',()=>{
   if(document.getElementById('calendar'))renderCalendar();
   if(document.getElementById('tasks-list'))renderTasks();
+  // أيقونات شاشة الدخول المتحركة
+  (function initAuthIcons(){
+    const screen=document.getElementById('auth-screen');
+    if(!screen)return;
+    const icons=['📊','📚','📐','📏','🗺️','📝','✏️','📋'];
+    const zones=[
+      {x:[2,18],y:[5,40]},{x:[2,18],y:[55,90]},
+      {x:[82,96],y:[5,40]},{x:[82,96],y:[55,90]},
+      {x:[25,42],y:[2,14]},{x:[58,75],y:[2,14]},
+      {x:[25,42],y:[86,96]},{x:[58,75],y:[86,96]}
+    ];
+    zones.forEach((zone,i)=>{
+      const el=document.createElement('div');
+      el.className='floating-icon';
+      const x=zone.x[0]+Math.random()*(zone.x[1]-zone.x[0]);
+      const y=zone.y[0]+Math.random()*(zone.y[1]-zone.y[0]);
+      const size=Math.random()*8+18;
+      const dur=Math.random()*3+4;
+      const delay=`${(Math.random()*-6).toFixed(1)}s`;
+      const r0=(Math.random()*20-10).toFixed(1);
+      const r1=(parseFloat(r0)+Math.random()*14-7).toFixed(1);
+      el.textContent=icons[i%icons.length];
+      el.style.cssText=`left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--size:${size.toFixed(0)}px;--dur:${dur.toFixed(1)}s;--delay:${delay};--r0:${r0}deg;--r1:${r1}deg;`;
+      screen.appendChild(el);
+      for(let s=0;s<3;s++){
+        const spark=document.createElement('div');
+        spark.className='auth-spark';
+        const sw=Math.random()*3+2;
+        const angle=Math.random()*Math.PI*2;
+        const dist=Math.random()*18+8;
+        const sx=(Math.cos(angle)*dist).toFixed(1);
+        const sy=(Math.sin(angle)*dist).toFixed(1);
+        const sd=(Math.random()*1.5+1).toFixed(1);
+        const sdel=`${(Math.random()*-3).toFixed(1)}s`;
+        spark.style.cssText=`left:calc(${x.toFixed(1)}% + ${(Math.random()*10-5).toFixed(0)}px);top:calc(${y.toFixed(1)}% + ${(Math.random()*10-5).toFixed(0)}px);--sw:${sw.toFixed(1)}px;--sx:${sx}px;--sy:${sy}px;--sd:${sd}s;--sdel:${sdel};`;
+        screen.appendChild(spark);
+      }
+    });
+  })();
 });
 </script>
 <!-- مودال معاينة السلوك -->
