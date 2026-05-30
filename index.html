@@ -2834,31 +2834,38 @@ const SUBJECT_BASE={
 const SUBJECT_THEMES={
   'الرياضيات':{
     accent:'#f0c060',accent2:'#d4a030',red:'#c0392b',red2:'#e74c3c',
-    dark:{bg:'#0d0a07',surface:'#1a1410',card:'#211a12',border:'#3d3020'}
+    dark:{bg:'#0d0a07',surface:'#1a1410',card:'#211a12',border:'#3d3020'},
+    light:{accent:'#8a6000',accent2:'#6e4c00',red:'#c0392b',red2:'#e74c3c'}
   },
   'العلوم':{
     accent:'#2ee59d',accent2:'#1fae77',red:'#16a085',red2:'#1abc9c',
-    dark:{bg:'#07120e',surface:'#0d1f19',card:'#112821',border:'#1d4438'}
+    dark:{bg:'#07120e',surface:'#0d1f19',card:'#112821',border:'#1d4438'},
+    light:{accent:'#0a7a5a',accent2:'#086248',red:'#0e8a6a',red2:'#16a085'}
   },
   'التربية الإسلامية':{
     accent:'#1fc9a6',accent2:'#159e82',red:'#27ae60',red2:'#2ecc71',
-    dark:{bg:'#06120f',surface:'#0c1f1a',card:'#102823',border:'#1b443a'}
+    dark:{bg:'#06120f',surface:'#0c1f1a',card:'#102823',border:'#1b443a'},
+    light:{accent:'#0e6e3a',accent2:'#0a5830',red:'#1a7a44',red2:'#229954'}
   },
   'الاجتماعيات':{
     accent:'#f0a050',accent2:'#d97e2a',red:'#cd6133',red2:'#e58e26',
-    dark:{bg:'#120d06',surface:'#1f170d',card:'#281e11',border:'#40321c'}
+    dark:{bg:'#120d06',surface:'#1f170d',card:'#281e11',border:'#40321c'},
+    light:{accent:'#8a4010',accent2:'#6e3208',red:'#8a3a18',red2:'#a04e20'}
   },
   'اللغة العربية':{
     accent:'#e8554a',accent2:'#c0392b',red:'#a93226',red2:'#e74c3c',
-    dark:{bg:'#120807',surface:'#1f0f0e',card:'#281312',border:'#421f1d'}
+    dark:{bg:'#120807',surface:'#1f0f0e',card:'#281312',border:'#421f1d'},
+    light:{accent:'#8a1a14',accent2:'#700e0a',red:'#8a1a14',red2:'#c0392b'}
   },
   'اللغة الإنجليزية':{
     accent:'#b06fd0',accent2:'#8e44ad',red:'#7d3c98',red2:'#a569bd',
-    dark:{bg:'#0e0812',surface:'#180f20',card:'#1f1429',border:'#341f42'}
+    dark:{bg:'#0e0812',surface:'#180f20',card:'#1f1429',border:'#341f42'},
+    light:{accent:'#6020a0',accent2:'#4e1888',red:'#5a1a90',red2:'#7d3c98'}
   },
   'تقنية المعلومات':{
     accent:'#4aa8e8',accent2:'#2980b9',red:'#2471a3',red2:'#5dade2',
-    dark:{bg:'#060d12',surface:'#0c161f',card:'#101d28',border:'#1a3242'}
+    dark:{bg:'#060d12',surface:'#0c161f',card:'#101d28',border:'#1a3242'},
+    light:{accent:'#1058a0',accent2:'#0c4688',red:'#0e5090',red2:'#1a6ab8'}
   }
 };
 function detectBaseSubject(cfg){
@@ -2879,15 +2886,18 @@ function applySubjectTheme(cfg){
   const clear=()=>['--bg','--surface','--card','--border','--gold','--gold2','--red','--red2'].forEach(v=>root.style.removeProperty(v));
   clear();
   if(!t)return; // افتراضي = ثيم الرياضيات الأصلي عبر :root
+  const isLight=document.body.classList.contains('light-mode');
   const pal=t.dark;
   root.style.setProperty('--bg',pal.bg);
   root.style.setProperty('--surface',pal.surface);
   root.style.setProperty('--card',pal.card);
   root.style.setProperty('--border',pal.border);
-  root.style.setProperty('--gold',t.accent);
-  root.style.setProperty('--gold2',t.accent2);
-  root.style.setProperty('--red',t.red);
-  root.style.setProperty('--red2',t.red2);
+  // في النهاري: استخدم الألوان الأغمق للقراءة الجيدة
+  const colors=isLight&&t.light?t.light:t;
+  root.style.setProperty('--gold',colors.accent);
+  root.style.setProperty('--gold2',colors.accent2);
+  root.style.setProperty('--red',colors.red);
+  root.style.setProperty('--red2',colors.red2);
 }
 
 function showApp(data){
