@@ -1560,24 +1560,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <h1>مكتبة المعلمين</h1>
     <p>روابط ومصادر تعليمية مشتركة لجميع المعلمين</p>
   </div>
-  
-  <!-- زر إضافة (يظهر للمشرف فقط) -->
-  <div id="library-admin-bar" style="display:none;margin-bottom:20px;">
+  <div id="library-admin-bar" style="display:none;margin-bottom:20px;gap:10px;align-items:center;flex-wrap:wrap;">
     <button class="setup-btn primary" onclick="openLibraryModal()">➕ إضافة رابط جديد</button>
-    <span style="margin-right:12px;color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
+    <span style="color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
   </div>
-  
-  <!-- فلاتر -->
-  <div class="library-filters">
-    <select id="lib-filter-subject" onchange="renderLibrary()">
-      <option value="">📖 جميع المواد</option>
-    </select>
-    <select id="lib-filter-grade" onchange="renderLibrary()">
-      <option value="">🎓 جميع الصفوف</option>
-    </select>
-  </div>
-  
-  <!-- قائمة الروابط -->
   <div id="library-content"></div>
 </div></div>
 
@@ -1942,41 +1928,60 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 <div class="modal-bg hidden" id="library-modal-bg">
   <div class="modal">
     <h3 id="lib-modal-title">➕ إضافة رابط جديد</h3>
-    <label>المادة *</label>
-    <select id="lib-subject">
-      <option value="">اختر المادة</option>
-      <option value="الرياضيات">الرياضيات</option>
-      <option value="العلوم">العلوم</option>
-      <option value="التربية الإسلامية">التربية الإسلامية</option>
-      <option value="الاجتماعيات">الاجتماعيات</option>
-      <option value="اللغة العربية">اللغة العربية</option>
-      <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
-      <option value="تقنية المعلومات">تقنية المعلومات</option>
-    </select>
-    <label>الصف *</label>
-    <select id="lib-grade">
-      <option value="">اختر الصف</option>
-      <option value="1">الصف الأول</option>
-      <option value="2">الصف الثاني</option>
-      <option value="3">الصف الثالث</option>
-      <option value="4">الصف الرابع</option>
-      <option value="5">الصف الخامس</option>
-      <option value="6">الصف السادس</option>
-      <option value="7">الصف السابع</option>
-      <option value="8">الصف الثامن</option>
-      <option value="9">الصف التاسع</option>
-      <option value="10">الصف العاشر</option>
-      <option value="11">الصف الحادي عشر</option>
-      <option value="12">الصف الثاني عشر</option>
-    </select>
+
+    <!-- خيار عام -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
+        <input type="checkbox" id="lib-is-general" onchange="toggleLibGeneralMode(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold)"/>
+        🌐 نشر عام — يظهر لجميع المعلمين
+      </label>
+    </div>
+
+    <!-- تفاصيل المادة والصف (تُخفى عند العام) -->
+    <div id="lib-specific-fields">
+      <label>المادة *</label>
+      <select id="lib-subject">
+        <option value="">اختر المادة</option>
+        <option value="الرياضيات">الرياضيات</option>
+        <option value="العلوم">العلوم</option>
+        <option value="التربية الإسلامية">التربية الإسلامية</option>
+        <option value="الاجتماعيات">الاجتماعيات</option>
+        <option value="اللغة العربية">اللغة العربية</option>
+        <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+        <option value="تقنية المعلومات">تقنية المعلومات</option>
+      </select>
+      <label>الصف *</label>
+      <select id="lib-grade">
+        <option value="">اختر الصف</option>
+        <option value="1">الصف الأول</option>
+        <option value="2">الصف الثاني</option>
+        <option value="3">الصف الثالث</option>
+        <option value="4">الصف الرابع</option>
+        <option value="5">الصف الخامس</option>
+        <option value="6">الصف السادس</option>
+        <option value="7">الصف السابع</option>
+        <option value="8">الصف الثامن</option>
+        <option value="9">الصف التاسع</option>
+        <option value="10">الصف العاشر</option>
+        <option value="11">الصف الحادي عشر</option>
+        <option value="12">الصف الثاني عشر</option>
+      </select>
+      <label>الفصل الدراسي</label>
+      <select id="lib-semester">
+        <option value="all">📅 كلا الفصلين</option>
+        <option value="1">الفصل الأول</option>
+        <option value="2">الفصل الثاني</option>
+      </select>
+    </div>
+
     <label>العنوان *</label>
     <input id="lib-title" type="text" placeholder="مثال: شرح الوحدة الأولى"/>
     <label>رابط Drive *</label>
     <input id="lib-url" type="text" placeholder="https://drive.google.com/..."/>
     <label>النوع</label>
     <select id="lib-type">
-      <option value="file">📄 ملف</option>
       <option value="folder">📁 مجلد</option>
+      <option value="file">📄 ملف</option>
     </select>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeLibraryModal()">إلغاء</button>
@@ -7332,83 +7337,85 @@ async function loadLibrary(){
     const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
     if(error){console.error('خطأ تحميل المكتبة:',error);return;}
     libraryLinks=data||[];
-    populateLibraryFilters();
     renderLibrary();
   }catch(e){console.error('خطأ:',e);}
-}
-
-function populateLibraryFilters(){
-  const subjects=[...new Set(libraryLinks.map(l=>l.subject))];
-  const grades=[...new Set(libraryLinks.map(l=>l.grade))].sort((a,b)=>parseInt(a)-parseInt(b));
-  
-  const subSelect=document.getElementById('lib-filter-subject');
-  const grdSelect=document.getElementById('lib-filter-grade');
-  if(!subSelect||!grdSelect)return;
-  
-  const curSub=subSelect.value;
-  const curGrd=grdSelect.value;
-  
-  subSelect.innerHTML='<option value="">📖 جميع المواد</option>'+subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
-  grdSelect.innerHTML='<option value="">🎓 جميع الصفوف</option>'+grades.map(g=>`<option value="${g}">الصف ${g}</option>`).join('');
-  
-  subSelect.value=curSub;
-  grdSelect.value=curGrd;
 }
 
 function renderLibrary(){
   const content=document.getElementById('library-content');
   const adminBar=document.getElementById('library-admin-bar');
   if(!content)return;
-  
-  // إظهار شريط المشرف إذا كان المستخدم مشرفاً
   if(adminBar)adminBar.style.display=isAdmin()?'flex':'none';
-  
-  const filterSub=document.getElementById('lib-filter-subject').value;
-  const filterGrd=document.getElementById('lib-filter-grade').value;
-  
+
+  // فلترة البيانات حسب نوع المستخدم
   let filtered=libraryLinks;
-  if(filterSub)filtered=filtered.filter(l=>l.subject===filterSub);
-  if(filterGrd)filtered=filtered.filter(l=>l.grade===filterGrd);
-  
+  if(!isAdmin()&&teacherConfig){
+    // المعلم يرى: العام + ما يطابق صفه ومادته وفصله
+    const tGrades=(teacherConfig.grades||[]).map(g=>String(g.grade));
+    const tSubjects=(teacherConfig.grades||[]).map(g=>g.subject);
+    const tSem=String(teacherConfig.semester||'');
+    filtered=libraryLinks.filter(l=>{
+      if(l.is_general)return true;
+      const gradeMatch=!l.grade||tGrades.includes(String(l.grade));
+      const subjectMatch=!l.subject||tSubjects.includes(l.subject);
+      const semMatch=!l.semester||l.semester==='all'||l.semester===tSem;
+      return gradeMatch&&subjectMatch&&semMatch;
+    });
+  }
+
   if(!filtered.length){
     content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(isAdmin()?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
     return;
   }
-  
-  // تجميع حسب المادة ثم الصف
-  const grouped={};
-  filtered.forEach(l=>{
-    if(!grouped[l.subject])grouped[l.subject]={};
-    if(!grouped[l.subject][l.grade])grouped[l.subject][l.grade]=[];
-    grouped[l.subject][l.grade].push(l);
-  });
-  
+
+  // تجميع: عام أولاً ثم حسب المادة والصف
+  const general=filtered.filter(l=>l.is_general);
+  const specific=filtered.filter(l=>!l.is_general);
   let html='';
-  Object.keys(grouped).forEach(subject=>{
-    html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
-    const grades=Object.keys(grouped[subject]).sort((a,b)=>parseInt(a)-parseInt(b));
-    grades.forEach(grade=>{
-      html+=`<div class="lib-grade-group">
-        <div class="lib-grade-label">🎓 الصف ${grade}</div>
-        <div class="lib-links-grid">`;
-      grouped[subject][grade].forEach(link=>{
-        const icon=link.type==='folder'?'📁':'📄';
-        const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
-        html+=`<div class="lib-link-card" onclick="window.open('${link.url}','_blank')">
-          <div class="lib-link-icon">${icon}</div>
-          <div class="lib-link-info">
-            <div class="lib-link-title">${link.title}</div>
-            <div class="lib-link-meta">${link.type==='folder'?'مجلد':'ملف'} • اضغط للفتح</div>
-          </div>
-          ${delBtn}
-        </div>`;
-      });
-      html+=`</div></div>`;
+
+  if(general.length){
+    html+=`<div class="lib-section"><div class="lib-section-title">🌐 عام — لجميع المعلمين</div><div class="lib-links-grid">`;
+    general.forEach(link=>{ html+=libLinkCard(link); });
+    html+=`</div></div>`;
+  }
+
+  if(specific.length){
+    const grouped={};
+    specific.forEach(l=>{
+      const key=l.subject||'أخرى';
+      if(!grouped[key])grouped[key]={};
+      const gKey=l.grade?`الصف ${l.grade}`:'عام';
+      if(!grouped[key][gKey])grouped[key][gKey]=[];
+      grouped[key][gKey].push(l);
     });
-    html+=`</div>`;
-  });
-  
+    Object.keys(grouped).forEach(subject=>{
+      html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
+      Object.keys(grouped[subject]).forEach(grade=>{
+        html+=`<div class="lib-grade-group"><div class="lib-grade-label">🎓 ${grade}</div><div class="lib-links-grid">`;
+        grouped[subject][grade].forEach(link=>{ html+=libLinkCard(link); });
+        html+=`</div></div>`;
+      });
+      html+=`</div>`;
+    });
+  }
+
   content.innerHTML=html;
+}
+
+function libLinkCard(link){
+  const icon=link.type==='folder'?'📁':'📄';
+  const semLabel=link.semester==='1'?'ف١':link.semester==='2'?'ف٢':'';
+  const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
+  return `<div class="lib-link-card" onclick="window.open('${link.url}','_blank')">
+    <div class="lib-link-icon">${icon}</div>
+    <div class="lib-link-info">
+      <div class="lib-link-title">${link.title}</div>
+      <div class="lib-link-meta">${link.type==='folder'?'مجلد':'ملف'}${semLabel?' • '+semLabel:''} • اضغط للفتح</div>
+    </div>${delBtn}</div>`;
+}
+
+function toggleLibGeneralMode(isGeneral){
+  document.getElementById('lib-specific-fields').style.display=isGeneral?'none':'block';
 }
 
 function openLibraryModal(){
@@ -7417,9 +7424,12 @@ function openLibraryModal(){
   document.getElementById('lib-modal-title').textContent='➕ إضافة رابط جديد';
   document.getElementById('lib-subject').value='';
   document.getElementById('lib-grade').value='';
+  document.getElementById('lib-semester').value='all';
   document.getElementById('lib-title').value='';
   document.getElementById('lib-url').value='';
-  document.getElementById('lib-type').value='file';
+  document.getElementById('lib-type').value='folder';
+  document.getElementById('lib-is-general').checked=false;
+  document.getElementById('lib-specific-fields').style.display='block';
   document.getElementById('library-modal-bg').classList.remove('hidden');
 }
 
@@ -7430,59 +7440,37 @@ function closeLibraryModal(){
 
 async function saveLibraryLink(){
   if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
-  
-  const subject=document.getElementById('lib-subject').value;
-  const grade=document.getElementById('lib-grade').value;
+  const isGeneral=document.getElementById('lib-is-general').checked;
+  const subject=isGeneral?null:document.getElementById('lib-subject').value;
+  const grade=isGeneral?null:document.getElementById('lib-grade').value;
+  const semester=isGeneral?null:document.getElementById('lib-semester').value;
   const title=document.getElementById('lib-title').value.trim();
   const url=document.getElementById('lib-url').value.trim();
   const lnkType=document.getElementById('lib-type').value;
-  
-  if(!subject||!grade||!title||!url){
-    toast('يرجى ملء جميع الحقول',true);
-    return;
-  }
-  
-  if(!url.startsWith('http')){
-    toast('الرابط غير صحيح',true);
-    return;
-  }
-  
+  if(!title||!url){toast('يرجى ملء العنوان والرابط',true);return;}
+  if(!isGeneral&&(!subject||!grade)){toast('يرجى تحديد المادة والصف',true);return;}
+  if(!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
   try{
     const{error}=await sb.from('library_links').insert({
-      subject,grade,title,url,type:lnkType,
-      created_by:currentUser.email
+      subject,grade,semester,title,url,type:lnkType,
+      is_general:isGeneral,created_by:currentUser.email
     });
-    if(error){
-      console.error(error);
-      toast('فشل الحفظ: '+error.message,true);
-      return;
-    }
+    if(error){toast('فشل الحفظ: '+error.message,true);return;}
     toast('تم إضافة الرابط بنجاح','ok');
     closeLibraryModal();
     loadLibrary();
-  }catch(e){
-    console.error(e);
-    toast('حدث خطأ',true);
-  }
+  }catch(e){toast('حدث خطأ',true);}
 }
 
 async function deleteLibraryLink(id){
   if(!isAdmin()){toast('فقط المشرف يمكنه الحذف',true);return;}
   if(!confirm('هل أنت متأكد من حذف هذا الرابط؟'))return;
-  
   try{
     const{error}=await sb.from('library_links').delete().eq('id',id);
-    if(error){
-      console.error(error);
-      toast('فشل الحذف',true);
-      return;
-    }
+    if(error){toast('فشل الحذف',true);return;}
     toast('تم الحذف','ok');
     loadLibrary();
-  }catch(e){
-    console.error(e);
-    toast('حدث خطأ',true);
-  }
+  }catch(e){toast('حدث خطأ',true);}
 }
 
 // ══ CALENDAR ═══════════════════════════════════════════
