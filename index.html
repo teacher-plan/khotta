@@ -1567,17 +1567,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <!-- فلاتر المشرف -->
   <div id="library-admin-filters" style="display:none;margin-bottom:20px;">
     <div class="library-filters">
-      <select id="lib-filter-subject" onchange="renderLibrary()">
-        <option value="">📖 جميع المواد</option>
-        <option value="الرياضيات">الرياضيات</option>
-        <option value="العلوم">العلوم</option>
-        <option value="التربية الإسلامية">التربية الإسلامية</option>
-        <option value="الاجتماعيات">الاجتماعيات</option>
-        <option value="اللغة العربية">اللغة العربية</option>
-        <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
-        <option value="تقنية المعلومات">تقنية المعلومات</option>
-      </select>
-      <select id="lib-filter-grade" onchange="renderLibrary()">
+      <select id="lib-filter-grade" onchange="loadLibFilterSubjects()">
         <option value="">🎓 جميع الصفوف</option>
         <option value="1">الصف الأول</option>
         <option value="2">الصف الثاني</option>
@@ -1591,6 +1581,9 @@ tbody tr.today{background:rgba(240,192,96,.03);}
         <option value="10">الصف العاشر</option>
         <option value="11">الصف الحادي عشر</option>
         <option value="12">الصف الثاني عشر</option>
+      </select>
+      <select id="lib-filter-subject" onchange="renderLibrary()">
+        <option value="">📖 جميع المواد</option>
       </select>
       <select id="lib-filter-semester" onchange="renderLibrary()">
         <option value="">📅 جميع الفصول</option>
@@ -1974,19 +1967,8 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 
     <!-- تفاصيل المادة والصف (تُخفى عند العام) -->
     <div id="lib-specific-fields">
-      <label>المادة *</label>
-      <select id="lib-subject">
-        <option value="">اختر المادة</option>
-        <option value="الرياضيات">الرياضيات</option>
-        <option value="العلوم">العلوم</option>
-        <option value="التربية الإسلامية">التربية الإسلامية</option>
-        <option value="الاجتماعيات">الاجتماعيات</option>
-        <option value="اللغة العربية">اللغة العربية</option>
-        <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
-        <option value="تقنية المعلومات">تقنية المعلومات</option>
-      </select>
       <label>الصف *</label>
-      <select id="lib-grade">
+      <select id="lib-grade" onchange="loadLibModalSubjects(this.value)">
         <option value="">اختر الصف</option>
         <option value="1">الصف الأول</option>
         <option value="2">الصف الثاني</option>
@@ -2000,6 +1982,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
         <option value="10">الصف العاشر</option>
         <option value="11">الصف الحادي عشر</option>
         <option value="12">الصف الثاني عشر</option>
+      </select>
+      <label>المادة *</label>
+      <select id="lib-subject">
+        <option value="">اختر الصف أولاً</option>
       </select>
       <label>الفصل الدراسي</label>
       <select id="lib-semester">
@@ -7503,6 +7489,26 @@ function extractYoutubeId(url){
 function openLibraryItem(type,url){
   if(type==='pdf'){openPdf(url,url.split('/').pop());}
   else{window.open(url,'_blank');}
+}
+
+async function loadLibFilterSubjects(){
+  const grade=document.getElementById('lib-filter-grade').value;
+  const subSelect=document.getElementById('lib-filter-subject');
+  subSelect.innerHTML='<option value="">📖 جميع المواد</option>';
+  if(grade&&sb){
+    const{data}=await sb.from('subjects').select('subject').eq('grade',grade).order('sort');
+    if(data){const unique=[...new Set(data.map(r=>r.subject))];unique.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSelect.appendChild(o);});}
+  }
+  renderLibrary();
+}
+
+async function loadLibModalSubjects(grade){
+  const subSelect=document.getElementById('lib-subject');
+  subSelect.innerHTML='<option value="">اختر المادة</option>';
+  if(grade&&sb){
+    const{data}=await sb.from('subjects').select('subject').eq('grade',grade).order('sort');
+    if(data){const unique=[...new Set(data.map(r=>r.subject))];unique.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSelect.appendChild(o);});}
+  }
 }
 
 function toggleLibGeneralMode(isGeneral){
