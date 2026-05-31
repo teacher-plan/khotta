@@ -1560,9 +1560,44 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <h1>مكتبة المعلمين</h1>
     <p>روابط ومصادر تعليمية مشتركة لجميع المعلمين</p>
   </div>
-  <div id="library-admin-bar" style="display:none;margin-bottom:20px;gap:10px;align-items:center;flex-wrap:wrap;">
+  <div id="library-admin-bar" style="display:none;margin-bottom:16px;gap:10px;align-items:center;flex-wrap:wrap;">
     <button class="setup-btn primary" onclick="openLibraryModal()">➕ إضافة رابط جديد</button>
     <span style="color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
+  </div>
+  <!-- فلاتر المشرف -->
+  <div id="library-admin-filters" style="display:none;margin-bottom:20px;">
+    <div class="library-filters">
+      <select id="lib-filter-subject" onchange="renderLibrary()">
+        <option value="">📖 جميع المواد</option>
+        <option value="الرياضيات">الرياضيات</option>
+        <option value="العلوم">العلوم</option>
+        <option value="التربية الإسلامية">التربية الإسلامية</option>
+        <option value="الاجتماعيات">الاجتماعيات</option>
+        <option value="اللغة العربية">اللغة العربية</option>
+        <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+        <option value="تقنية المعلومات">تقنية المعلومات</option>
+      </select>
+      <select id="lib-filter-grade" onchange="renderLibrary()">
+        <option value="">🎓 جميع الصفوف</option>
+        <option value="1">الصف الأول</option>
+        <option value="2">الصف الثاني</option>
+        <option value="3">الصف الثالث</option>
+        <option value="4">الصف الرابع</option>
+        <option value="5">الصف الخامس</option>
+        <option value="6">الصف السادس</option>
+        <option value="7">الصف السابع</option>
+        <option value="8">الصف الثامن</option>
+        <option value="9">الصف التاسع</option>
+        <option value="10">الصف العاشر</option>
+        <option value="11">الصف الحادي عشر</option>
+        <option value="12">الصف الثاني عشر</option>
+      </select>
+      <select id="lib-filter-semester" onchange="renderLibrary()">
+        <option value="">📅 جميع الفصول</option>
+        <option value="1">الفصل الأول</option>
+        <option value="2">الفصل الثاني</option>
+      </select>
+    </div>
   </div>
   <div id="library-content"></div>
 </div></div>
@@ -7371,13 +7406,23 @@ async function loadLibrary(){
 function renderLibrary(){
   const content=document.getElementById('library-content');
   const adminBar=document.getElementById('library-admin-bar');
+  const adminFilters=document.getElementById('library-admin-filters');
   if(!content)return;
-  if(adminBar)adminBar.style.display=isAdmin()?'flex':'none';
+  const admin=isAdmin();
+  if(adminBar)adminBar.style.display=admin?'flex':'none';
+  if(adminFilters)adminFilters.style.display=admin?'block':'none';
 
-  // فلترة البيانات حسب نوع المستخدم
   let filtered=libraryLinks;
-  if(!isAdmin()&&teacherConfig){
-    // المعلم يرى: العام + ما يطابق صفه ومادته وفصله
+  if(admin){
+    // المشرف يفلتر يدوياً
+    const fSub=document.getElementById('lib-filter-subject')?.value||'';
+    const fGrd=document.getElementById('lib-filter-grade')?.value||'';
+    const fSem=document.getElementById('lib-filter-semester')?.value||'';
+    if(fSub)filtered=filtered.filter(l=>l.subject===fSub);
+    if(fGrd)filtered=filtered.filter(l=>String(l.grade)===fGrd);
+    if(fSem)filtered=filtered.filter(l=>l.semester===fSem||l.semester==='all');
+  } else if(teacherConfig){
+    // المعلم يرى ما يناسبه تلقائياً
     const tGrades=(teacherConfig.grades||[]).map(g=>String(g.grade));
     const tSubjects=(teacherConfig.grades||[]).map(g=>g.subject);
     const tSem=String(teacherConfig.semester||'');
@@ -7391,18 +7436,17 @@ function renderLibrary(){
   }
 
   if(!filtered.length){
-    content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(isAdmin()?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
+    content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(admin?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
     return;
   }
 
-  // تجميع: عام أولاً ثم حسب المادة والصف
   const general=filtered.filter(l=>l.is_general);
   const specific=filtered.filter(l=>!l.is_general);
   let html='';
 
   if(general.length){
     html+=`<div class="lib-section"><div class="lib-section-title">🌐 عام — لجميع المعلمين</div><div class="lib-links-grid">`;
-    general.forEach(link=>{ html+=libLinkCard(link); });
+    general.forEach(link=>{html+=libLinkCard(link);});
     html+=`</div></div>`;
   }
 
@@ -7419,13 +7463,12 @@ function renderLibrary(){
       html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
       Object.keys(grouped[subject]).forEach(grade=>{
         html+=`<div class="lib-grade-group"><div class="lib-grade-label">🎓 ${grade}</div><div class="lib-links-grid">`;
-        grouped[subject][grade].forEach(link=>{ html+=libLinkCard(link); });
+        grouped[subject][grade].forEach(link=>{html+=libLinkCard(link);});
         html+=`</div></div>`;
       });
       html+=`</div>`;
     });
   }
-
   content.innerHTML=html;
 }
 
