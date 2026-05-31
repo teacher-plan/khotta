@@ -1976,16 +1976,43 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 
     <label>العنوان *</label>
     <input id="lib-title" type="text" placeholder="مثال: شرح الوحدة الأولى"/>
-    <label>رابط Drive *</label>
-    <input id="lib-url" type="text" placeholder="https://drive.google.com/..."/>
-    <label>النوع</label>
-    <select id="lib-type">
-      <option value="folder">📁 مجلد</option>
-      <option value="file">📄 ملف</option>
+
+    <!-- نوع المحتوى -->
+    <label>نوع المحتوى *</label>
+    <select id="lib-type" onchange="toggleLibContentType(this.value)">
+      <option value="folder">📁 مجلد (رابط خارجي)</option>
+      <option value="file">📄 ملف (رابط خارجي)</option>
+      <option value="pdf">📑 PDF (رفع من الجهاز)</option>
+      <option value="youtube">🎬 فيديو يوتيوب</option>
     </select>
+
+    <!-- رابط خارجي -->
+    <div id="lib-url-field">
+      <label>الرابط *</label>
+      <input id="lib-url" type="text" placeholder="https://drive.google.com/..."/>
+    </div>
+
+    <!-- رفع PDF -->
+    <div id="lib-pdf-field" style="display:none">
+      <label>اختر ملف PDF * (حد أقصى 50MB)</label>
+      <input id="lib-pdf-input" type="file" accept="application/pdf" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;"/>
+      <div id="lib-pdf-progress" style="display:none;margin-top:8px;">
+        <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+          <div id="lib-pdf-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
+        </div>
+        <div id="lib-pdf-pct" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">0%</div>
+      </div>
+    </div>
+
+    <!-- يوتيوب -->
+    <div id="lib-yt-field" style="display:none">
+      <label>رابط يوتيوب *</label>
+      <input id="lib-yt-url" type="text" placeholder="https://youtube.com/watch?v=..."/>
+    </div>
+
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeLibraryModal()">إلغاء</button>
-      <button class="modal-save" onclick="saveLibraryLink()">حفظ ✅</button>
+      <button class="modal-save" id="lib-save-btn" onclick="saveLibraryLink()">حفظ ✅</button>
     </div>
   </div>
 </div>
@@ -7403,19 +7430,46 @@ function renderLibrary(){
 }
 
 function libLinkCard(link){
-  const icon=link.type==='folder'?'📁':'📄';
+  const icons={folder:'📁',file:'📄',pdf:'📑',youtube:'🎬'};
+  const icon=icons[link.type]||'📄';
   const semLabel=link.semester==='1'?'ف١':link.semester==='2'?'ف٢':'';
   const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
-  return `<div class="lib-link-card" onclick="window.open('${link.url}','_blank')">
-    <div class="lib-link-icon">${icon}</div>
-    <div class="lib-link-info">
-      <div class="lib-link-title">${link.title}</div>
-      <div class="lib-link-meta">${link.type==='folder'?'مجلد':'ملف'}${semLabel?' • '+semLabel:''} • اضغط للفتح</div>
-    </div>${delBtn}</div>`;
+  // عرض thumbnail يوتيوب
+  let ytThumb='';
+  if(link.type==='youtube'){
+    const ytId=extractYoutubeId(link.url);
+    if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
+  }
+  const typeLabel={folder:'مجلد',file:'ملف',pdf:'PDF',youtube:'يوتيوب'}[link.type]||'ملف';
+  return `<div class="lib-link-card" onclick="openLibraryItem('${link.type}','${link.url.replace(/'/g,"\\'")}')">
+    ${ytThumb}
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <div class="lib-link-icon">${icon}</div>
+      <div class="lib-link-info">
+        <div class="lib-link-title">${link.title}</div>
+        <div class="lib-link-meta">${typeLabel}${semLabel?' • '+semLabel:''} • اضغط للفتح</div>
+      </div>${delBtn}
+    </div></div>`;
+}
+
+function extractYoutubeId(url){
+  const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  return m?m[1]:null;
+}
+
+function openLibraryItem(type,url){
+  if(type==='pdf'){openPdf(url,url.split('/').pop());}
+  else{window.open(url,'_blank');}
 }
 
 function toggleLibGeneralMode(isGeneral){
   document.getElementById('lib-specific-fields').style.display=isGeneral?'none':'block';
+}
+
+function toggleLibContentType(type){
+  document.getElementById('lib-url-field').style.display=(type==='folder'||type==='file')?'block':'none';
+  document.getElementById('lib-pdf-field').style.display=type==='pdf'?'block':'none';
+  document.getElementById('lib-yt-field').style.display=type==='youtube'?'block':'none';
 }
 
 function openLibraryModal(){
@@ -7427,9 +7481,13 @@ function openLibraryModal(){
   document.getElementById('lib-semester').value='all';
   document.getElementById('lib-title').value='';
   document.getElementById('lib-url').value='';
+  document.getElementById('lib-yt-url').value='';
+  document.getElementById('lib-pdf-input').value='';
   document.getElementById('lib-type').value='folder';
   document.getElementById('lib-is-general').checked=false;
   document.getElementById('lib-specific-fields').style.display='block';
+  document.getElementById('lib-pdf-progress').style.display='none';
+  toggleLibContentType('folder');
   document.getElementById('library-modal-bg').classList.remove('hidden');
 }
 
@@ -7445,21 +7503,40 @@ async function saveLibraryLink(){
   const grade=isGeneral?null:document.getElementById('lib-grade').value;
   const semester=isGeneral?null:document.getElementById('lib-semester').value;
   const title=document.getElementById('lib-title').value.trim();
-  const url=document.getElementById('lib-url').value.trim();
   const lnkType=document.getElementById('lib-type').value;
-  if(!title||!url){toast('يرجى ملء العنوان والرابط',true);return;}
+  if(!title){toast('يرجى إدخال العنوان',true);return;}
   if(!isGeneral&&(!subject||!grade)){toast('يرجى تحديد المادة والصف',true);return;}
-  if(!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
+  let url='';
+  // رفع PDF
+  if(lnkType==='pdf'){
+    const file=document.getElementById('lib-pdf-input').files[0];
+    if(!file){toast('يرجى اختيار ملف PDF',true);return;}
+    if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB',true);return;}
+    const btn=document.getElementById('lib-save-btn');
+    btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
+    document.getElementById('lib-pdf-progress').style.display='block';
+    try{
+      const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const{data,error}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false,onUploadProgress:(p)=>{const pct=Math.round(p.loaded/p.total*100);document.getElementById('lib-pdf-bar').style.width=pct+'%';document.getElementById('lib-pdf-pct').textContent=pct+'%';}});
+      if(error){toast('فشل رفع الملف: '+error.message,true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
+      const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
+      url=pub.publicUrl;
+    }catch(e){toast('حدث خطأ أثناء الرفع',true);document.getElementById('lib-save-btn').disabled=false;document.getElementById('lib-save-btn').textContent='حفظ ✅';return;}
+  } else if(lnkType==='youtube'){
+    url=document.getElementById('lib-yt-url').value.trim();
+    if(!url||!url.includes('youtu')){toast('رابط يوتيوب غير صحيح',true);return;}
+  } else {
+    url=document.getElementById('lib-url').value.trim();
+    if(!url||!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
+  }
   try{
-    const{error}=await sb.from('library_links').insert({
-      subject,grade,semester,title,url,type:lnkType,
-      is_general:isGeneral,created_by:currentUser.email
-    });
+    const{error}=await sb.from('library_links').insert({subject,grade,semester,title,url,type:lnkType,is_general:isGeneral,created_by:currentUser.email});
     if(error){toast('فشل الحفظ: '+error.message,true);return;}
-    toast('تم إضافة الرابط بنجاح','ok');
+    toast('تم الإضافة بنجاح','ok');
     closeLibraryModal();
     loadLibrary();
   }catch(e){toast('حدث خطأ',true);}
+  finally{const btn=document.getElementById('lib-save-btn');if(btn){btn.disabled=false;btn.textContent='حفظ ✅';}}
 }
 
 async function deleteLibraryLink(id){
