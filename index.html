@@ -35,7 +35,8 @@ body{background-image:var(--subject-glow,none),linear-gradient(var(--grid-color)
 /* طبقة 1: نمط الخلفية (شبكة/نقاط/خطوط فنية) */
 /* خلفية نظيفة بدون رسومات */
 
-/* ══ AUTH ══ */
+.bg-spark{position:fixed;pointer-events:none;border-radius:50%;width:var(--sw);height:var(--sw);background:var(--sc);animation:bgSparkFloat var(--sd) ease-in-out infinite var(--sdel) both;filter:blur(var(--sb));z-index:0;}
+@keyframes bgSparkFloat{0%{opacity:0;transform:translate(0,0) scale(0);}20%{opacity:1;transform:translate(var(--sx1),var(--sy1)) scale(1);}50%{opacity:.7;transform:translate(var(--sx2),var(--sy2)) scale(.7);}80%{opacity:.3;transform:translate(var(--sx3),var(--sy3)) scale(.4);}100%{opacity:0;transform:translate(var(--sx4),var(--sy4)) scale(0);}}
 .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:500;}
 .auth-screen.hidden{display:none;}
 .auth-bg-grid{position:absolute;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
@@ -7668,6 +7669,26 @@ window.addEventListener('DOMContentLoaded',()=>{
         screen.appendChild(spark);
       }
     });
+  })();
+  // شرارات خلفية الموقع
+  (function initBgSparks(){
+    const colors=['rgba(184,134,11,OP)','rgba(184,134,11,OP)','rgba(192,57,43,OP)','rgba(139,90,43,OP)'];
+    for(let i=0;i<35;i++){
+      const s=document.createElement('div');
+      s.className='bg-spark';
+      const size=(Math.random()*4+2).toFixed(1);
+      const blur=(Math.random()*1.2+0.4).toFixed(1);
+      const x=(Math.random()*100).toFixed(1);
+      const y=(Math.random()*100).toFixed(1);
+      const dur=(Math.random()*5+4).toFixed(1);
+      const del=(Math.random()*-12).toFixed(1)+'s';
+      const op=(Math.random()*0.3+0.25).toFixed(2);
+      const col=colors[Math.floor(Math.random()*colors.length)].replace('OP',op);
+      const r=()=>(Math.random()*50-25).toFixed(0)+'px';
+      const ry=()=>(Math.random()*-60-10).toFixed(0)+'px';
+      s.style.cssText=`left:${x}%;top:${y}%;--sw:${size}px;--sc:${col};--sb:${blur}px;--sd:${dur}s;--sdel:${del};--sx1:${r()};--sy1:${ry()};--sx2:${r()};--sy2:${ry()};--sx3:${r()};--sy3:${ry()};--sx4:${r()};--sy4:${ry()};`;
+      document.body.appendChild(s);
+    }
   })();
 });
 </script>
