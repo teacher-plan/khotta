@@ -1561,7 +1561,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <p>روابط ومصادر تعليمية مشتركة لجميع المعلمين</p>
   </div>
   <div id="library-admin-bar" style="display:none;margin-bottom:16px;gap:10px;align-items:center;flex-wrap:wrap;">
-    <button class="setup-btn primary" onclick="openLibraryModal()">➕ إضافة رابط جديد</button>
+    <button class="setup-btn primary" onclick="openLibraryModal()">➕ إضافة مجلد جديد</button>
     <span style="color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
   </div>
   <!-- فلاتر المشرف -->
@@ -1592,7 +1592,21 @@ tbody tr.today{background:rgba(240,192,96,.03);}
       </select>
     </div>
   </div>
+  <!-- قائمة المجلدات -->
   <div id="library-content"></div>
+</div></div>
+
+<!-- صفحة داخل المجلد -->
+<div class="page" id="page-library-folder"><div class="wrap">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <button class="arc-btn" onclick="closeLibraryFolder()" style="padding:8px 16px">← رجوع</button>
+    <div>
+      <div id="lib-folder-name" style="font-size:22px;font-weight:800;color:var(--text)"></div>
+      <div id="lib-folder-meta" style="font-size:12px;color:var(--muted)"></div>
+    </div>
+    <button id="lib-folder-add-btn" style="display:none;margin-right:auto" class="setup-btn primary" onclick="openFolderItemModal()">➕ إضافة محتوى</button>
+  </div>
+  <div id="lib-folder-content"></div>
 </div></div>
 
 <!-- ══ ANNOUNCEMENTS PAGE ══ -->
@@ -2034,6 +2048,44 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeLibraryModal()">إلغاء</button>
       <button class="modal-save" id="lib-save-btn" onclick="saveLibraryLink()">حفظ ✅</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal إضافة محتوى للمجلد -->
+<div class="modal-bg hidden" id="folder-item-modal-bg">
+  <div class="modal">
+    <h3>➕ إضافة محتوى للمجلد</h3>
+    <label>العنوان *</label>
+    <input id="fi-title" type="text" placeholder="عنوان المحتوى"/>
+    <label>نوع المحتوى *</label>
+    <select id="fi-type" onchange="toggleFolderItemType(this.value)">
+      <option value="file">📄 ملف (رابط خارجي)</option>
+      <option value="pdf">📑 PDF (رفع من الجهاز)</option>
+      <option value="youtube">🎬 فيديو يوتيوب</option>
+      <option value="link">🔗 رابط عام</option>
+    </select>
+    <div id="fi-url-field">
+      <label>الرابط *</label>
+      <input id="fi-url" type="text" placeholder="https://..."/>
+    </div>
+    <div id="fi-pdf-field" style="display:none">
+      <label>اختر ملف PDF * (حد أقصى 50MB)</label>
+      <input id="fi-pdf-input" type="file" accept="application/pdf" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;"/>
+      <div id="fi-pdf-progress" style="display:none;margin-top:8px;">
+        <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+          <div id="fi-pdf-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
+        </div>
+        <div id="fi-pdf-pct" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">0%</div>
+      </div>
+    </div>
+    <div id="fi-yt-field" style="display:none">
+      <label>رابط يوتيوب *</label>
+      <input id="fi-yt-url" type="text" placeholder="https://youtube.com/watch?v=..."/>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeFolderItemModal()">إلغاء</button>
+      <button class="modal-save" id="fi-save-btn" onclick="saveFolderItem()">حفظ ✅</button>
     </div>
   </div>
 </div>
@@ -7469,13 +7521,17 @@ function libLinkCard(link){
     if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
   }
   const typeLabel={folder:'مجلد',file:'ملف',pdf:'PDF',youtube:'يوتيوب'}[link.type]||'ملف';
-  return `<div class="lib-link-card" onclick="openLibraryItem('${link.type}','${link.url.replace(/'/g,"\\'")}')">
+  const meta=link.subject?(link.subject+(semLabel?' • '+semLabel:'')):semLabel||'';
+  const onClick=link.type==='folder'
+    ?`openLibraryFolder(${link.id},'${link.title.replace(/'/g,"\\'")}','${meta}')`
+    :`openLibraryItem('${link.type}','${(link.url||'').replace(/'/g,"\\'")}')`;
+  return `<div class="lib-link-card" onclick="${onClick}">
     ${ytThumb}
     <div style="display:flex;align-items:center;gap:10px;flex:1">
       <div class="lib-link-icon">${icon}</div>
       <div class="lib-link-info">
         <div class="lib-link-title">${link.title}</div>
-        <div class="lib-link-meta">${typeLabel}${semLabel?' • '+semLabel:''} • اضغط للفتح</div>
+        <div class="lib-link-meta">${typeLabel}${meta?' • '+meta:''} • اضغط للفتح</div>
       </div>${delBtn}
     </div></div>`;
 }
@@ -7486,7 +7542,7 @@ function extractYoutubeId(url){
 }
 
 function openLibraryItem(type,url){
-  if(type==='pdf'){openPdf(url,url.split('/').pop());}
+  if(type==='pdf'&&url.includes('supabase')){openPdf(url,url.split('/').pop());}
   else{window.open(url,'_blank');}
 }
 
@@ -7598,7 +7654,121 @@ async function deleteLibraryLink(id){
   }catch(e){toast('حدث خطأ',true);}
 }
 
-// ══ CALENDAR ═══════════════════════════════════════════
+// ══ LIBRARY FOLDER ════════════════════════════════════
+let currentFolderId=null;
+
+async function openLibraryFolder(folderId,folderTitle,folderMeta){
+  currentFolderId=folderId;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-library-folder').classList.add('active');
+  document.getElementById('lib-folder-name').textContent='📁 '+folderTitle;
+  document.getElementById('lib-folder-meta').textContent=folderMeta||'';
+  document.getElementById('lib-folder-add-btn').style.display=isAdmin()?'block':'none';
+  await loadFolderItems(folderId);
+}
+
+function closeLibraryFolder(){
+  currentFolderId=null;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-library').classList.add('active');
+}
+
+async function loadFolderItems(folderId){
+  const content=document.getElementById('lib-folder-content');
+  content.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">⏳ جاري التحميل...</div>';
+  const{data,error}=await sb.from('library_items').select('*').eq('folder_id',folderId).order('created_at');
+  if(error){content.innerHTML='<div style="text-align:center;color:var(--red)">❌ حدث خطأ</div>';return;}
+  if(!data||!data.length){
+    content.innerHTML='<div class="lib-empty">📭 لا يوجد محتوى في هذا المجلد بعد'+(isAdmin()?'<br><small>اضغط على "إضافة محتوى" لإضافة روابط وملفات</small>':'')+'</div>';
+    return;
+  }
+  let html='<div class="lib-links-grid">';
+  data.forEach(item=>{
+    const icons={file:'📄',pdf:'📑',youtube:'🎬',link:'🔗'};
+    const icon=icons[item.type]||'📄';
+    const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteFolderItem(${item.id})" title="حذف">✕</button>`:'';
+    let ytThumb='';
+    if(item.type==='youtube'){
+      const ytId=extractYoutubeId(item.url);
+      if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
+    }
+    const typeLabel={file:'ملف',pdf:'PDF',youtube:'يوتيوب',link:'رابط'}[item.type]||'ملف';
+    html+=`<div class="lib-link-card" onclick="openLibraryItem('${item.type}','${item.url.replace(/'/g,"\\'")}')">
+      ${ytThumb}
+      <div style="display:flex;align-items:center;gap:10px;flex:1">
+        <div class="lib-link-icon">${icon}</div>
+        <div class="lib-link-info">
+          <div class="lib-link-title">${item.title}</div>
+          <div class="lib-link-meta">${typeLabel} • اضغط للفتح</div>
+        </div>${delBtn}
+      </div></div>`;
+  });
+  html+='</div>';
+  content.innerHTML=html;
+}
+
+function openFolderItemModal(){
+  document.getElementById('fi-title').value='';
+  document.getElementById('fi-type').value='file';
+  document.getElementById('fi-url').value='';
+  document.getElementById('fi-yt-url').value='';
+  document.getElementById('fi-pdf-input').value='';
+  document.getElementById('fi-pdf-progress').style.display='none';
+  toggleFolderItemType('file');
+  document.getElementById('folder-item-modal-bg').classList.remove('hidden');
+}
+
+function closeFolderItemModal(){
+  document.getElementById('folder-item-modal-bg').classList.add('hidden');
+}
+
+function toggleFolderItemType(type){
+  document.getElementById('fi-url-field').style.display=(type==='file'||type==='link')?'block':'none';
+  document.getElementById('fi-pdf-field').style.display=type==='pdf'?'block':'none';
+  document.getElementById('fi-yt-field').style.display=type==='youtube'?'block':'none';
+}
+
+async function saveFolderItem(){
+  const title=document.getElementById('fi-title').value.trim();
+  const type=document.getElementById('fi-type').value;
+  if(!title){toast('يرجى إدخال العنوان',true);return;}
+  let url='';
+  if(type==='pdf'){
+    const file=document.getElementById('fi-pdf-input').files[0];
+    if(!file){toast('يرجى اختيار ملف PDF',true);return;}
+    if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB',true);return;}
+    const btn=document.getElementById('fi-save-btn');
+    btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
+    document.getElementById('fi-pdf-progress').style.display='block';
+    try{
+      const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
+      if(upErr){toast('فشل رفع الملف',true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
+      document.getElementById('fi-pdf-bar').style.width='100%';
+      document.getElementById('fi-pdf-pct').textContent='100%';
+      const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
+      url=pub.publicUrl;
+    }catch(e){toast('حدث خطأ',true);document.getElementById('fi-save-btn').disabled=false;document.getElementById('fi-save-btn').textContent='حفظ ✅';return;}
+  } else if(type==='youtube'){
+    url=document.getElementById('fi-yt-url').value.trim();
+    if(!url||!url.includes('youtu')){toast('رابط يوتيوب غير صحيح',true);return;}
+  } else {
+    url=document.getElementById('fi-url').value.trim();
+    if(!url||!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
+  }
+  const{error}=await sb.from('library_items').insert({folder_id:currentFolderId,title,url,type});
+  if(error){toast('فشل الحفظ: '+error.message,true);}
+  else{toast('تمت الإضافة','ok');closeFolderItemModal();loadFolderItems(currentFolderId);}
+  const btn=document.getElementById('fi-save-btn');
+  if(btn){btn.disabled=false;btn.textContent='حفظ ✅';}
+}
+
+async function deleteFolderItem(id){
+  if(!confirm('حذف هذا المحتوى؟'))return;
+  const{error}=await sb.from('library_items').delete().eq('id',id);
+  if(error){toast('فشل الحذف',true);}
+  else{toast('تم الحذف','ok');loadFolderItems(currentFolderId);}
+}
 let currentMonth=new Date().getMonth();
 let currentYear=new Date().getFullYear();
 let calendarEvents=JSON.parse(localStorage.getItem('calendarEvents')||'{}');
