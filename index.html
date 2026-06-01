@@ -1050,7 +1050,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
       <button class="modal-save" style="width:100%;padding:12px" onclick="completeOnboard()">ابدأ الإعداد 🚀</button>
     </div>
     <div class="onboard-state" id="auth-loading" style="display:none">
-      <img class="auth-logo-img" src="khottah_icon_180.png" onerror="this.style.display='none'" alt=""/>
+      <img class="auth-logo-img" src="khottah_icon_180.png" onerror="this.src='https://teacher-plan.github.io/khotta/khottah_icon_180.png'" alt=""/>
       <div class="auth-title">خطتي الفصلية</div>
       <div style="margin:18px auto 10px;width:44px;height:44px;">
         <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" style="animation:spin 1s linear infinite;width:44px;height:44px;">
@@ -4920,13 +4920,13 @@ async function exportGradesExcel(){
   const gradeName=info?`الصف ${info.grade}`:'';
   
   // ألوان الوزارة
-  const COLOR_GREEN='FF006C35';    // أخضر علم عمان
-  const COLOR_RED='FFC41E3A';      // أحمر علم عمان  
-  const COLOR_GOLD='FFD4AF37';     // ذهبي للتأكيد
-  const COLOR_LIGHT_GREEN='FFE8F5E9'; // أخضر فاتح للصفوف
-  const COLOR_FAIL='FFFFEBEE';     // أحمر فاتح للراسبين
+  const COLOR_GREEN='FF2E7D4F';    // أخضر باهت للطباعة
+  const COLOR_RED='FFB05050';      // أحمر باهت للطباعة
+  const COLOR_GOLD='FFB8960A';     // ذهبي باهت
+  const COLOR_LIGHT_GREEN='FFF0F7F3'; // أخضر فاتح جداً
+  const COLOR_FAIL='FFFFF0F0';     // أحمر فاتح جداً
   const COLOR_WHITE='FFFFFFFF';
-  const COLOR_DARK='FF1A1A1A';
+  const COLOR_DARK='FF2A2A2A';
   
   // إنشاء ملف Excel جديد
   const workbook=new ExcelJS.Workbook();
@@ -4960,7 +4960,7 @@ async function exportGradesExcel(){
   ws.mergeCells(3,1,3,3+cols.length);
   const dateCell=ws.getCell(3,1);
   const today=new Date().toLocaleDateString('ar-OM',{year:'numeric',month:'long',day:'numeric'});
-  dateCell.value=`📅 تاريخ التصدير: ${today}  •  عدد الطلاب: ${sList.length}  •  عدد التقييمات: ${cols.length}`;
+  dateCell.value=`تاريخ التصدير: ${today}  •  عدد الطلاب: ${sList.length}  •  المعلم: ${displayName||'المعلم'}  •  الفصل: ${teacherConfig?.semester==='1'?'الأول':'الثاني'}`;
   dateCell.font={name:'Cairo',size:10,italic:true,color:{argb:'FF555555'}};
   dateCell.alignment={horizontal:'center',vertical:'middle'};
   ws.getRow(3).height=20;
@@ -5057,7 +5057,7 @@ async function exportGradesExcel(){
   const statsRow=dataStartRow+sList.length;
   const statsRowObj=ws.getRow(statsRow);
   ws.mergeCells(statsRow,1,statsRow,2);
-  statsRowObj.getCell(1).value='📊 متوسط الفصل';
+  statsRowObj.getCell(1).value='متوسط الفصل';
   
   cols.forEach((c,ci)=>{
     const cellIdx=colStart+ci;
@@ -5087,7 +5087,7 @@ async function exportGradesExcel(){
   const footerRow=statsRow+2;
   ws.mergeCells(footerRow,1,footerRow,totalCol);
   const footerCell=ws.getCell(footerRow,1);
-  footerCell.value='✦ تم إعداد هذا السجل من خلال منصة "خطتي الفصلية" ✦';
+  footerCell.value='تم إعداد هذا السجل من خلال منصة "خطتي الفصلية" ✦';
   footerCell.font={name:'Cairo',size:9,italic:true,color:{argb:COLOR_GREEN}};
   footerCell.alignment={horizontal:'center',vertical:'middle'};
   
