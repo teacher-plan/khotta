@@ -40,7 +40,7 @@ body{background-image:var(--subject-glow,none),linear-gradient(var(--grid-color)
 .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:500;}
 .auth-screen.hidden{display:none;}
 .auth-bg-grid{position:absolute;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
-.auth-card{background:rgba(255,255,255,.95);backdrop-filter:blur(24px);border:1px solid rgba(139,90,43,.15);border-radius:24px;padding:38px 32px;max-width:420px;width:100%;text-align:center;position:relative;z-index:10;box-shadow:0 16px 60px rgba(0,0,0,.15);animation:cardIn .8s cubic-bezier(.16,1,.3,1) forwards;}
+.auth-card{background:rgba(255,255,255,.88);backdrop-filter:blur(24px);border:1px solid rgba(139,90,43,.15);border-radius:24px;padding:38px 32px;max-width:420px;width:100%;text-align:center;position:relative;z-index:10;box-shadow:0 16px 60px rgba(0,0,0,.15);animation:cardIn .8s cubic-bezier(.16,1,.3,1) forwards;}
 @keyframes cardIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 .auth-logo{font-size:54px;margin-bottom:12px;}
 .auth-logo-img{width:78px;height:78px;border-radius:18px;box-shadow:0 8px 28px rgba(192,57,43,.45);border:2px solid rgba(240,192,96,.25);display:block;margin:0 auto 18px;animation:logoPulse 3s ease-in-out infinite;}
@@ -1050,15 +1050,16 @@ tbody tr.today{background:rgba(240,192,96,.03);}
       <button class="modal-save" style="width:100%;padding:12px" onclick="completeOnboard()">ابدأ الإعداد 🚀</button>
     </div>
     <div class="onboard-state" id="auth-loading" style="display:none">
-      <img class="auth-logo-img" src="khottah_icon_180.png" onerror="this.src='https://teacher-plan.github.io/khotta/khottah_icon_180.png'" alt=""/>
-      <div class="auth-title">خطتي الفصلية</div>
-      <div style="margin:18px auto 10px;width:44px;height:44px;">
-        <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" style="animation:spin 1s linear infinite;width:44px;height:44px;">
-          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(240,192,96,.2)" stroke-width="4"/>
-          <path d="M22 4 a18 18 0 0 1 18 18" fill="none" stroke="#f0c060" stroke-width="4" stroke-linecap="round"/>
+      <img class="auth-logo-img" src="khottah_icon_180.png" onerror="this.src='https://teacher-plan.github.io/khotta/khottah_icon_180.png'" alt="" style="width:62px;height:62px;margin-bottom:6px;"/>
+      <div style="font-size:11px;color:var(--gold);letter-spacing:1px;margin-bottom:4px;font-family:'Cairo',sans-serif;">مرحباً بك في</div>
+      <div class="auth-title" style="margin-bottom:18px;">خطتي الفصلية</div>
+      <div style="margin:0 auto 12px;width:36px;height:36px;">
+        <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" style="animation:spin 1s linear infinite;width:36px;height:36px;">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(240,192,96,.25)" stroke-width="4"/>
+          <path d="M22 4 a18 18 0 0 1 18 18" fill="none" stroke="#c9a84c" stroke-width="4" stroke-linecap="round"/>
         </svg>
       </div>
-      <div class="auth-sub">جارٍ تحميل بياناتك...</div>
+      <div class="auth-sub" style="color:var(--muted);font-size:12px;">جارٍ تحميل بياناتك...</div>
     </div>
   </div>
 </div>
@@ -8097,7 +8098,18 @@ window.addEventListener('DOMContentLoaded',()=>{
   (function initAuthIcons(){
     const screen=document.getElementById('auth-screen');
     if(!screen)return;
-    const icons=['📊','📚','📐','📏','🗺️','📝','✏️','📋'];
+    // أشكال SVG زخرفية بدل الإيموجي
+    const svgShapes=[
+      `<svg viewBox="0 0 48 48" width="VAR" height="VAR"><circle cx="24" cy="24" r="20" fill="none" stroke="#c9a84c" stroke-width="2.5"/><circle cx="24" cy="24" r="10" fill="none" stroke="#c0392b" stroke-width="1.5"/></svg>`,
+      `<svg viewBox="0 0 36 36" width="VAR" height="VAR"><polygon points="18,2 34,18 18,34 2,18" fill="none" stroke="#c9a84c" stroke-width="2"/></svg>`,
+      `<svg viewBox="0 0 40 40" width="VAR" height="VAR"><polygon points="20,4 36,34 4,34" fill="none" stroke="#8a5030" stroke-width="2"/></svg>`,
+      `<svg viewBox="0 0 38 38" width="VAR" height="VAR"><rect x="4" y="4" width="30" height="30" rx="8" fill="none" stroke="#c9a84c" stroke-width="2"/></svg>`,
+      `<svg viewBox="0 0 44 32" width="VAR" height="VAR"><line x1="0" y1="6" x2="44" y2="6" stroke="#c9a84c" stroke-width="2"/><line x1="0" y1="16" x2="44" y2="16" stroke="#c9a84c" stroke-width="2"/><line x1="0" y1="26" x2="44" y2="26" stroke="#c9a84c" stroke-width="2"/></svg>`,
+      `<svg viewBox="0 0 32 32" width="VAR" height="VAR"><polygon points="16,2 20,12 30,12 22,19 25,30 16,23 7,30 10,19 2,12 12,12" fill="none" stroke="#c9a84c" stroke-width="1.5"/></svg>`,
+      `<svg viewBox="0 0 70 70" width="VAR" height="VAR"><circle cx="35" cy="35" r="30" fill="none" stroke="#8a5030" stroke-width="2" stroke-dasharray="6 4"/></svg>`,
+      `<svg viewBox="0 0 40 40" width="VAR" height="VAR"><rect x="4" y="4" width="32" height="32" rx="4" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="5 3"/></svg>`,
+    ];
+    const icons=svgShapes;
     const zones=[
       {x:[2,18],y:[5,40]},{x:[2,18],y:[55,90]},
       {x:[82,96],y:[5,40]},{x:[82,96],y:[55,90]},
@@ -8114,7 +8126,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       const delay=`${(Math.random()*-6).toFixed(1)}s`;
       const r0=(Math.random()*20-10).toFixed(1);
       const r1=(parseFloat(r0)+Math.random()*14-7).toFixed(1);
-      el.textContent=icons[i%icons.length];
+      const sz=(size*1.4).toFixed(0);el.innerHTML=icons[i%icons.length].replace(/VAR/g,sz);el.style.opacity='0.15';
       el.style.cssText=`left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--size:${size.toFixed(0)}px;--dur:${dur.toFixed(1)}s;--delay:${delay};--r0:${r0}deg;--r1:${r1}deg;`;
       screen.appendChild(el);
       for(let s=0;s<3;s++){
