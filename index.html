@@ -971,6 +971,24 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   .field-wrap{flex-direction:row;grid-column:1/-1;margin-top:3px;}
   .field-input{flex:1;width:auto;}
 }
+
+.grades-search-wrap{position:relative;margin-bottom:8px;}
+.grades-search{width:100%;padding:8px 36px 8px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;outline:none;transition:border .2s;}
+.grades-search:focus{border-color:var(--gold);}
+.grades-search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+.behavior-search-wrap{position:relative;margin-bottom:8px;}
+.behavior-search{width:100%;padding:8px 36px 8px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;outline:none;transition:border .2s;}
+.behavior-search:focus{border-color:var(--gold);}
+/* تحسينات الموبايل */
+@media(max-width:767px){
+  .grade-btn{padding:8px 10px;font-size:11px;min-height:38px;}
+  .grades-table td,.grades-table th{padding:6px 2px;}
+  .grades-class-tabs{flex-wrap:wrap;gap:4px;}
+  .nav-btn{padding:7px 10px;font-size:11px;}
+  .grades-toolbar{flex-direction:column;gap:8px;}
+  .grades-actions{display:flex;flex-wrap:wrap;gap:6px;width:100%;}
+  .grades-actions .grade-btn{flex:1;min-width:80px;justify-content:center;}
+}
 </style>
 </head>
 <body>
@@ -1301,7 +1319,11 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <div id="grades-empty" class="grades-empty teacher-only"><div class="grades-empty-icon">📋</div><p>اختر شعبة من فوق</p></div>
   <div id="grades-content" class="teacher-only" style="display:none">
     <div class="grades-summary" id="grades-summary"></div>
-    <div class="grades-table-wrap"><table class="grades-table" id="grades-table"></table></div>
+    <div class="grades-search-wrap">
+    <svg class="grades-search-ico" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input class="grades-search" type="text" placeholder="ابحث عن طالب..." oninput="filterGradesSearch(this.value)" id="grades-search-input">
+  </div>
+  <div class="grades-table-wrap"><table class="grades-table" id="grades-table"></table></div>
   </div>
 </div></div>
 
@@ -1836,6 +1858,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   </div>
 
   <!-- جدول الطلاب -->
+  <div class="behavior-search-wrap" style="margin:8px 16px;">
+    <svg style="position:absolute;left:26px;top:50%;transform:translateY(-50%);color:var(--muted)" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input class="behavior-search" type="text" id="behavior-search-input" placeholder="ابحث عن طالب..." oninput="filterBehaviorSearch(this.value)" style="padding-right:36px">
+  </div>
   <div id="behavior-table-wrap"></div>
 </div></div></div>
 
@@ -4766,6 +4792,8 @@ function renderGrades(){
   autoLoadTemplateIfEmpty();
 }
 function setGradesClass(k){
+  const si=document.getElementById('grades-search-input');
+  if(si)si.value='';
   activeGradesClass=k;
   renderGrades();
 }
@@ -4794,7 +4822,7 @@ function renderGradesTable(){
     for(let i=0;i<=Math.floor(c.max);i++)opts+=`<option value="${i}">${i}</option>`;
     colOptions[c.id]={opts,max:Number(c.max)};
   });
-  let body='<tbody>';
+  let body='<tbody id="grades-table-body">';
   sList.forEach((st,idx)=>{
     const sg=(grades[k]||{})[st.id]||{};
     body+=`<tr><td style="text-align:center;color:var(--muted);font-weight:700;width:36px">${idx+1}</td><td style="white-space:nowrap;font-size:13px;font-weight:900;">${st.name}</td>`;
@@ -5047,6 +5075,16 @@ async function exportGradesExcel(){
     console.error('Excel export error:',e);
     toast('❌ فشل التصدير: '+e.message,true);
   }
+}
+function filterGradesSearch(q){
+  const rows=document.querySelectorAll('#grades-table-body tr');
+  const term=q.trim().toLowerCase();
+  rows.forEach(row=>{
+    const nameCell=row.querySelector('td:nth-child(2)');
+    if(!nameCell){row.style.display='';return;}
+    const name=nameCell.textContent.toLowerCase();
+    row.style.display=(!term||name.includes(term))?'':'none';
+  });
 }
 function updGrade(studentId,colId,val){const k=activeGradesClass;if(!grades[k])grades[k]={};if(!grades[k][studentId])grades[k][studentId]={};if(val==''||val==null){delete grades[k][studentId][colId];}else{grades[k][studentId][colId]=parseFloat(val);}renderGradesTable();scheduleSave();}
 function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
@@ -5458,7 +5496,19 @@ function switchBehaviorClass(id){
   renderBehaviorTabs();
 }
 
+function filterBehaviorSearch(q){
+  const rows=document.querySelectorAll('.behavior-table tbody tr');
+  const term=q.trim().toLowerCase();
+  rows.forEach(row=>{
+    const nameCell=row.querySelector('td:nth-child(2)');
+    if(!nameCell){row.style.display='';return;}
+    row.style.display=(!term||nameCell.textContent.toLowerCase().includes(term))?'':'none';
+  });
+}
 function renderBehaviorTable(){
+  // بحث السلوك
+  const searchInput=document.getElementById('behavior-search-input');
+  const searchTerm=searchInput?searchInput.value.trim().toLowerCase():'';
   const wrap=document.getElementById('behavior-table-wrap');
   if(!wrap)return;
   const list=behaviorStudents[activeBehaviorClass]||[];
