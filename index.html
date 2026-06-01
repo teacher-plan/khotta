@@ -1046,7 +1046,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 <div class="sync-status" id="sync-status"><div class="sync-dot"></div><span id="sync-text">جاري المزامنة...</span></div>
 
 <!-- ══ AUTH SCREEN ══ -->
-<div class="loader-screen" id="loader-screen" style="display:none">
+<div class="loader-screen" id="loader-screen">
   <!-- زخارف SVG -->
   <svg class="loader-deco" style="left:5%;top:10%;animation-duration:5s;animation-delay:0s" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#c9a84c" stroke-width="2"/><circle cx="22" cy="22" r="8" fill="none" stroke="#c0392b" stroke-width="1.5"/></svg>
   <svg class="loader-deco" style="right:6%;top:15%;animation-duration:7s;animation-delay:-2s" width="34" height="34" viewBox="0 0 34 34"><polygon points="17,2 32,17 17,32 2,17" fill="none" stroke="#c9a84c" stroke-width="2"/></svg>
@@ -1064,7 +1064,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <div class="loader-title">خطتي الفصلية</div>
   <div class="loader-sub">جارٍ تحميل بياناتك<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span></div>
 </div>
-<div class="auth-screen" id="auth-screen">
+<div class="auth-screen hidden" id="auth-screen">
   <div class="auth-bg-grid"></div>
   <!-- زخارف SVG -->
   <svg class="loader-deco" style="left:5%;top:10%;animation-duration:5s" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#c9a84c" stroke-width="2"/><circle cx="22" cy="22" r="8" fill="none" stroke="#c0392b" stroke-width="1.5"/></svg>
@@ -2484,6 +2484,10 @@ async function renameTeacher(){const newName=prompt('الاسم الجديد:',d
 function reopenSetup(){document.getElementById('user-menu').classList.remove('show');showSetupScreen();}
 
 // نقطة الدخول: تنتظر تسجيل دخول Google عبر Supabase
+function hideLoader(){
+  const l=document.getElementById('loader-screen');
+  if(l){l.style.opacity='0';l.style.transition='opacity .4s';setTimeout(()=>l.style.display='none',400);}
+}
 async function bootApp(session){
   currentUser=session.user;
   // ─── فحص قائمة الإيميلات المسموحة ───
@@ -2587,15 +2591,16 @@ async function bootApp(session){
   // أظهر شاشة الدخول مبدئياً
   document.getElementById('auth-screen').classList.remove('hidden');
   showAuthState('auth-loading');
-  document.getElementById('auth-screen').classList.add('hidden');
   const _loaderStart=Date.now();
   const _minLoader=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms-(Date.now()-_loaderStart))));
 
   const {data:{session}}=await sb.auth.getSession();
   if(session){
     await Promise.all([bootApp(session),_minLoader(5000)]);
+    hideLoader();
   }else{
     await _minLoader(5000);
+    hideLoader();
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
   }
