@@ -5033,8 +5033,8 @@ async function exportGradesExcel(){
     sumCell.value={formula:`SUM(${colLetter(colStart)}${rowNum}:${colLetter(colEnd)}${rowNum})`};
     sumCell.alignment={horizontal:'center',vertical:'middle'};
     sumCell.numFmt='0';
-    // تلوين المجموع بعد حسابه
-    if(pts!=null&&totalMax>0){
+    const hasGrades=cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''));
+    if(hasGrades&&totalMax>0){
       const pct2=pts/totalMax;
       if(pct2<0.5){
         sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFEBEE'}};
@@ -5046,6 +5046,8 @@ async function exportGradesExcel(){
         sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F7F3'}};
         sumCell.font={name:'Cairo',size:11,bold:true,color:{argb:'FF2E7D4F'}};
       }
+    } else {
+      sumCell.font={name:'Cairo',size:11,color:{argb:'FFAAAAAA'}};
     }
     
     // خلفية متناوبة للصفوف
@@ -5056,8 +5058,7 @@ async function exportGradesExcel(){
           cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:COLOR_LIGHT_GREEN}};
         }
       }
-      // إعادة تطبيق ألوان المجموع
-      sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE0F2E5'}};
+      // لا نتجاوز تلوين المجموع
     }
     
     // الحواف لجميع الخلايا
