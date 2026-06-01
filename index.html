@@ -1026,7 +1026,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <div class="auth-bg-grid"></div>
   <div class="auth-card">
     <div class="onboard-state show" id="auth-login" style="display:block">
-      <img class="auth-logo-img" src="/khotta/khottah_icon_180.png" onerror="this.outerHTML='<div class=&quot;auth-logo&quot;>📚</div>'" alt="خطتي الفصلية"/>
+      <img class="auth-logo-img" src="/khotta/khottah_icon_180.png" onerror="this.src='https://teacher-plan.github.io/khotta/khottah_icon_180.png'" alt="خطتي الفصلية"/>
       <div class="auth-welcome">مرحباً بك في</div>
       <div class="auth-title">خطتي الفصلية</div>
       <div class="auth-tagline">منصتك الذكية لإدارة الخطة والجدول والدرجات</div>
@@ -1341,7 +1341,6 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <div class="grades-actions" style="margin-right:auto;">
       <button class="grade-btn" onclick="openStudentsManager(activeGradesClass,'grades')"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تعديل قائمة الطلاب</button>
       <button class="grade-btn" onclick="exportGradesExcel()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-4 4h2l1.5 2.5L13 15h2l-2.25 3.5L15 22h-2l-1.5-2.7L10 22H8l2.25-3.5L8 15z"/></svg></span> تصدير Excel</button>
-      <button class="grade-btn" onclick="printGradesSheet()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></span> طباعة</button>
       <button class="grade-btn" onclick="openTopStudents()" style="background:linear-gradient(135deg,#C9A84C,#F0C040);color:#000;font-weight:700;"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> المتفوقون</button>
       <button class="grade-btn admin-only" onclick="loadTemplateForCurrentClass()" style="display:none">📋 تحميل القالب (مشرف)</button>
       <button class="grade-btn admin-only" id="save-template-btn" onclick="saveGradeTemplate()" style="display:none;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;font-weight:700">💾 حفظ كقالب عام</button>
@@ -5013,10 +5012,19 @@ async function exportGradesExcel(){
       cell.alignment={horizontal:'center',vertical:'middle'};
       cell.font={name:'Cairo',size:11};
       
-      // تلوين الدرجات الراسبة فقط (أقل من 50%)
-      if(num!=null&&c.max>0&&(num/c.max)<0.5){
-        cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:COLOR_FAIL}};
-        cell.font={name:'Cairo',size:11,bold:true,color:{argb:COLOR_RED}};
+      // تلوين الدرجات حسب النسبة
+      if(num!=null&&c.max>0){
+        const pct=(num/c.max);
+        if(pct<0.5){
+          cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFEBEE'}};
+          cell.font={name:'Cairo',size:11,bold:true,color:{argb:'FFB05050'}};
+        } else if(pct<0.75){
+          cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFDE7'}};
+          cell.font={name:'Cairo',size:11,bold:true,color:{argb:'FF8a6000'}};
+        } else {
+          cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F7F3'}};
+          cell.font={name:'Cairo',size:11,bold:true,color:{argb:'FF2E7D4F'}};
+        }
       }
     });
     
@@ -5024,9 +5032,21 @@ async function exportGradesExcel(){
     const sumCell=row.getCell(totalCol);
     sumCell.value={formula:`SUM(${colLetter(colStart)}${rowNum}:${colLetter(colEnd)}${rowNum})`};
     sumCell.alignment={horizontal:'center',vertical:'middle'};
-    sumCell.font={name:'Cairo',size:11,bold:true,color:{argb:COLOR_GREEN}};
-    sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F8F2'}};
-    sumCell.numFmt='0.##';
+    sumCell.numFmt='0';
+    // تلوين المجموع بعد حسابه
+    if(pts!=null&&totalMax>0){
+      const pct2=pts/totalMax;
+      if(pct2<0.5){
+        sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFEBEE'}};
+        sumCell.font={name:'Cairo',size:11,bold:true,color:{argb:'FFB05050'}};
+      } else if(pct2<0.75){
+        sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFDE7'}};
+        sumCell.font={name:'Cairo',size:11,bold:true,color:{argb:'FF8a6000'}};
+      } else {
+        sumCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F7F3'}};
+        sumCell.font={name:'Cairo',size:11,bold:true,color:{argb:'FF2E7D4F'}};
+      }
+    }
     
     // خلفية متناوبة للصفوف
     if(idx%2===1){
@@ -5163,7 +5183,30 @@ function escapeHTML(s){
   if(typeof s!=='string')return s||'';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function updGrade(studentId,colId,val){const k=activeGradesClass;if(!grades[k])grades[k]={};if(!grades[k][studentId])grades[k][studentId]={};if(val==''||val==null){delete grades[k][studentId][colId];}else{grades[k][studentId][colId]=parseFloat(val);}renderGradesTable();scheduleSave();}
+function updGrade(studentId,colId,val){
+  const k=activeGradesClass;
+  if(!grades[k])grades[k]={};
+  if(!grades[k][studentId])grades[k][studentId]={};
+  if(val==''||val==null){
+    delete grades[k][studentId][colId];
+  } else {
+    const num=parseFloat(val);
+    const col=(gradeTypes||[]).find(c=>c.id===colId);
+    if(col&&num>col.max){
+      toast('❌ الدرجة أعلى من الحد الأقصى ('+col.max+')',true);
+      renderGradesTable();
+      return;
+    }
+    if(num<0){
+      toast('❌ الدرجة لا يمكن أن تكون سالبة',true);
+      renderGradesTable();
+      return;
+    }
+    grades[k][studentId][colId]=num;
+  }
+  renderGradesTable();
+  scheduleSave();
+}
 function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
 function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
 function openImportStudents(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}const allCls=getAllClasses();const cls=allCls.find(c=>c.id===activeGradesClass);document.getElementById('import-class-lbl').textContent='الشعبة: '+(cls?cls.name:'');document.getElementById('import-textarea').value='';document.getElementById('import-modal-bg').classList.remove('hidden');}
