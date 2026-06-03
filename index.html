@@ -1651,6 +1651,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
           <option value="">— اختر الصف أولاً —</option>
         </select>
       </div>
+      <input type="text" id="mg-search" placeholder="ابحث عن درس..." oninput="filterMgLessons(this.value)" style="width:100%;padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;margin-bottom:10px;transition:border .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
       <div id="mg-lessons-list" class="manage-lessons-list"></div>
     </div>
   </div>
@@ -1749,10 +1750,18 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <!-- قسم الدعوات -->
   <div class="admin-panel-card" style="margin-bottom:16px;">
     <div class="admin-panel-header">
-      <h3>🔗 دعوة معلم جديد</h3>
-      <button class="grade-btn" onclick="createInvite()" style="background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-weight:700;">➕ إنشاء رابط دعوة</button>
+      <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 0-10z"/></svg> دعوة معلم جديد</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="invite-duration" style="background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:6px 10px;outline:none;cursor:pointer">
+          <option value="24">24 ساعة</option>
+          <option value="48">48 ساعة</option>
+          <option value="72">3 أيام</option>
+          <option value="168">أسبوع</option>
+        </select>
+        <button class="grade-btn" onclick="createInvite()" style="background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-weight:700;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> إنشاء رابط دعوة</button>
+      </div>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">الرابط صالح لـ 24 ساعة ولاستخدام واحد فقط</div>
+    <div id="invites-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;"></div>
     <div id="invites-list" style="display:flex;flex-direction:column;gap:8px;">
       <div style="text-align:center;padding:10px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
     </div>
@@ -1779,21 +1788,20 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     <p>بيانات شاملة لمساعدتك في تطوير الموقع</p>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-    <button class="analytics-refresh" onclick="loadAnalytics()">🔄 تحديث البيانات</button>
+    <button class="analytics-refresh" onclick="loadAnalytics()" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8 8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6 6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> تحديث البيانات</button>
   </div>
-  <!-- الأرقام الرئيسية -->
   <div class="analytics-grid" id="analytics-kpis">
-    <div class="stat-box green"><div class="stat-box-icon">👥</div><div class="stat-box-num" id="an-total">—</div><div class="stat-box-label">إجمالي المعلمين</div></div>
-    <div class="stat-box blue"><div class="stat-box-icon">✅</div><div class="stat-box-num" id="an-active">—</div><div class="stat-box-label">معلم نشط هذا الأسبوع</div></div>
-    <div class="stat-box gold"><div class="stat-box-icon">📊</div><div class="stat-box-num" id="an-grades">—</div><div class="stat-box-label">إجمالي الطلاب المسجلين</div></div>
-    <div class="stat-box purple"><div class="stat-box-icon">🎓</div><div class="stat-box-num" id="an-violations">—</div><div class="stat-box-label">مخالفة مسجلة</div></div>
-    <div class="stat-box red"><div class="stat-box-icon">💬</div><div class="stat-box-num" id="an-msgs">—</div><div class="stat-box-label">رسالة خاصة أُرسلت</div></div>
-    <div class="stat-box green"><div class="stat-box-icon">📋</div><div class="stat-box-num" id="an-survey-res">—</div><div class="stat-box-label">إجابة استبيان</div></div>
+    <div class="stat-box green"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></div><div class="stat-box-num" id="an-total">—</div><div class="stat-box-label">إجمالي المعلمين</div></div>
+    <div class="stat-box blue"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div><div class="stat-box-num" id="an-active">—</div><div class="stat-box-label">معلم نشط هذا الأسبوع</div></div>
+    <div class="stat-box gold"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></div><div class="stat-box-num" id="an-grades">—</div><div class="stat-box-label">إجمالي الطلاب المسجلين</div></div>
+    <div class="stat-box purple"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19h-17L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg></div><div class="stat-box-num" id="an-violations">—</div><div class="stat-box-label">مخالفة مسجلة</div></div>
+    <div class="stat-box red"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg></div><div class="stat-box-num" id="an-msgs">—</div><div class="stat-box-label">رسالة خاصة أُرسلت</div></div>
+    <div class="stat-box green"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg></div><div class="stat-box-num" id="an-survey-res">—</div><div class="stat-box-label">إجابة استبيان</div></div>
   </div>
 
   <!-- نشاط المعلمين -->
   <div class="analytics-section">
-    <h4>⏱️ آخر نشاط للمعلمين</h4>
+    <h4>آخر نشاط للمعلمين</h4>
     <div id="an-activity-table">
       <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
     </div>
@@ -1801,7 +1809,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 
   <!-- المواد الأكثر استخداماً -->
   <div class="analytics-section">
-    <h4>📚 المواد الأكثر استخداماً</h4>
+    <h4>المواد الأكثر استخداماً</h4>
     <div id="an-subjects-chart">
       <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
     </div>
@@ -3553,6 +3561,13 @@ function openLessonsManager(){
     }
   });
 }
+function filterMgLessons(q){
+  const term=q.trim().toLowerCase();
+  document.querySelectorAll('#mg-lessons-list .manage-lesson-item').forEach(el=>{
+    const title=el.querySelector('.ml-title')?.textContent.toLowerCase()||'';
+    el.style.display=(!term||title.includes(term))?'':'none';
+  });
+}
 function closeLessonsManager(){
   document.getElementById('lessons-manager-modal').style.display='none';
 }
@@ -3596,6 +3611,18 @@ async function loadLessonsForManagement(){
     const{data}=await sb.from('curriculum').select('*')
       .eq('semester',semester).eq('subject',subject).eq('grade',grade).order('sort');
     
+    // ملخص الإحصائيات
+    const summary=document.getElementById('invites-summary');
+    if(summary&&data){
+      const pending=(data||[]).filter(i=>i.status==='pending').length;
+      const used=(data||[]).filter(i=>i.status==='used').length;
+      const cancelled=(data||[]).filter(i=>i.status==='cancelled'||i.status==='expired').length;
+      summary.innerHTML=`
+        <span style="background:rgba(39,174,96,.1);color:#27ae60;padding:3px 10px;border-radius:99px;font-weight:700">${pending} متاحة</span>
+        <span style="background:rgba(41,128,185,.1);color:#2980b9;padding:3px 10px;border-radius:99px;font-weight:700">${used} مستخدمة</span>
+        <span style="background:rgba(127,140,141,.1);color:#7f8c8d;padding:3px 10px;border-radius:99px;font-weight:700">${cancelled} منتهية/ملغاة</span>
+      `;
+    }
     if(!data||!data.length){
       listEl.innerHTML=`<div class="mg-empty">📭 لا توجد دروس لـ ${subject} - الصف ${grade}</div>`;
       return;
@@ -7133,7 +7160,8 @@ async function createInvite(){
   if(!isAdmin())return;
   try{
     const code=generateInviteCode();
-    const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+    const hours=parseInt(document.getElementById('invite-duration')?.value||'24');
+  const expiresAt=new Date(Date.now()+hours*60*60*1000).toISOString();
     const{error}=await sb.from('invites').insert({code,expires_at:expiresAt,status:'pending'});
     if(error)throw error;
     toast('✅ تم إنشاء رابط الدعوة!','ok');
