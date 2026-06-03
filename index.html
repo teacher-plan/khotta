@@ -24,7 +24,7 @@
 @font-face{font-family:'Tajawal';font-display:swap;}
 :root{
   --bg:#f4f0eb;--surface:#fff;--card:#f9f6f2;--border:#d8ccc4;
-  --gold:#b8860b;--gold2:#9a7010;--red:#c0392b;--red2:#e74c3c;
+  --gold:#b8860b;--gold2:#9a7010;--red:#c0392b;--red2:#e74c3c;--g1:#1a7a3a;--g2:#27ae60;--g3:#1a5a2a;
   --white:#1a1010;--muted:#7a6060;--text:#2a1a1a;--green:#27ae60;
   --grid-color:rgba(139,90,43,.06);
 }
@@ -382,16 +382,18 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 
 /* ══ INVITES ══ */
 .invite-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-.invite-code{font-family:monospace;font-size:13px;color:var(--g3);background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);flex:1;min-width:200px;word-break:break-all;direction:ltr;}
+.invite-code{font-family:monospace;font-size:13px;color:var(--text);background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);flex:1;min-width:200px;word-break:break-all;direction:ltr;}
 .invite-status{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:700;}
-.invite-status.pending{background:rgba(0,166,81,.12);color:var(--g2);}
+.invite-status.pending{background:rgba(39,174,96,.15);color:#1a7a3a;}
 .invite-status.used{background:rgba(52,152,219,.12);color:#3498db;}
 .invite-status.cancelled{background:rgba(192,57,43,.12);color:var(--red);}
 .invite-status.expired{background:rgba(255,255,255,.06);color:var(--muted);}
 .invite-meta{font-size:11px;color:var(--muted);flex:1;}
 .invite-actions{display:flex;gap:6px;}
 .invite-copy-btn{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;}
-.invite-cancel-btn{background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;}
+.invite-cancel-btn{background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:4px;}
+.invite-delete-btn{background:rgba(127,140,141,.1);border:1px solid #95a5a6;color:#7f8c8d;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:4px;}
+.invite-delete-btn:hover{background:rgba(192,57,43,.1);border-color:var(--red);color:var(--red);}
 
 /* ══ ANALYTICS ══ */
 .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
@@ -7193,7 +7195,7 @@ async function loadInvites(){
     list.innerHTML=data.map(inv=>{
       const link=`${location.origin}${location.pathname}?invite=${inv.code}`;
       const expDate=new Date(inv.expires_at).toLocaleString('ar');
-      const statusLabel={pending:'متاح ✅',used:'مستخدم 👤',cancelled:'ملغى ❌',expired:'منتهي ⏰'}[inv.status]||inv.status;
+      const statusLabel={pending:'متاح',used:'مستخدم',cancelled:'ملغى',expired:'منتهي'}[inv.status]||inv.status;
       const isPending=inv.status==='pending';
       return `<div class="invite-card">
         <div style="flex:1;min-width:0;">
@@ -7207,8 +7209,9 @@ async function loadInvites(){
           </div>
         </div>
         <div class="invite-actions">
-          ${isPending?`<button class="invite-copy-btn" onclick="copyInviteLink('${link}')">📋 نسخ</button>`:''}
-          ${isPending?`<button class="invite-cancel-btn" onclick="cancelInvite('${inv.id}')">إلغاء</button>`:''}
+          ${isPending?`<button class="invite-copy-btn" style="display:flex;align-items:center;gap:4px" onclick="copyInviteLink('${link}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg> نسخ</button>`:''}
+          ${isPending?`<button class="invite-cancel-btn" onclick="cancelInvite('${inv.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg> إلغاء</button>`:''}
+          ${!isPending?`<button class="invite-delete-btn" onclick="deleteInvite('${inv.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg> حذف</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -7232,6 +7235,15 @@ function copyInviteLink(link){
   });
 }
 
+async function deleteInvite(id){
+  if(!confirm('حذف هذه الدعوة نهائياً؟'))return;
+  try{
+    const{error}=await sb.from('invites').delete().eq('id',id);
+    if(error)throw error;
+    toast('✅ تم حذف الدعوة','ok');
+    loadInvites();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
 async function cancelInvite(id){
   if(!confirm('هل تريد إلغاء هذه الدعوة؟'))return;
   try{
