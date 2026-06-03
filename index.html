@@ -555,6 +555,8 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .ann-item-date{font-size:10px;color:var(--muted);}
 .ann-item-body{font-size:12px;color:var(--text);line-height:1.7;}
 .ann-item-actions{display:flex;gap:6px;justify-content:flex-end;}
+.ann-edit-btn{background:rgba(41,128,185,.1);border:1px solid #2980b9;color:#2980b9;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;}
+.ann-edit-btn:hover{opacity:.8;}
 .ann-del-btn{background:rgba(192,57,43,.15);border:1px solid var(--red);color:var(--red2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;}
 .ann-textarea{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px 13px;outline:none;resize:vertical;min-height:80px;transition:border-color .2s;}
 .ann-textarea:focus{border-color:var(--gold);}
@@ -1207,7 +1209,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   <button class="nav-btn teacher-only" data-page="stats" onclick="showPage('stats',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> إحصائيات</button>
   <button class="nav-btn teacher-only" data-page="archive" onclick="showPage('archive',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V4zm0 4h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm5 3v2h8v-2H8z"/></svg></span> الأرشيف</button>
   <button class="nav-btn" data-page="library" onclick="showPage('library',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></span> المكتبة</button>
-  <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> الإعلانات</button>
+  <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> المراسلات</button>
   <button class="nav-btn admin-only" data-page="users" onclick="showPage('users',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></span> المعلمون</button>
   <button class="nav-btn admin-only" data-page="surveys" onclick="showPage('surveys',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg></span> الاستبيان</button>
   <button class="nav-btn admin-only" data-page="analytics" onclick="showPage('analytics',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</button>
@@ -1718,28 +1720,52 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 <!-- ══ ANNOUNCEMENTS PAGE ══ -->
 <div class="page" id="page-announcements"><div class="wrap">
   <div class="page-header">
-    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> الإعلانات</div>
-    <h1>لوحة الإعلانات</h1>
-    <p>أرسل إشعارات تظهر لجميع المعلمين في الموقع</p>
+    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> المراسلات</div>
+    <h1>المراسلات</h1>
+    <p>الإعلانات العامة والرسائل الخاصة في مكان واحد</p>
   </div>
-  <div class="admin-panel-card">
-    <div class="admin-panel-header">
-      <h3>📢 إدارة الإعلانات</h3>
-      <button class="grade-btn" style="background:linear-gradient(135deg,#e67e22,#f39c12);color:#fff;font-weight:700" onclick="toggleNewAnnForm()">✏️ إعلان جديد</button>
-    </div>
-    <!-- نموذج إعلان جديد -->
-    <div id="new-ann-form" style="display:none;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
-      <input id="ann-title-inp" class="ann-inp" type="text" placeholder="عنوان الإعلان..."/>
-      <textarea id="ann-body-inp" class="ann-textarea" placeholder="نص الإعلان الذي سيظهر لجميع المعلمين..."></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
-        <button onclick="toggleNewAnnForm()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 16px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif">إلغاء</button>
-        <button onclick="saveAnnouncement()" style="background:linear-gradient(135deg,#e67e22,#f39c12);border:none;color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">📢 نشر الإعلان</button>
+
+  <!-- تبويبات -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;">
+    <button id="tab-ann" onclick="switchMsgTab('ann')" style="padding:10px 20px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--gold);border-bottom:2px solid var(--gold);margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> الإعلانات</button>
+    <button id="tab-msgs" onclick="switchMsgTab('msgs')" style="padding:10px 20px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل الخاصة</button>
+  </div>
+
+  <!-- قسم الإعلانات -->
+  <div id="panel-ann">
+    <div class="admin-panel-card">
+      <div class="admin-panel-header">
+        <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> إدارة الإعلانات</h3>
+        <button class="grade-btn" style="background:linear-gradient(135deg,#e67e22,#f39c12);color:#fff;font-weight:700;display:flex;align-items:center;gap:6px" onclick="toggleNewAnnForm()"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> إعلان جديد</button>
+      </div>
+      <div id="new-ann-form" style="display:none;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <input id="ann-title-inp" class="ann-inp" type="text" placeholder="عنوان الإعلان..."/>
+        <textarea id="ann-body-inp" class="ann-textarea" placeholder="نص الإعلان الذي سيظهر لجميع المعلمين..."></textarea>
+        <div id="ann-edit-id" style="display:none"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+          <button onclick="toggleNewAnnForm()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 16px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif">إلغاء</button>
+          <button onclick="saveAnnouncement()" style="background:linear-gradient(135deg,#e67e22,#f39c12);border:none;color:#fff;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> نشر الإعلان</button>
+        </div>
+      </div>
+      <div id="announcements-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
       </div>
     </div>
-    <div id="announcements-list" style="display:flex;flex-direction:column;gap:8px">
-      <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
+  </div>
+
+  <!-- قسم الرسائل الخاصة -->
+  <div id="panel-msgs" style="display:none;">
+    <div class="admin-panel-card">
+      <div class="admin-panel-header">
+        <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل الخاصة</h3>
+        <div id="msgs-count" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div id="private-msgs-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
+      </div>
     </div>
   </div>
+
 </div></div>
 
 <!-- ══ USERS PAGE ══ -->
@@ -3241,7 +3267,7 @@ function showPage(id,btn){
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
   if(id==='users'){loadAdminUsers();loadInvites();}
-  if(id==='announcements')loadAnnouncements();
+  if(id==='announcements'){loadAnnouncements();}
   if(id==='users')loadAdminUsers();
   if(id==='timetable')loadAnnouncementBanner();
   if(id==='tracker'){
@@ -3895,6 +3921,69 @@ async function saveAnnouncement(){
   }
 }
 
+function switchMsgTab(tab){
+  document.getElementById('panel-ann').style.display=tab==='ann'?'block':'none';
+  document.getElementById('panel-msgs').style.display=tab==='msgs'?'block':'none';
+  const tAnn=document.getElementById('tab-ann');
+  const tMsg=document.getElementById('tab-msgs');
+  if(tAnn&&tMsg){
+    tAnn.style.color=tab==='ann'?'var(--gold)':'var(--muted)';
+    tAnn.style.borderBottomColor=tab==='ann'?'var(--gold)':'transparent';
+    tMsg.style.color=tab==='msgs'?'var(--gold)':'var(--muted)';
+    tMsg.style.borderBottomColor=tab==='msgs'?'var(--gold)':'transparent';
+  }
+  if(tab==='msgs')loadPrivateMessages();
+}
+
+async function loadPrivateMessages(){
+  const list=document.getElementById('private-msgs-list');
+  const countEl=document.getElementById('msgs-count');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
+  try{
+    let query=sb.from('private_messages').select('*').order('created_at',{ascending:false});
+    if(!isAdmin())query=query.eq('to_user_id',currentUser.id);
+    const{data,error}=await query;
+    if(error)throw error;
+    if(countEl)countEl.textContent=`${(data||[]).length} رسالة`;
+    if(!data||!data.length){
+      list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">لا توجد رسائل بعد</div>';
+      return;
+    }
+    list.innerHTML=(data||[]).map(m=>{
+      const d=new Date(m.created_at).toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+      return `<div class="ann-item">
+        <div class="ann-item-header">
+          <span class="ann-item-title" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> ${escHtml(m.title||'رسالة')}</span>
+          <span class="ann-item-date">${d}</span>
+        </div>
+        <div class="ann-item-body">${escHtml(m.body||'')}</div>
+        ${isAdmin()?`<div class="ann-item-actions">
+          <button class="ann-del-btn" style="display:flex;align-items:center;gap:4px" onclick="deletePrivateMsg('${m.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg> حذف</button>
+        </div>`:''}
+      </div>`;
+    }).join('');
+  }catch(e){list.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;}
+}
+
+async function deletePrivateMsg(id){
+  if(!confirm('حذف هذه الرسالة نهائياً؟'))return;
+  try{
+    const{error}=await sb.from('private_messages').delete().eq('id',id);
+    if(error)throw error;
+    toast('✅ تم حذف الرسالة','ok');
+    loadPrivateMessages();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
+
+function editAnnouncement(id,title,body){
+  document.getElementById('ann-title-inp').value=title;
+  document.getElementById('ann-body-inp').value=body;
+  document.getElementById('ann-edit-id').textContent=id;
+  document.getElementById('new-ann-form').style.display='block';
+  document.getElementById('ann-title-inp').focus();
+}
+
 async function deleteAnnouncement(id){
   if(!confirm('هل تريد حذف هذا الإعلان؟'))return;
   try{
@@ -3922,15 +4011,17 @@ async function loadAnnouncements(){
     list.innerHTML=data.map(a=>{
       const d=new Date(a.created_at);
       const dateStr=d.toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+      const canEdit=isAdmin();
       return `<div class="ann-item">
         <div class="ann-item-header">
-          <span class="ann-item-title">📢 ${escHtml(a.title)}</span>
+          <span class="ann-item-title" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> ${escHtml(a.title)}</span>
           <span class="ann-item-date">${dateStr}</span>
         </div>
         <div class="ann-item-body">${escHtml(a.body)}</div>
-        <div class="ann-item-actions">
-          <button class="ann-del-btn" onclick="deleteAnnouncement(${a.id})">🗑️ حذف</button>
-        </div>
+        ${canEdit?`<div class="ann-item-actions">
+          <button class="ann-edit-btn" style="display:flex;align-items:center;gap:4px" onclick="editAnnouncement(${a.id},'${escHtml(a.title)}','${escHtml(a.body)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> تعديل</button>
+          <button class="ann-del-btn" style="display:flex;align-items:center;gap:4px" onclick="deleteAnnouncement(${a.id})"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg> حذف</button>
+        </div>`:''}
       </div>`;
     }).join('');
   }catch(e){
