@@ -1726,9 +1726,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   </div>
 
   <!-- تبويبات -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;">
-    <button id="tab-ann" onclick="switchMsgTab('ann')" style="padding:10px 20px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--gold);border-bottom:2px solid var(--gold);margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> الإعلانات</button>
-    <button id="tab-msgs" onclick="switchMsgTab('msgs')" style="padding:10px 20px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل الخاصة</button>
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
+    <button id="tab-ann" onclick="switchMsgTab('ann')" style="padding:10px 18px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--gold);border-bottom:2px solid var(--gold);margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> الإعلانات</button>
+    <button id="tab-msgs" onclick="switchMsgTab('msgs')" style="padding:10px 18px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل الخاصة</button>
+    <button id="tab-surveys" onclick="switchMsgTab('surveys')" style="padding:10px 18px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg> الاستبيانات</button>
   </div>
 
   <!-- قسم الإعلانات -->
@@ -3924,15 +3925,16 @@ async function saveAnnouncement(){
 function switchMsgTab(tab){
   document.getElementById('panel-ann').style.display=tab==='ann'?'block':'none';
   document.getElementById('panel-msgs').style.display=tab==='msgs'?'block':'none';
-  const tAnn=document.getElementById('tab-ann');
-  const tMsg=document.getElementById('tab-msgs');
-  if(tAnn&&tMsg){
-    tAnn.style.color=tab==='ann'?'var(--gold)':'var(--muted)';
-    tAnn.style.borderBottomColor=tab==='ann'?'var(--gold)':'transparent';
-    tMsg.style.color=tab==='msgs'?'var(--gold)':'var(--muted)';
-    tMsg.style.borderBottomColor=tab==='msgs'?'var(--gold)':'transparent';
-  }
+  document.getElementById('panel-surveys').style.display=tab==='surveys'?'block':'none';
+  ['tab-ann','tab-msgs','tab-surveys'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const active=id===`tab-${tab}`;
+    el.style.color=active?'var(--gold)':'var(--muted)';
+    el.style.borderBottomColor=active?'var(--gold)':'transparent';
+  });
   if(tab==='msgs')loadPrivateMessages();
+  if(tab==='surveys'){renderSurveyBuilder();loadSurveyResults();}
 }
 
 async function loadPrivateMessages(){
@@ -7573,6 +7575,15 @@ async function loadSurveyResults(){
   }catch(e){console.warn('survey results error:',e);}
 }
 
+async function deleteSurvey(id){
+  if(!confirm('حذف هذا الاستبيان نهائياً مع جميع الإجابات؟'))return;
+  try{
+    await sb.from('survey_responses').delete().eq('survey_id',id);
+    await sb.from('surveys').delete().eq('id',id);
+    toast('✅ تم حذف الاستبيان','ok');
+    loadSurveyResults();
+  }catch(e){toast('❌ خطأ: '+e.message,true);}
+}
 async function deactivateSurvey(id){
   await sb.from('surveys').update({is_active:false}).eq('id',id);
   loadSurveyResults();
