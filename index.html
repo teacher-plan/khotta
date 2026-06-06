@@ -1767,6 +1767,34 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     </div>
   </div>
 
+  <!-- قسم الاستبيانات -->
+  <div id="panel-surveys" style="display:none;">
+    <div class="survey-wrap">
+      <!-- بناء الاستبيان -->
+      <div class="survey-builder">
+        <h4>✏️ إنشاء استبيان جديد</h4>
+        <input id="survey-title" class="survey-title-inp" placeholder="عنوان الاستبيان — مثال: تقييم منصة خطتي الفصلية"/>
+        <div class="survey-q-list" id="survey-q-list"></div>
+        <div class="survey-add-q" id="survey-add-q-box">
+          <input id="new-q-text" placeholder="نص السؤال — مثال: ما القسم الذي تستخدمه أكثر؟"/>
+          <div class="survey-opts-wrap" id="new-q-opts">
+            <div class="survey-opt-inp"><input placeholder="خيار 1" class="new-opt-inp"/><button class="survey-opt-del" onclick="removeOpt(this)">✕</button></div>
+            <div class="survey-opt-inp"><input placeholder="خيار 2" class="new-opt-inp"/><button class="survey-opt-del" onclick="removeOpt(this)">✕</button></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button onclick="addOptField()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Cairo',sans-serif;">+ إضافة خيار</button>
+            <button onclick="addQuestion()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;">✅ إضافة السؤال</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button onclick="publishSurvey()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;">📤 نشر للمعلمين</button>
+          <button onclick="clearSurveyBuilder()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Cairo',sans-serif;">🗑️ مسح</button>
+        </div>
+      </div>
+      <div id="survey-results-wrap"></div>
+    </div>
+  </div>
+
 </div></div>
 
 <!-- ══ USERS PAGE ══ -->
@@ -1861,56 +1889,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   </div>
 </div></div>
 
-<!-- ══ SURVEYS ══ -->
-<div class="page hidden" id="page-surveys"><div class="wrap">
-  <div class="page-header">
-    <div class="tag">📋 الاستبيانات</div>
-    <h1>إنشاء ونشر الاستبيانات</h1>
-    <p>اسأل المعلمين واستقبل آراءهم بشكل منظم</p>
-  </div>
-
-  <div class="survey-wrap">
-
-    <!-- بناء الاستبيان -->
-    <div class="survey-builder">
-      <h4>✏️ إنشاء استبيان جديد</h4>
-      <input id="survey-title" class="survey-title-inp" placeholder="عنوان الاستبيان — مثال: تقييم منصة خطتي الفصلية"/>
-
-      <!-- قائمة الأسئلة -->
-      <div class="survey-q-list" id="survey-q-list"></div>
-
-      <!-- إضافة سؤال جديد -->
-      <div class="survey-add-q" id="survey-add-q-box">
-        <input id="new-q-text" placeholder="نص السؤال — مثال: ما القسم الذي تستخدمه أكثر؟"/>
-        <div class="survey-opts-wrap" id="new-q-opts">
-          <div class="survey-opt-inp">
-            <input placeholder="خيار 1" class="new-opt-inp"/>
-            <button class="survey-opt-del" onclick="removeOpt(this)">✕</button>
-          </div>
-          <div class="survey-opt-inp">
-            <input placeholder="خيار 2" class="new-opt-inp"/>
-            <button class="survey-opt-del" onclick="removeOpt(this)">✕</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-          <button onclick="addOptField()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Cairo',sans-serif;">+ إضافة خيار</button>
-          <button onclick="addQuestion()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;box-shadow:0 2px 8px rgba(0,108,53,.3);">✅ إضافة السؤال</button>
-        </div>
-      </div>
-
-      <!-- أزرار النشر -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-        <button onclick="publishSurvey()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;box-shadow:0 4px 14px rgba(0,108,53,.35);">📤 نشر للمعلمين</button>
-        <button onclick="clearSurveyBuilder()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Cairo',sans-serif;">🗑️ مسح</button>
-      </div>
-    </div>
-
-    <!-- الاستبيانات المنشورة والإحصائيات -->
-    <div id="survey-results-wrap"></div>
-  </div>
-</div></div>
-
-<!-- مودال الاستبيان للمعلم -->
+<!-- ══ SURVEYS MODAL للمعلم ══ -->
 <div class="survey-modal-bg" id="survey-modal-bg" style="display:none" onclick="closeSurveyModal(event)">
   <div class="survey-modal" onclick="event.stopPropagation()">
     <h3 id="survey-modal-title">📋 استبيان</h3>
