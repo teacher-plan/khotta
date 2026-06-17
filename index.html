@@ -1072,7 +1072,11 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   </div>
   <div class="loader-brand">KHOTTAH</div>
   <div class="loader-title">خطتي الفصلية</div>
-  <div class="loader-sub">جارٍ تحميل بياناتك<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div class="loader-sub" id="loader-sub-text">جارٍ تحميل بياناتك<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="loader-retry" style="display:none;margin-top:20px;text-align:center;">
+    <div style="color:var(--muted);font-size:12px;margin-bottom:10px;">استغرق التحميل وقتاً طويلاً</div>
+    <button onclick="location.reload()" style="padding:10px 28px;border-radius:99px;border:none;background:linear-gradient(135deg,#c0392b,#c9a84c);color:#fff;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">إعادة المحاولة</button>
+  </div>
 </div>
 <div class="auth-screen hidden" id="auth-screen">
   <div class="auth-bg-grid"></div>
@@ -2569,7 +2573,20 @@ function reopenSetup(){document.getElementById('user-menu').classList.remove('sh
 // نقطة الدخول: تنتظر تسجيل دخول Google عبر Supabase
 function hideLoader(){
   const l=document.getElementById('loader-screen');
-  if(l){l.style.opacity='0';l.style.transition='opacity .4s';setTimeout(()=>l.style.display='none',400);}
+  if(l){
+    l.style.opacity='0';
+    l.style.transition='opacity .4s';
+    setTimeout(()=>{
+      l.style.display='none';
+      // تأكد من إظهار auth-screen إذا لم يكن المستخدم مسجلاً
+      const authScreen=document.getElementById('auth-screen');
+      const appPages=document.querySelectorAll('.page.active');
+      if(authScreen&&authScreen.classList.contains('hidden')&&!appPages.length){
+        authScreen.classList.remove('hidden');
+        showAuthState('auth-login');
+      }
+    },400);
+  }
 }
 async function bootApp(session){
   currentUser=session.user;
@@ -2675,14 +2692,23 @@ async function bootApp(session){
   document.getElementById('auth-screen').classList.remove('hidden');
   showAuthState('auth-loading');
   const _loaderStart=Date.now();
+  // timeout: إذا تجاوز 12 ثانية يظهر زر إعادة المحاولة
+  const _loaderTimeout=setTimeout(()=>{
+    const retry=document.getElementById('loader-retry');
+    const sub=document.getElementById('loader-sub-text');
+    if(retry)retry.style.display='block';
+    if(sub)sub.style.display='none';
+  },12000);
   const _minLoader=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms-(Date.now()-_loaderStart))));
 
   const {data:{session}}=await sb.auth.getSession();
   if(session){
-    await Promise.all([bootApp(session),_minLoader(5000)]);
+    await Promise.all([bootApp(session),_minLoader(2000)]);
+    clearTimeout(_loaderTimeout);
     hideLoader();
   }else{
-    await _minLoader(5000);
+    clearTimeout(_loaderTimeout);
+    await _minLoader(2000);
     hideLoader();
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
@@ -7436,6 +7462,19 @@ async function loadInvites(){
     if(!data||!data.length){
       list.innerHTML='<div style="text-align:center;padding:10px;color:var(--muted);font-size:12px">لا توجد دعوات بعد</div>';
       return;
+    }
+
+    // تحديث الملخص
+    const summary=document.getElementById('invites-summary');
+    if(summary){
+      const pending=(data||[]).filter(i=>i.status==='pending').length;
+      const used=(data||[]).filter(i=>i.status==='used').length;
+      const cancelled=(data||[]).filter(i=>i.status==='cancelled'||i.status==='expired').length;
+      summary.innerHTML=`
+        <span style="background:rgba(39,174,96,.1);color:#27ae60;padding:3px 10px;border-radius:99px;font-weight:700">${pending} متاحة</span>
+        <span style="background:rgba(41,128,185,.1);color:#2980b9;padding:3px 10px;border-radius:99px;font-weight:700">${used} مستخدمة</span>
+        <span style="background:rgba(127,140,141,.1);color:#7f8c8d;padding:3px 10px;border-radius:99px;font-weight:700">${cancelled} منتهية/ملغاة</span>
+      `;
     }
 
     list.innerHTML=data.map(inv=>{
