@@ -1183,7 +1183,6 @@ tbody tr.today{background:rgba(240,192,96,.03);}
         <button class="setup-btn primary" onclick="finishSetup()">ابدأ الاستخدام 🚀</button>
       </div>
     </div>
-    </div>
   </div>
 </div>
 
@@ -1764,6 +1763,33 @@ tbody tr.today{background:rgba(240,192,96,.03);}
       <div id="private-msgs-list" style="display:flex;flex-direction:column;gap:8px">
         <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- قسم الاستبيانات -->
+  <div id="panel-surveys" style="display:none;">
+    <div class="survey-wrap">
+      <div class="survey-builder admin-only" id="survey-builder-panel">
+        <h4 style="display:flex;align-items:center;gap:8px;color:var(--gold)">إنشاء استبيان جديد</h4>
+        <input id="survey-title" class="survey-title-inp" placeholder="عنوان الاستبيان..."/>
+        <div class="survey-q-list" id="survey-q-list"></div>
+        <div class="survey-add-q" id="survey-add-q-box">
+          <input id="new-q-text" placeholder="نص السؤال..."/>
+          <div class="survey-opts-wrap" id="new-q-opts">
+            <div class="survey-opt-inp"><input placeholder="خيار 1" class="new-opt-inp"/><button class="survey-opt-del" onclick="removeOpt(this)">✕</button></div>
+            <div class="survey-opt-inp"><input placeholder="خيار 2" class="new-opt-inp"/><button class="survey-opt-del" onclick="removeOpt(this)">✕</button></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button onclick="addOptField()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">+ إضافة خيار</button>
+            <button onclick="addQuestion()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;">✅ إضافة السؤال</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button onclick="publishSurvey()" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);border:none;color:#fff;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;">نشر للمعلمين</button>
+          <button onclick="clearSurveyBuilder()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:10px 24px;font-size:13px;cursor:pointer;font-family:'Cairo',sans-serif;">مسح</button>
+        </div>
+      </div>
+      <div id="survey-results-wrap"></div>
     </div>
   </div>
 
@@ -5936,18 +5962,20 @@ function renderBehaviorTable(){
           ${VIOLATION_TYPES.map(v=>`<option value="${v}">${v}</option>`).join('')}
         </select>
       </td>
-      <td style="display:flex;gap:4px;flex-wrap:wrap;">
-        <button class="send-wa-btn" onclick="sendViolationWA('${s.id}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''}
-          style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 8px">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> ولي
-        </button>
-        <button class="send-admin-btn" onclick="sendViolationAdmin('${s.id}')" style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 8px;background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red);border-radius:6px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> إدارة
-        </button>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
+          <button class="send-wa-btn" onclick="sendViolationWA('${s.id}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''}
+            style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 10px;white-space:nowrap">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> ولي
+          </button>
+          <button class="send-admin-btn" onclick="sendViolationAdmin('${s.id}')" style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 10px;background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red);border-radius:99px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;white-space:nowrap">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> إدارة
+          </button>
+        </div>
       </td>
       <td>
-        <button class="send-grades-btn" onclick="sendStudentGradesWA('${s.id}','${activeBehaviorClass}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''}>
-          📊 إرسال
+        <button class="send-grades-btn" onclick="sendStudentGradesWA('${s.id}','${activeBehaviorClass}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''} style="display:flex;align-items:center;gap:4px;font-size:10px;padding:4px 10px">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M3 3h2v16h16v2H3V3zm4 10h3v5H7v-5zm5-4h3v9h-3V9zm5-4h3v13h-3V5z"/></svg> إرسال
         </button>
       </td>
       <td>
