@@ -1868,6 +1868,12 @@ tbody tr.today{background:rgba(240,192,96,.03);}
     </div>
   </div>
 
+  <!-- مخالفات الشعب -->
+  <div class="analytics-section">
+    <h4 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19h-17L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg> سجل المخالفات بالشعب</h4>
+    <div id="an-violations-detail"></div>
+  </div>
+
   <!-- المواد الأكثر استخداماً -->
   <div class="analytics-section">
     <h4>المواد الأكثر استخداماً</h4>
@@ -5984,10 +5990,6 @@ function renderBehaviorTable(){
           <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M3 3h2v16h16v2H3V3zm4 10h3v5H7v-5zm5-4h3v9h-3V9zm5-4h3v13h-3V5z"/></svg> إرسال
         </button>
       </td>
-      <td>
-        <span style="font-size:11px;color:var(--muted)">${vList.length?vList.length+' مخالفة':'-'}</span>
-        ${lastV?`<div class="violation-log">آخر: ${lastV.type}</div>`:''}
-      </td>
     </tr>`;
   });
 
@@ -6713,6 +6715,45 @@ async function loadAnalytics(){
   }catch(e){
     toast('❌ خطأ في تحميل الإحصائيات: '+e.message,true);
   }
+  renderViolationsDetail();
+}
+
+function renderViolationsDetail(){
+  const wrap=document.getElementById('an-violations-detail');
+  if(!wrap)return;
+  const classes=Object.keys(behaviorStudents||{});
+  if(!classes.length){
+    wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:16px;font-size:12px">لا توجد بيانات سلوك بعد</div>';
+    return;
+  }
+  let html='';
+  let hasAny=false;
+  classes.forEach(cls=>{
+    const studs=behaviorStudents[cls]||[];
+    const violators=studs.filter(s=>(behaviorViolations[s.id]||[]).length>0);
+    if(!violators.length)return;
+    hasAny=true;
+    const clsLabel=(getAllClasses2&&getAllClasses2().find(c=>c.id===cls)?.label)||cls;
+    html+=`<div style="margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="background:var(--surface);padding:9px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;color:var(--text);font-size:13px">${clsLabel}</span>
+        <span style="font-size:11px;color:var(--red2);background:rgba(192,57,43,.1);border-radius:99px;padding:2px 10px;">${violators.length} طالب مخالف</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        ${violators.map(s=>{
+          const vList=behaviorViolations[s.id]||[];
+          const counts={};
+          vList.forEach(v=>{counts[v.type]=(counts[v.type]||0)+1;});
+          const tags=Object.entries(counts).map(([type,n])=>`<span style="background:rgba(192,57,43,.1);color:var(--red2);border-radius:99px;padding:2px 8px;font-size:10px;white-space:nowrap;">${escHtml(type)}${n>1?' ('+n+')':''}</span>`).join('');
+          return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;font-weight:700;color:var(--text);min-width:150px;">${escHtml(s.name)}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">${tags}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML=hasAny?html:'<div style="text-align:center;color:var(--muted);padding:16px;font-size:12px">لا توجد مخالفات مسجلة</div>';
 }
 
 // ══ CERTIFICATES & TOP STUDENTS ══════════════════════════
