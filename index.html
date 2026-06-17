@@ -6239,7 +6239,9 @@ function addBehaviorStudents(newStudents){
   const existing=new Set(behaviorStudents[activeBehaviorClass].map(s=>s.name));
   const added=newStudents.filter(s=>!existing.has(s.name));
   behaviorStudents[activeBehaviorClass].push(...added);
-  saveBehaviorData();
+  // مزامنة مع students (الدرجات) لضمان الظهور في الجدول
+  const unified=getUnifiedStudents(activeBehaviorClass);
+  syncStudentsToBoth(activeBehaviorClass, unified);
   renderBehaviorTabs();
   updateBehaviorStats();
   toast(`✅ تم إضافة ${added.length} طالب`);
