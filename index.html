@@ -2614,16 +2614,22 @@ async function bootApp(session){
       // تحقق من وجود كود دعوة في الرابط قبل الرفض
       const inviteCode=new URLSearchParams(location.search).get('invite');
       if(inviteCode){
-        // فحص الدعوة وإضافة البريد
         const handled=await handleInviteOnBoot(inviteCode,userEmail);
         if(handled){
-          // أعد تشغيل bootApp بعد الإضافة
-          bootApp(session);
+          await bootApp(session);
           return;
         }
+        // فشلت الدعوة — أخرجه
+        await sb.auth.signOut();
+        currentUser=null;googleAccessToken=null;
+        hideLoader();
+        document.getElementById('auth-screen').classList.remove('hidden');
+        showAuthState('auth-login');
+        return;
       }
       await sb.auth.signOut();
       currentUser=null;googleAccessToken=null;
+      hideLoader();
       document.getElementById('auth-screen').classList.remove('hidden');
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
@@ -7615,27 +7621,48 @@ async function cancelInvite(id){
 
 async function handleInviteOnBoot(code, email){
   try{
+    // ١. التحقق من الدعوة
     const{data,error}=await sb.from('invites').select('*').eq('code',code).maybeSingle();
-    if(error||!data)return false;
-    if(data.status!=='pending')return false;
-    if(new Date(data.expires_at)<new Date()){
-      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+    if(error){toast('❌ خطأ في التحقق من الدعوة',true);return false;}
+    if(!data){toast('❌ رابط الدعوة غير صحيح',true);return false;}
+    
+    // ٢. التحقق من الحالة
+    if(data.status==='used'){
+      // إذا كان البريد نفسه استخدمه → اسمح له بالدخول
+      if(data.used_by===email){
+        const{data:exists}=await sb.from('allowed_emails').select('email').eq('email',email).maybeSingle();
+        if(!exists)await sb.from('allowed_emails').insert({email});
+        history.replaceState({},'',location.pathname);
+        return true;
+      }
+      toast('❌ هذا الرابط مستخدم مسبقاً',true);
       return false;
     }
-    // إضافة البريد لـ allowed_emails
+    if(data.status==='cancelled'){toast('❌ هذا الرابط ملغى',true);return false;}
+    if(data.status==='expired'||new Date(data.expires_at)<new Date()){
+      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+      toast('❌ انتهت صلاحية هذا الرابط',true);
+      return false;
+    }
+    
+    // ٣. إضافة البريد لـ allowed_emails
     const{data:existing}=await sb.from('allowed_emails').select('email').eq('email',email).maybeSingle();
     if(!existing){
-      await sb.from('allowed_emails').insert({email});
+      const{error:insErr}=await sb.from('allowed_emails').insert({email});
+      if(insErr){toast('❌ خطأ في إضافة البريد: '+insErr.message,true);return false;}
     }
-    // تحديث حالة الدعوة
+    
+    // ٤. تحديث حالة الدعوة
     await sb.from('invites').update({
       status:'used',used_by:email,used_at:new Date().toISOString()
     }).eq('id',data.id);
-    // إزالة الكود من الرابط
+    
+    // ٥. إزالة الكود من الرابط
     history.replaceState({},'',location.pathname);
+    toast('✅ مرحباً! تم قبول دعوتك','ok');
     return true;
   }catch(e){
-    console.warn('handleInviteOnBoot error:',e);
+    toast('❌ خطأ في معالجة الدعوة: '+(e.message||''),true);
     return false;
   }
 }
