@@ -2156,10 +2156,15 @@ input,textarea,select{font-size:16px !important;}
         📂 رفع Excel
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importStudentsExcel(event)"/>
       </label>
+      <label style="background:linear-gradient(135deg,#c0392b,#e74c3c);border:none;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        📄 رفع PDF
+        <input type="file" accept="application/pdf,.pdf" style="display:none" onchange="importStudentsPdf(event)"/>
+      </label>
       <span style="font-size:11px;color:var(--muted);align-self:center">أو الصق الأسماء أدناه</span>
     </div>
     <div style="font-size:11px;color:var(--muted);background:rgba(240,192,96,.06);border:1px solid rgba(240,192,96,.2);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.7;">
       📊 <strong>Excel:</strong> يتعرف تلقائياً على عمود الاسم (اسم الطالب، الاسم، name...)<br>
+      📄 <strong>PDF:</strong> يستخرج الأسماء من PDF نصي (راجعها قبل الإضافة)<br>
       📝 <strong>لصق:</strong> كل اسم في سطر منفصل
     </div>
     <textarea class="import-textarea" id="import-textarea" placeholder="الصق الأسماء هنا، كل اسم في سطر...&#10;أحمد محمد&#10;سالم علي&#10;..."></textarea>
@@ -5762,7 +5767,88 @@ function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطال
 function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
 function openImportStudents(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}const allCls=getAllClasses();const cls=allCls.find(c=>c.id===activeGradesClass);document.getElementById('import-class-lbl').textContent='الشعبة: '+(cls?cls.name:'');document.getElementById('import-textarea').value='';document.getElementById('import-modal-bg').classList.remove('hidden');}
 function closeImportStudents(){document.getElementById('import-modal-bg').classList.add('hidden');}
-function importStudents(){const txt=document.getElementById('import-textarea').value;const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('❌ لا يوجد أسماء',true);return;}const k=activeGradesClass;if(!students[k])students[k]=[];const existing=new Set(students[k].map(s=>s.name));const added=lines.filter(n=>!existing.has(n));added.forEach(name=>{students[k].push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name});});closeImportStudents();renderGradesTable();toast(`✅ تم إضافة ${added.length} طالب`+(lines.length-added.length>0?` (${lines.length-added.length} مكرر تم تجاهله)`:''),'ok');scheduleSave();}
+function importStudents(){const txt=document.getElementById('import-textarea').value;const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('❌ لا يوجد أسماء',true);return;}const k=activeGradesClass;if(!students[k])students[k]=[];const existing=new Set(students[k].map(s=>s.name));const added=lines.filter(n=>!existing.has(n));added.forEach(name=>{students[k].push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name});});closeImportStudents();renderGradesTable();toast(`✅ تم إضافة ${added.length} طالب`+(lines.length-added.length>0?` (${lines.length-added.length} مكرر تم تجاهله)`:''),'ok');persistStudentsNow();scheduleSave();}
+
+// ── تحميل PDF.js مرة واحدة (lazy) ──
+let _pdfjsLoading=null;
+function loadPdfJs(){
+  if(typeof pdfjsLib!=='undefined')return Promise.resolve();
+  if(_pdfjsLoading)return _pdfjsLoading;
+  _pdfjsLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    s.onload=()=>{
+      // تعيين workerSrc
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      resolve();
+    };
+    s.onerror=()=>reject(new Error('فشل تحميل PDF.js'));
+    document.head.appendChild(s);
+  });
+  return _pdfjsLoading;
+}
+
+async function importStudentsPdf(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  event.target.value='';
+  toast('⏳ جاري تحميل المكتبة...');
+  try{await loadPdfJs();}
+  catch(e){toast('❌ فشل تحميل المكتبة - تحقق من الإنترنت',true);return;}
+  toast('⏳ جاري استخراج الأسماء من PDF...');
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let allLines=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      // تجميع العناصر حسب الموقع y (نفس السطر تقريباً)
+      const lines={};
+      tc.items.forEach(it=>{
+        if(!it.str||!it.str.trim())return;
+        // y من transform[5]
+        const y=Math.round(it.transform[5]);
+        if(!lines[y])lines[y]=[];
+        lines[y].push({x:it.transform[4],s:it.str});
+      });
+      // ترتيب الأسطر من أعلى لأسفل (y أكبر = أعلى في PDF)
+      const ys=Object.keys(lines).map(Number).sort((a,b)=>b-a);
+      ys.forEach(y=>{
+        // داخل السطر: من اليمين لليسار للعربي (x أكبر = أيمن)
+        const parts=lines[y].sort((a,b)=>b.x-a.x).map(p=>p.s).join(' ').trim();
+        if(parts)allLines.push(parts);
+      });
+    }
+    // تنقية: حذف الأسطر التي ليست أسماء (أرقام منفردة، رؤوس الأعمدة الشائعة، فراغات)
+    const skipWords=['م','رقم','الاسم','اسم','اسم الطالب','الصف','الشعبة','المدرسة','الفصل','التاريخ','#','رقم ولي الأمر','الهاتف','الجوال','ملاحظات','الجنس'];
+    const cleaned=allLines.map(line=>{
+      // إزالة الأرقام في بداية السطر (مثل "1- " أو "1. " أو "1 ")
+      return line.replace(/^[\d٠-٩]+[\s\-\.\)]+/,'').trim();
+    }).filter(line=>{
+      if(!line||line.length<3)return false;
+      // تجاهل الأسطر التي هي أرقام فقط
+      if(/^[\d٠-٩\s\-\.]+$/.test(line))return false;
+      // تجاهل الكلمات المفتاحية
+      if(skipWords.includes(line.trim()))return false;
+      // تجاهل الأسطر التي طولها كبير جداً (غالباً جملة وليس اسم)
+      if(line.length>80)return false;
+      return true;
+    });
+    // إزالة المكرر
+    const unique=[...new Set(cleaned)];
+    if(!unique.length){
+      toast('❌ لم يتم العثور على أسماء في PDF — قد يكون PDF صورة (يحتاج OCR)',true);
+      return;
+    }
+    // ضع الأسماء في textarea ليراجعها المعلم
+    document.getElementById('import-textarea').value=unique.join('\n');
+    toast(`✅ تم استخراج ${unique.length} اسم — راجعها ثم اضغط إضافة`,'ok');
+  }catch(e){
+    console.error('PDF parse error:',e);
+    toast('❌ تعذّر قراءة PDF — تأكد أنه ليس صورة ممسوحة',true);
+  }
+}
 
 async function importStudentsExcel(event){
   const file=event.target.files[0];
