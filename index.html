@@ -2418,8 +2418,15 @@ async function signInWithGoogle(){
 }
 async function signOut(){
   if(!confirm('تسجيل الخروج؟ بياناتك محفوظة في حسابك السحابي.'))return;
-  // مسح الكاش
-  try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
+  // مسح كل الكاش (الرئيسي + المستقل)
+  try{
+    const k=getCacheKey();if(k)localStorage.removeItem(k);
+    if(currentUser){
+      localStorage.removeItem('kh_grades_'+currentUser.id);
+      localStorage.removeItem('kh_gtypes_'+currentUser.id);
+      localStorage.removeItem('kh_students_'+currentUser.id);
+    }
+  }catch(e){}
   await sb.auth.signOut();
   location.reload();
 }
@@ -2447,6 +2454,31 @@ function saveToCache(data){
       localStorage.setItem(k,JSON.stringify(data));
     }catch(e2){console.warn('cache save failed',e2);}
   }
+}
+// ── حفظ مستقل ودفاعي للدرجات والقالب (مفاتيح منفصلة لضمان عدم الضياع) ──
+function persistGradesNow(){
+  if(!currentUser)return;
+  try{localStorage.setItem('kh_grades_'+currentUser.id,JSON.stringify(grades||{}));}catch(e){}
+}
+function persistGradeTypesNow(){
+  if(!currentUser)return;
+  try{localStorage.setItem('kh_gtypes_'+currentUser.id,JSON.stringify(gradeTypes||[]));}catch(e){}
+}
+function persistStudentsNow(){
+  if(!currentUser)return;
+  try{localStorage.setItem('kh_students_'+currentUser.id,JSON.stringify(students||{}));}catch(e){}
+}
+function loadPersistedGrades(){
+  if(!currentUser)return null;
+  try{const v=localStorage.getItem('kh_grades_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
+}
+function loadPersistedGradeTypes(){
+  if(!currentUser)return null;
+  try{const v=localStorage.getItem('kh_gtypes_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
+}
+function loadPersistedStudents(){
+  if(!currentUser)return null;
+  try{const v=localStorage.getItem('kh_students_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
 }
 async function dbLoad(forceFresh=false){
   if(!currentUser)return null;
@@ -3432,6 +3464,13 @@ function showApp(data){
     students=data.students||{};
     grades=data.grades||{};
     gradeTypes=data.grade_types||[];
+    // ── استرجاع من الحفظ المستقل: لو فيه بيانات أحدث محلياً، استخدمها ──
+    const lpGrades=loadPersistedGrades();
+    if(lpGrades&&Object.keys(lpGrades).length){grades=lpGrades;}
+    const lpGTypes=loadPersistedGradeTypes();
+    if(lpGTypes&&lpGTypes.length){gradeTypes=lpGTypes;}
+    const lpStudents=loadPersistedStudents();
+    if(lpStudents&&Object.keys(lpStudents).length){students=lpStudents;}
     cvProfile=data.cv_profile||{};
     // تحميل بيانات السلوك من Supabase
     behaviorStudents=data.behavior_students||{};
@@ -5647,6 +5686,8 @@ function updGrade(studentId,colId,val){
   }
   // تحديث جزئي: لون الخلية + المجموع للصف + متوسط الصف فقط (بدون إعادة بناء الجدول)
   updateGradeCellUI(studentId,colId);
+  // حفظ فوري مستقل في localStorage (مفتاح خاص بالدرجات)
+  persistGradesNow();
   scheduleSave();
 }
 function updateGradeCellUI(studentId,colId){
@@ -5686,7 +5727,7 @@ function updateGradeCellUI(studentId,colId){
   if(sumEl)sumEl.innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
 }
 function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
-function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
+function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
 function openImportStudents(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}const allCls=getAllClasses();const cls=allCls.find(c=>c.id===activeGradesClass);document.getElementById('import-class-lbl').textContent='الشعبة: '+(cls?cls.name:'');document.getElementById('import-textarea').value='';document.getElementById('import-modal-bg').classList.remove('hidden');}
 function closeImportStudents(){document.getElementById('import-modal-bg').classList.add('hidden');}
 function importStudents(){const txt=document.getElementById('import-textarea').value;const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('❌ لا يوجد أسماء',true);return;}const k=activeGradesClass;if(!students[k])students[k]=[];const existing=new Set(students[k].map(s=>s.name));const added=lines.filter(n=>!existing.has(n));added.forEach(name=>{students[k].push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name});});closeImportStudents();renderGradesTable();toast(`✅ تم إضافة ${added.length} طالب`+(lines.length-added.length>0?` (${lines.length-added.length} مكرر تم تجاهله)`:''),'ok');scheduleSave();}
@@ -5765,7 +5806,7 @@ async function importStudentsExcel(event){
 }
 function openAddGradeCol(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}document.getElementById('gc-name').value='';document.getElementById('gc-max').value=10;document.getElementById('gc-cat').value='homework';document.getElementById('gradecol-modal-bg').classList.remove('hidden');}
 function closeGradeCol(){document.getElementById('gradecol-modal-bg').classList.add('hidden');}
-function addGradeCol(){const name=document.getElementById('gc-name').value.trim();if(!name){document.getElementById('gc-name').focus();return;}const max=parseFloat(document.getElementById('gc-max').value)||10;const cat=document.getElementById('gc-cat').value;gradeTypes.push({id:'g_'+Date.now(),name,category:cat,max,classKey:activeGradesClass});closeGradeCol();renderGradesTable();toast('✅ تم الإضافة','ok');scheduleSave();}
+function addGradeCol(){const name=document.getElementById('gc-name').value.trim();if(!name){document.getElementById('gc-name').focus();return;}const max=parseFloat(document.getElementById('gc-max').value)||10;const cat=document.getElementById('gc-cat').value;gradeTypes.push({id:'g_'+Date.now(),name,category:cat,max,classKey:activeGradesClass});closeGradeCol();renderGradesTable();toast('✅ تم الإضافة','ok');persistGradeTypesNow();scheduleSave();}
 
 // ══ GRADE TEMPLATES (قوالب الدرجات المشتركة) ══════════
 function getCurrentClassInfo(){
@@ -5931,6 +5972,7 @@ async function autoLoadTemplateIfEmpty(){
     hideTemplateComingSoon();
     renderGradesTable();
     toast(`✨ تم تحميل قالب الدرجات تلقائياً (${match.grade_types.length} نوع)`,'ok');
+    persistGradeTypesNow();
     scheduleSave();
   }catch(e){console.error('autoload error:',e);}
 }
