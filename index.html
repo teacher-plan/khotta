@@ -2418,20 +2418,85 @@ async function signInWithGoogle(){
 }
 async function signOut(){
   if(!confirm('تسجيل الخروج؟ بياناتك محفوظة في حسابك السحابي.'))return;
+  // مسح الكاش
+  try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
   await sb.auth.signOut();
   location.reload();
 }
 
 // ─── قاعدة البيانات (جدول profiles في Supabase) ───
 let profileCache=null;
-async function dbLoad(){
+// ── طبقة الكاش المحلية ──
+const CACHE_KEY_PREFIX='khotati_profile_';
+function getCacheKey(){return currentUser?CACHE_KEY_PREFIX+currentUser.id:null;}
+function loadFromCache(){
+  const k=getCacheKey();if(!k)return null;
+  try{const raw=localStorage.getItem(k);return raw?JSON.parse(raw):null;}
+  catch(e){return null;}
+}
+function saveToCache(data){
+  const k=getCacheKey();if(!k||!data)return;
+  try{localStorage.setItem(k,JSON.stringify(data));}
+  catch(e){
+    // localStorage ممتلئ — احذف أي كاش قديم لمستخدمين آخرين
+    try{
+      for(let i=localStorage.length-1;i>=0;i--){
+        const key=localStorage.key(i);
+        if(key&&key.startsWith(CACHE_KEY_PREFIX)&&key!==k)localStorage.removeItem(key);
+      }
+      localStorage.setItem(k,JSON.stringify(data));
+    }catch(e2){console.warn('cache save failed',e2);}
+  }
+}
+async function dbLoad(forceFresh=false){
   if(!currentUser)return null;
+  // أولاً: حاول من الكاش (إلا إذا طُلب جلب جديد)
+  if(!forceFresh){
+    const cached=loadFromCache();
+    if(cached){
+      profileCache=cached;
+      // مزامنة في الخلفية بدون انتظار
+      _syncFromServerInBackground();
+      return cached;
+    }
+  }
+  // لا يوجد كاش → جلب من Supabase
   try{
     const {data,error}=await sb.from('profiles').select('data').eq('id',currentUser.id).maybeSingle();
     if(error){console.error('dbLoad error:',error);return profileCache;}
     profileCache=data?data.data:null;
+    if(profileCache)saveToCache(profileCache);
     return profileCache;
   }catch(e){console.error('dbLoad exception:',e);return profileCache;}
+}
+// مزامنة في الخلفية: تتحقق إذا كان الخادم يحتوي على نسخة أحدث
+async function _syncFromServerInBackground(){
+  if(!currentUser||!sb)return;
+  try{
+    const {data,error}=await sb.from('profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
+    if(error||!data||!data.data)return;
+    const serverData=data.data;
+    const localUpdated=profileCache?.updated_at||'';
+    const serverUpdated=serverData.updated_at||data.updated_at||'';
+    // إذا الخادم أحدث وحجم البيانات يختلف → حدّث الكاش وأعد الرسم
+    if(serverUpdated>localUpdated){
+      profileCache=serverData;
+      saveToCache(serverData);
+      // إعادة رسم الجدول الحالي بهدوء (بدون مقاطعة المستخدم لو هو يدخل بيانات)
+      const activeEl=document.activeElement;
+      if(!activeEl||(activeEl.tagName!=='INPUT'&&activeEl.tagName!=='SELECT'&&activeEl.tagName!=='TEXTAREA')){
+        // حدّث المتغيرات العامة من البيانات الجديدة
+        if(serverData.students)students=serverData.students;
+        if(serverData.grades)grades=serverData.grades;
+        if(serverData.grade_types)gradeTypes=serverData.grade_types;
+        if(serverData.behavior_students)behaviorStudents=serverData.behavior_students;
+        if(serverData.behavior_violations)behaviorViolations=serverData.behavior_violations;
+        if(typeof renderGradesTable==='function'&&document.getElementById('page-grades')?.classList.contains('active')){
+          renderGradesTable();
+        }
+      }
+    }
+  }catch(e){/* صامت */}
 }
 async function dbInit(){
   if(!currentUser)return false;
@@ -2464,7 +2529,7 @@ async function dbSave(payload){
     const {error}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:merged,updated_at:new Date().toISOString()});
     ok=!error;
     if(error){console.error('dbSave error:',error);}
-    else{profileCache=merged;}
+    else{profileCache=merged;saveToCache(merged);}
   }catch(e){
     if(!navigator.onLine){
       toast('📵 لا يوجد اتصال بالإنترنت — سيتم الحفظ عند الاتصال',true);
