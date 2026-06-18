@@ -496,8 +496,8 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   #page-behavior .wrap{max-width:100%;padding-left:24px;padding-right:24px;}
   #behavior-table-wrap{overflow-x:auto;border-radius:8px;}
   .behavior-table{table-layout:fixed;width:100%;}
-  .behavior-table td:nth-child(1),.behavior-table th:nth-child(1){width:36px;position:sticky;right:0;background:var(--surface);z-index:2;}
-  .behavior-table td:nth-child(2),.behavior-table th:nth-child(2){width:31%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;right:36px;background:var(--surface);z-index:2;box-shadow:-2px 0 4px rgba(0,0,0,.06);}
+  .behavior-table td:nth-child(1),.behavior-table th:nth-child(1){width:36px;}
+  .behavior-table td:nth-child(2),.behavior-table th:nth-child(2){width:31%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .behavior-table td:nth-child(3),.behavior-table th:nth-child(3){width:21%;}
   .behavior-table td:nth-child(4),.behavior-table th:nth-child(4){width:21%;}
   .behavior-table td:nth-child(5),.behavior-table th:nth-child(5){width:11%;}
@@ -538,7 +538,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .bell-btn:hover{transform:scale(1.15);}
 .bell-badge{position:absolute;top:-4px;right:-4px;background:var(--red2);color:#fff;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;min-width:18px;height:18px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 4px;pointer-events:none;display:none;}
 .bell-badge.show{display:flex;}
-.bell-dropdown{position:fixed;top:60px;left:8px;right:8px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:400px;margin:0 auto;z-index:500;display:none;overflow-y:auto;max-height:70vh;}
+.bell-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.4);min-width:280px;max-width:320px;z-index:200;display:none;overflow:hidden;}
 .bell-dropdown.show{display:block;}
 .bell-drop-header{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;}
 .bell-drop-list{max-height:320px;overflow-y:auto;}
@@ -776,7 +776,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
   #page-grades .grades-toolbar,#page-grades .grades-summary{max-width:100%;}
   .grades-table-wrap{overflow-x:auto;border-radius:8px;}
   .grades-table{min-width:100%;table-layout:fixed;width:100%;}
-  .grades-table th:nth-child(1),.grades-table td:nth-child(1){width:30px;min-width:30px;position:sticky;right:0;background:var(--surface);z-index:2;}
+  .grades-table th:nth-child(1),.grades-table td:nth-child(1){width:30px;min-width:30px;}
   .grades-table th:nth-child(2),.grades-table td:nth-child(2){width:200px;min-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .grades-table th,.grades-table td{padding:4px 0px;font-size:10.5px;}
   .grades-table th:last-child,.grades-table td:last-child{width:80px;min-width:80px;}
@@ -4929,37 +4929,18 @@ let currentFilter='all';
 function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyFilter();}
 function applyFilter(){
   let vis=0;
-  // أولاً: أظهر كل الوحدات ثم أخفِ حسب الفلتر
+  document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
   document.querySelectorAll('#page-tracker .section').forEach(sec=>{
-    sec.style.display='';
-    // افتح الوحدة إذا كانت مطوية وفيها دروس مرئية
-    const content=sec.querySelector('.sec-content');
-    if(content&&content.style.display==='none'&&currentFilter!=='all'){
-      content.style.display='';
-    }
-  });
-  document.querySelectorAll('.lesson').forEach(card=>{
-    const done=get(card.dataset.id).done;
-    let show=true;
-    if(currentFilter==='done'&&!done)show=false;
-    if(currentFilter==='remain'&&done)show=false;
-    card.classList.toggle('hidden',!show);
-    if(show)vis++;
-  });
-  // أخفِ الوحدات التي ليس فيها دروس مرئية
-  document.querySelectorAll('#page-tracker .section').forEach(sec=>{
-    if(!sec._built&&!sec.getAttribute('data-built')){sec.style.display='';return;}
+    // إذا لم تُبنَ الدروس بعد، أبقِ الوحدة ظاهرة دائماً
+    if(!sec._built){sec.style.display='';return;}
     const sv=sec.querySelectorAll('.lesson:not(.hidden)').length;
     sec.style.display=sv?'':'none';
   });
   const emptyEl=document.getElementById('empty');
-  const unbuiltCount=document.querySelectorAll('#page-tracker .section:not([data-built])').filter(s=>!s._built).length;
-  if(vis===0&&unbuiltCount===0){
-    emptyEl.style.display='block';
-    if(currentFilter==='done'){document.getElementById('empty-emoji').textContent='📚';document.getElementById('empty-msg').textContent='ما خلصت أي درس بعد!';}
-    else if(currentFilter==='remain'){document.getElementById('empty-emoji').textContent='🏆';document.getElementById('empty-msg').textContent='خلصت كل الدروس 🎉';}
-    else{document.getElementById('empty-emoji').textContent='📋';document.getElementById('empty-msg').textContent='لا توجد دروس';}
-  } else {emptyEl.style.display='none';}
+  // اعتبر الوحدات غير المبنية كأن لها دروس
+  const unbuiltCount=document.querySelectorAll('#page-tracker .section:not([data-built])').length;
+  if(vis===0&&unbuiltCount===0){emptyEl.style.display='block';if(currentFilter==='done'){document.getElementById('empty-emoji').textContent='📚';document.getElementById('empty-msg').textContent='ما خلصت أي درس بعد!';}else if(currentFilter==='remain'){document.getElementById('empty-emoji').textContent='🏆';document.getElementById('empty-msg').textContent='خلصت كل الدروس 🎉';}else{document.getElementById('empty-emoji').textContent='📋';document.getElementById('empty-msg').textContent='لا توجد دروس';}}
+  else{emptyEl.style.display='none';}
 }
 function update(){
   const all=allLessons(),total=all.length,done=all.filter(l=>get(l.id).done).length,pct=total?Math.round(done/total*100):0;
