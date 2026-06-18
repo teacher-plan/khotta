@@ -2789,8 +2789,9 @@ async function bootApp(session){
     const isAdminUserC=userEmail===ADMIN_EMAIL.toLowerCase();
     // ── flag محلي: المستخدم في منتصف الإعداد ──
     let inSetupFlag=currentUser&&localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';
-    // تنظيف ذاتي: لو الإعداد مكتمل فعلاً (grades موجودة + setupDone) امسح الـ flag القديم
-    if(inSetupFlag&&cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length&&cached.teacher_config.setupDone){
+    // تنظيف ذاتي: لو الإعداد مكتمل فعلاً (grades موجودة) امسح الـ flag القديم
+    // (لا نشترط setupDone:true لأن المعلمين القدامى قد لا يحتوي بياناتهم هذا الحقل)
+    if(inSetupFlag&&cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length){
       try{localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);}catch(e){}
       inSetupFlag=false;
     }
@@ -2809,21 +2810,20 @@ async function bootApp(session){
       showSetupScreen();
     }
     // ─── الفحوصات الأمنية في الخلفية (بدون انتظار) ───
+    // ملاحظة: لا نفحص allowed_emails في الخلفية - وجود الكاش يعني أن المستخدم دخل بنجاح
+    // الفحص الكامل يحدث في المسار الطويل عند أول دخول أو عند مسح الكاش
     (async()=>{
       try{
-        // فحص الصلاحية والحظر معاً
-        const[allowedRes,bannedRes]=await Promise.all([
-          sb.from('allowed_emails').select('email').eq('email',userEmail).maybeSingle(),
-          sb.from('banned_users').select('user_id').eq('user_id',currentUser.id).maybeSingle()
-        ]);
-        if(allowedRes.error){console.warn('background allowed check failed');return;}
-        if(!allowedRes.data){
-          // غير مصرّح — مسح الكاش وتسجيل خروج
-          try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
-          await sb.auth.signOut();location.reload();return;
-        }
+        // فحص الحظر فقط (طارئ — يجب أن يأخذ مفعوله فوراً)
+        const bannedRes=await sb.from('banned_users').select('user_id').eq('user_id',currentUser.id).maybeSingle();
         if(bannedRes.data){
-          try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
+          try{
+            const k=getCacheKey();if(k)localStorage.removeItem(k);
+            localStorage.removeItem('kh_grades_'+currentUser.id);
+            localStorage.removeItem('kh_gtypes_'+currentUser.id);
+            localStorage.removeItem('kh_students_'+currentUser.id);
+            localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);
+          }catch(e){}
           await sb.auth.signOut();location.reload();return;
         }
         // التقط توكن Google
@@ -2836,14 +2836,31 @@ async function bootApp(session){
   }
 
   // ─── المسار العادي: لا يوجد كاش — تنفيذ كل الفحوصات بالتسلسل ───
+  // دالة فحص الصلاحية مع إعادة المحاولة
+  async function checkAllowedWithRetry(){
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        const{data,error}=await sb.from('allowed_emails').select('email').eq('email',userEmail).maybeSingle();
+        if(!error)return{data,error:null};
+        console.warn(`allowed_emails attempt ${attempt} failed:`,error);
+      }catch(e){
+        console.warn(`allowed_emails attempt ${attempt} exception:`,e);
+      }
+      if(attempt<3)await new Promise(r=>setTimeout(r,800*attempt));
+    }
+    return{data:null,error:{message:'network'}};
+  }
   try{
-    const {data:allowed,error}=await sb.from('allowed_emails').select('email').eq('email',userEmail).maybeSingle();
+    const {data:allowed,error}=await checkAllowedWithRetry();
     if(error){
-      console.error('allowed_emails check error:',error);
-      await sb.auth.signOut();
+      // فشل بعد 3 محاولات — لا نطرد المستخدم، نعرض رسالة ونعطي خيار إعادة المحاولة
+      console.error('allowed_emails check failed after retries:',error);
       document.getElementById('auth-screen').classList.remove('hidden');
       showAuthState('auth-login');
-      toast('⚠️ تعذّر التحقق من الصلاحية. حاول لاحقاً',true);
+      const sub=document.querySelector('#auth-login .auth-sub');
+      if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة في الاتصال.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
+      const btn=document.getElementById('google-signin-btn');
+      if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='إعادة المحاولة';}
       return;
     }
     if(!allowed){
@@ -2876,10 +2893,13 @@ async function bootApp(session){
     }
   }catch(e){
     console.error('allowed_emails exception:',e);
-    await sb.auth.signOut();
+    // لا نطرد المستخدم - نعرض رسالة فقط (قد يكون خطأ عابر)
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
-    toast('⚠️ تعذّر التحقق من الصلاحية',true);
+    const sub=document.querySelector('#auth-login .auth-sub');
+    if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
+    const btn=document.getElementById('google-signin-btn');
+    if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='إعادة المحاولة';}
     return;
   }
   // التقط توكن Google لرفع الملفات على Drive
@@ -2929,8 +2949,8 @@ async function bootApp(session){
     return;
   }
   let inSetupFlagLong=currentUser&&localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';
-  // تنظيف ذاتي: لو الإعداد مكتمل فعلاً
-  if(inSetupFlagLong&&data.teacher_config&&data.teacher_config.grades&&data.teacher_config.grades.length&&data.teacher_config.setupDone){
+  // تنظيف ذاتي: لو الإعداد مكتمل فعلاً (grades موجودة)
+  if(inSetupFlagLong&&data.teacher_config&&data.teacher_config.grades&&data.teacher_config.grades.length){
     try{localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);}catch(e){}
     inSetupFlagLong=false;
   }
