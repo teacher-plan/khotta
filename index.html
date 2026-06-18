@@ -2727,30 +2727,36 @@ async function bootApp(session){
 }
 
 (async()=>{
-  // أظهر شاشة الدخول مبدئياً
-  document.getElementById('auth-screen').classList.remove('hidden');
-  showAuthState('auth-loading');
+  // أخفِ auth-screen أثناء التحميل
+  document.getElementById('auth-screen').classList.add('hidden');
   const _loaderStart=Date.now();
-  // timeout: إذا تجاوز 12 ثانية يظهر زر إعادة المحاولة
+  const _minLoader=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms-(Date.now()-_loaderStart))));
+
+  // timeout: بعد 15 ثانية أظهر زر إعادة المحاولة
   const _loaderTimeout=setTimeout(()=>{
     const retry=document.getElementById('loader-retry');
     const sub=document.getElementById('loader-sub-text');
     if(retry)retry.style.display='block';
     if(sub)sub.style.display='none';
-  },20000);
-  const _minLoader=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms-(Date.now()-_loaderStart))));
+  },15000);
 
-  const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    await Promise.all([bootApp(session),_minLoader(2000)]);
-    clearTimeout(_loaderTimeout);
-    hideLoader();
-  }else{
-    clearTimeout(_loaderTimeout);
-    await _minLoader(2000);
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){
+      await Promise.all([bootApp(session),_minLoader(2000)]);
+    }else{
+      await _minLoader(2000);
+      hideLoader();
+      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthState('auth-login');
+    }
+  }catch(e){
     hideLoader();
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
+    toast('⚠️ تعذّر الاتصال، تحقق من الإنترنت',true);
+  }finally{
+    clearTimeout(_loaderTimeout);
   }
 
   // راقب تغيّر حالة الدخول (بعد رجوع المستخدم من Google)
