@@ -5934,20 +5934,29 @@ function loadBehaviorData(){
 function initBehaviorPage(){
   loadBehaviorData();
   loadBehaviorPhone();
-  // تأكد من جاهزية teacherConfig قبل رسم التبويبات
-  const _initBehavior=()=>{
-    const classes=getAllClasses2();
-    if(classes.length){
-      if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass)){
-        activeBehaviorClass=classes[0].id;
-      }
-      renderBehaviorTabs();
-    } else {
-      setTimeout(_initBehavior, 500);
-    }
-  };
-  _initBehavior();
   updateBehaviorStats();
+  // رسم التبويبات فوراً إذا كانت البيانات جاهزة
+  const classes=getAllClasses2();
+  if(classes.length){
+    if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass)){
+      activeBehaviorClass=classes[0].id;
+    }
+    renderBehaviorTabs();
+    renderViolationsLog();
+  } else {
+    // انتظر حتى تُحمَّل البيانات
+    const _wait=()=>{
+      const cls=getAllClasses2();
+      if(cls.length){
+        if(!activeBehaviorClass)activeBehaviorClass=cls[0].id;
+        renderBehaviorTabs();
+        renderViolationsLog();
+      } else {
+        setTimeout(_wait,300);
+      }
+    };
+    setTimeout(_wait,300);
+  }
 }
 
 function getAllClasses2(){
