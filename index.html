@@ -152,8 +152,10 @@ body{background-image:var(--subject-glow,none),linear-gradient(var(--grid-color)
 /* ══ SYNC ══ */
 .sync-bar{position:fixed;top:0;left:0;right:0;z-index:200;height:3px;background:transparent;overflow:hidden;}
 .sync-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--gold));transition:width .4s;border-radius:99px;}
-.sync-status{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:7px 16px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;z-index:150;opacity:0;transition:opacity .3s;pointer-events:none;}
-.sync-status.show{opacity:1;}
+.sync-status{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-60px);background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;border-radius:99px;padding:10px 22px;font-size:13px;color:#fff;font-weight:700;display:flex;align-items:center;gap:8px;z-index:9999;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.25);}
+.sync-status.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.sync-status .sync-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:syncPulse 1s infinite;}
+@keyframes syncPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.5s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
@@ -2720,6 +2722,36 @@ function hideLoader(){
     },400);
   }
 }
+// تحميل مسبق للأقسام في الخلفية أثناء عرض الـ loader
+// — هكذا عند الضغط على أي قسم لأول مرة، يكون جاهز فوراً بدون lag
+async function preWarmSections(){
+  // ننتظر قليلاً لتسمح bootApp بملء البيانات الأساسية
+  for(let i=0;i<10;i++){
+    if(teacherConfig||profileCache)break;
+    await new Promise(r=>setTimeout(r,200));
+  }
+  // بعد توفر البيانات، نقوم بتجهيز الأقسام التي قد تكون بطيئة
+  try{
+    // قسم الدرجات: جهّز الجدول مسبقاً
+    if(typeof renderGrades==='function'&&teacherConfig){
+      // التأكد من activeGradesClass
+      if(!activeGradesClass&&teacherConfig.grades&&teacherConfig.grades.length){
+        const allCls=teacherConfig.grades.flatMap(g=>g.classes||[]);
+        if(allCls.length)activeGradesClass=allCls[0].id;
+      }
+      // رسم الجدول بصمت (الصفحة مخفية فلا يراه المستخدم)
+      try{renderGrades();}catch(e){}
+    }
+    // قسم السلوك
+    if(typeof renderBehaviorTable==='function'&&activeBehaviorClass){
+      try{renderBehaviorTable();}catch(e){}
+    }
+    // قسم السيرة الذاتية
+    if(typeof renderCv==='function'){
+      try{renderCv();}catch(e){}
+    }
+  }catch(e){console.warn('preWarm error:',e);}
+}
 async function bootApp(session){
   currentUser=session.user;
   const userEmail=(currentUser.email||'').toLowerCase().trim();
@@ -2888,7 +2920,7 @@ async function bootApp(session){
 
   const {data:{session}}=await sb.auth.getSession();
   if(session){
-    await Promise.all([bootApp(session),_minLoader(2000)]);
+    await Promise.all([bootApp(session),_minLoader(5000),preWarmSections()]);
     clearTimeout(_loaderTimeout);
     hideLoader();
   }else{
