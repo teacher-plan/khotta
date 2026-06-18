@@ -3271,6 +3271,18 @@ function showApp(data){
         if(!activeBehaviorClass)activeBehaviorClass=allCls[0].id;
       }
     }
+    // ملء behavior-tabs مباشرة بعد تحميل teacherConfig
+    setTimeout(()=>{
+      const tabs=document.getElementById('behavior-tabs');
+      if(tabs&&teacherConfig&&teacherConfig.grades){
+        const allCls2=teacherConfig.grades.flatMap(g=>g.classes.map(c=>({id:c.id,label:c.name||c.id})));
+        if(allCls2.length){
+          if(!activeBehaviorClass)activeBehaviorClass=allCls2[0].id;
+          tabs.innerHTML=allCls2.map(c=>`<button class="behavior-tab${c.id===activeBehaviorClass?' active':''}" onclick="switchBehaviorClass('${c.id}')">${c.label}</button>`).join('');
+          renderBehaviorTable();
+        }
+      }
+    },200);
     remindersConfig=data.reminders_config||{enabled:false,minutes:10};
     students=data.students||{};
     grades=data.grades||{};
@@ -5603,14 +5615,7 @@ function updateGradeAdminButtons(){
   checkInviteCode();
   // إظهار زر المساعدة
   const helpBtn=document.getElementById('help-btn');if(helpBtn)helpBtn.style.display='block';
-  // تهيئة تبويبات السلوك بعد تحميل teacherConfig
-  setTimeout(()=>{
-    const classes=getAllClasses2();
-    if(classes.length&&(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass))){
-      activeBehaviorClass=classes[0].id;
-    }
-    renderBehaviorTabs();
-  },500);
+
 }
 
 // حفظ قالب جديد (المشرف فقط)
@@ -5932,31 +5937,14 @@ function loadBehaviorData(){
 }
 
 function initBehaviorPage(){
-  loadBehaviorData();
   loadBehaviorPhone();
   updateBehaviorStats();
-  // رسم التبويبات فوراً إذا كانت البيانات جاهزة
-  const classes=getAllClasses2();
-  if(classes.length){
-    if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass)){
-      activeBehaviorClass=classes[0].id;
-    }
-    renderBehaviorTabs();
-    renderViolationsLog();
-  } else {
-    // انتظر حتى تُحمَّل البيانات
-    const _wait=()=>{
-      const cls=getAllClasses2();
-      if(cls.length){
-        if(!activeBehaviorClass)activeBehaviorClass=cls[0].id;
-        renderBehaviorTabs();
-        renderViolationsLog();
-      } else {
-        setTimeout(_wait,300);
-      }
-    };
-    setTimeout(_wait,300);
+  const cls=getAllClasses2();
+  if(cls.length&&(!activeBehaviorClass||!cls.find(c=>c.id===activeBehaviorClass))){
+    activeBehaviorClass=cls[0].id;
   }
+  renderBehaviorTabs();
+  renderViolationsLog();
 }
 
 function getAllClasses2(){
