@@ -5803,44 +5803,73 @@ async function importStudentsPdf(event){
     for(let p=1;p<=pdf.numPages;p++){
       const page=await pdf.getPage(p);
       const tc=await page.getTextContent();
-      // تجميع العناصر حسب الموقع y (نفس السطر تقريباً)
-      const lines={};
+      // تجميع العناصر حسب الموقع y (نفس السطر تقريباً، tolerance 3 بكسل)
+      const lineMap={};
       tc.items.forEach(it=>{
         if(!it.str||!it.str.trim())return;
-        // y من transform[5]
-        const y=Math.round(it.transform[5]);
-        if(!lines[y])lines[y]=[];
-        lines[y].push({x:it.transform[4],s:it.str});
+        const y=Math.round(it.transform[5]/3)*3;
+        if(!lineMap[y])lineMap[y]=[];
+        lineMap[y].push({x:it.transform[4],s:it.str});
       });
-      // ترتيب الأسطر من أعلى لأسفل (y أكبر = أعلى في PDF)
-      const ys=Object.keys(lines).map(Number).sort((a,b)=>b-a);
+      const ys=Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
       ys.forEach(y=>{
-        // داخل السطر: من اليمين لليسار للعربي (x أكبر = أيمن)
-        const parts=lines[y].sort((a,b)=>b.x-a.x).map(p=>p.s).join(' ').trim();
+        // ترتيب من اليسار لليمين (كما يستخرج PDF)
+        const parts=lineMap[y].sort((a,b)=>a.x-b.x).map(p=>p.s).join(' ').replace(/\s+/g,' ').trim();
         if(parts)allLines.push(parts);
       });
     }
-    // تنقية: حذف الأسطر التي ليست أسماء (أرقام منفردة، رؤوس الأعمدة الشائعة، فراغات)
-    const skipWords=['م','رقم','الاسم','اسم','اسم الطالب','الصف','الشعبة','المدرسة','الفصل','التاريخ','#','رقم ولي الأمر','الهاتف','الجوال','ملاحظات','الجنس'];
-    const cleaned=allLines.map(line=>{
-      // إزالة الأرقام في بداية السطر (مثل "1- " أو "1. " أو "1 ")
-      return line.replace(/^[\d٠-٩]+[\s\-\.\)]+/,'').trim();
-    }).filter(line=>{
-      if(!line||line.length<3)return false;
-      // تجاهل الأسطر التي هي أرقام فقط
-      if(/^[\d٠-٩\s\-\.]+$/.test(line))return false;
-      // تجاهل الكلمات المفتاحية
-      if(skipWords.includes(line.trim()))return false;
-      // تجاهل الأسطر التي طولها كبير جداً (غالباً جملة وليس اسم)
-      if(line.length>80)return false;
-      return true;
+    
+    // ── استخراج الأسماء بنمطين ──
+    const names=[];
+    
+    // النمط 1: قوائم وزارة التربية (Crystal Reports)
+    // شكل السطر: [هاتف 8 أرقام] [م 1-3 أرقام] [الاسم] [رقم مدرسي 12 خانة] [جنسية] [حالة] [منطقة]
+    // أو: [م 1-3 أرقام] [الاسم] [رقم مدرسي 12 خانة] ...
+    const pattern1=/(?:^|\s)(\d{1,3})\s+([\u0600-\u06FF\s]+?)\s+(\d{10,13})(?:\s|$)/;
+    
+    // النمط 2: أي سطر فيه رقم تسلسلي ثم اسم عربي (للقوائم البسيطة)
+    const pattern2=/^[\s]*[\d٠-٩]+[\s\-\.\)]+([\u0600-\u06FF][\u0600-\u06FF\s]{2,80})$/;
+    
+    const skipWords=new Set(['م','رقم','الاسم','اسم','اسم الطالب','الصف','الشعبة','المدرسة','الفصل','التاريخ','رقم ولي الأمر','الهاتف','الجوال','ملاحظات','الجنس','الجنسية','المنطقة السكنية','حالة القيد','الهاتف النقال','الرقم المدرسي','عماني','منقول','مستجد','السنة الدراسية','رمز المدرسة','قوائم الطلاب','وزارة التربية والتعليم','المديرية العامة للتربية والتعليم','سلطنة عمان']);
+    
+    allLines.forEach(line=>{
+      // جرّب النمط 1 (وزارة التربية)
+      const m1=line.match(pattern1);
+      if(m1){
+        const name=m1[2].trim().replace(/\s+/g,' ');
+        if(name.length>=4&&name.length<=80&&!skipWords.has(name))names.push(name);
+        return;
+      }
+      // جرّب النمط 2 (قائمة بسيطة)
+      const m2=line.match(pattern2);
+      if(m2){
+        const name=m2[1].trim().replace(/\s+/g,' ');
+        if(name.length>=4&&name.length<=80&&!skipWords.has(name))names.push(name);
+      }
     });
-    // إزالة المكرر
-    const unique=[...new Set(cleaned)];
+    
+    // إذا لم تنجح الأنماط، جرّب الطريقة العامة (سطر عربي بدون أرقام)
+    if(!names.length){
+      allLines.forEach(line=>{
+        const cleaned=line.replace(/^[\d٠-٩]+[\s\-\.\)]+/,'').trim();
+        if(!cleaned||cleaned.length<4||cleaned.length>80)return;
+        if(skipWords.has(cleaned))return;
+        if(/^[\d٠-٩\s\-\.]+$/.test(cleaned))return;
+        // يجب أن يحتوي على حروف عربية ولا يحتوي على أرقام طويلة
+        if(!/[\u0600-\u06FF]/.test(cleaned))return;
+        if(/\d{4,}/.test(cleaned))return;
+        names.push(cleaned);
+      });
+    }
+    
+    // إزالة المكرر مع الحفاظ على الترتيب
+    const unique=[...new Set(names)];
+    
     if(!unique.length){
       toast('❌ لم يتم العثور على أسماء في PDF — قد يكون PDF صورة (يحتاج OCR)',true);
       return;
     }
+    
     // ضع الأسماء في textarea ليراجعها المعلم
     document.getElementById('import-textarea').value=unique.join('\n');
     toast(`✅ تم استخراج ${unique.length} اسم — راجعها ثم اضغط إضافة`,'ok');
