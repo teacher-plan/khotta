@@ -3263,6 +3263,14 @@ function showApp(data){
     lessonFiles=data.lesson_files||{};
     arcCategories=data.arc_categories||DEFAULT_CATS;
     teacherConfig=data.teacher_config||null;
+    // تعيين الشعبة النشطة فور تحميل teacherConfig
+    if(teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length){
+      const allCls=teacherConfig.grades.flatMap(g=>g.classes||[]);
+      if(allCls.length){
+        if(!activeGradesClass)activeGradesClass=allCls[0].id;
+        if(!activeBehaviorClass)activeBehaviorClass=allCls[0].id;
+      }
+    }
     remindersConfig=data.reminders_config||{enabled:false,minutes:10};
     students=data.students||{};
     grades=data.grades||{};
@@ -5596,7 +5604,13 @@ function updateGradeAdminButtons(){
   // إظهار زر المساعدة
   const helpBtn=document.getElementById('help-btn');if(helpBtn)helpBtn.style.display='block';
   // تهيئة تبويبات السلوك بعد تحميل teacherConfig
-  setTimeout(()=>renderBehaviorTabs(),500);
+  setTimeout(()=>{
+    const classes=getAllClasses2();
+    if(classes.length&&(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass))){
+      activeBehaviorClass=classes[0].id;
+    }
+    renderBehaviorTabs();
+  },500);
 }
 
 // حفظ قالب جديد (المشرف فقط)
@@ -5921,11 +5935,18 @@ function initBehaviorPage(){
   loadBehaviorData();
   loadBehaviorPhone();
   // تأكد من جاهزية teacherConfig قبل رسم التبويبات
-  if(teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length){
-    renderBehaviorTabs();
-  } else {
-    setTimeout(()=>{renderBehaviorTabs();},800);
-  }
+  const _initBehavior=()=>{
+    const classes=getAllClasses2();
+    if(classes.length){
+      if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass)){
+        activeBehaviorClass=classes[0].id;
+      }
+      renderBehaviorTabs();
+    } else {
+      setTimeout(_initBehavior, 500);
+    }
+  };
+  _initBehavior();
   updateBehaviorStats();
 }
 
