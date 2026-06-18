@@ -2432,6 +2432,7 @@ async function signOut(){
       localStorage.removeItem('kh_grades_'+currentUser.id);
       localStorage.removeItem('kh_gtypes_'+currentUser.id);
       localStorage.removeItem('kh_students_'+currentUser.id);
+      localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);
     }
   }catch(e){}
   await sb.auth.signOut();
@@ -2680,6 +2681,7 @@ async function resetAllData(){
       localStorage.removeItem('kh_grades_'+currentUser.id);
       localStorage.removeItem('kh_gtypes_'+currentUser.id);
       localStorage.removeItem('kh_students_'+currentUser.id);
+      localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);
     }
     // مسح أي مفتاح آخر متعلق بالتطبيق
     localStorage.removeItem('behaviorTeacherPhone');
@@ -2785,19 +2787,25 @@ async function bootApp(session){
     usedCache=true;
     document.getElementById('auth-screen').classList.add('hidden');
     const isAdminUserC=userEmail===ADMIN_EMAIL.toLowerCase();
+    // ── flag محلي: المستخدم في منتصف الإعداد ──
+    let inSetupFlag=currentUser&&localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';
+    // تنظيف ذاتي: لو الإعداد مكتمل فعلاً (grades موجودة + setupDone) امسح الـ flag القديم
+    if(inSetupFlag&&cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length&&cached.teacher_config.setupDone){
+      try{localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);}catch(e){}
+      inSetupFlag=false;
+    }
     if(isAdminUserC){
       if(!cached.teacher_config||!cached.teacher_config.grades||!cached.teacher_config.grades.length){
         cached.teacher_config={grades:[],subjects:['الرياضيات'],subject:'الرياضيات',semester:'الفصل الأول',setupDone:true,isAdminMode:true};
       }else{cached.teacher_config.isAdminMode=true;}
       showApp(cached);
       startBellPolling();
-    }else if(cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length&&cached.teacher_config.setupDone){
-      // الإعداد مكتمل → اعرض التطبيق
+    }else if(!inSetupFlag&&cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length){
+      // الإعداد مكتمل (ولم يكن في منتصف إعداد جديد) → اعرض التطبيق
       showApp(cached);
       startBellPolling();
     }else{
-      // الإعداد غير مكتمل → اعرض شاشة الإعداد
-      // قد يكون displayName موجود من قبل (المستخدم بدأ ولم يكمل)
+      // إما الإعداد غير مكتمل، أو المستخدم في منتصف إعادة إعداد
       showSetupScreen();
     }
     // ─── الفحوصات الأمنية في الخلفية (بدون انتظار) ───
@@ -2920,7 +2928,13 @@ async function bootApp(session){
     startBellPolling();
     return;
   }
-  if(!data.teacher_config||!data.teacher_config.grades||!data.teacher_config.grades.length||!data.teacher_config.setupDone){
+  let inSetupFlagLong=currentUser&&localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';
+  // تنظيف ذاتي: لو الإعداد مكتمل فعلاً
+  if(inSetupFlagLong&&data.teacher_config&&data.teacher_config.grades&&data.teacher_config.grades.length&&data.teacher_config.setupDone){
+    try{localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);}catch(e){}
+    inSetupFlagLong=false;
+  }
+  if(inSetupFlagLong||!data.teacher_config||!data.teacher_config.grades||!data.teacher_config.grades.length){
     showSetupScreen();
     return;
   }
@@ -3514,6 +3528,8 @@ async function finishSetup(){
     reminders_config:(prev&&prev.reminders_config)||{enabled:false,minutes:10}
   });
   document.getElementById('setup-screen').classList.add('hidden');
+  // مسح flag "الإعداد قيد التقدم" لأن الإعداد اكتمل
+  clearSetupInProgress();
   const data=await dbLoad();
   showApp(data);
   toast('🎉 تم الإعداد بنجاح!','ok');
