@@ -2670,8 +2670,23 @@ async function resetAllData(){
   if(!confirm('⚠️ سيتم حذف جميع بياناتك نهائياً من حسابك السحابي. هل أنت متأكد؟'))return;
   if(!confirm('تأكيد أخير: لا يمكن التراجع. متابعة الحذف؟'))return;
   try{
+    // 1) مسح البيانات في Supabase
     await sb.from('profiles').update({data:{}}).eq('id',currentUser.id);
-  }catch(e){}
+  }catch(e){console.error('resetAllData supabase error:',e);}
+  // 2) مسح كل الكاش المحلي (الرئيسي + المستقل)
+  try{
+    const k=getCacheKey();if(k)localStorage.removeItem(k);
+    if(currentUser){
+      localStorage.removeItem('kh_grades_'+currentUser.id);
+      localStorage.removeItem('kh_gtypes_'+currentUser.id);
+      localStorage.removeItem('kh_students_'+currentUser.id);
+    }
+    // مسح أي مفتاح آخر متعلق بالتطبيق
+    localStorage.removeItem('behaviorTeacherPhone');
+    // مسح profileCache في الذاكرة
+    profileCache=null;
+  }catch(e){console.error('resetAllData cache error:',e);}
+  // 3) إعادة تحميل — bootApp سيكتشف غياب display_name ويعرض شاشة onboarding تلقائياً
   location.reload();
 }
 
