@@ -2472,20 +2472,22 @@ async function dbLoad(forceFresh=false){
 // مزامنة في الخلفية: تتحقق إذا كان الخادم يحتوي على نسخة أحدث
 async function _syncFromServerInBackground(){
   if(!currentUser||!sb)return;
+  // لا تستبدل البيانات المحلية إذا فيه تعديلات لم تُحفظ بعد
+  if(_pendingSave)return;
   try{
     const {data,error}=await sb.from('profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
     if(error||!data||!data.data)return;
     const serverData=data.data;
-    const localUpdated=profileCache?.updated_at||'';
-    const serverUpdated=serverData.updated_at||data.updated_at||'';
-    // إذا الخادم أحدث وحجم البيانات يختلف → حدّث الكاش وأعد الرسم
-    if(serverUpdated>localUpdated){
+    // قارن بطابع الوقت المحلي (آخر تعديل محلي) مع طابع الخادم
+    const localTime=profileCache?._localUpdatedAt||profileCache?.updated_at||'';
+    const serverTime=serverData.updated_at||data.updated_at||'';
+    // الخادم أحدث فعلاً؟
+    if(serverTime>localTime){
       profileCache=serverData;
       saveToCache(serverData);
       // إعادة رسم الجدول الحالي بهدوء (بدون مقاطعة المستخدم لو هو يدخل بيانات)
       const activeEl=document.activeElement;
       if(!activeEl||(activeEl.tagName!=='INPUT'&&activeEl.tagName!=='SELECT'&&activeEl.tagName!=='TEXTAREA')){
-        // حدّث المتغيرات العامة من البيانات الجديدة
         if(serverData.students)students=serverData.students;
         if(serverData.grades)grades=serverData.grades;
         if(serverData.grade_types)gradeTypes=serverData.grade_types;
@@ -8259,28 +8261,47 @@ function startClassWatcher(){if(watcherInterval)clearInterval(watcherInterval);u
 // ══ SAVE ═══════════════════════════════════════════════
 let saveTimer3;
 let _pendingSave=false;
+// حفظ فوري في الكاش (لا ينتظر Supabase) — لضمان عدم ضياع البيانات عند التحديث المفاجئ
+function saveCacheImmediate(){
+  if(!currentUser)return;
+  if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
+  const merged={
+    ...(profileCache||{}),
+    plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,
+    lesson_files:lessonFiles,arc_categories:arcCategories,
+    timetable_config:timetableConfig,class_config:classConfig,
+    students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,
+    teacher_config:teacherConfig,behavior_students:behaviorStudents,
+    behavior_violations:behaviorViolations,
+    behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',
+    behavior_admin_phone:behaviorAdminPhone||'',
+    display_name:displayName||profileCache?.display_name||'',
+    email:currentUser.email||'',
+    _localUpdatedAt:new Date().toISOString()
+  };
+  profileCache=merged;
+  saveToCache(merged);
+}
 function scheduleSave(){
+  // 1) حفظ فوري في الكاش (مهما حدث، البيانات محفوظة محلياً)
+  saveCacheImmediate();
+  // إشعار فوري للمستخدم: البيانات محفوظة محلياً + جاري المزامنة
+  showSyncing();
+  // 2) حفظ مؤجل في Supabase (debounced)
   _pendingSave=true;
   clearTimeout(saveTimer3);
   saveTimer3=setTimeout(()=>{
-    // Update classConfig in teacherConfig
-    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
     dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   },400);
 }
 // حفظ فوري قبل إغلاق/تحديث الصفحة لمنع ضياع الدرجات
 window.addEventListener('beforeunload',function(e){
   if(_pendingSave){
+    // البيانات أصلاً في الكاش (saveCacheImmediate)، لكن نحاول حفظ متزامن لـ Supabase أيضاً
     clearTimeout(saveTimer3);
-    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
-    // استخدم sendBeacon لضمان الحفظ حتى لو أُغلقت الصفحة
     try{
       const payload={plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''};
-      // محاولة حفظ نهائي متزامن (best effort)
       dbSave(payload);
-      e.preventDefault();
-      e.returnValue='التغييرات تُحفظ الآن — هل تريد المغادرة؟';
-      return e.returnValue;
     }catch(err){}
   }
 });
@@ -8288,7 +8309,6 @@ window.addEventListener('beforeunload',function(e){
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='hidden'&&_pendingSave){
     clearTimeout(saveTimer3);
-    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
     dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   }
 });
