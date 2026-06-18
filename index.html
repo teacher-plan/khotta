@@ -5194,9 +5194,7 @@ function renderGradesTable(){
     body+=`<td style="font-weight:800;background:rgba(138,96,0,.13);border:1.5px solid rgba(138,96,0,.35);border-radius:8px;text-align:center;"><span style="color:var(--gold);font-size:13px;font-weight:900;">${totalVal!=null?totalVal:'—'}</span>${totalVal!=null?`<span style="color:var(--muted);font-size:9px;"> / ${totalMax}</span>`:''}</td></tr>`;
   });
   body+='</tbody>';
-  t.style.opacity='0';
   t.innerHTML=head+body;
-  requestAnimationFrame(()=>{ t.style.transition='opacity .2s'; t.style.opacity='1'; });
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
@@ -5531,8 +5529,45 @@ function updGrade(studentId,colId,val){
     }
     grades[k][studentId][colId]=num;
   }
-  renderGradesTable();
+  // تحديث جزئي: لون الخلية + المجموع للصف + متوسط الصف فقط (بدون إعادة بناء الجدول)
+  updateGradeCellUI(studentId,colId);
   scheduleSave();
+}
+function updateGradeCellUI(studentId,colId){
+  const k=activeGradesClass;if(!k)return;
+  const cols=gradeTypes.filter(c=>c.classKey===k);
+  const sg=(grades[k]||{})[studentId]||{};
+  // تحديث لون الخلية المعدّلة
+  const sel=document.querySelector(`select[onchange*="${studentId}"][onchange*="${colId}"]`);
+  if(sel){
+    const col=cols.find(c=>c.id===colId);
+    const v=sg[colId];const num=v!=null&&!isNaN(v)?Number(v):null;
+    sel.classList.remove('low','mid','high');
+    if(num!=null&&col){
+      const pct=(num/col.max)*100;
+      sel.classList.add(pct<50?'low':pct<75?'mid':'high');
+    }
+  }
+  // تحديث خلية المجموع للصف
+  const row=sel?sel.closest('tr'):null;
+  if(row){
+    const totalCell=row.querySelector('td:last-child');
+    if(totalCell){
+      const totalMax=cols.reduce((a,c)=>a+Number(c.max),0);
+      let pts=0;cols.forEach(c=>{if(sg[c.id]!=null&&!isNaN(sg[c.id]))pts+=Number(sg[c.id]);});
+      const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
+      const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
+      totalCell.innerHTML=`<span style="color:var(--gold);font-size:13px;font-weight:900;">${totalVal!=null?totalVal:'—'}</span>${totalVal!=null?`<span style="color:var(--muted);font-size:9px;"> / ${totalMax}</span>`:''}`;
+    }
+  }
+  // تحديث ملخص الصف (متوسط)
+  const sList=getUnifiedStudents(k);
+  const totalMax=cols.reduce((a,c)=>a+Number(c.max),0);
+  let sumPts=0,countSt=0;
+  sList.forEach(st=>{const sgx=(grades[k]||{})[st.id]||{};let pts=0;cols.forEach(c=>{if(sgx[c.id]!=null&&!isNaN(sgx[c.id]))pts+=Number(sgx[c.id]);});if(totalMax>0){sumPts+=pts;countSt++;}});
+  const classAvg=countSt&&totalMax?Math.round(sumPts/countSt):0;
+  const sumEl=document.getElementById('grades-summary');
+  if(sumEl)sumEl.innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
 }
 function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
 function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
@@ -8109,14 +8144,40 @@ function startClassWatcher(){if(watcherInterval)clearInterval(watcherInterval);u
 
 // ══ SAVE ═══════════════════════════════════════════════
 let saveTimer3;
+let _pendingSave=false;
 function scheduleSave(){
+  _pendingSave=true;
   clearTimeout(saveTimer3);
   saveTimer3=setTimeout(()=>{
     // Update classConfig in teacherConfig
     if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
-    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''});
-  },800);
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+  },400);
 }
+// حفظ فوري قبل إغلاق/تحديث الصفحة لمنع ضياع الدرجات
+window.addEventListener('beforeunload',function(e){
+  if(_pendingSave){
+    clearTimeout(saveTimer3);
+    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
+    // استخدم sendBeacon لضمان الحفظ حتى لو أُغلقت الصفحة
+    try{
+      const payload={plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''};
+      // محاولة حفظ نهائي متزامن (best effort)
+      dbSave(payload);
+      e.preventDefault();
+      e.returnValue='التغييرات تُحفظ الآن — هل تريد المغادرة؟';
+      return e.returnValue;
+    }catch(err){}
+  }
+});
+// حفظ عند فقدان التركيز (تبديل tab/تطبيق)
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden'&&_pendingSave){
+    clearTimeout(saveTimer3);
+    if(teacherConfig&&teacherConfig.grades){teacherConfig.grades.forEach(g=>{g.classes.forEach(cls=>{if(classConfig[cls.id]){cls.name=classConfig[cls.id].name;cls.color=classConfig[cls.id].color;}});});}
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+  }
+});
 
 // ══ TOAST ══════════════════════════════════════════════
 let tt2;
