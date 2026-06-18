@@ -2500,6 +2500,8 @@ async function _syncFromServerInBackground(){
 }
 async function dbInit(){
   if(!currentUser)return false;
+  // لو الكاش موجود → البروفايل أُنشئ من قبل، لا داعي لطلب شبكي
+  if(loadFromCache())return true;
   try{
     const {data}=await sb.from('profiles').select('id').eq('id',currentUser.id).maybeSingle();
     if(!data){
@@ -2686,8 +2688,55 @@ function hideLoader(){
 }
 async function bootApp(session){
   currentUser=session.user;
-  // ─── فحص قائمة الإيميلات المسموحة ───
   const userEmail=(currentUser.email||'').toLowerCase().trim();
+
+  // ─── المسار السريع: لو الكاش موجود اعرض التطبيق فوراً ───
+  const cached=loadFromCache();
+  let usedCache=false;
+  if(cached&&cached.display_name){
+    profileCache=cached;
+    displayName=cached.display_name;
+    usedCache=true;
+    document.getElementById('auth-screen').classList.add('hidden');
+    const isAdminUserC=userEmail===ADMIN_EMAIL.toLowerCase();
+    if(isAdminUserC){
+      if(!cached.teacher_config||!cached.teacher_config.grades||!cached.teacher_config.grades.length){
+        cached.teacher_config={grades:[],subjects:['الرياضيات'],subject:'الرياضيات',semester:'الفصل الأول',setupDone:true,isAdminMode:true};
+      }else{cached.teacher_config.isAdminMode=true;}
+      showApp(cached);
+      startBellPolling();
+    }else if(cached.teacher_config&&cached.teacher_config.grades&&cached.teacher_config.grades.length){
+      showApp(cached);
+      startBellPolling();
+    }
+    // ─── الفحوصات الأمنية في الخلفية (بدون انتظار) ───
+    (async()=>{
+      try{
+        // فحص الصلاحية والحظر معاً
+        const[allowedRes,bannedRes]=await Promise.all([
+          sb.from('allowed_emails').select('email').eq('email',userEmail).maybeSingle(),
+          sb.from('banned_users').select('user_id').eq('user_id',currentUser.id).maybeSingle()
+        ]);
+        if(allowedRes.error){console.warn('background allowed check failed');return;}
+        if(!allowedRes.data){
+          // غير مصرّح — مسح الكاش وتسجيل خروج
+          try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
+          await sb.auth.signOut();location.reload();return;
+        }
+        if(bannedRes.data){
+          try{const k=getCacheKey();if(k)localStorage.removeItem(k);}catch(e){}
+          await sb.auth.signOut();location.reload();return;
+        }
+        // التقط توكن Google
+        if(session.provider_token)googleAccessToken=session.provider_token;
+        // مزامنة البيانات من الخادم لو فيه نسخة أحدث
+        _syncFromServerInBackground();
+      }catch(e){console.warn('background checks error:',e);}
+    })();
+    return;
+  }
+
+  // ─── المسار العادي: لا يوجد كاش — تنفيذ كل الفحوصات بالتسلسل ───
   try{
     const {data:allowed,error}=await sb.from('allowed_emails').select('email').eq('email',userEmail).maybeSingle();
     if(error){
