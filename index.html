@@ -7949,10 +7949,14 @@ function openCompleteStudentsSetup(){
     <div class="setup-class-row" id="cs-row-${c.id}">
       <div class="scr-name">📚 ${escHtml(c.gradeName)} — ${escHtml(c.name)}</div>
       <span class="scr-status empty" id="cs-status-${c.id}">⚠️ فارغة</span>
-      <div class="scr-actions">
+      <div class="scr-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
         <label class="scr-upload">
           📂 رفع Excel
           <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadCompleteSetupExcel(event,'${c.id}')"/>
+        </label>
+        <label class="scr-upload" style="background:linear-gradient(135deg,#c0392b,#e74c3c)!important;">
+          📄 رفع PDF
+          <input type="file" accept="application/pdf,.pdf" style="display:none" onchange="uploadCompleteSetupPdf(event,'${c.id}')"/>
         </label>
       </div>
     </div>
@@ -8046,6 +8050,89 @@ async function uploadCompleteSetupExcel(event, classId){
     }
   };
   reader.readAsBinaryString(file);
+}
+
+async function uploadCompleteSetupPdf(event, classId){
+  const file=event.target.files[0];
+  if(!file)return;
+  event.target.value='';
+  toast('⏳ جاري تحميل المكتبة...');
+  try{await loadPdfJs();}
+  catch(e){toast('❌ فشل تحميل المكتبة - تحقق من الإنترنت',true);return;}
+  toast('⏳ جاري استخراج الأسماء من PDF...');
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let allLines=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      const lineMap={};
+      tc.items.forEach(it=>{
+        if(!it.str||!it.str.trim())return;
+        const y=Math.round(it.transform[5]/3)*3;
+        if(!lineMap[y])lineMap[y]=[];
+        lineMap[y].push({x:it.transform[4],s:it.str});
+      });
+      const ys=Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
+      ys.forEach(y=>{
+        const parts=lineMap[y].sort((a,b)=>a.x-b.x).map(p=>p.s).join(' ').replace(/\s+/g,' ').trim();
+        if(parts)allLines.push(parts);
+      });
+    }
+    const skipWords=new Set(['م','رقم','الاسم','اسم','اسم الطالب','الصف','الشعبة','المدرسة','الفصل','التاريخ','رقم ولي الأمر','الهاتف','الجوال','ملاحظات','الجنس','الجنسية','المنطقة السكنية','حالة القيد','الهاتف النقال','الرقم المدرسي','عماني','منقول','مستجد','السنة الدراسية','رمز المدرسة','قوائم الطلاب','وزارة التربية والتعليم','المديرية العامة للتربية والتعليم','سلطنة عمان']);
+    const studentsList=[];
+    const patternWithPhone=/(\d{8})\s+(\d{1,3})\s+([\u0600-\u06FF\s]+?)\s+(\d{10,13})(?:\s|$)/;
+    const patternNoPhone=/(?:^|\s)(\d{1,3})\s+([\u0600-\u06FF\s]+?)\s+(\d{10,13})(?:\s|$)/;
+    const patternSimple=/^[\s]*[\d٠-٩]+[\s\-\.\)]+([\u0600-\u06FF][\u0600-\u06FF\s]{2,80})$/;
+    allLines.forEach(line=>{
+      const m1=line.match(patternWithPhone);
+      if(m1){
+        const phone=m1[1].trim();
+        const name=m1[3].trim().replace(/\s+/g,' ');
+        if(name.length>=4&&name.length<=80&&!skipWords.has(name)){
+          studentsList.push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name,phone});
+        }
+        return;
+      }
+      const m2=line.match(patternNoPhone);
+      if(m2){
+        const name=m2[2].trim().replace(/\s+/g,' ');
+        if(name.length>=4&&name.length<=80&&!skipWords.has(name)){
+          studentsList.push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name,phone:''});
+        }
+        return;
+      }
+      const m3=line.match(patternSimple);
+      if(m3){
+        const name=m3[1].trim().replace(/\s+/g,' ');
+        if(name.length>=4&&name.length<=80&&!skipWords.has(name)){
+          studentsList.push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name,phone:''});
+        }
+      }
+    });
+    // إزالة المكرر حسب الاسم
+    const seen=new Set();
+    const unique=studentsList.filter(s=>{if(seen.has(s.name))return false;seen.add(s.name);return true;});
+    if(!unique.length){
+      toast('❌ لم يتم العثور على أسماء — قد يكون PDF صورة (يحتاج OCR)',true);
+      return;
+    }
+    // ترتيب أبجدي وحفظ
+    unique.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+    syncStudentsToBoth(classId, unique);
+    // تحديث الواجهة
+    const row=document.getElementById(`cs-row-${classId}`);
+    const status=document.getElementById(`cs-status-${classId}`);
+    if(row)row.className='setup-class-row has-students';
+    if(status){status.className='scr-status filled';status.textContent=`✓ ${unique.length} طالب`;}
+    const withPhones=unique.filter(s=>s.phone).length;
+    toast(`✅ تم إضافة ${unique.length} طالب${withPhones?` (منهم ${withPhones} برقم هاتف)`:''}`,'ok');
+    setTimeout(()=>checkIncompleteSetup(),500);
+  }catch(e){
+    console.error('PDF parse error:',e);
+    toast('❌ تعذّر قراءة PDF — تأكد أنه ليس صورة ممسوحة',true);
+  }
 }
 
 function openStudentsManager(classKey, context='grades'){
