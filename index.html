@@ -3515,7 +3515,8 @@ async function parseStudentsFromPdfFile(file){
   await loadPdfJs();
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-  let allLines=[];
+  // جمع كل الصفوف من جميع الصفحات
+  const allRows=[]; // [{y, cells:[{x,w,text}]}]
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);
     const tc=await page.getTextContent();
@@ -3524,43 +3525,101 @@ async function parseStudentsFromPdfFile(file){
       if(!it.str||!it.str.trim())return;
       const y=Math.round(it.transform[5]/3)*3;
       if(!lineMap[y])lineMap[y]=[];
-      lineMap[y].push({x:it.transform[4],s:it.str});
+      lineMap[y].push({
+        x:it.transform[4],
+        w:(it.width||(it.str.length*5)),
+        text:it.str.trim()
+      });
     });
     const ys=Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
     ys.forEach(y=>{
-      const parts=lineMap[y].sort((a,b)=>a.x-b.x).map(p=>p.s).join(' ').replace(/\s+/g,' ').trim();
-      if(parts)allLines.push(parts);
+      const items=lineMap[y].sort((a,b)=>a.x-b.x);
+      // جمع items المتجاورة في خلية واحدة (مسافة < 8px)
+      const cells=[];
+      items.forEach(it=>{
+        const last=cells[cells.length-1];
+        if(last&&(it.x-(last.x+last.w))<8){
+          last.text+=' '+it.text;
+          last.w=it.x+it.w-last.x;
+        }else{
+          cells.push({x:it.x,w:it.w,text:it.text});
+        }
+      });
+      allRows.push({y,cells});
     });
   }
-  const skipWords=new Set(['م','رقم','الاسم','اسم','اسم الطالب','الصف','الشعبة','المدرسة','الفصل','التاريخ','رقم ولي الأمر','الهاتف','الجوال','ملاحظات','الجنس','الجنسية','المنطقة السكنية','حالة القيد','الهاتف النقال','الرقم المدرسي','عماني','منقول','مستجد','السنة الدراسية','رمز المدرسة','قوائم الطلاب','وزارة التربية والتعليم','المديرية العامة للتربية والتعليم','سلطنة عمان']);
+  // ابحث في أول 20 سطر عن header
+  const nameKW=['اسم الطالب','الاسم','اسم','student name','student','name'];
+  const phoneKW=['رقم ولي الأمر','رقم ولي','ولي الأمر','ولي الامر','الهاتف النقال','رقم الهاتف','الجوال','الهاتف','الجوّال','جوال','هاتف','رقم الجوال','phone','mobile'];
+  let nameX=null,phoneX=null,headerRowIdx=-1;
+  for(let i=0;i<Math.min(20,allRows.length);i++){
+    const cells=allRows[i].cells;
+    cells.forEach(cell=>{
+      const txt=cell.text.toLowerCase().replace(/\u0640/g,'').trim();
+      // الاسم: مطابقة دقيقة لتجنب التداخل
+      if(nameX===null){
+        if(nameKW.some(kw=>txt===kw||txt.includes(kw))){
+          nameX=cell.x+cell.w/2;
+          if(headerRowIdx<0)headerRowIdx=i;
+        }
+      }
+      // الهاتف: مطابقة دقيقة (نتجنب اختيار كلمة "الهاتف" داخل اسم آخر)
+      if(phoneX===null){
+        if(phoneKW.some(kw=>txt===kw||txt.includes(kw))){
+          phoneX=cell.x+cell.w/2;
+          if(headerRowIdx<0)headerRowIdx=i;
+        }
+      }
+    });
+    if(nameX!==null&&phoneX!==null)break;
+  }
+  if(nameX===null)throw new Error('لم يتم العثور على عمود الاسم في PDF');
+  // استخرج البيانات: لكل صف بعد header، خلية الاسم وخلية الهاتف
   const list=[];
-  const patternWithPhone=/(\d{8})\s+(\d{1,3})\s+([\u0600-\u06FF\s]+?)\s+(\d{10,13})(?:\s|$)/;
-  const patternNoPhone=/(?:^|\s)(\d{1,3})\s+([\u0600-\u06FF\s]+?)\s+(\d{10,13})(?:\s|$)/;
-  const patternSimple=/^[\s]*[\d٠-٩]+[\s\-\.\)]+([\u0600-\u06FF][\u0600-\u06FF\s]{2,80})$/;
-  allLines.forEach(line=>{
-    const m1=line.match(patternWithPhone);
-    if(m1){
-      const name=m1[3].trim().replace(/\s+/g,' ');
-      if(name.length>=4&&name.length<=80&&!skipWords.has(name))list.push({name,phone:m1[1].trim()});
-      return;
+  const seenNames=new Set();
+  const TOLERANCE=60; // px - أقصى مسافة بين مركز الخلية و مركز العمود
+  for(let i=headerRowIdx+1;i<allRows.length;i++){
+    const cells=allRows[i].cells;
+    if(!cells.length)continue;
+    let nameCell=null,phoneCell=null;
+    let bestNameDist=Infinity,bestPhoneDist=Infinity;
+    cells.forEach(cell=>{
+      const cx=cell.x+cell.w/2;
+      const nameDist=Math.abs(cx-nameX);
+      if(nameDist<bestNameDist&&nameDist<TOLERANCE){
+        bestNameDist=nameDist;
+        nameCell=cell;
+      }
+      if(phoneX!==null){
+        const phoneDist=Math.abs(cx-phoneX);
+        if(phoneDist<bestPhoneDist&&phoneDist<TOLERANCE){
+          bestPhoneDist=phoneDist;
+          phoneCell=cell;
+        }
+      }
+    });
+    if(!nameCell)continue;
+    const name=nameCell.text.replace(/\s+/g,' ').trim();
+    if(name.length<4||name.length>80)continue;
+    // تجاوز الصفوف التي تحوي رقم فقط أو نص غير عربي
+    if(!/[\u0600-\u06FF]/.test(name))continue;
+    if(/^\d+$/.test(name))continue;
+    // تجاوز رؤوس متكررة في كل صفحة
+    if(nameKW.some(kw=>name.toLowerCase().includes(kw)))continue;
+    // استخراج الهاتف (أرقام فقط)
+    let phone='';
+    if(phoneCell){
+      const digits=phoneCell.text.replace(/\D/g,'');
+      if(digits.length>=7&&digits.length<=15)phone=digits;
     }
-    const m2=line.match(patternNoPhone);
-    if(m2){
-      const name=m2[2].trim().replace(/\s+/g,' ');
-      if(name.length>=4&&name.length<=80&&!skipWords.has(name))list.push({name,phone:''});
-      return;
+    if(!seenNames.has(name)){
+      seenNames.add(name);
+      list.push({name,phone});
     }
-    const m3=line.match(patternSimple);
-    if(m3){
-      const name=m3[1].trim().replace(/\s+/g,' ');
-      if(name.length>=4&&name.length<=80&&!skipWords.has(name))list.push({name,phone:''});
-    }
-  });
-  const seen=new Set();
-  const unique=list.filter(s=>{if(seen.has(s.name))return false;seen.add(s.name);return true;});
-  if(!unique.length)throw new Error('لم يتم العثور على أسماء — قد يكون PDF صورة');
-  unique.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  return unique;
+  }
+  if(!list.length)throw new Error('لم يتم العثور على أسماء — قد يكون PDF صورة');
+  list.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  return list;
 }
 
 async function uploadSetupClassExcel(event, classId){
