@@ -1143,8 +1143,9 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div class="auth-title">أهلاً بك</div>
       <div class="auth-sub">قبل ما نبدأ، كيف نناديك؟</div>
-      <input type="text" class="onboard-input" id="onboard-name" placeholder="الأستاذ / الأستاذة..." onkeydown="if(event.key==='Enter')completeOnboard()"/>
-      <button class="modal-save" style="width:100%;padding:12px" onclick="completeOnboard()">ابدأ الإعداد</button>
+      <input type="text" class="onboard-input" id="onboard-name" placeholder="الأستاذ / الأستاذة..." onkeydown="if(event.key==='Enter')document.getElementById('onboard-phone').focus()"/>
+      <input type="tel" class="onboard-input" id="onboard-phone" placeholder="رقم الهاتف (واتساب) — مثال: 99887766" style="margin-top:10px;direction:ltr;text-align:right" maxlength="15" onkeydown="if(event.key==='Enter')completeOnboard()"/>
+      <button class="modal-save" style="width:100%;padding:12px;margin-top:10px" onclick="completeOnboard()">ابدأ الإعداد</button>
     </div>
     <div class="onboard-state" id="auth-loading" style="display:none"></div>
   </div>
@@ -2545,29 +2546,17 @@ async function dbInit(){
   // لو الكاش موجود → البروفايل أُنشئ من قبل، لا داعي لطلب شبكي
   if(loadFromCache())return true;
   try{
-    const {data,error:selErr}=await sb.from('profiles').select('id').eq('id',currentUser.id).maybeSingle();
-    if(selErr){
-      console.error('dbInit select error:',selErr);
-      try{toast('⚠️ خطأ قراءة البروفايل: '+(selErr.message||selErr.code||'unknown'),true);}catch(e){}
-    }
+    const {data}=await sb.from('profiles').select('id').eq('id',currentUser.id).maybeSingle();
     if(!data){
       const{error:insErr}=await sb.from('profiles').insert({
         id:currentUser.id,
         email:currentUser.email||'',
         data:{display_name:displayName||'',email:currentUser.email||'',avatar_url:currentUser.user_metadata?.avatar_url||'',created_at:new Date().toISOString()}
       });
-      if(insErr){
-        console.error('dbInit insert error:',insErr);
-        try{toast('⚠️ تعذّر إنشاء البروفايل: '+(insErr.message||insErr.code||'unknown'),true);}catch(e){}
-        return false;
-      }
+      if(insErr){console.error('dbInit insert error:',insErr);return false;}
     }
     return true;
-  }catch(e){
-    console.error('dbInit exception:',e);
-    try{toast('⚠️ خطأ في إنشاء البروفايل: '+(e.message||e),true);}catch(er){}
-    return false;
-  }
+  }catch(e){console.error('dbInit exception:',e);return false;}
 }
 async function dbSave(payload){
   if(!currentUser)return false;
@@ -2716,8 +2705,16 @@ function showAuthState(state){
 async function completeOnboard(){
   const name=document.getElementById('onboard-name').value.trim();
   if(!name){document.getElementById('onboard-name').focus();return;}
+  const phoneRaw=document.getElementById('onboard-phone').value.trim();
+  // تنظيف الرقم: إزالة أي حرف غير الأرقام و +
+  const phone=phoneRaw.replace(/[^\d+]/g,'');
+  if(!phone||phone.length<8){
+    document.getElementById('onboard-phone').focus();
+    toast('⚠️ يرجى إدخال رقم هاتف صحيح (8 أرقام على الأقل)',true);
+    return;
+  }
   displayName=name;
-  await dbSave({display_name:name});
+  await dbSave({display_name:name,teacher_phone:phone});
   document.getElementById('auth-screen').classList.add('hidden');
   showSetupScreen();
 }
@@ -2899,7 +2896,7 @@ async function bootApp(session){
       document.getElementById('auth-screen').classList.remove('hidden');
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
-      if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.<br/><small style="color:#999">[DBG: !allowed]</small>';
+      if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.';
       const btn=document.getElementById('google-signin-btn');
       if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='تسجيل الدخول بحساب آخر';}
       return;
@@ -2910,7 +2907,7 @@ async function bootApp(session){
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
     const sub=document.querySelector('#auth-login .auth-sub');
-    if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.<br/><small style="color:#999">[DBG: '+(e.message||e)+']</small>';
+    if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
     const btn=document.getElementById('google-signin-btn');
     if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='إعادة المحاولة';}
     return;
@@ -4705,6 +4702,7 @@ async function loadAdminUsers(){
         ...u,
         _email: d.email||'',
         _name: d.display_name||d.teacher_name||d.full_name||(d.email?d.email.split('@')[0]:'—'),
+        _phone: d.teacher_phone||'',
         _avatar: d.avatar_url||d.photo||'',
         _config: typeof d.teacher_config==='object'&&d.teacher_config!==null?d.teacher_config:{},
         _enabled: !bannedSet.has(u.id)
@@ -4744,6 +4742,15 @@ function renderUsersList(users){
   list.innerHTML=users.map((u,idx)=>{
     const name=u._name||'—';
     const email=u._email||'';
+    const phone=u._phone||'';
+    // تنسيق الهاتف لرابط واتساب: إزالة + و 00 من البداية، إضافة 968 إذا كان رقم عُماني محلي
+    let waNum='';
+    if(phone){
+      let p=phone.replace(/\D/g,'');
+      if(p.startsWith('00'))p=p.substring(2);
+      if(p.length===8)p='968'+p;
+      waNum=p;
+    }
     const config=u._config||{};
     const gradesRaw=config.grades;
     const grades=Array.isArray(gradesRaw)?gradesRaw.join('، '):(gradesRaw?String(gradesRaw):'—');
@@ -4761,12 +4768,14 @@ function renderUsersList(users){
       <div class="user-info" style="flex:1;min-width:0">
         <div class="user-name">${idx+1}. ${escHtml(name)}${isAdminUser?'<span style="display:inline-flex;align-items:center;gap:3px;margin-right:4px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg></span>':''}${disabledBadge}</div>
         ${email?`<div class="user-email">${escHtml(email)}</div>`:'<div class="user-email" style="color:var(--muted);font-style:italic">بريد غير متاح</div>'}
+        ${phone?`<div class="user-email" style="display:flex;align-items:center;gap:5px;color:#25D366;font-weight:700;direction:ltr;justify-content:flex-end"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.52 3.449A11.94 11.94 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg> ${escHtml(phone)}</div>`:''}
         <div class="user-meta" style="display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M4 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7V3H4zm9 0v18h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-7zm2 4h4v2h-4V7zm0 4h4v2h-4v-2z"/></svg> ${escHtml(subject)} · صف ${escHtml(grades)}</div>
         <div class="user-last-seen${lastSeen.recent?' recent':''}" style="display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16A8 8 0 0 1 12 20zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> آخر نشاط: ${lastSeen.text}</div>
       </div>
       ${!isAdminUser?`
         <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
           <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px" onclick="openMsgModal('${escHtml(u.id)}','${escHtml(name)}','${escHtml(email)}')"> <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
+          ${waNum?`<a href="https://wa.me/${waNum}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:5px;background:#25D366;color:#fff;text-decoration:none;justify-content:center;padding:5px 10px;border-radius:6px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.52 3.449A11.94 11.94 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg> واتساب</a>`:''}
           ${enabled
             ?`<button class="user-disable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escHtml(u.id)}','${escHtml(name)}',false)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg> تعطيل</button>`
             :`<button class="user-enable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escHtml(u.id)}','${escHtml(name)}',true)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> تفعيل</button>`
