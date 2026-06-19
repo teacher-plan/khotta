@@ -3549,29 +3549,56 @@ async function parseStudentsFromPdfFile(file){
     });
   }
   // ابحث في أول 20 سطر عن header
-  const nameKW=['اسم الطالب','الاسم','اسم','student name','student','name'];
+  const nameKW=['اسم الطالب','الاسم','اسم','السم','الام','الاسم','student name','student','name','اسماء','أسماء'];
   const phoneKW=['رقم ولي الأمر','رقم ولي','ولي الأمر','ولي الامر','الهاتف النقال','رقم الهاتف','الجوال','الهاتف','الجوّال','جوال','هاتف','رقم الجوال','phone','mobile'];
   let nameX=null,phoneX=null,headerRowIdx=-1;
   for(let i=0;i<Math.min(20,allRows.length);i++){
     const cells=allRows[i].cells;
     cells.forEach(cell=>{
-      const txt=cell.text.toLowerCase().replace(/\u0640/g,'').trim();
-      // الاسم: مطابقة دقيقة لتجنب التداخل
+      // إزالة الكشيدة قبل المقارنة (كلمات مثل "الســـــــــم" → "السم")
+      const txt=cell.text.toLowerCase().replace(/\u0640/g,'').replace(/\s+/g,'').trim();
+      // الاسم: تطابق دقيق أو احتواء
       if(nameX===null){
-        if(nameKW.some(kw=>txt===kw||txt.includes(kw))){
+        if(nameKW.some(kw=>txt===kw.replace(/\s+/g,'')||txt.includes(kw.replace(/\s+/g,'')))){
           nameX=cell.x+cell.w/2;
           if(headerRowIdx<0)headerRowIdx=i;
         }
       }
-      // الهاتف: مطابقة دقيقة (نتجنب اختيار كلمة "الهاتف" داخل اسم آخر)
+      // الهاتف
       if(phoneX===null){
-        if(phoneKW.some(kw=>txt===kw||txt.includes(kw))){
+        if(phoneKW.some(kw=>txt===kw.replace(/\s+/g,'')||txt.includes(kw.replace(/\s+/g,'')))){
           phoneX=cell.x+cell.w/2;
           if(headerRowIdx<0)headerRowIdx=i;
         }
       }
     });
     if(nameX!==null&&phoneX!==null)break;
+  }
+  // ── Fallback ذكي: لو لم نجد عمود الاسم في الـ header، ابحث عن أول صف فيه اسم عربي طويل ──
+  if(nameX===null){
+    for(let i=0;i<allRows.length;i++){
+      const cells=allRows[i].cells;
+      // ابحث عن خلية فيها اسم عربي طويل (3+ كلمات أو فيها "بن"/"بنت")
+      const nameCandidate=cells.find(cell=>{
+        const t=cell.text.replace(/\s+/g,' ').trim();
+        if(t.length<10||t.length>80)return false;
+        if(!/[\u0600-\u06FF]/.test(t))return false;
+        const arabicWords=t.split(/\s+/).filter(w=>/[\u0600-\u06FF]/.test(w));
+        // اسم: 3+ كلمات عربية أو فيها "بن"/"بنت"
+        return arabicWords.length>=3||/\sبن\s|\sبنت\s/.test(' '+t+' ');
+      });
+      if(nameCandidate){
+        nameX=nameCandidate.x+nameCandidate.w/2;
+        headerRowIdx=i-1; // ابدأ القراءة من هذا الصف نفسه (وليس بعده)
+        // ابحث عن عمود هاتف في نفس الصف: خلية فيها 8 أرقام تبدأ بـ 7 أو 9
+        const phoneCandidate=cells.find(cell=>{
+          const digits=cell.text.replace(/\D/g,'');
+          return /^[79]\d{7}$/.test(digits)||/^\d{8,15}$/.test(digits);
+        });
+        if(phoneCandidate)phoneX=phoneCandidate.x+phoneCandidate.w/2;
+        break;
+      }
+    }
   }
   if(nameX===null)throw new Error('لم يتم العثور على عمود الاسم في PDF');
   // استخرج البيانات: لكل صف بعد header، خلية الاسم وخلية الهاتف
