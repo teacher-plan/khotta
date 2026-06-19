@@ -2545,16 +2545,29 @@ async function dbInit(){
   // لو الكاش موجود → البروفايل أُنشئ من قبل، لا داعي لطلب شبكي
   if(loadFromCache())return true;
   try{
-    const {data}=await sb.from('profiles').select('id').eq('id',currentUser.id).maybeSingle();
+    const {data,error:selErr}=await sb.from('profiles').select('id').eq('id',currentUser.id).maybeSingle();
+    if(selErr){
+      console.error('dbInit select error:',selErr);
+      try{toast('⚠️ خطأ قراءة البروفايل: '+(selErr.message||selErr.code||'unknown'),true);}catch(e){}
+    }
     if(!data){
-      await sb.from('profiles').insert({
+      const{error:insErr}=await sb.from('profiles').insert({
         id:currentUser.id,
         email:currentUser.email||'',
         data:{display_name:displayName||'',email:currentUser.email||'',avatar_url:currentUser.user_metadata?.avatar_url||'',created_at:new Date().toISOString()}
       });
+      if(insErr){
+        console.error('dbInit insert error:',insErr);
+        try{toast('⚠️ تعذّر إنشاء البروفايل: '+(insErr.message||insErr.code||'unknown'),true);}catch(e){}
+        return false;
+      }
     }
     return true;
-  }catch(e){console.error('dbInit exception:',e);return false;}
+  }catch(e){
+    console.error('dbInit exception:',e);
+    try{toast('⚠️ خطأ في إنشاء البروفايل: '+(e.message||e),true);}catch(er){}
+    return false;
+  }
 }
 async function dbSave(payload){
   if(!currentUser)return false;
@@ -2886,7 +2899,7 @@ async function bootApp(session){
       document.getElementById('auth-screen').classList.remove('hidden');
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
-      if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.';
+      if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.<br/><small style="color:#999">[DBG: !allowed]</small>';
       const btn=document.getElementById('google-signin-btn');
       if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='تسجيل الدخول بحساب آخر';}
       return;
@@ -2897,7 +2910,7 @@ async function bootApp(session){
     document.getElementById('auth-screen').classList.remove('hidden');
     showAuthState('auth-login');
     const sub=document.querySelector('#auth-login .auth-sub');
-    if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
+    if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.<br/><small style="color:#999">[DBG: '+(e.message||e)+']</small>';
     const btn=document.getElementById('google-signin-btn');
     if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='إعادة المحاولة';}
     return;
