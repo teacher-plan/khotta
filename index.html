@@ -1230,7 +1230,7 @@ input,textarea,select{font-size:16px !important;}
         <p style="color:var(--muted);font-size:12px;margin-bottom:14px">راجع البيانات قبل إنشاء حسابك. لو فيه خطأ، ارجع وعدله.</p>
         <div id="setup-summary-content" style="display:flex;flex-direction:column;gap:14px;"></div>
         <div style="background:rgba(240,192,96,.08);border:1px solid rgba(240,192,96,.2);border-radius:10px;padding:10px 14px;margin-top:14px;font-size:12px;line-height:1.7;color:var(--muted);">
-          💡 <strong>ملاحظة:</strong> بعد التأكيد سيتم رفع كل بياناتك إلى السحابة. يمكنك تعديل كل شيء لاحقاً من داخل التطبيق.
+          💡 <strong>ملاحظة:</strong> راجع بياناتك جيداً قبل التأكيد، فبعض الإعدادات لا يمكن تعديلها لاحقاً.
         </div>
       </div>
       <div class="setup-nav">
@@ -2736,7 +2736,9 @@ async function completeOnboard(){
     return;
   }
   displayName=name;
-  await dbSave({display_name:name,teacher_phone:phone});
+  // ربط رقم الهاتف بـ قسم السلوك أيضاً (مفتاح localStorage)
+  try{localStorage.setItem('behaviorTeacherPhone',phone);}catch(e){}
+  await dbSave({display_name:name,teacher_phone:phone,behavior_teacher_phone:phone});
   document.getElementById('auth-screen').classList.add('hidden');
   showSetupScreen();
 }
@@ -3895,6 +3897,9 @@ function showApp(data){
     behaviorViolations=data.behavior_violations||{};
     if(data.behavior_teacher_phone){
       localStorage.setItem('behaviorTeacherPhone',data.behavior_teacher_phone);
+    }else if(data.teacher_phone){
+      // للمعلمين القدامى: لو فيه teacher_phone (من الإعداد) لكن behavior_teacher_phone فارغ، استخدمه
+      localStorage.setItem('behaviorTeacherPhone',data.teacher_phone);
     }
     if(data.behavior_admin_phone){
       behaviorAdminPhone=data.behavior_admin_phone;
@@ -6617,7 +6622,8 @@ const VIOLATION_TYPES=[
 function saveBehaviorPhone(){
   const phone=document.getElementById('behavior-teacher-phone').value.trim();
   localStorage.setItem('behaviorTeacherPhone',phone);
-  // حفظ في Supabase أيضاً
+  // مزامنة مع teacher_phone (الذي يستخدمه المشرف) — البقاء على نفس الرقم
+  if(profileCache)profileCache.teacher_phone=phone;
   scheduleSave();
 }
 
@@ -8873,7 +8879,7 @@ function scheduleSave(){
   _pendingSave=true;
   clearTimeout(saveTimer3);
   saveTimer3=setTimeout(()=>{
-    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   },400);
 }
 // حفظ فوري قبل إغلاق/تحديث الصفحة لمنع ضياع الدرجات
@@ -8882,7 +8888,7 @@ window.addEventListener('beforeunload',function(e){
     // البيانات أصلاً في الكاش (saveCacheImmediate)، لكن نحاول حفظ متزامن لـ Supabase أيضاً
     clearTimeout(saveTimer3);
     try{
-      const payload={plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''};
+      const payload={plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''};
       dbSave(payload);
     }catch(err){}
   }
@@ -8891,7 +8897,7 @@ window.addEventListener('beforeunload',function(e){
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='hidden'&&_pendingSave){
     clearTimeout(saveTimer3);
-    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   }
 });
 
