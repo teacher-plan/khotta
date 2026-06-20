@@ -3515,134 +3515,86 @@ async function parseStudentsFromPdfFile(file){
   await loadPdfJs();
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-  // جمع كل الصفوف من جميع الصفحات
-  const allRows=[]; // [{y, cells:[{x,w,text}]}]
-  for(let p=1;p<=pdf.numPages;p++){
-    const page=await pdf.getPage(p);
-    const tc=await page.getTextContent();
-    const lineMap={};
-    tc.items.forEach(it=>{
-      if(!it.str||!it.str.trim())return;
-      const y=Math.round(it.transform[5]/3)*3;
-      if(!lineMap[y])lineMap[y]=[];
-      lineMap[y].push({
-        x:it.transform[4],
-        w:(it.width||(it.str.length*5)),
-        text:it.str.trim()
-      });
+  const nameKW=['اسم الطالب','الاسم','اسم','السم','student name','student','name','اسماء','أسماء'];
+  const phoneKW=['رقم ولي الأمر','رقم ولي','ولي الأمر','ولي الامر','الهاتف النقال','رقم الهاتف','الجوال','الهاتف','جوال','هاتف','phone','mobile'];
+  function buildRows(tc){
+    const items=tc.items.filter(it=>it.str&&it.str.trim()).map(it=>({
+      x:it.transform[4],y:it.transform[5],w:(it.width||(it.str.length*5)),text:it.str.trim()
+    }));
+    items.sort((a,b)=>b.y-a.y);
+    const groups=[];
+    items.forEach(it=>{
+      let g=groups.find(grp=>Math.abs(grp.refY-it.y)<=4);
+      if(!g){g={refY:it.y,items:[]};groups.push(g);}
+      g.items.push(it);
     });
-    const ys=Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
-    ys.forEach(y=>{
-      const items=lineMap[y].sort((a,b)=>a.x-b.x);
-      // جمع items المتجاورة في خلية واحدة (مسافة < 8px)
+    return groups.map(g=>{
+      const sorted=g.items.sort((a,b)=>a.x-b.x);
       const cells=[];
-      items.forEach(it=>{
+      sorted.forEach(it=>{
         const last=cells[cells.length-1];
-        if(last&&(it.x-(last.x+last.w))<8){
-          last.text+=' '+it.text;
-          last.w=it.x+it.w-last.x;
-        }else{
-          cells.push({x:it.x,w:it.w,text:it.text});
-        }
+        if(last&&(it.x-(last.x+last.w))<8){last.text+=' '+it.text;last.w=it.x+it.w-last.x;}
+        else cells.push({x:it.x,w:it.w,text:it.text});
       });
-      allRows.push({y,cells});
+      return {y:g.refY,cells};
     });
   }
-  // ابحث في أول 20 سطر عن header
-  const nameKW=['اسم الطالب','الاسم','اسم','السم','الام','الاسم','student name','student','name','اسماء','أسماء'];
-  const phoneKW=['رقم ولي الأمر','رقم ولي','ولي الأمر','ولي الامر','الهاتف النقال','رقم الهاتف','الجوال','الهاتف','الجوّال','جوال','هاتف','رقم الجوال','phone','mobile'];
-  let nameX=null,phoneX=null,headerRowIdx=-1;
-  for(let i=0;i<Math.min(20,allRows.length);i++){
-    const cells=allRows[i].cells;
-    cells.forEach(cell=>{
-      // إزالة الكشيدة قبل المقارنة (كلمات مثل "الســـــــــم" → "السم")
+  let nameX=null,phoneX=null;
+  const page1=await pdf.getPage(1);
+  const rows1=buildRows(await page1.getTextContent());
+  for(let i=0;i<Math.min(25,rows1.length);i++){
+    rows1[i].cells.forEach(cell=>{
       const txt=cell.text.toLowerCase().replace(/\u0640/g,'').replace(/\s+/g,'').trim();
-      // الاسم: تطابق دقيق أو احتواء
-      if(nameX===null){
-        if(nameKW.some(kw=>txt===kw.replace(/\s+/g,'')||txt.includes(kw.replace(/\s+/g,'')))){
-          nameX=cell.x+cell.w/2;
-          if(headerRowIdx<0)headerRowIdx=i;
-        }
-      }
-      // الهاتف
-      if(phoneX===null){
-        if(phoneKW.some(kw=>txt===kw.replace(/\s+/g,'')||txt.includes(kw.replace(/\s+/g,'')))){
-          phoneX=cell.x+cell.w/2;
-          if(headerRowIdx<0)headerRowIdx=i;
-        }
-      }
+      if(nameX===null&&nameKW.some(kw=>txt.includes(kw.replace(/\s+/g,''))))nameX=cell.x+cell.w/2;
+      if(phoneX===null&&phoneKW.some(kw=>txt.includes(kw.replace(/\s+/g,''))))phoneX=cell.x+cell.w/2;
     });
     if(nameX!==null&&phoneX!==null)break;
   }
-  // ── Fallback ذكي: لو لم نجد عمود الاسم في الـ header، ابحث عن أول صف فيه اسم عربي طويل ──
   if(nameX===null){
-    for(let i=0;i<allRows.length;i++){
-      const cells=allRows[i].cells;
-      // ابحث عن خلية فيها اسم عربي طويل (3+ كلمات أو فيها "بن"/"بنت")
-      const nameCandidate=cells.find(cell=>{
+    for(const row of rows1){
+      const cand=row.cells.find(cell=>{
         const t=cell.text.replace(/\s+/g,' ').trim();
-        if(t.length<10||t.length>80)return false;
-        if(!/[\u0600-\u06FF]/.test(t))return false;
-        const arabicWords=t.split(/\s+/).filter(w=>/[\u0600-\u06FF]/.test(w));
-        // اسم: 3+ كلمات عربية أو فيها "بن"/"بنت"
-        return arabicWords.length>=3||/\sبن\s|\sبنت\s/.test(' '+t+' ');
+        if(t.length<10||t.length>80||!/[\u0600-\u06FF]/.test(t))return false;
+        const words=t.split(/\s+/).filter(w=>/[\u0600-\u06FF]/.test(w));
+        return words.length>=3||/\sبن\s|\sبنت\s/.test(' '+t+' ');
       });
-      if(nameCandidate){
-        nameX=nameCandidate.x+nameCandidate.w/2;
-        headerRowIdx=i-1; // ابدأ القراءة من هذا الصف نفسه (وليس بعده)
-        // ابحث عن عمود هاتف في نفس الصف: خلية فيها 8 أرقام تبدأ بـ 7 أو 9
-        const phoneCandidate=cells.find(cell=>{
-          const digits=cell.text.replace(/\D/g,'');
-          return /^[79]\d{7}$/.test(digits)||/^\d{8,15}$/.test(digits);
-        });
-        if(phoneCandidate)phoneX=phoneCandidate.x+phoneCandidate.w/2;
+      if(cand){
+        nameX=cand.x+cand.w/2;
+        const ph=row.cells.find(c=>/^[79]\d{7}$/.test(c.text.replace(/\D/g,'')));
+        if(ph)phoneX=ph.x+ph.w/2;
         break;
       }
     }
   }
   if(nameX===null)throw new Error('لم يتم العثور على عمود الاسم في PDF');
-  // استخرج البيانات: لكل صف بعد header، خلية الاسم وخلية الهاتف
+  const headerExact=new Set(['الاسم','اسم','السم','اسمالطالب','الرقمالمدرسي','الهاتفالنقال','رقمالهاتف','الجوال','هاتف','جوال','الجنسية','حالةالقيد','المنطقةالسكنية','رقمالصفحة','رمزالمدرسة']);
+  const TOL=55;
   const list=[];
-  const seenNames=new Set();
-  const TOLERANCE=60; // px - أقصى مسافة بين مركز الخلية و مركز العمود
-  for(let i=headerRowIdx+1;i<allRows.length;i++){
-    const cells=allRows[i].cells;
-    if(!cells.length)continue;
-    let nameCell=null,phoneCell=null;
-    let bestNameDist=Infinity,bestPhoneDist=Infinity;
-    cells.forEach(cell=>{
-      const cx=cell.x+cell.w/2;
-      const nameDist=Math.abs(cx-nameX);
-      if(nameDist<bestNameDist&&nameDist<TOLERANCE){
-        bestNameDist=nameDist;
-        nameCell=cell;
-      }
-      if(phoneX!==null){
-        const phoneDist=Math.abs(cx-phoneX);
-        if(phoneDist<bestPhoneDist&&phoneDist<TOLERANCE){
-          bestPhoneDist=phoneDist;
-          phoneCell=cell;
-        }
-      }
+  const seen=new Set();
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const rows=buildRows(await page.getTextContent());
+    rows.forEach(row=>{
+      const cells=row.cells;
+      if(!cells.length)return;
+      const hasSchoolId=cells.some(c=>/\d{10,}/.test(c.text.replace(/\s/g,'')));
+      if(!hasSchoolId)return;
+      let nameCell=null,phoneCell=null,bN=Infinity,bP=Infinity;
+      cells.forEach(cell=>{
+        const cx=cell.x+cell.w/2;
+        const nd=Math.abs(cx-nameX);
+        if(nd<bN&&nd<TOL){bN=nd;nameCell=cell;}
+        if(phoneX!==null){const pd=Math.abs(cx-phoneX);if(pd<bP&&pd<TOL){bP=pd;phoneCell=cell;}}
+      });
+      if(!nameCell)return;
+      const name=nameCell.text.replace(/\s+/g,' ').trim();
+      if(name.length<4||name.length>80||!/[\u0600-\u06FF]/.test(name)||/^\d+$/.test(name))return;
+      const nameClean=name.replace(/\u0640/g,'').replace(/\s+/g,'');
+      if(headerExact.has(nameClean))return;
+      let phone='';
+      if(phoneCell){const d=phoneCell.text.replace(/\D/g,'');if(d.length>=7&&d.length<=15)phone=d;}
+      if(!seen.has(name)){seen.add(name);list.push({name,phone});}
     });
-    if(!nameCell)continue;
-    const name=nameCell.text.replace(/\s+/g,' ').trim();
-    if(name.length<4||name.length>80)continue;
-    // تجاوز الصفوف التي تحوي رقم فقط أو نص غير عربي
-    if(!/[\u0600-\u06FF]/.test(name))continue;
-    if(/^\d+$/.test(name))continue;
-    // تجاوز رؤوس متكررة في كل صفحة
-    if(nameKW.some(kw=>name.toLowerCase().includes(kw)))continue;
-    // استخراج الهاتف (أرقام فقط)
-    let phone='';
-    if(phoneCell){
-      const digits=phoneCell.text.replace(/\D/g,'');
-      if(digits.length>=7&&digits.length<=15)phone=digits;
-    }
-    if(!seenNames.has(name)){
-      seenNames.add(name);
-      list.push({name,phone});
-    }
   }
   if(!list.length)throw new Error('لم يتم العثور على أسماء — قد يكون PDF صورة');
   list.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
