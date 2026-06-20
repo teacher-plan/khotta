@@ -1266,10 +1266,26 @@ input,textarea,select{font-size:16px !important;}
   </div>
   <div class="user-menu-item" id="complete-setup-item" onclick="openCompleteStudentsSetup()" style="display:none;background:rgba(0,108,53,.08);color:var(--green2);font-weight:700"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg></span> إكمال الإعداد</div>
   <div class="user-menu-item" onclick="renameTeacher()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تغيير اسم الترحيب</div>
+  <div class="user-menu-item" onclick="openChangeSchoolModal()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></span> تغيير المدرسة</div>
   <div class="user-menu-item" id="notif-menu-item" onclick="requestNotifPermission()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> تفعيل الإشعارات</div>
 
   <div class="user-menu-item" onclick="signOut()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M10 9V5l-7 7 7 7v-4h8V9h-8zm6 10v2H3V3h13v2H5v14h11z"/></svg></span> تسجيل الخروج</div>
   <div class="user-menu-item danger" onclick="resetAllData()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 3v1H4v2h1l1 14h12l1-14h1V4h-5V3H9zm0 5h2l.5 8H9.5L9 8zm4 0h2l-.5 8h-2L13 8z"/></svg></span> حذف كل البيانات</div>
+</div>
+
+<!-- مودال تغيير المدرسة -->
+<div class="modal-bg" id="change-school-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:18px;padding:22px;width:100%;max-width:380px;max-height:85vh;overflow-y:auto">
+    <h3 style="margin-bottom:6px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="var(--gold)" width="18" height="18"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> تغيير المدرسة</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">اختيار مدرستك يسمح بنشر مخالفات السلوك تلقائياً لصفحة إدارتها</p>
+    <select id="change-school-select" style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;padding:11px;font-family:'Cairo',sans-serif;font-size:14px;color:var(--text);margin-bottom:16px">
+      <option value="">— بدون مدرسة —</option>
+    </select>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="modal-cancel" onclick="closeChangeSchoolModal()">إلغاء</button>
+      <button class="modal-save" onclick="saveChangedSchool()">حفظ ✅</button>
+    </div>
+  </div>
 </div>
 
 <!-- NAV -->
@@ -2811,6 +2827,40 @@ function showUserBadge(){
 function toggleUserMenu(e){e.stopPropagation();document.getElementById('user-menu').classList.toggle('show');}
 document.addEventListener('click',e=>{const m=document.getElementById('user-menu');if(m&&!m.contains(e.target)&&!e.target.closest('#user-badge'))m.classList.remove('show');});
 async function renameTeacher(){const newName=prompt('الاسم الجديد:',displayName||'');if(!newName||!newName.trim())return;displayName=newName.trim();await dbSave({display_name:displayName});showUserBadge();document.getElementById('user-menu').classList.remove('show');toast('✅ تم التحديث','ok');}
+
+// ── تغيير المدرسة من الإعدادات ──
+async function openChangeSchoolModal(){
+  document.getElementById('user-menu').classList.remove('show');
+  const sel=document.getElementById('change-school-select');
+  sel.innerHTML='<option value="">— بدون مدرسة —</option>';
+  try{
+    const{data,error}=await sb.from('schools').select('id,name').order('name');
+    if(!error&&data){
+      data.forEach(s=>{
+        const o=document.createElement('option');
+        o.value=s.id;o.textContent=s.name;
+        sel.appendChild(o);
+      });
+    }
+  }catch(e){}
+  const currentId=teacherConfig&&teacherConfig.school_id;
+  if(currentId)sel.value=String(currentId);
+  document.getElementById('change-school-modal-bg').style.display='flex';
+}
+function closeChangeSchoolModal(){
+  document.getElementById('change-school-modal-bg').style.display='none';
+}
+async function saveChangedSchool(){
+  const sel=document.getElementById('change-school-select');
+  const schoolId=sel.value;
+  const schoolName=schoolId?sel.options[sel.selectedIndex].textContent:'';
+  if(!teacherConfig)teacherConfig={};
+  teacherConfig.school_id=schoolId||null;
+  teacherConfig.school_name=schoolName||'';
+  await dbSave({teacher_config:teacherConfig});
+  closeChangeSchoolModal();
+  toast(schoolId?`✅ تم ربط حسابك بمدرسة "${schoolName}"`:'✅ تم إلغاء ربط المدرسة','ok');
+}
 function reopenSetup(){document.getElementById('user-menu').classList.remove('show');showSetupScreen();}
 
 // نقطة الدخول: تنتظر تسجيل دخول Google عبر Supabase
@@ -6747,6 +6797,70 @@ function loadBehaviorPhone(){
   loadBehaviorAdminPhone();
 }
 
+// ── قائمة نشر المخالفة المنبثقة ──
+function openPublishViolationMenu(studentId,btnEl){
+  closePublishViolationMenu();
+  const sel=document.getElementById(`vsel_${studentId}`);
+  if(!sel||!sel.value){toast('❌ اختر نوع المخالفة أولاً',true);return;}
+  const student=(behaviorStudents[activeBehaviorClass]||[]).find(s=>s.id===studentId);
+  const hasParentPhone=student&&student.phone;
+  const hasSchool=!!(teacherConfig&&teacherConfig.school_id);
+  const menu=document.createElement('div');
+  menu.id='publish-violation-menu';
+  menu.style.cssText='position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;gap:4px;min-width:200px';
+  const rect=btnEl.getBoundingClientRect();
+  let top=rect.bottom+6,left=rect.left;
+  if(left+200>window.innerWidth)left=window.innerWidth-210;
+  menu.style.top=top+'px';menu.style.left=left+'px';
+  menu.innerHTML=`
+    <button onclick="sendViolationWA('${studentId}');closePublishViolationMenu()" ${!hasParentPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''} style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;border:none;background:transparent;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:${hasParentPhone?'var(--text)':'var(--muted)'};text-align:right;width:100%;opacity:${hasParentPhone?'1':'.5'}">
+      <svg viewBox="0 0 24 24" fill="#25D366" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785a9.87 9.87 0 0 1-5.031-1.378l-3.741.982.998-3.648a9.86 9.86 0 0 1-1.51-5.26C2.766 6.94 7.4 2.505 12.05 2.505c5.45 0 9.884 4.434 9.886 9.884-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+      إرسال لولي الأمر
+    </button>
+    <button onclick="sendViolationAdminWA('${studentId}');closePublishViolationMenu()" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;border:none;background:transparent;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:var(--text);text-align:right;width:100%">
+      <svg viewBox="0 0 24 24" fill="#25D366" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785a9.87 9.87 0 0 1-5.031-1.378l-3.741.982.998-3.648a9.86 9.86 0 0 1-1.51-5.26C2.766 6.94 7.4 2.505 12.05 2.505c5.45 0 9.884 4.434 9.886 9.884-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+      واتساب الإدارة
+    </button>
+    ${hasSchool?`
+    <button onclick="sendViolationToSchoolPage('${studentId}');closePublishViolationMenu()" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;border:none;background:rgba(184,134,11,.1);cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:var(--gold);text-align:right;width:100%">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+      نشر إلى صفحة الإدارة
+    </button>`:''}
+  `;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',closePublishViolationMenuOutside),0);
+}
+function closePublishViolationMenuOutside(e){
+  const menu=document.getElementById('publish-violation-menu');
+  if(menu&&!menu.contains(e.target))closePublishViolationMenu();
+}
+function closePublishViolationMenu(){
+  const menu=document.getElementById('publish-violation-menu');
+  if(menu)menu.remove();
+  document.removeEventListener('click',closePublishViolationMenuOutside);
+}
+// إرسال واتساب للإدارة فقط (بدون تسجيل في صفحة المدرسة)
+function sendViolationAdminWA(studentId){
+  sendViolationAdmin(studentId);
+}
+// نشر فقط لصفحة الإدارة (بدون فتح واتساب)
+function sendViolationToSchoolPage(studentId){
+  const sel=document.getElementById(`vsel_${studentId}`);
+  if(!sel||!sel.value){toast('❌ اختر نوع المخالفة أولاً',true);return;}
+  const cls=activeBehaviorClass;
+  const student=(behaviorStudents[cls]||[]).find(s=>s.id===studentId);
+  if(!student)return;
+  const clsLabel=getAllClasses2().find(c=>c.id===cls)?.label||cls;
+  const violation=sel.value;
+  if(!behaviorViolations[studentId])behaviorViolations[studentId]=[];
+  behaviorViolations[studentId].push({type:violation,date:new Date().toISOString(),sentToSchool:true});
+  saveBehaviorData();
+  updateBehaviorStats();
+  renderBehaviorTable();
+  pushViolationToSchool(student.name,cls,clsLabel,violation);
+  toast('✅ تم نشر المخالفة إلى صفحة الإدارة','ok');
+}
+
 function sendViolationAdmin(studentId){
   const adminPhone=behaviorAdminPhone||'';
   if(!adminPhone){toast('❌ أدخل رقم واتساب الإدارة أولاً في الأعلى',true);return;}
@@ -6972,15 +7086,9 @@ function renderBehaviorTable(){
         </select>
       </td>
       <td>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
-          <button class="send-wa-btn" onclick="sendViolationWA('${s.id}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''}
-            style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 10px;white-space:nowrap">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> ولي
-          </button>
-          <button class="send-admin-btn" onclick="sendViolationAdmin('${s.id}')" style="display:flex;align-items:center;gap:3px;font-size:10px;padding:4px 10px;background:rgba(192,57,43,.1);border:1px solid var(--red);color:var(--red);border-radius:99px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;white-space:nowrap">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> إدارة
-          </button>
-        </div>
+        <button class="send-admin-btn" onclick="openPublishViolationMenu('${s.id}',this)" style="display:flex;align-items:center;gap:4px;font-size:10.5px;padding:6px 12px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:#fff;border-radius:99px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;white-space:nowrap">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> نشر المخالفة
+        </button>
       </td>
       <td>
         <button class="send-grades-btn" onclick="sendStudentGradesWA('${s.id}','${activeBehaviorClass}')" ${!hasPhone?'disabled title="أدخل رقم ولي الأمر أولاً"':''} style="display:flex;align-items:center;gap:4px;font-size:10px;padding:4px 10px">
