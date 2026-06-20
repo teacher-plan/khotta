@@ -2268,7 +2268,7 @@ input,textarea,select{font-size:16px !important;}
     <!-- نوع المحتوى -->
     <label>نوع المحتوى *</label>
     <select id="lib-type" onchange="toggleLibContentType(this.value)">
-      <option value="folder">📁 مجلد (رابط خارجي)</option>
+      <option value="folder">📁 مجلد (تضيف بداخله لاحقاً)</option>
       <option value="file">📄 ملف (رابط خارجي)</option>
       <option value="pdf">📑 PDF (رفع من الجهاز)</option>
       <option value="youtube">🎬 فيديو يوتيوب</option>
@@ -6105,14 +6105,32 @@ function printGradesSheet(){
   `;
   setTimeout(()=>{window.print();document.getElementById('print-grades-area').style.display='none';},200);
 }
+// تطبيع الاسم للبحث: إزالة بن/بنت/ابن، توحيد الهمزات، تقسيم لكلمات
+function normalizeForSearch(s){
+  return (s||'')
+    .toLowerCase()
+    .replace(/[أإآ]/g,'ا')
+    .replace(/ى/g,'ي')
+    .replace(/ة/g,'ه')
+    .replace(/[ـًٌٍَُِّْ]/g,'') // كشيدة وتشكيل
+    .replace(/\bبنت\b|\bابن\b|\bبن\b/g,' ') // كلمات النسب
+    .replace(/\s+/g,' ')
+    .trim();
+}
+// هل كل كلمات البحث موجودة في الاسم (بأي ترتيب)؟
+function smartNameMatch(name, query){
+  const nName=normalizeForSearch(name);
+  const nQuery=normalizeForSearch(query);
+  if(!nQuery)return true;
+  const qWords=nQuery.split(' ').filter(w=>w);
+  return qWords.every(w=>nName.includes(w));
+}
 function filterGradesSearch(q){
   const rows=document.querySelectorAll('#grades-table-body tr');
-  const term=q.trim().toLowerCase();
   rows.forEach(row=>{
     const nameCell=row.querySelector('td:nth-child(2)');
     if(!nameCell){row.style.display='';return;}
-    const name=nameCell.textContent.toLowerCase();
-    row.style.display=(!term||name.includes(term))?'':'none';
+    row.style.display=smartNameMatch(nameCell.textContent,q)?'':'none';
   });
 }
 function escapeHTML(s){
@@ -6773,11 +6791,10 @@ function switchBehaviorClass(id){
 
 function filterBehaviorSearch(q){
   const rows=document.querySelectorAll('.behavior-table tbody tr');
-  const term=q.trim().toLowerCase();
   rows.forEach(row=>{
     const nameCell=row.querySelector('td:nth-child(2)');
     if(!nameCell){row.style.display='';return;}
-    row.style.display=(!term||nameCell.textContent.toLowerCase().includes(term))?'':'none';
+    row.style.display=smartNameMatch(nameCell.textContent,q)?'':'none';
   });
 }
 function renderViolationsLog(){
@@ -9039,7 +9056,8 @@ function toggleLibGeneralMode(isGeneral){
 }
 
 function toggleLibContentType(type){
-  document.getElementById('lib-url-field').style.display=(type==='folder'||type==='file')?'block':'none';
+  // المجلد لا يحتاج رابطاً (تُضاف الروابط بداخله لاحقاً)
+  document.getElementById('lib-url-field').style.display=(type==='file')?'block':'none';
   document.getElementById('lib-pdf-field').style.display=type==='pdf'?'block':'none';
   document.getElementById('lib-yt-field').style.display=type==='youtube'?'block':'none';
 }
@@ -9079,8 +9097,10 @@ async function saveLibraryLink(){
   if(!title){toast('يرجى إدخال العنوان',true);return;}
   if(!isGeneral&&(!subject||!grade)){toast('يرجى تحديد المادة والصف',true);return;}
   let url='';
-  // رفع PDF
-  if(lnkType==='pdf'){
+  // المجلد لا يحتاج رابطاً (تُضاف الروابط بداخله)
+  if(lnkType==='folder'){
+    url='';
+  } else if(lnkType==='pdf'){
     const file=document.getElementById('lib-pdf-input').files[0];
     if(!file){toast('يرجى اختيار ملف PDF',true);return;}
     if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB',true);return;}
