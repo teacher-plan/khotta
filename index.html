@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>خطتي الفصلية</title>
 <link rel="manifest" href="/khotta/manifest.json"/>
 <link rel="apple-touch-icon" href="/khotta/khottah_icon_180.png"/>
@@ -22,6 +22,16 @@
 /* تحسين عرض الخطوط أثناء التحميل */
 @font-face{font-family:'Cairo';font-display:swap;}
 @font-face{font-family:'Tajawal';font-display:swap;}
+/* ══ تحسينات الموبايل ══ */
+*{-webkit-tap-highlight-color:transparent;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
+/* منع تكبير iOS عند التركيز على الحقول (الخط 16px على الموبايل فقط) */
+@media(max-width:767px){
+  input,select,textarea{font-size:16px !important;}
+}
+/* تحسين التمرير داخل الـ modals والجداول */
+.modal,.table-wrap,[id$="-content"]{-webkit-overflow-scrolling:touch;}
 :root{
   --bg:#f4f0eb;--surface:#fff;--card:#f9f6f2;--border:#d8ccc4;
   --gold:#b8860b;--gold2:#9a7010;--red:#c0392b;--red2:#e74c3c;--g1:#1a7a3a;--g2:#27ae60;--g3:#1a5a2a;
@@ -124,7 +134,7 @@ body{background-image:var(--subject-glow,none),linear-gradient(var(--grid-color)
 .setup-btn:hover{opacity:.85;}
 
 /* ══ NAV ══ */
-.nav{position:sticky;top:0;z-index:100;background:var(--bg);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;padding:8px 14px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;transition:background .3s;white-space:nowrap;flex-wrap:nowrap;}
+.nav{position:sticky;top:0;z-index:100;background:var(--bg);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;padding:8px 14px;padding-top:max(8px,env(safe-area-inset-top));overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;transition:background .3s;white-space:nowrap;flex-wrap:nowrap;}
 .nav::-webkit-scrollbar{display:none;}
 .nav-btn{padding:8px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;}
 .nav-btn:hover{border-color:var(--gold);color:var(--gold);}
@@ -8837,7 +8847,6 @@ function updateCurrentClassBanner(){
   checkReminders();
 }
 function checkReminders(){if(!remindersConfig.enabled)return;const dayKey=currentDayKey();const daySched=(timetableConfig&&timetableConfig.schedule[dayKey])||{};const now=nowMins();timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start);const classKey=daySched[idx];if(s===null||!classKey)return;const diff=s-now;const target=remindersConfig.minutes||10;if(diff===target||diff===target-1){const key=`${dayKey}_${idx}_${new Date().toDateString()}`;if(reminderState[key])return;reminderState[key]=true;fireReminder(p,classKey,diff);}});}
-function fireReminder(period,classKey,diff){const cls=classConfig[classKey];const name=cls?cls.name:classKey;const msg=`حصة ${name} تبدأ بعد ${diff} دقيقة`;document.getElementById('reminder-text').textContent=msg;document.getElementById('reminder-toast').classList.add('show');if('Notification' in window&&Notification.permission==='granted'){try{new Notification('تذكير حصة 🔔',{body:msg});}catch(e){}}if(navigator.vibrate)navigator.vibrate([200,100,200]);}
 function dismissReminder(){document.getElementById('reminder-toast').classList.remove('show');}
 function loadRemindersUI(){const t=document.getElementById('rs-toggle');t.classList.toggle('on',remindersConfig.enabled);document.getElementById('rs-mins').value=remindersConfig.minutes||10;}
 function toggleReminders(){remindersConfig.enabled=!remindersConfig.enabled;document.getElementById('rs-toggle').classList.toggle('on',remindersConfig.enabled);if(remindersConfig.enabled&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ تم تفعيل التذكيرات','ok');else toast('🔔 التذكيرات داخل الصفحة فقط');});}else{toast(remindersConfig.enabled?'✅ تم التفعيل':'❌ تم الإيقاف',remindersConfig.enabled?'ok':false);}scheduleSave();}
