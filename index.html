@@ -2050,6 +2050,9 @@ input,textarea,select{font-size:16px !important;}
         <input id="school-pass-inp" type="text" placeholder="كلمة المرور" dir="ltr" style="flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;text-align:right"/>
         <button class="grade-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;white-space:nowrap" onclick="genSchoolPassword()">🎲 توليد</button>
       </div>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">الصفوف التي تدرّسها المدرسة *</label>
+      <div id="school-grades-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;margin-bottom:12px"></div>
+      <div id="school-sections-wrap" style="margin-bottom:10px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="modal-cancel" onclick="toggleNewSchoolForm()">إلغاء</button>
         <button class="modal-save" id="school-save-btn" onclick="saveSchool()">حفظ المدرسة ✅</button>
@@ -9019,8 +9022,52 @@ function toggleNewSchoolForm(){
     document.getElementById('school-name-inp').value='';
     document.getElementById('school-user-inp').value='';
     document.getElementById('school-pass-inp').value='';
+    buildSchoolGradesGrid();
+    document.getElementById('school-sections-wrap').innerHTML='';
     document.getElementById('school-name-inp').focus();
   }
+}
+// بناء مربعات اختيار الصفوف 1-12
+function buildSchoolGradesGrid(){
+  const grid=document.getElementById('school-grades-grid');
+  const gradeNames={1:'الأول',2:'الثاني',3:'الثالث',4:'الرابع',5:'الخامس',6:'السادس',7:'السابع',8:'الثامن',9:'التاسع',10:'العاشر',11:'الحادي عشر',12:'الثاني عشر'};
+  let html='';
+  for(let g=1;g<=12;g++){
+    html+=`<button type="button" class="school-grade-chip" data-grade="${g}" onclick="toggleSchoolGrade(${g},this)" style="background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:8px 4px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s">${gradeNames[g]}</button>`;
+  }
+  grid.innerHTML=html;
+}
+// عند اختيار/إلغاء صف
+function toggleSchoolGrade(grade,btn){
+  const selected=btn.classList.toggle('sel');
+  if(selected){
+    btn.style.background='linear-gradient(135deg,#1a7a3a,#27ae60)';
+    btn.style.color='#fff';
+    btn.style.borderColor='#1a7a3a';
+  }else{
+    btn.style.background='var(--surface)';
+    btn.style.color='var(--text)';
+    btn.style.borderColor='var(--border)';
+  }
+  rebuildSchoolSections();
+}
+// بناء حقول عدد الشعب لكل صف مختار
+function rebuildSchoolSections(){
+  const wrap=document.getElementById('school-sections-wrap');
+  const selectedGrades=[...document.querySelectorAll('.school-grade-chip.sel')].map(b=>parseInt(b.dataset.grade)).sort((a,b)=>a-b);
+  if(!selectedGrades.length){wrap.innerHTML='';return;}
+  const gradeNames={1:'الأول',2:'الثاني',3:'الثالث',4:'الرابع',5:'الخامس',6:'السادس',7:'السابع',8:'الثامن',9:'التاسع',10:'العاشر',11:'الحادي عشر',12:'الثاني عشر'};
+  let html='<label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">عدد الشعب لكل صف *</label>';
+  selectedGrades.forEach(g=>{
+    // احتفظ بالقيمة السابقة إن وُجدت
+    const prevInput=document.getElementById('school-sec-'+g);
+    const prevVal=prevInput?prevInput.value:'';
+    html+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+      <span style="flex:1;font-size:13px;font-weight:700">الصف ${gradeNames[g]}</span>
+      <input id="school-sec-${g}" type="number" min="1" max="20" value="${prevVal||''}" placeholder="عدد الشعب" dir="ltr" style="width:110px;background:var(--card);border:1.5px solid var(--border);border-radius:6px;padding:7px;font-family:'Cairo',sans-serif;font-size:13px;text-align:center"/>
+    </div>`;
+  });
+  wrap.innerHTML=html;
 }
 function genSchoolPassword(){
   // توليد كلمة مرور سهلة القراءة (أحرف + أرقام، بدون التباس)
@@ -9038,10 +9085,22 @@ async function saveSchool(){
   if(!username||username.length<3){toast('اسم المستخدم 3 أحرف على الأقل',true);return;}
   if(!/^[a-z0-9_]+$/.test(username)){toast('اسم المستخدم: أحرف إنجليزية وأرقام فقط',true);return;}
   if(!password||password.length<4){toast('كلمة المرور 4 أحرف على الأقل',true);return;}
+  // جمع الصفوف والشعب
+  const selectedGrades=[...document.querySelectorAll('.school-grade-chip.sel')].map(b=>parseInt(b.dataset.grade)).sort((a,b)=>a-b);
+  if(!selectedGrades.length){toast('اختر صفاً واحداً على الأقل',true);return;}
+  const structure={};
+  for(const g of selectedGrades){
+    const inp=document.getElementById('school-sec-'+g);
+    const count=parseInt(inp?inp.value:0);
+    if(!count||count<1){toast(`أدخل عدد الشعب للصف ${g}`,true);if(inp)inp.focus();return;}
+    // بناء أسماء الشعب: 5/1، 5/2...
+    structure[g]=[];
+    for(let s=1;s<=count;s++)structure[g].push(`${g}/${s}`);
+  }
   const btn=document.getElementById('school-save-btn');
   btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';
   try{
-    const{error}=await sb.from('schools').insert({name,username,password,created_by:currentUser.email});
+    const{error}=await sb.from('schools').insert({name,username,password,structure,created_by:currentUser.email});
     if(error){
       if(error.code==='23505'||(error.message||'').includes('duplicate')){
         toast('❌ اسم المستخدم مستخدم من قبل، اختر غيره',true);
@@ -9080,7 +9139,15 @@ function renderSchoolsList(){
     list.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">📭 لا توجد مدارس بعد<br><small>اضغط "مدرسة جديدة" لإضافة أول مدرسة</small></div>';
     return;
   }
-  list.innerHTML=_schoolsList.map((s,i)=>`
+  list.innerHTML=_schoolsList.map((s,i)=>{
+    // ملخص الصفوف والشعب
+    let structInfo='';
+    if(s.structure&&Object.keys(s.structure).length){
+      const grades=Object.keys(s.structure).sort((a,b)=>parseInt(a)-parseInt(b));
+      const totalSections=grades.reduce((sum,g)=>sum+(s.structure[g]||[]).length,0);
+      structInfo=`<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">📚 ${grades.length} صفوف · ${totalSections} شعبة (${grades.map(g=>`الصف ${g}: ${(s.structure[g]||[]).length}`).join('، ')})</div>`;
+    }
+    return `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
         <div style="font-weight:800;color:var(--text);font-size:15px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="var(--gold)" width="16" height="16"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> ${i+1}. ${escHtml(s.name)}</div>
@@ -9090,9 +9157,10 @@ function renderSchoolsList(){
         <span style="color:var(--muted)">المستخدم:</span><strong dir="ltr" style="text-align:right;font-family:monospace">${escHtml(s.username)}</strong>
         <span style="color:var(--muted)">كلمة المرور:</span><strong dir="ltr" style="text-align:right;font-family:monospace">${escHtml(s.password)}</strong>
       </div>
+      ${structInfo}
       <button class="grade-btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="copySchoolCreds('${escHtml(s.username).replace(/'/g,"\\'")}','${escHtml(s.password).replace(/'/g,"\\'")}','${escHtml(s.name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg> نسخ بيانات الدخول</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 async function deleteSchool(id,name){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
