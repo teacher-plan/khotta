@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#1a7a3a"/>
+<title>إدارة المدرسة — خطتي الفصلية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#f4f0eb;--surface:#fff;--card:#f9f6f2;--border:#d8ccc4;
+  --green:#1a7a3a;--green2:#27ae60;--gold:#b8860b;--red:#c0392b;--red2:#e74c3c;
+  --text:#2a1a1a;--muted:#7a6060;
+}
+html{-webkit-text-size-adjust:100%;}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior-y:contain;
+  background-image:linear-gradient(rgba(26,122,58,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,122,58,.04) 1px,transparent 1px);background-size:36px 36px;}
+@media(max-width:767px){input,select{font-size:16px !important;}}
+
+/* ══ شاشة الدخول ══ */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.08);}
+.login-logo{width:64px;height:64px;margin:0 auto 16px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:18px;display:flex;align-items:center;justify-content:center;}
+.login-title{text-align:center;font-size:22px;font-weight:900;margin-bottom:4px;}
+.login-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:24px;}
+.login-field{margin-bottom:14px;}
+.login-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700;}
+.login-field input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;transition:border .2s;}
+.login-field input:focus{border-color:var(--green);}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:10px;padding:13px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:opacity .2s;}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;}
+.login-err{background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:var(--red);border-radius:8px;padding:10px;font-size:13px;margin-bottom:14px;text-align:center;display:none;}
+
+/* ══ لوحة التحكم ══ */
+.dash{display:none;min-height:100vh;}
+.dash-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10;backdrop-filter:blur(10px);}
+.dash-school{font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px;}
+.dash-logout{background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 14px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.dash-body{max-width:900px;margin:0 auto;padding:20px;}
+
+/* بطاقات الإحصائيات */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;}
+.stat-num{font-size:28px;font-weight:900;color:var(--green);line-height:1;margin-bottom:6px;}
+.stat-num.red{color:var(--red);}
+.stat-num.gold{color:var(--gold);}
+.stat-label{font-size:12px;color:var(--muted);font-weight:700;}
+
+.section-title{font-size:16px;font-weight:800;margin:24px 0 12px;display:flex;align-items:center;gap:8px;}
+
+/* بطاقة الصف */
+.grade-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;}
+.grade-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .2s;gap:10px;}
+.grade-head:hover{background:var(--card);}
+.grade-name{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.grade-badge{background:var(--red);color:#fff;border-radius:99px;padding:3px 12px;font-size:13px;font-weight:800;min-width:32px;text-align:center;}
+.grade-badge.low{background:var(--green2);}
+.grade-badge.mid{background:var(--gold);}
+.grade-classes{display:none;border-top:1px solid var(--border);padding:8px;}
+.grade-classes.open{display:block;}
+
+/* صف الشعبة */
+.class-row{background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:transform .15s;}
+.class-row:last-child{margin-bottom:0;}
+.class-row:active{transform:scale(.99);}
+.class-row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.class-name{font-size:14px;font-weight:700;}
+.class-count{font-size:13px;font-weight:800;color:var(--red);}
+.class-top-violation{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* تفاصيل المخالفات */
+.violations-detail{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:none;}
+.violations-detail.open{display:block;}
+.viol-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.viol-item:last-child{border-bottom:none;}
+.viol-student{font-weight:700;}
+.viol-type{color:var(--red);font-size:12px;}
+.viol-meta{font-size:11px;color:var(--muted);}
+
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+.loading{text-align:center;color:var(--muted);padding:40px;}
+
+/* فلاتر */
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filters select{flex:1;min-width:130px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px;font-family:'Cairo',sans-serif;font-size:13px;color:var(--text);}
+</style>
+</head>
+<body>
+
+<!-- ══ شاشة الدخول ══ -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="#fff" width="32" height="32"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+    </div>
+    <div class="login-title">إدارة المدرسة</div>
+    <div class="login-sub">لوحة متابعة مخالفات الطلاب</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-field">
+      <label>اسم المستخدم</label>
+      <input type="text" id="login-user" dir="ltr" style="text-align:right" placeholder="اسم المستخدم" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>كلمة المرور</label>
+      <input type="password" id="login-pass" dir="ltr" style="text-align:right" placeholder="كلمة المرور" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- ══ لوحة التحكم ══ -->
+<div class="dash" id="dashboard">
+  <div class="dash-header">
+    <div class="dash-school" id="dash-school-name">
+      <svg viewBox="0 0 24 24" fill="var(--green)" width="20" height="20"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+      <span>—</span>
+    </div>
+    <button class="dash-logout" onclick="doLogout()">خروج</button>
+  </div>
+  <div class="dash-body">
+    <!-- إحصائيات -->
+    <div class="stats-row" id="stats-row"></div>
+    <!-- فلاتر -->
+    <div class="filters">
+      <select id="filter-period" onchange="renderDashboard()">
+        <option value="all">كل الفترات</option>
+        <option value="today">اليوم</option>
+        <option value="week">آخر 7 أيام</option>
+        <option value="month">آخر 30 يوم</option>
+      </select>
+      <select id="filter-type" onchange="renderDashboard()">
+        <option value="">كل أنواع المخالفات</option>
+      </select>
+    </div>
+    <!-- الصفوف -->
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="var(--gold)" width="18" height="18"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      المخالفات حسب الصفوف والشعب
+    </div>
+    <div id="grades-container"><div class="loading">⏳ جاري التحميل...</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let currentSchool=null;
+let allViolations=[];
+
+function escHtml(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+// ── حفظ الجلسة (تبقى الإدارة مسجّلة) ──
+function saveSession(school){try{localStorage.setItem('kh_admin_session',JSON.stringify({id:school.id,name:school.name,username:school.username}));}catch(e){}}
+function loadSession(){try{const r=localStorage.getItem('kh_admin_session');return r?JSON.parse(r):null;}catch(e){return null;}}
+function clearSession(){try{localStorage.removeItem('kh_admin_session');}catch(e){}}
+
+// ── تسجيل الدخول ──
+async function doLogin(){
+  const username=document.getElementById('login-user').value.trim().toLowerCase();
+  const password=document.getElementById('login-pass').value.trim();
+  const err=document.getElementById('login-err');
+  const btn=document.getElementById('login-btn');
+  err.style.display='none';
+  if(!username||!password){err.textContent='أدخل اسم المستخدم وكلمة المرور';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='⏳ جاري الدخول...';
+  try{
+    const{data,error}=await sb.from('schools').select('*').eq('username',username).maybeSingle();
+    if(error){err.textContent='تعذّر الاتصال، حاول مجدداً';err.style.display='block';return;}
+    if(!data||data.password!==password){
+      err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';err.style.display='block';
+      return;
+    }
+    currentSchool=data;
+    saveSession(data);
+    showDashboard();
+  }catch(e){
+    err.textContent='حدث خطأ، حاول مجدداً';err.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='دخول';
+  }
+}
+
+function doLogout(){
+  if(!confirm('تسجيل الخروج؟'))return;
+  clearSession();
+  currentSchool=null;allViolations=[];
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+// ── عرض اللوحة ──
+async function showDashboard(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.querySelector('#dash-school-name span').textContent=currentSchool.name;
+  await loadViolations();
+}
+
+async function loadViolations(){
+  const container=document.getElementById('grades-container');
+  container.innerHTML='<div class="loading">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('violations').select('*').eq('school_id',currentSchool.id).order('created_at',{ascending:false});
+    if(error){container.innerHTML='<div class="empty">❌ تعذّر تحميل البيانات</div>';return;}
+    allViolations=data||[];
+    // املأ فلتر الأنواع
+    const types=[...new Set(allViolations.map(v=>v.violation_type).filter(Boolean))];
+    const typeSel=document.getElementById('filter-type');
+    typeSel.innerHTML='<option value="">كل أنواع المخالفات</option>'+types.map(t=>`<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('');
+    renderDashboard();
+  }catch(e){
+    container.innerHTML='<div class="empty">❌ حدث خطأ</div>';
+  }
+}
+
+function getFilteredViolations(){
+  let v=allViolations;
+  const period=document.getElementById('filter-period').value;
+  const type=document.getElementById('filter-type').value;
+  if(period!=='all'){
+    const now=new Date();
+    let cutoff=new Date();
+    if(period==='today')cutoff.setHours(0,0,0,0);
+    else if(period==='week')cutoff.setDate(now.getDate()-7);
+    else if(period==='month')cutoff.setDate(now.getDate()-30);
+    v=v.filter(x=>new Date(x.created_at)>=cutoff);
+  }
+  if(type)v=v.filter(x=>x.violation_type===type);
+  return v;
+}
+
+function renderDashboard(){
+  const violations=getFilteredViolations();
+  renderStats(violations);
+  renderGrades(violations);
+}
+
+function renderStats(violations){
+  const total=violations.length;
+  const students=new Set(violations.map(v=>v.student_name)).size;
+  const classes=new Set(violations.map(v=>v.class_name)).size;
+  // أكثر نوع مخالفة
+  const typeCounts={};
+  violations.forEach(v=>{typeCounts[v.violation_type]=(typeCounts[v.violation_type]||0)+1;});
+  const topType=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card"><div class="stat-num red">${total}</div><div class="stat-label">إجمالي المخالفات</div></div>
+    <div class="stat-card"><div class="stat-num gold">${students}</div><div class="stat-label">طالب مخالف</div></div>
+    <div class="stat-card"><div class="stat-num">${classes}</div><div class="stat-label">شعبة</div></div>
+    <div class="stat-card"><div class="stat-num" style="font-size:15px;padding-top:6px">${topType?escHtml(topType[0]):'—'}</div><div class="stat-label">الأكثر تكراراً${topType?` (${topType[1]})`:''}</div></div>
+  `;
+}
+
+function renderGrades(violations){
+  const container=document.getElementById('grades-container');
+  if(!violations.length){
+    container.innerHTML='<div class="empty">📭 لا توجد مخالفات في هذه الفترة</div>';
+    return;
+  }
+  // تجميع حسب الصف ثم الشعبة
+  const byGrade={};
+  violations.forEach(v=>{
+    const grade=v.grade||'غير محدد';
+    const cls=v.class_name||'غير محدد';
+    if(!byGrade[grade])byGrade[grade]={};
+    if(!byGrade[grade][cls])byGrade[grade][cls]=[];
+    byGrade[grade][cls].push(v);
+  });
+  // ترتيب الصفوف رقمياً
+  const grades=Object.keys(byGrade).sort((a,b)=>{
+    const na=parseInt(a),nb=parseInt(b);
+    if(isNaN(na))return 1;if(isNaN(nb))return -1;
+    return na-nb;
+  });
+  let html='';
+  grades.forEach((grade,gi)=>{
+    const classes=byGrade[grade];
+    const gradeTotal=Object.values(classes).reduce((sum,arr)=>sum+arr.length,0);
+    const badgeClass=gradeTotal>=10?'':gradeTotal>=5?'mid':'low';
+    // ترتيب الشعب حسب عدد المخالفات (الأكثر أولاً)
+    const sortedClasses=Object.entries(classes).sort((a,b)=>b[1].length-a[1].length);
+    html+=`
+      <div class="grade-card">
+        <div class="grade-head" onclick="toggleGrade(${gi})">
+          <div class="grade-name">
+            <svg viewBox="0 0 24 24" fill="var(--green)" width="18" height="18"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+            الصف ${escHtml(grade)}
+          </div>
+          <div class="grade-badge ${badgeClass}">${gradeTotal}</div>
+        </div>
+        <div class="grade-classes" id="grade-${gi}">`;
+    sortedClasses.forEach(([cls,arr],ci)=>{
+      // أكثر مخالفة في الشعبة
+      const tc={};arr.forEach(v=>{tc[v.violation_type]=(tc[v.violation_type]||0)+1;});
+      const topV=Object.entries(tc).sort((a,b)=>b[1]-a[1])[0];
+      html+=`
+        <div class="class-row" onclick="toggleClass(${gi},${ci})">
+          <div class="class-row-head">
+            <div class="class-name">📋 ${escHtml(cls)}</div>
+            <div class="class-count">${arr.length} مخالفة</div>
+          </div>
+          ${topV?`<div class="class-top-violation">الأكثر: ${escHtml(topV[0])} (${topV[1]})</div>`:''}
+          <div class="violations-detail" id="viol-${gi}-${ci}">
+            ${arr.map(v=>`
+              <div class="viol-item">
+                <div>
+                  <div class="viol-student">${escHtml(v.student_name)}</div>
+                  <div class="viol-type">${escHtml(v.violation_type)}</div>
+                </div>
+                <div class="viol-meta">
+                  ${escHtml(v.teacher_name||'')}<br>
+                  ${formatDate(v.violation_date||v.created_at)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    });
+    html+='</div></div>';
+  });
+  container.innerHTML=html;
+  // افتح الصف الأول تلقائياً
+  if(grades.length)document.getElementById('grade-0').classList.add('open');
+}
+
+function toggleGrade(gi){
+  document.getElementById('grade-'+gi).classList.toggle('open');
+}
+function toggleClass(gi,ci){
+  event.stopPropagation();
+  const el=document.getElementById('viol-'+gi+'-'+ci);
+  if(el)el.classList.toggle('open');
+}
+
+function formatDate(d){
+  if(!d)return '';
+  try{
+    const date=new Date(d);
+    return date.toLocaleDateString('ar-OM',{day:'numeric',month:'short'});
+  }catch(e){return '';}
+}
+
+// Enter للدخول
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
+
+// استعادة الجلسة عند الفتح
+(async()=>{
+  const session=loadSession();
+  if(session&&session.id){
+    // تحقق أن المدرسة ما زالت موجودة
+    try{
+      const{data}=await sb.from('schools').select('*').eq('id',session.id).maybeSingle();
+      if(data){currentSchool=data;showDashboard();return;}
+    }catch(e){}
+    clearSession();
+  }
+})();
+</script>
+</body>
+</html>

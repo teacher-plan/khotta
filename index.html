@@ -1190,6 +1190,13 @@ input,textarea,select{font-size:16px !important;}
           <button class="class-chip-btn" id="sem-2" onclick="selectSemester('الفصل الثاني',this)">الفصل الثاني</button>
         </div>
       </div>
+      <div class="setup-card" id="school-select-card">
+        <h3>🏫 مدرستك (اختياري)</h3>
+        <p>اختر مدرستك لتصل مخالفات السلوك لإدارة المدرسة</p>
+        <select id="setup-school" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:11px;font-family:'Cairo',sans-serif;font-size:14px;color:var(--text)">
+          <option value="">— بدون مدرسة —</option>
+        </select>
+      </div>
       <div class="setup-card" id="grade-card" style="display:none">
         <h3>🏫 اختر الصفوف التي تدرّسها</h3>
         <p>يمكنك اختيار أكثر من صف</p>
@@ -1277,6 +1284,7 @@ input,textarea,select{font-size:16px !important;}
   <button class="nav-btn admin-only" data-page="users" onclick="showPage('users',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></span> المعلمون</button>
 
   <button class="nav-btn admin-only" data-page="analytics" onclick="showPage('analytics',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</button>
+  <button class="nav-btn admin-only" data-page="schools" onclick="showPage('schools',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></span> إدارة المدارس</button>
   <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
   <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
@@ -2018,6 +2026,38 @@ input,textarea,select{font-size:16px !important;}
     </div>
   </div>
 </div>
+
+<!-- ══ SCHOOLS MANAGEMENT (إدارة المدارس) ══ -->
+<div class="page" id="page-schools"><div class="wrap">
+  <div class="page-header">
+    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></span> إدارة المدارس</div>
+    <h1>المدارس المسجّلة</h1>
+    <p>أنشئ حساب دخول لكل مدرسة — تستخدمه الإدارة لمتابعة المخالفات</p>
+  </div>
+
+  <div class="admin-panel-card">
+    <div class="admin-panel-header">
+      <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> إضافة مدرسة جديدة</h3>
+      <button class="grade-btn" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;font-weight:700;display:flex;align-items:center;gap:6px" onclick="toggleNewSchoolForm()"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> مدرسة جديدة</button>
+    </div>
+    <div id="new-school-form" style="display:none;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">اسم المدرسة *</label>
+      <input id="school-name-inp" type="text" placeholder="مثال: مدرسة عبدالرحمن بن أبي بكر" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;margin-bottom:10px"/>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">اسم المستخدم (للدخول) *</label>
+      <input id="school-user-inp" type="text" placeholder="مثال: school6103" dir="ltr" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;margin-bottom:10px;text-align:right"/>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">كلمة المرور *</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="school-pass-inp" type="text" placeholder="كلمة المرور" dir="ltr" style="flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;text-align:right"/>
+        <button class="grade-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;white-space:nowrap" onclick="genSchoolPassword()">🎲 توليد</button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="modal-cancel" onclick="toggleNewSchoolForm()">إلغاء</button>
+        <button class="modal-save" id="school-save-btn" onclick="saveSchool()">حفظ المدرسة ✅</button>
+      </div>
+    </div>
+    <div id="schools-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+  </div>
+</div></div>
 
 <!-- ══ BEHAVIOR ══ -->
 <div class="page" id="page-behavior"><div class="wrap"><div style="max-width:760px;margin:0 auto;width:100%;">
@@ -3066,6 +3106,8 @@ function showSetupScreen(){
   document.getElementById('grade-card').style.display='none';
   document.getElementById('lessons-preview-card').style.display='none';
   document.querySelectorAll('#semester-grid .class-chip-btn').forEach(b=>b.classList.remove('sel'));
+  // تحميل قائمة المدارس في القائمة المنسدلة
+  loadSchoolsDropdown();
   // ── استعادة المسودة المحلية إن وُجدت ──
   setTimeout(()=>restoreSetupDraftIfExists(),200);
 }
@@ -3762,7 +3804,11 @@ async function finishSetup(){
     }
   }
   const allSubjects=[...new Set(grades.map(x=>x.subject))];
-  const config={grades,subjects:allSubjects,subject:allSubjects[0],semester:setupSemester,setupDone:true};
+  // المدرسة المختارة
+  const schoolSel=document.getElementById('setup-school');
+  const schoolId=schoolSel?schoolSel.value:'';
+  const schoolName=schoolSel&&schoolSel.value?schoolSel.options[schoolSel.selectedIndex].textContent:'';
+  const config={grades,subjects:allSubjects,subject:allSubjects[0],semester:setupSemester,setupDone:true,school_id:schoolId||null,school_name:schoolName||''};
   
   // تطبيق طلاب الشعب من Step 3 على students وbehaviorStudents
   Object.keys(_setupStudents).forEach(classId=>{
@@ -4010,6 +4056,7 @@ function showPage(id,btn){
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
+  if(id==='schools')loadSchools();
   if(id==='users'){loadAdminUsers();loadInvites();}
   if(id==='announcements'){loadAnnouncements();}
   if(id==='users')loadAdminUsers();
@@ -6733,6 +6780,8 @@ function sendViolationAdmin(studentId){
   saveBehaviorData();
   updateBehaviorStats();
   renderBehaviorTable();
+  // كتابة المخالفة في الجدول المشترك (لإدارة المدرسة)
+  pushViolationToSchool(student.name,cls,clsLabel,violation);
 
   const phone=adminPhone.replace(/[^0-9]/g,'');
   const encodedMsg=encodeURIComponent(msg);
@@ -6747,6 +6796,36 @@ function sendViolationAdmin(studentId){
 function saveBehaviorData(){
   // حفظ في Supabase (متزامن بين الأجهزة)
   scheduleSave();
+}
+
+// كتابة المخالفة في الجدول المشترك violations (تظهر لإدارة المدرسة)
+async function pushViolationToSchool(studentName,classId,classLabel,violationType){
+  // فقط إذا اختار المعلم مدرسة في الإعداد
+  const schoolId=teacherConfig&&teacherConfig.school_id;
+  if(!schoolId||!sb)return;
+  try{
+    // استخراج الصف من معرّف الشعبة أو من الـ label (مثل "5/1" → الصف 5)
+    let grade='';
+    const gradeMatch=(classLabel||'').match(/(\d+)\s*[\/\-]/);
+    if(gradeMatch)grade=gradeMatch[1];
+    else{
+      // محاولة من teacherConfig
+      for(const g of (teacherConfig.grades||[])){
+        if((g.classes||[]).some(c=>c.id===classId)){grade=String(g.num||g.grade||'');break;}
+      }
+    }
+    await sb.from('violations').insert({
+      school_id:schoolId,
+      teacher_email:currentUser?currentUser.email:'',
+      teacher_name:displayName||'',
+      student_name:studentName,
+      grade:grade,
+      class_name:classLabel||'',
+      violation_type:violationType,
+      subject:(teacherConfig&&teacherConfig.subject)||'',
+      violation_date:new Date().toISOString().slice(0,10)
+    });
+  }catch(e){/* صامت - لا نوقف تجربة المعلم لو فشلت الكتابة المشتركة */}
 }
 
 function loadBehaviorData(){
@@ -6976,6 +7055,8 @@ function sendViolationWA(studentId){
   saveBehaviorData();
   updateBehaviorStats();
   renderBehaviorTable();
+  // كتابة المخالفة في الجدول المشترك (لإدارة المدرسة)
+  pushViolationToSchool(student.name,cls,clsLabel,violation);
 
   // فتح واتساب - يكتشف تلقائياً الجهاز
   const phone=student.phone.replace(/[^0-9]/g,'');
@@ -8913,6 +8994,127 @@ document.addEventListener('visibilitychange',function(){
 // ══ TOAST ══════════════════════════════════════════════
 let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
+
+// ══ SCHOOLS MANAGEMENT (إدارة المدارس) ════════════════
+let _schoolsList=[];
+// تحميل المدارس في القائمة المنسدلة بإعداد المعلم
+async function loadSchoolsDropdown(){
+  const sel=document.getElementById('setup-school');
+  if(!sel||!sb)return;
+  try{
+    const{data,error}=await sb.from('schools').select('id,name').order('name');
+    if(error||!data)return;
+    const current=sel.value;
+    sel.innerHTML='<option value="">— بدون مدرسة —</option>'+data.map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+    // استعادة الاختيار السابق إن وُجد (من teacherConfig)
+    const savedId=(teacherConfig&&teacherConfig.school_id)||current||'';
+    if(savedId)sel.value=String(savedId);
+  }catch(e){/* صامت */}
+}
+function toggleNewSchoolForm(){
+  const f=document.getElementById('new-school-form');
+  const show=f.style.display==='none';
+  f.style.display=show?'block':'none';
+  if(show){
+    document.getElementById('school-name-inp').value='';
+    document.getElementById('school-user-inp').value='';
+    document.getElementById('school-pass-inp').value='';
+    document.getElementById('school-name-inp').focus();
+  }
+}
+function genSchoolPassword(){
+  // توليد كلمة مرور سهلة القراءة (أحرف + أرقام، بدون التباس)
+  const chars='abcdefghjkmnpqrstuvwxyz23456789';
+  let p='';
+  for(let i=0;i<8;i++)p+=chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('school-pass-inp').value=p;
+}
+async function saveSchool(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة المدارس',true);return;}
+  const name=document.getElementById('school-name-inp').value.trim();
+  const username=document.getElementById('school-user-inp').value.trim().toLowerCase();
+  const password=document.getElementById('school-pass-inp').value.trim();
+  if(!name){toast('يرجى إدخال اسم المدرسة',true);return;}
+  if(!username||username.length<3){toast('اسم المستخدم 3 أحرف على الأقل',true);return;}
+  if(!/^[a-z0-9_]+$/.test(username)){toast('اسم المستخدم: أحرف إنجليزية وأرقام فقط',true);return;}
+  if(!password||password.length<4){toast('كلمة المرور 4 أحرف على الأقل',true);return;}
+  const btn=document.getElementById('school-save-btn');
+  btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';
+  try{
+    const{error}=await sb.from('schools').insert({name,username,password,created_by:currentUser.email});
+    if(error){
+      if(error.code==='23505'||(error.message||'').includes('duplicate')){
+        toast('❌ اسم المستخدم مستخدم من قبل، اختر غيره',true);
+      }else{
+        toast('فشل الحفظ: '+error.message,true);
+      }
+      btn.disabled=false;btn.textContent='حفظ المدرسة ✅';
+      return;
+    }
+    toast('✅ تمت إضافة المدرسة','ok');
+    toggleNewSchoolForm();
+    loadSchools();
+  }catch(e){
+    toast('حدث خطأ أثناء الحفظ',true);
+  }finally{
+    btn.disabled=false;btn.textContent='حفظ المدرسة ✅';
+  }
+}
+async function loadSchools(){
+  const list=document.getElementById('schools-list');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('schools').select('*').order('created_at',{ascending:false});
+    if(error){list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ تعذّر التحميل</div>';return;}
+    _schoolsList=data||[];
+    renderSchoolsList();
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ حدث خطأ</div>';
+  }
+}
+function renderSchoolsList(){
+  const list=document.getElementById('schools-list');
+  if(!list)return;
+  if(!_schoolsList.length){
+    list.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">📭 لا توجد مدارس بعد<br><small>اضغط "مدرسة جديدة" لإضافة أول مدرسة</small></div>';
+    return;
+  }
+  list.innerHTML=_schoolsList.map((s,i)=>`
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div style="font-weight:800;color:var(--text);font-size:15px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="var(--gold)" width="16" height="16"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> ${i+1}. ${escHtml(s.name)}</div>
+        <button class="user-disable-btn" style="display:flex;align-items:center;gap:4px;flex-shrink:0" onclick="deleteSchool(${s.id},'${escHtml(s.name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
+      </div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;background:var(--surface);border-radius:8px;padding:10px">
+        <span style="color:var(--muted)">المستخدم:</span><strong dir="ltr" style="text-align:right;font-family:monospace">${escHtml(s.username)}</strong>
+        <span style="color:var(--muted)">كلمة المرور:</span><strong dir="ltr" style="text-align:right;font-family:monospace">${escHtml(s.password)}</strong>
+      </div>
+      <button class="grade-btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="copySchoolCreds('${escHtml(s.username).replace(/'/g,"\\'")}','${escHtml(s.password).replace(/'/g,"\\'")}','${escHtml(s.name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg> نسخ بيانات الدخول</button>
+    </div>
+  `).join('');
+}
+async function deleteSchool(id,name){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  if(!confirm(`حذف مدرسة "${name}"؟\nسيتم حذف جميع مخالفاتها أيضاً ولا يمكن التراجع.`))return;
+  try{
+    const{error}=await sb.from('schools').delete().eq('id',id);
+    if(error){toast('فشل الحذف: '+error.message,true);return;}
+    toast('🗑️ تم حذف المدرسة','ok');
+    loadSchools();
+  }catch(e){toast('حدث خطأ',true);}
+}
+function copySchoolCreds(username,password,name){
+  const txt=`🏫 ${name}\n\nرابط الدخول: ${location.origin}/admin.html\nاسم المستخدم: ${username}\nكلمة المرور: ${password}`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('✅ تم نسخ بيانات الدخول','ok')).catch(()=>toast('تعذّر النسخ',true));
+  }else{
+    // fallback
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');toast('✅ تم النسخ','ok');}catch(e){toast('تعذّر النسخ',true);}
+    document.body.removeChild(ta);
+  }
+}
 
 // ══ LIBRARY ════════════════════════════════════════════
 const ADMIN_EMAIL='teacherplane2026project@gmail.com';
