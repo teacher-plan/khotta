@@ -229,7 +229,30 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 .celebration-banner{background:linear-gradient(135deg,var(--sun),var(--sun2));border-radius:18px;padding:18px;text-align:center;color:#fff;margin-bottom:16px;box-shadow:0 8px 22px rgba(255,179,0,.3);}
 .celebration-banner .ctitle{font-family:'Baloo Bhaijaan 2',sans-serif;font-size:17px;font-weight:800;}
 </style>
-</head>
+<style>
+/* ══ إعداد متعدد الخطوات (نُسخ من بنية الموقع الأساسي) ══ */
+.setup-progress{display:flex;justify-content:center;gap:6px;margin-bottom:18px;}
+.setup-progress span{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .25s;}
+.setup-progress span.active{background:var(--sky);width:22px;border-radius:99px;}
+.setup-progress span.done{background:var(--mint2);}
+.grade-multi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px;}
+.grade-tabs-row{display:flex;gap:7px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;}
+.grade-tab-chip{flex-shrink:0;padding:9px 16px;border-radius:99px;background:var(--bg);border:2px solid var(--border);font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap;}
+.grade-tab-chip.active{background:linear-gradient(135deg,var(--sky),var(--sky2));border-color:var(--sky2);color:#fff;}
+.class-upload-row{background:var(--bg);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.class-upload-row .cname{font-size:13px;font-weight:800;color:var(--ink);}
+.class-upload-row .cstat{font-size:10.5px;color:var(--muted);font-weight:700;}
+.class-upload-row .cstat.ok{color:var(--mint2);}
+.upload-mini-btn{background:var(--card);border:1.5px dashed var(--border);border-radius:9px;padding:6px 10px;font-size:10.5px;font-weight:700;color:var(--sky2);position:relative;cursor:pointer;}
+.upload-mini-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.setup-summary-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+.setup-summary-row b{font-weight:800;color:var(--ink);}
+/* اختيار الشعبة عند تعدد الشعب لنفس المادة */
+.class-pick-grid{display:flex;flex-wrap:wrap;gap:9px;}
+.class-pick-card{background:var(--card);border-radius:14px;padding:14px;text-align:center;min-width:90px;flex:1;box-shadow:0 4px 14px rgba(45,49,66,.05);}
+.class-pick-card .cname{font-size:14px;font-weight:800;color:var(--ink);}
+.class-pick-card .ccount{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:3px;}
+</style>
 <body>
 
 <!-- ══ شاشة الدخول ══ -->
@@ -238,29 +261,22 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
     <div class="mascot-wrap">
       <svg viewBox="0 0 200 200" id="mascot-owl">
         <ellipse cx="100" cy="185" rx="55" ry="10" fill="#000" opacity=".06"/>
-        <!-- جسم البومة -->
         <ellipse cx="100" cy="120" rx="62" ry="58" fill="#7B5EA7"/>
         <ellipse cx="100" cy="128" rx="44" ry="42" fill="#9B82C4"/>
-        <!-- أجنحة -->
         <ellipse cx="48" cy="130" rx="16" ry="30" fill="#6A4F92" transform="rotate(-15 48 130)"/>
         <ellipse cx="152" cy="130" rx="16" ry="30" fill="#6A4F92" transform="rotate(15 152 130)"/>
-        <!-- ريش الرأس -->
         <path d="M70 55 L78 35 L86 55 Z" fill="#7B5EA7"/>
         <path d="M114 55 L122 35 L130 55 Z" fill="#7B5EA7"/>
-        <!-- وجه -->
         <circle cx="76" cy="98" r="26" fill="#fff"/>
         <circle cx="124" cy="98" r="26" fill="#fff"/>
         <circle cx="76" cy="98" r="15" fill="#2D3142"/>
         <circle cx="124" cy="98" r="15" fill="#2D3142"/>
         <circle cx="80" cy="93" r="5" fill="#fff"/>
         <circle cx="128" cy="93" r="5" fill="#fff"/>
-        <!-- منقار -->
         <path d="M93 112 L100 128 L107 112 Z" fill="#FFB300"/>
-        <!-- قبعة تخرج صغيرة -->
         <path d="M70 48 L100 32 L130 48 L100 58 Z" fill="#2D3142"/>
         <rect x="96" y="56" width="8" height="3" fill="#2D3142"/>
         <circle cx="100" cy="32" r="4" fill="#FFC93C"/>
-        <!-- أرجل -->
         <path d="M85 172 L82 184 M85 172 L88 184" stroke="#FFB300" stroke-width="4" stroke-linecap="round"/>
         <path d="M115 172 L112 184 M115 172 L118 184" stroke="#FFB300" stroke-width="4" stroke-linecap="round"/>
       </svg>
@@ -278,58 +294,75 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
   </div>
 </div>
 
-<!-- ══ شاشة الإعداد ══ -->
+<!-- ══ شاشة الإعداد متعدد الخطوات ══ -->
 <div class="setup-wrap hidden" id="setup-screen">
-  <div class="setup-card" id="setup-step-name">
+  <div class="setup-progress" id="setup-progress">
+    <span data-step="1" class="active"></span><span data-step="2"></span><span data-step="3"></span><span data-step="4"></span><span data-step="5"></span>
+  </div>
+
+  <!-- خطوة 1: الاسم والهاتف -->
+  <div class="setup-card" id="su-step-1">
     <div class="setup-title">👋 أهلاً بك يا معلّمنا الغالي</div>
     <div class="setup-sub">قبل أن نبدأ، عرّفنا بنفسك</div>
     <input type="text" class="input-pill" id="su-name" placeholder="اسمك الكريم..."/>
     <input type="tel" class="input-pill" id="su-phone" placeholder="رقم الهاتف (واتساب)" dir="ltr" style="text-align:right" maxlength="15"/>
-    <button class="primary-btn" onclick="goSetupStep(2)">التالي ←</button>
+    <button class="primary-btn" onclick="suGoStep(2)">التالي ←</button>
   </div>
 
-  <div class="setup-card hidden" id="setup-step-grade">
-    <div class="setup-title">📚 أي صف تُدرّس؟</div>
-    <div class="setup-sub">اختر صفك من الحلقة الأولى</div>
-    <div class="grade-pick-grid">
-      <button class="grade-pick-btn" data-g="1" onclick="pickGrade(1,this)"><span class="gnum">١</span><span class="glabel">الأول</span></button>
-      <button class="grade-pick-btn" data-g="2" onclick="pickGrade(2,this)"><span class="gnum">٢</span><span class="glabel">الثاني</span></button>
-      <button class="grade-pick-btn" data-g="3" onclick="pickGrade(3,this)"><span class="gnum">٣</span><span class="glabel">الثالث</span></button>
-      <button class="grade-pick-btn" data-g="4" onclick="pickGrade(4,this)"><span class="gnum">٤</span><span class="glabel">الرابع</span></button>
+  <!-- خطوة 2: الفصل الدراسي والصفوف -->
+  <div class="setup-card hidden" id="su-step-2">
+    <div class="setup-title">📅 اختر الفصل الدراسي</div>
+    <div class="setup-sub">أي فصل تجهّز خطته الآن؟</div>
+    <div class="grade-pick-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px">
+      <button class="grade-pick-btn" data-sem="1" onclick="suSelectSemester('الفصل الأول',this)" style="aspect-ratio:auto;padding:14px"><span class="gnum" style="font-size:15px">الفصل الأول</span></button>
+      <button class="grade-pick-btn" data-sem="2" onclick="suSelectSemester('الفصل الثاني',this)" style="aspect-ratio:auto;padding:14px"><span class="gnum" style="font-size:15px">الفصل الثاني</span></button>
+    </div>
+    <div class="setup-title" style="font-size:16px">📚 ما الصفوف التي تُدرّسها؟</div>
+    <div class="setup-sub">اختر صفاً أو أكثر — يمكنك تدريس عدة صفوف</div>
+    <div class="grade-multi-grid">
+      <button class="grade-pick-btn" data-g="1" onclick="suToggleGrade(1,this)"><span class="gnum">١</span><span class="glabel">الأول</span></button>
+      <button class="grade-pick-btn" data-g="2" onclick="suToggleGrade(2,this)"><span class="gnum">٢</span><span class="glabel">الثاني</span></button>
+      <button class="grade-pick-btn" data-g="3" onclick="suToggleGrade(3,this)"><span class="gnum">٣</span><span class="glabel">الثالث</span></button>
+      <button class="grade-pick-btn" data-g="4" onclick="suToggleGrade(4,this)"><span class="gnum">٤</span><span class="glabel">الرابع</span></button>
     </div>
     <div style="height:14px"></div>
-    <select class="input-pill" id="su-class" style="margin-bottom:0">
-      <option value="">اختر شعبتك...</option>
-    </select>
-    <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:6px">💡 هذه القائمة تطابق تلقائياً شعب مدرستك في صفحة الإدارة</div>
-    <div style="height:14px"></div>
-    <button class="primary-btn" onclick="goSetupStep(3)">التالي ←</button>
+    <button class="primary-btn" onclick="suGoStep(3)">التالي ←</button>
     <div style="height:8px"></div>
-    <button class="ghost-btn" onclick="goSetupStep(1)">→ رجوع</button>
+    <button class="ghost-btn" onclick="suGoStep(1)">→ رجوع</button>
   </div>
 
-  <div class="setup-card hidden" id="setup-step-subjects">
-    <div class="setup-title">📖 ما المواد التي تُدرّسها؟</div>
-    <div class="setup-sub">اختر كل المواد — يمكنك اختيار أكثر من مادة</div>
-    <div class="subject-chip-grid" id="subjects-pick-grid"></div>
+  <!-- خطوة 3: المواد والشعب لكل صف -->
+  <div class="setup-card hidden" id="su-step-3">
+    <div class="setup-title">📖 المواد والشعب</div>
+    <div class="setup-sub">لكل صف، حدّد المواد ثم شعبك</div>
+    <div class="grade-tabs-row" id="su-grade-tabs"></div>
+    <div id="su-grade-body"></div>
     <div style="height:14px"></div>
-    <button class="primary-btn" onclick="goSetupStep(4)">التالي ←</button>
+    <button class="primary-btn" onclick="suGoStep(4)">التالي ←</button>
     <div style="height:8px"></div>
-    <button class="ghost-btn" onclick="goSetupStep(2)">→ رجوع</button>
+    <button class="ghost-btn" onclick="suGoStep(2)">→ رجوع</button>
   </div>
 
-  <div class="setup-card hidden" id="setup-step-students">
-    <div class="setup-title">👧🧒 طلاب شعبتك</div>
-    <div class="setup-sub">ارفع قائمة الطلاب مرة واحدة — تُستخدم لكل المواد</div>
-    <div class="upload-row">
-      <label class="upload-pill">📂 ملف Excel<input type="file" accept=".xlsx,.xls,.csv" onchange="handleStudentUpload(event,'excel')"/></label>
-      <label class="upload-pill">📑 ملف PDF<input type="file" accept="application/pdf,.pdf" onchange="handleStudentUpload(event,'pdf')"/></label>
-    </div>
-    <div id="su-students-status" style="text-align:center;font-size:12px;color:var(--muted);font-weight:700;margin-top:10px"></div>
+  <!-- خطوة 4: رفع الطلاب لكل شعبة -->
+  <div class="setup-card hidden" id="su-step-4">
+    <div class="setup-title">👧🧒 طلاب شعبك</div>
+    <div class="setup-sub">ارفع قائمة الطلاب لكل شعبة (مرة واحدة لكل شعبة)</div>
+    <div id="su-classes-upload-list"></div>
     <div style="height:14px"></div>
-    <button class="primary-btn" id="finish-setup-btn" onclick="finishCycle1Setup()" disabled>🎉 ابدأ رحلتي</button>
+    <button class="primary-btn" id="su-finish-btn" onclick="suGoStep(5)">مراجعة وإنهاء ←</button>
     <div style="height:8px"></div>
-    <button class="ghost-btn" onclick="goSetupStep(3)">→ رجوع</button>
+    <button class="ghost-btn" onclick="suGoStep(3)">→ رجوع</button>
+  </div>
+
+  <!-- خطوة 5: المراجعة والتأكيد -->
+  <div class="setup-card hidden" id="su-step-5">
+    <div class="setup-title">✅ مراجعة أخيرة</div>
+    <div class="setup-sub">تأكد من بياناتك قبل البدء</div>
+    <div id="su-summary"></div>
+    <div style="height:14px"></div>
+    <button class="primary-btn" id="su-confirm-btn" onclick="suFinishSetup()">🎉 ابدأ رحلتي</button>
+    <div style="height:8px"></div>
+    <button class="ghost-btn" onclick="suGoStep(4)">→ رجوع</button>
   </div>
 </div>
 
@@ -359,19 +392,26 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
     <button class="tab-btn" data-tab="stars" onclick="switchTab('stars',this)">⭐ ركن النجوم</button>
   </div>
 
-  <!-- صفحة المواد -->
+  <!-- موادي -->
   <div class="page active" id="page-subjects">
     <div id="subjects-list" class="subjects-grid"></div>
   </div>
 
-  <!-- صفحة الشعبة (بعد اختيار مادة) -->
-  <div class="page" id="page-class">
+  <!-- اختيار الشعبة (لو المادة عندها أكثر من شعبة) -->
+  <div class="page" id="page-pick-class">
     <button class="small-btn" onclick="switchTab('subjects')" style="margin-bottom:14px">→ رجوع للمواد</button>
+    <div class="setup-title" id="pick-class-title" style="margin-bottom:14px"></div>
+    <div class="class-pick-grid" id="class-pick-grid"></div>
+  </div>
+
+  <!-- شاشة الشعبة -->
+  <div class="page" id="page-class">
+    <button class="small-btn" onclick="goBackFromClass()" style="margin-bottom:14px">→ رجوع</button>
     <div class="class-hero" id="class-hero-box"></div>
     <button class="go-record-btn" onclick="openRecord()">📝 فتح سجل الدرجات</button>
   </div>
 
-  <!-- صفحة السجل -->
+  <!-- سجل الدرجات -->
   <div class="page" id="page-record">
     <button class="small-btn" onclick="switchTab('class')" style="margin-bottom:14px">→ رجوع للشعبة</button>
     <div class="record-toolbar">
@@ -382,7 +422,6 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 
   <!-- الجدول -->
   <div class="page" id="page-timetable">
-    <div class="section-hero hero-tt"><div class="shi">🗓️</div><div><div class="sht">جدولي الأسبوعي</div><div class="shs">رتّب حصصك بسهولة</div></div></div>
     <div class="record-toolbar">
       <button class="small-btn" onclick="addPeriodRow()">➕ إضافة حصة</button>
     </div>
@@ -391,14 +430,13 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 
   <!-- السلوك -->
   <div class="page" id="page-behavior">
-    <div class="section-hero hero-beh"><div class="shi">🌟</div><div><div class="sht">رحلة السلوك</div><div class="shs">لاحظ، شجّع، وتابع نمو طلابك</div></div></div>
+    <div class="subject-tab-row" id="beh-class-tabs"></div>
     <input type="tel" class="input-pill" id="beh-admin-phone" placeholder="📞 رقم واتساب الإدارة (اختياري)" dir="ltr" style="text-align:right" onchange="saveBehAdminPhone()"/>
     <div id="behavior-list"></div>
   </div>
 
   <!-- الأرشيف -->
   <div class="page" id="page-archive">
-    <div class="section-hero hero-arc"><div class="shi">🗂️</div><div><div class="sht">أرشيفي التعليمي</div><div class="shs">احفظ كل ملفاتك بمكان واحد منظّم</div></div></div>
     <div class="subject-tab-row" id="archive-subject-tabs"></div>
     <div id="archive-folders-view" class="archive-folders"></div>
     <div id="archive-items-view" class="hidden">
@@ -410,15 +448,13 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 
   <!-- المكتبة -->
   <div class="page" id="page-library">
-    <div class="section-hero hero-lib"><div class="shi">📖</div><div><div class="sht">مكتبتي</div><div class="shs">مصادر ومحتوى مفيد لصفك</div></div></div>
     <div id="library-list"></div>
   </div>
 
   <!-- الإنجاز -->
   <div class="page" id="page-achievement">
-    <div class="section-hero hero-achv"><div class="shi">🏆</div><div><div class="sht">رحلة الإنجاز</div><div class="shs">تابع تقدّمك في كل مادة</div></div></div>
-    <div id="achv-celebration"></div>
     <div class="subject-tab-row" id="achv-subject-tabs"></div>
+    <div id="achv-celebration"></div>
     <div class="progress-bar-wrap"><div class="progress-bar-fill" id="achv-progress-fill" style="width:0%"></div></div>
     <div style="text-align:center;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:14px" id="achv-progress-text"></div>
     <button class="small-btn" onclick="openAddUnitModal()" style="margin-bottom:14px">➕ إضافة وحدة دراسية</button>
@@ -427,6 +463,7 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 
   <!-- ركن النجوم -->
   <div class="page" id="page-stars">
+    <div class="subject-tab-row" id="stars-class-tabs"></div>
     <div class="stars-header">
       <div class="ttl">⭐ ركن النجوم</div>
       <div class="sub">امنح طلابك نجمة فورية حين يتميزون!</div>
@@ -451,8 +488,15 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 <div class="modal-bg" id="beh-modal-bg">
   <div class="modal-box">
     <div class="setup-title" style="margin-bottom:14px">🌟 تسجيل ملاحظة سلوكية</div>
-    <div class="subject-chip-grid" id="beh-type-grid" style="margin-bottom:6px"></div>
-    <button class="primary-btn" onclick="saveBehaviorLog()" style="margin-top:10px">حفظ ✅</button>
+    <select class="input-pill" id="beh-type-sel">
+      <option value="إخلال بالنظام">إخلال بالنظام</option>
+      <option value="عدم إحضار الأدوات">عدم إحضار الأدوات</option>
+      <option value="عدم أداء الواجب">عدم أداء الواجب</option>
+      <option value="مشكلة مع زميل">مشكلة مع زميل</option>
+      <option value="عدم الانتباه">عدم الانتباه</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+    <button class="primary-btn" onclick="saveBehaviorLog()">حفظ ✅</button>
     <div style="height:8px"></div>
     <button class="ghost-btn" onclick="closeBehaviorModal()">إلغاء</button>
   </div>
@@ -512,34 +556,33 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 // ══════════════════════════════════════════════════════════
 //   خطتي الصغار — الحلقة الأولى
 //   جدول معزول (cycle1_profiles) — لا علاقة له بجدول profiles الأساسي
+//   بنية البيانات (مطابقة لمنطق الموقع الأساسي):
+//   profile.classesConfig = [{num, subject, classes:[{id,name}]}]
+//   profile.students       = {classId:[{id,name,phone}]}
+//   profile.gradeTypes     = {classId:[{id,name,max}]}
+//   profile.gradeRecords   = {classId:{studentId:{colId:val}}}
+//   profile.units          = {classId:[{name,lessons:[{id,name,done,date}]}]}
+//   profile.archive        = {classId:{catId:[{title,url}]}}
+//   profile.timetable      = {periods:[...], schedule:{day:{periodIdx:classId}}}
+//   profile.stars          = {studentId:count}  (طلاب من كل الشعب معاً)
+//   profile.behavior_violations = {studentId:[{type,date}]}
 // ══════════════════════════════════════════════════════════
 const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 
 let currentUser=null;
-let profile={}; // البيانات الكاملة المحفوظة
+let profile={};
 const SUBJECT_ICONS={
   'اللغة العربية':'📗','الرياضيات':'🔢','العلوم':'🔬','التربية الإسلامية':'🕌',
   'اللغة الإنجليزية':'🔤','التربية الفنية':'🎨','التربية الرياضية':'⚽','المهارات الحياتية':'🧩',
   'التربية الموسيقية':'🎵','دراسات اجتماعية':'🌍'
 };
 const ALL_SUBJECTS=Object.keys(SUBJECT_ICONS);
-let _pickedGrade=null;
-let _pickedSubjects=[];
-let _uploadedStudents=[];
-let activeSubject=null;
+const GRADE_COLORS=['#4FB8E8','#FFC93C','#5FD9A8','#FF8A65','#A78BFA','#FF9EC7'];
+const arabicNums=['١','٢','٣','٤'];
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-// ── لوحة ألوان موحّدة لإعطاء كل طالب/مادة هوية بصرية ثابتة ──
-const KID_COLORS=[
-  ['#FF8A65','#FF6E4A'],['#5FD9A8','#34B583'],['#4FB8E8','#2E9FD6'],['#FFC93C','#FFB300'],
-  ['#A78BFA','#8B5CF6'],['#FF9EC7','#F472B6'],['#60D9D9','#2DC4C4'],['#FFA94D','#FF8800']
-];
-function hashStr(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h);}
-function colorFor(id){return KID_COLORS[hashStr(String(id))%KID_COLORS.length];}
-function avatarStyle(id){const[c1,c2]=colorFor(id);return `background:linear-gradient(135deg,${c1},${c2})`;}
 function toast(msg,isErr){
   const el=document.getElementById('toast-el');
   el.textContent=msg;
@@ -547,6 +590,13 @@ function toast(msg,isErr){
   clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(()=>el.classList.remove('show'),2600);
 }
+function colorFor(id){
+  let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;
+  const c1=GRADE_COLORS[h%GRADE_COLORS.length];
+  const c2=GRADE_COLORS[(h+1)%GRADE_COLORS.length];
+  return [c1,c2];
+}
+function avatarStyle(id){const[c1,c2]=colorFor(id);return `background:linear-gradient(135deg,${c1},${c2})`;}
 
 // ══ المصادقة ══
 async function signInWithGoogle(){
@@ -558,7 +608,6 @@ function confirmSignOut(){
   if(!confirm('هل تريد تسجيل الخروج؟'))return;
   sb.auth.signOut().then(()=>location.reload());
 }
-
 async function boot(){
   const{data:{session}}=await sb.auth.getSession();
   if(session){await afterAuth(session);}
@@ -567,7 +616,6 @@ async function boot(){
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
   });
 }
-
 async function afterAuth(session){
   currentUser=session.user;
   document.getElementById('auth-loading-box').classList.remove('hidden');
@@ -583,6 +631,7 @@ async function afterAuth(session){
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('setup-screen').classList.remove('hidden');
       if(profile.display_name)document.getElementById('su-name').value=profile.display_name;
+      suInit();
     }
   }catch(e){
     toast('تعذّر الاتصال، حاول مجدداً',true);
@@ -590,7 +639,6 @@ async function afterAuth(session){
     document.getElementById('google-btn').classList.remove('hidden');
   }
 }
-
 async function cy1Save(partial){
   if(!currentUser)return;
   profile={...profile,...partial,updated_at:new Date().toISOString()};
@@ -599,81 +647,205 @@ async function cy1Save(partial){
   }catch(e){toast('⚠️ تعذّر الحفظ — تحقق من الاتصال',true);}
 }
 
-// ══ الإعداد ══
-function goSetupStep(n){
-  document.querySelectorAll('.setup-card').forEach(c=>c.classList.add('hidden'));
-  if(n===1)document.getElementById('setup-step-name').classList.remove('hidden');
+// ══════════════════════════════════════════════════════════
+//   الإعداد متعدد الخطوات (منسوخ من منطق الموقع الأساسي)
+// ══════════════════════════════════════════════════════════
+let suSemester='';
+let suGrades=[];           // الصفوف المختارة [1,2,3,4]
+let suData={};             // {grade:{subjects:[],classes:{grade:[clsNames]}}}
+let suActiveGradeTab=null;
+let suStudentsUpload={};   // {classId:[{name,phone}]}
+let suClassesFlat=[];      // [{id,name,grade,subject}] بعد البناء
+
+function suInit(){
+  suSemester='';suGrades=[];suData={};suActiveGradeTab=null;suStudentsUpload={};suClassesFlat=[];
+  suGoStep(1);
+}
+function suUpdateProgress(step){
+  document.querySelectorAll('#setup-progress span').forEach(s=>{
+    const n=parseInt(s.dataset.step);
+    s.classList.toggle('active',n===step);
+    s.classList.toggle('done',n<step);
+  });
+}
+function suGoStep(n){
   if(n===2){
     const name=document.getElementById('su-name').value.trim();
-    if(!name){toast('يرجى إدخال اسمك',true);document.querySelectorAll('.setup-card')[0].classList.remove('hidden');return;}
-    document.getElementById('setup-step-grade').classList.remove('hidden');
+    if(!name){toast('يرجى إدخال اسمك',true);n=1;}
   }
   if(n===3){
-    if(!_pickedGrade){toast('يرجى اختيار الصف',true);document.getElementById('setup-step-grade').classList.remove('hidden');return;}
-    const clsName=document.getElementById('su-class').value.trim();
-    if(!clsName){toast('يرجى إدخال اسم الشعبة',true);document.getElementById('setup-step-grade').classList.remove('hidden');return;}
-    renderSubjectsPickGrid();
-    document.getElementById('setup-step-subjects').classList.remove('hidden');
+    if(!suSemester){toast('يرجى اختيار الفصل الدراسي',true);n=2;}
+    else if(!suGrades.length){toast('يرجى اختيار صف واحد على الأقل',true);n=2;}
+    else{suBuildGradeTabs();}
   }
   if(n===4){
-    if(!_pickedSubjects.length){toast('اختر مادة واحدة على الأقل',true);document.getElementById('setup-step-subjects').classList.remove('hidden');return;}
-    document.getElementById('setup-step-students').classList.remove('hidden');
+    if(!suValidateSubjectsClasses()){n=3;}
+    else{suBuildClassesFlat();suBuildUploadList();}
   }
+  if(n===5){
+    if(!suValidateUploads()){n=4;}
+    else{suBuildSummary();}
+  }
+  document.querySelectorAll('.setup-card').forEach(c=>c.classList.add('hidden'));
+  document.getElementById('su-step-'+n).classList.remove('hidden');
+  suUpdateProgress(n);
 }
-function renderSubjectsPickGrid(){
-  const grid=document.getElementById('subjects-pick-grid');
-  grid.innerHTML=ALL_SUBJECTS.map(s=>`<button type="button" class="subject-chip ${_pickedSubjects.includes(s)?'sel':''}" onclick="toggleSubjectPick('${s}',this)">${SUBJECT_ICONS[s]} ${s}</button>`).join('');
-}
-function toggleSubjectPick(s,btn){
-  const i=_pickedSubjects.indexOf(s);
-  if(i>=0){_pickedSubjects.splice(i,1);btn.classList.remove('sel');}
-  else{_pickedSubjects.push(s);btn.classList.add('sel');}
-}
-function pickGrade(g,btn){
-  _pickedGrade=g;
-  document.querySelectorAll('.grade-pick-btn').forEach(b=>b.classList.remove('sel'));
+function suSelectSemester(sem,btn){
+  suSemester=sem;
+  btn.closest('.grade-pick-grid').querySelectorAll('.grade-pick-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  // توليد 12 شعبة احتياطية بصيغة موحّدة (صف/رقم) — تطابق تلقائياً مع شعب المدرسة في صفحة الإدارة
-  const sel=document.getElementById('su-class');
-  const prev=sel.value;
-  sel.innerHTML='<option value="">اختر شعبتك...</option>'+
-    Array.from({length:12},(_,i)=>`${g}/${i+1}`).map(c=>`<option value="${c}">${c}</option>`).join('');
-  if(prev&&prev.startsWith(g+'/'))sel.value=prev;
 }
-async function handleStudentUpload(event,kind){
+function suToggleGrade(g,btn){
+  const i=suGrades.indexOf(g);
+  if(i>=0){suGrades.splice(i,1);btn.classList.remove('sel');delete suData[g];}
+  else{suGrades.push(g);btn.classList.add('sel');suData[g]={subjects:[],classes:{}};}
+  suGrades.sort((a,b)=>a-b);
+}
+function suBuildGradeTabs(){
+  const tabs=document.getElementById('su-grade-tabs');
+  if(!suActiveGradeTab||!suGrades.includes(suActiveGradeTab))suActiveGradeTab=suGrades[0];
+  tabs.innerHTML=suGrades.map(g=>`<button type="button" class="grade-tab-chip ${g===suActiveGradeTab?'active':''}" onclick="suSwitchGradeTab(${g})">الصف ${arabicNums[g-1]}</button>`).join('');
+  suBuildGradeBody();
+}
+function suSwitchGradeTab(g){suActiveGradeTab=g;suBuildGradeTabs();}
+function suBuildGradeBody(){
+  const body=document.getElementById('su-grade-body');
+  const g=suActiveGradeTab;
+  const d=suData[g]||{subjects:[],classes:{}};
+  let html=`<div style="font-weight:800;font-size:13px;color:var(--ink);margin-bottom:8px">📖 مواد الصف ${arabicNums[g-1]}</div>`;
+  html+='<div class="subject-chip-grid" style="margin-bottom:16px">'+
+    ALL_SUBJECTS.map(s=>`<button type="button" class="subject-chip ${d.subjects.includes(s)?'sel':''}" onclick="suToggleSubject(${g},'${s.replace(/'/g,"\\'")}',this)">${SUBJECT_ICONS[s]} ${s}</button>`).join('')+
+    '</div>';
+  html+=`<div style="font-weight:800;font-size:13px;color:var(--ink);margin-bottom:8px">👥 شعب الصف ${arabicNums[g-1]}</div>`;
+  const chosen=d.classes[g]||[];
+  const presets=Array.from({length:8},(_,i)=>`${g}/${i+1}`);
+  html+='<div class="grades-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
+    presets.map(p=>`<button type="button" class="class-chip-btn ${chosen.includes(p)?'sel':''}" onclick="suToggleClass(${g},'${p}',this)" style="padding:10px 4px;border-radius:10px;background:var(--bg);border:2px solid var(--border);font-weight:800;font-size:12.5px;color:var(--ink)">${p}</button>`).join('')+
+    '</div>';
+  body.innerHTML=html;
+  // تلوين الأزرار المختارة
+  body.querySelectorAll('.class-chip-btn.sel').forEach(b=>{b.style.background='linear-gradient(135deg,var(--sky),var(--sky2))';b.style.color='#fff';b.style.borderColor='var(--sky2)';});
+}
+function suToggleSubject(g,subj,btn){
+  const d=suData[g];
+  const i=d.subjects.indexOf(subj);
+  if(i>=0){d.subjects.splice(i,1);btn.classList.remove('sel');}
+  else{d.subjects.push(subj);btn.classList.add('sel');}
+}
+function suToggleClass(g,cls,btn){
+  const d=suData[g];
+  if(!d.classes[g])d.classes[g]=[];
+  const i=d.classes[g].indexOf(cls);
+  if(i>=0){d.classes[g].splice(i,1);}
+  else{d.classes[g].push(cls);}
+  suBuildGradeBody();
+}
+function suValidateSubjectsClasses(){
+  for(const g of suGrades){
+    const d=suData[g];
+    if(!d.subjects.length){toast(`اختر مادة واحدة على الأقل للصف ${arabicNums[g-1]}`,true);suActiveGradeTab=g;suBuildGradeTabs();return false;}
+    if(!(d.classes[g]||[]).length){toast(`اختر شعبة واحدة على الأقل للصف ${arabicNums[g-1]}`,true);suActiveGradeTab=g;suBuildGradeTabs();return false;}
+  }
+  return true;
+}
+// بناء قائمة مسطّحة بكل الشعب (شعبة واحدة قد تخدم عدة مواد لنفس الصف)
+function suBuildClassesFlat(){
+  suClassesFlat=[];
+  const seen={};
+  suGrades.forEach(g=>{
+    const d=suData[g];
+    (d.classes[g]||[]).forEach(clsName=>{
+      const id=`cls_${g}_${clsName.replace(/[^\w]/g,'_')}`;
+      if(!seen[id]){seen[id]=true;suClassesFlat.push({id,name:clsName,grade:g,subjects:d.subjects.slice()});}
+    });
+  });
+}
+function suBuildUploadList(){
+  const wrap=document.getElementById('su-classes-upload-list');
+  wrap.innerHTML=suClassesFlat.map(c=>{
+    const has=suStudentsUpload[c.id]&&suStudentsUpload[c.id].length;
+    return `<div class="class-upload-row">
+      <div>
+        <div class="cname">شعبة ${escHtml(c.name)} <span style="color:var(--muted);font-weight:600">(${c.subjects.length} مواد)</span></div>
+        <div class="cstat ${has?'ok':''}">${has?`✅ ${suStudentsUpload[c.id].length} طالب`:'لم يُرفع بعد'}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <label class="upload-mini-btn">Excel<input type="file" accept=".xlsx,.xls,.csv" onchange="suHandleUpload(event,'${c.id}','excel')"/></label>
+        <label class="upload-mini-btn">PDF<input type="file" accept="application/pdf,.pdf" onchange="suHandleUpload(event,'${c.id}','pdf')"/></label>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function suHandleUpload(event,classId,kind){
   const file=event.target.files[0];
   if(!file)return;
   event.target.value='';
-  const status=document.getElementById('su-students-status');
-  status.textContent='⏳ جاري القراءة...';
+  toast('⏳ جاري القراءة...');
   try{
     const list=kind==='excel'?await parseStudentsFromExcelFile(file):await parseStudentsFromPdfFile(file);
-    _uploadedStudents=list.map((s,i)=>({id:'st_'+Date.now()+'_'+i,name:s.name,phone:s.phone||''}));
-    status.textContent=`✅ تم تحميل ${_uploadedStudents.length} طالب`;
-    document.getElementById('finish-setup-btn').disabled=false;
+    suStudentsUpload[classId]=list.map((s,i)=>({id:`st_${classId}_${Date.now()}_${i}`,name:s.name,phone:s.phone||''}));
+    suBuildUploadList();
+    toast(`✅ تم تحميل ${list.length} طالب`,'ok');
   }catch(err){
-    status.textContent='❌ '+(err.message||'تعذّر القراءة');
+    toast('❌ '+(err.message||'تعذّر القراءة'),true);
   }
 }
-async function finishCycle1Setup(){
-  if(!_uploadedStudents.length){toast('يرجى رفع قائمة الطلاب',true);return;}
-  const btn=document.getElementById('finish-setup-btn');
+function suValidateUploads(){
+  const missing=suClassesFlat.filter(c=>!suStudentsUpload[c.id]||!suStudentsUpload[c.id].length);
+  if(missing.length){toast(`يرجى رفع طلاب شعبة ${missing[0].name}`,true);return false;}
+  return true;
+}
+function suBuildSummary(){
+  const wrap=document.getElementById('su-summary');
+  const totalStudents=Object.values(suStudentsUpload).reduce((s,arr)=>s+arr.length,0);
+  let html=`
+    <div class="setup-summary-row"><span>👤 الاسم</span><b>${escHtml(document.getElementById('su-name').value.trim())}</b></div>
+    <div class="setup-summary-row"><span>📅 الفصل</span><b>${escHtml(suSemester)}</b></div>
+    <div class="setup-summary-row"><span>📚 الصفوف</span><b>${suGrades.map(g=>arabicNums[g-1]).join('، ')}</b></div>
+    <div class="setup-summary-row"><span>👥 عدد الشعب</span><b>${suClassesFlat.length}</b></div>
+    <div class="setup-summary-row"><span>🧒 إجمالي الطلاب</span><b>${totalStudents}</b></div>
+  `;
+  suGrades.forEach(g=>{
+    html+=`<div style="margin-top:10px;font-size:12px;color:var(--muted);font-weight:700">الصف ${arabicNums[g-1]}: ${suData[g].subjects.join('، ')}</div>`;
+  });
+  wrap.innerHTML=html;
+}
+async function suFinishSetup(){
+  const btn=document.getElementById('su-confirm-btn');
   btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';
   const name=document.getElementById('su-name').value.trim();
   const phone=document.getElementById('su-phone').value.trim();
-  const clsName=document.getElementById('su-class').value.trim();
-  const gradeTypes={}; // {subject:[{id,name,max}]}
-  const grades={};     // {subject:{studentId:{colId:val}}}
-  _pickedSubjects.forEach(s=>{gradeTypes[s]=[];grades[s]={};});
+
+  // بناء classesConfig: [{num,subject,classes:[{id,name}]}]
+  const classesConfig=[];
+  suGrades.forEach(g=>{
+    const d=suData[g];
+    d.subjects.forEach(subj=>{
+      classesConfig.push({
+        num:g,subject:subj,
+        classes:(d.classes[g]||[]).map(clsName=>{
+          const id=`cls_${g}_${clsName.replace(/[^\w]/g,'_')}`;
+          return{id,name:clsName};
+        })
+      });
+    });
+  });
+  const subjectsUnique=[...new Set(classesConfig.map(c=>c.subject))];
+  const students={};
+  Object.keys(suStudentsUpload).forEach(clsId=>{students[clsId]=suStudentsUpload[clsId];});
+
   const newProfile={
     display_name:name,teacher_phone:phone,
-    grade:_pickedGrade,class_name:clsName,
-    subjects:_pickedSubjects,
-    students:_uploadedStudents,
-    grade_types:gradeTypes,
-    grades:grades,
-    stars:{}, // {studentId: count}
-    star_log:[],
+    semester:suSemester,
+    classesConfig,subjects:subjectsUnique,
+    students,
+    gradeTypes:{},gradeRecords:{},
+    units:{},archive:{},
+    stars:profile.stars||{},star_log:profile.star_log||[],
+    behavior_violations:profile.behavior_violations||{},
+    behavior_admin_phone:profile.behavior_admin_phone||'',
+    timetable:profile.timetable||null,
+    school_id:profile.school_id||null,school_name:profile.school_name||'',
     setupDone:true
   };
   await cy1Save(newProfile);
@@ -683,7 +855,12 @@ async function finishCycle1Setup(){
   toast('🎉 أهلاً بك في رحلتك الجديدة!','ok');
 }
 
-// ══ الواجهة الرئيسية ══
+// ══════════════════════════════════════════════════════════
+//   الواجهة الرئيسية
+// ══════════════════════════════════════════════════════════
+let activeClassId=null;     // الشعبة المفتوحة حالياً (للدرجات)
+let activeSubjectCtx=null;  // المادة المختارة قبل اختيار الشعبة
+
 function showMainApp(){
   document.getElementById('main-app').classList.remove('hidden');
   document.getElementById('header-teacher-name').textContent=profile.display_name||'معلّمنا';
@@ -694,20 +871,37 @@ function switchTab(tab,btnEl){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if(btnEl)btnEl.classList.add('active');
   else{
-    // عند الرجوع برمجياً (مثل فتح صفحة الشعبة) نُبقي تبويب "موادي" نشطاً
     const subjBtn=document.querySelector('.tab-btn[data-tab="subjects"]');
-    if(subjBtn&&(tab==='subjects'||tab==='class'))subjBtn.classList.add('active');
+    if(subjBtn&&(tab==='subjects'||tab==='class'||tab==='pick-class'))subjBtn.classList.add('active');
   }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const pageId=tab==='class'?'page-class':'page-'+tab;
+  const pageId=tab==='class'?'page-class':tab==='pick-class'?'page-pick-class':'page-'+tab;
   const pageEl=document.getElementById(pageId);
   if(pageEl)pageEl.classList.add('active');
-  if(tab==='stars')renderStarsList();
+  if(tab==='stars'){renderStarsClassTabs();}
   if(tab==='timetable')renderTimetable();
-  if(tab==='behavior')renderBehaviorList();
+  if(tab==='behavior')renderBehaviorClassTabs();
   if(tab==='archive')renderArchiveSubjectTabs();
   if(tab==='library')renderLibraryList();
   if(tab==='achievement')renderAchvSubjectTabs();
+}
+// كل الشعب المسطّحة (مفيدة لعدة أقسام)
+function getAllClasses(){
+  const out=[];
+  const seen={};
+  (profile.classesConfig||[]).forEach(g=>{
+    g.classes.forEach(c=>{
+      if(!seen[c.id]){seen[c.id]=true;out.push({...c,grade:g.num,subject:g.subject});}
+    });
+  });
+  return out;
+}
+function getClassesForSubject(subj){
+  const out=[];
+  (profile.classesConfig||[]).forEach(g=>{
+    if(g.subject===subj)g.classes.forEach(c=>out.push({...c,grade:g.num}));
+  });
+  return out;
 }
 function renderSubjectsList(){
   const wrap=document.getElementById('subjects-list');
@@ -717,33 +911,66 @@ function renderSubjectsList(){
     return;
   }
   wrap.innerHTML=subjects.map(s=>{
-    const cols=(profile.grade_types&&profile.grade_types[s])||[];
-    const units=(profile.units&&profile.units[s])||[];
-    let lt=0,ld=0;units.forEach(u=>u.lessons.forEach(l=>{lt++;if(l.done)ld++;}));
+    const classes=getClassesForSubject(s);
+    let lt=0,ld=0;
+    classes.forEach(c=>{
+      const units=(profile.units&&profile.units[c.id])||[];
+      units.forEach(u=>u.lessons.forEach(l=>{lt++;if(l.done)ld++;}));
+    });
     const pct=lt?Math.round(ld/lt*100):0;
-    return `<div class="subject-card" onclick="openSubject('${s.replace(/'/g,"\\'")}')">
+    return `<div class="subject-card" onclick="openSubjectEntry('${s.replace(/'/g,"\\'")}')">
       <div class="icon">${SUBJECT_ICONS[s]||'📘'}</div>
       <div class="name">${escHtml(s)}</div>
-      <div class="meta">${cols.length} تقييم · ${lt} درس</div>
+      <div class="meta">${classes.length} شعبة${lt?` · ${lt} درس`:''}</div>
       ${lt?`<div class="prog-mini"><div class="prog-mini-fill" style="width:${pct}%"></div></div>`:''}
     </div>`;
   }).join('');
 }
-function openSubject(s){
-  activeSubject=s;
-  const students=profile.students||[];
+// عند اختيار مادة: لو شعبة واحدة → افتحها مباشرة، أكثر → شاشة اختيار
+function openSubjectEntry(subj){
+  activeSubjectCtx=subj;
+  const classes=getClassesForSubject(subj);
+  if(!classes.length){toast('لا توجد شعب لهذه المادة',true);return;}
+  if(classes.length===1){
+    openClassDirect(classes[0].id,subj);
+    return;
+  }
+  document.getElementById('pick-class-title').textContent=`${SUBJECT_ICONS[subj]||'📘'} اختر شعبة ${subj}`;
+  const grid=document.getElementById('class-pick-grid');
+  grid.innerHTML=classes.map(c=>{
+    const students=(profile.students&&profile.students[c.id])||[];
+    return `<div class="class-pick-card" onclick="openClassDirect('${c.id}','${subj.replace(/'/g,"\\'")}')">
+      <div class="cname">${escHtml(c.name)}</div>
+      <div class="ccount">${students.length} طالب</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-pick-class').classList.add('active');
+}
+function openClassDirect(classId,subj){
+  activeClassId=classId;
+  activeSubjectCtx=subj;
+  const students=(profile.students&&profile.students[classId])||[];
+  const cls=getAllClasses().find(c=>c.id===classId);
   const box=document.getElementById('class-hero-box');
   box.innerHTML=`
-    <div class="subj-icon">${SUBJECT_ICONS[s]||'📘'}</div>
-    <div class="subj-name">${escHtml(s)}</div>
-    <div class="cls-name">شعبة ${escHtml(profile.class_name||'')} — الصف ${profile.grade||''}</div>
+    <div class="subj-icon">${SUBJECT_ICONS[subj]||'📘'}</div>
+    <div class="subj-name">${escHtml(subj)}</div>
+    <div class="cls-name">شعبة ${escHtml(cls?cls.name:'')} — الصف ${cls?arabicNums[cls.grade-1]:''}</div>
     <div class="stat-row">
       <div class="stat"><b>${students.length}</b><span>طالب</span></div>
-      <div class="stat"><b>${((profile.grade_types&&profile.grade_types[s])||[]).length}</b><span>تقييم</span></div>
+      <div class="stat"><b>${((profile.gradeTypes&&profile.gradeTypes[classId])||[]).length}</b><span>تقييم</span></div>
     </div>`;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-class').classList.add('active');
 }
+function goBackFromClass(){
+  const classes=getClassesForSubject(activeSubjectCtx);
+  if(classes.length>1)switchTab('pick-class');
+  else switchTab('subjects');
+}
+
+// ══ سجل الدرجات ══
 function openRecord(){
   renderRecordTable();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -751,35 +978,34 @@ function openRecord(){
 }
 function renderRecordTable(){
   const wrap=document.getElementById('record-students-list');
-  const students=profile.students||[];
-  const cols=(profile.grade_types&&profile.grade_types[activeSubject])||[];
+  const students=(profile.students&&profile.students[activeClassId])||[];
+  const cols=(profile.gradeTypes&&profile.gradeTypes[activeClassId])||[];
   if(!students.length){wrap.innerHTML='<div class="empty-state"><div class="ic">👧🧒</div>لا يوجد طلاب</div>';return;}
   if(!cols.length){
     wrap.innerHTML='<div class="empty-state"><div class="ic">📝</div>لا توجد تقييمات بعد<br><small>اضغط "إضافة تقييم" للبدء</small></div>';
     return;
   }
   wrap.innerHTML=students.map((st,idx)=>{
-    const sg=((profile.grades&&profile.grades[activeSubject])||{})[st.id]||{};
-    const initial=(st.name||'؟').trim().charAt(0);
+    const sg=((profile.gradeRecords&&profile.gradeRecords[activeClassId])||{})[st.id]||{};
     const inputs=cols.map(c=>`
       <div class="col-input-wrap">
         <label>${escHtml(c.name)} <span style="opacity:.6">/${c.max}</span></label>
         <input type="number" min="0" max="${c.max}" value="${sg[c.id]!=null?sg[c.id]:''}" onchange="updGradeVal('${st.id}','${c.id}',this.value,${c.max})"/>
       </div>`).join('');
     return `<div class="grade-card-row">
-      <div class="st-name"><span class="st-avatar" style="${avatarStyle(st.id)}">${initial}</span> ${escHtml(st.name)}</div>
+      <div class="st-name"><span class="st-avatar" style="${avatarStyle(st.id)}">${idx+1}</span> ${escHtml(st.name)}</div>
       <div class="cols-scroll">${inputs}</div>
     </div>`;
   }).join('');
 }
 function updGradeVal(studentId,colId,val,max){
-  if(!profile.grades)profile.grades={};
-  if(!profile.grades[activeSubject])profile.grades[activeSubject]={};
-  if(!profile.grades[activeSubject][studentId])profile.grades[activeSubject][studentId]={};
+  if(!profile.gradeRecords)profile.gradeRecords={};
+  if(!profile.gradeRecords[activeClassId])profile.gradeRecords[activeClassId]={};
+  if(!profile.gradeRecords[activeClassId][studentId])profile.gradeRecords[activeClassId][studentId]={};
   let v=val===''?null:Number(val);
   if(v!=null){if(v<0)v=0;if(v>max)v=max;}
-  profile.grades[activeSubject][studentId][colId]=v;
-  cy1Save({grades:profile.grades});
+  profile.gradeRecords[activeClassId][studentId][colId]=v;
+  cy1Save({gradeRecords:profile.gradeRecords});
 }
 function openAddColumnModal(){document.getElementById('col-modal-bg').classList.add('show');document.getElementById('col-name-inp').value='';document.getElementById('col-max-inp').value='10';}
 function closeAddColumnModal(){document.getElementById('col-modal-bg').classList.remove('show');}
@@ -787,23 +1013,341 @@ function saveNewColumn(){
   const name=document.getElementById('col-name-inp').value.trim();
   const max=Number(document.getElementById('col-max-inp').value)||10;
   if(!name){toast('أدخل اسم التقييم',true);return;}
-  if(!profile.grade_types)profile.grade_types={};
-  if(!profile.grade_types[activeSubject])profile.grade_types[activeSubject]=[];
-  profile.grade_types[activeSubject].push({id:'col_'+Date.now(),name,max});
-  cy1Save({grade_types:profile.grade_types});
+  if(!profile.gradeTypes)profile.gradeTypes={};
+  if(!profile.gradeTypes[activeClassId])profile.gradeTypes[activeClassId]=[];
+  profile.gradeTypes[activeClassId].push({id:'col_'+Date.now(),name,max});
+  cy1Save({gradeTypes:profile.gradeTypes});
   closeAddColumnModal();
   renderRecordTable();
   toast('✅ تمت إضافة التقييم','ok');
 }
 
-// ══ ركن النجوم ══
+// ══════════════════════════════════════════════════════════
+//   الجدول الأسبوعي
+// ══════════════════════════════════════════════════════════
+const TT_DAYS=[{id:'sun',name:'الأحد'},{id:'mon',name:'الإثنين'},{id:'tue',name:'الثلاثاء'},{id:'wed',name:'الأربعاء'},{id:'thu',name:'الخميس'}];
+const TT_DEFAULT_PERIODS=[
+  {num:1,start:'7:25',end:'8:05'},{num:2,start:'8:10',end:'8:50'},{num:3,start:'8:55',end:'9:35'},
+  {num:4,start:'9:35',end:'10:15'},{num:5,start:'10:40',end:'11:20'},{num:6,start:'11:20',end:'12:00'}
+];
+function ensureTimetable(){
+  if(!profile.timetable||!profile.timetable.periods){
+    profile.timetable={periods:TT_DEFAULT_PERIODS.slice(),schedule:{}};
+  }
+}
+function renderTimetable(){
+  ensureTimetable();
+  const periods=profile.timetable.periods;
+  const schedule=profile.timetable.schedule||{};
+  const classes=getAllClasses();
+  let html='<thead><tr><th>الحصة</th>'+TT_DAYS.map(d=>`<th>${d.name}</th>`).join('')+'</tr></thead><tbody>';
+  periods.forEach((p,pi)=>{
+    html+=`<tr><td>${p.num}<br><span style="opacity:.6">${p.start}</span></td>`;
+    TT_DAYS.forEach(d=>{
+      const val=(schedule[d.id]&&schedule[d.id][pi])||'';
+      html+=`<td><select class="tt-cell-select" onchange="setTimetableCell('${d.id}',${pi},this.value)">
+        <option value="">—</option>
+        ${classes.map(c=>`<option value="${c.id}" ${val===c.id?'selected':''}>${SUBJECT_ICONS[c.subject]||''} ${escHtml(c.subject)} (${escHtml(c.name)})</option>`).join('')}
+      </select></td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  document.getElementById('tt-table').innerHTML=html;
+}
+function setTimetableCell(dayId,periodIdx,classId){
+  ensureTimetable();
+  if(!profile.timetable.schedule[dayId])profile.timetable.schedule[dayId]={};
+  profile.timetable.schedule[dayId][periodIdx]=classId;
+  cy1Save({timetable:profile.timetable});
+}
+function addPeriodRow(){
+  ensureTimetable();
+  const n=profile.timetable.periods.length+1;
+  profile.timetable.periods.push({num:n,start:'--:--',end:'--:--'});
+  cy1Save({timetable:profile.timetable});
+  renderTimetable();
+}
+
+// ══════════════════════════════════════════════════════════
+//   السلوك (يحتاج اختيار شعبة لأن الطلاب يختلفون بين الشعب)
+// ══════════════════════════════════════════════════════════
+let activeBehaviorClass=null;
+let _behStudentId=null;
+let _behSelectedType='';
+function renderBehaviorClassTabs(){
+  const wrap=document.getElementById('beh-class-tabs');
+  const classes=getAllClasses();
+  if(!activeBehaviorClass||!classes.find(c=>c.id===activeBehaviorClass))activeBehaviorClass=classes[0]?classes[0].id:null;
+  wrap.innerHTML=classes.map(c=>`<button type="button" class="subject-tab-chip ${c.id===activeBehaviorClass?'active':''}" onclick="setBehaviorClass('${c.id}')">${escHtml(c.name)}</button>`).join('');
+  const phoneInp=document.getElementById('beh-admin-phone');
+  if(phoneInp)phoneInp.value=profile.behavior_admin_phone||'';
+  renderBehaviorList();
+}
+function setBehaviorClass(id){activeBehaviorClass=id;renderBehaviorClassTabs();}
+function saveBehAdminPhone(){
+  const phone=document.getElementById('beh-admin-phone').value.trim();
+  cy1Save({behavior_admin_phone:phone});
+}
+function renderBehaviorList(){
+  const wrap=document.getElementById('behavior-list');
+  const students=(profile.students&&profile.students[activeBehaviorClass])||[];
+  if(!students.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🌟</div>لا يوجد طلاب بعد</div>';return;}
+  const violations=profile.behavior_violations||{};
+  wrap.innerHTML=students.map((st,idx)=>{
+    const logs=violations[st.id]||[];
+    return `<div class="beh-row">
+      <div class="top">
+        <div class="sname"><span class="savatar" style="width:28px;height:28px;font-size:12px;${avatarStyle(st.id)}">${idx+1}</span> ${escHtml(st.name)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="count-badge ${logs.length?'':'zero'}">${logs.length} ملاحظة</span>
+          <button class="beh-add-btn" onclick="openBehaviorModal('${st.id}')">➕</button>
+        </div>
+      </div>
+      ${logs.slice(-3).reverse().map(l=>`<div class="beh-log-item"><span>${escHtml(l.type)}</span><span style="color:var(--muted)">${formatDateAr(l.date)}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+function openBehaviorModal(studentId){
+  _behStudentId=studentId;_behSelectedType=document.getElementById('beh-type-sel').value;
+  document.getElementById('beh-modal-bg').classList.add('show');
+}
+function closeBehaviorModal(){document.getElementById('beh-modal-bg').classList.remove('show');}
+function saveBehaviorLog(){
+  const type=document.getElementById('beh-type-sel').value;
+  if(!type){toast('اختر نوع الملاحظة',true);return;}
+  if(!profile.behavior_violations)profile.behavior_violations={};
+  if(!profile.behavior_violations[_behStudentId])profile.behavior_violations[_behStudentId]=[];
+  profile.behavior_violations[_behStudentId].push({type,date:new Date().toISOString()});
+  cy1Save({behavior_violations:profile.behavior_violations});
+  closeBehaviorModal();
+  renderBehaviorList();
+  const student=(profile.students&&profile.students[activeBehaviorClass]||[]).find(s=>s.id===_behStudentId);
+  pushCycle1ViolationToSchool(student,type);
+  const adminPhone=(profile.behavior_admin_phone||'').replace(/\D/g,'');
+  if(adminPhone&&student){
+    const msg=encodeURIComponent(`🌟 ملاحظة سلوكية\nالطالب: ${student.name}\nالملاحظة: ${type}\nالمعلم: ${profile.display_name||''}`);
+    let p=adminPhone;if(p.startsWith('00'))p=p.substring(2);if(p.length===8)p='968'+p;
+    window.open(`https://wa.me/${p}?text=${msg}`,'_blank');
+  }
+  toast('✅ تم تسجيل الملاحظة','ok');
+}
+async function pushCycle1ViolationToSchool(student,violationType){
+  if(!profile.school_id||!student)return;
+  const cls=getAllClasses().find(c=>c.id===activeBehaviorClass);
+  try{
+    await sb.from('violations').insert({
+      school_id:profile.school_id,
+      teacher_email:currentUser?currentUser.email:'',
+      teacher_name:profile.display_name||'',
+      student_name:student.name,
+      grade:cls?String(cls.grade):'',
+      class_name:cls?cls.name:'',
+      violation_type:violationType,
+      subject:'السلوك العام',
+      violation_date:new Date().toISOString().slice(0,10)
+    });
+  }catch(e){/* صامت */}
+}
+function formatDateAr(iso){
+  try{const d=new Date(iso);return d.toLocaleDateString('ar-OM',{day:'numeric',month:'short'});}catch(e){return '';}
+}
+
+// ══════════════════════════════════════════════════════════
+//   الأرشيف (مجلدات لكل شعبة)
+// ══════════════════════════════════════════════════════════
+const ARCHIVE_CATS=[
+  {id:'homework',name:'الواجبات',icon:'📝'},{id:'quiz',name:'الاختبارات القصيرة',icon:'📋'},
+  {id:'shortq',name:'الأسئلة القصيرة',icon:'❓'},{id:'project',name:'المشروع',icon:'🎯'},
+  {id:'final',name:'تجميع نهائي',icon:'📚'}
+];
+let _archiveActiveClass=null;
+let _archiveActiveCat=null;
+function renderArchiveSubjectTabs(){
+  const wrap=document.getElementById('archive-subject-tabs');
+  const classes=getAllClasses();
+  if(!_archiveActiveClass||!classes.find(c=>c.id===_archiveActiveClass))_archiveActiveClass=classes[0]?classes[0].id:null;
+  wrap.innerHTML=classes.map(c=>`<button type="button" class="subject-tab-chip ${c.id===_archiveActiveClass?'active':''}" onclick="setArchiveClass('${c.id}')">${SUBJECT_ICONS[c.subject]||'📘'} ${escHtml(c.subject)} (${escHtml(c.name)})</button>`).join('');
+  renderArchiveFolders();
+}
+function setArchiveClass(id){_archiveActiveClass=id;renderArchiveSubjectTabs();}
+function renderArchiveFolders(){
+  document.getElementById('archive-items-view').classList.add('hidden');
+  document.getElementById('archive-folders-view').classList.remove('hidden');
+  const wrap=document.getElementById('archive-folders-view');
+  const archiveData=(profile.archive&&profile.archive[_archiveActiveClass])||{};
+  wrap.innerHTML=ARCHIVE_CATS.map(c=>{
+    const count=(archiveData[c.id]||[]).length;
+    return `<div class="archive-folder" onclick="openArchiveFolder('${c.id}')"><div class="ic">${c.icon}</div><div class="nm">${c.name}</div><div class="cnt">${count} عنصر</div></div>`;
+  }).join('');
+}
+function openArchiveFolder(catId){
+  _archiveActiveCat=catId;
+  document.getElementById('archive-folders-view').classList.add('hidden');
+  document.getElementById('archive-items-view').classList.remove('hidden');
+  renderArchiveLinks();
+}
+function closeArchiveFolder(){renderArchiveFolders();}
+function renderArchiveLinks(){
+  const wrap=document.getElementById('archive-links-list');
+  const items=((profile.archive&&profile.archive[_archiveActiveClass]&&profile.archive[_archiveActiveClass][_archiveActiveCat])||[]);
+  if(!items.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🗂️</div>لا يوجد محتوى بعد</div>';return;}
+  wrap.innerHTML=items.map((it,idx)=>`<div class="archive-link-row"><a href="${escHtml(it.url)}" target="_blank">🔗 ${escHtml(it.title)}</a><button class="header-icon-btn" style="width:30px;height:30px" onclick="deleteArchiveLink(${idx})">✕</button></div>`).join('');
+}
+function openAddArchiveLinkModal(){document.getElementById('archive-link-modal-bg').classList.add('show');document.getElementById('arc-link-title').value='';document.getElementById('arc-link-url').value='';}
+function closeAddArchiveLinkModal(){document.getElementById('archive-link-modal-bg').classList.remove('show');}
+function saveArchiveLink(){
+  const title=document.getElementById('arc-link-title').value.trim();
+  const url=document.getElementById('arc-link-url').value.trim();
+  if(!title||!url||!url.startsWith('http')){toast('يرجى إدخال عنوان ورابط صحيح',true);return;}
+  if(!profile.archive)profile.archive={};
+  if(!profile.archive[_archiveActiveClass])profile.archive[_archiveActiveClass]={};
+  if(!profile.archive[_archiveActiveClass][_archiveActiveCat])profile.archive[_archiveActiveClass][_archiveActiveCat]=[];
+  profile.archive[_archiveActiveClass][_archiveActiveCat].push({title,url});
+  cy1Save({archive:profile.archive});
+  closeAddArchiveLinkModal();
+  renderArchiveLinks();
+  toast('✅ تمت الإضافة','ok');
+}
+function deleteArchiveLink(idx){
+  if(!confirm('حذف هذا العنصر؟'))return;
+  profile.archive[_archiveActiveClass][_archiveActiveCat].splice(idx,1);
+  cy1Save({archive:profile.archive});
+  renderArchiveLinks();
+}
+
+// ══════════════════════════════════════════════════════════
+//   المكتبة (من الجدول المشترك مع الموقع الأساسي)
+// ══════════════════════════════════════════════════════════
+async function renderLibraryList(){
+  const wrap=document.getElementById('library-list');
+  wrap.innerHTML='<div class="empty-state"><div class="ic">⏳</div>جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    const grades=(profile.classesConfig||[]).map(g=>String(g.num));
+    const filtered=(data||[]).filter(l=>l.is_general||grades.includes(String(l.grade)));
+    if(!filtered.length){wrap.innerHTML='<div class="empty-state"><div class="ic">📖</div>لا يوجد محتوى في المكتبة بعد</div>';return;}
+    const icons={file:'📄',pdf:'📑',youtube:'🎬',folder:'📁'};
+    wrap.innerHTML=filtered.map(l=>`<a class="lib-card" href="${escHtml(l.url||'#')}" target="_blank">
+      <div class="ic">${icons[l.type]||'📄'}</div>
+      <div><div class="tt">${escHtml(l.title)}</div><div class="mt">${escHtml(l.subject||'عام')}</div></div>
+    </a>`).join('');
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="ic">❌</div>تعذّر التحميل</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//   الإنجاز (متابعة الوحدات والدروس لكل شعبة)
+// ══════════════════════════════════════════════════════════
+let _achvActiveClass=null;
+function renderAchvSubjectTabs(){
+  const wrap=document.getElementById('achv-subject-tabs');
+  const classes=getAllClasses();
+  if(!_achvActiveClass||!classes.find(c=>c.id===_achvActiveClass))_achvActiveClass=classes[0]?classes[0].id:null;
+  wrap.innerHTML=classes.map(c=>`<button type="button" class="subject-tab-chip ${c.id===_achvActiveClass?'active':''}" onclick="setAchvClass('${c.id}')">${SUBJECT_ICONS[c.subject]||'📘'} ${escHtml(c.subject)} (${escHtml(c.name)})</button>`).join('');
+  renderUnitsList();
+}
+function setAchvClass(id){_achvActiveClass=id;renderAchvSubjectTabs();}
+function renderUnitsList(){
+  const wrap=document.getElementById('units-list');
+  const celeb=document.getElementById('achv-celebration');
+  const units=(profile.units&&profile.units[_achvActiveClass])||[];
+  let totalLessons=0,doneLessons=0;
+  units.forEach(u=>u.lessons.forEach(l=>{totalLessons++;if(l.done)doneLessons++;}));
+  const pct=totalLessons?Math.round(doneLessons/totalLessons*100):0;
+  document.getElementById('achv-progress-fill').style.width=pct+'%';
+  document.getElementById('achv-progress-text').textContent=totalLessons?`✅ أنجزت ${doneLessons} من ${totalLessons} درساً (${pct}%)`:'لا توجد دروس مسجّلة بعد';
+  celeb.innerHTML=(totalLessons&&pct===100)?'<div class="celebration-banner celebrate"><div class="ctitle">🎉 رائع! أنجزت كل دروس هذه الشعبة</div></div>':'';
+  if(!units.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🏆</div>أضف وحدتك الدراسية الأولى<br><small>ابدأ رحلة الإنجاز مع طلابك</small></div>';return;}
+  wrap.innerHTML=units.map((u,ui)=>{
+    const ld=u.lessons.filter(l=>l.done).length;
+    const lt=u.lessons.length;
+    const upct=lt?Math.round(ld/lt*100):0;
+    return `
+    <div class="unit-card">
+      <div class="uname"><span>📂 ${escHtml(u.name)}</span><span class="ubadge">${ld}/${lt} ${upct===100?'🎉':''}</span></div>
+      ${u.lessons.map((l,li)=>`
+        <div class="lesson-row">
+          <div class="lesson-check ${l.done?'done':''}" onclick="toggleLessonDone(${ui},${li},event)">${l.done?'✓':''}</div>
+          <div class="ltext ${l.done?'done':''}">${escHtml(l.name)}</div>
+        </div>`).join('')}
+      <button class="small-btn" onclick="openAddLessonModal(${ui})" style="margin-top:8px;width:100%;justify-content:center">➕ إضافة درس</button>
+    </div>`;
+  }).join('');
+}
+function openAddUnitModal(){document.getElementById('unit-modal-bg').classList.add('show');document.getElementById('unit-name-inp').value='';}
+function closeAddUnitModal(){document.getElementById('unit-modal-bg').classList.remove('show');}
+function saveNewUnit(){
+  const name=document.getElementById('unit-name-inp').value.trim();
+  if(!name){toast('أدخل اسم الوحدة',true);return;}
+  if(!profile.units)profile.units={};
+  if(!profile.units[_achvActiveClass])profile.units[_achvActiveClass]=[];
+  profile.units[_achvActiveClass].push({name,lessons:[]});
+  cy1Save({units:profile.units});
+  closeAddUnitModal();
+  renderUnitsList();
+  toast('✅ تمت الإضافة','ok');
+}
+let _lessonTargetUnitIdx=null;
+function openAddLessonModal(unitIdx){_lessonTargetUnitIdx=unitIdx;document.getElementById('lesson-modal-bg').classList.add('show');document.getElementById('lesson-name-inp').value='';}
+function closeAddLessonModal(){document.getElementById('lesson-modal-bg').classList.remove('show');}
+function saveNewLesson(){
+  const name=document.getElementById('lesson-name-inp').value.trim();
+  if(!name){toast('أدخل اسم الدرس',true);return;}
+  profile.units[_achvActiveClass][_lessonTargetUnitIdx].lessons.push({name,done:false});
+  cy1Save({units:profile.units});
+  closeAddLessonModal();
+  renderUnitsList();
+  toast('✅ تمت الإضافة','ok');
+}
+function toggleLessonDone(unitIdx,lessonIdx,ev){
+  const lesson=profile.units[_achvActiveClass][unitIdx].lessons[lessonIdx];
+  lesson.done=!lesson.done;
+  lesson.date=lesson.done?new Date().toISOString():'';
+  cy1Save({units:profile.units});
+  if(lesson.done&&ev&&ev.target)burstConfetti(ev.target);
+  renderUnitsList();
+}
+function burstConfetti(originEl){
+  const rect=originEl.getBoundingClientRect();
+  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  const emojis=['🎉','⭐','✨','🌟','🎊'];
+  for(let i=0;i<8;i++){
+    const p=document.createElement('div');
+    p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    p.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;font-size:${14+Math.random()*10}px;pointer-events:none;z-index:9999;`;
+    document.body.appendChild(p);
+    const ang=Math.random()*Math.PI*2,dist=40+Math.random()*50;
+    const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist-30;
+    p.animate([
+      {transform:'translate(0,0) scale(0.4)',opacity:1},
+      {transform:`translate(${dx}px,${dy}px) scale(1.2)`,opacity:1,offset:.6},
+      {transform:`translate(${dx*1.3}px,${dy+40}px) scale(0.6)`,opacity:0}
+    ],{duration:900,easing:'cubic-bezier(.3,1,.6,1)'});
+    setTimeout(()=>p.remove(),900);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//   ركن النجوم (طلاب شعبة مختارة، لأن قائمة الطلاب تختلف)
+// ══════════════════════════════════════════════════════════
+let _starsActiveClass=null;
+function renderStarsClassTabs(){
+  const wrap=document.getElementById('stars-class-tabs');
+  const classes=getAllClasses();
+  if(!_starsActiveClass||!classes.find(c=>c.id===_starsActiveClass))_starsActiveClass=classes[0]?classes[0].id:null;
+  wrap.innerHTML=classes.map(c=>`<button type="button" class="subject-tab-chip ${c.id===_starsActiveClass?'active':''}" onclick="setStarsClass('${c.id}')">${escHtml(c.name)}</button>`).join('');
+  renderStarsList();
+}
+function setStarsClass(id){_starsActiveClass=id;renderStarsClassTabs();}
 function renderStarsList(){
   const wrap=document.getElementById('stars-list');
-  const students=profile.students||[];
+  const students=(profile.students&&profile.students[_starsActiveClass])||[];
   if(!students.length){wrap.innerHTML='<div class="empty-state"><div class="ic">⭐</div>لا يوجد طلاب بعد</div>';return;}
   const stars=profile.stars||{};
   const maxStars=Math.max(0,...students.map(s=>stars[s.id]||0));
-  // منصة التتويج لأفضل 3
   let podiumHtml='';
   const ranked=students.map((s,idx)=>({...s,idx,count:stars[s.id]||0})).filter(s=>s.count>0).sort((a,b)=>b.count-a.count);
   if(ranked.length){
@@ -843,7 +1387,6 @@ function giveStar(studentId,ev){
   if(!profile.star_log)profile.star_log=[];
   profile.star_log.push({studentId,date:new Date().toISOString()});
   cy1Save({stars:profile.stars,star_log:profile.star_log});
-  // تأثير بصري احتفالي
   if(ev&&ev.target){
     const rect=ev.target.getBoundingClientRect();
     const pop=document.createElement('div');
@@ -855,145 +1398,6 @@ function giveStar(studentId,ev){
     setTimeout(()=>pop.remove(),1000);
   }
   renderStarsList();
-}
-
-// ══════════════════════════════════════════════════════════
-//   الجدول الأسبوعي
-// ══════════════════════════════════════════════════════════
-const TT_DAYS=[{id:'sun',name:'الأحد'},{id:'mon',name:'الإثنين'},{id:'tue',name:'الثلاثاء'},{id:'wed',name:'الأربعاء'},{id:'thu',name:'الخميس'}];
-const TT_DEFAULT_PERIODS=[
-  {num:1,start:'7:25',end:'8:05'},{num:2,start:'8:10',end:'8:50'},{num:3,start:'8:55',end:'9:35'},
-  {num:4,start:'9:35',end:'10:15'},{num:5,start:'10:40',end:'11:20'},{num:6,start:'11:20',end:'12:00'}
-];
-function ensureTimetable(){
-  if(!profile.timetable||!profile.timetable.periods){
-    profile.timetable={periods:TT_DEFAULT_PERIODS.slice(),schedule:{}};
-  }
-}
-function renderTimetable(){
-  ensureTimetable();
-  const periods=profile.timetable.periods;
-  const schedule=profile.timetable.schedule||{};
-  const subjects=profile.subjects||[];
-  let html='<thead><tr><th>الحصة</th>'+TT_DAYS.map(d=>`<th>${d.name}</th>`).join('')+'</tr></thead><tbody>';
-  periods.forEach((p,pi)=>{
-    html+=`<tr><td>${p.num}<br><span style="opacity:.6">${p.start}</span></td>`;
-    TT_DAYS.forEach(d=>{
-      const val=(schedule[d.id]&&schedule[d.id][pi])||'';
-      html+=`<td><select class="tt-cell-select" onchange="setTimetableCell('${d.id}',${pi},this.value)">
-        <option value="">—</option>
-        ${subjects.map(s=>`<option value="${escHtml(s)}" ${val===s?'selected':''}>${escHtml(s)}</option>`).join('')}
-      </select></td>`;
-    });
-    html+='</tr>';
-  });
-  html+='</tbody>';
-  document.getElementById('tt-table').innerHTML=html;
-}
-function setTimetableCell(dayId,periodIdx,subject){
-  ensureTimetable();
-  if(!profile.timetable.schedule[dayId])profile.timetable.schedule[dayId]={};
-  profile.timetable.schedule[dayId][periodIdx]=subject;
-  cy1Save({timetable:profile.timetable});
-}
-function addPeriodRow(){
-  ensureTimetable();
-  const n=profile.timetable.periods.length+1;
-  profile.timetable.periods.push({num:n,start:'--:--',end:'--:--'});
-  cy1Save({timetable:profile.timetable});
-  renderTimetable();
-}
-
-// ══════════════════════════════════════════════════════════
-//   السلوك
-// ══════════════════════════════════════════════════════════
-let _behStudentId=null;
-const BEH_TYPES=[
-  {name:'إخلال بالنظام',icon:'🌀'},{name:'عدم إحضار الأدوات',icon:'🎒'},
-  {name:'عدم أداء الواجب',icon:'📓'},{name:'مشكلة مع زميل',icon:'🤝'},
-  {name:'عدم الانتباه',icon:'💭'},{name:'أخرى',icon:'📝'}
-];
-const BEH_ICONS=Object.fromEntries(BEH_TYPES.map(t=>[t.name,t.icon]));
-function saveBehAdminPhone(){
-  const phone=document.getElementById('beh-admin-phone').value.trim();
-  cy1Save({behavior_admin_phone:phone});
-}
-function renderBehaviorList(){
-  const wrap=document.getElementById('behavior-list');
-  const students=profile.students||[];
-  const phoneInp=document.getElementById('beh-admin-phone');
-  if(phoneInp)phoneInp.value=profile.behavior_admin_phone||'';
-  if(!students.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🌟</div>لا يوجد طلاب بعد</div>';return;}
-  const violations=profile.behavior_violations||{};
-  wrap.innerHTML=students.map((st,idx)=>{
-    const logs=violations[st.id]||[];
-    const initial=(st.name||'؟').trim().charAt(0);
-    return `<div class="beh-row">
-      <div class="top">
-        <div class="sname"><span class="savatar" style="width:28px;height:28px;font-size:12px;${avatarStyle(st.id)}">${initial}</span> ${escHtml(st.name)}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="count-badge ${logs.length?'':'zero'}">${logs.length} ملاحظة</span>
-          <button class="beh-add-btn" onclick="openBehaviorModal('${st.id}')">➕</button>
-        </div>
-      </div>
-      ${logs.slice(-3).reverse().map(l=>`<div class="beh-log-item"><span>${BEH_ICONS[l.type]||'🌟'} ${escHtml(l.type)}</span><span style="color:var(--muted)">${formatDateAr(l.date)}</span></div>`).join('')}
-    </div>`;
-  }).join('');
-}
-let _behSelectedType=null;
-function openBehaviorModal(studentId){
-  _behStudentId=studentId;
-  _behSelectedType=null;
-  const grid=document.getElementById('beh-type-grid');
-  grid.innerHTML=BEH_TYPES.map(t=>`<button type="button" class="subject-chip" onclick="pickBehType('${t.name.replace(/'/g,"\\'")}',this)">${t.icon} ${t.name}</button>`).join('');
-  document.getElementById('beh-modal-bg').classList.add('show');
-}
-function pickBehType(name,btn){
-  _behSelectedType=name;
-  document.querySelectorAll('#beh-type-grid .subject-chip').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
-}
-function closeBehaviorModal(){document.getElementById('beh-modal-bg').classList.remove('show');}
-function saveBehaviorLog(){
-  if(!_behSelectedType){toast('اختر نوع الملاحظة',true);return;}
-  const type=_behSelectedType;
-  if(!profile.behavior_violations)profile.behavior_violations={};
-  if(!profile.behavior_violations[_behStudentId])profile.behavior_violations[_behStudentId]=[];
-  profile.behavior_violations[_behStudentId].push({type,date:new Date().toISOString()});
-  cy1Save({behavior_violations:profile.behavior_violations});
-  closeBehaviorModal();
-  renderBehaviorList();
-  const student=(profile.students||[]).find(s=>s.id===_behStudentId);
-  // نشر للجدول المشترك (يظهر في صفحة إدارة المدرسة) إن كانت المدرسة محددة
-  pushCycle1ViolationToSchool(student,type);
-  // إرسال واتساب للإدارة إن وُجد الرقم
-  const adminPhone=(profile.behavior_admin_phone||'').replace(/\D/g,'');
-  if(adminPhone){
-    const msg=encodeURIComponent(`🌟 ملاحظة سلوكية\nالطالب: ${student?student.name:''}\nالملاحظة: ${type}\nالمعلم: ${profile.display_name||''}`);
-    let p=adminPhone;if(p.startsWith('00'))p=p.substring(2);if(p.length===8)p='968'+p;
-    window.open(`https://wa.me/${p}?text=${msg}`,'_blank');
-  }
-  toast('✅ تم تسجيل الملاحظة','ok');
-}
-// نشر الملاحظة في جدول violations المشترك (نفس الجدول الذي يقرأه admin.html)
-async function pushCycle1ViolationToSchool(student,violationType){
-  if(!profile.school_id||!student)return;
-  try{
-    await sb.from('violations').insert({
-      school_id:profile.school_id,
-      teacher_email:currentUser?currentUser.email:'',
-      teacher_name:profile.display_name||'',
-      student_name:student.name,
-      grade:String(profile.grade||''),
-      class_name:profile.class_name||'',
-      violation_type:violationType,
-      subject:'السلوك العام',
-      violation_date:new Date().toISOString().slice(0,10)
-    });
-  }catch(e){/* صامت — لا نعطّل تجربة المعلم لو فشل النشر المشترك */}
-}
-function formatDateAr(iso){
-  try{const d=new Date(iso);return d.toLocaleDateString('ar-OM',{day:'numeric',month:'short'});}catch(e){return '';}
 }
 
 // ══ اختيار/تغيير المدرسة ══
@@ -1023,187 +1427,6 @@ async function saveSelectedSchool(){
   toast(schoolId?`✅ تم ربط حسابك بمدرسة "${schoolName}"`:'✅ تم إلغاء ربط المدرسة','ok');
 }
 
-
-// ══════════════════════════════════════════════════════════
-//   الأرشيف (مجلدات لكل مادة، تحوي روابط — وليس رفع ملفات مباشر)
-// ══════════════════════════════════════════════════════════
-const ARCHIVE_CATS=[
-  {id:'homework',name:'الواجبات',icon:'📝',color:'#5FD9A8'},{id:'quiz',name:'الاختبارات القصيرة',icon:'📋',color:'#4FB8E8'},
-  {id:'shortq',name:'الأسئلة القصيرة',icon:'❓',color:'#FFC93C'},{id:'project',name:'المشروع',icon:'🎯',color:'#FF8A65'},
-  {id:'final',name:'تجميع نهائي',icon:'📚',color:'#A78BFA'}
-];
-let _archiveActiveSubject=null;
-let _archiveActiveCat=null;
-function renderArchiveSubjectTabs(){
-  const wrap=document.getElementById('archive-subject-tabs');
-  const subjects=profile.subjects||[];
-  if(!_archiveActiveSubject)_archiveActiveSubject=subjects[0];
-  wrap.innerHTML=subjects.map(s=>`<button type="button" class="subject-tab-chip ${s===_archiveActiveSubject?'active':''}" onclick="setArchiveSubject('${s.replace(/'/g,"\\'")}')">${SUBJECT_ICONS[s]||'📘'} ${escHtml(s)}</button>`).join('');
-  renderArchiveFolders();
-}
-function setArchiveSubject(s){_archiveActiveSubject=s;renderArchiveSubjectTabs();}
-function renderArchiveFolders(){
-  document.getElementById('archive-items-view').classList.add('hidden');
-  document.getElementById('archive-folders-view').classList.remove('hidden');
-  const wrap=document.getElementById('archive-folders-view');
-  const archiveData=(profile.archive&&profile.archive[_archiveActiveSubject])||{};
-  wrap.innerHTML=ARCHIVE_CATS.map(c=>{
-    const count=(archiveData[c.id]||[]).length;
-    return `<div class="archive-folder" style="border-top:4px solid ${c.color}" onclick="openArchiveFolder('${c.id}')"><div class="ic">${c.icon}</div><div class="nm">${c.name}</div><div class="cnt">${count} عنصر</div></div>`;
-  }).join('');
-}
-function openArchiveFolder(catId){
-  _archiveActiveCat=catId;
-  document.getElementById('archive-folders-view').classList.add('hidden');
-  document.getElementById('archive-items-view').classList.remove('hidden');
-  renderArchiveLinks();
-}
-function closeArchiveFolder(){renderArchiveFolders();}
-function renderArchiveLinks(){
-  const wrap=document.getElementById('archive-links-list');
-  const items=((profile.archive&&profile.archive[_archiveActiveSubject]&&profile.archive[_archiveActiveSubject][_archiveActiveCat])||[]);
-  if(!items.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🗂️</div>لا يوجد محتوى بعد</div>';return;}
-  wrap.innerHTML=items.map((it,idx)=>`<div class="archive-link-row"><a href="${escHtml(it.url)}" target="_blank">🔗 ${escHtml(it.title)}</a><button class="header-icon-btn" style="width:30px;height:30px" onclick="deleteArchiveLink(${idx})">✕</button></div>`).join('');
-}
-function openAddArchiveLinkModal(){document.getElementById('archive-link-modal-bg').classList.add('show');document.getElementById('arc-link-title').value='';document.getElementById('arc-link-url').value='';}
-function closeAddArchiveLinkModal(){document.getElementById('archive-link-modal-bg').classList.remove('show');}
-function saveArchiveLink(){
-  const title=document.getElementById('arc-link-title').value.trim();
-  const url=document.getElementById('arc-link-url').value.trim();
-  if(!title||!url||!url.startsWith('http')){toast('يرجى إدخال عنوان ورابط صحيح',true);return;}
-  if(!profile.archive)profile.archive={};
-  if(!profile.archive[_archiveActiveSubject])profile.archive[_archiveActiveSubject]={};
-  if(!profile.archive[_archiveActiveSubject][_archiveActiveCat])profile.archive[_archiveActiveSubject][_archiveActiveCat]=[];
-  profile.archive[_archiveActiveSubject][_archiveActiveCat].push({title,url});
-  cy1Save({archive:profile.archive});
-  closeAddArchiveLinkModal();
-  renderArchiveLinks();
-  toast('✅ تمت الإضافة','ok');
-}
-function deleteArchiveLink(idx){
-  if(!confirm('حذف هذا العنصر؟'))return;
-  profile.archive[_archiveActiveSubject][_archiveActiveCat].splice(idx,1);
-  cy1Save({archive:profile.archive});
-  renderArchiveLinks();
-}
-
-// ══════════════════════════════════════════════════════════
-//   المكتبة (تُعرض من نفس جدول المكتبة المشترك في الموقع الأساسي)
-// ══════════════════════════════════════════════════════════
-async function renderLibraryList(){
-  const wrap=document.getElementById('library-list');
-  wrap.innerHTML='<div class="empty-state"><div class="ic">⏳</div>جاري التحميل...</div>';
-  try{
-    const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
-    if(error)throw error;
-    const grade=String(profile.grade||'');
-    const filtered=(data||[]).filter(l=>l.is_general||String(l.grade)===grade);
-    if(!filtered.length){wrap.innerHTML='<div class="empty-state"><div class="ic">📖</div>لا يوجد محتوى في المكتبة بعد</div>';return;}
-    const icons={file:'📄',pdf:'📑',youtube:'🎬',folder:'📁'};
-    wrap.innerHTML=filtered.map(l=>`<a class="lib-card" href="${escHtml(l.url||'#')}" target="_blank">
-      <div class="ic">${icons[l.type]||'📄'}</div>
-      <div><div class="tt">${escHtml(l.title)}</div><div class="mt">${escHtml(l.subject||'عام')}</div></div>
-    </a>`).join('');
-  }catch(e){
-    wrap.innerHTML='<div class="empty-state"><div class="ic">❌</div>تعذّر التحميل</div>';
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-//   الإنجاز (متابعة الوحدات والدروس)
-// ══════════════════════════════════════════════════════════
-let _achvActiveSubject=null;
-function renderAchvSubjectTabs(){
-  const wrap=document.getElementById('achv-subject-tabs');
-  const subjects=profile.subjects||[];
-  if(!_achvActiveSubject)_achvActiveSubject=subjects[0];
-  wrap.innerHTML=subjects.map(s=>`<button type="button" class="subject-tab-chip ${s===_achvActiveSubject?'active':''}" onclick="setAchvSubject('${s.replace(/'/g,"\\'")}')">${SUBJECT_ICONS[s]||'📘'} ${escHtml(s)}</button>`).join('');
-  renderUnitsList();
-}
-function setAchvSubject(s){_achvActiveSubject=s;renderAchvSubjectTabs();}
-function renderUnitsList(){
-  const wrap=document.getElementById('units-list');
-  const units=(profile.units&&profile.units[_achvActiveSubject])||[];
-  let totalLessons=0,doneLessons=0;
-  units.forEach(u=>u.lessons.forEach(l=>{totalLessons++;if(l.done)doneLessons++;}));
-  const pct=totalLessons?Math.round(doneLessons/totalLessons*100):0;
-  document.getElementById('achv-progress-fill').style.width=pct+'%';
-  document.getElementById('achv-progress-text').textContent=totalLessons?`✅ أنجزت ${doneLessons} من ${totalLessons} درساً (${pct}%)`:'لا توجد دروس مسجّلة بعد';
-  const celeb=document.getElementById('achv-celebration');
-  celeb.innerHTML=(totalLessons&&pct===100)?'<div class="celebration-banner celebrate"><div class="ctitle">🎉 رائع! أنجزت كل دروس هذه المادة</div></div>':'';
-  if(!units.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🏆</div>أضف وحدتك الدراسية الأولى<br><small>ابدأ رحلة الإنجاز مع طلابك</small></div>';return;}
-  wrap.innerHTML=units.map((u,ui)=>{
-    const ld=u.lessons.filter(l=>l.done).length;
-    const lt=u.lessons.length;
-    const upct=lt?Math.round(ld/lt*100):0;
-    return `
-    <div class="unit-card">
-      <div class="uname"><span>📂 ${escHtml(u.name)}</span><span class="ubadge">${ld}/${lt} ${upct===100?'🎉':''}</span></div>
-      ${u.lessons.map((l,li)=>`
-        <div class="lesson-row">
-          <div class="lesson-check ${l.done?'done':''}" onclick="toggleLessonDone(${ui},${li},event)">${l.done?'✓':''}</div>
-          <div class="ltext ${l.done?'done':''}">${escHtml(l.name)}</div>
-        </div>`).join('')}
-      <button class="small-btn" onclick="openAddLessonModal(${ui})" style="margin-top:8px;width:100%;justify-content:center">➕ إضافة درس</button>
-    </div>`;
-  }).join('');
-}
-function openAddUnitModal(){document.getElementById('unit-modal-bg').classList.add('show');document.getElementById('unit-name-inp').value='';}
-function closeAddUnitModal(){document.getElementById('unit-modal-bg').classList.remove('show');}
-function saveNewUnit(){
-  const name=document.getElementById('unit-name-inp').value.trim();
-  if(!name){toast('أدخل اسم الوحدة',true);return;}
-  if(!profile.units)profile.units={};
-  if(!profile.units[_achvActiveSubject])profile.units[_achvActiveSubject]=[];
-  profile.units[_achvActiveSubject].push({name,lessons:[]});
-  cy1Save({units:profile.units});
-  closeAddUnitModal();
-  renderUnitsList();
-  toast('✅ تمت الإضافة','ok');
-}
-let _lessonTargetUnitIdx=null;
-function openAddLessonModal(unitIdx){_lessonTargetUnitIdx=unitIdx;document.getElementById('lesson-modal-bg').classList.add('show');document.getElementById('lesson-name-inp').value='';}
-function closeAddLessonModal(){document.getElementById('lesson-modal-bg').classList.remove('show');}
-function saveNewLesson(){
-  const name=document.getElementById('lesson-name-inp').value.trim();
-  if(!name){toast('أدخل اسم الدرس',true);return;}
-  profile.units[_achvActiveSubject][_lessonTargetUnitIdx].lessons.push({name,done:false});
-  cy1Save({units:profile.units});
-  closeAddLessonModal();
-  renderUnitsList();
-  toast('✅ تمت الإضافة','ok');
-}
-function toggleLessonDone(unitIdx,lessonIdx,ev){
-  const lesson=profile.units[_achvActiveSubject][unitIdx].lessons[lessonIdx];
-  lesson.done=!lesson.done;
-  lesson.date=lesson.done?new Date().toISOString():'';
-  cy1Save({units:profile.units});
-  // احتفال بصري عند الإنجاز
-  if(lesson.done&&ev&&ev.target){
-    burstConfetti(ev.target);
-  }
-  renderUnitsList();
-}
-// انفجار احتفالي صغير
-function burstConfetti(originEl){
-  const rect=originEl.getBoundingClientRect();
-  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
-  const emojis=['🎉','⭐','✨','🌟','🎊'];
-  for(let i=0;i<8;i++){
-    const p=document.createElement('div');
-    p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
-    p.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;font-size:${14+Math.random()*10}px;pointer-events:none;z-index:9999;`;
-    document.body.appendChild(p);
-    const ang=Math.random()*Math.PI*2,dist=40+Math.random()*50;
-    const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist-30;
-    p.animate([
-      {transform:'translate(0,0) scale(0.4)',opacity:1},
-      {transform:`translate(${dx}px,${dy}px) scale(1.2)`,opacity:1,offset:.6},
-      {transform:`translate(${dx*1.3}px,${dy+40}px) scale(0.6)`,opacity:0}
-    ],{duration:900,easing:'cubic-bezier(.3,1,.6,1)'});
-    setTimeout(()=>p.remove(),900);
-  }
-}
 
 // ══ Parsers مستوردة من النظام الأساسي (مطابقة تماماً، مُختبرة) ══
 function loadPdfJs(){
@@ -1371,9 +1594,7 @@ async function parseStudentsFromPdfFile(file){
   return list;
 }
 
-// ══════════════════════════════════════════════════════════
-//   العناصر البصرية (شرارات + أشكال طافية) — هوية الحلقة الأولى
-// ══════════════════════════════════════════════════════════
+
 function initC1Visuals(){
   // أشكال طافية مرحة (نجوم، فقاعات، قلوب، شموس)
   const shapes=[
@@ -1446,4 +1667,3 @@ initC1Visuals();
 </script>
 </body>
 </html>
-
