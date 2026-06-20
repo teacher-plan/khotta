@@ -9231,12 +9231,15 @@ function renderLibrary(){
   } else if(teacherConfig){
     const tGrades=(teacherConfig.grades||[]).map(g=>String(g.num||g.grade));
     const tSubjects=(teacherConfig.grades||[]).map(g=>g.subject);
-    const tSem=String(teacherConfig.semester||'');
+    const tSemRaw=String(teacherConfig.semester||'');
+    // توحيد تنسيق الفصل: المكتبة تخزّن '1'/'2'، بينما إعداد المعلم يخزّن النص الكامل
+    const tSemNum=tSemRaw.includes('الثاني')?'2':(tSemRaw.includes('الأول')?'1':'');
     filtered=libraryLinks.filter(l=>{
       if(l.is_general)return true;
       const gradeMatch=!l.grade||tGrades.includes(String(l.grade));
       const subjectMatch=!l.subject||tSubjects.includes(l.subject);
-      const semMatch=!l.semester||l.semester==='all'||l.semester===tSem;
+      const lSem=String(l.semester||'');
+      const semMatch=!lSem||lSem==='all'||lSem===tSemRaw||lSem===tSemNum;
       return gradeMatch&&subjectMatch&&semMatch;
     });
   }
