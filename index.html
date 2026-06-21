@@ -1301,6 +1301,7 @@ input,textarea,select{font-size:16px !important;}
 
   <button class="nav-btn admin-only" data-page="analytics" onclick="showPage('analytics',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</button>
   <button class="nav-btn admin-only" data-page="schools" onclick="showPage('schools',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></span> إدارة المدارس</button>
+  <button class="nav-btn admin-only" data-page="violtypes" onclick="showPage('violtypes',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg></span> إدارة المخالفات</button>
   <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
   <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
@@ -2075,6 +2076,29 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
     <div id="schools-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+  </div>
+</div></div>
+
+<!-- ══ VIOLATION TYPES MANAGEMENT (إدارة المخالفات) ══ -->
+<div class="page" id="page-violtypes"><div class="wrap">
+  <div class="page-header">
+    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 2 7v10l10 5 10-5V7L12 2z"/></svg></span> إدارة المخالفات</div>
+    <h1>أنواع المخالفات</h1>
+    <p>أضف أو أخفِ أنواع المخالفات الظاهرة للمعلمين — الإخفاء لا يؤثر على المخالفات المسجّلة سابقاً</p>
+  </div>
+
+  <!-- تبويبان: الحلقة الأولى / 5-12 -->
+  <div style="display:flex;gap:8px;margin-bottom:18px">
+    <button class="violtype-tab-btn active" id="vt-tab-main" onclick="switchViolTypeTab('main')" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-family:'Cairo',sans-serif;font-weight:800;font-size:13.5px;color:var(--text);cursor:pointer">إدارة مخالفات (٥-١٢)</button>
+    <button class="violtype-tab-btn" id="vt-tab-cycle1" onclick="switchViolTypeTab('cycle1')" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-family:'Cairo',sans-serif;font-weight:800;font-size:13.5px;color:var(--text);cursor:pointer">إدارة مخالفات الحلقة الأولى</button>
+  </div>
+
+  <div class="admin-panel-card">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input id="vt-new-name" type="text" placeholder="اسم المخالفة الجديدة..." style="flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:8px;padding:11px;font-family:'Cairo',sans-serif;font-size:14px"/>
+      <button class="grade-btn" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;font-weight:700;white-space:nowrap" onclick="addViolationType()">➕ إضافة</button>
+    </div>
+    <div id="violtypes-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
   </div>
 </div></div>
 
@@ -3983,6 +4007,7 @@ function showApp(data){
   document.getElementById('main-nav').style.display='flex';
   document.querySelectorAll('.page')[0].classList.add('active');
   showUserBadge();
+  loadActiveViolationTypes();
 
   if(data){
     state=data.plan_state||{};
@@ -4112,6 +4137,7 @@ function showPage(id,btn){
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
   if(id==='schools')loadSchools();
+  if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='users'){loadAdminUsers();loadInvites();}
   if(id==='announcements'){loadAnnouncements();}
   if(id==='users')loadAdminUsers();
@@ -6759,7 +6785,7 @@ let behaviorViolations={}; // {studentId: [{type,date,sent}]}
 let behaviorAdminPhone=''; // رقم هاتف إدارة المدرسة
 let activeBehaviorClass='';
 
-const VIOLATION_TYPES=[
+let VIOLATION_TYPES=[
   'تأخر عن الحصة',
   'غياب بدون عذر',
   'عدم إنجاز الواجب',
@@ -6770,6 +6796,17 @@ const VIOLATION_TYPES=[
   'مخالفة الزي المدرسي',
   'أخرى'
 ];
+// تحميل أنواع المخالفات الفعّالة من Supabase (يستبدل القائمة الثابتة أعلاه إن نجح)
+async function loadActiveViolationTypes(){
+  try{
+    const{data,error}=await sb.from('violation_types').select('name').eq('cycle','main').eq('active',true).order('sort_order');
+    if(!error&&data&&data.length){
+      VIOLATION_TYPES=data.map(d=>d.name);
+      // أعد رسم جدول السلوك إن كان معروضاً حالياً
+      if(typeof renderBehaviorTable==='function'&&document.getElementById('behavior-table-wrap'))renderBehaviorTable();
+    }
+  }catch(e){/* صامت — تبقى القائمة الافتراضية تعمل */}
+}
 
 function saveBehaviorPhone(){
   const phone=document.getElementById('behavior-teacher-phone').value.trim();
@@ -9295,6 +9332,97 @@ function copySchoolCreds(username,password,name){
     try{document.execCommand('copy');toast('✅ تم النسخ','ok');}catch(e){toast('تعذّر النسخ',true);}
     document.body.removeChild(ta);
   }
+}
+
+// ══ VIOLATION TYPES MANAGEMENT (إدارة المخالفات) ══════
+let _violTypesActiveTab='main';
+let _violTypesList=[];
+function switchViolTypeTab(tab){
+  _violTypesActiveTab=tab;
+  document.getElementById('vt-tab-main').classList.toggle('active',tab==='main');
+  document.getElementById('vt-tab-cycle1').classList.toggle('active',tab==='cycle1');
+  document.getElementById('vt-tab-main').style.background=tab==='main'?'linear-gradient(135deg,#1a7a3a,#27ae60)':'var(--surface)';
+  document.getElementById('vt-tab-main').style.color=tab==='main'?'#fff':'var(--text)';
+  document.getElementById('vt-tab-cycle1').style.background=tab==='cycle1'?'linear-gradient(135deg,#1a7a3a,#27ae60)':'var(--surface)';
+  document.getElementById('vt-tab-cycle1').style.color=tab==='cycle1'?'#fff':'var(--text)';
+  loadViolationTypesAdmin();
+}
+async function loadViolationTypesAdmin(){
+  const list=document.getElementById('violtypes-list');
+  list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('violation_types').select('*').eq('cycle',_violTypesActiveTab).order('sort_order');
+    if(error){list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ تعذّر التحميل</div>';return;}
+    _violTypesList=data||[];
+    renderViolationTypesList();
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ حدث خطأ</div>';
+  }
+}
+function renderViolationTypesList(){
+  const list=document.getElementById('violtypes-list');
+  if(!_violTypesList.length){
+    list.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">📭 لا توجد أنواع مخالفات بعد</div>';
+    return;
+  }
+  list.innerHTML=_violTypesList.map((vt,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;${vt.active?'':'opacity:.5'}">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button onclick="moveViolationType(${i},-1)" ${i===0?'disabled':''} style="background:none;border:none;cursor:${i===0?'default':'pointer'};color:${i===0?'var(--border)':'var(--gold)'};padding:0;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 14l5-5 5 5z"/></svg></button>
+        <button onclick="moveViolationType(${i},1)" ${i===_violTypesList.length-1?'disabled':''} style="background:none;border:none;cursor:${i===_violTypesList.length-1?'default':'pointer'};color:${i===_violTypesList.length-1?'var(--border)':'var(--gold)'};padding:0;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 10l5 5 5-5z"/></svg></button>
+      </div>
+      <div style="flex:1;font-weight:700;font-size:13.5px;color:var(--text)">${escHtml(vt.name)}</div>
+      ${!vt.active?'<span style="font-size:10.5px;color:var(--muted);font-weight:700;background:var(--surface);border-radius:99px;padding:2px 8px">مخفية</span>':''}
+      <button onclick="toggleViolationTypeActive(${vt.id},${!vt.active})" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;color:${vt.active?'var(--muted)':'var(--green)'};cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px">
+        ${vt.active?'<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 6.5c3.79 0 7.17 2.13 8.82 5.5-.59 1.22-1.42 2.27-2.41 3.12l1.41 1.41c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l1.65 1.65c.64-.12 1.3-.22 1.99-.22zM2.71 3.46l2.16 2.16C3.18 7.07 1.83 8.92 1 11.5 2.73 16.39 7 19.5 12 19.5c1.6 0 3.15-.34 4.55-.94l3.07 3.07L21 20.31 4.31 2 2.71 3.46zm7.7 7.7 2.13 2.13c.06-.21.11-.43.11-.65 0-1.1-.89-2-2-2-.22 0-.44.05-.65.11l.41.41z"/></svg> إخفاء':'<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> إظهار'}
+      </button>
+      <button onclick="deleteViolationType(${vt.id},'${escHtml(vt.name).replace(/'/g,"\\'")}')" style="background:rgba(192,57,43,.08);border:1px solid var(--red);border-radius:8px;padding:6px 8px;color:var(--red);cursor:pointer;display:flex;align-items:center">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </div>
+  `).join('');
+}
+async function addViolationType(){
+  const inp=document.getElementById('vt-new-name');
+  const name=inp.value.trim();
+  if(!name){toast('أدخل اسم المخالفة',true);return;}
+  const maxSort=_violTypesList.length?Math.max(..._violTypesList.map(v=>v.sort_order||0)):0;
+  try{
+    const{error}=await sb.from('violation_types').insert({name,cycle:_violTypesActiveTab,active:true,sort_order:maxSort+1});
+    if(error){toast('فشل الإضافة: '+error.message,true);return;}
+    inp.value='';
+    toast('✅ تمت الإضافة','ok');
+    loadViolationTypesAdmin();
+  }catch(e){toast('حدث خطأ',true);}
+}
+async function toggleViolationTypeActive(id,newActive){
+  try{
+    const{error}=await sb.from('violation_types').update({active:newActive}).eq('id',id);
+    if(error){toast('فشل التحديث',true);return;}
+    loadViolationTypesAdmin();
+  }catch(e){toast('حدث خطأ',true);}
+}
+async function deleteViolationType(id,name){
+  if(!confirm(`حذف "${name}" نهائياً؟\n\nملاحظة: المخالفات المسجّلة سابقاً بهذا الاسم لن تتأثر — فقط لن يظهر كخيار جديد.\nيُفضّل "الإخفاء" بدل الحذف إن كنت غير متأكد.`))return;
+  try{
+    const{error}=await sb.from('violation_types').delete().eq('id',id);
+    if(error){toast('فشل الحذف',true);return;}
+    toast('🗑️ تم الحذف','ok');
+    loadViolationTypesAdmin();
+  }catch(e){toast('حدث خطأ',true);}
+}
+async function moveViolationType(index,direction){
+  const otherIndex=index+direction;
+  if(otherIndex<0||otherIndex>=_violTypesList.length)return;
+  const a=_violTypesList[index],b=_violTypesList[otherIndex];
+  const aOrder=a.sort_order,bOrder=b.sort_order;
+  try{
+    await Promise.all([
+      sb.from('violation_types').update({sort_order:bOrder}).eq('id',a.id),
+      sb.from('violation_types').update({sort_order:aOrder}).eq('id',b.id)
+    ]);
+    loadViolationTypesAdmin();
+  }catch(e){toast('فشل تغيير الترتيب',true);}
 }
 
 // ══ LIBRARY ════════════════════════════════════════════

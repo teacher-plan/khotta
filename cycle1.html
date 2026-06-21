@@ -866,6 +866,17 @@ function showMainApp(){
   document.getElementById('header-teacher-name').textContent=profile.display_name||'معلّمنا';
   renderSubjectsList();
   renderStarsList();
+  loadActiveViolationTypesCycle1();
+}
+// تحميل أنواع المخالفات الفعّالة من Supabase (يستبدل الخيارات الثابتة في HTML إن نجح)
+async function loadActiveViolationTypesCycle1(){
+  try{
+    const{data,error}=await sb.from('violation_types').select('name').eq('cycle','cycle1').eq('active',true).order('sort_order');
+    if(!error&&data&&data.length){
+      const sel=document.getElementById('beh-type-sel');
+      if(sel)sel.innerHTML=data.map(d=>`<option value="${escHtml(d.name)}">${escHtml(d.name)}</option>`).join('');
+    }
+  }catch(e){/* صامت — تبقى الخيارات الافتراضية في HTML تعمل */}
 }
 function switchTab(tab,btnEl){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
