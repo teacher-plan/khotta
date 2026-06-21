@@ -147,11 +147,18 @@ tr:last-child td{border-bottom:none;}
         <h1>📋 المستخدمون المُحالون</h1>
         <p>كل من سجّل عبر رابط أحد الأصدقاء أو مباشرة</p>
       </div>
+      <div class="panel" style="margin-bottom:18px">
+        <h3 style="margin-bottom:10px">📱 رقمي الشخصي (واتساب)</h3>
+        <div class="form-row">
+          <input id="my-phone-input" type="tel" placeholder="مثال: 9XXXXXXX" dir="ltr" style="text-align:right"/>
+          <button class="btn-gold" onclick="saveMyPhone()">💾 حفظ</button>
+        </div>
+      </div>
       <div class="stats-row" id="data-stats-row"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th></tr></thead>
-          <tbody id="data-table-body"><tr><td colspan="6"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
+          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th><th></th></tr></thead>
+          <tbody id="data-table-body"><tr><td colspan="7"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -217,6 +224,7 @@ async function afterAuth(session){
   currentUser=session.user;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('dashboard').style.display='block';
+  loadMyPhone();
   await Promise.all([loadFriends(),loadRegistrations()]);
   renderDataTab();
   renderFinanceTab();
@@ -299,11 +307,30 @@ function renderFriendsTable(){
 async function loadRegistrations(){
   try{
     const{data,error}=await sb.from('pre_registrations').select('*').order('created_at',{ascending:false});
-    if(error){document.getElementById('data-table-body').innerHTML='<tr><td colspan="6"><div class="empty">❌ تعذّر التحميل — تأكد من تنفيذ سياسات RLS</div></td></tr>';return;}
+    if(error){document.getElementById('data-table-body').innerHTML='<tr><td colspan="7"><div class="empty">❌ تعذّر التحميل — تأكد من تنفيذ سياسات RLS</div></td></tr>';return;}
     registrations=data||[];
   }catch(e){}
 }
 const stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 الحلقة الثانية',['10-12']:'🎓 ما بعد الأساسي'};
+
+// ══ رقمي الشخصي (محفوظ محلياً) ══
+function saveMyPhone(){
+  const val=document.getElementById('my-phone-input').value.trim();
+  localStorage.setItem('kh_my_phone',val);
+  alert('✅ تم الحفظ');
+}
+function loadMyPhone(){
+  const v=localStorage.getItem('kh_my_phone')||'';
+  const inp=document.getElementById('my-phone-input');
+  if(inp)inp.value=v;
+}
+function whatsappLink(phone){
+  let p=(phone||'').replace(/\D/g,'');
+  if(p.startsWith('00'))p=p.substring(2);
+  if(p.length===8)p='968'+p;
+  return `https://wa.me/${p}`;
+}
+
 function renderDataTab(){
   const total=registrations.length;
   const paid=registrations.filter(r=>r.payment_status==='paid').length;
@@ -314,7 +341,7 @@ function renderDataTab(){
     <div class="stat-card"><div class="stat-num gold">${referred}</div><div class="stat-label">عبر رابط صديق</div></div>
   `;
   const tbody=document.getElementById('data-table-body');
-  if(!registrations.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
+  if(!registrations.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
   tbody.innerHTML=registrations.map(r=>{
     const f=friends.find(fr=>fr.code===r.referred_by);
     const refLabel=r.referred_by?(f?escHtml(f.name):escHtml(r.referred_by)):'<span style="color:var(--muted)">مباشر</span>';
@@ -328,8 +355,22 @@ function renderDataTab(){
       <td>${refLabel}</td>
       <td>${new Date(r.created_at).toLocaleDateString('ar-OM')}</td>
       <td>${status}</td>
+      <td style="white-space:nowrap">
+        <a href="${whatsappLink(r.phone)}" target="_blank" class="action-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+          <svg viewBox="0 0 24 24" fill="#25D366" width="13" height="13"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785a9.87 9.87 0 0 1-5.031-1.378l-3.741.982.998-3.648a9.86 9.86 0 0 1-1.51-5.26C2.766 6.94 7.4 2.505 12.05 2.505c5.45 0 9.884 4.434 9.886 9.884-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+        </a>
+        <button class="delete-btn" onclick="deleteRegistration(${r.id},'${escHtml(r.name).replace(/'/g,"\\'")}')">✕</button>
+      </td>
     </tr>`;
   }).join('');
+}
+async function deleteRegistration(id,name){
+  if(!confirm(`حذف تسجيل "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.`))return;
+  const{error}=await sb.from('pre_registrations').delete().eq('id',id);
+  if(error){alert('فشل الحذف: '+error.message);return;}
+  await loadRegistrations();
+  renderDataTab();
+  renderFinanceTab();
 }
 
 // ══ تبويب الإدارة المالية ══
