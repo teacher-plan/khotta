@@ -176,7 +176,7 @@ tr:last-child td{border-bottom:none;}
       <div class="stats-row" id="finance-stats-row"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الصديق</th><th>عدد المُحالين</th><th>اشتراكات مدفوعة</th><th>إجمالي العمولة</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th>الصديق</th><th>عدد المُحالين</th><th>اشتراكات مدفوعة</th><th>المستحقات (العمولة)</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="finance-table-body"><tr><td colspan="6"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
@@ -383,8 +383,18 @@ function renderFinanceTab(){
     return{friend:f,referredCount:referredRows.length,paidCount:paidRows.length,totalCommission};
   });
   const totalOwed=rows.filter(r=>localStorage.getItem('payout_'+r.friend.code)!=='1').reduce((s,r)=>s+r.totalCommission,0);
+  // إجمالي الأرباح: كل الاشتراكات المدفوعة في النظام (مُحالة + مباشرة)
+  const totalPaidAll=registrations.filter(r=>r.payment_status==='paid').length;
+  const totalRevenue=Math.round(totalPaidAll*price*100)/100;
+  // إجمالي مستحقات كل الأصدقاء (مدفوعة وغير مدفوعة معاً)
+  const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
+  // صافي الربح بعد خصم عمولات الأصدقاء
+  const netProfit=Math.round((totalRevenue-totalCommissionAll)*100)/100;
   document.getElementById('finance-stats-row').innerHTML=`
-    <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">مستحق غير مدفوع</div></div>
+    <div class="stat-card"><div class="stat-num green">${totalRevenue.toFixed(2)} ر.ع</div><div class="stat-label">💰 مجموع الأرباح (الإجمالي)</div></div>
+    <div class="stat-card"><div class="stat-num">${netProfit.toFixed(2)} ر.ع</div><div class="stat-label">📈 صافي الربح بعد العمولات</div></div>
+    <div class="stat-card"><div class="stat-num gold">${totalCommissionAll.toFixed(2)} ر.ع</div><div class="stat-label">🤝 إجمالي مستحقات الأصدقاء</div></div>
+    <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">⏳ مستحق غير مدفوع بعد</div></div>
     <div class="stat-card"><div class="stat-num">${friends.length}</div><div class="stat-label">عدد الأصدقاء النشطين</div></div>
     <div class="stat-card"><div class="stat-num gold">${registrations.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
   `;
