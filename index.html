@@ -2402,7 +2402,7 @@ input,textarea,select{font-size:16px !important;}
 <div class="modal-bg hidden" id="folder-item-modal-bg">
   <div class="modal">
     <h3>➕ إضافة محتوى للمجلد</h3>
-    <label>العنوان *</label>
+    <label id="fi-title-label">العنوان *</label>
     <input id="fi-title" type="text" placeholder="عنوان المحتوى"/>
     <label>نوع المحتوى *</label>
     <select id="fi-type" onchange="toggleFolderItemType(this.value)">
@@ -2416,8 +2416,9 @@ input,textarea,select{font-size:16px !important;}
       <input id="fi-url" type="text" placeholder="https://..."/>
     </div>
     <div id="fi-pdf-field" style="display:none">
-      <label>اختر ملف PDF * (حد أقصى 50MB)</label>
-      <input id="fi-pdf-input" type="file" accept="application/pdf" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;"/>
+      <label>اختر ملف PDF أو أكثر (حد أقصى 50MB لكل ملف)</label>
+      <input id="fi-pdf-input" type="file" accept="application/pdf" multiple style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;" onchange="onFiPdfFilesSelected()"/>
+      <div id="fi-pdf-hint" style="font-size:11px;color:var(--muted);margin-top:6px">💡 يمكنك اختيار عدة ملفات معاً — لو تركت العنوان فارغاً سيُستخدم اسم كل ملف تلقائياً</div>
       <div id="fi-pdf-progress" style="display:none;margin-top:8px;">
         <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
           <div id="fi-pdf-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
@@ -9737,41 +9738,81 @@ function toggleFolderItemType(type){
   document.getElementById('fi-url-field').style.display=(type==='file'||type==='link')?'block':'none';
   document.getElementById('fi-pdf-field').style.display=type==='pdf'?'block':'none';
   document.getElementById('fi-yt-field').style.display=type==='youtube'?'block':'none';
+  const titleLabel=document.getElementById('fi-title-label');
+  const titleInput=document.getElementById('fi-title');
+  if(type==='pdf'){
+    titleLabel.textContent='العنوان (اختياري — سيُستخدم اسم الملف تلقائياً إن تُرك فارغاً)';
+    titleInput.placeholder='اتركه فارغاً لاستخدام اسم الملف';
+  }else{
+    titleLabel.textContent='العنوان *';
+    titleInput.placeholder='عنوان المحتوى';
+  }
 }
+// عند اختيار ملفات PDF: لو ملف واحد فقط، اقترح اسمه كعنوان تلقائياً (قابل للتعديل)
+function onFiPdfFilesSelected(){
+  const files=document.getElementById('fi-pdf-input').files;
+  const hint=document.getElementById('fi-pdf-hint');
+  if(files.length>1){
+    hint.textContent=`✅ تم اختيار ${files.length} ملفات — سيُستخدم اسم كل ملف كعنوان له تلقائياً`;
+  }else if(files.length===1){
+    hint.textContent='💡 لو تركت العنوان فارغاً سيُستخدم اسم الملف تلقائياً';
+    const titleInput=document.getElementById('fi-title');
+    if(!titleInput.value.trim()){
+      titleInput.value=files[0].name.replace(/\.pdf$/i,'');
+    }
+  }
+}
+function stripExt(name){return name.replace(/\.pdf$/i,'');}
 
 async function saveFolderItem(){
-  const title=document.getElementById('fi-title').value.trim();
+  const titleInput=document.getElementById('fi-title').value.trim();
   const type=document.getElementById('fi-type').value;
-  if(!title){toast('يرجى إدخال العنوان',true);return;}
-  let url='';
+
   if(type==='pdf'){
-    const file=document.getElementById('fi-pdf-input').files[0];
-    if(!file){toast('يرجى اختيار ملف PDF',true);return;}
-    if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB',true);return;}
+    const files=[...document.getElementById('fi-pdf-input').files];
+    if(!files.length){toast('يرجى اختيار ملف PDF واحد على الأقل',true);return;}
+    for(const f of files){
+      if(f.size>50*1024*1024){toast(`الملف "${f.name}" أكبر من 50MB`,true);return;}
+    }
     const btn=document.getElementById('fi-save-btn');
-    btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
+    btn.disabled=true;
     document.getElementById('fi-pdf-progress').style.display='block';
-    try{
-      const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-      const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
-      if(upErr){toast('فشل رفع الملف',true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
-      document.getElementById('fi-pdf-bar').style.width='100%';
-      document.getElementById('fi-pdf-pct').textContent='100%';
-      const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
-      url=pub.publicUrl;
-    }catch(e){toast('حدث خطأ',true);document.getElementById('fi-save-btn').disabled=false;document.getElementById('fi-save-btn').textContent='حفظ ✅';return;}
-  } else if(type==='youtube'){
+    let okCount=0;
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      btn.textContent=`⏳ جاري الرفع (${i+1}/${files.length})...`;
+      const itemTitle=files.length===1&&titleInput?titleInput:stripExt(file.name);
+      try{
+        const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+        const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
+        if(upErr){toast(`فشل رفع "${file.name}"`,true);continue;}
+        const pct=Math.round(((i+1)/files.length)*100);
+        document.getElementById('fi-pdf-bar').style.width=pct+'%';
+        document.getElementById('fi-pdf-pct').textContent=pct+'%';
+        const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
+        const{error:insErr}=await sb.from('library_items').insert({folder_id:currentFolderId,title:itemTitle,url:pub.publicUrl,type:'pdf'});
+        if(insErr){toast(`فشل حفظ "${file.name}"`,true);continue;}
+        okCount++;
+      }catch(e){toast(`حدث خطأ مع "${file.name}"`,true);}
+    }
+    btn.disabled=false;btn.textContent='حفظ ✅';
+    if(okCount){toast(`✅ تمت إضافة ${okCount} من ${files.length} ملف`,'ok');closeFolderItemModal();loadFolderItems(currentFolderId);}
+    return;
+  }
+
+  // أنواع أخرى (رابط/يوتيوب) — العنوان لا يزال إلزامياً
+  if(!titleInput){toast('يرجى إدخال العنوان',true);return;}
+  let url='';
+  if(type==='youtube'){
     url=document.getElementById('fi-yt-url').value.trim();
     if(!url||!url.includes('youtu')){toast('رابط يوتيوب غير صحيح',true);return;}
   } else {
     url=document.getElementById('fi-url').value.trim();
     if(!url||!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
   }
-  const{error}=await sb.from('library_items').insert({folder_id:currentFolderId,title,url,type});
+  const{error}=await sb.from('library_items').insert({folder_id:currentFolderId,title:titleInput,url,type});
   if(error){toast('فشل الحفظ: '+error.message,true);}
   else{toast('تمت الإضافة','ok');closeFolderItemModal();loadFolderItems(currentFolderId);}
-  const btn=document.getElementById('fi-save-btn');
-  if(btn){btn.disabled=false;btn.textContent='حفظ ✅';}
 }
 
 async function deleteFolderItem(id){
