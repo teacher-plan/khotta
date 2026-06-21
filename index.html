@@ -902,12 +902,14 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .lib-grade-group{margin-bottom:16px;}
 .lib-grade-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
 .lib-links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
-.lib-link-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:pointer;position:relative;min-width:0;}
+.lib-link-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;transition:all .2s;cursor:pointer;position:relative;}
 .lib-link-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2);}
+.lib-link-card.has-thumb{display:block;}
+.lib-link-card.has-thumb .lib-link-body{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;}
 .lib-link-icon{font-size:22px;flex-shrink:0;}
-.lib-link-info{flex:1;min-width:0;}
-.lib-link-title{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lib-link-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.lib-link-info{min-width:0;overflow:hidden;}
+.lib-link-title{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+.lib-link-meta{font-size:10px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .lib-link-delete{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:4px;opacity:0;transition:opacity .2s;}
 .lib-link-card:hover .lib-link-delete{opacity:1;}
 .lib-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
@@ -2308,7 +2310,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </div>
 <div class="pdf-modal-bg hidden" id="pdf-modal">
-  <div class="pdf-top-bar"><span class="pdf-title" id="pdf-title">ملف</span><button class="pdf-close" onclick="closePdf()">✕ إغلاق</button></div>
+  <div class="pdf-top-bar"><span class="pdf-title" id="pdf-title">ملف</span><a id="pdf-open-new-tab" href="#" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px;font-weight:700;text-decoration:underline;margin-inline-end:10px;white-space:nowrap">↗ فتح في تبويب جديد</a><button class="pdf-close" onclick="closePdf()">✕ إغلاق</button></div>
   <iframe class="pdf-frame" id="pdf-frame" src=""></iframe>
 </div>
 
@@ -5809,7 +5811,13 @@ function openDriveFile(url,name){
   if(!real){toast('❌ الملف غير متاح',true);return;}
   document.getElementById('pdf-title').textContent=name;
   document.getElementById('pdf-frame').src=real;
+  const openLink=document.getElementById('pdf-open-new-tab');
+  if(openLink)openLink.href=real;
   document.getElementById('pdf-modal').classList.remove('hidden');
+}
+// alias — بعض الأقسام (مكتبة المجلدات) تستدعي openPdf بنفس منطق openDriveFile
+function openPdf(url,name){
+  openDriveFile(url,name);
 }
 function downloadDriveFile(url,name){
   const real=resolveLocalUrl(url);
@@ -9448,6 +9456,7 @@ async function loadLibrary(){
 }
 
 function renderLibrary(){
+  _libLinkCardsIndex=[];
   const content=document.getElementById('library-content');
   const adminBar=document.getElementById('library-admin-bar');
   const adminFilters=document.getElementById('library-admin-filters');
@@ -9518,6 +9527,7 @@ function renderLibrary(){
   content.innerHTML=html;
 }
 
+let _libLinkCardsIndex=[];
 function libLinkCard(link){
   const icons={folder:'📁',file:'📄',pdf:'📑',youtube:'🎬'};
   const icon=icons[link.type]||'📄';
@@ -9531,18 +9541,26 @@ function libLinkCard(link){
   }
   const typeLabel={folder:'مجلد',file:'ملف',pdf:'PDF',youtube:'يوتيوب'}[link.type]||'ملف';
   const meta=link.subject?(link.subject+(semLabel?' • '+semLabel:'')):semLabel||'';
-  const onClick=link.type==='folder'
-    ?`openLibraryFolder(${link.id},'${link.title.replace(/'/g,"\\'")}','${meta}')`
-    :`openLibraryItem('${link.type}','${(link.url||'').replace(/'/g,"\\'")}')`;
-  return `<div class="lib-link-card" onclick="${onClick}">
-    ${ytThumb}
-    <div style="display:flex;align-items:center;gap:10px;flex:1">
+  // فهرسة آمنة بدل تضمين الرابط/العنوان مباشرة في onclick (يتفادى كسر الكود مع أحرف خاصة في الروابط/العناوين)
+  const idx=_libLinkCardsIndex.length;
+  _libLinkCardsIndex.push(link);
+  const onClick=`handleLibCardClick(${idx})`;
+  const bodyHtml=`
       <div class="lib-link-icon">${icon}</div>
       <div class="lib-link-info">
-        <div class="lib-link-title">${link.title}</div>
-        <div class="lib-link-meta">${typeLabel}${meta?' • '+meta:''} • اضغط للفتح</div>
-      </div>${delBtn}
-    </div></div>`;
+        <div class="lib-link-title">${escHtml(link.title)}</div>
+        <div class="lib-link-meta">${typeLabel}${meta?' • '+escHtml(meta):''} • اضغط للفتح</div>
+      </div>${delBtn}`;
+  if(ytThumb){
+    return `<div class="lib-link-card has-thumb" onclick="${onClick}">${ytThumb}<div class="lib-link-body">${bodyHtml}</div></div>`;
+  }
+  return `<div class="lib-link-card" onclick="${onClick}">${bodyHtml}</div>`;
+}
+function handleLibCardClick(idx){
+  const link=_libLinkCardsIndex[idx];
+  if(!link)return;
+  if(link.type==='folder')openLibraryFolder(link.id,link.title,(link.subject||'')+(link.semester==='1'?' • ف١':link.semester==='2'?' • ف٢':''));
+  else openLibraryItem(link.type,link.url||'');
 }
 
 function extractYoutubeId(url){
@@ -9694,6 +9712,7 @@ async function loadFolderItems(folderId){
     content.innerHTML='<div class="lib-empty">📭 لا يوجد محتوى في هذا المجلد بعد'+(isAdmin()?'<br><small>اضغط على "إضافة محتوى" لإضافة روابط وملفات</small>':'')+'</div>';
     return;
   }
+  _libLinkCardsIndex=[];
   let html='<div class="lib-links-grid">';
   data.forEach(item=>{
     const icons={file:'📄',pdf:'📑',youtube:'🎬',link:'🔗'};
@@ -9705,15 +9724,19 @@ async function loadFolderItems(folderId){
       if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
     }
     const typeLabel={file:'ملف',pdf:'PDF',youtube:'يوتيوب',link:'رابط'}[item.type]||'ملف';
-    html+=`<div class="lib-link-card" onclick="openLibraryItem('${item.type}','${item.url.replace(/'/g,"\\'")}')">
-      ${ytThumb}
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-        <div class="lib-link-icon">${icon}</div>
-        <div class="lib-link-info">
-          <div class="lib-link-title">${item.title}</div>
-          <div class="lib-link-meta">${typeLabel} • اضغط للفتح</div>
-        </div>${delBtn}
-      </div></div>`;
+    const idx=_libLinkCardsIndex.length;
+    _libLinkCardsIndex.push(item);
+    const bodyHtml=`
+      <div class="lib-link-icon">${icon}</div>
+      <div class="lib-link-info">
+        <div class="lib-link-title">${escHtml(item.title)}</div>
+        <div class="lib-link-meta">${typeLabel} • اضغط للفتح</div>
+      </div>${delBtn}`;
+    if(ytThumb){
+      html+=`<div class="lib-link-card has-thumb" onclick="handleLibCardClick(${idx})">${ytThumb}<div class="lib-link-body">${bodyHtml}</div></div>`;
+    }else{
+      html+=`<div class="lib-link-card" onclick="handleLibCardClick(${idx})">${bodyHtml}</div>`;
+    }
   });
   html+='</div>';
   content.innerHTML=html;
