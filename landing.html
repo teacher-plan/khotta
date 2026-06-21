@@ -260,6 +260,13 @@ function selectStage(stage,btn){
   btn.classList.add('sel');
 }
 
+// ══ التقاط كود الإحالة من الرابط (?ref=code) وحفظه طوال الجلسة ══
+(function captureReferral(){
+  const params=new URLSearchParams(location.search);
+  const ref=params.get('ref');
+  if(ref)sessionStorage.setItem('kh_ref_code',ref.trim());
+})();
+
 // ══ عداد المعلمين المسجّلين (عبر دالة آمنة، بدون كشف أي بيانات شخصية) ══
 async function loadRegistrationCount(){
   try{
@@ -299,7 +306,7 @@ async function submitRegistration(){
   const btn=document.getElementById('submit-btn');
   btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';
   try{
-    const{error}=await sb.from('pre_registrations').insert({name,phone,email:email||null,stage:selectedStage});
+    const{error}=await sb.from('pre_registrations').insert({name,phone,email:email||null,stage:selectedStage,referred_by:sessionStorage.getItem('kh_ref_code')||null});
     if(error){showMsg('حدث خطأ، حاول مجدداً',true);btn.disabled=false;btn.textContent='📝 احجز مكاني الآن';return;}
     document.getElementById('form-card').style.display='none';
     document.getElementById('success-state').style.display='block';
