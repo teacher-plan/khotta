@@ -9632,7 +9632,7 @@ async function saveLibraryLink(){
     btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
     document.getElementById('lib-pdf-progress').style.display='block';
     try{
-      const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const path=`${Date.now()}_${Math.random().toString(36).slice(2,9)}.pdf`;
       const{data,error}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false,onUploadProgress:(p)=>{const pct=Math.round(p.loaded/p.total*100);document.getElementById('lib-pdf-bar').style.width=pct+'%';document.getElementById('lib-pdf-pct').textContent=pct+'%';}});
       if(error){toast('فشل رفع الملف: '+error.message,true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
       const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
@@ -9778,25 +9778,40 @@ async function saveFolderItem(){
     btn.disabled=true;
     document.getElementById('fi-pdf-progress').style.display='block';
     let okCount=0;
+    let failedFiles=[];
     for(let i=0;i<files.length;i++){
       const file=files[i];
       btn.textContent=`⏳ جاري الرفع (${i+1}/${files.length})...`;
       const itemTitle=files.length===1&&titleInput?titleInput:stripExt(file.name);
-      try{
-        const path=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-        const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
-        if(upErr){toast(`فشل رفع "${file.name}"`,true);continue;}
-        const pct=Math.round(((i+1)/files.length)*100);
-        document.getElementById('fi-pdf-bar').style.width=pct+'%';
-        document.getElementById('fi-pdf-pct').textContent=pct+'%';
-        const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
-        const{error:insErr}=await sb.from('library_items').insert({folder_id:currentFolderId,title:itemTitle,url:pub.publicUrl,type:'pdf'});
-        if(insErr){toast(`فشل حفظ "${file.name}"`,true);continue;}
-        okCount++;
-      }catch(e){toast(`حدث خطأ مع "${file.name}"`,true);}
+      const path=`${Date.now()}_${i}_${Math.random().toString(36).slice(2,9)}.pdf`;
+      let lastErrMsg='';
+      let success=false;
+      // محاولتان لكل ملف (مرة، وإعادة محاولة واحدة عند الفشل — يفيد مع تذبذب الشبكة)
+      for(let attempt=0;attempt<2&&!success;attempt++){
+        try{
+          const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
+          if(upErr){lastErrMsg=upErr.message||'خطأ غير معروف';continue;}
+          const pct=Math.round(((i+1)/files.length)*100);
+          document.getElementById('fi-pdf-bar').style.width=pct+'%';
+          document.getElementById('fi-pdf-pct').textContent=pct+'%';
+          const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
+          const{error:insErr}=await sb.from('library_items').insert({folder_id:currentFolderId,title:itemTitle,url:pub.publicUrl,type:'pdf'});
+          if(insErr){lastErrMsg=insErr.message||'فشل حفظ السجل';continue;}
+          success=true;okCount++;
+        }catch(e){lastErrMsg=e.message||'خطأ غير متوقع';}
+      }
+      if(!success)failedFiles.push({name:file.name,err:lastErrMsg});
     }
     btn.disabled=false;btn.textContent='حفظ ✅';
-    if(okCount){toast(`✅ تمت إضافة ${okCount} من ${files.length} ملف`,'ok');closeFolderItemModal();loadFolderItems(currentFolderId);}
+    if(okCount&&!failedFiles.length){
+      toast(`✅ تمت إضافة ${okCount} من ${files.length} ملف`,'ok');
+      closeFolderItemModal();loadFolderItems(currentFolderId);
+    }else if(okCount&&failedFiles.length){
+      toast(`✅ نجح ${okCount} وفشل ${failedFiles.length} — السبب: ${failedFiles[0].err}`,true);
+      loadFolderItems(currentFolderId);
+    }else{
+      toast(`❌ فشل الرفع بالكامل — السبب: ${failedFiles[0]?.err||'غير معروف'}`,true);
+    }
     return;
   }
 
