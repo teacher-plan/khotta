@@ -239,7 +239,7 @@ async function doLogin(){
   try{
     const{data,error}=await sb.rpc('school_login',{p_username:username,p_password:password});
     const row=Array.isArray(data)?data[0]:data;
-    if(error){err.textContent='تعذّر الاتصال، حاول مجدداً';err.style.display='block';return;}
+    if(error){console.error('school_login error:',error);err.textContent='تعذّر الاتصال، حاول مجدداً';err.style.display='block';return;}
     if(!row){
       err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';err.style.display='block';
       return;
@@ -248,6 +248,7 @@ async function doLogin(){
     saveSession(row);
     showDashboard();
   }catch(e){
+    console.error('school_login exception:',e);
     err.textContent='حدث خطأ، حاول مجدداً';err.style.display='block';
   }finally{
     btn.disabled=false;btn.textContent='دخول';
@@ -277,7 +278,7 @@ async function loadViolations(){
   try{
     const session=loadSession();
     const{data,error}=await sb.rpc('school_get_violations',{p_token:session?session.token:null});
-    if(error){document.getElementById('grades-grid-view').innerHTML='<div class="empty">❌ تعذّر تحميل البيانات</div>';return;}
+    if(error){console.error('school_get_violations error:',error);document.getElementById('grades-grid-view').innerHTML='<div class="empty">❌ تعذّر تحميل البيانات</div>';return;}
     allViolations=data||[];
     const types=[...new Set(allViolations.map(v=>v.violation_type).filter(Boolean))];
     const typeSel=document.getElementById('filter-type');
@@ -287,6 +288,7 @@ async function loadViolations(){
     renderGradesGrid();
     renderStatsSection();
   }catch(e){
+    console.error('loadViolations exception:',e);
     document.getElementById('grades-grid-view').innerHTML='<div class="empty">❌ حدث خطأ</div>';
   }
 }
