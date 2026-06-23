@@ -8686,7 +8686,7 @@ async function handleInviteOnBoot(code, email){
     }
     if(data.status==='cancelled'){toast('❌ هذا الرابط ملغى',true);return false;}
     if(data.status==='expired'||new Date(data.expires_at)<new Date()){
-      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+      await sb.from('invites').update({status:'expired',used_by:email}).eq('id',data.id);
       toast('❌ انتهت صلاحية هذا الرابط',true);
       return false;
     }
@@ -8724,13 +8724,13 @@ async function checkInviteCode(){
       toast('❌ هذا الرابط '+(data.status==='used'?'مستخدم مسبقاً':'منتهي الصلاحية'),true);
       return;
     }
+    const email=currentUser.email;
     if(new Date(data.expires_at)<new Date()){
-      await sb.from('invites').update({status:'expired'}).eq('id',data.id);
+      await sb.from('invites').update({status:'expired',used_by:email}).eq('id',data.id);
       toast('❌ انتهت صلاحية هذا الرابط',true);
       return;
     }
     // إضافة البريد لـ allowed_emails
-    const email=currentUser.email;
     const{data:existing}=await sb.from('allowed_emails').select('email').eq('email',email).maybeSingle();
     if(!existing){
       await sb.from('allowed_emails').insert({email});
@@ -9315,7 +9315,7 @@ async function loadSchools(){
   if(!list)return;
   list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>';
   try{
-    const{data,error}=await sb.from('schools').select('id,name,username,structure,created_at,created_by').order('created_at',{ascending:false});
+    const{data,error}=await sb.rpc('admin_list_schools');
     if(error){list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ تعذّر التحميل</div>';return;}
     _schoolsList=data||[];
     renderSchoolsList();

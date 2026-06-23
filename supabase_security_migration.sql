@@ -128,6 +128,27 @@ create policy schools_admin_select on schools for select to authenticated using 
 drop policy if exists schools_admin_delete on schools;
 create policy schools_admin_delete on schools for delete to authenticated using (is_app_admin());
 
+-- المعلمون العاديون يحتاجون قراءة id/name فقط (للقائمة المنسدلة عند الإعداد)
+revoke select on schools from authenticated;
+grant select (id, name) on schools to authenticated;
+drop policy if exists schools_authenticated_basic_select on schools;
+create policy schools_authenticated_basic_select on schools for select to authenticated using (true);
+
+-- لوحة الأدمن تحتاج أعمدة أكثر (username, structure...) فلا يمكن منحها عبر صلاحيات الأعمدة
+-- (تختلف حسب السياسة)، لذا تُستخدم دالة RPC آمنة بدلاً من القراءة المباشرة
+create or replace function admin_list_schools()
+returns table(id bigint, name text, username text, structure jsonb, created_at timestamptz, created_by text)
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_app_admin() then
+    raise exception 'forbidden';
+  end if;
+  return query
+    select s.id, s.name, s.username, s.structure, s.created_at, s.created_by
+    from schools s order by s.created_at desc;
+end; $$;
+grant execute on function admin_list_schools() to authenticated;
+
 -- violations: أي معلّم مسجّل دخول يستطيع تسجيل مخالفة؛ لا قراءة مباشرة (لوحة المدرسة تقرأ عبر RPC)
 drop policy if exists violations_insert on violations;
 create policy violations_insert on violations for insert to authenticated with check (true);
