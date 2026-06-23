@@ -334,8 +334,10 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 #tour-launch-btn.pulse{animation:tourPulse 1.8s ease-in-out infinite;}
 @keyframes tourPulse{0%,100%{box-shadow:0 4px 14px rgba(184,134,11,.5),0 0 0 0 rgba(184,134,11,.55);}50%{box-shadow:0 4px 14px rgba(184,134,11,.5),0 0 0 10px rgba(184,134,11,0);}}
 
-#tour-invite{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);max-width:min(360px,92vw);background:var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:16px 18px;box-shadow:0 10px 36px rgba(0,0,0,.45);z-index:900;opacity:0;transition:transform .4s cubic-bezier(.4,0,.2,1),opacity .4s;text-align:center;}
-#tour-invite.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#tour-invite-bg{position:fixed;inset:0;background:rgba(10,6,4,.6);z-index:899;display:none;align-items:center;justify-content:center;padding:16px;}
+#tour-invite-bg.show{display:flex;}
+#tour-invite{position:relative;transform:scale(.85);max-width:min(360px,92vw);background:var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:20px 18px;box-shadow:0 10px 36px rgba(0,0,0,.45);z-index:900;opacity:0;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;text-align:center;}
+#tour-invite.show{transform:scale(1);opacity:1;}
 #tour-invite .ti-icon{font-size:26px;margin-bottom:6px;}
 #tour-invite .ti-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;}
 #tour-invite .ti-desc{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;}
@@ -364,6 +366,9 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 #tour-card .tc-nav button{border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;}
 #tour-card .tc-prev{background:var(--card);color:var(--text);border:1px solid var(--border) !important;}
 #tour-card .tc-next{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+#tour-card .tc-try{display:none;width:100%;margin-bottom:12px;border:none;border-radius:10px;padding:10px;font-size:12.5px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;animation:tcTryPulse 1.6s ease-in-out infinite;}
+#tour-card .tc-try.show{display:block;}
+@keyframes tcTryPulse{0%,100%{box-shadow:0 0 0 0 rgba(67,160,71,.5);}50%{box-shadow:0 0 0 7px rgba(67,160,71,0);}}
 @media(max-width:520px){#tour-card{max-width:min(260px,80vw);padding:14px;}}
 
 /* ══ OFFLINE BANNER ══ */
@@ -2488,14 +2493,16 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- ══ TOUR التفاعلي ══ -->
 <button id="tour-launch-btn" onclick="startDemoTour()" title="جولة تفاعلية">🎯</button>
+<div id="tour-invite-bg">
 <div id="tour-invite">
   <div class="ti-icon">🎯</div>
   <div class="ti-title">أول مرة هنا؟</div>
-  <div class="ti-desc">خذ جولة سريعة (دقيقة واحدة) تشرح لك كل قسم ووظيفته وكيف تستخدمه</div>
+  <div class="ti-desc">خذ جولة سريعة تفاعلية تجرّب فيها أهم مزايا كل قسم بنفسك — تعديل الجدول، تفعيل التذكيرات، تصدير شهادة، وأكثر</div>
   <div class="ti-actions">
     <button class="ti-dismiss" onclick="dismissTourInvite()">لا، شكراً</button>
     <button class="ti-start" onclick="startDemoTour()">🚀 بدء الجولة</button>
   </div>
+</div>
 </div>
 <div id="tour-overlay">
   <div id="tour-spotlight"></div>
@@ -2504,6 +2511,7 @@ input,textarea,select{font-size:16px !important;}
     <div class="tc-icon" id="tc-icon"></div>
     <div class="tc-title" id="tc-title"></div>
     <div class="tc-desc" id="tc-desc"></div>
+    <button class="tc-try" id="tc-try-btn" onclick="tourTryAction()"></button>
     <div class="tc-dots" id="tc-dots"></div>
     <div class="tc-actions">
       <button class="tc-skip" onclick="endDemoTour()">تخطي الجولة ✕</button>
@@ -9993,18 +10001,25 @@ function injectDemoBanner(){
 // ══════════ TOUR التفاعلي (نسخة الديمو) ══════════
 const TOUR_STEPS=[
   {page:'timetable',icon:'📅',title:'الجدول الأسبوعي',
-    desc:'هنا يظهر جدول حصصك كاملاً. اضغط "تعديل الجدول" لإدخال حصصك، وستصلك تذكيرات تلقائية قبل كل حصة بدقائق معدودة.'},
+    desc:'هنا يظهر جدول حصصك كاملاً. جرّب الآن الضغط على "تعديل الجدول" لترى كيف تُدخل حصصك بنفسك.',
+    target:'#tt-edit',tryLabel:'👆 جرّب: فتح وضع تعديل الجدول',
+    tryFn:()=>{if(!ttEditing)toggleEditMode();}},
+  {page:'timetable',icon:'🔔',title:'التذكيرات التلقائية',
+    desc:'فعّل الآن التذكيرات وحدد عدد الدقائق — سيصلك تنبيه تلقائي قبل كل حصة بهذا الوقت بالضبط.',
+    target:'#rs-toggle',tryLabel:'👆 جرّب: تفعيل التذكيرات',
+    tryFn:()=>{if(!remindersConfig.enabled)toggleReminders();}},
   {page:'tracker',icon:'📘',title:'خطة الدروس',
     desc:'تابع تقدّمك في المنهج وحدة بوحدة ودرساً بدرس. علّم كل درس بعد تنفيذه ليُحفظ تقدّمك تلقائياً ويظهر لك بالتقارير.'},
   {page:'grades',icon:'📝',title:'الدرجات والتقييم',
-    desc:'أدخل درجات طلابك في أعمدة التقييم الجاهزة (اختبارات، مشاركة، واجبات...). جرّب زر "🏆 المتفوقون" لتصدر شهادات تقدير لمن حصل على العلامة الكاملة.',
-    target:'#page-grades [onclick^="openTopStudents"]'},
+    desc:'أدخل درجات طلابك في أعمدة التقييم الجاهزة (اختبارات، مشاركة، واجبات...). جرّب الآن تصدير شهادة تقدير حقيقية لأحد المتفوقين.',
+    target:'#page-grades [onclick^="openTopStudents"]',tryLabel:'👆 جرّب: فتح المتفوقون وتصدير شهادة',
+    tryFn:()=>{openTopStudents();}},
   {page:'behavior',icon:'🎓',title:'السلوك والأداء',
     desc:'سجّل ملاحظات وسلوكيات الطلاب بسهولة. عند تسجيل مخالفة يُفتح واتساب تلقائياً برسالة جاهزة لإرسالها لولي الأمر.'},
   {page:'stats',icon:'📊',title:'الإحصائيات',
     desc:'نظرة سريعة وشاملة على أداء طلابك وصفوفك — متوسطات الدرجات، نسب الحضور والسلوك، كل ذلك في رسوم بيانية واضحة.'},
   {page:'library',icon:'📚',title:'المكتبة',
-    desc:'مصادر ومرفقات تعليمية منظّمة حسب المادة والوحدة، تقدر ترجع لها وقت ما تحتاجها أثناء التحضير للدروس.'},
+    desc:'هنا تجد كل ملفات مادتك منظّمة في مكان واحد — من الكتب والمناهج إلى الاختبارات الجاهزة وملفات التحضير، ترجع لها وقت ما تحتاجها.'},
   {page:'archive',icon:'🗂️',title:'الأرشيف',
     desc:'كل ما توثّقه عبر الفصول الدراسية يُحفظ هنا تلقائياً — رجوع سريع لأي بيانات سابقة دون فقدان شيء.'},
   {page:'cv',icon:'🪪',title:'السيرة الذاتية',
@@ -10022,12 +10037,14 @@ function initDemoTour(){
   if(localStorage.getItem('kh_demo_tour_done'))return;
   setTimeout(()=>{
     if(tourActiveNow)return;
-    document.getElementById('tour-invite')?.classList.add('show');
+    document.getElementById('tour-invite-bg')?.classList.add('show');
+    setTimeout(()=>document.getElementById('tour-invite')?.classList.add('show'),20);
   },2200);
 }
 let tourActiveNow=false;
 function dismissTourInvite(){
   document.getElementById('tour-invite')?.classList.remove('show');
+  document.getElementById('tour-invite-bg')?.classList.remove('show');
 }
 function startDemoTour(){
   dismissTourInvite();
@@ -10041,6 +10058,12 @@ function startDemoTour(){
   window.addEventListener('resize',positionTourOnResize);
 }
 function positionTourOnResize(){if(tourActiveNow)positionTourElements(tourSteps[tourIdx]);}
+function tourTryAction(){
+  const step=tourSteps[tourIdx];
+  if(!step||!step.tryFn)return;
+  try{step.tryFn();}catch(err){}
+  setTimeout(()=>positionTourElements(step),200);
+}
 function endDemoTour(){
   tourActiveNow=false;
   document.getElementById('tour-overlay').style.display='none';
@@ -10064,6 +10087,13 @@ function renderTourStep(){
   document.getElementById('tc-icon').textContent=step.icon;
   document.getElementById('tc-title').textContent=step.title;
   document.getElementById('tc-desc').textContent=step.desc;
+  const tryBtn=document.getElementById('tc-try-btn');
+  if(step.tryFn){
+    tryBtn.textContent=step.tryLabel||'👆 جرّب الآن';
+    tryBtn.classList.add('show');
+  }else{
+    tryBtn.classList.remove('show');
+  }
   document.getElementById('tc-dots').innerHTML=tourSteps.map((_,i)=>`<div class="tc-dot ${i===tourIdx?'on':''}"></div>`).join('');
   document.getElementById('tc-prev-btn').style.visibility=tourIdx===0?'hidden':'visible';
   document.getElementById('tc-next-btn').textContent=tourIdx===tourSteps.length-1?'إنهاء ✅':'التالي ←';
