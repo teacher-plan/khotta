@@ -808,7 +808,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .grades-table tbody tr:nth-child(even) td:first-child{background:rgba(255,255,255,.02);}
 
 /* ══ CERT PREVIEW MODAL ══ */
-.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:600;padding:20px;}
+.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
 .cert-preview-card{background:#1a1010;border-radius:20px;padding:20px;max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center;}
 .grade-input{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;padding:4px 2px;width:38px;text-align:center;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;transition:all .2s;}
 .grade-input:hover{border-color:var(--border);}
@@ -8101,7 +8101,8 @@ async function downloadCertificate(studentId, studentName){
   iframe.contentDocument.open();
   iframe.contentDocument.write(certHTML);
   iframe.contentDocument.close();
-  await new Promise(r=>setTimeout(r,1500));
+  try{ await iframe.contentDocument.fonts.ready; }catch(e){}
+  await new Promise(r=>setTimeout(r,600));
 
   try{
     if(typeof html2canvas==='undefined'){
@@ -8113,7 +8114,7 @@ async function downloadCertificate(studentId, studentName){
       });
     }
     const certEl=iframe.contentDocument.querySelector('.cert');
-    const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490});
+    const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490,foreignObjectRendering:true});
     const imgSrc=canvas.toDataURL('image/png');
     const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
     const canShare=navigator.share&&isMobile;
