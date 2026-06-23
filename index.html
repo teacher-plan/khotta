@@ -4946,6 +4946,10 @@ async function loadAnnouncementBanner(){
     _bellAnnouncements=[...announcements,...messages]
       .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
+    // تنظيف معرّفات القراءة المخزّنة من عناصر لم تعد موجودة لمنع تضخّم localStorage
+    const currentKeys=new Set(_bellAnnouncements.map(a=>`${a._type}_${a.id}`));
+    saveBellReadIds(getBellReadIds().filter(id=>currentKeys.has(id)));
+
     renderBell();
   }catch(e){}
 }
@@ -5029,7 +5033,7 @@ function markOneReadByKey(key){
 function markAllRead(e){
   e.stopPropagation();
   const keys=_bellAnnouncements.map(a=>`${a._type}_${a.id}`);
-  saveBellReadIds(keys);
+  saveBellReadIds([...new Set([...getBellReadIds(),...keys])]);
   renderBell();
   const dd=document.getElementById('bell-dropdown');
   if(dd)dd.classList.remove('show');
