@@ -8252,7 +8252,8 @@ async function downloadCertificate(studentId, studentName){
   iframe.contentDocument.open();
   iframe.contentDocument.write(certHTML);
   iframe.contentDocument.close();
-  await new Promise(r=>setTimeout(r,1500));
+  try{ await iframe.contentDocument.fonts.ready; }catch(e){}
+  await new Promise(r=>setTimeout(r,600));
 
   try{
     if(typeof html2canvas==='undefined'){
@@ -8264,7 +8265,7 @@ async function downloadCertificate(studentId, studentName){
       });
     }
     const certEl=iframe.contentDocument.querySelector('.cert');
-    const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490});
+    const canvas=await html2canvas(certEl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:700,height:490,foreignObjectRendering:true});
     const imgSrc=canvas.toDataURL('image/png');
     const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
     const canShare=navigator.share&&isMobile;
