@@ -84,9 +84,52 @@ tr:last-child td{border-bottom:none;}
 .empty{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
 .loading{text-align:center;color:var(--muted);padding:40px;}
 
-.price-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;}
+.price-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;flex-wrap:wrap;}
 .price-row label{font-size:12.5px;font-weight:800;color:var(--text);white-space:nowrap;}
 .price-row input{width:100px;background:var(--card);border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-family:'Cairo',sans-serif;font-size:13px;}
+
+tbody tr{transition:background .15s;}
+tbody tr:hover{background:rgba(184,134,11,.04);}
+.row-delete-btn{background:rgba(192,57,43,.08);border:1px solid var(--red);color:var(--red);border-radius:50%;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;}
+.row-delete-btn:hover{background:var(--red);color:#fff;}
+
+/* ══ شريط البحث ══ */
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.search-row input{flex:1;min-width:180px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:13.5px;}
+.search-row .results-count{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap;}
+
+/* ══ تبويب النظرة العامة ══ */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.kpi-card.green::before{background:linear-gradient(90deg,var(--green),var(--green2));}
+.kpi-card.red::before{background:linear-gradient(90deg,var(--red),var(--red2));}
+.kpi-icon{font-size:20px;margin-bottom:8px;}
+.kpi-num{font-size:26px;font-weight:900;line-height:1.1;margin-bottom:4px;color:var(--text);}
+.kpi-card.gold .kpi-num{color:var(--gold);}
+.kpi-card.green .kpi-num{color:var(--green2);}
+.kpi-card.red .kpi-num{color:var(--red);}
+.kpi-label{font-size:11.5px;color:var(--muted);font-weight:700;}
+.kpi-sub{font-size:10.5px;margin-top:6px;font-weight:800;display:inline-flex;align-items:center;gap:3px;}
+.kpi-sub.up{color:var(--green2);}
+.kpi-sub.down{color:var(--red);}
+
+.section-title{font-size:14px;font-weight:800;margin:24px 0 12px;display:flex;align-items:center;gap:6px;}
+.stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px;}
+.stage-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.stage-card .stage-name{font-size:12.5px;font-weight:800;margin-bottom:8px;}
+.stage-bar-track{background:var(--card);border-radius:99px;height:8px;overflow:hidden;margin-bottom:8px;}
+.stage-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:99px;}
+.stage-card .stage-count{font-size:11px;color:var(--muted);font-weight:700;}
+
+.top-friends-list{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.top-friend-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+.top-friend-row:last-child{border-bottom:none;}
+.top-friend-rank{width:26px;height:26px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:var(--gold);flex-shrink:0;}
+.top-friend-row:nth-child(1) .top-friend-rank{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+.top-friend-name{flex:1;font-weight:800;font-size:13px;}
+.top-friend-meta{font-size:11.5px;color:var(--muted);}
+.top-friend-revenue{font-weight:900;color:var(--green2);font-size:13px;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -114,14 +157,30 @@ tr:last-child td{border-bottom:none;}
   </div>
 
   <div class="tabs-bar">
-    <button class="active" onclick="switchTab('links',this)">🔗 روابط الأصدقاء</button>
+    <button class="active" onclick="switchTab('overview',this)">📊 نظرة عامة</button>
+    <button onclick="switchTab('links',this)">🔗 روابط الأصدقاء</button>
     <button onclick="switchTab('data',this)">📋 جدول البيانات</button>
     <button onclick="switchTab('finance',this)">💵 الإدارة المالية</button>
   </div>
 
   <div class="wrap">
+    <!-- ══ تبويب 0: نظرة عامة ══ -->
+    <div class="tab-section active" id="tab-overview">
+      <div class="page-header">
+        <h1>📊 نظرة عامة</h1>
+        <p>ملخّص شامل للأداء المالي والتسويقي للمنصة</p>
+      </div>
+      <div class="kpi-grid" id="overview-kpi-row"></div>
+
+      <div class="section-title">📚 توزيع المسجّلين حسب المرحلة</div>
+      <div class="stage-grid" id="overview-stage-grid"></div>
+
+      <div class="section-title">🏆 أفضل 5 أصدقاء أداءً</div>
+      <div class="top-friends-list" id="overview-top-friends"></div>
+    </div>
+
     <!-- ══ تبويب 1: روابط الأصدقاء ══ -->
-    <div class="tab-section active" id="tab-links">
+    <div class="tab-section" id="tab-links">
       <div class="page-header">
         <h1>🔗 روابط الأصدقاء</h1>
         <p>أنشئ رابطاً فريداً لكل صديق يُروّج لخطتي الفصلية</p>
@@ -157,6 +216,10 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="stats-row" id="data-stats-row"></div>
+      <div class="search-row">
+        <input id="data-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderDataTab()"/>
+        <span class="results-count" id="data-results-count"></span>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th><th>إجراءات</th></tr></thead>
@@ -179,6 +242,10 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="stats-row" id="finance-stats-row"></div>
+      <div class="search-row">
+        <input id="finance-search" type="text" placeholder="🔎 بحث باسم الصديق..." oninput="renderFinanceTab()"/>
+        <span class="results-count" id="finance-results-count"></span>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>الصديق</th><th>عدد المُحالين</th><th>اشتراكات مدفوعة</th><th>المستحقات (العمولة)</th><th>الحالة</th><th></th></tr></thead>
@@ -234,6 +301,7 @@ async function afterAuth(session){
   await Promise.all([loadFriends(),loadRegistrations()]);
   renderDataTab();
   renderFinanceTab();
+  renderOverviewTab();
 }
 
 function switchTab(name,btn){
@@ -273,6 +341,7 @@ async function addFriend(){
     document.getElementById('new-friend-commission').value='20';
     await loadFriends();
     renderFinanceTab();
+    renderOverviewTab();
   }finally{
     btn.disabled=false;btn.textContent='➕ إنشاء رابط';
   }
@@ -282,6 +351,7 @@ async function deleteFriend(id){
   await sb.from('referrers').delete().eq('id',id);
   await loadFriends();
   renderFinanceTab();
+  renderOverviewTab();
 }
 function copyLink(code){
   const link=`${location.origin}/landing.html?ref=${code}`;
@@ -354,6 +424,7 @@ async function openChangePriceDialog(){
     subscriptionPrice=val;
     document.getElementById('sub-price-display').textContent=subscriptionPrice;
     renderFinanceTab();
+    renderOverviewTab();
     alert('✅ تم تحديث السعر');
   }catch(e){
     alert('❌ فشل التحديث: '+e.message);
@@ -369,15 +440,24 @@ function whatsappLink(phone){
 function renderDataTab(){
   const total=registrations.length;
   const paid=registrations.filter(r=>r.payment_status==='paid').length;
+  const pending=total-paid;
   const referred=registrations.filter(r=>r.referred_by).length;
+  const conversion=total?Math.round((paid/total)*100):0;
   document.getElementById('data-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">إجمالي المسجّلين</div></div>
     <div class="stat-card"><div class="stat-num green">${paid}</div><div class="stat-label">اشتراك مدفوع</div></div>
+    <div class="stat-card"><div class="stat-num red">${pending}</div><div class="stat-label">قيد الانتظار</div></div>
+    <div class="stat-card"><div class="stat-num gold">${conversion}%</div><div class="stat-label">نسبة التحويل</div></div>
     <div class="stat-card"><div class="stat-num gold">${referred}</div><div class="stat-label">عبر رابط صديق</div></div>
   `;
+  const q=(document.getElementById('data-search')?.value||'').trim().toLowerCase();
+  const filtered=q?registrations.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)):registrations;
+  const countEl=document.getElementById('data-results-count');
+  if(countEl)countEl.textContent=q?`${filtered.length} من ${total} نتيجة`:'';
   const tbody=document.getElementById('data-table-body');
   if(!registrations.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
-  tbody.innerHTML=registrations.map(r=>{
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  tbody.innerHTML=filtered.map(r=>{
     const f=friends.find(fr=>fr.code===r.referred_by);
     const refLabel=r.referred_by?(f?escHtml(f.name):escHtml(r.referred_by)):'<span style="color:var(--muted)">مباشر</span>';
     const status=r.payment_status==='paid'
@@ -394,26 +474,12 @@ function renderDataTab(){
         <a href="${whatsappLink(r.phone)}" target="_blank" title="فتح واتساب" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#25D366;border-radius:50%;text-decoration:none;margin-left:4px">
           <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785a9.87 9.87 0 0 1-5.031-1.378l-3.741.982.998-3.648a9.86 9.86 0 0 1-1.51-5.26C2.766 6.94 7.4 2.505 12.05 2.505c5.45 0 9.884 4.434 9.886 9.884-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
         </a>
-        <button title="حذف" onclick="deleteRegistration(${r.id},'${escHtml(r.name).replace(/'/g,"\\'")}'')" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#ff4444;border:none;border-radius:50%;color:white;cursor:pointer;font-size:14px">✕</button>
+        <button title="حذف" onclick="deleteRegistration(${r.id},'${escHtml(r.name).replace(/'/g,"\\'")}')" class="row-delete-btn">✕</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-// ══ إرسال رسالة واتساب (مباشر) ══
-const WA_PHONE_ID='1128078607060985';
-const WA_TOKEN=localStorage.getItem('kh_wa_token')||'';
-
-function saveWaToken(){
-  const val=document.getElementById('wa-token-input').value.trim();
-  localStorage.setItem('kh_wa_token',val);
-  alert('✅ تم حفظ التوكن');
-}
-function loadWaToken(){
-  const v=localStorage.getItem('kh_wa_token')||'';
-  const inp=document.getElementById('wa-token-input');
-  if(inp)inp.value=v?'••••••••••••••••••':'';
-}
 async function deleteRegistration(id,name){
   if(!confirm(`حذف تسجيل "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.`))return;
   const{error}=await sb.from('pre_registrations').delete().eq('id',id);
@@ -421,10 +487,11 @@ async function deleteRegistration(id,name){
   await loadRegistrations();
   renderDataTab();
   renderFinanceTab();
+  renderOverviewTab();
 }
 
 // ══ تبويب الإدارة المالية ══
-function renderFinanceTab(){
+function computeFinanceRows(){
   const price=subscriptionPrice;
   const rows=friends.map(f=>{
     const referredRows=registrations.filter(r=>r.referred_by===f.code);
@@ -432,7 +499,7 @@ function renderFinanceTab(){
     const totalCommission=Math.round(paidRows.length*price*(f.commission_rate/100)*100)/100;
     return{friend:f,referredCount:referredRows.length,paidCount:paidRows.length,totalCommission};
   });
-  const totalOwed=rows.filter(r=>localStorage.getItem('payout_'+r.friend.code)!=='1').reduce((s,r)=>s+r.totalCommission,0);
+  const totalOwed=Math.round(rows.filter(r=>localStorage.getItem('payout_'+r.friend.code)!=='1').reduce((s,r)=>s+r.totalCommission,0)*100)/100;
   // إجمالي الأرباح: كل الاشتراكات المدفوعة في النظام (مُحالة + مباشرة)
   const totalPaidAll=registrations.filter(r=>r.payment_status==='paid').length;
   const totalRevenue=Math.round(totalPaidAll*price*100)/100;
@@ -440,6 +507,11 @@ function renderFinanceTab(){
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
   // صافي الربح بعد خصم عمولات الأصدقاء
   const netProfit=Math.round((totalRevenue-totalCommissionAll)*100)/100;
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit};
+}
+
+function renderFinanceTab(){
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit}=computeFinanceRows();
   document.getElementById('finance-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num green">${totalRevenue.toFixed(2)} ر.ع</div><div class="stat-label">💰 مجموع الأرباح (الإجمالي)</div></div>
     <div class="stat-card"><div class="stat-num">${netProfit.toFixed(2)} ر.ع</div><div class="stat-label">📈 صافي الربح بعد العمولات</div></div>
@@ -448,9 +520,14 @@ function renderFinanceTab(){
     <div class="stat-card"><div class="stat-num">${friends.length}</div><div class="stat-label">عدد الأصدقاء النشطين</div></div>
     <div class="stat-card"><div class="stat-num gold">${registrations.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
   `;
+  const q=(document.getElementById('finance-search')?.value||'').trim().toLowerCase();
+  const filtered=q?rows.filter(r=>r.friend.name.toLowerCase().includes(q)):rows;
+  const countEl=document.getElementById('finance-results-count');
+  if(countEl)countEl.textContent=q?`${filtered.length} من ${rows.length} نتيجة`:'';
   const tbody=document.getElementById('finance-table-body');
   if(!rows.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">أضف أصدقاءً أولاً من تبويب "روابط الأصدقاء"</div></td></tr>';return;}
-  tbody.innerHTML=rows.map(r=>{
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  tbody.innerHTML=filtered.map(r=>{
     const localKey='payout_'+r.friend.code;
     const paidOut=localStorage.getItem(localKey)==='1';
     return `<tr>
@@ -468,6 +545,7 @@ function togglePayout(code){
   const cur=localStorage.getItem(key)==='1';
   if(cur)localStorage.removeItem(key);else localStorage.setItem(key,'1');
   renderFinanceTab();
+  renderOverviewTab();
 }
 
 // ══ تبديل حالة الدفع لمسجَّل (من تبويب البيانات لاحقاً عند الحاجة) ══
@@ -476,6 +554,73 @@ async function markRegistrationPaid(id,status){
   await loadRegistrations();
   renderDataTab();
   renderFinanceTab();
+  renderOverviewTab();
+}
+
+// ══ تبويب النظرة العامة (ملخّص شامل للمدير) ══
+function renderOverviewTab(){
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit}=computeFinanceRows();
+  const total=registrations.length;
+  const paid=registrations.filter(r=>r.payment_status==='paid').length;
+  const conversion=total?Math.round((paid/total)*100):0;
+  const referred=registrations.filter(r=>r.referred_by).length;
+  const directCount=total-referred;
+
+  const now=new Date();
+  const isThisMonth=d=>{const dt=new Date(d);return dt.getFullYear()===now.getFullYear()&&dt.getMonth()===now.getMonth();};
+  const lastMonthDate=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const isLastMonth=d=>{const dt=new Date(d);return dt.getFullYear()===lastMonthDate.getFullYear()&&dt.getMonth()===lastMonthDate.getMonth();};
+  const thisMonthCount=registrations.filter(r=>isThisMonth(r.created_at)).length;
+  const lastMonthCount=registrations.filter(r=>isLastMonth(r.created_at)).length;
+  let growthLabel='';
+  if(lastMonthCount>0){
+    const growthPct=Math.round(((thisMonthCount-lastMonthCount)/lastMonthCount)*100);
+    growthLabel=`<span class="kpi-sub ${growthPct>=0?'up':'down'}">${growthPct>=0?'▲':'▼'} ${Math.abs(growthPct)}% عن الشهر الماضي</span>`;
+  }else if(thisMonthCount>0){
+    growthLabel=`<span class="kpi-sub up">▲ جديد هذا الشهر</span>`;
+  }
+
+  document.getElementById('overview-kpi-row').innerHTML=`
+    <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-num">${totalRevenue.toFixed(2)}</div><div class="kpi-label">إجمالي الأرباح (ر.ع)</div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات</div></div>
+    <div class="kpi-card red"><div class="kpi-icon">⏳</div><div class="kpi-num">${totalOwed.toFixed(2)}</div><div class="kpi-label">مستحقات غير مدفوعة</div></div>
+    <div class="kpi-card gold"><div class="kpi-icon">👥</div><div class="kpi-num">${total}</div><div class="kpi-label">إجمالي المسجّلين</div>${growthLabel}</div>
+    <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-num">${paid}</div><div class="kpi-label">مشتركون مدفوعون</div></div>
+    <div class="kpi-card gold"><div class="kpi-icon">🎯</div><div class="kpi-num">${conversion}%</div><div class="kpi-label">نسبة التحويل لمدفوع</div></div>
+    <div class="kpi-card"><div class="kpi-icon">🔗</div><div class="kpi-num">${referred}</div><div class="kpi-label">عبر روابط الأصدقاء</div></div>
+    <div class="kpi-card"><div class="kpi-icon">🚶</div><div class="kpi-num">${directCount}</div><div class="kpi-label">تسجيل مباشر</div></div>
+    <div class="kpi-card"><div class="kpi-icon">🤝</div><div class="kpi-num">${friends.length}</div><div class="kpi-label">عدد الأصدقاء المسوّقين</div></div>
+    <div class="kpi-card"><div class="kpi-icon">🗓️</div><div class="kpi-num">${thisMonthCount}</div><div class="kpi-label">تسجيلات هذا الشهر</div></div>
+  `;
+
+  const stages=['cycle1','5-9','10-12'];
+  const stageGrid=document.getElementById('overview-stage-grid');
+  if(!total){
+    stageGrid.innerHTML='<div class="empty">لا توجد بيانات بعد</div>';
+  }else{
+    stageGrid.innerHTML=stages.map(s=>{
+      const count=registrations.filter(r=>r.stage===s).length;
+      const pct=total?Math.round((count/total)*100):0;
+      return `<div class="stage-card">
+        <div class="stage-name">${stageLabel[s]}</div>
+        <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${pct}%"></div></div>
+        <div class="stage-count">${count} مسجّل (${pct}%)</div>
+      </div>`;
+    }).join('');
+  }
+
+  const topFriends=[...rows].sort((a,b)=>b.totalCommission-a.totalCommission||b.paidCount-a.paidCount).slice(0,5).filter(r=>r.referredCount>0);
+  const topFriendsEl=document.getElementById('overview-top-friends');
+  if(!topFriends.length){
+    topFriendsEl.innerHTML='<div class="empty">لا توجد إحالات كافية لعرض الترتيب</div>';
+  }else{
+    topFriendsEl.innerHTML=topFriends.map((r,i)=>`
+      <div class="top-friend-row">
+        <div class="top-friend-rank">${i+1}</div>
+        <div class="top-friend-name">${escHtml(r.friend.name)}<div class="top-friend-meta">${r.referredCount} إحالة · ${r.paidCount} اشتراك مدفوع</div></div>
+        <div class="top-friend-revenue">${r.totalCommission.toFixed(2)} ر.ع</div>
+      </div>`).join('');
+  }
 }
 
 boot();
