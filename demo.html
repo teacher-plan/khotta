@@ -851,7 +851,7 @@ tbody tr.today{background:rgba(240,192,96,.03);}
 .grades-table tbody tr:nth-child(even) td:first-child{background:rgba(255,255,255,.02);}
 
 /* ══ CERT PREVIEW MODAL ══ */
-.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:600;padding:20px;}
+.cert-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
 .cert-preview-card{background:#1a1010;border-radius:20px;padding:20px;max-width:95vw;max-height:90vh;overflow-y:auto;text-align:center;}
 .grade-input{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;padding:4px 2px;width:38px;text-align:center;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;transition:all .2s;}
 .grade-input:hover{border-color:var(--border);}
@@ -10036,7 +10036,7 @@ function initDemoTour(){
   if(launchBtn){launchBtn.style.display='flex';launchBtn.style.alignItems='center';launchBtn.style.justifyContent='center';launchBtn.classList.add('pulse');}
   if(localStorage.getItem('kh_demo_tour_done'))return;
   setTimeout(()=>{
-    if(tourActiveNow)return;
+    if(tourActiveNow||localStorage.getItem('kh_demo_tour_done'))return;
     document.getElementById('tour-invite-bg')?.classList.add('show');
     setTimeout(()=>document.getElementById('tour-invite')?.classList.add('show'),20);
   },2200);
@@ -10066,16 +10066,25 @@ function tourTryAction(){
 }
 function endDemoTour(){
   tourActiveNow=false;
+  cleanupTourTrySideEffects();
   document.getElementById('tour-overlay').style.display='none';
   window.removeEventListener('resize',positionTourOnResize);
   localStorage.setItem('kh_demo_tour_done','1');
 }
+function cleanupTourTrySideEffects(){
+  if(typeof ttEditing!=='undefined'&&ttEditing)exitEditMode();
+  const tsModal=document.getElementById('top-students-modal');
+  if(tsModal)tsModal.style.display='none';
+  document.querySelector('.cert-preview-modal')?.remove();
+}
 function tourNext(){
+  cleanupTourTrySideEffects();
   if(tourIdx>=tourSteps.length-1){endDemoTour();toast('✨ انتهت الجولة! بالتوفيق في استخدام خطتي الفصلية','ok');return;}
   tourIdx++;renderTourStep();
 }
 function tourPrev(){
   if(tourIdx<=0)return;
+  cleanupTourTrySideEffects();
   tourIdx--;renderTourStep();
 }
 function renderTourStep(){
@@ -10104,8 +10113,8 @@ function positionTourElements(step){
   if(!tourActiveNow)return;
   let target=null;
   if(step.target)target=document.querySelector(step.target);
-  if(!target)target=document.querySelector(`.nav-btn[data-page="${step.page}"]`);
-  if(!target)return;
+  if(!target||target.offsetParent===null)target=document.querySelector(`.nav-btn[data-page="${step.page}"]`);
+  if(!target||target.offsetParent===null)return;
   const r=target.getBoundingClientRect();
   const pad=8;
   const spot=document.getElementById('tour-spotlight');
