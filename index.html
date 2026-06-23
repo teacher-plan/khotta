@@ -5713,10 +5713,11 @@ async function deleteLessonFile(lessonId,fileId,driveId){
 }
 
 let currentFilter='all';
-function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyFilter();}
+function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');try{applyFilter();}catch(e){console.error('applyFilter error:',e);toast('❌ خطأ في الفلتر: '+(e.message||''),true);}}
 function applyFilter(){
-  let vis=0;
-  document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
+  let vis=0,doneCnt=0,remainCnt=0;
+  document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;if(done)doneCnt++;else remainCnt++;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
+  console.log('applyFilter:',{currentFilter,vis,doneCnt,remainCnt});
   document.querySelectorAll('#page-tracker .section').forEach(sec=>{
     // إذا لم تُبنَ الدروس بعد، أبقِ الوحدة ظاهرة دائماً
     if(!sec._built){sec.style.display='';return;}
