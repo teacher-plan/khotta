@@ -26,10 +26,10 @@ alter table school_sessions enable row level security;
 
 create or replace function school_login(p_username text, p_password text)
 returns table(id bigint, name text, username text, structure jsonb, token uuid)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 declare v_row schools%rowtype; v_token uuid;
 begin
-  select * into v_row from schools where lower(username) = lower(p_username) limit 1;
+  select * into v_row from schools s where lower(s.username) = lower(p_username) limit 1;
   if v_row.id is null or v_row.password_hash is null
      or crypt(p_password, v_row.password_hash) <> v_row.password_hash then
     return;
