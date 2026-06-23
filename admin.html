@@ -224,7 +224,7 @@ let activeClass=null;
 
 function escHtml(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-function saveSession(school){try{localStorage.setItem('kh_admin_session',JSON.stringify({id:school.id,name:school.name,username:school.username}));}catch(e){}}
+function saveSession(school){try{localStorage.setItem('kh_admin_session',JSON.stringify({token:school.token}));}catch(e){}}
 function loadSession(){try{const r=localStorage.getItem('kh_admin_session');return r?JSON.parse(r):null;}catch(e){return null;}}
 function clearSession(){try{localStorage.removeItem('kh_admin_session');}catch(e){}}
 
@@ -237,14 +237,15 @@ async function doLogin(){
   if(!username||!password){err.textContent='أدخل اسم المستخدم وكلمة المرور';err.style.display='block';return;}
   btn.disabled=true;btn.textContent='⏳ جاري الدخول...';
   try{
-    const{data,error}=await sb.from('schools').select('*').eq('username',username).maybeSingle();
+    const{data,error}=await sb.rpc('school_login',{p_username:username,p_password:password});
+    const row=Array.isArray(data)?data[0]:data;
     if(error){err.textContent='تعذّر الاتصال، حاول مجدداً';err.style.display='block';return;}
-    if(!data||data.password!==password){
+    if(!row){
       err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';err.style.display='block';
       return;
     }
-    currentSchool=data;
-    saveSession(data);
+    currentSchool=row;
+    saveSession(row);
     showDashboard();
   }catch(e){
     err.textContent='حدث خطأ، حاول مجدداً';err.style.display='block';
@@ -252,8 +253,10 @@ async function doLogin(){
     btn.disabled=false;btn.textContent='دخول';
   }
 }
-function doLogout(){
+async function doLogout(){
   if(!confirm('تسجيل الخروج؟'))return;
+  const session=loadSession();
+  if(session&&session.token){try{await sb.rpc('school_logout',{p_token:session.token});}catch(e){}}
   clearSession();
   currentSchool=null;allViolations=[];
   document.getElementById('dashboard').style.display='none';
@@ -272,7 +275,8 @@ async function showDashboard(){
 async function loadViolations(){
   document.getElementById('grades-grid-view').innerHTML='<div class="loading">⏳ جاري التحميل...</div>';
   try{
-    const{data,error}=await sb.from('violations').select('*').eq('school_id',currentSchool.id).order('created_at',{ascending:false});
+    const session=loadSession();
+    const{data,error}=await sb.rpc('school_get_violations',{p_token:session?session.token:null});
     if(error){document.getElementById('grades-grid-view').innerHTML='<div class="empty">❌ تعذّر تحميل البيانات</div>';return;}
     allViolations=data||[];
     const types=[...new Set(allViolations.map(v=>v.violation_type).filter(Boolean))];
@@ -509,10 +513,11 @@ document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key===
 
 (async()=>{
   const session=loadSession();
-  if(session&&session.id){
+  if(session&&session.token){
     try{
-      const{data}=await sb.from('schools').select('*').eq('id',session.id).maybeSingle();
-      if(data){currentSchool=data;showDashboard();return;}
+      const{data}=await sb.rpc('school_session_restore',{p_token:session.token});
+      const row=Array.isArray(data)?data[0]:data;
+      if(row){currentSchool={...row,token:session.token};showDashboard();return;}
     }catch(e){}
     clearSession();
   }
