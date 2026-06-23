@@ -923,16 +923,27 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .cal-title{font-size:10px;font-weight:700;color:var(--text);}
 .cal-nav-btn{background:var(--surface);border:1px solid var(--border);border-radius:3px;width:17px;height:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:11px;transition:all .2s;}
 .cal-nav-btn:hover{border-color:var(--gold);color:var(--gold);}
-.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-top:4px;}
-.cal-day-header{font-size:7px;color:var(--muted);text-align:center;padding:1px;font-weight:600;}
-.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:8px;border-radius:2px;cursor:pointer;transition:all .2s;color:var(--text);position:relative;}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:4px;}
+.cal-day-header{font-size:9px;color:var(--muted);text-align:center;padding:2px 0;font-weight:700;}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10.5px;border-radius:5px;cursor:pointer;transition:all .15s;color:var(--text);position:relative;font-weight:600;min-height:24px;}
 .cal-day:hover{background:var(--surface);}
-.cal-day.today{background:var(--gold);color:#000;font-weight:700;}
-.cal-day.has-event{background:var(--red);color:#fff;font-weight:600;}
-.cal-day.has-event.today{background:linear-gradient(135deg,var(--gold),var(--red));}
-.cal-day.other-month{color:var(--muted);opacity:.4;}
-.event-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:9px;color:var(--text);font-family:'Cairo',sans-serif;outline:none;transition:border-color .2s;margin-top:5px;}
-.event-input:focus{border-color:var(--gold);}
+.cal-day:active{transform:scale(.92);}
+.cal-day.today{background:var(--gold);color:#fff;font-weight:800;}
+.cal-day.has-event::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:var(--red2);}
+.cal-day.today.has-event::after{background:#fff;}
+.cal-day.other-month{color:var(--muted);opacity:.45;}
+.ev-modal-bg{position:fixed;inset:0;background:rgba(20,10,10,.45);display:none;align-items:flex-end;justify-content:center;z-index:250;}
+.ev-modal-bg.show{display:flex;}
+.ev-modal{background:var(--surface);border-radius:18px 18px 0 0;padding:18px;width:100%;max-width:440px;animation:evSlideUp .25s ease;}
+@keyframes evSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ev-modal .ev-date{font-size:12px;color:var(--muted);margin-bottom:6px;}
+.ev-modal textarea{width:100%;min-height:64px;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:'Cairo',sans-serif;font-size:13px;resize:none;outline:none;margin-bottom:10px;background:var(--card);color:var(--text);}
+.ev-modal textarea:focus{border-color:var(--gold);}
+.ev-actions{display:flex;gap:8px;}
+.ev-actions button{flex:1;border:none;border-radius:10px;padding:11px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+.ev-save{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+.ev-del{background:rgba(192,57,43,.1);color:var(--red);}
+.ev-cancel{background:var(--card);color:var(--muted);flex:.6;}
 .motivational-msg{background:linear-gradient(135deg,var(--gold),var(--red2));color:#fff;padding:5px 7px;border-radius:4px;font-size:8px;font-weight:600;text-align:center;margin-bottom:6px;line-height:1.3;}
 .tasks-list{max-height:80px;overflow-y:auto;margin-bottom:5px;}
 .task-item{display:flex;align-items:center;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:3px;cursor:pointer;transition:all .2s;}
@@ -947,6 +958,9 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .task-input:focus{border-color:var(--gold);}
 .add-task-btn{background:var(--gold);border:none;border-radius:3px;width:15px;height:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000;font-size:11px;font-weight:700;transition:opacity .2s;}
 .add-task-btn:hover{opacity:.8;}
+.undo-toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(80px);background:#2a1a1a;color:#fff;padding:10px 16px;border-radius:12px;font-size:12.5px;display:flex;align-items:center;gap:12px;transition:transform .25s;z-index:260;}
+.undo-toast.show{transform:translateX(-50%) translateY(0);}
+.undo-toast button{background:none;border:none;color:var(--gold);font-weight:800;font-size:12.5px;cursor:pointer;}
 @media(max-width:768px){.sidebar-widgets{grid-template-columns:1fr;max-width:300px;}}
 
 /* ══ MODALS ══ */
@@ -1379,7 +1393,6 @@ input,textarea,select{font-size:16px !important;}
         <button class="cal-nav-btn" onclick="nextMonth()">›</button>
       </div>
       <div class="calendar" id="calendar"></div>
-      <input type="text" class="event-input" id="event-input" placeholder="إضافة حدث ليوم..." style="display:none"/>
     </div>
     
     <!-- صندوق المهام -->
@@ -1394,6 +1407,22 @@ input,textarea,select{font-size:16px !important;}
     </div>
   </div>
 </div></div>
+
+<div class="ev-modal-bg" id="ev-modal-bg">
+  <div class="ev-modal">
+    <div class="ev-date" id="ev-date"></div>
+    <textarea id="ev-text" placeholder="اكتب الحدث..."></textarea>
+    <div class="ev-actions">
+      <button class="ev-cancel" onclick="closeEvModal()">إلغاء</button>
+      <button class="ev-del" id="ev-del-btn" onclick="deleteEvent()" style="display:none">حذف</button>
+      <button class="ev-save" onclick="saveEvent()">حفظ</button>
+    </div>
+  </div>
+</div>
+<div class="undo-toast" id="task-undo-toast">
+  <span id="task-undo-msg">تم حذف المهمة</span>
+  <button onclick="undoDeleteTask()">تراجع</button>
+</div>
 
 <!-- ══ TRACKER ══ -->
 <div class="page" id="page-tracker"><div class="wrap">
@@ -9883,51 +9912,42 @@ function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYe
 
 function saveCalendarEvents(){localStorage.setItem('calendarEvents',JSON.stringify(calendarEvents));}
 
+let activeEvKey=null;
 function selectDate(year,month,day){
-  const key=`${year}-${month}-${day}`;
-  const input=document.getElementById('event-input');
-  const currentEvent=calendarEvents[key]||'';
-  
-  // إظهار الحدث الحالي إذا كان موجوداً
-  if(currentEvent){
-    const confirmMsg=`الحدث: "${currentEvent}"\n\nاضغط OK للتعديل أو Cancel للحذف`;
-    const userChoice=confirm(confirmMsg);
-    if(!userChoice){
-      delete calendarEvents[key];
-      saveCalendarEvents();
-      renderCalendar();
-      return;
-    }
-  }
-  
-  input.style.display='block';
-  input.value=currentEvent;
-  input.placeholder=`حدث ليوم ${day} ${monthNames[month]}`;
-  input.focus();
-  
-  const saveEvent=()=>{
-    const val=input.value.trim();
-    if(val){
-      calendarEvents[key]=val;
-    }else{
-      delete calendarEvents[key];
-    }
-    saveCalendarEvents();
-    input.style.display='none';
-    input.value='';
-    renderCalendar();
-  };
-  
-  input.onkeypress=(e)=>{
-    if(e.key==='Enter'){
-      e.preventDefault();
-      saveEvent();
-    }
-  };
-  
-  input.onblur=()=>{
-    setTimeout(saveEvent,150);
-  };
+  activeEvKey=`${year}-${month}-${day}`;
+  const currentEvent=calendarEvents[activeEvKey]||'';
+  document.getElementById('ev-date').textContent=`${day} ${monthNames[month]} ${year}`;
+  document.getElementById('ev-text').value=currentEvent;
+  document.getElementById('ev-del-btn').style.display=currentEvent?'block':'none';
+  document.getElementById('ev-modal-bg').classList.add('show');
+  setTimeout(()=>document.getElementById('ev-text').focus(),200);
+}
+
+function closeEvModal(){
+  document.getElementById('ev-modal-bg').classList.remove('show');
+  activeEvKey=null;
+}
+
+function saveEvent(){
+  if(!activeEvKey)return;
+  const val=document.getElementById('ev-text').value.trim();
+  if(val){calendarEvents[activeEvKey]=val;}else{delete calendarEvents[activeEvKey];}
+  saveCalendarEvents();
+  closeEvModal();
+  renderCalendar();
+}
+
+function deleteEvent(){
+  if(!activeEvKey)return;
+  delete calendarEvents[activeEvKey];
+  saveCalendarEvents();
+  closeEvModal();
+  renderCalendar();
+}
+
+function jumpAndSelectDate(year,month,day,dir){
+  if(dir<0)prevMonth();else nextMonth();
+  setTimeout(()=>selectDate(year,month,day),0);
 }
 
 function renderCalendar(){
@@ -9949,9 +9969,12 @@ function renderCalendar(){
   
   // أيام الشهر السابق
   for(let i=firstDay-1;i>=0;i--){
-    html+=`<div class="cal-day other-month">${daysInPrevMonth-i}</div>`;
+    const d=daysInPrevMonth-i;
+    let pm=currentMonth-1,py=currentYear;
+    if(pm<0){pm=11;py--;}
+    html+=`<div class="cal-day other-month" onclick="jumpAndSelectDate(${py},${pm},${d},-1)">${d}</div>`;
   }
-  
+
   // أيام الشهر الحالي
   for(let d=1;d<=daysInMonth;d++){
     const isToday=d===today.getDate()&&currentMonth===today.getMonth()&&currentYear===today.getFullYear();
@@ -9960,14 +9983,15 @@ function renderCalendar(){
     let classStr='cal-day';
     if(isToday)classStr+=' today';
     if(hasEvent)classStr+=' has-event';
-    const eventTitle=calendarEvents[key]?` title="${calendarEvents[key]}"`:'';
-    html+=`<div class="${classStr}" onclick="selectDate(${currentYear},${currentMonth},${d})"${eventTitle}>${d}</div>`;
+    html+=`<div class="${classStr}" onclick="selectDate(${currentYear},${currentMonth},${d})">${d}</div>`;
   }
-  
+
   // أيام الشهر التالي لإكمال الجدول
   const remaining=42-(firstDay+daysInMonth);
   for(let i=1;i<=remaining;i++){
-    html+=`<div class="cal-day other-month">${i}</div>`;
+    let nm=currentMonth+1,ny=currentYear;
+    if(nm>11){nm=0;ny++;}
+    html+=`<div class="cal-day other-month" onclick="jumpAndSelectDate(${ny},${nm},${i},1)">${i}</div>`;
   }
   
   calEl.innerHTML=html;
@@ -9984,7 +10008,7 @@ function renderTasks(){
   list.innerHTML=tasks.map((t,i)=>`
     <div class="task-item${t.done?' done':''}" onclick="toggleTask(${i})">
       <div class="task-checkbox">${t.done?'✓':''}</div>
-      <div class="task-text">${t.text}</div>
+      <div class="task-text">${escHtml(t.text)}</div>
       <span class="task-delete" onclick="event.stopPropagation();deleteTask(${i})">✕</span>
     </div>
   `).join('');
@@ -10006,10 +10030,27 @@ function toggleTask(idx){
   renderTasks();
 }
 
+let _lastDeletedTask=null,_lastDeletedTaskIdx=null,_taskUndoTimer=null;
 function deleteTask(idx){
+  _lastDeletedTask=tasks[idx];
+  _lastDeletedTaskIdx=idx;
   tasks.splice(idx,1);
   saveTasks();
   renderTasks();
+  const toast=document.getElementById('task-undo-toast');
+  toast.classList.add('show');
+  clearTimeout(_taskUndoTimer);
+  _taskUndoTimer=setTimeout(()=>toast.classList.remove('show'),4000);
+}
+
+function undoDeleteTask(){
+  if(_lastDeletedTask){
+    tasks.splice(_lastDeletedTaskIdx,0,_lastDeletedTask);
+    saveTasks();
+    renderTasks();
+    _lastDeletedTask=null;
+  }
+  document.getElementById('task-undo-toast').classList.remove('show');
 }
 
 // تهيئة التقويم والمهام عند تحميل الصفحة بالكامل
