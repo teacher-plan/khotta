@@ -171,8 +171,10 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="price-row">
         <label>💰 سعر الاشتراك (ر.ع):</label>
-        <input type="number" id="sub-price-input" value="5" onchange="renderFinanceTab()"/>
-        <button class="btn-gold" style="padding:9px 16px;font-size:12px" onclick="saveSubPrice()">💾 حفظ</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="sub-price-display" style="font-size:18px;font-weight:700;color:var(--green)">15</span>
+          <button class="btn-gold" style="padding:6px 12px;font-size:12px" onclick="openChangePriceDialog()">✏️ تغيير</button>
+        </div>
       </div>
       <div class="stats-row" id="finance-stats-row"></div>
       <div class="table-wrap">
@@ -326,16 +328,34 @@ function loadMyPhone(){
   const inp=document.getElementById('my-phone-input');
   if(inp)inp.value=v;
 }
-// ══ سعر الاشتراك (محفوظ محلياً لتجنّب رجوعه لـ5 افتراضياً عند كل تحديث) ══
-function saveSubPrice(){
-  const val=Number(document.getElementById('sub-price-input').value)||5;
-  localStorage.setItem('kh_sub_price',val);
-  renderFinanceTab();
-  alert('✅ تم حفظ سعر الاشتراك');
+// ══ سعر الاشتراك (من Supabase) ══
+let subscriptionPrice=15;
+
+async function loadSubPrice(){
+  try{
+    const{data,error}=await sb.from('app_settings').select('value').eq('key','subscription_price').single();
+    if(!error && data)subscriptionPrice=Number(data.value)||15;
+    document.getElementById('sub-price-display').textContent=subscriptionPrice;
+  }catch(e){}
 }
-function loadSubPrice(){
-  const saved=localStorage.getItem('kh_sub_price');
-  if(saved)document.getElementById('sub-price-input').value=saved;
+
+async function openChangePriceDialog(){
+  const newPrice=prompt(`السعر الحالي: ${subscriptionPrice} ريال\n\nأدخل السعر الجديد:`,subscriptionPrice);
+  if(newPrice===null)return;
+  
+  const val=Number(newPrice);
+  if(isNaN(val)||val<=0){alert('❌ أدخل رقماً صحيحاً');return;}
+  
+  try{
+    const{error}=await sb.from('app_settings').update({value:String(val)}).eq('key','subscription_price');
+    if(error)throw error;
+    subscriptionPrice=val;
+    document.getElementById('sub-price-display').textContent=subscriptionPrice;
+    renderFinanceTab();
+    alert('✅ تم تحديث السعر');
+  }catch(e){
+    alert('❌ فشل التحديث: '+e.message);
+  }
 }
 function whatsappLink(phone){
   let p=(phone||'').replace(/\D/g,'');
@@ -403,7 +423,7 @@ async function deleteRegistration(id,name){
 
 // ══ تبويب الإدارة المالية ══
 function renderFinanceTab(){
-  const price=Number(document.getElementById('sub-price-input').value)||5;
+  const price=subscriptionPrice;
   const rows=friends.map(f=>{
     const referredRows=registrations.filter(r=>r.referred_by===f.code);
     const paidRows=referredRows.filter(r=>r.payment_status==='paid');
