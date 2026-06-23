@@ -4775,6 +4775,7 @@ function toggleNewAnnForm(){
 }
 
 async function saveAnnouncement(){
+  if(!isAdmin()){toast('❌ هذه الميزة للمشرف فقط',true);return;}
   const title=document.getElementById('ann-title-inp').value.trim();
   const body=document.getElementById('ann-body-inp').value.trim();
   if(!title){toast('❌ أدخل عنوان الإعلان',true);return;}
@@ -4844,6 +4845,7 @@ async function loadPrivateMessages(){
 }
 
 async function deletePrivateMsg(id){
+  if(!isAdmin())return;
   if(!confirm('حذف هذه الرسالة نهائياً؟'))return;
   try{
     const{error}=await sb.from('private_messages').delete().eq('id',id);
@@ -4862,6 +4864,7 @@ function editAnnouncement(id,title,body){
 }
 
 async function deleteAnnouncement(id){
+  if(!isAdmin())return;
   if(!confirm('هل تريد حذف هذا الإعلان؟'))return;
   try{
     const{error}=await sb.from('announcements').delete().eq('id',id);
@@ -5169,6 +5172,7 @@ function renderUsersList(users){
 // 🔐 تفعيل / تعطيل الحساب
 // ════════════════════════════════════════
 async function toggleUserAccess(userId, name, enable){
+  if(!isAdmin())return;
   const action = enable ? 'تفعيل' : 'تعطيل';
   if(!confirm(`هل تريد ${action} حساب "${name}"؟`)) return;
   try{
@@ -9393,6 +9397,7 @@ function renderViolationTypesList(){
   `).join('');
 }
 async function addViolationType(){
+  if(!isAdmin())return;
   const inp=document.getElementById('vt-new-name');
   const name=inp.value.trim();
   if(!name){toast('أدخل اسم المخالفة',true);return;}
@@ -9413,6 +9418,7 @@ async function toggleViolationTypeActive(id,newActive){
   }catch(e){toast('حدث خطأ',true);}
 }
 async function deleteViolationType(id,name){
+  if(!isAdmin())return;
   if(!confirm(`حذف "${name}" نهائياً؟\n\nملاحظة: المخالفات المسجّلة سابقاً بهذا الاسم لن تتأثر — فقط لن يظهر كخيار جديد.\nيُفضّل "الإخفاء" بدل الحذف إن كنت غير متأكد.`))return;
   try{
     const{error}=await sb.from('violation_types').delete().eq('id',id);
