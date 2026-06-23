@@ -2513,16 +2513,25 @@ function _buildDemoGradeTypes(){
   return out;
 }
 function _demoRandGrade(max){return Math.round((max*(0.55+Math.random()*0.45))*2)/2;}
+// طلاب متفوقون جاهزون مسبقاً بالعلامة الكاملة (لتجربة ميزة "شهادات التفوق" فوراً في النسخة التجريبية)
+const DEMO_TOP_STUDENTS={
+  cls_5_1:{d_st_1:0,d_st_3:0,d_st_5:3},   // أحمد ومحمد وعبدالله الكندي: علامة كاملة في عمود محدد
+  cls_5_2:{d_st_9:0,d_st_11:2}            // سالم وحمد: علامة كاملة في عمود محدد
+};
 // بنية grades الحقيقية: grades[classId][studentId][typeId] = value (كائن متداخل)
 function _buildDemoGrades(gradeTypesList){
   const out={};
   ['cls_5_1','cls_5_2'].forEach(clsId=>{
     const studs=clsId==='cls_5_1'?DEMO_STUDENTS_5_1:DEMO_STUDENTS_5_2;
     const cols=gradeTypesList.filter(t=>t.classKey===clsId);
+    const topMap=DEMO_TOP_STUDENTS[clsId]||{};
     out[clsId]={};
     studs.forEach(s=>{
       out[clsId][s.id]={};
-      cols.forEach(c=>{out[clsId][s.id][c.id]=_demoRandGrade(c.max);});
+      cols.forEach((c,i)=>{
+        const topColIndex=topMap[s.id];
+        out[clsId][s.id][c.id]=(topColIndex===i)?c.max:_demoRandGrade(c.max);
+      });
     });
   });
   return out;
