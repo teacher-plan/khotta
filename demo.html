@@ -851,23 +851,6 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .grades-table td{padding:10px 8px;border-bottom:1px solid rgba(0,0,0,.15);text-align:center;font-size:12px;transition:background .15s;}
 .grades-table td:first-child{font-weight:700;color:var(--muted);text-align:center;min-width:36px;width:36px;border-left:none;background:var(--surface);position:sticky;right:0;z-index:2;white-space:nowrap;}
 .grades-table td:nth-child(2){font-weight:900;color:var(--text);text-align:right;padding-right:8px;border-left:none;background:var(--surface);position:sticky;right:36px;z-index:1;font-size:13px;white-space:nowrap;width:140px;overflow:hidden;text-overflow:ellipsis;box-shadow:-6px 0 6px -6px rgba(0,0,0,.4);}
-/* ═══ الهاتف: جدول الدرجات بعمود أسماء مجمّد (جدولان منفصلان، بلا sticky) ═══ */
-@media(max-width:767px){
-  .grades-table-wrap{overflow:visible;border:none;background:transparent;}
-  .gm-flex{display:flex;align-items:flex-start;border-radius:8px;border:1px solid var(--border);width:100%;box-sizing:border-box;}
-  .gm-fixed{flex:0 0 auto;background:var(--surface);box-shadow:-4px 0 6px -4px rgba(0,0,0,.3);z-index:1;overflow:hidden;}
-  .gm-scroll{flex:0 0 auto;overflow-x:auto;min-width:0;}
-  .gmt{border-collapse:separate;border-spacing:0;table-layout:fixed;}
-  .gmt-names{width:170px;}
-  .gmt-grades{}
-  .gmt thead th{position:sticky;top:0;z-index:2;background:var(--card);color:var(--gold);font-size:10px;font-weight:700;border-bottom:2px solid rgba(240,192,96,.3);height:58px;padding:2px 4px;white-space:nowrap;text-align:center;vertical-align:middle;}
-  .gmt td{border-bottom:1px solid rgba(0,0,0,.15);height:48px;box-sizing:border-box;text-align:center;font-size:12px;padding:2px 4px;vertical-align:middle;}
-  .gmt tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
-  .gmt-names th:first-child,.gmt-names td:first-child{width:32px;color:var(--muted);font-weight:700;}
-  .gmt-names th:nth-child(2),.gmt-names td:nth-child(2){width:138px;max-width:138px;text-align:right;padding-right:8px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .gmt-grades th,.gmt-grades td{width:111px;min-width:111px;}
-  .gmt-grades th:last-child,.gmt-grades td:last-child{width:88px;min-width:88px;}
-}
 .grades-table tr:hover td{background:rgba(240,192,96,.04);}
 .grades-table tr:hover td:first-child,.grades-table tr:hover td:nth-child(2){background:var(--surface);}
 .grades-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
@@ -6238,30 +6221,10 @@ function renderGradesTable(){
     gradeRows+=`<tr>${gradeCells}${totalCell}</tr>`;
     combinedRows+=`<tr>${idxCell}${nameCell}${gradeCells}${totalCell}</tr>`;
   });
-  if(isPhone){
-    const gradesTableW=cols.length*111+88;
-    wrapEl.innerHTML=
-      '<div class="gm-flex">'+
-        '<div class="gm-fixed"><table class="gmt gmt-names" style="width:170px"><thead><tr><th>م</th><th>الطالب</th></tr></thead><tbody id="gm-names-body">'+nameRows+'</tbody></table></div>'+
-        '<div class="gm-scroll"><table class="gmt gmt-grades" style="width:'+gradesTableW+'px">'+
-          '<thead><tr>'+gradeThs+totalTh+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
-      '</div>';
-    // فرض الأبعاد بالبكسل لتفادي انهيار حساب flexbox على بعض المتصفحات
-    const NAMES_W=170;
-    const avail=wrapEl.clientWidth||(document.getElementById('grades-content')||{}).clientWidth||(window.innerWidth-32);
-    const flexEl=wrapEl.querySelector('.gm-flex');
-    const fixedEl=wrapEl.querySelector('.gm-fixed');
-    const scrollEl=wrapEl.querySelector('.gm-scroll');
-    if(flexEl&&fixedEl&&scrollEl){
-      flexEl.style.width=avail+'px';
-      fixedEl.style.width=NAMES_W+'px';
-      scrollEl.style.width=Math.max(120,avail-NAMES_W)+'px';
-    }
-  }else{
-    const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
-    const body='<tbody id="grades-table-body">'+combinedRows+'</tbody>';
-    wrapEl.innerHTML='<table class="grades-table" id="grades-table">'+head+body+'</table>';
-  }
+  // جدول واحد مدمج لكل من اللابتوب والهاتف (نفس الإعدادات)
+  const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
+  const body='<tbody id="grades-table-body">'+combinedRows+'</tbody>';
+  wrapEl.innerHTML='<table class="grades-table" id="grades-table">'+head+body+'</table>';
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
