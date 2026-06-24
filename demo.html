@@ -851,11 +851,21 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .grades-table td{padding:10px 8px;border-bottom:1px solid rgba(0,0,0,.15);text-align:center;font-size:12px;transition:background .15s;}
 .grades-table td:first-child{font-weight:700;color:var(--muted);text-align:center;min-width:36px;width:36px;border-left:none;background:var(--surface);position:sticky;right:0;z-index:2;white-space:nowrap;}
 .grades-table td:nth-child(2){font-weight:900;color:var(--text);text-align:right;padding-right:8px;border-left:none;background:var(--surface);position:sticky;right:36px;z-index:1;font-size:13px;white-space:nowrap;width:140px;overflow:hidden;text-overflow:ellipsis;box-shadow:-6px 0 6px -6px rgba(0,0,0,.4);}
-@media(max-width:767px){.grades-table th:nth-child(n+3),.grades-table td:nth-child(n+3){width:111px;min-width:111px;}
-/* iOS: الأعمدة المثبّتة تختفي عند التمرير مع border-collapse:collapse — الحل separate */
-.grades-table{border-collapse:separate;border-spacing:0;}
-/* iOS: اجعل التمرير (أفقي وعمودي) داخل صندوق الجدول نفسه ليثبت العمود والرأس بشكل صحيح */
-.grades-table-wrap{max-height:72vh;overflow:auto;transform:translateZ(0);-webkit-transform:translateZ(0);}}
+/* ═══ الهاتف: جدول الدرجات بعمود أسماء مجمّد (جدولان منفصلان، بلا sticky) ═══ */
+@media(max-width:767px){
+  .grades-table-wrap{overflow:visible;border:none;background:transparent;}
+  .gm-flex{display:flex;align-items:flex-start;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+  .gm-fixed{flex:0 0 auto;background:var(--surface);box-shadow:-4px 0 6px -4px rgba(0,0,0,.3);z-index:1;}
+  .gm-scroll{flex:1;overflow-x:auto;}
+  .gmt{border-collapse:separate;border-spacing:0;width:auto;}
+  .gmt thead th{position:sticky;top:0;z-index:2;background:var(--card);color:var(--gold);font-size:10px;font-weight:700;border-bottom:2px solid rgba(240,192,96,.3);height:58px;padding:2px 4px;white-space:nowrap;text-align:center;vertical-align:middle;}
+  .gmt td{border-bottom:1px solid rgba(0,0,0,.15);height:48px;box-sizing:border-box;text-align:center;font-size:12px;padding:2px 4px;vertical-align:middle;}
+  .gmt tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+  .gmt-names th:first-child,.gmt-names td:first-child{width:32px;color:var(--muted);font-weight:700;}
+  .gmt-names th:nth-child(2),.gmt-names td:nth-child(2){width:138px;max-width:138px;text-align:right;padding-right:8px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gmt-grades th,.gmt-grades td{width:111px;min-width:111px;}
+  .gmt-grades th:last-child,.gmt-grades td:last-child{width:88px;min-width:88px;}
+}
 .grades-table tr:hover td{background:rgba(240,192,96,.04);}
 .grades-table tr:hover td:first-child,.grades-table tr:hover td:nth-child(2){background:var(--surface);}
 .grades-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
@@ -1561,7 +1571,7 @@ input,textarea,select{font-size:16px !important;}
     <svg class="grades-search-ico" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
     <input class="grades-search" type="text" placeholder="ابحث عن طالب..." oninput="filterGradesSearch(this.value)" id="grades-search-input">
   </div>
-  <div class="grades-table-wrap"><table class="grades-table" id="grades-table"></table></div>
+  <div class="grades-table-wrap" id="grades-table-wrap"><table class="grades-table" id="grades-table"></table></div>
   </div>
 </div></div>
 
@@ -6192,38 +6202,51 @@ function renderGradesTable(){
   sList.forEach(st=>{const sg=(grades[k]||{})[st.id]||{};let pts=0;cols.forEach(c=>{if(sg[c.id]!=null&&!isNaN(sg[c.id]))pts+=Number(sg[c.id]);});if(totalMax>0){sumPts+=pts;countSt++;}});
   const classAvg=countSt&&totalMax?Math.round(sumPts/countSt):0;
   document.getElementById('grades-summary').innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
-  const t=document.getElementById('grades-table');
+  const wrapEl=document.getElementById('grades-table-wrap');
   const canEditCols=isAdmin();
-  // بناء الرأس
-  let head='<thead><tr><th>م</th><th>الطالب</th>';
-  cols.forEach(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';head+=`<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
-  head+=`<th>المجموع / ${totalMax}</th></tr></thead>`;
-  // بناء الجسم — بناء options مرة واحدة لكل عمود ثم إعادة استخدامها
+  const isPhone=window.matchMedia('(max-width:767px)').matches;
+  // رؤوس أعمدة الدرجات + المجموع (مشتركة)
+  let gradeThs='';
+  cols.forEach(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';gradeThs+=`<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
+  const totalTh=`<th>المجموع / ${totalMax}</th>`;
+  // بناء options مرة واحدة لكل عمود
   const colOptions={};
   cols.forEach(c=>{
     let opts='<option value="">—</option>';
     for(let i=0;i<=Math.floor(c.max);i++)opts+=`<option value="${i}">${i}</option>`;
     colOptions[c.id]={opts,max:Number(c.max)};
   });
-  let body='<tbody id="grades-table-body">';
+  // لكل طالب: خلايا الاسم وخلايا الدرجات منفصلة (لإعادة استخدامها في الوضعين)
+  let nameRows='',gradeRows='',combinedRows='';
   sList.forEach((st,idx)=>{
     const sg=(grades[k]||{})[st.id]||{};
-    body+=`<tr><td>${idx+1}</td><td>${escapeHTML(st.name)}</td>`;
-    let pts=0;
+    const idxCell=`<td>${idx+1}</td>`;
+    const nameCell=`<td>${escapeHTML(st.name)}</td>`;
+    let pts=0,gradeCells='';
     cols.forEach(c=>{
       const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';
       if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}
-      // استبدال selected في الـ options المبنية مسبقاً بدل بنائها من جديد
       let opts=colOptions[c.id].opts;
       if(num!=null)opts=opts.replace(`<option value="${num}">${num}</option>`,`<option value="${num}" selected>${num}</option>`);
-      body+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${opts}</select></td>`;
+      gradeCells+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${opts}</select></td>`;
     });
     const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
-    const tColor=totalVal==null?'var(--muted)':totalMax>0&&(totalVal/totalMax)<0.5?'#e74c3c':totalMax>0&&(totalVal/totalMax)<0.75?'#f0c060':'#27ae60';
-    body+=`<td style="font-weight:800;background:rgba(138,96,0,.13);border:1.5px solid rgba(138,96,0,.35);border-radius:8px;text-align:center;"><span style="color:var(--gold);font-size:13px;font-weight:900;">${totalVal!=null?totalVal:'—'}</span>${totalVal!=null?`<span style="color:var(--muted);font-size:9px;"> / ${totalMax}</span>`:''}</td></tr>`;
+    const totalCell=`<td style="font-weight:800;background:rgba(138,96,0,.13);border:1.5px solid rgba(138,96,0,.35);border-radius:8px;text-align:center;"><span style="color:var(--gold);font-size:13px;font-weight:900;">${totalVal!=null?totalVal:'—'}</span>${totalVal!=null?`<span style="color:var(--muted);font-size:9px;"> / ${totalMax}</span>`:''}</td>`;
+    nameRows+=`<tr>${idxCell}${nameCell}</tr>`;
+    gradeRows+=`<tr>${gradeCells}${totalCell}</tr>`;
+    combinedRows+=`<tr>${idxCell}${nameCell}${gradeCells}${totalCell}</tr>`;
   });
-  body+='</tbody>';
-  t.innerHTML=head+body;
+  if(isPhone){
+    wrapEl.innerHTML=
+      '<div class="gm-flex">'+
+        '<div class="gm-fixed"><table class="gmt gmt-names"><thead><tr><th>م</th><th>الطالب</th></tr></thead><tbody id="gm-names-body">'+nameRows+'</tbody></table></div>'+
+        '<div class="gm-scroll"><table class="gmt gmt-grades"><thead><tr>'+gradeThs+totalTh+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
+      '</div>';
+  }else{
+    const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
+    const body='<tbody id="grades-table-body">'+combinedRows+'</tbody>';
+    wrapEl.innerHTML='<table class="grades-table" id="grades-table">'+head+body+'</table>';
+  }
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
@@ -6544,6 +6567,19 @@ function smartNameMatch(name, query){
   return qWords.every(w=>nName.includes(w));
 }
 function filterGradesSearch(q){
+  const namesBody=document.getElementById('gm-names-body');
+  if(namesBody){ // الهاتف: جدولان — أخفِ الصف المقابل في جدولي الأسماء والدرجات معاً
+    const gradesBody=document.getElementById('grades-table-body');
+    const nrows=namesBody.querySelectorAll('tr');
+    const grows=gradesBody?gradesBody.querySelectorAll('tr'):[];
+    nrows.forEach((row,i)=>{
+      const nameCell=row.querySelector('td:nth-child(2)');
+      const show=nameCell?smartNameMatch(nameCell.textContent,q):true;
+      row.style.display=show?'':'none';
+      if(grows[i])grows[i].style.display=show?'':'none';
+    });
+    return;
+  }
   const rows=document.querySelectorAll('#grades-table-body tr');
   rows.forEach(row=>{
     const nameCell=row.querySelector('td:nth-child(2)');
