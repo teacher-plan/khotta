@@ -10187,9 +10187,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   })();
 });
 (function(){
+  let ticking=false;
   function wakeGradesSticky(){
-    const wrap=document.getElementById('grades-table-wrap');
-    if(wrap)void wrap.offsetHeight;
+    if(ticking)return;
+    ticking=true;
+    requestAnimationFrame(()=>{
+      const wrap=document.getElementById('grades-table-wrap');
+      if(wrap)void wrap.offsetHeight;
+      ticking=false;
+    });
   }
   window.addEventListener('scroll',wakeGradesSticky,{passive:true});
   document.addEventListener('touchmove',wakeGradesSticky,{passive:true});
