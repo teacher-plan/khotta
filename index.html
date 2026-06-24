@@ -809,9 +809,9 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 /* ═══ الهاتف: جدول الدرجات بعمود أسماء مجمّد (جدولان منفصلان، بلا sticky) ═══ */
 @media(max-width:767px){
   .grades-table-wrap{overflow:visible;border:none;background:transparent;}
-  .gm-flex{display:flex;align-items:flex-start;border-radius:8px;border:1px solid var(--border);max-width:100%;}
+  .gm-flex{display:flex;align-items:flex-start;border-radius:8px;border:1px solid var(--border);width:100%;box-sizing:border-box;}
   .gm-fixed{flex:0 0 auto;background:var(--surface);box-shadow:-4px 0 6px -4px rgba(0,0,0,.3);z-index:1;}
-  .gm-scroll{flex:0 0 calc(100% - 172px);width:calc(100% - 172px);overflow-x:auto;min-width:0;}
+  .gm-scroll{flex:0 0 auto;overflow-x:auto;min-width:0;}
   .gmt{border-collapse:separate;border-spacing:0;table-layout:fixed;}
   .gmt-names{width:170px;}
   .gmt-grades{}
@@ -6033,6 +6033,17 @@ function renderGradesTable(){
         '<div class="gm-scroll"><table class="gmt gmt-grades" style="width:'+gradesTableW+'px">'+
           '<thead><tr>'+gradeThs+totalTh+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
       '</div>';
+    // فرض الأبعاد بالبكسل لتفادي انهيار حساب flexbox على بعض المتصفحات
+    const NAMES_W=170;
+    const avail=wrapEl.clientWidth||(document.getElementById('grades-content')||{}).clientWidth||(window.innerWidth-32);
+    const flexEl=wrapEl.querySelector('.gm-flex');
+    const fixedEl=wrapEl.querySelector('.gm-fixed');
+    const scrollEl=wrapEl.querySelector('.gm-scroll');
+    if(flexEl&&fixedEl&&scrollEl){
+      flexEl.style.width=avail+'px';
+      fixedEl.style.width=NAMES_W+'px';
+      scrollEl.style.width=Math.max(120,avail-NAMES_W)+'px';
+    }
   }else{
     // اللابتوب: الجدول الأصلي كما هو (عمود مثبّت عبر sticky)
     const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
