@@ -806,7 +806,7 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .grades-table td{padding:10px 8px;border-bottom:1px solid rgba(0,0,0,.15);text-align:center;font-size:12px;transition:background .15s;}
 .grades-table td:first-child{font-weight:700;color:var(--muted);text-align:center;min-width:36px;width:36px;border-left:none;background:var(--surface);position:sticky;right:0;z-index:2;white-space:nowrap;}
 .grades-table td:nth-child(2){font-weight:900;color:var(--text);text-align:right;padding-right:8px;border-left:none;background:var(--surface);position:sticky;right:36px;z-index:1;font-size:13px;white-space:nowrap;width:140px;overflow:hidden;text-overflow:ellipsis;box-shadow:-6px 0 6px -6px rgba(0,0,0,.4);}
-@media(max-width:767px){.grades-table th:nth-child(n+3),.grades-table td:nth-child(n+3){width:var(--gcol-w,64px);min-width:var(--gcol-w,64px);}}
+@media(max-width:767px){.grades-table th:nth-child(n+3),.grades-table td:nth-child(n+3){width:111px;min-width:111px;}}
 .grades-table tr:hover td{background:rgba(240,192,96,.04);}
 .grades-table tr:hover td:first-child,.grades-table tr:hover td:nth-child(2){background:var(--surface);}
 .grades-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
@@ -6006,20 +6006,6 @@ function renderGradesTable(){
   });
   body+='</tbody>';
   t.innerHTML=head+body;
-  // الهاتف فقط: اقرأ عناوين أعمدة الدرجات، جد الأعرض، ووحّد عرض كل الأعمدة عليه
-  if(window.innerWidth<768){
-    try{
-      let maxW=44;
-      t.querySelectorAll('thead th .gch-name').forEach(el=>{const w=el.scrollWidth;if(w>maxW)maxW=w;});
-      // عرض الخلية = أعرض نص عنوان + هامش داخلي، بحد أقصى معقول
-      const colW=Math.min(Math.ceil(maxW)+18,160);
-      t.style.setProperty('--gcol-w',colW+'px');
-      console.log('عرض عمود الدرجات الحالي:',colW+'px','(أعرض عنوان نصاً:',Math.ceil(maxW)+'px)');
-      toast('📏 عرض كل عمود: '+colW+'px');
-    }catch(e){}
-  }else{
-    t.style.removeProperty('--gcol-w');
-  }
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
