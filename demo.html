@@ -7078,7 +7078,11 @@ async function loadTemplateForCurrentClass(){
     const data=(rows||[]).find(r=>normalize(r.subject)===normalize(info.subject));
 
     if(!data||!data.grade_types||!data.grade_types.length){
-      toast(`📭 لا يوجد قالب جاهز لـ ${info.subject} - الصف ${info.grade}`,true);
+      const available=(rows||[]).map(r=>r.subject).filter(Boolean);
+      console.log('[loadTemplate] info.subject=',JSON.stringify(info.subject),'normalize=',JSON.stringify(normalize(info.subject)),'grade=',info.grade);
+      console.log('[loadTemplate] available templates for this grade=',JSON.stringify(available));
+      const dbg=available.length?` | القوالب المتوفرة لهذا الصف: ${available.join(' ، ')}`:' | لا توجد قوالب لهذا الصف أصلاً';
+      toast(`📭 لا يوجد قالب جاهز لـ "${info.subject}" - الصف ${info.grade}${dbg}`,true);
       return;
     }
     
