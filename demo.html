@@ -868,7 +868,7 @@ tbody tr.today{background:rgba(240,192,96,.06);}
   .gmt tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
   .gmt-names th:first-child,.gmt-names td:first-child{width:138px;max-width:138px;text-align:right;padding-right:8px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .gmt-grades th,.gmt-grades td{width:111px;min-width:111px;}
-  .gmt-grades th:last-child,.gmt-grades td:last-child{width:88px;min-width:88px;}
+  .gmt-grades th:first-child,.gmt-grades td:first-child{width:88px;min-width:88px;}
 }
 
 /* ══ CERT PREVIEW MODAL ══ */
@@ -6206,9 +6206,11 @@ function renderGradesTable(){
   const canEditCols=isAdmin();
   const isPhone=window.matchMedia('(max-width:767px)').matches;
   // رؤوس أعمدة الدرجات + المجموع (مشتركة)
-  let gradeThs='';
-  cols.forEach(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';gradeThs+=`<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
+  const gradeThsArr=cols.map(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';return `<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
+  const gradeThs=gradeThsArr.join('');
   const totalTh=`<th>المجموع / ${totalMax}</th>`;
+  // الهاتف: نعكس ترتيب الأعمدة (المجموع أولاً، فآخر تقييم...، فأول تقييم) لأن جدول الدرجات يُعرض بـdir="ltr" لتفادي خلل WebKit في تثبيت أول عمود عند التمرير بجدول RTL — هذا يجعل أول تقييم يظهر ملاصقاً لعمود الاسم كما في الوضع الطبيعي
+  const gradeThsPhone=[totalTh,...gradeThsArr.slice().reverse()].join('');
   // بناء options مرة واحدة لكل عمود
   const colOptions={};
   cols.forEach(c=>{
@@ -6222,18 +6224,20 @@ function renderGradesTable(){
     const sg=(grades[k]||{})[st.id]||{};
     const idxCell=`<td>${idx+1}</td>`;
     const nameCell=`<td>${escapeHTML(st.name)}</td>`;
-    let pts=0,gradeCells='';
-    cols.forEach(c=>{
+    let pts=0;
+    const gradeCellsArr=cols.map(c=>{
       const v=sg[c.id];const num=v!=null&&!isNaN(v)?Number(v):null;let cl='';
       if(num!=null){const pct2=(num/c.max)*100;cl=pct2<50?'low':pct2<75?'mid':'high';pts+=num;}
       let opts=colOptions[c.id].opts;
       if(num!=null)opts=opts.replace(`<option value="${num}">${num}</option>`,`<option value="${num}" selected>${num}</option>`);
-      gradeCells+=`<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${opts}</select></td>`;
+      return `<td><select class="grade-input ${cl}" onchange="updGrade('${st.id}','${c.id}',this.value)">${opts}</select></td>`;
     });
+    const gradeCells=gradeCellsArr.join('');
     const totalVal=pts>0||cols.some(c=>(sg[c.id]!=null&&sg[c.id]!==''))?pts:null;
     const totalCell=`<td style="font-weight:800;background:rgba(138,96,0,.13);border:1.5px solid rgba(138,96,0,.35);border-radius:8px;text-align:center;"><span style="color:var(--gold);font-size:13px;font-weight:900;">${totalVal!=null?totalVal:'—'}</span>${totalVal!=null?`<span style="color:var(--muted);font-size:9px;"> / ${totalMax}</span>`:''}</td>`;
+    const gradeCellsPhone=[totalCell,...gradeCellsArr.slice().reverse()].join('');
     nameRows+=`<tr>${nameCell}</tr>`;
-    gradeRows+=`<tr>${gradeCells}${totalCell}</tr>`;
+    gradeRows+=`<tr>${gradeCellsPhone}</tr>`;
     combinedRows+=`<tr>${idxCell}${nameCell}${gradeCells}${totalCell}</tr>`;
   });
   if(isPhone){
@@ -6243,8 +6247,10 @@ function renderGradesTable(){
     gmWrap.innerHTML=
       '<div class="gm-flex">'+
         '<div class="gm-fixed"><table class="gmt gmt-names"><thead><tr><th>الطالب</th></tr></thead><tbody id="gm-names-body">'+nameRows+'</tbody></table></div>'+
-        '<div class="gm-scroll"><table class="gmt gmt-grades"><thead><tr>'+gradeThs+totalTh+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
+        '<div class="gm-scroll" dir="ltr"><table class="gmt gmt-grades" dir="ltr"><thead><tr>'+gradeThsPhone+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
       '</div>';
+    const gmScroll=gmWrap.querySelector('.gm-scroll');
+    if(gmScroll)gmScroll.scrollLeft=gmScroll.scrollWidth-gmScroll.clientWidth;
   }else{
     const gmWrap=document.getElementById('grades-table-gm');if(gmWrap)gmWrap.innerHTML='';
     const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
