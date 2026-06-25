@@ -5774,21 +5774,28 @@ async function saveTemplateFromEditor(){
       toast('✅ تم التحديث');
     }else{
       // إنشاء قالب لكل صف من الصفوف المختارة
-      let created=0,replaced=0;
+      let created=0,replaced=0;const failed=[];
       for(const g of grades){
         const existing=await sb.from('grade_templates').select('id')
           .eq('subject',subject).eq('grade',g);
+        if(existing.error){failed.push(`الصف ${g}: ${existing.error.message}`);continue;}
         if(existing.data&&existing.data.length){
           // قالب موجود → استبدل بصمت
-          await sb.from('grade_templates')
+          const{error:upErr}=await sb.from('grade_templates')
             .update({grade_types:cols}).eq('id',existing.data[0].id);
+          if(upErr){failed.push(`الصف ${g}: ${upErr.message}`);continue;}
           replaced++;
         }else{
-          await sb.from('grade_templates').insert([{
+          const{error:insErr}=await sb.from('grade_templates').insert([{
             subject,grade:g,grade_types:cols,created_by:currentUser?.email||''
           }]);
+          if(insErr){failed.push(`الصف ${g}: ${insErr.message}`);continue;}
           created++;
         }
+      }
+      if(failed.length){
+        toast(`❌ فشل الحفظ لـ: ${failed.join(' | ')}`,true);
+        if(!created&&!replaced)return;
       }
       let msg=`✅ تم: ${created} قالب جديد`;
       if(replaced>0)msg+=`، ${replaced} مُحدّث`;
