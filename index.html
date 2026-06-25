@@ -5306,6 +5306,7 @@ function filterUsers(){
 // 🎯 إدارة قوالب الدرجات (للمشرف)
 // ════════════════════════════════════════════════════════════════
 let _editingTemplateId=null;
+let _editingOldCols=[];
 
 async function loadAdminTemplates(){
   const panel=document.getElementById('admin-templates-panel');
@@ -5468,6 +5469,7 @@ async function editTemplate(id){
     document.getElementById('te-subject-custom').value='';
     document.getElementById('te-cols-list').innerHTML='';
     const cols=Array.isArray(data.grade_types)?data.grade_types:[];
+    _editingOldCols=JSON.parse(JSON.stringify(cols));
     if(cols.length){cols.forEach(c=>addTemplateCol(c));}
     else{addTemplateCol();}
     document.getElementById('te-cols-field').style.display='block';
@@ -5478,6 +5480,7 @@ async function editTemplate(id){
 function closeTemplateEditor(){
   document.getElementById('template-editor-modal').style.display='none';
   _editingTemplateId=null;
+  _editingOldCols=[];
   _selectedGrades=new Set();
   _selectedSubject='';
 }
@@ -5537,6 +5540,7 @@ async function saveTemplateFromEditor(){
         .update({subject,grade:grades[0],grade_types:cols})
         .eq('id',_editingTemplateId);
       if(error)throw error;
+      await cascadeUpdateTemplateColumns(subject,grades[0],_editingOldCols,cols);
       toast('✅ تم التحديث');
     }else{
       // إنشاء قالب لكل صف من الصفوف المختارة
@@ -5635,6 +5639,75 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
     }
     if(affected)toast(`🧹 تم حذف الأعمدة المطابقة من ${affected} شعبة/معلم`,'ok');
   }catch(e){console.error('cascade error:',e);}
+}
+
+// تحديث تتابعي: مزامنة تعديل القالب (تغيير درجة/اسم/إضافة/حذف عمود) مع كل شعب المعلمين التي حمّلت هذا القالب فعلاً
+async function cascadeUpdateTemplateColumns(subject,grade,oldCols,newCols){
+  const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+  const targetSubject=normalize(subject);
+  const targetGrade=parseInt(grade);
+  const oldNames=new Set((oldCols||[]).map(c=>c.name));
+  const newByName=new Map((newCols||[]).map(c=>[c.name,c]));
+  try{
+    const{data:profiles,error}=await sb.from('profiles').select('id,data');
+    if(error){console.error(error);return;}
+    let affected=0;
+    for(const p of (profiles||[])){
+      const d=p.data;
+      if(!d||!d.teacher_config||!Array.isArray(d.teacher_config.grades))continue;
+      const classKeys=[];
+      d.teacher_config.grades.forEach(g=>{
+        if(parseInt(g.num)===targetGrade&&normalize(g.subject)===targetSubject){
+          (g.classes||[]).forEach(c=>classKeys.push(c.id));
+        }
+      });
+      if(!classKeys.length)continue;
+      let gradeTypesArr=Array.isArray(d.grade_types)?d.grade_types.slice():[];
+      const gradesObj=d.grades||{};
+      let changed=false;
+      classKeys.forEach(ck=>{
+        // لا نمسّ شعبة لم تحمّل هذا القالب أصلاً (لا تملك أي عمود من أعمدته القديمة)
+        const usesTemplate=gradeTypesArr.some(c=>c.classKey===ck&&oldNames.has(c.name));
+        if(!usesTemplate)return;
+        // تحديث الدرجة العظمى للأعمدة المطابقة بالاسم
+        gradeTypesArr.forEach(c=>{
+          if(c.classKey!==ck||!oldNames.has(c.name))return;
+          const nc=newByName.get(c.name);
+          if(nc&&Number(c.max)!==Number(nc.max)){c.max=Number(nc.max);changed=true;}
+        });
+        // حذف الأعمدة التي أُزيلت من القالب
+        const toRemove=gradeTypesArr.filter(c=>c.classKey===ck&&oldNames.has(c.name)&&!newByName.has(c.name));
+        if(toRemove.length){
+          const removeIds=new Set(toRemove.map(c=>c.id));
+          gradeTypesArr=gradeTypesArr.filter(c=>!removeIds.has(c.id));
+          if(gradesObj[ck]){
+            Object.keys(gradesObj[ck]).forEach(sid=>{
+              removeIds.forEach(cid=>{if(gradesObj[ck][sid][cid]!=null)delete gradesObj[ck][sid][cid];});
+            });
+          }
+          changed=true;
+        }
+        // إضافة الأعمدة الجديدة التي أُضيفت للقالب
+        newCols.forEach((nc,i)=>{
+          const exists=gradeTypesArr.some(c=>c.classKey===ck&&c.name===nc.name);
+          if(!exists){
+            gradeTypesArr.push({id:'g_tmpl_'+Date.now()+'_'+ck+'_'+i,name:nc.name,category:nc.category||'homework',max:Number(nc.max)||10,classKey:ck});
+            changed=true;
+          }
+        });
+      });
+      if(!changed)continue;
+      const newData={...d,grade_types:gradeTypesArr,grades:gradesObj,updated_at:new Date().toISOString()};
+      const{error:upErr}=await sb.from('profiles').update({data:newData,updated_at:new Date().toISOString()}).eq('id',p.id);
+      if(upErr){console.error('cascade update failed for',p.id,upErr);continue;}
+      affected++;
+      if(currentUser&&p.id===currentUser.id){
+        gradeTypes=gradeTypesArr;grades=gradesObj;
+        if(typeof renderGradesTable==='function'&&document.getElementById('page-grades')?.classList.contains('active'))renderGradesTable();
+      }
+    }
+    if(affected)toast(`🧹 تم تحديث الأعمدة في ${affected} شعبة/معلم`,'ok');
+  }catch(e){console.error('cascade update error:',e);}
 }
 
 // إعادة جلب الدروس من قاعدة البيانات وتحديث teacher_config
