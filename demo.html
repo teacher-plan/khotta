@@ -7064,18 +7064,19 @@ async function loadTemplateForCurrentClass(){
   if(!info){toast('❌ اختر شعبة أولاً',true);return;}
   
   try{
-    const{data,error}=await sb.from('grade_templates')
+    const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+    const{data:rows,error}=await sb.from('grade_templates')
       .select('*')
-      .eq('subject',info.subject)
-      .eq('grade',info.grade)
-      .maybeSingle();
-    
+      .eq('grade',info.grade);
+
     if(error){
       console.error(error);
       toast('❌ خطأ في التحميل',true);
       return;
     }
-    
+
+    const data=(rows||[]).find(r=>normalize(r.subject)===normalize(info.subject));
+
     if(!data||!data.grade_types||!data.grade_types.length){
       toast(`📭 لا يوجد قالب جاهز لـ ${info.subject} - الصف ${info.grade}`,true);
       return;
