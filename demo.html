@@ -5808,13 +5808,67 @@ async function saveTemplateFromEditor(){
 
 async function deleteTemplate(id,subject,grade){
   if(!isAdmin())return;
-  if(!confirm(`⚠️ حذف قالب ${subject} - الصف ${grade}؟\nلا يمكن التراجع.`))return;
+  if(!confirm(`⚠️ حذف قالب ${subject} - الصف ${grade}؟\nسيُحذف القالب وكل أعمدة التقييم المطابقة من جميع شعب المعلمين التي حمّلته، مع درجات الطلاب فيها.\nلا يمكن التراجع.`))return;
   try{
+    // اجلب أعمدة القالب قبل حذفه لمطابقتها عند الحذف التتابعي
+    const{data:tmplRow}=await sb.from('grade_templates').select('grade_types').eq('id',id).maybeSingle();
+    const tmplCols=Array.isArray(tmplRow?.grade_types)?tmplRow.grade_types:[];
+    const tmplNames=new Set(tmplCols.map(c=>c.name));
+
     const{error}=await sb.from('grade_templates').delete().eq('id',id);
     if(error)throw error;
+
+    if(tmplNames.size)await cascadeDeleteTemplateColumns(subject,grade,tmplNames);
+
     toast('✅ تم الحذف');
     loadAdminTemplates();
   }catch(e){toast('❌ خطأ: '+(e.message||''),true);}
+}
+
+// حذف تتابعي: إزالة أعمدة القالب المحذوف (ودرجاتها) من كل شعب كل المعلمين المطابقة لنفس المادة والصف
+async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
+  const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+  const targetSubject=normalize(subject);
+  const targetGrade=parseInt(grade);
+  try{
+    const{data:profiles,error}=await sb.from('profiles').select('id,data');
+    if(error){console.error(error);return;}
+    let affected=0;
+    for(const p of (profiles||[])){
+      const d=p.data;
+      if(!d||!d.teacher_config||!Array.isArray(d.teacher_config.grades))continue;
+      const classKeys=[];
+      d.teacher_config.grades.forEach(g=>{
+        if(parseInt(g.num)===targetGrade&&normalize(g.subject)===targetSubject){
+          (g.classes||[]).forEach(c=>classKeys.push(c.id));
+        }
+      });
+      if(!classKeys.length)continue;
+      const gradeTypesArr=Array.isArray(d.grade_types)?d.grade_types:[];
+      const toRemove=gradeTypesArr.filter(c=>classKeys.includes(c.classKey)&&nameSet.has(c.name));
+      if(!toRemove.length)continue;
+      const removeIds=new Set(toRemove.map(c=>c.id));
+      const newGradeTypes=gradeTypesArr.filter(c=>!removeIds.has(c.id));
+      const gradesObj=d.grades||{};
+      classKeys.forEach(ck=>{
+        if(gradesObj[ck]){
+          Object.keys(gradesObj[ck]).forEach(sid=>{
+            removeIds.forEach(cid=>{if(gradesObj[ck][sid][cid]!=null)delete gradesObj[ck][sid][cid];});
+          });
+        }
+      });
+      const newData={...d,grade_types:newGradeTypes,grades:gradesObj,updated_at:new Date().toISOString()};
+      const{error:upErr}=await sb.from('profiles').update({data:newData,updated_at:new Date().toISOString()}).eq('id',p.id);
+      if(upErr){console.error('cascade update failed for',p.id,upErr);continue;}
+      affected++;
+      // إن كان الملف الحالي هو ملف المشرف نفسه، حدّث الحالة المحلية فوراً
+      if(currentUser&&p.id===currentUser.id){
+        gradeTypes=newGradeTypes;grades=gradesObj;
+        if(typeof renderGradesTable==='function'&&document.getElementById('page-grades')?.classList.contains('active'))renderGradesTable();
+      }
+    }
+    if(affected)toast(`🧹 تم حذف الأعمدة المطابقة من ${affected} شعبة/معلم`,'ok');
+  }catch(e){console.error('cascade error:',e);}
 }
 
 // إعادة جلب الدروس من قاعدة البيانات وتحديث teacher_config
