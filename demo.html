@@ -855,22 +855,20 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .grades-table tr:hover td:first-child,.grades-table tr:hover td:nth-child(2){background:var(--surface);}
 .grades-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
 .grades-table tbody tr:nth-child(even) td:first-child,.grades-table tbody tr:nth-child(even) td:nth-child(2){background:var(--surface);}
+/* ═══ الهاتف: جدول الدرجات بعمود أسماء مجمّد (جدولان منفصلان، بلا position:sticky) ═══ */
 @media(max-width:767px){
-  .grades-table-wrap{-webkit-overflow-scrolling:touch;}
-  .grades-table{border-collapse:separate;border-spacing:0;}
-  .grades-table th:not(:nth-child(1)):not(:nth-child(2)),.grades-table td:not(:nth-child(1)):not(:nth-child(2)){width:111px;min-width:111px;}
-  .grades-table th:nth-child(2){font-size:13px;text-align:center;}
-  .grades-table td:nth-child(2){font-size:10px;}
-  .grades-table td{transition:none;}
-  .grades-table thead{position:static;}
-  .grades-table tr:hover td{background:transparent;}
-  .grades-table tr:hover td:first-child,.grades-table tr:hover td:nth-child(2){background:var(--surface);}
-  .grades-table tbody tr:nth-child(even):hover td{background:rgba(255,255,255,.02);}
-  .grades-table tbody tr:nth-child(even):hover td:first-child,.grades-table tbody tr:nth-child(even):hover td:nth-child(2){background:var(--surface);}
-  .grades-table th,.grades-table td{-webkit-tap-highlight-color:transparent;}
-  .grades-table th:nth-child(1),.grades-table td:nth-child(1){position:sticky;right:0;z-index:2;width:30px;min-width:30px;background:var(--surface);}
-  .grades-table th:nth-child(2),.grades-table td:nth-child(2){position:sticky;right:30px;z-index:2;background:var(--surface);box-shadow:-6px 0 6px -6px rgba(0,0,0,.4);width:200px;min-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .grades-table tr:hover td:nth-child(1),.grades-table tr:hover td:nth-child(2){background:var(--surface);}
+  .grades-table-wrap{display:none;}
+  .gm-flex{display:flex;align-items:flex-start;width:100%;border-radius:8px;border:1px solid var(--border);background:var(--surface);overflow:hidden;}
+  .gm-fixed{flex:0 0 170px;width:170px;background:var(--surface);box-shadow:-4px 0 6px -4px rgba(0,0,0,.3);}
+  .gm-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .gmt{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;}
+  .gmt thead th{background:var(--card);color:var(--gold);font-size:10px;font-weight:700;border-bottom:2px solid rgba(240,192,96,.3);height:58px;padding:2px 4px;white-space:nowrap;text-align:center;vertical-align:middle;box-sizing:border-box;}
+  .gmt tbody td{border-bottom:1px solid rgba(0,0,0,.15);height:48px;box-sizing:border-box;text-align:center;font-size:12px;padding:2px 4px;vertical-align:middle;}
+  .gmt tbody tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+  .gmt-names th:first-child,.gmt-names td:first-child{width:32px;color:var(--muted);font-weight:700;}
+  .gmt-names th:nth-child(2),.gmt-names td:nth-child(2){width:138px;max-width:138px;text-align:right;padding-right:8px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gmt-grades th,.gmt-grades td{width:111px;min-width:111px;}
+  .gmt-grades th:last-child,.gmt-grades td:last-child{width:88px;min-width:88px;}
 }
 
 /* ══ CERT PREVIEW MODAL ══ */
@@ -6238,10 +6236,21 @@ function renderGradesTable(){
     gradeRows+=`<tr>${gradeCells}${totalCell}</tr>`;
     combinedRows+=`<tr>${idxCell}${nameCell}${gradeCells}${totalCell}</tr>`;
   });
-  // جدول واحد مدمج لكل من اللابتوب والهاتف (نفس الإعدادات)
-  const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
-  const body='<tbody id="grades-table-body">'+combinedRows+'</tbody>';
-  wrapEl.innerHTML='<table class="grades-table" id="grades-table">'+head+body+'</table>';
+  if(isPhone){
+    // الهاتف: جدولان منفصلان (الأسماء مجمّدة بعرض ثابت بـCSS، الدرجات تُمرَّر أفقياً) — بدون أي position:sticky
+    wrapEl.innerHTML='';
+    const gmWrap=document.getElementById('grades-table-gm')||(()=>{const d=document.createElement('div');d.id='grades-table-gm';wrapEl.parentNode.insertBefore(d,wrapEl.nextSibling);return d;})();
+    gmWrap.innerHTML=
+      '<div class="gm-flex">'+
+        '<div class="gm-fixed"><table class="gmt gmt-names"><thead><tr><th>م</th><th>الطالب</th></tr></thead><tbody>'+nameRows+'</tbody></table></div>'+
+        '<div class="gm-scroll"><table class="gmt gmt-grades"><thead><tr>'+gradeThs+totalTh+'</tr></thead><tbody id="grades-table-body">'+gradeRows+'</tbody></table></div>'+
+      '</div>';
+  }else{
+    const gmWrap=document.getElementById('grades-table-gm');if(gmWrap)gmWrap.innerHTML='';
+    const head='<thead><tr><th>م</th><th>الطالب</th>'+gradeThs+totalTh+'</tr></thead>';
+    const body='<tbody id="grades-table-body">'+combinedRows+'</tbody>';
+    wrapEl.innerHTML='<table class="grades-table" id="grades-table">'+head+body+'</table>';
+  }
 }
 // تحميل lazy لمكتبات Excel (توفير ~2MB من التحميل الأولي)
 let _excelLibsLoading=null;
