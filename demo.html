@@ -5833,7 +5833,7 @@ async function deleteTemplate(id,subject,grade){
 
 // حذف تتابعي: إزالة أعمدة القالب المحذوف (ودرجاتها) من كل شعب كل المعلمين المطابقة لنفس المادة والصف
 async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
-  const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+  const normalize=s=>String(s||'').trim().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[إأآ]/g,'ا').replace(/\s+/g,' ').replace(/^ال/,'');
   const targetSubject=normalize(subject);
   const targetGrade=parseInt(grade);
   try{
@@ -5879,7 +5879,7 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
 
 // تحديث تتابعي: مزامنة تعديل القالب (تغيير درجة/اسم/إضافة/حذف عمود) مع كل شعب المعلمين التي حمّلت هذا القالب فعلاً
 async function cascadeUpdateTemplateColumns(subject,grade,oldCols,newCols){
-  const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+  const normalize=s=>String(s||'').trim().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[إأآ]/g,'ا').replace(/\s+/g,' ').replace(/^ال/,'');
   const targetSubject=normalize(subject);
   const targetGrade=parseInt(grade);
   const oldNames=new Set((oldCols||[]).map(c=>c.name));
@@ -7064,7 +7064,7 @@ async function loadTemplateForCurrentClass(){
   if(!info){toast('❌ اختر شعبة أولاً',true);return;}
   
   try{
-    const normalize=s=>String(s||'').trim().replace(/ـ/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+    const normalize=s=>String(s||'').trim().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[إأآ]/g,'ا').replace(/\s+/g,' ').replace(/^ال/,'');
     const{data:rows,error}=await sb.from('grade_templates')
       .select('*')
       .eq('grade',info.grade);
@@ -7123,7 +7123,7 @@ async function autoLoadTemplateIfEmpty(){
   if(!info)return;
   
   // تطبيع اسم المادة لمقارنة مرنة (إزالة المسافات الزائدة والمدّات)
-  const normalize=s=>String(s||'').trim().replace(/\u0640/g,'').replace(/\s+/g,' ').replace(/^ال/,'');
+  const normalize=s=>String(s||'').trim().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[إأآ]/g,'ا').replace(/\s+/g,' ').replace(/^ال/,'');
   const targetSubject=normalize(info.subject);
   const targetGrade=parseInt(info.grade);
   
