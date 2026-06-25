@@ -5838,8 +5838,8 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
   const targetGrade=parseInt(grade);
   try{
     const{data:profiles,error}=await sb.from('profiles').select('id,data');
-    if(error){console.error(error);return;}
-    let affected=0;
+    if(error){console.error(error);toast('❌ خطأ في جلب الملفات: '+(error.message||''),true);return;}
+    let affected=0,classKeysFoundTotal=0,scanned=(profiles||[]).length;
     for(const p of (profiles||[])){
       const d=p.data;
       if(!d||!d.teacher_config||!Array.isArray(d.teacher_config.grades))continue;
@@ -5850,8 +5850,10 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
         }
       });
       if(!classKeys.length)continue;
+      classKeysFoundTotal+=classKeys.length;
       const gradeTypesArr=Array.isArray(d.grade_types)?d.grade_types:[];
       const toRemove=gradeTypesArr.filter(c=>classKeys.includes(c.classKey)&&nameSet.has(c.name));
+      console.log('[cascadeDelete] profile',p.id,'classKeys=',classKeys,'gradeTypesArr names=',gradeTypesArr.map(c=>c.classKey+':'+c.name),'nameSet=',[...nameSet],'toRemove=',toRemove.length);
       if(!toRemove.length)continue;
       const removeIds=new Set(toRemove.map(c=>c.id));
       const newGradeTypes=gradeTypesArr.filter(c=>!removeIds.has(c.id));
@@ -5873,8 +5875,8 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
         if(typeof renderGradesTable==='function'&&document.getElementById('page-grades')?.classList.contains('active'))renderGradesTable();
       }
     }
-    if(affected)toast(`🧹 تم حذف الأعمدة المطابقة من ${affected} شعبة/معلم`,'ok');
-  }catch(e){console.error('cascade error:',e);}
+    toast(`🔍 تشخيص: ${scanned} ملف، ${classKeysFoundTotal} شعبة مطابقة للمادة/الصف، ${affected} تم التحديث فيها`,affected?'ok':true);
+  }catch(e){console.error('cascade error:',e);toast('❌ خطأ في الحذف التتابعي: '+(e.message||''),true);}
 }
 
 // تحديث تتابعي: مزامنة تعديل القالب (تغيير درجة/اسم/إضافة/حذف عمود) مع كل شعب المعلمين التي حمّلت هذا القالب فعلاً
