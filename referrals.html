@@ -504,13 +504,14 @@ function renderDataTab(){
 function createEphemeralSbClient(){
   return window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'kh_temp_signup_'+Date.now()}});
 }
-function getTeacherAccountsMap(){
-  try{return JSON.parse(localStorage.getItem('kh_teacher_accounts')||'{}');}catch(e){return{};}
-}
-function saveTeacherAccount(regId,email,password){
-  const map=getTeacherAccountsMap();
-  map[regId]={email,password};
-  localStorage.setItem('kh_teacher_accounts',JSON.stringify(map));
+function nextTeacherSerial(){
+  // العدّاد من قاعدة البيانات (account_email على صفوف الترويج) — موثوق عبر كل الأجهزة
+  let max=0;
+  for(const r of registrations){
+    const m=/^t(\d+)@khotati\.app$/i.exec(r.account_email||'');
+    if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
+  }
+  return max+1;
 }
 function genRandomPassword(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -522,14 +523,16 @@ async function generateTeacherAccount(regId){
   const btn=document.getElementById('gen-account-btn-'+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ الإنشاء...';}
   try{
-    const email=`t${regId}@khotati.app`;
+    const email=`t${nextTeacherSerial()}@khotati.app`;
     const password=genRandomPassword();
     const tempSb=createEphemeralSbClient();
     const{error}=await tempSb.auth.signUp({email,password});
     if(error)throw error;
     const{error:allowErr}=await sb.from('allowed_emails').insert({email});
     if(allowErr)throw allowErr;
-    saveTeacherAccount(regId,email,password);
+    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
+    if(updErr)throw updErr;
+    await loadRegistrations();
     renderAccountsTab();
     alert(`✅ تم إنشاء الحساب بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن — لن تُعرض كلمة المرور مرة أخرى.`);
   }catch(e){
@@ -538,15 +541,13 @@ async function generateTeacherAccount(regId){
   }
 }
 function showTeacherAccount(regId){
-  const map=getTeacherAccountsMap();
-  const acc=map[regId];
-  if(!acc)return;
-  alert(`اسم المستخدم: ${acc.email}\nكلمة المرور: ${acc.password}`);
+  const r=registrations.find(x=>x.id===regId);
+  if(!r||!r.account_email)return;
+  alert(`اسم المستخدم: ${r.account_email}\nكلمة المرور: ${r.account_password||'—'}`);
 }
 function renderAccountsTab(){
   const tbody=document.getElementById('accounts-table-body');
   if(!tbody)return;
-  const map=getTeacherAccountsMap();
   const q=(document.getElementById('accounts-search')?.value||'').trim().toLowerCase();
   const filtered=q?registrations.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)):registrations;
   const countEl=document.getElementById('accounts-results-count');
@@ -555,9 +556,9 @@ function renderAccountsTab(){
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
     const paidStatus=r.payment_status==='paid'?'<span class="status-badge paid">✅ مدفوع</span>':'<span class="status-badge pending">⏳ قيد الانتظار</span>';
-    const acc=map[r.id];
-    const accCell=acc?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(acc.email)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
-    const actionBtn=acc
+    const accEmail=r.account_email;
+    const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
+    const actionBtn=accEmail
       ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>`
       :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>`;
     return `<tr>
