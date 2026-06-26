@@ -3584,14 +3584,15 @@ function buildUnitsFromRows(rows,semester,subject){
 let _setupStudents={}; // {classId: [{name,phone}]}
 
 function goToStep3(){
-  // تحقق من إتمام Step 2
-  const chosenGrades=setupGrades.filter(g=>setupData[g]&&setupData[g].subjects.length);
-  if(!chosenGrades.length){toast('❌ اختر مادة واحدة على الأقل',true);return;}
-  for(const g of chosenGrades){
+  // تحقق من إتمام Step 2 — كل صف اختاره المعلم يجب أن يكتمل (مواد + شعب)
+  if(!setupGrades.length){toast('❌ اختر صفاً واحداً على الأقل',true);return;}
+  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
+  for(const g of setupGrades){
     const d=setupData[g];
-    if(!(d.classes[g]||[]).length){toast(`❌ اختر شعبة للصف ${g}`,true);return;}
+    if(!d||!d.subjects.length){toast(`❌ اختر مواد الصف ${arabicNums[g-1]} أولاً`,true);switchGradeTab(g);return;}
+    if(!(d.classes[g]||[]).length){toast(`❌ اختر شعب الصف ${arabicNums[g-1]} أولاً`,true);switchGradeTab(g);return;}
   }
-  
+
   // الانتقال
   document.getElementById('setup-step-2').style.display='none';
   document.getElementById('setup-step-3').style.display='block';
