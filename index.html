@@ -2780,7 +2780,7 @@ function fmtSize(b){if(!b)return'';if(b<1024)return b+'B';if(b<1048576)return(b/
 // إنشاء/إيجاد مجلد التطبيق داخل درايف المستخدم (مرة واحدة)
 async function ensureDriveFolder(){
   if(driveFolderId)return driveFolderId;
-  if(!googleAccessToken)throw new Error('no-google-token');
+  if(!await ensureDriveToken())throw new Error('no-google-token');
   // ابحث عن المجلد
   const q=encodeURIComponent(`name='${GOOGLE_DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{
@@ -2800,7 +2800,7 @@ async function ensureDriveFolder(){
 }
 // يرفع الملف على Drive ويرجّع كائن متوافق مع باقي الكود
 async function driveUpload(file,fileName){
-  if(!googleAccessToken){toast('❌ صلاحية Google منتهية. سجّل الدخول من جديد',true);return null;}
+  if(!await ensureDriveToken()){await promptLinkDrive();return null;}
   if(file.size>MAX_FILE_SIZE){toast('❌ الملف أكبر من 500MB',true);return null;}
   try{
     const folderId=await ensureDriveFolder();
@@ -2829,7 +2829,8 @@ async function driveUpload(file,fileName){
   }catch(e){console.error('drive upload error:',e);toast('❌ تعذّر رفع الملف',true);return null;}
 }
 async function driveDelete(fileId){
-  if(!fileId||!googleAccessToken)return false;
+  if(!fileId)return false;
+  if(!await ensureDriveToken())return false;
   try{
     const res=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId,{
       method:'DELETE',headers:{Authorization:'Bearer '+googleAccessToken}
@@ -2850,6 +2851,54 @@ async function getFileUrl(fileObj){
 async function getDownloadUrl(fileObj){
   if(isDriveFile(fileObj))return'https://drive.google.com/uc?export=download&id='+fileObj.driveId;
   return'';
+}
+
+// ── ربط Google Drive للتخزين (يعمل لكل أنواع الحسابات: جوجل أو بريد/كلمة مرور) ──
+let driveTokenExpiry=0;   // وقت انتهاء توكن الوصول الحالي (ملّي ثانية)
+// يخزّن refresh_token الخاص بجوجل (يأتي بعد الربط/الدخول) ليجدّده الخادم لاحقاً
+async function storeDriveRefreshToken(session){
+  try{
+    const rt=session&&session.provider_refresh_token;
+    if(!rt||!currentUser)return;
+    await sb.from('drive_tokens').upsert({user_id:currentUser.id,refresh_token:rt,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  }catch(e){console.warn('store drive token failed:',e);}
+}
+// يطلب توكن وصول جديد من Edge Function (للحسابات المرتبطة بدون جلسة جوجل حيّة)
+async function getFreshDriveToken(){
+  try{
+    const{data,error}=await sb.functions.invoke('drive-token');
+    if(error||!data||!data.access_token)return null;
+    googleAccessToken=data.access_token;
+    driveTokenExpiry=Date.now()+((data.expires_in||3600)*1000)-60000;
+    return googleAccessToken;
+  }catch(e){console.error('getFreshDriveToken error:',e);return null;}
+}
+// يضمن وجود توكن صالح قبل أي عملية على Drive
+async function ensureDriveToken(){
+  // توكن حيّ (مستخدم جوجل في نفس الجلسة، أو توكن مجدّد لم ينتهِ بعد)
+  if(googleAccessToken&&(driveTokenExpiry===0||Date.now()<driveTokenExpiry))return true;
+  // حاول التجديد عبر الخادم (للحسابات المرتبطة بالبريد/كلمة المرور)
+  return !!(await getFreshDriveToken());
+}
+// يبدأ تدفّق ربط حساب Google (مرة واحدة) لإتاحة مساحة التخزين
+async function linkGoogleDrive(){
+  try{
+    const{error}=await sb.auth.linkIdentity({
+      provider:'google',
+      options:{
+        redirectTo:window.location.href.split('#')[0],
+        scopes:'https://www.googleapis.com/auth/drive.file',
+        queryParams:{access_type:'offline',prompt:'consent'}
+      }
+    });
+    if(error)toast('❌ تعذّر ربط Google: '+error.message,true);
+  }catch(e){toast('❌ تعذّر ربط Google',true);}
+}
+// يُعرض عند محاولة الرفع بدون ربط — يجبر المعلم على الربط قبل استخدام الملفات
+async function promptLinkDrive(){
+  if(confirm('لتخزين الملفات تحتاج لربط حساب Google مرة واحدة.\nسيُفتح جوجل لمنح إذن التخزين فقط، ثم تعود للموقع.\nربط الآن؟')){
+    await linkGoogleDrive();
+  }
 }
 
 // ══ حذف كل البيانات ══════════════════════════════════
@@ -3058,7 +3107,8 @@ async function bootApp(session){
           await sb.auth.signOut();location.reload();return;
         }
         // التقط توكن Google
-        if(session.provider_token)googleAccessToken=session.provider_token;
+        if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
+        storeDriveRefreshToken(session);
         // مزامنة البيانات من الخادم لو فيه نسخة أحدث
         _syncFromServerInBackground();
       }catch(e){console.warn('background checks error:',e);}
@@ -3134,7 +3184,8 @@ async function bootApp(session){
     return;
   }
   // التقط توكن Google لرفع الملفات على Drive
-  if(session.provider_token)googleAccessToken=session.provider_token;
+  if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
+  storeDriveRefreshToken(session);
 
   // فحص إذا كان الحساب محظوراً
   try{
@@ -3225,9 +3276,16 @@ async function bootApp(session){
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='SIGNED_IN'&&session){
       if(!currentUser)await bootApp(session);
-      else if(session.provider_token)googleAccessToken=session.provider_token;
+      else if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
+      storeDriveRefreshToken(session);
     }
-    if(event==='SIGNED_OUT'){currentUser=null;googleAccessToken=null;stopBellPolling();}
+    // عند رجوع المستخدم من ربط حساب Google (linkIdentity)
+    if(event==='USER_UPDATED'&&session){
+      if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
+      await storeDriveRefreshToken(session);
+      if(session.provider_refresh_token)toast('✅ تم ربط حساب Google — يمكنك الآن رفع الملفات','ok');
+    }
+    if(event==='SIGNED_OUT'){currentUser=null;googleAccessToken=null;driveTokenExpiry=0;stopBellPolling();}
   });
 })();
 
