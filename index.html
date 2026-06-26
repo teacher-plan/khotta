@@ -5633,7 +5633,7 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
       });
       const newData={...d,grade_types:newGradeTypes,grades:gradesObj,updated_at:new Date().toISOString()};
       const{error:upErr}=await sb.from('profiles').update({data:newData,updated_at:new Date().toISOString()}).eq('id',p.id);
-      if(upErr){console.error('cascade update failed for',p.id,upErr);continue;}
+      if(upErr){console.error('cascade update failed for',p.id,upErr);toast(`❌ فشل تحديث ملف ${p.id}: ${upErr.message||upErr.code||''}`,true);continue;}
       affected++;
       // إن كان الملف الحالي هو ملف المشرف نفسه، حدّث الحالة المحلية فوراً
       if(currentUser&&p.id===currentUser.id){
@@ -5703,7 +5703,7 @@ async function cascadeUpdateTemplateColumns(subject,grade,oldCols,newCols){
       if(!changed)continue;
       const newData={...d,grade_types:gradeTypesArr,grades:gradesObj,updated_at:new Date().toISOString()};
       const{error:upErr}=await sb.from('profiles').update({data:newData,updated_at:new Date().toISOString()}).eq('id',p.id);
-      if(upErr){console.error('cascade update failed for',p.id,upErr);continue;}
+      if(upErr){console.error('cascade update failed for',p.id,upErr);toast(`❌ فشل تحديث ملف ${p.id}: ${upErr.message||upErr.code||''}`,true);continue;}
       affected++;
       if(currentUser&&p.id===currentUser.id){
         gradeTypes=gradeTypesArr;grades=gradesObj;
