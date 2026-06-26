@@ -504,11 +504,13 @@ function renderDataTab(){
 function createEphemeralSbClient(){
   return window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'kh_temp_signup_'+Date.now()}});
 }
-function nextTeacherSerial(){
+function nextTeacherSerial(prefix){
   // العدّاد من قاعدة البيانات (account_email على صفوف الترويج) — موثوق عبر كل الأجهزة
+  // prefix: 't' للحلقة الثانية، 'c' للحلقة الأولى
+  const re=new RegExp('^'+prefix+'(\\d+)@khotati\\.app$','i');
   let max=0;
   for(const r of registrations){
-    const m=/^t(\d+)@khotati\.app$/i.exec(r.account_email||'');
+    const m=re.exec(r.account_email||'');
     if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
   }
   return max+1;
@@ -523,18 +525,24 @@ async function generateTeacherAccount(regId){
   const btn=document.getElementById('gen-account-btn-'+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ الإنشاء...';}
   try{
-    const email=`t${nextTeacherSerial()}@khotati.app`;
+    // تحديد المرحلة من تسجيل المعلم: الحلقة الأولى (c) أو الثانية (t)
+    const reg=registrations.find(x=>x.id===regId);
+    const isCycle1=reg&&reg.stage==='cycle1';
+    const prefix=isCycle1?'c':'t';
+    const cycle=isCycle1?'cycle1':'main';
+    const email=`${prefix}${nextTeacherSerial(prefix)}@khotati.app`;
     const password=genRandomPassword();
     const tempSb=createEphemeralSbClient();
     const{error}=await tempSb.auth.signUp({email,password});
     if(error)throw error;
-    const{error:allowErr}=await sb.from('allowed_emails').insert({email});
+    const{error:allowErr}=await sb.from('allowed_emails').insert({email,cycle});
     if(allowErr)throw allowErr;
     const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
     if(updErr)throw updErr;
     await loadRegistrations();
     renderAccountsTab();
-    alert(`✅ تم إنشاء الحساب بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن — لن تُعرض كلمة المرور مرة أخرى.`);
+    const cycleLabel=isCycle1?'الحلقة الأولى (1-4)':'الحلقة الثانية (5-12)';
+    alert(`✅ تم إنشاء حساب ${cycleLabel} بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن — لن تُعرض كلمة المرور مرة أخرى.`);
   }catch(e){
     alert('❌ فشل إنشاء الحساب: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent='🔑 توليد حساب';}

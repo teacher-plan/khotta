@@ -3110,7 +3110,7 @@ async function bootApp(session){
   async function checkAllowedWithRetry(){
     for(let attempt=1;attempt<=3;attempt++){
       try{
-        const{data,error}=await sb.from('allowed_emails').select('email').ilike('email',userEmail).maybeSingle();
+        const{data,error}=await sb.from('allowed_emails').select('email,cycle').ilike('email',userEmail).maybeSingle();
         if(!error)return{data,error:null};
         console.warn(`allowed_emails attempt ${attempt} failed:`,error);
       }catch(e){
@@ -3143,6 +3143,17 @@ async function bootApp(session){
       if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.';
       const btn=document.getElementById('google-signin-btn');
       if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='تسجيل الدخول بحساب آخر';}
+      return;
+    }
+    // فصل المراحل: حساب الحلقة الأولى لا يدخل التطبيق الرئيسي (إلا المشرف)
+    if(allowed.cycle==='cycle1' && userEmail!==ADMIN_EMAIL.toLowerCase()){
+      await sb.auth.signOut();
+      currentUser=null;googleAccessToken=null;
+      hideLoader();
+      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthState('auth-login');
+      const sub=document.querySelector('#auth-login .auth-sub');
+      if(sub)sub.innerHTML='⛔ هذا حساب معلّم الحلقة الأولى.<br/>الرجاء الدخول من صفحة الحلقة الأولى المخصّصة.';
       return;
     }
   }catch(e){

@@ -288,10 +288,11 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
       <div class="spin"></div>
       <div style="font-size:13px;color:var(--muted);font-weight:700">لحظات... ⭐</div>
     </div>
-    <button class="google-btn" id="google-btn" onclick="signInWithGoogle()">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.5-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.6 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.5 0-13.9 4.2-17.2 10.4z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.7 35 27 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.9 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.6 5.6C40.4 36.4 44 30.8 44 24c0-1.3-.1-2.5-.4-3.5z"/></svg>
-      الدخول بحساب Google
-    </button>
+    <div id="cy1-login-form">
+      <input type="email" class="input-pill" id="cy1-login-email" placeholder="البريد / اسم المستخدم" style="direction:ltr;text-align:right" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('cy1-login-password').focus()"/>
+      <input type="password" class="input-pill" id="cy1-login-password" placeholder="كلمة المرور" style="direction:ltr;text-align:right;margin-top:8px" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginWithPassword()"/>
+      <button class="primary-btn" id="cy1-login-btn" style="margin-top:10px" onclick="loginWithPassword()">تسجيل الدخول 🌟</button>
+    </div>
   </div>
 </div>
 
@@ -608,10 +609,18 @@ function colorFor(id){
 function avatarStyle(id){const[c1,c2]=colorFor(id);return `background:linear-gradient(135deg,${c1},${c2})`;}
 
 // ══ المصادقة ══
-async function signInWithGoogle(){
-  document.getElementById('google-btn').classList.add('hidden');
-  document.getElementById('auth-loading-box').classList.remove('hidden');
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
+const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
+async function loginWithPassword(){
+  const email=document.getElementById('cy1-login-email').value.trim();
+  const password=document.getElementById('cy1-login-password').value;
+  if(!email||!password){toast('❌ أدخل البريد وكلمة المرور',true);return;}
+  const btn=document.getElementById('cy1-login-btn');
+  if(btn){btn.disabled=true;btn.textContent='جارٍ الدخول...';}
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error){
+    if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول 🌟';}
+    toast('❌ تعذّر تسجيل الدخول: '+error.message,true);
+  }
 }
 function confirmSignOut(){
   if(!confirm('هل تريد تسجيل الخروج؟'))return;
@@ -625,10 +634,29 @@ async function boot(){
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
   });
 }
+function cy1ShowLogin(msg){
+  currentUser=null;
+  document.getElementById('auth-loading-box').classList.add('hidden');
+  document.getElementById('cy1-login-form').classList.remove('hidden');
+  const btn=document.getElementById('cy1-login-btn');
+  if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول 🌟';}
+  if(msg)toast(msg,true);
+}
 async function afterAuth(session){
   currentUser=session.user;
   document.getElementById('auth-loading-box').classList.remove('hidden');
-  document.getElementById('google-btn').classList.add('hidden');
+  document.getElementById('cy1-login-form').classList.add('hidden');
+  // بوابة قائمة السماح: حسابات الحلقة الأولى فقط (+ المشرف)
+  const userEmail=(currentUser.email||'').toLowerCase();
+  try{
+    const{data:allowed,error}=await sb.from('allowed_emails').select('email,cycle').ilike('email',userEmail).maybeSingle();
+    if(error)throw error;
+    const isAdminU=userEmail===CY1_ADMIN_EMAIL.toLowerCase();
+    if(!isAdminU){
+      if(!allowed){await sb.auth.signOut();cy1ShowLogin('⛔ هذا البريد غير مصرّح له بالدخول');return;}
+      if(allowed.cycle!=='cycle1'){await sb.auth.signOut();cy1ShowLogin('⛔ هذا حساب الحلقة الثانية — ادخل من الموقع الرئيسي');return;}
+    }
+  }catch(e){await sb.auth.signOut();cy1ShowLogin('تعذّر التحقق من الصلاحية، حاول مجدداً');return;}
   try{
     const{data}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
     if(data&&data.data&&data.data.setupDone){
@@ -643,9 +671,7 @@ async function afterAuth(session){
       suInit();
     }
   }catch(e){
-    toast('تعذّر الاتصال، حاول مجدداً',true);
-    document.getElementById('auth-loading-box').classList.add('hidden');
-    document.getElementById('google-btn').classList.remove('hidden');
+    cy1ShowLogin('تعذّر الاتصال، حاول مجدداً');
   }
 }
 async function cy1Save(partial){
