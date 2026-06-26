@@ -527,6 +527,8 @@ async function generateTeacherAccount(regId){
     const tempSb=createEphemeralSbClient();
     const{error}=await tempSb.auth.signUp({email,password});
     if(error)throw error;
+    const{error:allowErr}=await sb.from('allowed_emails').insert({email});
+    if(allowErr)throw allowErr;
     saveTeacherAccount(regId,email,password);
     renderAccountsTab();
     alert(`✅ تم إنشاء الحساب بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن — لن تُعرض كلمة المرور مرة أخرى.`);
