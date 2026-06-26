@@ -5581,14 +5581,16 @@ async function deleteTemplate(id,subject,grade){
   if(!confirm(`⚠️ حذف قالب ${subject} - الصف ${grade}؟\nسيُحذف القالب وكل أعمدة التقييم المطابقة من جميع شعب المعلمين التي حمّلته، مع درجات الطلاب فيها.\nلا يمكن التراجع.`))return;
   try{
     // اجلب أعمدة القالب قبل حذفه لمطابقتها عند الحذف التتابعي
-    const{data:tmplRow}=await sb.from('grade_templates').select('grade_types').eq('id',id).maybeSingle();
+    const{data:tmplRow,error:fetchErr}=await sb.from('grade_templates').select('grade_types').eq('id',id).maybeSingle();
     const tmplCols=Array.isArray(tmplRow?.grade_types)?tmplRow.grade_types:[];
     const tmplNames=new Set(tmplCols.map(c=>c.name));
+    console.log('[deleteTemplate] id=',id,'fetchErr=',fetchErr,'tmplRow=',tmplRow,'tmplNames=',[...tmplNames]);
 
     const{error}=await sb.from('grade_templates').delete().eq('id',id);
     if(error)throw error;
 
     if(tmplNames.size)await cascadeDeleteTemplateColumns(subject,grade,tmplNames);
+    else toast('⚠️ لم يتم العثور على أعمدة القالب قبل حذفه (tmplNames=0) — لن يتم حذف الأعمدة من المعلمين',true);
 
     toast('✅ تم الحذف');
     loadAdminTemplates();
