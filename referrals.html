@@ -216,6 +216,19 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
           <button class="btn-gold" onclick="saveMyPhone()">💾 حفظ</button>
         </div>
       </div>
+      <div class="panel" style="margin-bottom:18px">
+        <h3 style="margin-bottom:10px">➕ إضافة معلم يدوياً (بدون نموذج التسجيل العام)</h3>
+        <div class="form-row">
+          <input id="manual-reg-name" type="text" placeholder="الاسم"/>
+          <input id="manual-reg-phone" type="tel" placeholder="الهاتف (مثال: 9XXXXXXX)" dir="ltr" style="text-align:right"/>
+          <select id="manual-reg-stage">
+            <option value="cycle1">🧒 الحلقة الأولى (١-٤)</option>
+            <option value="5-9">📘 الحلقة الثانية (٥-٩)</option>
+            <option value="10-12">🎓 ما بعد الأساسي (١٠-١٢)</option>
+          </select>
+          <button class="btn-gold" onclick="addManualRegistration()">➕ إضافة</button>
+        </div>
+      </div>
       <div class="stats-row" id="data-stats-row"></div>
       <div class="search-row">
         <input id="data-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderDataTab()"/>
@@ -397,6 +410,23 @@ function renderFriendsTable(){
       <td>${new Date(f.created_at).toLocaleDateString('ar-OM')}</td>
       <td><button class="delete-btn" onclick="deleteFriend(${f.id})">✕</button></td>
     </tr>`).join('');
+}
+
+async function addManualRegistration(){
+  const name=document.getElementById('manual-reg-name').value.trim();
+  const phone=document.getElementById('manual-reg-phone').value.trim();
+  const stage=document.getElementById('manual-reg-stage').value;
+  if(!name){alert('يرجى إدخال الاسم');return;}
+  if(!phone||phone.length<8){alert('يرجى إدخال رقم هاتف صحيح');return;}
+  try{
+    const{error}=await sb.from('pre_registrations').insert({name,phone,stage});
+    if(error){alert('فشلت الإضافة: '+error.message);return;}
+    document.getElementById('manual-reg-name').value='';
+    document.getElementById('manual-reg-phone').value='';
+    await loadRegistrations();
+    renderDataTab();
+    renderAccountsTab();
+  }catch(e){alert('تعذّر الاتصال، تحقق من الإنترنت');}
 }
 
 // ══ تبويب البيانات (متصل بجدول pre_registrations) ══
