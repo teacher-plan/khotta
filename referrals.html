@@ -580,6 +580,34 @@ async function generateTeacherAccount(regId){
     if(btn){btn.disabled=false;btn.textContent='🔑 توليد حساب';}
   }
 }
+async function createCustomTeacherAccount(regId){
+  const reg=registrations.find(x=>x.id===regId);
+  const isCycle1=reg&&reg.stage==='cycle1';
+  const cycle=isCycle1?'cycle1':'main';
+  const email=(prompt('أدخل البريد الإلكتروني للحساب الجديد:')||'').trim();
+  if(!email)return;
+  const password=(prompt('أدخل كلمة المرور للحساب الجديد:')||'').trim();
+  if(!password)return;
+  if(password.length<6){alert('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل');return;}
+  const btn=document.getElementById('custom-account-btn-'+regId);
+  if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ الإنشاء...';}
+  try{
+    const tempSb=createEphemeralSbClient();
+    const{error}=await tempSb.auth.signUp({email,password});
+    if(error)throw error;
+    const{error:allowErr}=await sb.from('allowed_emails').insert({email,cycle});
+    if(allowErr)throw allowErr;
+    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
+    if(updErr)throw updErr;
+    await loadRegistrations();
+    renderAccountsTab();
+    const cycleLabel=isCycle1?'الحلقة الأولى (1-4)':'الحلقة الثانية (5-12)';
+    alert(`✅ تم إنشاء حساب ${cycleLabel} بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن.`);
+  }catch(e){
+    alert('❌ فشل إنشاء الحساب: '+(e.message||''));
+    if(btn){btn.disabled=false;btn.textContent='✏️ إنشاء حساب مخصص';}
+  }
+}
 function showTeacherAccount(regId){
   const r=registrations.find(x=>x.id===regId);
   if(!r||!r.account_email)return;
@@ -624,7 +652,8 @@ function renderAccountsTab(){
     const actionBtn=accEmail
       ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>
          <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
-      :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>`;
+      :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
+         <button class="action-btn" id="custom-account-btn-${r.id}" onclick="createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button>`;
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
       <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
