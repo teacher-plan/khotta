@@ -517,8 +517,10 @@ function nextTeacherSerial(prefix){
 }
 function genRandomPassword(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes=new Uint32Array(8);
+  crypto.getRandomValues(bytes);
   let p='';
-  for(let i=0;i<8;i++)p+=chars[Math.floor(Math.random()*chars.length)];
+  for(let i=0;i<8;i++)p+=chars[bytes[i]%chars.length];
   return p;
 }
 async function generateTeacherAccount(regId){
