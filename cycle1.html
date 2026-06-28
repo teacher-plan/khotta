@@ -288,10 +288,11 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
       <div class="spin"></div>
       <div style="font-size:13px;color:var(--muted);font-weight:700">لحظات... ⭐</div>
     </div>
-    <button class="google-btn" id="google-btn" onclick="signInWithGoogle()">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.5-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.6 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.5 0-13.9 4.2-17.2 10.4z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.7 35 27 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.9 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.6 5.6C40.4 36.4 44 30.8 44 24c0-1.3-.1-2.5-.4-3.5z"/></svg>
-      الدخول بحساب Google
-    </button>
+    <div id="cy1-login-form">
+      <input type="email" class="input-pill" id="cy1-login-email" placeholder="البريد / اسم المستخدم" style="direction:ltr;text-align:right" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('cy1-login-password').focus()"/>
+      <input type="password" class="input-pill" id="cy1-login-password" placeholder="كلمة المرور" style="direction:ltr;text-align:right;margin-top:8px" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginWithPassword()"/>
+      <button class="primary-btn" id="cy1-login-btn" style="margin-top:10px" onclick="loginWithPassword()">تسجيل الدخول 🌟</button>
+    </div>
   </div>
 </div>
 
@@ -458,7 +459,6 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
     <div id="achv-celebration"></div>
     <div class="progress-bar-wrap"><div class="progress-bar-fill" id="achv-progress-fill" style="width:0%"></div></div>
     <div style="text-align:center;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:14px" id="achv-progress-text"></div>
-    <button class="small-btn" onclick="openAddUnitModal()" style="margin-bottom:14px">➕ إضافة وحدة دراسية</button>
     <div id="units-list"></div>
   </div>
 
@@ -515,28 +515,6 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
   </div>
 </div>
 
-<!-- مودال إضافة وحدة دراسية -->
-<div class="modal-bg" id="unit-modal-bg">
-  <div class="modal-box">
-    <div class="setup-title" style="margin-bottom:14px">➕ وحدة دراسية جديدة</div>
-    <input type="text" class="input-pill" id="unit-name-inp" placeholder="اسم الوحدة"/>
-    <button class="primary-btn" onclick="saveNewUnit()">حفظ ✅</button>
-    <div style="height:8px"></div>
-    <button class="ghost-btn" onclick="closeAddUnitModal()">إلغاء</button>
-  </div>
-</div>
-
-<!-- مودال إضافة درس -->
-<div class="modal-bg" id="lesson-modal-bg">
-  <div class="modal-box">
-    <div class="setup-title" style="margin-bottom:14px">➕ درس جديد</div>
-    <input type="text" class="input-pill" id="lesson-name-inp" placeholder="اسم الدرس"/>
-    <button class="primary-btn" onclick="saveNewLesson()">حفظ ✅</button>
-    <div style="height:8px"></div>
-    <button class="ghost-btn" onclick="closeAddLessonModal()">إلغاء</button>
-  </div>
-</div>
-
 <!-- مودال اختيار المدرسة -->
 <div class="modal-bg" id="school-modal-bg">
   <div class="modal-box">
@@ -562,7 +540,7 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;background:none
 //   profile.students       = {classId:[{id,name,phone}]}
 //   profile.gradeTypes     = {classId:[{id,name,max}]}
 //   profile.gradeRecords   = {classId:{studentId:{colId:val}}}
-//   profile.units          = {classId:[{name,lessons:[{id,name,done,date}]}]}
+//   profile.lessonProgress = {lessonId:{done,date}}  (المحتوى المشترك يرفعه المشرف)
 //   profile.archive        = {classId:{catId:[{title,url}]}}
 //   profile.timetable      = {periods:[...], schedule:{day:{periodIdx:classId}}}
 //   profile.stars          = {studentId:count}  (طلاب من كل الشعب معاً)
@@ -584,6 +562,37 @@ const GRADE_COLORS=['#4FB8E8','#FFC93C','#5FD9A8','#FF8A65','#A78BFA','#FF9EC7']
 const arabicNums=['١','٢','٣','٤'];
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── المحتوى المشترك (منسوخ من index.html) — وحدات/دروس يرفعها المشرف ──
+function stableLessonId(semester,subject,grade,unit,lesson){
+  const raw=`${semester}|${subject}|${grade}|${unit}|${lesson}`;
+  let h=5381;
+  for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}
+  return 'L'+h.toString(36);
+}
+function buildUnitsFromRows(rows,semester,subject){
+  const sorted=rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const unitsMap={};const order=[];
+  sorted.forEach(r=>{
+    if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
+    unitsMap[r.unit].push({id:stableLessonId(semester,subject,r.grade,r.unit,r.lesson),name:r.lesson});
+  });
+  return order.map(u=>({name:u,lessons:unitsMap[u]}));
+}
+// كاش المنهج لكل (semester|subject|grade) لتفادي تكرار الاستعلام
+const _curriculumCache={};
+async function getSharedUnits(semester,subject,grade){
+  const key=`${semester}|${subject}|${grade}`;
+  if(_curriculumCache[key])return _curriculumCache[key];
+  try{
+    const{data,error}=await sb.from('curriculum').select('*')
+      .eq('semester',semester).eq('subject',subject).eq('grade',grade).order('sort');
+    if(error)throw error;
+    const units=buildUnitsFromRows(data||[],semester,subject);
+    _curriculumCache[key]=units;
+    return units;
+  }catch(e){return [];}
+}
 function toast(msg,isErr){
   const el=document.getElementById('toast-el');
   el.textContent=msg;
@@ -600,10 +609,18 @@ function colorFor(id){
 function avatarStyle(id){const[c1,c2]=colorFor(id);return `background:linear-gradient(135deg,${c1},${c2})`;}
 
 // ══ المصادقة ══
-async function signInWithGoogle(){
-  document.getElementById('google-btn').classList.add('hidden');
-  document.getElementById('auth-loading-box').classList.remove('hidden');
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
+const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
+async function loginWithPassword(){
+  const email=document.getElementById('cy1-login-email').value.trim();
+  const password=document.getElementById('cy1-login-password').value;
+  if(!email||!password){toast('❌ أدخل البريد وكلمة المرور',true);return;}
+  const btn=document.getElementById('cy1-login-btn');
+  if(btn){btn.disabled=true;btn.textContent='جارٍ الدخول...';}
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error){
+    if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول 🌟';}
+    toast('❌ تعذّر تسجيل الدخول: '+error.message,true);
+  }
 }
 function confirmSignOut(){
   if(!confirm('هل تريد تسجيل الخروج؟'))return;
@@ -617,10 +634,29 @@ async function boot(){
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
   });
 }
+function cy1ShowLogin(msg){
+  currentUser=null;
+  document.getElementById('auth-loading-box').classList.add('hidden');
+  document.getElementById('cy1-login-form').classList.remove('hidden');
+  const btn=document.getElementById('cy1-login-btn');
+  if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول 🌟';}
+  if(msg)toast(msg,true);
+}
 async function afterAuth(session){
   currentUser=session.user;
   document.getElementById('auth-loading-box').classList.remove('hidden');
-  document.getElementById('google-btn').classList.add('hidden');
+  document.getElementById('cy1-login-form').classList.add('hidden');
+  // بوابة قائمة السماح: حسابات الحلقة الأولى فقط (+ المشرف)
+  const userEmail=(currentUser.email||'').toLowerCase();
+  try{
+    const{data:allowed,error}=await sb.from('allowed_emails').select('email,cycle').ilike('email',userEmail).maybeSingle();
+    if(error)throw error;
+    const isAdminU=userEmail===CY1_ADMIN_EMAIL.toLowerCase();
+    if(!isAdminU){
+      if(!allowed){await sb.auth.signOut();cy1ShowLogin('⛔ هذا البريد غير مصرّح له بالدخول');return;}
+      if(allowed.cycle!=='cycle1'){await sb.auth.signOut();cy1ShowLogin('⛔ هذا حساب الحلقة الثانية — ادخل من الموقع الرئيسي');return;}
+    }
+  }catch(e){await sb.auth.signOut();cy1ShowLogin('تعذّر التحقق من الصلاحية، حاول مجدداً');return;}
   try{
     const{data}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
     if(data&&data.data&&data.data.setupDone){
@@ -635,9 +671,7 @@ async function afterAuth(session){
       suInit();
     }
   }catch(e){
-    toast('تعذّر الاتصال، حاول مجدداً',true);
-    document.getElementById('auth-loading-box').classList.add('hidden');
-    document.getElementById('google-btn').classList.remove('hidden');
+    cy1ShowLogin('تعذّر الاتصال، حاول مجدداً');
   }
 }
 async function cy1Save(partial){
@@ -841,7 +875,7 @@ async function suFinishSetup(){
     classesConfig,subjects:subjectsUnique,
     students,
     gradeTypes:{},gradeRecords:{},
-    units:{},archive:{},
+    lessonProgress:{},archive:{},
     stars:profile.stars||{},star_log:profile.star_log||[],
     behavior_violations:profile.behavior_violations||{},
     behavior_admin_phone:profile.behavior_admin_phone||'',
@@ -915,20 +949,21 @@ function getClassesForSubject(subj){
   });
   return out;
 }
-function renderSubjectsList(){
+async function renderSubjectsList(){
   const wrap=document.getElementById('subjects-list');
   const subjects=profile.subjects||[];
   if(!subjects.length){
     wrap.innerHTML='<div class="empty-state"><div class="ic">📭</div>لا توجد مواد بعد</div>';
     return;
   }
-  wrap.innerHTML=subjects.map(s=>{
+  const P=profile.lessonProgress||{};
+  const cards=await Promise.all(subjects.map(async s=>{
     const classes=getClassesForSubject(s);
     let lt=0,ld=0;
-    classes.forEach(c=>{
-      const units=(profile.units&&profile.units[c.id])||[];
-      units.forEach(u=>u.lessons.forEach(l=>{lt++;if(l.done)ld++;}));
-    });
+    for(const c of classes){
+      const units=await getSharedUnits(profile.semester,s,c.grade);
+      units.forEach(u=>u.lessons.forEach(l=>{lt++;if(P[l.id]&&P[l.id].done)ld++;}));
+    }
     const pct=lt?Math.round(ld/lt*100):0;
     return `<div class="subject-card" onclick="openSubjectEntry('${s.replace(/'/g,"\\'")}')">
       <div class="icon">${SUBJECT_ICONS[s]||'📘'}</div>
@@ -936,7 +971,8 @@ function renderSubjectsList(){
       <div class="meta">${classes.length} شعبة${lt?` · ${lt} درس`:''}</div>
       ${lt?`<div class="prog-mini"><div class="prog-mini-fill" style="width:${pct}%"></div></div>`:''}
     </div>`;
-  }).join('');
+  }));
+  wrap.innerHTML=cards.join('');
 }
 // عند اختيار مادة: لو شعبة واحدة → افتحها مباشرة، أكثر → شاشة اختيار
 function openSubjectEntry(subj){
@@ -983,10 +1019,28 @@ function goBackFromClass(){
 }
 
 // ══ سجل الدرجات ══
-function openRecord(){
+async function openRecord(){
+  await ensureGradeTemplate(activeClassId);
   renderRecordTable();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-record').classList.add('active');
+}
+// تحميل قالب الدرجات المشترك (يرفعه المشرف) تلقائياً إن لم تكن للشعبة تقييمات بعد
+async function ensureGradeTemplate(classId){
+  if(!classId)return;
+  if(profile.gradeTypes&&profile.gradeTypes[classId]&&profile.gradeTypes[classId].length)return;
+  const cls=getAllClasses().find(c=>c.id===classId);
+  if(!cls)return;
+  const normalize=s=>String(s||'').trim().replace(/[ً-ٰٟـ]/g,'').replace(/[إأآ]/g,'ا').replace(/\s+/g,' ').replace(/^ال/,'');
+  try{
+    const{data,error}=await sb.from('grade_templates').select('subject,grade,grade_types').eq('grade',cls.grade);
+    if(error)throw error;
+    const match=(data||[]).find(t=>normalize(t.subject)===normalize(cls.subject));
+    if(!match||!match.grade_types||!match.grade_types.length)return;
+    if(!profile.gradeTypes)profile.gradeTypes={};
+    profile.gradeTypes[classId]=match.grade_types.map((t,i)=>({id:'g_auto_'+Date.now()+'_'+i,name:t.name,max:t.max||10}));
+    await cy1Save({gradeTypes:profile.gradeTypes});
+  }catch(e){}
 }
 function renderRecordTable(){
   const wrap=document.getElementById('record-students-list');
@@ -1262,64 +1316,42 @@ function renderAchvSubjectTabs(){
   renderUnitsList();
 }
 function setAchvClass(id){_achvActiveClass=id;renderAchvSubjectTabs();}
-function renderUnitsList(){
+async function renderUnitsList(){
   const wrap=document.getElementById('units-list');
   const celeb=document.getElementById('achv-celebration');
-  const units=(profile.units&&profile.units[_achvActiveClass])||[];
+  const cls=getAllClasses().find(c=>c.id===_achvActiveClass);
+  if(!cls){wrap.innerHTML='<div class="empty-state"><div class="ic">📭</div>لا توجد شعب</div>';return;}
+  wrap.innerHTML='<div class="empty-state"><div class="ic">⏳</div>جاري التحميل...</div>';
+  const units=await getSharedUnits(profile.semester,cls.subject,cls.grade);
+  const P=profile.lessonProgress||{};
   let totalLessons=0,doneLessons=0;
-  units.forEach(u=>u.lessons.forEach(l=>{totalLessons++;if(l.done)doneLessons++;}));
+  units.forEach(u=>u.lessons.forEach(l=>{totalLessons++;if(P[l.id]&&P[l.id].done)doneLessons++;}));
   const pct=totalLessons?Math.round(doneLessons/totalLessons*100):0;
   document.getElementById('achv-progress-fill').style.width=pct+'%';
-  document.getElementById('achv-progress-text').textContent=totalLessons?`✅ أنجزت ${doneLessons} من ${totalLessons} درساً (${pct}%)`:'لا توجد دروس مسجّلة بعد';
+  document.getElementById('achv-progress-text').textContent=totalLessons?`✅ أنجزت ${doneLessons} من ${totalLessons} درساً (${pct}%)`:'لا توجد دروس بعد';
   celeb.innerHTML=(totalLessons&&pct===100)?'<div class="celebration-banner celebrate"><div class="ctitle">🎉 رائع! أنجزت كل دروس هذه الشعبة</div></div>':'';
-  if(!units.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🏆</div>أضف وحدتك الدراسية الأولى<br><small>ابدأ رحلة الإنجاز مع طلابك</small></div>';return;}
-  wrap.innerHTML=units.map((u,ui)=>{
-    const ld=u.lessons.filter(l=>l.done).length;
+  if(!units.length){wrap.innerHTML='<div class="empty-state"><div class="ic">🏗️</div>لا يوجد محتوى لهذه المادة بعد<br><small>سيضيفه المشرف قريباً</small></div>';return;}
+  wrap.innerHTML=units.map(u=>{
+    const ld=u.lessons.filter(l=>P[l.id]&&P[l.id].done).length;
     const lt=u.lessons.length;
     const upct=lt?Math.round(ld/lt*100):0;
     return `
     <div class="unit-card">
       <div class="uname"><span>📂 ${escHtml(u.name)}</span><span class="ubadge">${ld}/${lt} ${upct===100?'🎉':''}</span></div>
-      ${u.lessons.map((l,li)=>`
+      ${u.lessons.map(l=>{const done=P[l.id]&&P[l.id].done;return `
         <div class="lesson-row">
-          <div class="lesson-check ${l.done?'done':''}" onclick="toggleLessonDone(${ui},${li},event)">${l.done?'✓':''}</div>
-          <div class="ltext ${l.done?'done':''}">${escHtml(l.name)}</div>
-        </div>`).join('')}
-      <button class="small-btn" onclick="openAddLessonModal(${ui})" style="margin-top:8px;width:100%;justify-content:center">➕ إضافة درس</button>
+          <div class="lesson-check ${done?'done':''}" onclick="toggleLessonDone('${l.id}',event)">${done?'✓':''}</div>
+          <div class="ltext ${done?'done':''}">${escHtml(l.name)}</div>
+        </div>`;}).join('')}
     </div>`;
   }).join('');
 }
-function openAddUnitModal(){document.getElementById('unit-modal-bg').classList.add('show');document.getElementById('unit-name-inp').value='';}
-function closeAddUnitModal(){document.getElementById('unit-modal-bg').classList.remove('show');}
-function saveNewUnit(){
-  const name=document.getElementById('unit-name-inp').value.trim();
-  if(!name){toast('أدخل اسم الوحدة',true);return;}
-  if(!profile.units)profile.units={};
-  if(!profile.units[_achvActiveClass])profile.units[_achvActiveClass]=[];
-  profile.units[_achvActiveClass].push({name,lessons:[]});
-  cy1Save({units:profile.units});
-  closeAddUnitModal();
-  renderUnitsList();
-  toast('✅ تمت الإضافة','ok');
-}
-let _lessonTargetUnitIdx=null;
-function openAddLessonModal(unitIdx){_lessonTargetUnitIdx=unitIdx;document.getElementById('lesson-modal-bg').classList.add('show');document.getElementById('lesson-name-inp').value='';}
-function closeAddLessonModal(){document.getElementById('lesson-modal-bg').classList.remove('show');}
-function saveNewLesson(){
-  const name=document.getElementById('lesson-name-inp').value.trim();
-  if(!name){toast('أدخل اسم الدرس',true);return;}
-  profile.units[_achvActiveClass][_lessonTargetUnitIdx].lessons.push({name,done:false});
-  cy1Save({units:profile.units});
-  closeAddLessonModal();
-  renderUnitsList();
-  toast('✅ تمت الإضافة','ok');
-}
-function toggleLessonDone(unitIdx,lessonIdx,ev){
-  const lesson=profile.units[_achvActiveClass][unitIdx].lessons[lessonIdx];
-  lesson.done=!lesson.done;
-  lesson.date=lesson.done?new Date().toISOString():'';
-  cy1Save({units:profile.units});
-  if(lesson.done&&ev&&ev.target)burstConfetti(ev.target);
+function toggleLessonDone(lessonId,ev){
+  if(!profile.lessonProgress)profile.lessonProgress={};
+  const cur=profile.lessonProgress[lessonId]&&profile.lessonProgress[lessonId].done;
+  profile.lessonProgress[lessonId]={done:!cur,date:!cur?new Date().toISOString():''};
+  cy1Save({lessonProgress:profile.lessonProgress});
+  if(!cur&&ev&&ev.target)burstConfetti(ev.target);
   renderUnitsList();
 }
 function burstConfetti(originEl){

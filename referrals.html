@@ -161,6 +161,7 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
     <button onclick="switchTab('links',this)">🔗 روابط الأصدقاء</button>
     <button onclick="switchTab('data',this)">📋 جدول البيانات</button>
     <button onclick="switchTab('finance',this)">💵 الإدارة المالية</button>
+    <button onclick="switchTab('accounts',this)">🔑 إنشاء حساب معلم</button>
   </div>
 
   <div class="wrap">
@@ -224,6 +225,24 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
         <table>
           <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th><th>إجراءات</th></tr></thead>
           <tbody id="data-table-body"><tr><td colspan="7"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ تبويب 4: إنشاء حساب معلم ══ -->
+    <div class="tab-section" id="tab-accounts">
+      <div class="page-header">
+        <h1>🔑 إنشاء حساب معلم</h1>
+        <p>بعد تأكيد استلام الدفع، أنشئ اسم مستخدم وكلمة مرور للمعلم لتسجيل الدخول مباشرة بدون جوجل</p>
+      </div>
+      <div class="search-row">
+        <input id="accounts-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderAccountsTab()"/>
+        <span class="results-count" id="accounts-results-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>الاسم</th><th>الهاتف</th><th>حالة الدفع</th><th>الحساب</th><th>إجراءات</th></tr></thead>
+          <tbody id="accounts-table-body"><tr><td colspan="5"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -302,6 +321,7 @@ async function afterAuth(session){
   renderDataTab();
   renderFinanceTab();
   renderOverviewTab();
+  renderAccountsTab();
 }
 
 function switchTab(name,btn){
@@ -476,6 +496,87 @@ function renderDataTab(){
         </a>
         <button title="حذف" onclick="deleteRegistration(${r.id},'${escHtml(r.name).replace(/'/g,"\\'")}')" class="row-delete-btn">✕</button>
       </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══ تبويب إنشاء حساب معلم (Supabase Auth بريد/كلمة مرور، عميل مؤقت منفصل) ══
+function createEphemeralSbClient(){
+  return window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'kh_temp_signup_'+Date.now()}});
+}
+function nextTeacherSerial(prefix){
+  // العدّاد من قاعدة البيانات (account_email على صفوف الترويج) — موثوق عبر كل الأجهزة
+  // prefix: 't' للحلقة الثانية، 'c' للحلقة الأولى
+  const re=new RegExp('^'+prefix+'(\\d+)@khotati\\.app$','i');
+  let max=0;
+  for(const r of registrations){
+    const m=re.exec(r.account_email||'');
+    if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
+  }
+  return max+1;
+}
+function genRandomPassword(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes=new Uint32Array(8);
+  crypto.getRandomValues(bytes);
+  let p='';
+  for(let i=0;i<8;i++)p+=chars[bytes[i]%chars.length];
+  return p;
+}
+async function generateTeacherAccount(regId){
+  const btn=document.getElementById('gen-account-btn-'+regId);
+  if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ الإنشاء...';}
+  try{
+    // تحديد المرحلة من تسجيل المعلم: الحلقة الأولى (c) أو الثانية (t)
+    const reg=registrations.find(x=>x.id===regId);
+    const isCycle1=reg&&reg.stage==='cycle1';
+    const prefix=isCycle1?'c':'t';
+    const cycle=isCycle1?'cycle1':'main';
+    const email=`${prefix}${nextTeacherSerial(prefix)}@khotati.app`;
+    const password=genRandomPassword();
+    const tempSb=createEphemeralSbClient();
+    const{error}=await tempSb.auth.signUp({email,password});
+    if(error)throw error;
+    const{error:allowErr}=await sb.from('allowed_emails').insert({email,cycle});
+    if(allowErr)throw allowErr;
+    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
+    if(updErr)throw updErr;
+    await loadRegistrations();
+    renderAccountsTab();
+    const cycleLabel=isCycle1?'الحلقة الأولى (1-4)':'الحلقة الثانية (5-12)';
+    alert(`✅ تم إنشاء حساب ${cycleLabel} بنجاح\n\nاسم المستخدم: ${email}\nكلمة المرور: ${password}\n\nانسخ هذه البيانات وأرسلها للمعلم الآن — لن تُعرض كلمة المرور مرة أخرى.`);
+  }catch(e){
+    alert('❌ فشل إنشاء الحساب: '+(e.message||''));
+    if(btn){btn.disabled=false;btn.textContent='🔑 توليد حساب';}
+  }
+}
+function showTeacherAccount(regId){
+  const r=registrations.find(x=>x.id===regId);
+  if(!r||!r.account_email)return;
+  alert(`اسم المستخدم: ${r.account_email}\nكلمة المرور: ${r.account_password||'—'}`);
+}
+function renderAccountsTab(){
+  const tbody=document.getElementById('accounts-table-body');
+  if(!tbody)return;
+  const q=(document.getElementById('accounts-search')?.value||'').trim().toLowerCase();
+  const filtered=q?registrations.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)):registrations;
+  const countEl=document.getElementById('accounts-results-count');
+  if(countEl)countEl.textContent=q?`${filtered.length} من ${registrations.length} نتيجة`:'';
+  if(!registrations.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  tbody.innerHTML=filtered.map(r=>{
+    const paidStatus=r.payment_status==='paid'?'<span class="status-badge paid">✅ مدفوع</span>':'<span class="status-badge pending">⏳ قيد الانتظار</span>';
+    const accEmail=r.account_email;
+    const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
+    const actionBtn=accEmail
+      ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>`
+      :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>`;
+    return `<tr>
+      <td class="cell-name">${escHtml(r.name)}</td>
+      <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
+      <td>${paidStatus}</td>
+      <td>${accCell}</td>
+      <td>${actionBtn}</td>
     </tr>`;
   }).join('');
 }

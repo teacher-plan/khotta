@@ -13,13 +13,13 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'خطتي الفصلية 📚', {
       body: data.body || '',
-      icon: '/khotta/favicon.ico',
-      badge: '/khotta/favicon.ico',
+      icon: '/khottah_icon_192.png',
+      badge: '/khottah_icon_192.png',
       dir: 'rtl',
       lang: 'ar',
       tag: data.tag || 'khotta',
       renotify: true,
-      data: { url: 'https://teacher-plan.github.io/khotta/' }
+      data: { url: 'https://khotati.com/' }
     })
   );
 });
@@ -31,8 +31,8 @@ self.addEventListener('message', e => {
       body: e.data.body,
       dir: 'rtl', lang: 'ar',
       tag: e.data.tag || 'khotta',
-      icon: '/khotta/favicon.ico',
-      data: { url: 'https://teacher-plan.github.io/khotta/' }
+      icon: '/khottah_icon_192.png',
+      data: { url: 'https://khotati.com/' }
     });
   }
 });
@@ -40,11 +40,11 @@ self.addEventListener('message', e => {
 // ═══ فتح الموقع عند الضغط على الإشعار ═══
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = e.notification.data?.url || 'https://teacher-plan.github.io/khotta/';
+  const url = e.notification.data?.url || 'https://khotati.com/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const c of list) {
-        if (c.url.includes('khotta') && 'focus' in c) return c.focus();
+        if (c.url.includes('khotati.com') && 'focus' in c) return c.focus();
       }
       if (clients.openWindow) return clients.openWindow(url);
     })
