@@ -585,6 +585,29 @@ function showTeacherAccount(regId){
   if(!r||!r.account_email)return;
   alert(`اسم المستخدم: ${r.account_email}\nكلمة المرور: ${r.account_password||'—'}`);
 }
+async function resetTeacherPassword(regId){
+  const r=registrations.find(x=>x.id===regId);
+  if(!r||!r.account_email){alert('لا يوجد حساب لهذا المعلم بعد');return;}
+  if(!confirm(`إعادة تعيين كلمة مرور ${r.account_email}؟ ستصبح كلمة المرور الحالية غير صالحة.`))return;
+  const btn=document.getElementById('reset-pw-btn-'+regId);
+  if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ التعيين...';}
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const resp=await fetch(`${SUPABASE_URL}/functions/v1/reset-teacher-password`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+      body:JSON.stringify({regId,email:r.account_email})
+    });
+    const out=await resp.json();
+    if(!resp.ok||out.error)throw new Error(out.error||('HTTP '+resp.status));
+    await loadRegistrations();
+    renderAccountsTab();
+    alert(`✅ تم تعيين كلمة مرور جديدة\n\nاسم المستخدم: ${r.account_email}\nكلمة المرور الجديدة: ${out.password}\n\nانسخها وأرسلها للمعلم الآن — لن تُعرض مرة أخرى.`);
+  }catch(e){
+    alert('❌ فشلت إعادة التعيين: '+(e.message||''));
+    if(btn){btn.disabled=false;btn.textContent='🔄 إعادة تعيين كلمة المرور';}
+  }
+}
 function renderAccountsTab(){
   const tbody=document.getElementById('accounts-table-body');
   if(!tbody)return;
@@ -599,7 +622,8 @@ function renderAccountsTab(){
     const accEmail=r.account_email;
     const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
     const actionBtn=accEmail
-      ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>`
+      ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>
+         <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
       :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>`;
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
