@@ -2918,6 +2918,14 @@ async function resetAllData(){
 }
 
 // ══ بدء التشغيل ════════════════════════════════════════
+function showAuthGate(){
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function hideAuthGate(){
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.body.style.overflow='';
+}
 function showAuthState(state){
   ['auth-login','auth-denied','auth-onboard','auth-loading'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
@@ -2940,7 +2948,7 @@ async function completeOnboard(){
   // ربط رقم الهاتف بـ قسم السلوك أيضاً (مفتاح localStorage)
   try{localStorage.setItem('behaviorTeacherPhone',phone);}catch(e){}
   await dbSave({display_name:name,teacher_phone:phone,behavior_teacher_phone:phone});
-  document.getElementById('auth-screen').classList.add('hidden');
+  hideAuthGate();
   showSetupScreen();
 }
 function showUserBadge(){
@@ -3054,7 +3062,7 @@ async function bootApp(session){
     profileCache=cached;
     displayName=cached.display_name;
     usedCache=true;
-    document.getElementById('auth-screen').classList.add('hidden');
+    hideAuthGate();
     const isAdminUserC=userEmail===ADMIN_EMAIL.toLowerCase();
     // ── flag محلي: المستخدم في منتصف الإعداد ──
     let inSetupFlag=currentUser&&localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';
@@ -3125,7 +3133,7 @@ async function bootApp(session){
     if(error){
       // فشل بعد 3 محاولات — لا نطرد المستخدم، نعرض رسالة ونعطي خيار إعادة المحاولة
       console.error('allowed_emails check failed after retries:',error);
-      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthGate();
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
       if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة في الاتصال.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
@@ -3137,7 +3145,7 @@ async function bootApp(session){
       await sb.auth.signOut();
       currentUser=null;googleAccessToken=null;
       hideLoader();
-      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthGate();
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
       if(sub)sub.innerHTML='⛔ هذا البريد ('+userEmail+') غير مصرّح له بالدخول.<br/>تواصل مع المشرف لإضافة بريدك.';
@@ -3150,7 +3158,7 @@ async function bootApp(session){
       await sb.auth.signOut();
       currentUser=null;googleAccessToken=null;
       hideLoader();
-      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthGate();
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
       if(sub)sub.innerHTML='⛔ هذا حساب معلّم الحلقة الأولى.<br/>الرجاء الدخول من صفحة الحلقة الأولى المخصّصة.';
@@ -3159,7 +3167,7 @@ async function bootApp(session){
   }catch(e){
     console.error('allowed_emails exception:',e);
     // لا نطرد المستخدم - نعرض رسالة فقط (قد يكون خطأ عابر)
-    document.getElementById('auth-screen').classList.remove('hidden');
+    showAuthGate();
     showAuthState('auth-login');
     const sub=document.querySelector('#auth-login .auth-sub');
     if(sub)sub.innerHTML='⚠️ تعذّر التحقق من الصلاحية بسبب مشكلة مؤقتة.<br/>أعد تحميل الصفحة وحاول مرة أخرى.';
@@ -3177,7 +3185,7 @@ async function bootApp(session){
     if(banned){
       await sb.auth.signOut();
       currentUser=null;
-      document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthGate();
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
       if(sub)sub.innerHTML='⛔ تم تعليق حسابك. تواصل مع المشرف.';
@@ -3187,11 +3195,11 @@ async function bootApp(session){
 
   await dbInit();
   const data=await dbLoad();
-  document.getElementById('auth-screen').classList.add('hidden');
+  hideAuthGate();
   if(!data||!data.display_name){
     // أول دخول: استخدم اسم Google كاقتراح ثم اطلب التأكيد
     const gName=(currentUser.user_metadata&&(currentUser.user_metadata.full_name||currentUser.user_metadata.name))||'';
-    document.getElementById('auth-screen').classList.remove('hidden');
+    showAuthGate();
     showAuthState('auth-onboard');
     const inp=document.getElementById('onboard-name');
     if(inp){inp.value=gName;setTimeout(()=>inp.focus(),200);}
@@ -3231,7 +3239,7 @@ async function bootApp(session){
 
 (async()=>{
   // أظهر شاشة الدخول مبدئياً
-  document.getElementById('auth-screen').classList.remove('hidden');
+  showAuthGate();
   showAuthState('auth-loading');
   const _loaderStart=Date.now();
   // timeout: إذا تجاوز 12 ثانية يظهر زر إعادة المحاولة
@@ -3252,7 +3260,7 @@ async function bootApp(session){
     clearTimeout(_loaderTimeout);
     await _minLoader(2000);
     hideLoader();
-    document.getElementById('auth-screen').classList.remove('hidden');
+    showAuthGate();
     showAuthState('auth-login');
   }
 
