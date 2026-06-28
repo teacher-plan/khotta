@@ -613,14 +613,10 @@ function showTeacherAccount(regId){
   if(!r||!r.account_email)return;
   alert(`اسم المستخدم: ${r.account_email}\nكلمة المرور: ${r.account_password||'—'}`);
 }
-function isPasswordResetUsed(regId){
-  return localStorage.getItem('kh_pw_reset_used_'+regId)==='1';
-}
 async function resetTeacherPassword(regId){
-  if(isPasswordResetUsed(regId)){alert('⚠️ تم استخدام إعادة تعيين كلمة المرور لهذا الحساب من قبل، ولا يمكن استخدامها مرة أخرى حالياً.');return;}
   const r=registrations.find(x=>x.id===regId);
   if(!r||!r.account_email){alert('لا يوجد حساب لهذا المعلم بعد');return;}
-  if(!confirm(`إعادة تعيين كلمة مرور ${r.account_email}؟ ستصبح كلمة المرور الحالية غير صالحة.\n\nملاحظة: هذا الإجراء مسموح مرة واحدة فقط لهذا الحساب.`))return;
+  if(!confirm(`إعادة تعيين كلمة مرور ${r.account_email}؟ ستصبح كلمة المرور الحالية غير صالحة.`))return;
   const btn=document.getElementById('reset-pw-btn-'+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ التعيين...';}
   try{
@@ -632,7 +628,6 @@ async function resetTeacherPassword(regId){
     });
     const out=await resp.json();
     if(!resp.ok||out.error)throw new Error(out.error||('HTTP '+resp.status));
-    localStorage.setItem('kh_pw_reset_used_'+regId,'1');
     await loadRegistrations();
     renderAccountsTab();
     alert(`✅ تم تعيين كلمة مرور جديدة\n\nاسم المستخدم: ${r.account_email}\nكلمة المرور الجديدة: ${out.password}\n\nانسخها وأرسلها للمعلم الآن — لن تُعرض مرة أخرى.`);
@@ -654,10 +649,9 @@ function renderAccountsTab(){
     const paidStatus=r.payment_status==='paid'?'<span class="status-badge paid">✅ مدفوع</span>':'<span class="status-badge pending">⏳ قيد الانتظار</span>';
     const accEmail=r.account_email;
     const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
-    const resetUsed=isPasswordResetUsed(r.id);
     const actionBtn=accEmail
       ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>
-         <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="resetTeacherPassword(${r.id})"${resetUsed?' disabled title="تم استخدامها مرة واحدة"':''}>${resetUsed?'✅ تم الاستخدام':'🔄 إعادة تعيين كلمة المرور'}</button>`
+         <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
       :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
          <button class="action-btn" id="custom-account-btn-${r.id}" onclick="createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button>`;
     return `<tr>
