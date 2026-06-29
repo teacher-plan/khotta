@@ -1655,10 +1655,9 @@ input,textarea,select{font-size:16px !important;}
   <div class="page-header"><div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</div><h1>لوحة المعلومات</h1><p>نظرة شاملة على تقدّم الفصل الدراسي</p></div>
   <div class="stats-grid" id="stats-cards"></div>
   <div class="chart-card"><h3>🏫 إحصائية كل شعبة على حدة</h3><div class="class-stats-grid" id="stats-per-class"></div></div>
-  <div class="chart-card"><h3>📚 التقدم حسب الوحدات</h3><div id="stats-sections"></div></div>
+  <div class="chart-card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>📚 التقدم حسب الوحدات</span><select id="stats-grade-select" onchange="statsGradeIdx=Number(this.value);renderStatsSections()" style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:11.5px;outline:none"></select></h3><div id="stats-sections"></div></div>
   <div class="chart-card"><h3>🏫 توزيع الدروس على الشعب</h3><div id="stats-classes"></div></div>
   <div class="chart-card"><h3>📅 الحصص الأسبوعية</h3><div class="week-grid" id="stats-week"></div></div>
-  <div class="chart-card" id="stats-grades-card" style="display:none"><h3>🎯 متوسط الدرجات حسب الشعبة</h3><div id="stats-grades"></div></div>
 </div></div>
 
 <!-- ══ ARCHIVE ══ -->
@@ -7052,17 +7051,27 @@ function renderStats(){
     });
     perClassEl.innerHTML=html||'<div style="color:var(--muted);font-size:12px">لا توجد شعب</div>';
   }
-  const secsEl=document.getElementById('stats-sections');
-  if(teacherConfig&&teacherConfig.grades){
-    const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
-    if(grade){secsEl.innerHTML=grade.units.map(unit=>{const ls=unit.lessons,sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;return`<div class="chart-row"><span class="chart-row-label">📚 ${unit.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${sp}%;background:linear-gradient(90deg,var(--red),var(--gold))">${sp}% (${sd}/${ls.length})</div></div></div>`;}).join('');}
-  }
+  buildStatsGradeSelect();renderStatsSections();
   const maxC=Math.max(...allCls.map(cls=>classCounts[cls.id]||0),1);
   document.getElementById('stats-classes').innerHTML=allCls.map(cls=>{const cnt=classCounts[cls.id]||0;const pctW=(cnt/maxC)*100;return`<div class="chart-row"><span class="chart-row-label" style="color:${cls.color}">🏫 ${cls.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${pctW}%;background:${cls.color}">${cnt}</div></div></div>`;}).join('');
   const wdays=[{id:'sun',name:'أحد'},{id:'mon',name:'إثنين'},{id:'tue',name:'ثلاثاء'},{id:'wed',name:'أربعاء'},{id:'thu',name:'خميس'}];
   document.getElementById('stats-week').innerHTML=wdays.map(d=>{const sch=timetableConfig.schedule[d.id]||{};const count=Object.values(sch).filter(v=>v).length;return`<div class="week-cell"><div class="wc-day">${d.name}</div><div class="wc-count">${count}</div><div style="font-size:9px;color:var(--muted)">حصة</div></div>`;}).join('');
-  const gCard=document.getElementById('stats-grades-card');const hasGrades=allCls.some(cls=>{const sList=students[cls.id]||[];const cols=gradeTypes.filter(c=>c.classKey===cls.id);return sList.length>0&&cols.length>0;});
-  if(hasGrades){gCard.style.display='block';document.getElementById('stats-grades').innerHTML=allCls.map(cls=>{const sList=students[cls.id]||[];const cols=gradeTypes.filter(c=>c.classKey===cls.id);let sum=0,cnt=0;sList.forEach(st=>{const sg=(grades[cls.id]||{})[st.id]||{};let pts=0,maxPts=0;cols.forEach(c=>{if(sg[c.id]!=null){pts+=Number(sg[c.id]);maxPts+=Number(c.max);}});if(maxPts>0){sum+=(pts/maxPts)*100;cnt++;}});const avg=cnt?Math.round(sum/cnt):0;return`<div class="chart-row"><span class="chart-row-label" style="color:${cls.color}">${cls.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${avg}%;background:${cls.color}">${avg}%</div></div></div>`;}).join('');}else{gCard.style.display='none';}
+}
+
+let statsGradeIdx=0;
+function buildStatsGradeSelect(){
+  const sel=document.getElementById('stats-grade-select');
+  if(!sel||!teacherConfig||!teacherConfig.grades)return;
+  if(statsGradeIdx==null||statsGradeIdx>=teacherConfig.grades.length)statsGradeIdx=0;
+  const arabicNums=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];
+  sel.innerHTML=teacherConfig.grades.map((g,idx)=>`<option value="${idx}" ${idx===statsGradeIdx?'selected':''}>${g.subject||''} — الصف ${arabicNums[(g.num||1)-1]}</option>`).join('');
+  sel.style.display=teacherConfig.grades.length>1?'block':'none';
+}
+function renderStatsSections(){
+  const secsEl=document.getElementById('stats-sections');
+  if(!secsEl||!teacherConfig||!teacherConfig.grades)return;
+  const grade=teacherConfig.grades[statsGradeIdx]||teacherConfig.grades[0];
+  if(grade){secsEl.innerHTML=grade.units.map(unit=>{const ls=unit.lessons,sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;return`<div class="chart-row"><span class="chart-row-label">📚 ${unit.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${sp}%;background:linear-gradient(90deg,var(--red),var(--gold))">${sp}% (${sd}/${ls.length})</div></div></div>`;}).join('');}
 }
 
 // ══ BEHAVIOR ════════════════════════════════════════════
