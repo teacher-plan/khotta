@@ -946,7 +946,8 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .eg-result-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
 .eg-export,.eg-regen{flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
 .eg-export{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border:none;}
-.eg-paper{background:#fff;color:#111;border-radius:10px;padding:22px;font-size:13px;line-height:1.9;min-height:200px;outline:none;}
+.eg-paper{background:#fff;color:#111;border-radius:10px;padding:30px 28px;font-size:13px;line-height:1.9;min-height:200px;outline:none;position:relative;overflow:hidden;}
+.eg-paper::before{content:'';position:absolute;inset:10px;border:1.5px solid #333;border-radius:6px;pointer-events:none;}
 .eg-paper h2,.eg-paper h3{color:#111;margin:0 0 6px;}
 .eg-paper .eg-q{margin:12px 0;}
 .eg-paper hr{border:none;border-top:1px solid #ddd;margin:14px 0;}
@@ -10005,14 +10006,15 @@ function egGenerate(){
     qn++;
   }
   const lessonsList=lessons.map(l=>l.name).join('، ');
+  const logoImg=egExportCfg.logo?'<img src="https://khotati.com/khottah_icon_120.png" style="width:16px;height:16px;border-radius:3px" alt=""/>':'';
   const paper=`
     <div style="float:left;border:1.5px solid #333;border-radius:8px;padding:6px 10px;text-align:center;min-width:64px;font-size:12px;color:#111"><div style="font-weight:700;margin-bottom:3px">الدرجة الكلية</div><div style="font-size:16px;font-weight:800">......... / ${egToArabic(total)}</div></div>
     <div style="text-align:center;margin-bottom:6px"><b>${escHtml(egExportCfg.header)}</b></div>
-    <h2 style="text-align:center">اختبار ${escHtml(subject)} — ${libGradeName(Number(grade))}</h2>
-    <div style="display:flex;justify-content:space-between;font-size:12px;color:#444;clear:both"><span>الاسم: .........................</span><span>التاريخ: ......./......./٢٠.....</span></div>
+    <h2 style="text-align:center;margin:0">اختبار ${escHtml(subject)} — ${libGradeName(Number(grade))}</h2>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#444;margin-top:8px;clear:both"><span>الاسم: .........................</span><span>التاريخ: ......./......./٢٠.....</span></div>
     <div style="font-size:12px;color:#444;margin-top:4px">الدروس: ${escHtml(lessonsList)}</div>
     <hr>${q}<hr>
-    <div style="text-align:center;font-size:11px;color:#888;margin-top:10px">تم التوليد عبر منصة «خطتي» — مسودة قابلة للتعديل</div>`;
+    <div class="eg-screen-footer" style="text-align:center;font-size:11px;color:#888;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px">${logoImg}<span>${escHtml(egExportCfg.footer)} — مسودة قابلة للتعديل</span></div>`;
   document.getElementById('eg-result').innerHTML=paper;
   document.getElementById('eg-result-card').style.display='block';
   document.getElementById('eg-result-card').scrollIntoView({behavior:'smooth'});
@@ -10021,25 +10023,29 @@ function egGenerate(){
 }
 
 function egExport(){
-  const content=document.getElementById('eg-result').innerHTML;
+  // إزالة تذييل الشاشة من المحتوى (نستخدم تذييلاً ثابتاً يتكرر بكل صفحة عند الطباعة)
+  let content=document.getElementById('eg-result').innerHTML
+    .replace(/<div class="eg-screen-footer"[\s\S]*?<\/div>\s*$/,'');
   const w=window.open('','_blank');
   if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
   const cfg=egExportCfg;
   const LOGO='https://khotati.com/khottah_icon_120.png';
   const fontHref='https://fonts.googleapis.com/css2?family='+cfg.font.replace(/ /g,'+')+':wght@400;700&display=swap';
   const footer=`<div class="eg-pfooter">${cfg.logo?`<img src="${LOGO}" alt=""/>`:''}<span>${escHtml(cfg.footer)}</span></div>`;
+  // النموذج: @page هامش موحّد → الإطار الثابت عند حافة المنطقة القابلة للطباعة،
+  // وحشوة body تُبقي كل المحتوى داخل الإطار، ومساحة سفلية تمنع تداخله مع التذييل.
   w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>اختبار</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="${fontHref}" rel="stylesheet">
 <style>
-  @page{margin:16mm 14mm 24mm;}
+  @page{margin:12mm;}
   *{box-sizing:border-box;}
-  body{font-family:'${cfg.font}',Arial,sans-serif;color:#111;line-height:1.95;margin:0;font-size:${cfg.size}px;}
-  .page-frame{position:fixed;top:8mm;left:8mm;right:8mm;bottom:8mm;border:1.5px solid #333;border-radius:6px;pointer-events:none;z-index:-1;}
-  h2{margin:0 0 6px;text-align:center;font-size:1.5em;}
+  body{font-family:'${cfg.font}',Arial,sans-serif;color:#111;line-height:1.95;margin:0;padding:9mm 9mm 18mm;font-size:${cfg.size}px;}
+  .page-frame{position:fixed;top:0;left:0;right:0;bottom:0;border:1.5px solid #333;border-radius:6px;pointer-events:none;z-index:-1;}
+  h2{margin:0;text-align:center;font-size:1.5em;}
   h3{margin:0 0 6px;}
   hr{border:none;border-top:1px solid #ccc;margin:14px 0;}
   .eg-q{margin:13px 0;page-break-inside:avoid;}
-  .eg-pfooter{position:fixed;bottom:8mm;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid #ddd;padding-top:6px;font-size:10.5px;color:#888;}
+  .eg-pfooter{position:fixed;bottom:5mm;left:9mm;right:9mm;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid #ddd;padding-top:5px;font-size:10.5px;color:#888;}
   .eg-pfooter img{width:18px;height:18px;border-radius:4px;}
 </style></head><body>
 <div class="page-frame"></div>
