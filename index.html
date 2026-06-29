@@ -2268,6 +2268,30 @@ input,textarea,select{font-size:16px !important;}
     <button class="eg-generate" style="margin-top:12px" onclick="saveAiLimits()">💾 حفظ التحكم والحدود</button>
   </div>
 
+  <!-- قالب التصدير -->
+  <div class="eg-card">
+    <div class="eg-step-title">🖨️ قالب التصدير</div>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">الخط</label>
+        <select id="ex-font" onchange="exPreview()">
+          <option value="Cairo">Cairo (حديث)</option>
+          <option value="Tajawal">Tajawal (حديث)</option>
+          <option value="Amiri">Amiri (نسخ تقليدي)</option>
+          <option value="Noto Naskh Arabic">Noto Naskh (نسخ)</option>
+        </select>
+      </div>
+      <div style="flex:1"><label class="eg-lbl">حجم الخط (px)</label><input type="number" id="ex-size" value="13" min="10" max="20" oninput="exPreview()"></div>
+    </div>
+    <label class="eg-lbl">ترويسة الورقة</label>
+    <input type="text" id="ex-header" value="سلطنة عُمان — وزارة التربية والتعليم" oninput="exPreview()">
+    <label class="eg-lbl">نص التذييل</label>
+    <input type="text" id="ex-footer" value="خطتي الفصلية — منصة المعلمين" oninput="exPreview()">
+    <label class="eg-chip" style="margin-top:12px;display:inline-flex"><input type="checkbox" id="ex-logo" checked onchange="exPreview()"> إظهار الشعار في التذييل</label>
+    <label class="eg-lbl" style="margin-top:14px">معاينة مباشرة</label>
+    <div id="ex-preview" style="background:#fff;color:#111;border-radius:10px;padding:18px;font-size:13px;line-height:1.9;border:1px solid var(--border)"></div>
+    <button class="eg-generate" style="margin-top:12px" onclick="saveExportTemplate()">💾 حفظ قالب التصدير</button>
+  </div>
+
   <!-- ميزانية التوليد -->
   <div class="eg-card">
     <div class="eg-step-title">💰 ميزانية التوليد</div>
@@ -9829,6 +9853,7 @@ function libBackToUnits(){libShowView('units');}
 let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
 let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
+let egExportCfg={font:'Cairo',size:13,header:'سلطنة عُمان — وزارة التربية والتعليم',footer:'خطتي الفصلية — منصة المعلمين',logo:true};
 
 function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function egCreditGet(){let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
@@ -9844,6 +9869,13 @@ async function egApplyConfig(){
     egLimits.maxQ=parseInt(m.max_questions)||30;
     egLimits.maxPages=parseInt(m.max_pages)||5;
     egLimits.types=(m.allowed_types||'mcq,essay,tf,fill,match').split(',').filter(Boolean);
+    egExportCfg={
+      font:m.export_font||'Cairo',
+      size:parseInt(m.export_size)||13,
+      header:m.export_header||'سلطنة عُمان — وزارة التربية والتعليم',
+      footer:m.export_footer||'خطتي الفصلية — منصة المعلمين',
+      logo:(m.export_logo!=='0')
+    };
   }catch(e){}
   const notice=document.getElementById('eg-disabled-notice');
   const credit=document.querySelector('#page-examgen .eg-credit');
@@ -9970,7 +10002,7 @@ function egGenerate(){
   }
   const lessonsList=lessons.map(l=>l.name).join('، ');
   const paper=`
-    <div style="text-align:center;margin-bottom:6px"><b>سلطنة عُمان — وزارة التربية والتعليم</b></div>
+    <div style="text-align:center;margin-bottom:6px"><b>${escHtml(egExportCfg.header)}</b></div>
     <h2 style="text-align:center">اختبار ${escHtml(subject)} — ${libGradeName(Number(grade))}</h2>
     <div style="display:flex;justify-content:space-between;font-size:12px;color:#444"><span>الاسم: .........................</span><span>الدرجة: ......... / ${egToArabic(qcount)}</span></div>
     <div style="font-size:12px;color:#444;margin-top:4px">الدروس: ${escHtml(lessonsList)}</div>
@@ -9987,14 +10019,17 @@ function egExport(){
   const content=document.getElementById('eg-result').innerHTML;
   const w=window.open('','_blank');
   if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
+  const cfg=egExportCfg;
   const LOGO='https://khotati.com/khottah_icon_120.png';
+  const fontHref='https://fonts.googleapis.com/css2?family='+cfg.font.replace(/ /g,'+')+':wght@400;700&display=swap';
+  const footer=`<div class="eg-pfooter">${cfg.logo?`<img src="${LOGO}" alt=""/>`:''}<span>${escHtml(cfg.footer)}</span></div>`;
   w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>اختبار</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="${fontHref}" rel="stylesheet">
 <style>
   @page{margin:16mm 14mm 24mm;}
   *{box-sizing:border-box;}
-  body{font-family:'Cairo',Arial,sans-serif;color:#111;line-height:1.95;margin:0;}
-  h2{margin:0 0 6px;text-align:center;font-size:20px;}
+  body{font-family:'${cfg.font}',Arial,sans-serif;color:#111;line-height:1.95;margin:0;font-size:${cfg.size}px;}
+  h2{margin:0 0 6px;text-align:center;font-size:1.5em;}
   h3{margin:0 0 6px;}
   hr{border:none;border-top:1px solid #ccc;margin:14px 0;}
   .eg-q{margin:13px 0;page-break-inside:avoid;}
@@ -10002,11 +10037,10 @@ function egExport(){
   .eg-pfooter img{width:18px;height:18px;border-radius:4px;}
 </style></head><body>
 ${content}
-<div class="eg-pfooter"><img src="${LOGO}" alt=""/><span>خطتي الفصلية — منصة المعلمين</span></div>
+${footer}
 </body></html>`);
   w.document.close();
-  // ننتظر تحميل الشعار والخط قبل الطباعة لضمان ظهورهما
-  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},700);
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},800);
 }
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
@@ -10024,9 +10058,58 @@ async function loadAiSettings(){
     const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
     const at=(m.allowed_types||'mcq,essay,tf,fill,match').split(',');
     document.querySelectorAll('.ai-atype').forEach(c=>{c.checked=at.includes(c.value);});
+    const ef=document.getElementById('ex-font');if(ef)ef.value=m.export_font||'Cairo';
+    const es=document.getElementById('ex-size');if(es)es.value=m.export_size||'13';
+    const eh=document.getElementById('ex-header');if(eh)eh.value=m.export_header||'سلطنة عُمان — وزارة التربية والتعليم';
+    const efo=document.getElementById('ex-footer');if(efo)efo.value=m.export_footer||'خطتي الفصلية — منصة المعلمين';
+    const el=document.getElementById('ex-logo');if(el)el.checked=(m.export_logo!=='0');
+    if(document.getElementById('ex-preview'))exPreview();
     _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
     aiComputeBudget();
   }catch(e){}
+}
+
+function exFontHref(f){return 'https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+':wght@400;700&display=swap';}
+function exEnsureFont(f){
+  const id='exfont-'+f.replace(/ /g,'-');
+  if(document.getElementById(id))return;
+  const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=exFontHref(f);document.head.appendChild(l);
+}
+function exPreview(){
+  const font=document.getElementById('ex-font').value;
+  const size=parseInt(document.getElementById('ex-size').value)||13;
+  const header=document.getElementById('ex-header').value;
+  const footer=document.getElementById('ex-footer').value;
+  const logo=document.getElementById('ex-logo').checked;
+  exEnsureFont(font);
+  const box=document.getElementById('ex-preview');
+  box.style.fontFamily=`'${font}',sans-serif`;
+  box.style.fontSize=size+'px';
+  box.innerHTML=`<div style="text-align:center;margin-bottom:4px"><b>${escHtml(header)}</b></div>
+    <h2 style="text-align:center;margin:0 0 6px;color:#111;font-size:1.4em">اختبار تجريبي — الصف الثامن</h2>
+    <div style="display:flex;justify-content:space-between;font-size:.9em;color:#444"><span>الاسم: .........</span><span>الدرجة: ... / ١٠</span></div>
+    <hr style="border:none;border-top:1px solid #ccc;margin:10px 0">
+    <div style="margin:8px 0"><b>١.</b> سؤال اختيار من متعدد تجريبي من الدرس.</div>
+    <div style="margin:8px 0"><b>٢.</b> ( صح / خطأ ) عبارة تجريبية.</div>
+    <hr style="border:none;border-top:1px solid #ccc;margin:10px 0">
+    <div style="text-align:center;font-size:.78em;color:#888;display:flex;align-items:center;justify-content:center;gap:6px">${logo?'<img src="https://khotati.com/khottah_icon_120.png" style="width:16px;height:16px;border-radius:3px"/>':''}<span>${escHtml(footer)}</span></div>`;
+}
+
+async function saveExportTemplate(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'export_font',value:document.getElementById('ex-font').value,updated_at:new Date().toISOString()},
+      {key:'export_size',value:String(document.getElementById('ex-size').value||13),updated_at:new Date().toISOString()},
+      {key:'export_header',value:document.getElementById('ex-header').value,updated_at:new Date().toISOString()},
+      {key:'export_footer',value:document.getElementById('ex-footer').value,updated_at:new Date().toISOString()},
+      {key:'export_logo',value:document.getElementById('ex-logo').checked?'1':'0',updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ قالب التصدير','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ قالب التصدير';}}
 }
 
 async function saveAiLimits(){
