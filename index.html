@@ -1904,6 +1904,8 @@ input,textarea,select{font-size:16px !important;}
     <p>ولّد اختباراً من محتوى المكتبة المعتمد — اختر الدروس ثم اضبط الخيارات</p>
   </div>
 
+  <div id="eg-disabled-notice" class="eg-card" style="display:none"><div style="text-align:center;color:var(--muted);padding:22px;font-size:14px">🚧 مولّد الاختبارات غير مفعّل حالياً.<br><span style="font-size:12px">سيتم تفعيله من الإدارة قريباً.</span></div></div>
+
   <!-- شريط الرصيد -->
   <div class="eg-credit">
     <div class="eg-credit-top"><span>🔋 رصيد التوليد المتبقي</span><span id="eg-credit-pct">100٪</span></div>
@@ -1911,7 +1913,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- ١) الصف والمادة -->
-  <div class="eg-card">
+  <div class="eg-card" id="eg-step1-card">
     <div class="eg-step-title">١. اختر الصف والمادة</div>
     <div class="eg-row">
       <select id="eg-grade" onchange="egOnGradeChange()"><option value="">الصف</option></select>
@@ -2244,6 +2246,24 @@ input,textarea,select{font-size:16px !important;}
     <textarea id="ai-system-prompt" rows="9" style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:12px;outline:none;line-height:1.9;box-sizing:border-box" placeholder="مثال: صُغ الأسئلة باللغة العربية الفصحى، وفق منهج سلطنة عُمان. راعِ المستوى الدراسي للصف. نوّع مستويات الصعوبة. تجنّب الأسئلة الغامضة أو خارج المحتوى المحدد..."></textarea>
     <button class="eg-generate" style="margin-top:12px" onclick="saveAiSettings()">💾 حفظ التعليمات</button>
     <div id="ai-save-status" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
+  </div>
+
+  <!-- التحكم والحدود -->
+  <div class="eg-card">
+    <div class="eg-step-title">⚙️ التحكم والحدود</div>
+    <label class="eg-chip" style="margin-bottom:14px;display:inline-flex"><input type="checkbox" id="ai-gen-enabled" checked> تفعيل المولّد للمعلمين</label>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">أقصى عدد أسئلة</label><input type="number" id="ai-max-q" value="30" min="1" max="100"></div>
+      <div style="flex:1"><label class="eg-lbl">أقصى عدد صفحات</label><input type="number" id="ai-max-pages" value="5" min="1" max="20"></div>
+    </div>
+    <label class="eg-lbl">أنواع الأسئلة المسموحة</label>
+    <div class="eg-types">
+      <label class="eg-chip"><input type="checkbox" class="ai-atype" value="mcq" checked> اختيار من متعدد</label>
+      <label class="eg-chip"><input type="checkbox" class="ai-atype" value="essay" checked> مقالي</label>
+      <label class="eg-chip"><input type="checkbox" class="ai-atype" value="tf" checked> صح وخطأ</label>
+      <label class="eg-chip"><input type="checkbox" class="ai-atype" value="fill" checked> إكمال الفراغ</label>
+    </div>
+    <button class="eg-generate" style="margin-top:12px" onclick="saveAiLimits()">💾 حفظ التحكم والحدود</button>
   </div>
 
   <!-- ميزانية التوليد -->
@@ -9806,18 +9826,56 @@ function libBackToUnits(){libShowView('units');}
 // ══ مولّد الاختبارات (واجهة — توليد وهمي بلا API) ══
 let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
+let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill']};
 
 function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function egCreditGet(){let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
 function egCreditSet(v){v=Math.max(0,Math.min(100,v));localStorage.setItem('egCreditPct',String(v));egCreditRender();}
 function egCreditRender(){const v=egCreditGet();const f=document.getElementById('eg-credit-fill');const p=document.getElementById('eg-credit-pct');if(f)f.style.width=v+'%';if(p)p.textContent=egToArabic(v)+'٪';}
 
-function egInit(){
-  egCreditRender();
+async function egApplyConfig(){
+  egLimits={enabled:true,maxQ:30,maxPages:5,types:['mcq','essay','tf','fill']};
+  try{
+    const{data}=await sb.from('ai_settings').select('key,value');
+    const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    egLimits.enabled=(m.generator_enabled!=='0');
+    egLimits.maxQ=parseInt(m.max_questions)||30;
+    egLimits.maxPages=parseInt(m.max_pages)||5;
+    egLimits.types=(m.allowed_types||'mcq,essay,tf,fill').split(',').filter(Boolean);
+  }catch(e){}
+  const notice=document.getElementById('eg-disabled-notice');
+  const credit=document.querySelector('#page-examgen .eg-credit');
+  const step1=document.getElementById('eg-step1-card');
+  if(!egLimits.enabled){
+    if(notice)notice.style.display='block';
+    if(credit)credit.style.display='none';
+    if(step1)step1.style.display='none';
+    document.getElementById('eg-lessons-card').style.display='none';
+    document.getElementById('eg-options-card').style.display='none';
+    document.getElementById('eg-result-card').style.display='none';
+    return false;
+  }
+  if(notice)notice.style.display='none';
+  if(credit)credit.style.display='';
+  if(step1)step1.style.display='';
+  const qc=document.getElementById('eg-qcount');if(qc){qc.max=egLimits.maxQ;if(+qc.value>egLimits.maxQ)qc.value=egLimits.maxQ;}
+  const pg=document.getElementById('eg-pages');if(pg){pg.max=egLimits.maxPages;if(+pg.value>egLimits.maxPages)pg.value=egLimits.maxPages;}
+  document.querySelectorAll('#eg-options-card .eg-qtype').forEach(c=>{
+    const lbl=c.closest('.eg-chip');const allowed=egLimits.types.includes(c.value);
+    if(lbl)lbl.style.display=allowed?'':'none';
+    if(!allowed)c.checked=false;
+  });
+  return true;
+}
+
+async function egInit(){
   egSelected={};egUnits=[];
   document.getElementById('eg-lessons-card').style.display='none';
   document.getElementById('eg-options-card').style.display='none';
   document.getElementById('eg-result-card').style.display='none';
+  const ok=await egApplyConfig();
+  if(!ok)return;
+  egCreditRender();
   const gsel=document.getElementById('eg-grade');
   let grades=[];
   if(isAdmin())grades=[5,6,7,8,9,10,11,12];
@@ -9893,7 +9951,7 @@ function egGenerate(){
   if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
   const types=[...document.querySelectorAll('.eg-qtype:checked')].map(c=>c.value);
   if(!types.length){toast('اختر نوع سؤال واحد على الأقل',true);return;}
-  const qcount=Math.max(1,Math.min(50,parseInt(document.getElementById('eg-qcount').value)||10));
+  const qcount=Math.max(1,Math.min(egLimits.maxQ||50,parseInt(document.getElementById('eg-qcount').value)||10));
   const grade=document.getElementById('eg-grade').value;
   const subject=document.getElementById('eg-subject').value;
   // ── توليد وهمي (mock) — يُستبدل بـ Claude API لاحقاً ──
@@ -9958,9 +10016,34 @@ async function loadAiSettings(){
     const ta=document.getElementById('ai-system-prompt');if(ta)ta.value=m.system_prompt||'';
     const per=document.getElementById('ai-budget-per');if(per)per.value=m.per_teacher_usd||'6';
     const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=m.teacher_count||'0';
+    const en=document.getElementById('ai-gen-enabled');if(en)en.checked=(m.generator_enabled!=='0');
+    const mq=document.getElementById('ai-max-q');if(mq)mq.value=m.max_questions||'30';
+    const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
+    const at=(m.allowed_types||'mcq,essay,tf,fill').split(',');
+    document.querySelectorAll('.ai-atype').forEach(c=>{c.checked=at.includes(c.value);});
     _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
     aiComputeBudget();
   }catch(e){}
+}
+
+async function saveAiLimits(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const enabled=document.getElementById('ai-gen-enabled').checked?'1':'0';
+  const maxQ=document.getElementById('ai-max-q').value||'30';
+  const maxP=document.getElementById('ai-max-pages').value||'5';
+  const types=[...document.querySelectorAll('.ai-atype:checked')].map(c=>c.value).join(',')||'mcq';
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'generator_enabled',value:enabled,updated_at:new Date().toISOString()},
+      {key:'max_questions',value:String(maxQ),updated_at:new Date().toISOString()},
+      {key:'max_pages',value:String(maxP),updated_at:new Date().toISOString()},
+      {key:'allowed_types',value:types,updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ التحكم والحدود','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ التحكم والحدود';}}
 }
 
 function aiComputeBudget(){
