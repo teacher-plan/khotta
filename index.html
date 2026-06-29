@@ -9872,9 +9872,26 @@ function egExport(){
   const content=document.getElementById('eg-result').innerHTML;
   const w=window.open('','_blank');
   if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
-  w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>اختبار</title><style>body{font-family:'Cairo',Arial,sans-serif;padding:30px;line-height:1.9;color:#111}h2,h3{margin:0 0 6px}.eg-q{margin:12px 0}hr{border:none;border-top:1px solid #ddd;margin:14px 0}</style></head><body>${content}</body></html>`);
+  const LOGO='https://khotati.com/khottah_icon_120.png';
+  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>اختبار</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page{margin:16mm 14mm 24mm;}
+  *{box-sizing:border-box;}
+  body{font-family:'Cairo',Arial,sans-serif;color:#111;line-height:1.95;margin:0;}
+  h2{margin:0 0 6px;text-align:center;font-size:20px;}
+  h3{margin:0 0 6px;}
+  hr{border:none;border-top:1px solid #ccc;margin:14px 0;}
+  .eg-q{margin:13px 0;page-break-inside:avoid;}
+  .eg-pfooter{position:fixed;bottom:8mm;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid #ddd;padding-top:6px;font-size:10.5px;color:#888;}
+  .eg-pfooter img{width:18px;height:18px;border-radius:4px;}
+</style></head><body>
+${content}
+<div class="eg-pfooter"><img src="${LOGO}" alt=""/><span>خطتي الفصلية — منصة المعلمين</span></div>
+</body></html>`);
   w.document.close();
-  setTimeout(()=>{try{w.print();}catch(e){}},400);
+  // ننتظر تحميل الشعار والخط قبل الطباعة لضمان ظهورهما
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},700);
 }
 
 // ── إضافة ملف (المشرف) — مرتبط بالدرس المفتوح ──
