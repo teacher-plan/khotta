@@ -917,6 +917,10 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .lib-link-delete{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:4px;opacity:0;transition:opacity .2s;}
 .lib-link-card:hover .lib-link-delete{opacity:1;}
 .lib-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+.lib-lesson-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:9px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+.lib-lesson-row:hover{border-color:var(--gold);transform:translateX(-2px);}
+.lib-lesson-name{font-size:13px;font-weight:600;color:var(--text);}
+.lib-lesson-count{font-size:11px;color:var(--gold);font-weight:700;white-space:nowrap;}
 .admin-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--gold),var(--red2));color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-right:6px;}
 
 /* ══ SIDEBAR WIDGETS ══ */
@@ -1819,57 +1823,46 @@ input,textarea,select{font-size:16px !important;}
 <!-- ══ LIBRARY ══ -->
 <div class="page" id="page-library"><div class="wrap">
   <div class="page-header">
-    <div class="tag">📚 المكتبة العامة</div>
-    <h1>مكتبة المعلمين</h1>
-    <p>روابط ومصادر تعليمية مشتركة لجميع المعلمين</p>
+    <div class="tag">📚 المكتبة</div>
+    <h1>مكتبة المناهج</h1>
+    <p>محتوى المنهج المعتمد — مرتّب حسب الوحدات والدروس</p>
   </div>
-  <div id="library-admin-bar" style="display:none;margin-bottom:16px;gap:10px;align-items:center;flex-wrap:wrap;">
-    <button class="setup-btn primary" onclick="openLibraryModal()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span> إضافة مجلد جديد</button>
-    <span style="color:var(--gold);font-size:13px;font-weight:600">👑 أنت مشرف المكتبة</span>
-  </div>
-  <!-- فلاتر المشرف -->
-  <div id="library-admin-filters" style="display:none;margin-bottom:20px;">
-    <div class="library-filters">
-      <select id="lib-filter-grade" onchange="loadLibFilterSubjects()">
-        <option value="">🎓 جميع الصفوف</option>
-        <option value="1">الصف الأول</option>
-        <option value="2">الصف الثاني</option>
-        <option value="3">الصف الثالث</option>
-        <option value="4">الصف الرابع</option>
-        <option value="5">الصف الخامس</option>
-        <option value="6">الصف السادس</option>
-        <option value="7">الصف السابع</option>
-        <option value="8">الصف الثامن</option>
-        <option value="9">الصف التاسع</option>
-        <option value="10">الصف العاشر</option>
-        <option value="11">الصف الحادي عشر</option>
-        <option value="12">الصف الثاني عشر</option>
-      </select>
-      <select id="lib-filter-subject" onchange="renderLibrary()">
-        <option value="">📖 جميع المواد</option>
-      </select>
-      <select id="lib-filter-semester" onchange="renderLibrary()">
-        <option value="">📅 جميع الفصول</option>
-        <option value="1">الفصل الأول</option>
-        <option value="2">الفصل الثاني</option>
-      </select>
-    </div>
-  </div>
-  <!-- قائمة المجلدات -->
-  <div id="library-content"></div>
-</div></div>
 
-<!-- صفحة داخل المجلد -->
-<div class="page" id="page-library-folder"><div class="wrap">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-    <button class="arc-btn" onclick="closeLibraryFolder()" style="padding:8px 16px">← رجوع</button>
-    <div>
-      <div id="lib-folder-name" style="font-size:22px;font-weight:800;color:var(--text)"></div>
-      <div id="lib-folder-meta" style="font-size:12px;color:var(--muted)"></div>
-    </div>
-    <button id="lib-folder-add-btn" style="display:none;margin-right:auto" class="setup-btn primary" onclick="openFolderItemModal()">➕ إضافة محتوى</button>
+  <!-- شاشة 1: اختيار الصف -->
+  <div id="lib-view-grades">
+    <div class="arc-gs-title">اختر الصف</div>
+    <div class="arc-gs-grid" id="lib-grades-grid"></div>
   </div>
-  <div id="lib-folder-content"></div>
+
+  <!-- شاشة 2: اختيار المادة -->
+  <div id="lib-view-subjects" style="display:none">
+    <button class="arc-btn" onclick="libBackToGrades()" style="padding:8px 16px;margin-bottom:14px">← رجوع للصفوف</button>
+    <div class="arc-grade-banner" id="lib-subjects-banner"></div>
+    <div class="arc-gs-grid" id="lib-subjects-grid"></div>
+  </div>
+
+  <!-- شاشة 3: الوحدات والدروس -->
+  <div id="lib-view-units" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="arc-btn" onclick="libBackToSubjects()" style="padding:8px 16px">← رجوع للمواد</button>
+      <div id="lib-units-banner" style="font-size:16px;font-weight:800;color:var(--text)"></div>
+    </div>
+    <input class="arc-search" type="text" id="lib-units-search" placeholder="ابحث عن درس..." oninput="libFilterLessons(this.value)" style="margin-bottom:14px">
+    <div id="lib-units-list"></div>
+  </div>
+
+  <!-- شاشة 4: ملفات الدرس -->
+  <div id="lib-view-lesson" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="arc-btn" onclick="libBackToUnits()" style="padding:8px 16px">← رجوع للدروس</button>
+      <div style="flex:1;min-width:0">
+        <div id="lib-lesson-name" style="font-size:17px;font-weight:800;color:var(--text)"></div>
+        <div id="lib-lesson-unit" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <button id="lib-add-file-btn" class="setup-btn primary" style="display:none" onclick="openLibAddModal()">➕ إضافة ملف</button>
+    </div>
+    <div id="lib-lesson-files"></div>
+  </div>
 </div></div>
 
 <!-- ══ ANNOUNCEMENTS PAGE ══ -->
@@ -2358,127 +2351,49 @@ input,textarea,select{font-size:16px !important;}
   <iframe class="pdf-frame" id="pdf-frame" src=""></iframe>
 </div>
 
-<!-- Modal إضافة/تعديل رابط المكتبة -->
-<div class="modal-bg hidden" id="library-modal-bg">
+<!-- Modal إضافة ملف للمكتبة (مرتبط بالدرس المفتوح) -->
+<div class="modal-bg hidden" id="lib-add-modal-bg">
   <div class="modal">
-    <h3 id="lib-modal-title">➕ إضافة رابط جديد</h3>
+    <h3>➕ إضافة ملف للدرس</h3>
+    <div id="lib-add-context" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.7"></div>
 
-    <!-- خيار عام -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
-        <input type="checkbox" id="lib-is-general" onchange="toggleLibGeneralMode(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold)"/>
-        🌐 نشر عام — يظهر لجميع المعلمين
-      </label>
-    </div>
-
-    <!-- تفاصيل المادة والصف (تُخفى عند العام) -->
-    <div id="lib-specific-fields">
-      <label>الصف *</label>
-      <select id="lib-grade" onchange="loadLibModalSubjects(this.value)">
-        <option value="">اختر الصف</option>
-        <option value="1">الصف الأول</option>
-        <option value="2">الصف الثاني</option>
-        <option value="3">الصف الثالث</option>
-        <option value="4">الصف الرابع</option>
-        <option value="5">الصف الخامس</option>
-        <option value="6">الصف السادس</option>
-        <option value="7">الصف السابع</option>
-        <option value="8">الصف الثامن</option>
-        <option value="9">الصف التاسع</option>
-        <option value="10">الصف العاشر</option>
-        <option value="11">الصف الحادي عشر</option>
-        <option value="12">الصف الثاني عشر</option>
-      </select>
-      <label>المادة *</label>
-      <select id="lib-subject">
-        <option value="">اختر الصف أولاً</option>
-      </select>
-      <label>الفصل الدراسي</label>
-      <select id="lib-semester">
-        <option value="all">📅 كلا الفصلين</option>
-        <option value="1">الفصل الأول</option>
-        <option value="2">الفصل الثاني</option>
-      </select>
-    </div>
-
-    <label>العنوان *</label>
-    <input id="lib-title" type="text" placeholder="مثال: شرح الوحدة الأولى"/>
-
-    <!-- نوع المحتوى -->
     <label>نوع المحتوى *</label>
-    <select id="lib-type" onchange="toggleLibContentType(this.value)">
-      <option value="folder">📁 مجلد (تضيف بداخله لاحقاً)</option>
-      <option value="file">📄 ملف (رابط خارجي)</option>
-      <option value="pdf">📑 PDF (رفع من الجهاز)</option>
+    <select id="lib-add-ctype">
+      <option value="book">📘 كتاب وزاري معتمد</option>
+      <option value="exam">📝 اختبار سابق</option>
+      <option value="summary">📄 ملخص</option>
+      <option value="link">🔗 رابط / فيديو</option>
+    </select>
+
+    <label>طريقة الإضافة *</label>
+    <select id="lib-add-method" onchange="libToggleAddMethod(this.value)">
+      <option value="pdf">📑 رفع PDF (من الجهاز)</option>
+      <option value="link">🔗 رابط خارجي</option>
       <option value="youtube">🎬 فيديو يوتيوب</option>
     </select>
 
-    <!-- رابط خارجي -->
-    <div id="lib-url-field">
-      <label>الرابط *</label>
-      <input id="lib-url" type="text" placeholder="https://drive.google.com/..."/>
-    </div>
+    <label>العنوان (اختياري — يُستخدم اسم الملف إن تُرك فارغاً)</label>
+    <input id="lib-add-title" type="text" placeholder="عنوان الملف"/>
 
-    <!-- رفع PDF -->
-    <div id="lib-pdf-field" style="display:none">
+    <div id="lib-add-pdf-field">
       <label>اختر ملف PDF * (حد أقصى 50MB)</label>
-      <input id="lib-pdf-input" type="file" accept="application/pdf" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;"/>
-      <div id="lib-pdf-progress" style="display:none;margin-top:8px;">
+      <input id="lib-add-pdf" type="file" accept="application/pdf" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;"/>
+      <div id="lib-add-progress" style="display:none;margin-top:8px;">
         <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
-          <div id="lib-pdf-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
+          <div id="lib-add-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
         </div>
-        <div id="lib-pdf-pct" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">0%</div>
+        <div id="lib-add-pct" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">0%</div>
       </div>
     </div>
 
-    <!-- يوتيوب -->
-    <div id="lib-yt-field" style="display:none">
-      <label>رابط يوتيوب *</label>
-      <input id="lib-yt-url" type="text" placeholder="https://youtube.com/watch?v=..."/>
-    </div>
-
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeLibraryModal()">إلغاء</button>
-      <button class="modal-save" id="lib-save-btn" onclick="saveLibraryLink()">حفظ ✅</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal إضافة محتوى للمجلد -->
-<div class="modal-bg hidden" id="folder-item-modal-bg">
-  <div class="modal">
-    <h3>➕ إضافة محتوى للمجلد</h3>
-    <label id="fi-title-label">العنوان *</label>
-    <input id="fi-title" type="text" placeholder="عنوان المحتوى"/>
-    <label>نوع المحتوى *</label>
-    <select id="fi-type" onchange="toggleFolderItemType(this.value)">
-      <option value="file">📄 ملف (رابط خارجي)</option>
-      <option value="pdf">📑 PDF (رفع من الجهاز)</option>
-      <option value="youtube">🎬 فيديو يوتيوب</option>
-      <option value="link">🔗 رابط عام</option>
-    </select>
-    <div id="fi-url-field">
+    <div id="lib-add-url-field" style="display:none">
       <label>الرابط *</label>
-      <input id="fi-url" type="text" placeholder="https://..."/>
+      <input id="lib-add-url" type="text" placeholder="https://..."/>
     </div>
-    <div id="fi-pdf-field" style="display:none">
-      <label>اختر ملف PDF أو أكثر (حد أقصى 50MB لكل ملف)</label>
-      <input id="fi-pdf-input" type="file" accept="application/pdf" multiple style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;" onchange="onFiPdfFilesSelected()"/>
-      <div id="fi-pdf-hint" style="font-size:11px;color:var(--muted);margin-top:6px">💡 يمكنك اختيار عدة ملفات معاً — لو تركت العنوان فارغاً سيُستخدم اسم كل ملف تلقائياً</div>
-      <div id="fi-pdf-progress" style="display:none;margin-top:8px;">
-        <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
-          <div id="fi-pdf-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:99px;"></div>
-        </div>
-        <div id="fi-pdf-pct" style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">0%</div>
-      </div>
-    </div>
-    <div id="fi-yt-field" style="display:none">
-      <label>رابط يوتيوب *</label>
-      <input id="fi-yt-url" type="text" placeholder="https://youtube.com/watch?v=..."/>
-    </div>
+
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeFolderItemModal()">إلغاء</button>
-      <button class="modal-save" id="fi-save-btn" onclick="saveFolderItem()">حفظ ✅</button>
+      <button class="modal-cancel" onclick="closeLibAddModal()">إلغاء</button>
+      <button class="modal-save" id="lib-add-save" onclick="saveLibFile()">حفظ ✅</button>
     </div>
   </div>
 </div>
@@ -9555,419 +9470,275 @@ function isAdmin(){
   return email===ADMIN_EMAIL.toLowerCase();
 }
 
+// ══ المكتبة الجديدة: الصف ← المادة ← الوحدة ← الدرس ← الملفات ══
+let libState={grade:null,subject:null,semester:null,unit:null,lesson:null,lessonId:null};
+let libFilesByLesson={};   // lessonId -> [files]
+let _libSubjects=[];
+let _libUnits=[];          // [{name, lessons:[{name,unit,semester,lessonId}]}]
+let _libFileCards=[];
+
+function libEscAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function libGradeName(n){return 'الصف '+(arabicNums[n-1]||n);}
+
+function libShowView(v){
+  ['grades','subjects','units','lesson'].forEach(x=>{
+    const el=document.getElementById('lib-view-'+x);
+    if(el)el.style.display=(x===v)?'block':'none';
+  });
+}
+
 async function loadLibrary(){
+  libState={grade:null,subject:null,semester:null,unit:null,lesson:null,lessonId:null};
+  libFilesByLesson={};_libSubjects=[];_libUnits=[];_libFileCards=[];
+  libShowView('grades');
+  libRenderGrades();
+}
+
+function libRenderGrades(){
+  const grid=document.getElementById('lib-grades-grid');
+  if(!grid)return;
+  let grades=[];
+  if(isAdmin()){
+    grades=[5,6,7,8,9,10,11,12];
+  }else if(teacherConfig&&teacherConfig.grades){
+    grades=[...new Set(teacherConfig.grades.map(g=>Number(g.num||g.grade)))].filter(n=>n).sort((a,b)=>a-b);
+  }
+  if(!grades.length){grid.innerHTML='<div class="lib-empty">📭 لا توجد صفوف متاحة</div>';return;}
+  grid.innerHTML=grades.map(g=>`<div class="arc-gs-card" onclick="libOpenGrade(${g})"><div class="arc-gs-icon" style="font-size:34px">🎓</div><div class="arc-gs-name">${libGradeName(g)}</div></div>`).join('');
+}
+
+async function libOpenGrade(grade){
+  libState.grade=grade;libState.subject=null;
+  libShowView('subjects');
+  document.getElementById('lib-subjects-banner').textContent='🎓 '+libGradeName(grade);
+  const grid=document.getElementById('lib-subjects-grid');
+  grid.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
+  _libSubjects=[];
+  if(isAdmin()){
+    try{
+      const{data}=await sb.from('subjects').select('subject,sort').eq('grade',String(grade)).order('sort');
+      _libSubjects=[...new Set((data||[]).map(r=>r.subject))];
+      if(!_libSubjects.length){
+        const{data:c}=await sb.from('curriculum').select('subject').eq('grade',String(grade));
+        _libSubjects=[...new Set((c||[]).map(r=>r.subject))];
+      }
+    }catch(e){}
+  }else if(teacherConfig&&teacherConfig.grades){
+    _libSubjects=[...new Set(teacherConfig.grades.filter(g=>Number(g.num||g.grade)===grade).map(g=>g.subject))];
+  }
+  if(!_libSubjects.length){grid.innerHTML='<div class="lib-empty">📭 لا توجد مواد لهذا الصف</div>';return;}
+  grid.innerHTML=_libSubjects.map((s,i)=>`<div class="arc-gs-card" onclick="libOpenSubject(${i})"><div class="arc-gs-icon" style="font-size:34px">📖</div><div class="arc-gs-name">${escHtml(s)}</div></div>`).join('');
+}
+
+async function libBuildUnits(grade,subject){
+  if(!isAdmin()&&teacherConfig&&teacherConfig.grades){
+    const sem=teacherConfig.semester||'';
+    const entry=teacherConfig.grades.find(g=>Number(g.num||g.grade)===grade&&g.subject===subject);
+    if(entry&&entry.units){
+      return entry.units.map(u=>({name:u.name,lessons:(u.lessons||[]).map(l=>({name:l.name,lessonId:l.id,unit:u.name,semester:sem}))}));
+    }
+    return [];
+  }
+  // المشرف: من جدول المنهج (كلا الفصلين)
+  try{
+    const{data}=await sb.from('curriculum').select('subject,grade,semester,unit,lesson,sort').eq('grade',String(grade)).eq('subject',subject);
+    const rows=(data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+    const map={};const order=[];
+    rows.forEach(r=>{
+      if(!map[r.unit]){map[r.unit]=[];order.push(r.unit);}
+      map[r.unit].push({name:r.lesson,unit:r.unit,semester:r.semester,lessonId:stableLessonId(r.semester,subject,r.grade,r.unit,r.lesson)});
+    });
+    return order.map(u=>({name:u,lessons:map[u]}));
+  }catch(e){return [];}
+}
+
+async function libLoadFiles(grade,subject){
+  libFilesByLesson={};
   if(!sb)return;
   try{
-    const{data,error}=await sb.from('library_links').select('*').order('created_at',{ascending:false});
-    if(error){console.error('خطأ تحميل المكتبة:',error);return;}
-    libraryLinks=data||[];
-    renderLibrary();
-  }catch(e){console.error('خطأ:',e);}
+    const{data,error}=await sb.from('library_files').select('*').eq('grade',String(grade)).eq('subject',subject).order('created_at');
+    if(error)return;
+    (data||[]).forEach(f=>{
+      const k=f.lesson_id||'';
+      if(!libFilesByLesson[k])libFilesByLesson[k]=[];
+      libFilesByLesson[k].push(f);
+    });
+  }catch(e){}
 }
 
-function renderLibrary(){
-  _libLinkCardsIndex=[];
-  const content=document.getElementById('library-content');
-  const adminBar=document.getElementById('library-admin-bar');
-  const adminFilters=document.getElementById('library-admin-filters');
-  if(!content)return;
-  const admin=isAdmin();
-  if(adminBar)adminBar.style.display=admin?'flex':'none';
-  if(adminFilters)adminFilters.style.display=admin?'block':'none';
-
-  let filtered=libraryLinks;
-  if(admin){
-    // المشرف يفلتر يدوياً
-    const fSub=document.getElementById('lib-filter-subject')?.value||'';
-    const fGrd=document.getElementById('lib-filter-grade')?.value||'';
-    const fSem=document.getElementById('lib-filter-semester')?.value||'';
-    if(fSub)filtered=filtered.filter(l=>l.subject===fSub);
-    if(fGrd)filtered=filtered.filter(l=>String(l.grade)===fGrd);
-    if(fSem)filtered=filtered.filter(l=>l.semester===fSem||l.semester==='all');
-  } else if(teacherConfig){
-    const tGrades=(teacherConfig.grades||[]).map(g=>String(g.num||g.grade));
-    const tSubjects=(teacherConfig.grades||[]).map(g=>g.subject);
-    const tSemRaw=String(teacherConfig.semester||'');
-    // توحيد تنسيق الفصل: المكتبة تخزّن '1'/'2'، بينما إعداد المعلم يخزّن النص الكامل
-    const tSemNum=tSemRaw.includes('الثاني')?'2':(tSemRaw.includes('الأول')?'1':'');
-    filtered=libraryLinks.filter(l=>{
-      if(l.is_general)return true;
-      const gradeMatch=!l.grade||tGrades.includes(String(l.grade));
-      const subjectMatch=!l.subject||tSubjects.includes(l.subject);
-      const lSem=String(l.semester||'');
-      const semMatch=!lSem||lSem==='all'||lSem===tSemRaw||lSem===tSemNum;
-      return gradeMatch&&subjectMatch&&semMatch;
-    });
-  }
-
-  if(!filtered.length){
-    content.innerHTML='<div class="lib-empty">📭 لا توجد روابط حالياً<br><small>'+(admin?'اضغط على "إضافة رابط" لبدء المشاركة':'سيتم إضافة المحتوى قريباً')+'</small></div>';
-    return;
-  }
-
-  const general=filtered.filter(l=>l.is_general);
-  const specific=filtered.filter(l=>!l.is_general);
-  let html='';
-
-  if(general.length){
-    html+=`<div class="lib-section"><div class="lib-section-title">🌐 عام — لجميع المعلمين</div><div class="lib-links-grid">`;
-    general.forEach(link=>{html+=libLinkCard(link);});
-    html+=`</div></div>`;
-  }
-
-  if(specific.length){
-    const grouped={};
-    specific.forEach(l=>{
-      const key=l.subject||'أخرى';
-      if(!grouped[key])grouped[key]={};
-      const gKey=l.grade?`الصف ${l.grade}`:'عام';
-      if(!grouped[key][gKey])grouped[key][gKey]=[];
-      grouped[key][gKey].push(l);
-    });
-    Object.keys(grouped).forEach(subject=>{
-      html+=`<div class="lib-section"><div class="lib-section-title">📖 ${subject}</div>`;
-      Object.keys(grouped[subject]).forEach(grade=>{
-        html+=`<div class="lib-grade-group"><div class="lib-grade-label">🎓 ${grade}</div><div class="lib-links-grid">`;
-        grouped[subject][grade].forEach(link=>{html+=libLinkCard(link);});
-        html+=`</div></div>`;
-      });
-      html+=`</div>`;
-    });
-  }
-  content.innerHTML=html;
+async function libOpenSubject(idx){
+  const subject=_libSubjects[idx];
+  if(subject==null)return;
+  libState.subject=subject;
+  libShowView('units');
+  document.getElementById('lib-units-banner').textContent='📖 '+subject+' — '+libGradeName(libState.grade);
+  const list=document.getElementById('lib-units-list');
+  list.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
+  const su=document.getElementById('lib-units-search');if(su)su.value='';
+  _libUnits=await libBuildUnits(libState.grade,subject);
+  await libLoadFiles(libState.grade,subject);
+  libRenderUnits();
 }
 
-let _libLinkCardsIndex=[];
-function libLinkCard(link){
-  const icons={folder:'📁',file:'📄',pdf:'📑',youtube:'🎬'};
-  const icon=icons[link.type]||'📄';
-  const semLabel=link.semester==='1'?'ف١':link.semester==='2'?'ف٢':'';
-  const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibraryLink(${link.id})" title="حذف">✕</button>`:'';
-  // عرض thumbnail يوتيوب
-  let ytThumb='';
-  if(link.type==='youtube'){
-    const ytId=extractYoutubeId(link.url);
-    if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
-  }
-  const typeLabel={folder:'مجلد',file:'ملف',pdf:'PDF',youtube:'يوتيوب'}[link.type]||'ملف';
-  const meta=link.subject?(link.subject+(semLabel?' • '+semLabel:'')):semLabel||'';
-  // فهرسة آمنة بدل تضمين الرابط/العنوان مباشرة في onclick (يتفادى كسر الكود مع أحرف خاصة في الروابط/العناوين)
-  const idx=_libLinkCardsIndex.length;
-  _libLinkCardsIndex.push(link);
-  const onClick=`handleLibCardClick(${idx})`;
-  const bodyHtml=`
-      <div class="lib-link-icon">${icon}</div>
-      <div class="lib-link-info">
-        <div class="lib-link-title">${escHtml(link.title)}</div>
-        <div class="lib-link-meta">${typeLabel}${meta?' • '+escHtml(meta):''} • اضغط للفتح</div>
-      </div>${delBtn}`;
-  if(ytThumb){
-    return `<div class="lib-link-card has-thumb" onclick="${onClick}">${ytThumb}<div class="lib-link-body">${bodyHtml}</div></div>`;
-  }
-  return `<div class="lib-link-card" onclick="${onClick}">${bodyHtml}</div>`;
+function libRenderUnits(){
+  const list=document.getElementById('lib-units-list');
+  if(!_libUnits.length){list.innerHTML='<div class="lib-empty">📭 لا توجد وحدات لهذه المادة</div>';return;}
+  list.innerHTML=_libUnits.map((u,ui)=>{
+    const lessons=u.lessons.map(l=>{
+      const cnt=(libFilesByLesson[l.lessonId]||[]).length;
+      return `<div class="lib-lesson-row" data-name="${libEscAttr(l.name)}" onclick="libOpenLesson('${l.lessonId}')">
+        <span class="lib-lesson-name">${escHtml(l.name)}</span>
+        <span class="lib-lesson-count">📎 ${cnt}</span>
+      </div>`;
+    }).join('');
+    return `<div class="section collapsed" id="lib-sec-${ui}">
+      <div class="sec-head" style="cursor:pointer" onclick="document.getElementById('lib-sec-${ui}').classList.toggle('collapsed')">
+        <div class="sec-icon" style="background:rgba(192,57,43,.12)">📚</div>
+        <div style="flex:1"><div class="sec-title">${escHtml(u.name)}</div><div class="sec-sub">${u.lessons.length} درس</div></div>
+        <div class="unit-arrow">▼</div>
+      </div>
+      <div class="lessons" style="gap:6px">${lessons}</div>
+    </div>`;
+  }).join('');
 }
-function handleLibCardClick(idx){
-  const link=_libLinkCardsIndex[idx];
-  if(!link)return;
-  if(link.type==='folder')openLibraryFolder(link.id,link.title,(link.subject||'')+(link.semester==='1'?' • ف١':link.semester==='2'?' • ف٢':''));
-  else openLibraryItem(link.type,link.url||'');
+
+function libFilterLessons(q){
+  q=(q||'').trim();
+  document.querySelectorAll('#lib-units-list .lib-lesson-row').forEach(row=>{
+    const name=row.getAttribute('data-name')||'';
+    row.style.display=(!q||smartNameMatch(name,q))?'':'none';
+  });
+}
+
+function libOpenLesson(lessonId){
+  let meta=null;
+  for(const u of _libUnits){const f=u.lessons.find(l=>l.lessonId===lessonId);if(f){meta=f;break;}}
+  if(!meta)return;
+  libState.unit=meta.unit;libState.lesson=meta.name;libState.lessonId=lessonId;libState.semester=meta.semester;
+  libShowView('lesson');
+  document.getElementById('lib-lesson-name').textContent='📖 '+meta.name;
+  document.getElementById('lib-lesson-unit').textContent=meta.unit;
+  document.getElementById('lib-add-file-btn').style.display=isAdmin()?'block':'none';
+  libRenderLessonFiles();
+}
+
+function libRenderLessonFiles(){
+  const box=document.getElementById('lib-lesson-files');
+  _libFileCards=[];
+  const files=libFilesByLesson[libState.lessonId]||[];
+  if(!files.length){box.innerHTML='<div class="lib-empty">📭 لا توجد ملفات لهذا الدرس بعد'+(isAdmin()?'<br><small>اضغط «إضافة ملف» لإضافة محتوى</small>':'')+'</div>';return;}
+  const ctIcons={book:'📘',exam:'📝',summary:'📄',link:'🔗'};
+  const ctLabels={book:'كتاب معتمد',exam:'اختبار سابق',summary:'ملخص',link:'رابط'};
+  let html='<div class="lib-links-grid">';
+  files.forEach(f=>{
+    const icon=ctIcons[f.content_type]||'📄';
+    const label=ctLabels[f.content_type]||'ملف';
+    const del=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibFile(${f.id})" title="حذف">✕</button>`:'';
+    let thumb='';
+    if(f.file_type==='youtube'){const yt=extractYoutubeId(f.url||'');if(yt)thumb=`<img src="https://img.youtube.com/vi/${yt}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;}
+    const idx=_libFileCards.length;_libFileCards.push(f);
+    const body=`<div class="lib-link-icon">${icon}</div><div class="lib-link-info"><div class="lib-link-title">${escHtml(f.title||'ملف')}</div><div class="lib-link-meta">${label} • اضغط للفتح</div></div>${del}`;
+    if(thumb)html+=`<div class="lib-link-card has-thumb" onclick="libOpenFile(${idx})">${thumb}<div class="lib-link-body">${body}</div></div>`;
+    else html+=`<div class="lib-link-card" onclick="libOpenFile(${idx})">${body}</div>`;
+  });
+  html+='</div>';
+  box.innerHTML=html;
+}
+
+function libOpenFile(idx){
+  const f=_libFileCards[idx];if(!f)return;
+  if(f.file_type==='pdf'&&(f.url||'').includes('supabase'))openPdf(f.url,(f.title||(f.url||'').split('/').pop()));
+  else window.open(f.url,'_blank','noopener');
 }
 
 function extractYoutubeId(url){
-  const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  const m=(url||'').match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
   return m?m[1]:null;
 }
 
-function openLibraryItem(type,url){
-  if(type==='pdf'&&url.includes('supabase')){openPdf(url,url.split('/').pop());}
-  else{window.open(url,'_blank');}
+function libBackToGrades(){libShowView('grades');}
+function libBackToSubjects(){libShowView('subjects');}
+function libBackToUnits(){libShowView('units');}
+
+// ── إضافة ملف (المشرف) — مرتبط بالدرس المفتوح ──
+function openLibAddModal(){
+  if(!isAdmin()){toast('فقط المشرف يمكنه الإضافة',true);return;}
+  if(!libState.lessonId){toast('افتح درساً أولاً',true);return;}
+  document.getElementById('lib-add-context').textContent=`${libGradeName(libState.grade)} • ${libState.subject} • ${libState.unit} • ${libState.lesson}`;
+  document.getElementById('lib-add-ctype').value='book';
+  document.getElementById('lib-add-method').value='pdf';
+  document.getElementById('lib-add-title').value='';
+  document.getElementById('lib-add-url').value='';
+  document.getElementById('lib-add-pdf').value='';
+  document.getElementById('lib-add-progress').style.display='none';
+  libToggleAddMethod('pdf');
+  document.getElementById('lib-add-modal-bg').classList.remove('hidden');
+}
+function closeLibAddModal(){document.getElementById('lib-add-modal-bg').classList.add('hidden');}
+function libToggleAddMethod(m){
+  document.getElementById('lib-add-pdf-field').style.display=(m==='pdf')?'block':'none';
+  document.getElementById('lib-add-url-field').style.display=(m==='pdf')?'none':'block';
 }
 
-async function loadLibFilterSubjects(){
-  const grade=document.getElementById('lib-filter-grade').value;
-  const subSelect=document.getElementById('lib-filter-subject');
-  subSelect.innerHTML='<option value="">📖 جميع المواد</option>';
-  if(grade&&sb){
-    const{data}=await sb.from('subjects').select('subject').eq('grade',grade).order('sort');
-    if(data){const unique=[...new Set(data.map(r=>r.subject))];unique.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSelect.appendChild(o);});}
-  }
-  renderLibrary();
-}
-
-async function loadLibModalSubjects(grade){
-  const subSelect=document.getElementById('lib-subject');
-  subSelect.innerHTML='<option value="">اختر المادة</option>';
-  if(grade&&sb){
-    const{data}=await sb.from('subjects').select('subject').eq('grade',grade).order('sort');
-    if(data){const unique=[...new Set(data.map(r=>r.subject))];unique.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSelect.appendChild(o);});}
-  }
-}
-
-function toggleLibGeneralMode(isGeneral){
-  document.getElementById('lib-specific-fields').style.display=isGeneral?'none':'block';
-}
-
-function toggleLibContentType(type){
-  // المجلد لا يحتاج رابطاً (تُضاف الروابط بداخله لاحقاً)
-  document.getElementById('lib-url-field').style.display=(type==='file')?'block':'none';
-  document.getElementById('lib-pdf-field').style.display=type==='pdf'?'block':'none';
-  document.getElementById('lib-yt-field').style.display=type==='youtube'?'block':'none';
-}
-
-function openLibraryModal(){
-  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
-  editingLinkId=null;
-  document.getElementById('lib-modal-title').textContent='➕ إضافة رابط جديد';
-  document.getElementById('lib-subject').value='';
-  document.getElementById('lib-grade').value='';
-  document.getElementById('lib-semester').value='all';
-  document.getElementById('lib-title').value='';
-  document.getElementById('lib-url').value='';
-  document.getElementById('lib-yt-url').value='';
-  document.getElementById('lib-pdf-input').value='';
-  document.getElementById('lib-type').value='folder';
-  document.getElementById('lib-is-general').checked=false;
-  document.getElementById('lib-specific-fields').style.display='block';
-  document.getElementById('lib-pdf-progress').style.display='none';
-  toggleLibContentType('folder');
-  document.getElementById('library-modal-bg').classList.remove('hidden');
-}
-
-function closeLibraryModal(){
-  document.getElementById('library-modal-bg').classList.add('hidden');
-  editingLinkId=null;
-}
-
-async function saveLibraryLink(){
-  if(!isAdmin()){toast('فقط المشرف يمكنه إضافة الروابط',true);return;}
-  const isGeneral=document.getElementById('lib-is-general').checked;
-  const subject=isGeneral?null:document.getElementById('lib-subject').value;
-  const grade=isGeneral?null:document.getElementById('lib-grade').value;
-  const semester=isGeneral?null:document.getElementById('lib-semester').value;
-  const title=document.getElementById('lib-title').value.trim();
-  const lnkType=document.getElementById('lib-type').value;
-  if(!title){toast('يرجى إدخال العنوان',true);return;}
-  if(!isGeneral&&(!subject||!grade)){toast('يرجى تحديد المادة والصف',true);return;}
-  let url='';
-  // المجلد لا يحتاج رابطاً (تُضاف الروابط بداخله)
-  if(lnkType==='folder'){
-    url='';
-  } else if(lnkType==='pdf'){
-    const file=document.getElementById('lib-pdf-input').files[0];
-    if(!file){toast('يرجى اختيار ملف PDF',true);return;}
-    if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB',true);return;}
-    const btn=document.getElementById('lib-save-btn');
-    btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
-    document.getElementById('lib-pdf-progress').style.display='block';
+async function saveLibFile(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  if(!libState.lessonId){toast('افتح درساً أولاً',true);return;}
+  const ctype=document.getElementById('lib-add-ctype').value;
+  const method=document.getElementById('lib-add-method').value;
+  let title=document.getElementById('lib-add-title').value.trim();
+  let url='';let fileType=method;
+  if(method==='pdf'){
+    const file=document.getElementById('lib-add-pdf').files[0];
+    if(!file){toast('اختر ملف PDF',true);return;}
+    if(file.size>50*1024*1024){toast('الحد الأقصى 50MB',true);return;}
+    if(!title)title=file.name.replace(/\.pdf$/i,'');
+    const btn=document.getElementById('lib-add-save');btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
+    document.getElementById('lib-add-progress').style.display='block';
     try{
       const path=`${Date.now()}_${Math.random().toString(36).slice(2,9)}.pdf`;
-      const{data,error}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false,onUploadProgress:(p)=>{const pct=Math.round(p.loaded/p.total*100);document.getElementById('lib-pdf-bar').style.width=pct+'%';document.getElementById('lib-pdf-pct').textContent=pct+'%';}});
-      if(error){toast('فشل رفع الملف: '+error.message,true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
+      const{error}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false,onUploadProgress:(p)=>{const pct=Math.round(p.loaded/p.total*100);document.getElementById('lib-add-bar').style.width=pct+'%';document.getElementById('lib-add-pct').textContent=pct+'%';}});
+      if(error){toast('فشل الرفع: '+error.message,true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
       const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
-      url=pub.publicUrl;
-    }catch(e){toast('حدث خطأ أثناء الرفع',true);document.getElementById('lib-save-btn').disabled=false;document.getElementById('lib-save-btn').textContent='حفظ ✅';return;}
-  } else if(lnkType==='youtube'){
-    url=document.getElementById('lib-yt-url').value.trim();
+      url=pub.publicUrl;fileType='pdf';
+    }catch(e){toast('خطأ أثناء الرفع',true);const b=document.getElementById('lib-add-save');b.disabled=false;b.textContent='حفظ ✅';return;}
+  }else if(method==='youtube'){
+    url=document.getElementById('lib-add-url').value.trim();
     if(!url||!url.includes('youtu')){toast('رابط يوتيوب غير صحيح',true);return;}
-  } else {
-    url=document.getElementById('lib-url').value.trim();
+    if(!title)title='فيديو';
+    fileType='youtube';
+  }else{
+    url=document.getElementById('lib-add-url').value.trim();
     if(!url||!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
+    if(!title)title='رابط';
+    fileType='link';
   }
   try{
-    const{error}=await sb.from('library_links').insert({subject,grade,semester,title,url,type:lnkType,is_general:isGeneral,created_by:currentUser.email});
-    if(error){toast('فشل الحفظ: '+error.message,true);return;}
-    toast('تم الإضافة بنجاح','ok');
-    closeLibraryModal();
-    loadLibrary();
+    const{error}=await sb.from('library_files').insert({
+      grade:String(libState.grade),subject:libState.subject,semester:libState.semester||'',
+      unit:libState.unit,lesson:libState.lesson,lesson_id:libState.lessonId,
+      content_type:ctype,title,url,file_type:fileType,created_by:(currentUser&&currentUser.email)||''
+    });
+    if(error){toast('فشل الحفظ: '+error.message,true);}
+    else{
+      toast('تمت الإضافة','ok');
+      closeLibAddModal();
+      await libLoadFiles(libState.grade,libState.subject);
+      libRenderLessonFiles();
+    }
   }catch(e){toast('حدث خطأ',true);}
-  finally{const btn=document.getElementById('lib-save-btn');if(btn){btn.disabled=false;btn.textContent='حفظ ✅';}}
+  finally{const b=document.getElementById('lib-add-save');if(b){b.disabled=false;b.textContent='حفظ ✅';}}
 }
 
-async function deleteLibraryLink(id){
-  if(!isAdmin()){toast('فقط المشرف يمكنه الحذف',true);return;}
-  if(!confirm('هل أنت متأكد من حذف هذا الرابط؟'))return;
+async function deleteLibFile(id){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  if(!confirm('حذف هذا الملف؟'))return;
   try{
-    const{error}=await sb.from('library_links').delete().eq('id',id);
+    const{error}=await sb.from('library_files').delete().eq('id',id);
     if(error){toast('فشل الحذف',true);return;}
     toast('تم الحذف','ok');
-    loadLibrary();
-  }catch(e){toast('حدث خطأ',true);}
-}
-
-// ══ LIBRARY FOLDER ════════════════════════════════════
-let currentFolderId=null;
-
-async function openLibraryFolder(folderId,folderTitle,folderMeta){
-  currentFolderId=folderId;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-library-folder').classList.add('active');
-  document.getElementById('lib-folder-name').textContent='📁 '+folderTitle;
-  document.getElementById('lib-folder-meta').textContent=folderMeta||'';
-  document.getElementById('lib-folder-add-btn').style.display=isAdmin()?'block':'none';
-  await loadFolderItems(folderId);
-}
-
-function closeLibraryFolder(){
-  currentFolderId=null;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-library').classList.add('active');
-}
-
-async function loadFolderItems(folderId){
-  const content=document.getElementById('lib-folder-content');
-  content.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">⏳ جاري التحميل...</div>';
-  const{data,error}=await sb.from('library_items').select('*').eq('folder_id',folderId).order('created_at');
-  if(error){content.innerHTML='<div style="text-align:center;color:var(--red)">❌ حدث خطأ</div>';return;}
-  if(!data||!data.length){
-    content.innerHTML='<div class="lib-empty">📭 لا يوجد محتوى في هذا المجلد بعد'+(isAdmin()?'<br><small>اضغط على "إضافة محتوى" لإضافة روابط وملفات</small>':'')+'</div>';
-    return;
-  }
-  _libLinkCardsIndex=[];
-  let html='<div class="lib-links-grid">';
-  data.forEach(item=>{
-    const icons={file:'📄',pdf:'📑',youtube:'🎬',link:'🔗'};
-    const icon=icons[item.type]||'📄';
-    const delBtn=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteFolderItem(${item.id})" title="حذف">✕</button>`:'';
-    let ytThumb='';
-    if(item.type==='youtube'){
-      const ytId=extractYoutubeId(item.url);
-      if(ytId)ytThumb=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;height:80px;" loading="lazy"/>`;
-    }
-    const typeLabel={file:'ملف',pdf:'PDF',youtube:'يوتيوب',link:'رابط'}[item.type]||'ملف';
-    const idx=_libLinkCardsIndex.length;
-    _libLinkCardsIndex.push(item);
-    const bodyHtml=`
-      <div class="lib-link-icon">${icon}</div>
-      <div class="lib-link-info">
-        <div class="lib-link-title">${escHtml(item.title)}</div>
-        <div class="lib-link-meta">${typeLabel} • اضغط للفتح</div>
-      </div>${delBtn}`;
-    if(ytThumb){
-      html+=`<div class="lib-link-card has-thumb" onclick="handleLibCardClick(${idx})">${ytThumb}<div class="lib-link-body">${bodyHtml}</div></div>`;
-    }else{
-      html+=`<div class="lib-link-card" onclick="handleLibCardClick(${idx})">${bodyHtml}</div>`;
-    }
-  });
-  html+='</div>';
-  content.innerHTML=html;
-}
-
-function openFolderItemModal(){
-  document.getElementById('fi-title').value='';
-  document.getElementById('fi-type').value='file';
-  document.getElementById('fi-url').value='';
-  document.getElementById('fi-yt-url').value='';
-  document.getElementById('fi-pdf-input').value='';
-  document.getElementById('fi-pdf-progress').style.display='none';
-  toggleFolderItemType('file');
-  document.getElementById('folder-item-modal-bg').classList.remove('hidden');
-}
-
-function closeFolderItemModal(){
-  document.getElementById('folder-item-modal-bg').classList.add('hidden');
-}
-
-function toggleFolderItemType(type){
-  document.getElementById('fi-url-field').style.display=(type==='file'||type==='link')?'block':'none';
-  document.getElementById('fi-pdf-field').style.display=type==='pdf'?'block':'none';
-  document.getElementById('fi-yt-field').style.display=type==='youtube'?'block':'none';
-  const titleLabel=document.getElementById('fi-title-label');
-  const titleInput=document.getElementById('fi-title');
-  if(type==='pdf'){
-    titleLabel.textContent='العنوان (اختياري — سيُستخدم اسم الملف تلقائياً إن تُرك فارغاً)';
-    titleInput.placeholder='اتركه فارغاً لاستخدام اسم الملف';
-  }else{
-    titleLabel.textContent='العنوان *';
-    titleInput.placeholder='عنوان المحتوى';
-  }
-}
-// عند اختيار ملفات PDF: لو ملف واحد فقط، اقترح اسمه كعنوان تلقائياً (قابل للتعديل)
-function onFiPdfFilesSelected(){
-  const files=document.getElementById('fi-pdf-input').files;
-  const hint=document.getElementById('fi-pdf-hint');
-  if(files.length>1){
-    hint.textContent=`✅ تم اختيار ${files.length} ملفات — سيُستخدم اسم كل ملف كعنوان له تلقائياً`;
-  }else if(files.length===1){
-    hint.textContent='💡 لو تركت العنوان فارغاً سيُستخدم اسم الملف تلقائياً';
-    const titleInput=document.getElementById('fi-title');
-    if(!titleInput.value.trim()){
-      titleInput.value=files[0].name.replace(/\.pdf$/i,'');
-    }
-  }
-}
-function stripExt(name){return name.replace(/\.pdf$/i,'');}
-
-async function saveFolderItem(){
-  const titleInput=document.getElementById('fi-title').value.trim();
-  const type=document.getElementById('fi-type').value;
-
-  if(type==='pdf'){
-    const files=[...document.getElementById('fi-pdf-input').files];
-    if(!files.length){toast('يرجى اختيار ملف PDF واحد على الأقل',true);return;}
-    for(const f of files){
-      if(f.size>50*1024*1024){toast(`الملف "${f.name}" أكبر من 50MB`,true);return;}
-    }
-    const btn=document.getElementById('fi-save-btn');
-    btn.disabled=true;
-    document.getElementById('fi-pdf-progress').style.display='block';
-    let okCount=0;
-    let failedFiles=[];
-    for(let i=0;i<files.length;i++){
-      const file=files[i];
-      btn.textContent=`⏳ جاري الرفع (${i+1}/${files.length})...`;
-      const itemTitle=files.length===1&&titleInput?titleInput:stripExt(file.name);
-      const path=`${Date.now()}_${i}_${Math.random().toString(36).slice(2,9)}.pdf`;
-      let lastErrMsg='';
-      let success=false;
-      // محاولتان لكل ملف (مرة، وإعادة محاولة واحدة عند الفشل — يفيد مع تذبذب الشبكة)
-      for(let attempt=0;attempt<2&&!success;attempt++){
-        try{
-          const{error:upErr}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false});
-          if(upErr){lastErrMsg=upErr.message||'خطأ غير معروف';continue;}
-          const pct=Math.round(((i+1)/files.length)*100);
-          document.getElementById('fi-pdf-bar').style.width=pct+'%';
-          document.getElementById('fi-pdf-pct').textContent=pct+'%';
-          const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
-          const{error:insErr}=await sb.from('library_items').insert({folder_id:currentFolderId,title:itemTitle,url:pub.publicUrl,type:'pdf'});
-          if(insErr){lastErrMsg=insErr.message||'فشل حفظ السجل';continue;}
-          success=true;okCount++;
-        }catch(e){lastErrMsg=e.message||'خطأ غير متوقع';}
-      }
-      if(!success)failedFiles.push({name:file.name,err:lastErrMsg});
-    }
-    btn.disabled=false;btn.textContent='حفظ ✅';
-    if(okCount&&!failedFiles.length){
-      toast(`✅ تمت إضافة ${okCount} من ${files.length} ملف`,'ok');
-      closeFolderItemModal();loadFolderItems(currentFolderId);
-    }else if(okCount&&failedFiles.length){
-      toast(`✅ نجح ${okCount} وفشل ${failedFiles.length} — السبب: ${failedFiles[0].err}`,true);
-      loadFolderItems(currentFolderId);
-    }else{
-      toast(`❌ فشل الرفع بالكامل — السبب: ${failedFiles[0]?.err||'غير معروف'}`,true);
-    }
-    return;
-  }
-
-  // أنواع أخرى (رابط/يوتيوب) — العنوان لا يزال إلزامياً
-  if(!titleInput){toast('يرجى إدخال العنوان',true);return;}
-  let url='';
-  if(type==='youtube'){
-    url=document.getElementById('fi-yt-url').value.trim();
-    if(!url||!url.includes('youtu')){toast('رابط يوتيوب غير صحيح',true);return;}
-  } else {
-    url=document.getElementById('fi-url').value.trim();
-    if(!url||!url.startsWith('http')){toast('الرابط غير صحيح',true);return;}
-  }
-  const{error}=await sb.from('library_items').insert({folder_id:currentFolderId,title:titleInput,url,type});
-  if(error){toast('فشل الحفظ: '+error.message,true);}
-  else{toast('تمت الإضافة','ok');closeFolderItemModal();loadFolderItems(currentFolderId);}
-}
-
-async function deleteFolderItem(id){
-  if(!confirm('حذف هذا المحتوى؟'))return;
-  const{error}=await sb.from('library_items').delete().eq('id',id);
-  if(error){toast('فشل الحذف',true);}
-  else{toast('تم الحذف','ok');loadFolderItems(currentFolderId);}
+    await libLoadFiles(libState.grade,libState.subject);
+    libRenderLessonFiles();
+  }catch(e){}
 }
 let currentMonth=new Date().getMonth();
 let currentYear=new Date().getFullYear();
