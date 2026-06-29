@@ -1980,6 +1980,19 @@ input,textarea,select{font-size:16px !important;}
       <button type="button" class="egt-btn" title="قائمة مرقّمة" onmousedown="egCmd(event,'insertOrderedList')">١.</button>
       <button type="button" class="egt-btn" title="خط فاصل" onmousedown="egCmd(event,'insertHorizontalRule')">―</button>
       <span class="egt-sep"></span>
+      <button type="button" class="egt-btn" title="إدراج جدول" onmousedown="egSaveSel()" onclick="egInsertTable()">▦</button>
+      <select class="egt-sel" title="إدراج شكل هندسي" onmousedown="egSaveSel()" onchange="egInsertShape(this.value);this.value=''">
+        <option value="">⬠ شكل</option>
+        <option value="square">■ مربع</option>
+        <option value="rect">▬ مستطيل</option>
+        <option value="circle">● دائرة</option>
+        <option value="triangle">▲ مثلث</option>
+        <option value="right">◣ مثلث قائم</option>
+        <option value="line">／ خط مستقيم</option>
+        <option value="arrow">→ سهم</option>
+        <option value="angle">∠ زاوية</option>
+      </select>
+      <span class="egt-sep"></span>
       <label class="egt-btn" title="إدراج صورة">🖼️<input type="file" accept="image/*" onchange="egInsertImage(this)" style="display:none"></label>
       <button type="button" class="egt-btn" title="مسح التنسيق" onmousedown="egCmd(event,'removeFormat')">🧹</button>
     </div>
@@ -10096,6 +10109,29 @@ function egCmd(ev,cmd,val){if(ev){ev.preventDefault();}document.getElementById('
 function egFontSize(v){if(!v)return;egRestoreSel();try{document.execCommand('fontSize',false,v);}catch(e){}}
 function egColor(c){egRestoreSel();try{document.execCommand('foreColor',false,c);}catch(e){}}
 function egHilite(c){egRestoreSel();try{document.execCommand('hiliteColor',false,c)||document.execCommand('backColor',false,c);}catch(e){}}
+function egInsertHTML(html){egRestoreSel();document.getElementById('eg-result').focus();try{document.execCommand('insertHTML',false,html);}catch(e){}}
+function egInsertTable(){
+  const r=parseInt(prompt('عدد الصفوف:','3'));if(!r||r<1||r>20)return;
+  const c=parseInt(prompt('عدد الأعمدة:','3'));if(!c||c<1||c>12)return;
+  let t='<table style="border-collapse:collapse;width:100%;margin:10px 0" border="1"><tbody>';
+  for(let i=0;i<r;i++){t+='<tr>';for(let j=0;j<c;j++)t+='<td style="border:1px solid #333;padding:6px 8px;min-width:40px;height:26px">&nbsp;</td>';t+='</tr>';}
+  t+='</tbody></table><p>&nbsp;</p>';
+  egInsertHTML(t);
+}
+function egInsertShape(type){
+  if(!type)return;
+  const S='stroke="#111" fill="none" stroke-width="2"';
+  let svg='';
+  if(type==='square')svg='<svg width="70" height="70"><rect x="5" y="5" width="60" height="60" '+S+'/></svg>';
+  else if(type==='rect')svg='<svg width="120" height="64"><rect x="5" y="5" width="110" height="54" '+S+'/></svg>';
+  else if(type==='circle')svg='<svg width="74" height="74"><circle cx="37" cy="37" r="32" '+S+'/></svg>';
+  else if(type==='triangle')svg='<svg width="80" height="72"><polygon points="40,6 74,66 6,66" '+S+'/></svg>';
+  else if(type==='right')svg='<svg width="80" height="72"><polygon points="8,6 8,66 74,66" '+S+'/></svg>';
+  else if(type==='line')svg='<svg width="120" height="24"><line x1="6" y1="12" x2="114" y2="12" '+S+'/></svg>';
+  else if(type==='arrow')svg='<svg width="120" height="24"><line x1="114" y1="12" x2="10" y2="12" '+S+'/><polyline points="22,5 8,12 22,19" '+S+'/></svg>';
+  else if(type==='angle')svg='<svg width="90" height="74"><polyline points="80,66 8,66 78,10" '+S+'/></svg>';
+  if(svg)egInsertHTML('<span style="display:inline-block;margin:4px 8px;vertical-align:middle">'+svg+'</span>');
+}
 function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('الملف ليس صورة',true);return;}if(f.size>3*1024*1024){toast('حجم الصورة كبير (الحد ٣ ميجابايت)',true);input.value='';return;}const rd=new FileReader();rd.onload=e=>{document.getElementById('eg-result').focus();try{document.execCommand('insertImage',false,e.target.result);}catch(err){}input.value='';};rd.readAsDataURL(f);}
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
