@@ -2246,6 +2246,31 @@ input,textarea,select{font-size:16px !important;}
     <div id="ai-save-status" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
   </div>
 
+  <!-- ميزانية التوليد -->
+  <div class="eg-card">
+    <div class="eg-step-title">💰 ميزانية التوليد</div>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">رصيد كل معلم سنوياً ($)</label><input type="number" id="ai-budget-per" value="6" min="0" step="0.5" oninput="aiComputeBudget()"></div>
+      <div style="flex:1"><label class="eg-lbl">عدد المعلمين المشتركين</label><input type="number" id="ai-teacher-count" value="0" min="0" oninput="aiComputeBudget()"></div>
+    </div>
+    <button class="eg-export" style="margin-top:10px;width:auto;padding:8px 14px;flex:none" onclick="aiFetchTeacherCount()">🔄 جلب العدد الفعلي</button>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted);font-size:13px;font-weight:600">إجمالي الميزانية السنوية</span><span id="ai-total-budget" style="color:var(--gold);font-size:18px;font-weight:800">$0</span></div>
+    <button class="eg-generate" style="margin-top:12px" onclick="saveAiBudget()">💾 حفظ الميزانية</button>
+  </div>
+
+  <!-- عدّاد الاستهلاك -->
+  <div class="eg-card">
+    <div class="eg-step-title">📊 عدّاد الرصيد / التوكنز</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px"><span>الرصيد المتبقي (كل المعلمين)</span><span id="ai-remain-pct" style="color:var(--gold)">١٠٠٪</span></div>
+    <div class="eg-credit-track" style="height:14px"><div class="eg-credit-fill" id="ai-remain-fill" style="width:100%"></div></div>
+    <div style="display:grid;gap:6px;font-size:12.5px;margin-top:14px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">الإجمالي</span><span id="ai-g-total" style="font-weight:700">$0</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">المستهلك</span><span id="ai-g-used" style="font-weight:700">$0</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">المتبقي</span><span id="ai-g-remain" style="font-weight:700;color:var(--gold)">$0</span></div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7">الاستهلاك يُحدَّث تلقائياً عند ربط Claude. حالياً تجريبي (٠ مستهلك).</p>
+  </div>
+
   <div class="eg-card">
     <div class="eg-step-title">ℹ️ إعدادات المولّد (للعلم)</div>
     <div style="display:grid;gap:8px;font-size:13px">
@@ -9924,13 +9949,61 @@ ${content}
 }
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
+let _aiConsumed=0;
 async function loadAiSettings(){
-  const ta=document.getElementById('ai-system-prompt');
-  if(!ta||!sb)return;
+  if(!sb)return;
   try{
-    const{data,error}=await sb.from('ai_settings').select('value').eq('key','system_prompt').maybeSingle();
-    if(!error&&data)ta.value=data.value||'';
+    const{data}=await sb.from('ai_settings').select('key,value');
+    const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    const ta=document.getElementById('ai-system-prompt');if(ta)ta.value=m.system_prompt||'';
+    const per=document.getElementById('ai-budget-per');if(per)per.value=m.per_teacher_usd||'6';
+    const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=m.teacher_count||'0';
+    _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
+    aiComputeBudget();
   }catch(e){}
+}
+
+function aiComputeBudget(){
+  const per=parseFloat(document.getElementById('ai-budget-per')?.value)||0;
+  const count=parseInt(document.getElementById('ai-teacher-count')?.value)||0;
+  const total=per*count;
+  const used=_aiConsumed||0;
+  const remain=Math.max(0,total-used);
+  const pct=total>0?Math.round((remain/total)*100):100;
+  const fmt=n=>'$'+(Math.round(n*100)/100);
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('ai-total-budget',fmt(total));
+  set('ai-g-total',fmt(total));
+  set('ai-g-used',fmt(used));
+  set('ai-g-remain',fmt(remain));
+  set('ai-remain-pct',egToArabic(pct)+'٪');
+  const fill=document.getElementById('ai-remain-fill');if(fill)fill.style.width=pct+'%';
+}
+
+async function aiFetchTeacherCount(){
+  if(!sb)return;
+  try{
+    const{count,error}=await sb.from('profiles').select('*',{count:'exact',head:true});
+    if(!error&&count!=null){const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=count;aiComputeBudget();toast('عدد الحسابات: '+count,'ok');}
+    else toast('تعذّر جلب العدد',true);
+  }catch(e){toast('تعذّر جلب العدد',true);}
+}
+
+async function saveAiBudget(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const per=document.getElementById('ai-budget-per').value||'0';
+  const count=document.getElementById('ai-teacher-count').value||'0';
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'per_teacher_usd',value:String(per),updated_at:new Date().toISOString()},
+      {key:'teacher_count',value:String(count),updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);
+    else{toast('✅ تم حفظ الميزانية','ok');aiComputeBudget();}
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ الميزانية';}}
 }
 
 async function saveAiSettings(){
