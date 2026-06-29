@@ -1937,6 +1937,7 @@ input,textarea,select{font-size:16px !important;}
       <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="essay"> مقالي</label>
       <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="tf"> صح وخطأ</label>
       <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="fill"> إكمال الفراغ</label>
+      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="match"> توصيل</label>
     </div>
     <div class="eg-row">
       <div style="flex:1"><label class="eg-lbl">عدد الأسئلة</label><input type="number" id="eg-qcount" value="10" min="1" max="50"></div>
@@ -2262,6 +2263,7 @@ input,textarea,select{font-size:16px !important;}
       <label class="eg-chip"><input type="checkbox" class="ai-atype" value="essay" checked> مقالي</label>
       <label class="eg-chip"><input type="checkbox" class="ai-atype" value="tf" checked> صح وخطأ</label>
       <label class="eg-chip"><input type="checkbox" class="ai-atype" value="fill" checked> إكمال الفراغ</label>
+      <label class="eg-chip"><input type="checkbox" class="ai-atype" value="match" checked> توصيل</label>
     </div>
     <button class="eg-generate" style="margin-top:12px" onclick="saveAiLimits()">💾 حفظ التحكم والحدود</button>
   </div>
@@ -9826,7 +9828,7 @@ function libBackToUnits(){libShowView('units');}
 // ══ مولّد الاختبارات (واجهة — توليد وهمي بلا API) ══
 let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
-let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill']};
+let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
 
 function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function egCreditGet(){let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
@@ -9841,7 +9843,7 @@ async function egApplyConfig(){
     egLimits.enabled=(m.generator_enabled!=='0');
     egLimits.maxQ=parseInt(m.max_questions)||30;
     egLimits.maxPages=parseInt(m.max_pages)||5;
-    egLimits.types=(m.allowed_types||'mcq,essay,tf,fill').split(',').filter(Boolean);
+    egLimits.types=(m.allowed_types||'mcq,essay,tf,fill,match').split(',').filter(Boolean);
   }catch(e){}
   const notice=document.getElementById('eg-disabled-notice');
   const credit=document.querySelector('#page-examgen .eg-credit');
@@ -9962,6 +9964,7 @@ function egGenerate(){
     if(t==='mcq')q+=`<div class="eg-q"><b>${egToArabic(qn)}.</b> سؤال اختيار من متعدد من درس «${escHtml(lesson)}» — (نص تجريبي سيُولّده الذكاء الاصطناعي).<div style="padding-right:18px">أ) خيار ١ &nbsp; ب) خيار ٢ &nbsp; ج) خيار ٣ &nbsp; د) خيار ٤</div></div>`;
     else if(t==='tf')q+=`<div class="eg-q"><b>${egToArabic(qn)}.</b> ( صح / خطأ ) عبارة تجريبية من درس «${escHtml(lesson)}».</div>`;
     else if(t==='fill')q+=`<div class="eg-q"><b>${egToArabic(qn)}.</b> أكمل الفراغ: ............... من درس «${escHtml(lesson)}».</div>`;
+    else if(t==='match')q+=`<div class="eg-q"><b>${egToArabic(qn)}.</b> صِل من العمود (أ) ما يناسبه من العمود (ب) — من درس «${escHtml(lesson)}»:<table style="border-collapse:collapse;margin-top:6px"><tr><td style="padding:3px 20px">١) ............</td><td style="padding:3px 20px">( ) أ. ............</td></tr><tr><td style="padding:3px 20px">٢) ............</td><td style="padding:3px 20px">( ) ب. ............</td></tr><tr><td style="padding:3px 20px">٣) ............</td><td style="padding:3px 20px">( ) ج. ............</td></tr></table></div>`;
     else q+=`<div class="eg-q"><b>${egToArabic(qn)}.</b> سؤال مقالي من درس «${escHtml(lesson)}»: اشرح ...........................<br>..........................................................</div>`;
     qn++;
   }
@@ -10019,7 +10022,7 @@ async function loadAiSettings(){
     const en=document.getElementById('ai-gen-enabled');if(en)en.checked=(m.generator_enabled!=='0');
     const mq=document.getElementById('ai-max-q');if(mq)mq.value=m.max_questions||'30';
     const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
-    const at=(m.allowed_types||'mcq,essay,tf,fill').split(',');
+    const at=(m.allowed_types||'mcq,essay,tf,fill,match').split(',');
     document.querySelectorAll('.ai-atype').forEach(c=>{c.checked=at.includes(c.value);});
     _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
     aiComputeBudget();
@@ -10053,7 +10056,8 @@ function aiComputeBudget(){
   const used=_aiConsumed||0;
   const remain=Math.max(0,total-used);
   const pct=total>0?Math.round((remain/total)*100):100;
-  const fmt=n=>'$'+(Math.round(n*100)/100);
+  // 1 ريال عماني ≈ 2.6 دولار
+  const fmt=n=>'$'+(Math.round(n*100)/100)+' ('+(Math.round(n/2.6*100)/100)+' ر.ع)';
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   set('ai-total-budget',fmt(total));
   set('ai-g-total',fmt(total));
