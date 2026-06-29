@@ -953,6 +953,12 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .egt-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
 .eg-toolbar+.eg-paper{border-radius:0 0 10px 10px;}
 .eg-paper img{max-width:100%;height:auto;}
+.eg-paper .eg-obj{cursor:move;touch-action:none;}
+.eg-paper .eg-obj.sel{outline:2px dashed #c0392b;outline-offset:2px;}
+.eg-obj .eg-handle,.eg-obj .eg-del{display:none;position:absolute;width:18px;height:18px;background:#c0392b;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3;}
+.eg-obj.sel .eg-handle,.eg-obj.sel .eg-del{display:block;}
+.eg-obj .eg-handle{right:-9px;bottom:-9px;cursor:nwse-resize;}
+.eg-obj .eg-del{left:-9px;top:-9px;cursor:pointer;color:#fff;font-size:13px;font-weight:900;line-height:14px;text-align:center;}
 .eg-paper{background:#fff;color:#111;border-radius:10px;padding:30px 28px;font-size:13px;line-height:1.9;min-height:200px;outline:none;position:relative;overflow:hidden;}
 .eg-paper::before{content:'';position:absolute;inset:10px;border:1.5px solid #333;border-radius:6px;pointer-events:none;}
 .eg-paper h2,.eg-paper h3{color:#111;margin:0 0 6px;}
@@ -10069,8 +10075,13 @@ function egGenerate(){
 
 function egExport(){
   // إزالة تذييل الشاشة من المحتوى (نستخدم تذييلاً ثابتاً يتكرر بكل صفحة عند الطباعة)
-  let content=document.getElementById('eg-result').innerHTML
+  const clone=document.getElementById('eg-result').cloneNode(true);
+  clone.querySelectorAll('.eg-handle,.eg-del').forEach(n=>n.remove());
+  clone.querySelectorAll('.eg-obj').forEach(n=>n.classList.remove('sel'));
+  let content=clone.innerHTML
     .replace(/<div class="eg-screen-footer"[\s\S]*?<\/div>\s*$/,'');
+  // غلاف نسبي ليُحدّد مرجع التموضع للكائنات المطلقة (الأشكال/الصور المحرّكة)
+  content='<div style="position:relative">'+content+'</div>';
   const w=window.open('','_blank');
   if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
   const cfg=egExportCfg;
@@ -10109,30 +10120,66 @@ function egCmd(ev,cmd,val){if(ev){ev.preventDefault();}document.getElementById('
 function egFontSize(v){if(!v)return;egRestoreSel();try{document.execCommand('fontSize',false,v);}catch(e){}}
 function egColor(c){egRestoreSel();try{document.execCommand('foreColor',false,c);}catch(e){}}
 function egHilite(c){egRestoreSel();try{document.execCommand('hiliteColor',false,c)||document.execCommand('backColor',false,c);}catch(e){}}
-function egInsertHTML(html){egRestoreSel();document.getElementById('eg-result').focus();try{document.execCommand('insertHTML',false,html);}catch(e){}}
+// ── كائنات قابلة للتحريك وتغيير الحجم (أشكال/صور/جداول) ──
+let _egObjN=0,_egDrag=null;
+function egAddObject(inner,w,h){
+  const paper=document.getElementById('eg-result');if(!paper)return;
+  egObjBind();
+  const off=(_egObjN++%6)*22;
+  const el=document.createElement('div');
+  el.className='eg-obj';el.setAttribute('contenteditable','false');
+  el.style.cssText='position:absolute;left:'+(40+off)+'px;top:'+(70+off)+'px;width:'+w+'px;'+(h?'height:'+h+'px;':'');
+  el.innerHTML=inner+'<span class="eg-del" title="حذف">×</span><span class="eg-handle" title="تغيير الحجم"></span>';
+  paper.appendChild(el);
+  egSelectObj(el);
+}
+function egSelectObj(el){document.querySelectorAll('#eg-result .eg-obj.sel').forEach(o=>o.classList.remove('sel'));if(el)el.classList.add('sel');}
+function egObjBind(){
+  const paper=document.getElementById('eg-result');if(!paper||paper._egBound)return;paper._egBound=true;
+  paper.addEventListener('pointerdown',function(e){
+    const del=e.target.closest('.eg-del');
+    const handle=e.target.closest('.eg-handle');
+    const obj=e.target.closest('.eg-obj');
+    if(del&&obj){e.preventDefault();obj.remove();return;}
+    if(!obj){egSelectObj(null);return;}
+    e.preventDefault();egSelectObj(obj);
+    const r=obj.getBoundingClientRect();
+    if(handle){_egDrag={mode:'resize',obj,sx:e.clientX,sy:e.clientY,w:r.width,h:r.height};}
+    else{_egDrag={mode:'move',obj,sx:e.clientX,sy:e.clientY,left:parseFloat(obj.style.left)||0,top:parseFloat(obj.style.top)||0};}
+    document.addEventListener('pointermove',egObjMove);
+    document.addEventListener('pointerup',egObjUp);
+  });
+}
+function egObjMove(e){
+  if(!_egDrag)return;const d=_egDrag;
+  if(d.mode==='move'){d.obj.style.left=(d.left+(e.clientX-d.sx))+'px';d.obj.style.top=(d.top+(e.clientY-d.sy))+'px';}
+  else{d.obj.style.width=Math.max(24,d.w+(e.clientX-d.sx))+'px';d.obj.style.height=Math.max(20,d.h+(e.clientY-d.sy))+'px';}
+}
+function egObjUp(){_egDrag=null;document.removeEventListener('pointermove',egObjMove);document.removeEventListener('pointerup',egObjUp);}
 function egInsertTable(){
   const r=parseInt(prompt('عدد الصفوف:','3'));if(!r||r<1||r>20)return;
   const c=parseInt(prompt('عدد الأعمدة:','3'));if(!c||c<1||c>12)return;
-  let t='<table style="border-collapse:collapse;width:100%;margin:10px 0" border="1"><tbody>';
-  for(let i=0;i<r;i++){t+='<tr>';for(let j=0;j<c;j++)t+='<td style="border:1px solid #333;padding:6px 8px;min-width:40px;height:26px">&nbsp;</td>';t+='</tr>';}
-  t+='</tbody></table><p>&nbsp;</p>';
-  egInsertHTML(t);
+  let t='<table style="border-collapse:collapse;width:100%;height:100%" border="1"><tbody>';
+  for(let i=0;i<r;i++){t+='<tr>';for(let j=0;j<c;j++)t+='<td style="border:1px solid #333;padding:6px 8px">&nbsp;</td>';t+='</tr>';}
+  t+='</tbody></table>';
+  egAddObject(t,Math.min(420,c*90),r*30);
 }
 function egInsertShape(type){
   if(!type)return;
-  const S='stroke="#111" fill="none" stroke-width="2"';
-  let svg='';
-  if(type==='square')svg='<svg width="70" height="70"><rect x="5" y="5" width="60" height="60" '+S+'/></svg>';
-  else if(type==='rect')svg='<svg width="120" height="64"><rect x="5" y="5" width="110" height="54" '+S+'/></svg>';
-  else if(type==='circle')svg='<svg width="74" height="74"><circle cx="37" cy="37" r="32" '+S+'/></svg>';
-  else if(type==='triangle')svg='<svg width="80" height="72"><polygon points="40,6 74,66 6,66" '+S+'/></svg>';
-  else if(type==='right')svg='<svg width="80" height="72"><polygon points="8,6 8,66 74,66" '+S+'/></svg>';
-  else if(type==='line')svg='<svg width="120" height="24"><line x1="6" y1="12" x2="114" y2="12" '+S+'/></svg>';
-  else if(type==='arrow')svg='<svg width="120" height="24"><line x1="114" y1="12" x2="10" y2="12" '+S+'/><polyline points="22,5 8,12 22,19" '+S+'/></svg>';
-  else if(type==='angle')svg='<svg width="90" height="74"><polyline points="80,66 8,66 78,10" '+S+'/></svg>';
-  if(svg)egInsertHTML('<span style="display:inline-block;margin:4px 8px;vertical-align:middle">'+svg+'</span>');
+  const S='stroke="#111" fill="none" stroke-width="2" vector-effect="non-scaling-stroke"';
+  const open='<svg viewBox="0 0 VB" preserveAspectRatio="none" style="width:100%;height:100%;display:block">';
+  let svg='',w=74,h=74;
+  if(type==='square'){svg=open.replace('VB','70 70')+'<rect x="4" y="4" width="62" height="62" '+S+'/></svg>';}
+  else if(type==='rect'){svg=open.replace('VB','120 64')+'<rect x="4" y="4" width="112" height="56" '+S+'/></svg>';w=120;h=64;}
+  else if(type==='circle'){svg=open.replace('VB','74 74')+'<ellipse cx="37" cy="37" rx="33" ry="33" '+S+'/></svg>';}
+  else if(type==='triangle'){svg=open.replace('VB','80 72')+'<polygon points="40,5 75,67 5,67" '+S+'/></svg>';w=80;h=72;}
+  else if(type==='right'){svg=open.replace('VB','80 72')+'<polygon points="6,5 6,67 75,67" '+S+'/></svg>';w=80;h=72;}
+  else if(type==='line'){svg=open.replace('VB','120 24')+'<line x1="4" y1="12" x2="116" y2="12" '+S+'/></svg>';w=120;h=24;}
+  else if(type==='arrow'){svg=open.replace('VB','120 24')+'<line x1="116" y1="12" x2="8" y2="12" '+S+'/><polyline points="22,4 8,12 22,20" '+S+'/></svg>';w=120;h=24;}
+  else if(type==='angle'){svg=open.replace('VB','90 74')+'<polyline points="82,67 6,67 80,8" '+S+'/></svg>';w=90;h=74;}
+  if(svg)egAddObject(svg,w,h);
 }
-function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('الملف ليس صورة',true);return;}if(f.size>3*1024*1024){toast('حجم الصورة كبير (الحد ٣ ميجابايت)',true);input.value='';return;}const rd=new FileReader();rd.onload=e=>{document.getElementById('eg-result').focus();try{document.execCommand('insertImage',false,e.target.result);}catch(err){}input.value='';};rd.readAsDataURL(f);}
+function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('الملف ليس صورة',true);return;}if(f.size>3*1024*1024){toast('حجم الصورة كبير (الحد ٣ ميجابايت)',true);input.value='';return;}const rd=new FileReader();rd.onload=e=>{egAddObject('<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain;display:block" alt=""/>',180,140);input.value='';};rd.readAsDataURL(f);}
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
 let _aiConsumed=0;
