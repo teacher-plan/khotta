@@ -4373,8 +4373,10 @@ function showApp(data){
     if(lpGrades&&Object.keys(lpGrades).length){grades=lpGrades;}
     const lpGTypes=loadPersistedGradeTypes();
     if(lpGTypes&&lpGTypes.length){gradeTypes=lpGTypes;}
-    const lpStudents=loadPersistedStudents();
-    if(lpStudents&&Object.keys(lpStudents).length){students=lpStudents;}
+    // ملاحظة: students يُحفظ ضمن الكاش الرئيسي (saveCacheImmediate) وعلى الخادم (dbSave).
+    // الكاش المنفصل القديم (kh_students_) لم يعد يُحدَّث وكان يستبدل البيانات الحديثة بقديمة
+    // عند التحديث (رجوع إضافة/حذف الطلاب) — نُزيله نهائياً.
+    try{localStorage.removeItem('kh_students_'+currentUser.id);}catch(e){}
     cvProfile=data.cv_profile||{};
     // تحميل بيانات السلوك من Supabase
     behaviorStudents=data.behavior_students||{};
