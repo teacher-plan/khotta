@@ -4375,15 +4375,15 @@ function showApp(data){
     students=data.students||{};
     grades=data.grades||{};
     gradeTypes=data.grade_types||[];
-    // ── استرجاع من الحفظ المستقل: لو فيه بيانات أحدث محلياً، استخدمها ──
-    const lpGrades=loadPersistedGrades();
-    if(lpGrades&&Object.keys(lpGrades).length){grades=lpGrades;}
-    const lpGTypes=loadPersistedGradeTypes();
-    if(lpGTypes&&lpGTypes.length){gradeTypes=lpGTypes;}
-    // ملاحظة: students يُحفظ ضمن الكاش الرئيسي (saveCacheImmediate) وعلى الخادم (dbSave).
-    // الكاش المنفصل القديم (kh_students_) لم يعد يُحدَّث وكان يستبدل البيانات الحديثة بقديمة
-    // عند التحديث (رجوع إضافة/حذف الطلاب) — نُزيله نهائياً.
-    try{localStorage.removeItem('kh_students_'+currentUser.id);}catch(e){}
+    // ── الكاش الرئيسي (saveCacheImmediate) + الخادم (dbSave) هما المصدر الموثوق ──
+    // الكاشات المنفصلة القديمة (kh_grades_ / kh_gtypes_ / kh_students_) كانت تُحدَّث
+    // بشكل غير متّسق (مثلاً حذف طالب لا يحدّث kh_grades_)، فتستبدل البيانات الحديثة
+    // بقديمة عند التحديث (رجوع/عودة بيانات محذوفة). نُزيلها نهائياً.
+    try{
+      localStorage.removeItem('kh_students_'+currentUser.id);
+      localStorage.removeItem('kh_grades_'+currentUser.id);
+      localStorage.removeItem('kh_gtypes_'+currentUser.id);
+    }catch(e){}
     cvProfile=data.cv_profile||{};
     // تحميل بيانات السلوك من Supabase
     behaviorStudents=data.behavior_students||{};
