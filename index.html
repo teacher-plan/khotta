@@ -954,6 +954,8 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .egt-btn:hover .egt-lbl{color:#111;}
 .egt-sel{height:44px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;padding:0 8px;cursor:pointer;}
 .egt-sep{width:1px;height:30px;background:var(--border);margin:0 3px;}
+.eg-prompt-eg{cursor:pointer;color:var(--muted);transition:color .15s;}
+.eg-prompt-eg:hover{color:var(--gold);}
 .eg-pagebar{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-top:none;padding:6px 12px;font-size:12px;font-weight:700;color:var(--gold);}
 #eg-pageviewport{background:#5a5a5a;border:1px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden;}
 #eg-pagewrap{position:relative;width:760px;margin:18px auto;}
@@ -1968,6 +1970,18 @@ input,textarea,select{font-size:16px !important;}
       <div style="flex:1"><label class="eg-lbl">عدد الأسئلة</label><input type="number" id="eg-qcount" value="10" min="1" max="50"></div>
       <div style="flex:1"><label class="eg-lbl">عدد الصفحات (تقريبي)</label><input type="number" id="eg-pages" value="2" min="1" max="10"></div>
       <div style="flex:1"><label class="eg-lbl">الدرجة الكلية</label><input type="number" id="eg-total" value="20" min="1" max="100"></div>
+    </div>
+    <label class="eg-lbl">توجيهات إضافية للمولّد <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+    <textarea id="eg-prompt" rows="3" placeholder="اكتب أي ملاحظات تريد أن يراعيها المولّد..." style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none;line-height:1.8;resize:vertical"></textarea>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.9">
+      💡 أمثلة لما يمكنك كتابته:
+      <div style="margin-top:4px">
+        <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• ركّز على الأمثلة التطبيقية أكثر من الحفظ</span><br>
+        <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• اجعل مستوى الصعوبة متوسطاً يناسب الطلاب الضعاف</span><br>
+        <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• تجنّب الأسئلة عن الدرس الأخير فلم نكمله</span><br>
+        <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• أضف سؤالاً واحداً يربط الدرس بالحياة اليومية</span><br>
+        <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• نوّع الأسئلة بين سهل ومتوسط وصعب</span>
+      </div>
     </div>
     <button class="eg-generate" onclick="egGenerate()">⚡ ولّد الاختبار</button>
   </div>
@@ -10250,6 +10264,7 @@ window.addEventListener('resize',function(){if(document.getElementById('eg-resul
 function egFontName(v){if(!v)return;egRestoreSel();try{document.execCommand('fontName',false,v);}catch(e){}egPaginateSoon();}
 function egPlaceToolbar(){const nav=document.querySelector('.nav'),tb=document.getElementById('eg-toolbar');if(nav&&tb)tb.style.top=(nav.offsetHeight-1)+'px';}
 function egEditorInit(){const R=document.getElementById('eg-result');if(!R||R._egEdBound)return;R._egEdBound=true;egObjBind();R.addEventListener('input',egPaginateSoon);egPlaceToolbar();}
+function egAddPromptEg(el){const ta=document.getElementById('eg-prompt');if(!ta)return;const t=el.textContent.replace(/^•\s*/,'').trim();ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+t;ta.focus();}
 function egInsertTable(){
   const r=parseInt(prompt('عدد الصفوف:','3'));if(!r||r<1||r>20)return;
   const c=parseInt(prompt('عدد الأعمدة:','3'));if(!c||c<1||c>12)return;
