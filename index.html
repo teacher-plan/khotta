@@ -958,6 +958,18 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .egt-sel{height:42px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;padding:0 10px;cursor:pointer;transition:border-color .12s;}
 .egt-sel:hover{border-color:var(--gold);}
 .egt-sep{width:1px;height:24px;background:var(--border);opacity:.55;margin:0 6px;}
+.ui-confirm-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.ui-confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:380px;width:100%;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.5);animation:uiConfirmPop .18s ease;}
+@keyframes uiConfirmPop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+.ui-confirm-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:16px;color:var(--gold);margin-bottom:10px;}
+.ui-confirm-msg{font-size:13.5px;color:var(--text);line-height:1.9;white-space:pre-line;margin-bottom:20px;}
+.ui-confirm-actions{display:flex;gap:10px;}
+.ui-confirm-actions button{flex:1;padding:11px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1.5px solid var(--border);transition:opacity .15s,background .15s;}
+.ui-confirm-cancel{background:var(--card);color:var(--text);}
+.ui-confirm-cancel:hover{background:var(--border);}
+.ui-confirm-ok{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1010;border:none;}
+.ui-confirm-ok.danger{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;}
+.ui-confirm-ok:hover{opacity:.9;}
 .eg-prompt-eg{cursor:pointer;color:var(--muted);transition:color .15s;}
 .eg-prompt-eg:hover{color:var(--gold);}
 .eg-pagebar{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-top:none;padding:6px 12px;font-size:12px;font-weight:700;color:var(--gold);}
@@ -2055,6 +2067,18 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </div></div>
 
+<!-- ══ نافذة التأكيد الموحّدة ══ -->
+<div class="ui-confirm-bg" id="ui-confirm-bg" style="display:none">
+  <div class="ui-confirm-box">
+    <div class="ui-confirm-title" id="ui-confirm-title">تأكيد</div>
+    <div class="ui-confirm-msg" id="ui-confirm-msg"></div>
+    <div class="ui-confirm-actions">
+      <button class="ui-confirm-cancel" id="ui-confirm-cancel">إلغاء</button>
+      <button class="ui-confirm-ok danger" id="ui-confirm-ok">تأكيد</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ بنك الأسئلة (نافذة) ══ -->
 <div class="modal-bg" id="eg-bank-modal" style="display:none">
   <div class="modal" style="max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column">
@@ -2823,7 +2847,7 @@ async function loginWithPassword(){
   }
 }
 async function signOut(){
-  if(!confirm('تسجيل الخروج؟ بياناتك محفوظة في حسابك السحابي.'))return;
+  if(!await uiConfirm('تسجيل الخروج؟ بياناتك محفوظة في حسابك السحابي.'))return;
   // مسح كل الكاش (الرئيسي + المستقل)
   try{
     const k=getCacheKey();if(k)localStorage.removeItem(k);
@@ -3111,15 +3135,15 @@ async function linkGoogleDrive(){
 }
 // يُعرض عند محاولة الرفع بدون ربط — يجبر المعلم على الربط قبل استخدام الملفات
 async function promptLinkDrive(){
-  if(confirm('لتخزين الملفات تحتاج لربط حساب Google مرة واحدة.\nسيُفتح جوجل لمنح إذن التخزين فقط، ثم تعود للموقع.\nربط الآن؟')){
+  if(await uiConfirm('لتخزين الملفات تحتاج لربط حساب Google مرة واحدة.\nسيُفتح جوجل لمنح إذن التخزين فقط، ثم تعود للموقع.\nربط الآن؟')){
     await linkGoogleDrive();
   }
 }
 
 // ══ حذف كل البيانات ══════════════════════════════════
 async function resetAllData(){
-  if(!confirm('⚠️ سيتم حذف جميع بياناتك نهائياً من حسابك السحابي. هل أنت متأكد؟'))return;
-  if(!confirm('تأكيد أخير: لا يمكن التراجع. متابعة الحذف؟'))return;
+  if(!await uiConfirm('⚠️ سيتم حذف جميع بياناتك نهائياً من حسابك السحابي. هل أنت متأكد؟'))return;
+  if(!await uiConfirm('تأكيد أخير: لا يمكن التراجع. متابعة الحذف؟'))return;
   try{
     // 1) مسح البيانات في Supabase
     await sb.from('profiles').update({data:{}}).eq('id',currentUser.id);
@@ -3576,8 +3600,8 @@ async function restoreSetupDraftIfExists(){
   }catch(e){console.warn('restoreDraft error:',e);}
 }
 // مسح المسودة والبدء من جديد
-function resetSetupFromScratch(){
-  if(!confirm('سيتم مسح كل ما أدخلته في الإعداد. هل تريد البدء من جديد؟'))return;
+async function resetSetupFromScratch(){
+  if(!await uiConfirm('سيتم مسح كل ما أدخلته في الإعداد. هل تريد البدء من جديد؟'))return;
   clearSetupDraft();
   setupSemester='';setupGrades=[];setupData={};curriculumBySubject={};gradeSubjectsMap={};setupActiveGrade=null;_setupStudents={};_setupCurrentStep=1;
   document.getElementById('setup-step-1').style.display='block';
@@ -4096,8 +4120,8 @@ async function uploadSetupClassExcel(event, classId){
   }
 }
 
-function clearSetupClass(classId){
-  if(!confirm('هل تريد مسح قائمة هذه الشعبة؟'))return;
+async function clearSetupClass(classId){
+  if(!await uiConfirm('هل تريد مسح قائمة هذه الشعبة؟'))return;
   delete _setupStudents[classId];
   renderSetupClassesList();
   saveSetupDraft();
@@ -4576,7 +4600,7 @@ function toggleEditMode(){
   document.getElementById('class-config').classList.add('active');
   renderClassConfig();renderTimetable();
 }
-function cancelEdit(){if(!confirm('إلغاء التعديلات؟'))return;timetableConfig=ttBackup.timetableConfig;classConfig=ttBackup.classConfig;exitEditMode();}
+async function cancelEdit(){if(!await uiConfirm('إلغاء التعديلات؟'))return;timetableConfig=ttBackup.timetableConfig;classConfig=ttBackup.classConfig;exitEditMode();}
 function saveTimetable(){exitEditMode();buildTracker();applyFilter();update();toast('✅ تم حفظ الجدول','ok');scheduleSave();}
 function exitEditMode(){
   ttEditing=false;ttBackup=null;
@@ -4593,9 +4617,9 @@ function renderClassConfig(){
 function updClassName(key,name){classConfig[key].name=name.trim()||key;}
 function updClassColor(key,color){classConfig[key].color=color;renderTimetable();}
 function addClassColor(){const newKey='cls_'+Date.now();classConfig[newKey]={name:'شعبة جديدة',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')};renderClassConfig();}
-function delClass(key){if(Object.keys(classConfig).length<=1){toast('❌ لا يمكن حذف آخر شعبة',true);return;}if(!confirm('حذف هذه الشعبة؟'))return;delete classConfig[key];Object.keys(timetableConfig.schedule).forEach(dayId=>{Object.keys(timetableConfig.schedule[dayId]).forEach(pIdx=>{if(timetableConfig.schedule[dayId][pIdx]===key)delete timetableConfig.schedule[dayId][pIdx];});});renderClassConfig();renderTimetable();}
+async function delClass(key){if(Object.keys(classConfig).length<=1){toast('❌ لا يمكن حذف آخر شعبة',true);return;}if(!await uiConfirm('حذف هذه الشعبة؟'))return;delete classConfig[key];Object.keys(timetableConfig.schedule).forEach(dayId=>{Object.keys(timetableConfig.schedule[dayId]).forEach(pIdx=>{if(timetableConfig.schedule[dayId][pIdx]===key)delete timetableConfig.schedule[dayId][pIdx];});});renderClassConfig();renderTimetable();}
 function addPeriod(){const last=timetableConfig.periods[timetableConfig.periods.length-1];timetableConfig.periods.push({num:last?last.num+1:1,start:'',end:''});renderTimetable();}
-function delPeriod(idx){if(timetableConfig.periods.length<=1){toast('❌ لا يمكن حذف آخر حصة',true);return;}if(!confirm('حذف هذه الحصة؟'))return;timetableConfig.periods.splice(idx,1);Object.keys(timetableConfig.schedule).forEach(dayId=>{const newDay={};Object.keys(timetableConfig.schedule[dayId]).forEach(pIdx=>{const i=parseInt(pIdx);if(i<idx)newDay[i]=timetableConfig.schedule[dayId][pIdx];else if(i>idx)newDay[i-1]=timetableConfig.schedule[dayId][pIdx];});timetableConfig.schedule[dayId]=newDay;});renderTimetable();}
+async function delPeriod(idx){if(timetableConfig.periods.length<=1){toast('❌ لا يمكن حذف آخر حصة',true);return;}if(!await uiConfirm('حذف هذه الحصة؟'))return;timetableConfig.periods.splice(idx,1);Object.keys(timetableConfig.schedule).forEach(dayId=>{const newDay={};Object.keys(timetableConfig.schedule[dayId]).forEach(pIdx=>{const i=parseInt(pIdx);if(i<idx)newDay[i]=timetableConfig.schedule[dayId][pIdx];else if(i>idx)newDay[i-1]=timetableConfig.schedule[dayId][pIdx];});timetableConfig.schedule[dayId]=newDay;});renderTimetable();}
 function updPeriod(idx,field,val){timetableConfig.periods[idx][field]=val.trim();}
 function cycleCell(dayId,pIdx){if(!timetableConfig.schedule[dayId])timetableConfig.schedule[dayId]={};const keys=Object.keys(classConfig);const current=timetableConfig.schedule[dayId][pIdx];let nextIdx;if(!current)nextIdx=0;else{const ci=keys.indexOf(current);nextIdx=ci+1;}if(nextIdx>=keys.length){delete timetableConfig.schedule[dayId][pIdx];}else{timetableConfig.schedule[dayId][pIdx]=keys[nextIdx];}renderTimetable();}
 function clearCell(dayId,pIdx){if(timetableConfig.schedule[dayId])delete timetableConfig.schedule[dayId][pIdx];renderTimetable();}
@@ -4764,7 +4788,7 @@ async function saveContent(){
   if(!subject){toast('❌ أدخل اسم المادة',true);return;}
   
   const confirmMsg=`سيتم حذف الدروس القديمة (إن وجدت) لـ:\n📘 ${subject} - الصف ${grade} - ${semester}\nواستبدالها بـ ${_parsedContent.reduce((s,u)=>s+u.lessons.length,0)} درس جديد.\n\nهل تريد المتابعة؟`;
-  if(!confirm(confirmMsg))return;
+  if(!await uiConfirm(confirmMsg))return;
   
   const saveBtn=document.getElementById('up-save-btn');
   saveBtn.disabled=true;
@@ -4946,7 +4970,7 @@ async function editLesson(id){
 
 async function deleteLesson(id,name){
   if(!isAdmin())return;
-  if(!confirm(`⚠️ هل تريد حذف الدرس:\n"${name}"؟\n\nلا يمكن التراجع عن هذا الإجراء.`))return;
+  if(!await uiConfirm(`⚠️ هل تريد حذف الدرس:\n"${name}"؟\n\nلا يمكن التراجع عن هذا الإجراء.`))return;
   try{
     const{error}=await sb.from('curriculum').delete().eq('id',id);
     if(error)throw error;
@@ -5214,7 +5238,7 @@ async function loadPrivateMessages(){
 
 async function deletePrivateMsg(id){
   if(!isAdmin())return;
-  if(!confirm('حذف هذه الرسالة نهائياً؟'))return;
+  if(!await uiConfirm('حذف هذه الرسالة نهائياً؟'))return;
   try{
     const{error}=await sb.from('private_messages').delete().eq('id',id);
     if(error)throw error;
@@ -5233,7 +5257,7 @@ function editAnnouncement(id,title,body){
 
 async function deleteAnnouncement(id){
   if(!isAdmin())return;
-  if(!confirm('هل تريد حذف هذا الإعلان؟'))return;
+  if(!await uiConfirm('هل تريد حذف هذا الإعلان؟'))return;
   try{
     const{error}=await sb.from('announcements').delete().eq('id',id);
     if(error)throw error;
@@ -5543,7 +5567,7 @@ function renderUsersList(users){
 async function toggleUserAccess(userId, name, enable){
   if(!isAdmin())return;
   const action = enable ? 'تفعيل' : 'تعطيل';
-  if(!confirm(`هل تريد ${action} حساب "${name}"؟`)) return;
+  if(!await uiConfirm(`هل تريد ${action} حساب "${name}"؟`)) return;
   try{
     if(enable){
       // رفع الحظر - حذف من banned_users
@@ -5903,7 +5927,7 @@ async function saveTemplateFromEditor(){
 
 async function deleteTemplate(id,subject,grade){
   if(!isAdmin())return;
-  if(!confirm(`⚠️ حذف قالب ${subject} - الصف ${grade}؟\nسيُحذف القالب وكل أعمدة التقييم المطابقة من جميع شعب المعلمين التي حمّلته، مع درجات الطلاب فيها.\nلا يمكن التراجع.`))return;
+  if(!await uiConfirm(`⚠️ حذف قالب ${subject} - الصف ${grade}؟\nسيُحذف القالب وكل أعمدة التقييم المطابقة من جميع شعب المعلمين التي حمّلته، مع درجات الطلاب فيها.\nلا يمكن التراجع.`))return;
   try{
     // اجلب أعمدة القالب قبل حذفه لمطابقتها عند الحذف التتابعي
     const{data:tmplRow}=await sb.from('grade_templates').select('grade_types').eq('id',id).maybeSingle();
@@ -6184,7 +6208,7 @@ function refreshLessonFiles(lessonId){
 }
 
 async function deleteLessonFile(lessonId,fileId,driveId){
-  if(!confirm('تأكيد حذف الملف؟'))return;
+  if(!await uiConfirm('تأكيد حذف الملف؟'))return;
   if(driveId)await driveDelete(driveId);
   lessonFiles[lessonId]=(lessonFiles[lessonId]||[]).filter(f=>f.id!==fileId);
   refreshLessonFiles(lessonId);
@@ -6389,14 +6413,14 @@ async function saveItem(){
   renderInnerItems(activeCat);buildArchiveGrid();closeModal();toast('✅ تم الحفظ','ok');btn.textContent='رفع 💾';scheduleSave();
 }
 async function deleteArcItem(catId,itemId,driveId){
-  if(!confirm('تأكيد الحذف؟'))return;
+  if(!await uiConfirm('تأكيد الحذف؟'))return;
   if(driveId)await driveDelete(driveId);
   const aKey=arcKey(catId);
   arcMeta[aKey]=(arcMeta[aKey]||[]).filter(i=>i.id!==itemId);
   renderInnerItems(catId);buildArchiveGrid();toast('🗑️ تم الحذف');scheduleSave();
 }
 async function deleteCat(catId){
-  if(!confirm('حذف هذا المجلد وكل محتوياته من جميع الصفوف؟'))return;
+  if(!await uiConfirm('حذف هذا المجلد وكل محتوياته من جميع الصفوف؟'))return;
   // المجلد تعريف مشترك، فنحذف ملفاته من كل الصفوف
   const gNums=getArchiveGrades();
   for(const n of gNums){
@@ -6874,8 +6898,8 @@ function updateGradeCellUI(studentId,colId){
   const sumEl=document.getElementById('grades-summary');
   if(sumEl)sumEl.innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
 }
-function delStudent(id){const k=activeGradesClass;if(!confirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
-function delGradeCol(id){if(!confirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
+async function delStudent(id){const k=activeGradesClass;if(!await uiConfirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
+async function delGradeCol(id){if(!await uiConfirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
 function openImportStudents(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}const allCls=getAllClasses();const cls=allCls.find(c=>c.id===activeGradesClass);document.getElementById('import-class-lbl').textContent='الشعبة: '+(cls?cls.name:'');document.getElementById('import-textarea').value='';document.getElementById('import-modal-bg').classList.remove('hidden');}
 function closeImportStudents(){document.getElementById('import-modal-bg').classList.add('hidden');}
 function importStudents(){const txt=document.getElementById('import-textarea').value;const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('❌ لا يوجد أسماء',true);return;}const k=activeGradesClass;if(!students[k])students[k]=[];const existing=new Set(students[k].map(s=>s.name));const added=lines.filter(n=>!existing.has(n));added.forEach(name=>{students[k].push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name});});closeImportStudents();renderGradesTable();toast(`✅ تم إضافة ${added.length} طالب`+(lines.length-added.length>0?` (${lines.length-added.length} مكرر تم تجاهله)`:''),'ok');persistStudentsNow();scheduleSave();}
@@ -7101,7 +7125,7 @@ async function saveGradeTemplate(){
   const cols=gradeTypes.filter(c=>c.classKey===activeGradesClass);
   if(!cols.length){toast('❌ أضف أنواع تقييم أولاً',true);return;}
   
-  if(!confirm(`حفظ قالب سجل درجات لـ:\n📖 ${info.subject}\n🎓 الصف ${info.grade}\n\nسيكون متاحاً لجميع المعلمين الذين يدرّسون نفس المادة والصف.\n\nالمتابعة؟`))return;
+  if(!await uiConfirm(`حفظ قالب سجل درجات لـ:\n📖 ${info.subject}\n🎓 الصف ${info.grade}\n\nسيكون متاحاً لجميع المعلمين الذين يدرّسون نفس المادة والصف.\n\nالمتابعة؟`))return;
   
   // تجريد القالب من classKey (سيتم استبداله عند الاستخدام)
   const template=cols.map(c=>({name:c.name,category:c.category,max:c.max}));
@@ -7154,7 +7178,7 @@ async function loadTemplateForCurrentClass(){
     // التحقق إذا كان هناك أنواع موجودة بالفعل
     const existing=gradeTypes.filter(c=>c.classKey===activeGradesClass);
     if(existing.length){
-      if(!confirm(`يوجد ${existing.length} نوع تقييم محفوظ. هل تريد استبدالها بالقالب الجاهز (${data.grade_types.length} نوع)؟`))return;
+      if(!await uiConfirm(`يوجد ${existing.length} نوع تقييم محفوظ. هل تريد استبدالها بالقالب الجاهز (${data.grade_types.length} نوع)؟`))return;
       // حذف الموجود
       gradeTypes=gradeTypes.filter(c=>c.classKey!==activeGradesClass);
     }
@@ -7932,8 +7956,8 @@ function addBehaviorStudents(newStudents){
   toast(`✅ تم إضافة ${added.length} طالب`);
 }
 
-function clearBehaviorClass(){
-  if(!confirm(`هل تريد مسح قائمة هذه الشعبة؟`))return;
+async function clearBehaviorClass(){
+  if(!await uiConfirm(`هل تريد مسح قائمة هذه الشعبة؟`))return;
   behaviorStudents[activeBehaviorClass]=[];
   saveBehaviorData();
   renderBehaviorTable();
@@ -7942,9 +7966,9 @@ function clearBehaviorClass(){
   toast('✅ تم المسح');
 }
 
-function clearAllBehaviorData(){
+async function clearAllBehaviorData(){
   const total=Object.values(behaviorStudents).reduce((s,a)=>s+a.length,0);
-  if(!confirm(`هل تريد حذف كامل سجل السلوك؟\n${total} طالب و${Object.values(behaviorViolations).reduce((s,a)=>s+a.length,0)} مخالفة\n\nلا يمكن التراجع!`))return;
+  if(!await uiConfirm(`هل تريد حذف كامل سجل السلوك؟\n${total} طالب و${Object.values(behaviorViolations).reduce((s,a)=>s+a.length,0)} مخالفة\n\nلا يمكن التراجع!`))return;
   behaviorStudents={};
   behaviorViolations={};
   saveBehaviorData();
@@ -8976,11 +9000,11 @@ function addStudentManually(){
   toast('✅ تم إضافة الطالب','ok');
 }
 
-function deleteStudentFromList(studentId){
+async function deleteStudentFromList(studentId){
   let unified=getUnifiedStudents(_smgrClassKey);
   const student=unified.find(s=>s.id===studentId);
   if(!student)return;
-  if(!confirm(`هل تريد حذف الطالب "${student.name}"؟`))return;
+  if(!await uiConfirm(`هل تريد حذف الطالب "${student.name}"؟`))return;
   
   unified=unified.filter(s=>s.id!==studentId);
   syncStudentsToBoth(_smgrClassKey, unified);
@@ -9161,8 +9185,8 @@ function renderSurveyBuilder(){
   `).join('');
 }
 
-function clearSurveyBuilder(){
-  if(!confirm('هل تريد مسح الاستبيان الحالي؟'))return;
+async function clearSurveyBuilder(){
+  if(!await uiConfirm('هل تريد مسح الاستبيان الحالي؟'))return;
   _surveyQuestions=[];
   document.getElementById('survey-title').value='';
   renderSurveyBuilder();
@@ -9247,7 +9271,7 @@ async function loadSurveyResults(){
 }
 
 async function deleteSurvey(id){
-  if(!confirm('حذف هذا الاستبيان نهائياً مع جميع الإجابات؟'))return;
+  if(!await uiConfirm('حذف هذا الاستبيان نهائياً مع جميع الإجابات؟'))return;
   try{
     await sb.from('survey_responses').delete().eq('survey_id',id);
     await sb.from('surveys').delete().eq('id',id);
@@ -9420,7 +9444,7 @@ function renderCv(){
   });
 }
 async function deleteCvItem(id){
-  if(!confirm('تأكيد الحذف؟'))return;
+  if(!await uiConfirm('تأكيد الحذف؟'))return;
   const item=cvItems.find(i=>i.id===id);
   if(item&&item.attachments)for(const a of item.attachments)if(a.driveId)await driveDelete(a.driveId);
   cvItems=cvItems.filter(i=>i.id!==id);renderCv();toast('🗑️ تم الحذف');scheduleSave();
@@ -9519,6 +9543,27 @@ document.addEventListener('visibilitychange',function(){
 // ══ TOAST ══════════════════════════════════════════════
 let tt2;
 function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(tt2);tt2=setTimeout(()=>el.classList.remove('show'),2500);}
+// ── نافذة تأكيد موحّدة (بديل confirm المتصفح) — تُرجِع Promise<bool> ──
+function uiConfirm(message,opts){
+  opts=opts||{};
+  return new Promise(resolve=>{
+    const bg=document.getElementById('ui-confirm-bg');
+    const msgEl=document.getElementById('ui-confirm-msg');
+    const titleEl=document.getElementById('ui-confirm-title');
+    const okBtn=document.getElementById('ui-confirm-ok');
+    const cancelBtn=document.getElementById('ui-confirm-cancel');
+    titleEl.textContent=opts.title||'تأكيد';
+    msgEl.textContent=message||'';
+    okBtn.textContent=opts.okText||'تأكيد';
+    cancelBtn.textContent=opts.cancelText||'إلغاء';
+    okBtn.className='ui-confirm-ok'+(opts.danger===false?'':' danger');
+    bg.style.display='flex';
+    const done=(val)=>{bg.style.display='none';okBtn.onclick=null;cancelBtn.onclick=null;bg.onclick=null;resolve(val);};
+    okBtn.onclick=()=>done(true);
+    cancelBtn.onclick=()=>done(false);
+    bg.onclick=(e)=>{if(e.target===bg)done(false);};
+  });
+}
 
 // ══ SCHOOLS MANAGEMENT (إدارة المدارس) ════════════════
 let _schoolsList=[];
@@ -9686,7 +9731,7 @@ function renderSchoolsList(){
 }
 async function deleteSchool(id,name){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
-  if(!confirm(`حذف مدرسة "${name}"؟\nسيتم حذف جميع مخالفاتها أيضاً ولا يمكن التراجع.`))return;
+  if(!await uiConfirm(`حذف مدرسة "${name}"؟\nسيتم حذف جميع مخالفاتها أيضاً ولا يمكن التراجع.`))return;
   try{
     const{error}=await sb.from('schools').delete().eq('id',id);
     if(error){toast('فشل الحذف: '+error.message,true);return;}
@@ -9788,7 +9833,7 @@ async function toggleViolationTypeActive(id,newActive){
 }
 async function deleteViolationType(id,name){
   if(!isAdmin())return;
-  if(!confirm(`حذف "${name}" نهائياً؟\n\nملاحظة: المخالفات المسجّلة سابقاً بهذا الاسم لن تتأثر — فقط لن يظهر كخيار جديد.\nيُفضّل "الإخفاء" بدل الحذف إن كنت غير متأكد.`))return;
+  if(!await uiConfirm(`حذف "${name}" نهائياً؟\n\nملاحظة: المخالفات المسجّلة سابقاً بهذا الاسم لن تتأثر — فقط لن يظهر كخيار جديد.\nيُفضّل "الإخفاء" بدل الحذف إن كنت غير متأكد.`))return;
   try{
     const{error}=await sb.from('violation_types').delete().eq('id',id);
     if(error){toast('فشل الحذف',true);return;}
@@ -10083,7 +10128,7 @@ async function egLoadFromBank(id){
 }
 async function egDeleteFromBank(id){
   const x=examBank.find(e=>e.id===id);if(!x)return;
-  if(!confirm('حذف «'+x.title+'» من البنك؟'))return;
+  if(!await uiConfirm('حذف «'+x.title+'» من البنك؟'))return;
   if(x.driveId){try{await driveDelete(x.driveId);}catch(e){}}
   examBank=examBank.filter(e=>e.id!==id);
   egUpdateBankCount();egRenderBank();scheduleSave();
@@ -10638,7 +10683,7 @@ async function saveLibFile(){
 
 async function deleteLibFile(id){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
-  if(!confirm('حذف هذا الملف؟'))return;
+  if(!await uiConfirm('حذف هذا الملف؟'))return;
   try{
     const{error}=await sb.from('library_files').delete().eq('id',id);
     if(error){toast('فشل الحذف',true);return;}
