@@ -10026,17 +10026,30 @@ function egCleanResultHtml(){
   return clone.innerHTML;
 }
 function egUpdateBankCount(){const el=document.getElementById('eg-bank-count');if(el)el.textContent=egToArabic(examBank.length);}
-function egSaveToBank(){
+async function egSaveToBank(){
   const R=document.getElementById('eg-result');
   if(!R||!R.textContent.trim()){toast('لا يوجد اختبار لحفظه',true);return;}
-  const html=egCleanResultHtml();
   const def='اختبار '+new Date().toLocaleDateString('ar');
   const title=(prompt('اسم الاختبار في البنك:',def)||'').trim();
   if(!title)return;
-  examBank.unshift({id:'ex_'+Date.now(),title,date:new Date().toISOString(),html});
+  const html=egCleanResultHtml();
+  const blob=new Blob([html],{type:'text/html'});
+  toast('⏳ جاري الحفظ في Google Drive...');
+  const fname=title.replace(/[\\/:*?"<>|]/g,'_')+'.html';
+  const up=await driveUpload(blob,fname);
+  if(!up)return; // لم يُربط Drive أو فشل الرفع (driveUpload أظهر الرسالة)
+  examBank.unshift({id:'ex_'+Date.now(),title,date:new Date().toISOString(),driveId:up.id});
   egUpdateBankCount();
   scheduleSave();
-  toast('✅ تم حفظ الاختبار في البنك','ok');
+  toast('✅ تم حفظ الاختبار في Drive','ok');
+}
+async function egFetchDriveHtml(driveId){
+  if(!await ensureDriveToken())return null;
+  try{
+    const res=await fetch('https://www.googleapis.com/drive/v3/files/'+driveId+'?alt=media',{headers:{Authorization:'Bearer '+googleAccessToken}});
+    if(!res.ok)return null;
+    return await res.text();
+  }catch(e){return null;}
 }
 function egOpenBank(){egRenderBank();document.getElementById('eg-bank-modal').style.display='flex';}
 function egCloseBank(){document.getElementById('eg-bank-modal').style.display='none';}
@@ -10055,19 +10068,23 @@ function egRenderBank(){
     </div>`;
   }).join('');
 }
-function egLoadFromBank(id){
+async function egLoadFromBank(id){
   const x=examBank.find(e=>e.id===id);if(!x)return;
   const R=document.getElementById('eg-result');if(!R)return;
-  R.innerHTML=x.html;
+  let html=x.html; // توافق مع نسخ قديمة محفوظة داخلياً
+  if(!html&&x.driveId){toast('⏳ جاري التحميل من Drive...');html=await egFetchDriveHtml(x.driveId);}
+  if(!html){toast('تعذّر تحميل الاختبار من Drive',true);return;}
+  R.innerHTML=html;
   document.getElementById('eg-result-card').style.display='block';
   egEditorInit();egPaginate();
   egCloseBank();
   document.getElementById('eg-result-card').scrollIntoView({behavior:'smooth'});
   toast('✅ تم فتح الاختبار — عدّله كما تشاء','ok');
 }
-function egDeleteFromBank(id){
+async function egDeleteFromBank(id){
   const x=examBank.find(e=>e.id===id);if(!x)return;
   if(!confirm('حذف «'+x.title+'» من البنك؟'))return;
+  if(x.driveId){try{await driveDelete(x.driveId);}catch(e){}}
   examBank=examBank.filter(e=>e.id!==id);
   egUpdateBankCount();egRenderBank();scheduleSave();
   toast('🗑️ تم الحذف','ok');
