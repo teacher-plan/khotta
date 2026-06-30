@@ -1933,6 +1933,7 @@ input,textarea,select{font-size:16px !important;}
     <div class="tag">🧪 مولّد الاختبارات</div>
     <h1>مولّد الاختبارات</h1>
     <p>ولّد اختباراً من محتوى المكتبة المعتمد — اختر الدروس ثم اضبط الخيارات</p>
+    <button class="eg-regen" style="margin-top:10px;max-width:240px" onclick="egOpenBank()">📚 بنك الأسئلة (<span id="eg-bank-count">٠</span>)</button>
   </div>
 
   <div id="eg-disabled-notice" class="eg-card" style="display:none"><div style="text-align:center;color:var(--muted);padding:22px;font-size:14px">🚧 مولّد الاختبارات غير مفعّل حالياً.<br><span style="font-size:12px">سيتم تفعيله من الإدارة قريباً.</span></div></div>
@@ -2048,10 +2049,23 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <div class="eg-result-actions">
       <button class="eg-export" onclick="egExport()">📄 طباعة / حفظ PDF</button>
+      <button class="eg-regen" onclick="egSaveToBank()">💾 حفظ في البنك</button>
       <button class="eg-regen" onclick="egGenerate()">🔄 إعادة التوليد</button>
     </div>
   </div>
 </div></div>
+
+<!-- ══ بنك الأسئلة (نافذة) ══ -->
+<div class="modal-bg" id="eg-bank-modal" style="display:none">
+  <div class="modal" style="max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;color:var(--gold)">📚 بنك الأسئلة</h3>
+      <button class="modal-cancel" onclick="egCloseBank()" style="padding:4px 12px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">الاختبارات المحفوظة — اضغط «فتح» لإعادة استخدام اختبار وتعديله.</div>
+    <div id="eg-bank-list" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
 
 <!-- ══ ANNOUNCEMENTS PAGE ══ -->
 <div class="page" id="page-announcements"><div class="wrap">
@@ -4372,6 +4386,7 @@ function showApp(data){
       }
     },200);
     remindersConfig=data.reminders_config||{enabled:false,minutes:10};
+    examBank=data.exam_bank||[];
     students=data.students||{};
     grades=data.grades||{};
     gradeTypes=data.grade_types||[];
@@ -4443,6 +4458,7 @@ function showApp(data){
   if(typeof updateAdminButtons==='function')updateAdminButtons();
   // تحديث نص زر الإشعارات
   updateNotifMenuBtn();
+  egUpdateBankCount();
   // استرجاع آخر قسم مفتوح بعد التحديث (مؤجّل ليتغلّب على إعادة توجيه المشرف)
   setTimeout(restoreLastPage,150);
 }
@@ -9459,7 +9475,7 @@ function saveCacheImmediate(){
     timetable_config:timetableConfig,class_config:classConfig,
     students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,
     teacher_config:teacherConfig,behavior_students:behaviorStudents,
-    behavior_violations:behaviorViolations,
+    behavior_violations:behaviorViolations,exam_bank:examBank,
     behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',
     behavior_admin_phone:behaviorAdminPhone||'',
     display_name:displayName||profileCache?.display_name||'',
@@ -9478,7 +9494,7 @@ function scheduleSave(){
   _pendingSave=true;
   clearTimeout(saveTimer3);
   saveTimer3=setTimeout(()=>{
-    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,exam_bank:examBank,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   },400);
 }
 // حفظ فوري قبل إغلاق/تحديث الصفحة لمنع ضياع الدرجات
@@ -9496,7 +9512,7 @@ window.addEventListener('beforeunload',function(e){
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='hidden'&&_pendingSave){
     clearTimeout(saveTimer3);
-    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
+    dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,exam_bank:examBank,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||(profileCache?.teacher_phone)||'',behavior_admin_phone:behaviorAdminPhone||''}).then(()=>{_pendingSave=false;});
   }
 });
 
@@ -10000,6 +10016,62 @@ let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
 let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
 let egExportCfg={font:'Cairo',size:13,header:'سلطنة عُمان — وزارة التربية والتعليم',footer:'خطتي الفصلية — منصة المعلمين',logo:true};
+let examBank=[];
+// ── بنك الأسئلة: حفظ/استرجاع الاختبارات المولّدة (يُخزَّن ضمن ملف المعلم ويتزامن) ──
+function egCleanResultHtml(){
+  const R=document.getElementById('eg-result');if(!R)return'';
+  const clone=R.cloneNode(true);
+  clone.querySelectorAll('.eg-handle,.eg-del,.eg-spacer').forEach(n=>n.remove());
+  clone.querySelectorAll('.eg-obj').forEach(n=>n.classList.remove('sel'));
+  return clone.innerHTML;
+}
+function egUpdateBankCount(){const el=document.getElementById('eg-bank-count');if(el)el.textContent=egToArabic(examBank.length);}
+function egSaveToBank(){
+  const R=document.getElementById('eg-result');
+  if(!R||!R.textContent.trim()){toast('لا يوجد اختبار لحفظه',true);return;}
+  const html=egCleanResultHtml();
+  const def='اختبار '+new Date().toLocaleDateString('ar');
+  const title=(prompt('اسم الاختبار في البنك:',def)||'').trim();
+  if(!title)return;
+  examBank.unshift({id:'ex_'+Date.now(),title,date:new Date().toISOString(),html});
+  egUpdateBankCount();
+  scheduleSave();
+  toast('✅ تم حفظ الاختبار في البنك','ok');
+}
+function egOpenBank(){egRenderBank();document.getElementById('eg-bank-modal').style.display='flex';}
+function egCloseBank(){document.getElementById('eg-bank-modal').style.display='none';}
+function egRenderBank(){
+  const el=document.getElementById('eg-bank-list');if(!el)return;
+  if(!examBank.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:30px;font-size:13px">📭 البنك فارغ — ولّد اختباراً واضغط «حفظ في البنك».</div>';return;}
+  el.innerHTML=examBank.map(x=>{
+    const d=new Date(x.date).toLocaleDateString('ar');
+    return `<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(x.title)}</div>
+        <div style="font-size:11px;color:var(--muted)">${d}</div>
+      </div>
+      <button class="eg-regen" style="flex:0;min-width:auto;padding:7px 14px" onclick="egLoadFromBank('${x.id}')">فتح</button>
+      <button class="eg-regen" style="flex:0;min-width:auto;padding:7px 10px;color:var(--red)" onclick="egDeleteFromBank('${x.id}')">🗑️</button>
+    </div>`;
+  }).join('');
+}
+function egLoadFromBank(id){
+  const x=examBank.find(e=>e.id===id);if(!x)return;
+  const R=document.getElementById('eg-result');if(!R)return;
+  R.innerHTML=x.html;
+  document.getElementById('eg-result-card').style.display='block';
+  egEditorInit();egPaginate();
+  egCloseBank();
+  document.getElementById('eg-result-card').scrollIntoView({behavior:'smooth'});
+  toast('✅ تم فتح الاختبار — عدّله كما تشاء','ok');
+}
+function egDeleteFromBank(id){
+  const x=examBank.find(e=>e.id===id);if(!x)return;
+  if(!confirm('حذف «'+x.title+'» من البنك؟'))return;
+  examBank=examBank.filter(e=>e.id!==id);
+  egUpdateBankCount();egRenderBank();scheduleSave();
+  toast('🗑️ تم الحذف','ok');
+}
 
 function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function egCreditGet(){let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
