@@ -4413,6 +4413,16 @@ function showApp(data){
   if(typeof updateAdminButtons==='function')updateAdminButtons();
   // تحديث نص زر الإشعارات
   updateNotifMenuBtn();
+  // استرجاع آخر قسم مفتوح بعد التحديث
+  restoreLastPage();
+}
+
+function restoreLastPage(){
+  let id;try{id=localStorage.getItem('lastPage');}catch(e){}
+  if(!id)return; // يبقى القسم الافتراضي (الجدول)
+  const btn=document.querySelector('.nav-btn[data-page="'+id+'"]');
+  // نتأكد أن الزر موجود وظاهر لهذا المستخدم (ليس admin-only لمعلم مثلاً)
+  if(btn&&btn.offsetParent!==null)showPage(id,btn);
 }
 
 function updateTeacherBanner(){
@@ -4432,6 +4442,7 @@ function showPage(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active','ripple');
+  try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
