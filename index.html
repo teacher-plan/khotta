@@ -2442,8 +2442,11 @@ input,textarea,select{font-size:16px !important;}
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
       <div style="flex:1;min-width:200px;">
         <span style="font-size:13px;font-weight:700;color:var(--gold)">📱 رقم واتساب المعلم:</span>
-        <input id="behavior-teacher-phone" class="behavior-phone-inp" type="tel" placeholder="أدخل رقمك" oninput="saveBehaviorPhone()"/>
-        <span style="font-size:11px;color:var(--muted)">يظهر في رسالة ولي الأمر</span>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input id="behavior-teacher-phone" class="behavior-phone-inp" type="tel" placeholder="أدخل رقمك" style="flex:1" oninput="onTeacherPhoneInput()"/>
+          <button id="tphone-save-btn" type="button" onclick="confirmTeacherPhone()" style="white-space:nowrap;background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border:none;border-radius:8px;padding:0 14px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer">✓ حفظ</button>
+        </div>
+        <span id="tphone-status" style="font-size:11px;color:var(--muted)">يظهر في رسالة ولي الأمر</span>
       </div>
       <div style="flex:1;min-width:200px;">
         <span style="font-size:13px;font-weight:700;color:var(--gold);"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/></svg> رقم الإدارة:</span>
@@ -7333,6 +7336,29 @@ function saveBehaviorPhone(){
   // مزامنة مع teacher_phone (الذي يستخدمه المشرف) — البقاء على نفس الرقم
   if(profileCache)profileCache.teacher_phone=phone;
   scheduleSave();
+}
+// عند الكتابة: نحفظ محلياً ونُظهر أن التغيير بانتظار التأكيد
+function onTeacherPhoneInput(){
+  saveBehaviorPhone();
+  const st=document.getElementById('tphone-status');
+  if(st){st.textContent='⏳ لم يتم التأكيد — اضغط «حفظ»';st.style.color='#e0a030';}
+}
+// عند الضغط على «حفظ»: مزامنة فورية مع الخادم + تأكيد مرئي
+async function confirmTeacherPhone(){
+  saveBehaviorPhone();
+  const btn=document.getElementById('tphone-save-btn');
+  const st=document.getElementById('tphone-status');
+  if(btn){btn.disabled=true;btn.textContent='⏳ ...';}
+  try{
+    if(typeof dbSave==='function'){
+      await dbSave({plan_state:state,arc_meta:arcMeta,cv_items:cvItems,cv_profile:cvProfile,lesson_files:lessonFiles,arc_categories:arcCategories,timetable_config:timetableConfig,class_config:classConfig,students,grades,grade_types:gradeTypes,reminders_config:remindersConfig,teacher_config:teacherConfig,behavior_students:behaviorStudents,behavior_violations:behaviorViolations,behavior_teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',teacher_phone:localStorage.getItem('behaviorTeacherPhone')||'',behavior_admin_phone:behaviorAdminPhone||''});
+    }
+    if(st){st.textContent='✅ تم الحفظ والمزامنة';st.style.color='#27ae60';}
+    toast('✅ تم حفظ رقم المعلم','ok');
+  }catch(e){
+    if(st){st.textContent='⚠️ حُفظ محلياً — سيُزامن لاحقاً';st.style.color='#e0a030';}
+  }
+  if(btn){btn.disabled=false;btn.textContent='✓ حفظ';}
 }
 
 function saveBehaviorAdminPhone(){
