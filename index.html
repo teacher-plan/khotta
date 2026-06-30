@@ -4413,16 +4413,18 @@ function showApp(data){
   if(typeof updateAdminButtons==='function')updateAdminButtons();
   // تحديث نص زر الإشعارات
   updateNotifMenuBtn();
-  // استرجاع آخر قسم مفتوح بعد التحديث
-  restoreLastPage();
+  // استرجاع آخر قسم مفتوح بعد التحديث (مؤجّل ليتغلّب على إعادة توجيه المشرف)
+  setTimeout(restoreLastPage,150);
 }
 
 function restoreLastPage(){
   let id;try{id=localStorage.getItem('lastPage');}catch(e){}
   if(!id)return; // يبقى القسم الافتراضي (الجدول)
   const btn=document.querySelector('.nav-btn[data-page="'+id+'"]');
-  // نتأكد أن الزر موجود وظاهر لهذا المستخدم (ليس admin-only لمعلم مثلاً)
-  if(btn&&btn.offsetParent!==null)showPage(id,btn);
+  if(!btn)return;
+  // نتأكد أن الزر ظاهر لهذا المستخدم (ليس مخفياً بصلاحية مختلفة)
+  if(getComputedStyle(btn).display==='none')return;
+  showPage(id,btn);
 }
 
 function updateTeacherBanner(){
