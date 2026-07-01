@@ -2432,7 +2432,12 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
       <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this)" style="display:none">
-      <button type="button" class="eg-regen" onclick="document.getElementById('lt-book-pdf').click()">اختر ملف الكتاب (PDF/نص)</button>
+      <input type="file" id="lt-book-vision" accept=".pdf" onchange="ltVisionSliceBook(this)" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-pdf').click()">📄 تقطيع نصّي (سريع/مجاني)</button>
+        <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-vision').click()">👁 تقطيع بالرؤية (رياضيات/علوم)</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">جرّب «النصّي» أولاً. إن ظهر ٠ تطابق أو رموز غريبة (خطوط مشوّهة)، استخدم «بالرؤية» — يقرأ الصفحات كصور (أدقّ للرياضيات/العلوم، أبطأ وأعلى تكلفة قليلاً).</div>
       <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div id="lt-book-result" style="margin-top:8px"></div>
     </div>
@@ -10898,7 +10903,11 @@ async function ltSliceBook(input){
     document.getElementById('lt-book-result').innerHTML=`<div style="color:#b26a00;font-size:13px;line-height:1.9"><b>⚠️ الكتاب لا يحتوي نصّاً قابلاً للاستخراج (${egToArabic(chars)} حرف فقط).</b><br>هذا يعني أن الملف <b>صور ممسوحة</b> (شائع في كتب الرياضيات والعلوم) — استخراج النص لا يعمل معه، ويحتاج <b>مسار الرؤية/OCR</b> الذي خطّطنا له.<br>جرّب مادة نصّية (تربية إسلامية/اجتماعيات) للتأكد أن التقطيع يعمل، أو ننتقل لبناء مسار الرؤية للعلوم.</div>`;
     return;
   }
-  // تقطيع: إيجاد بداية كل درس بالترتيب
+  await ltSliceAndSave(full,rows,grade,subject,semester,chars);
+}
+// المنطق المشترك: تقطيع النصّ حسب عناوين الدروس + الحفظ + عرض النتيجة
+async function ltSliceAndSave(full,rows,grade,subject,semester,chars){
+  const st=document.getElementById('lt-book-status');
   const{norm,map}=ltNormMap(full);
   let cursor=0;const starts=[];
   rows.forEach(r=>{
@@ -10908,7 +10917,6 @@ async function ltSliceBook(input){
     starts.push(pos>=0?map[pos]:-1);
     if(pos>=0)cursor=pos+key.length;
   });
-  // بناء نصّ كل درس (من بدايته حتى بداية الدرس التالي الموجود)
   const found=[],missing=[];
   for(let i=0;i<rows.length;i++){
     if(starts[i]<0){missing.push(rows[i].lesson);continue;}
@@ -10918,7 +10926,6 @@ async function ltSliceBook(input){
     found.push({unit:rows[i].unit,lesson:rows[i].lesson,text});
   }
   st.textContent=`⏳ جاري حفظ ${egToArabic(found.length)} درساً...`;
-  // حفظ في lesson_texts
   const recs=found.map(f=>({
     lesson_id:stableLessonId(semester,subject,String(grade),f.unit,f.lesson),
     grade:String(grade),subject,semester,unit:f.unit,lesson:f.lesson,
@@ -10928,18 +10935,64 @@ async function ltSliceBook(input){
   if(recs.length){try{const{error}=await sb.from('lesson_texts').upsert(recs,{onConflict:'lesson_id'});if(error)saveErr=error.message;}catch(e){saveErr=String(e);}}
   const total=rows.length;
   let html=`<div style="font-weight:700;font-size:13px;color:${found.length===total?'#2e7d32':'#b26a00'}">طوبِق ${egToArabic(found.length)} من ${egToArabic(total)} درساً${found.length===total?' ✅':''}</div>`;
-  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">استُخرج ${egToArabic(chars)} حرف من الكتاب${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق.':''}</div>`;
+  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">حجم النصّ ${egToArabic(chars||full.trim().length)} حرف${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق.':''}</div>`;
   if(found.length<total){
     const sample=full.replace(/\s+/g,' ').trim().slice(0,300);
-    html+=`<div style="margin-top:8px;font-size:11px;color:var(--muted)">عيّنة من النصّ المستخرج (للتشخيص):<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;direction:rtl;max-height:120px;overflow:auto">${escHtml(sample)||'(فارغ)'}</div></div>`;
+    html+=`<div style="margin-top:8px;font-size:11px;color:var(--muted)">عيّنة من النصّ (للتشخيص):<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;direction:rtl;max-height:120px;overflow:auto">${escHtml(sample)||'(فارغ)'}</div></div>`;
   }
   if(saveErr){html+=`<div style="color:var(--red);font-size:12px;margin-top:6px">فشل الحفظ: ${escHtml(saveErr)}</div>`;}
   else{html+=`<div style="color:var(--muted);font-size:12px;margin-top:4px">تم حفظ نصّ ${egToArabic(found.length)} درساً — جاهزة للتوليد الدقيق تلقائياً.</div>`;}
   if(missing.length){
-    html+=`<div style="margin-top:10px;font-size:12px;color:#b26a00"><b>دروس لم يُعثر عليها في الكتاب (${egToArabic(missing.length)}):</b><ul style="margin:6px 0;padding-inline-start:18px">${missing.map(m=>'<li>'+escHtml(m)+'</li>').join('')}</ul>تأكد أن عناوينها في المنهج تطابق ما في الكتاب، أو أن الكتاب نصّي لا صور.</div>`;
+    html+=`<div style="margin-top:10px;font-size:12px;color:#b26a00"><b>دروس لم يُعثر عليها (${egToArabic(missing.length)}):</b><ul style="margin:6px 0;padding-inline-start:18px">${missing.map(m=>'<li>'+escHtml(m)+'</li>').join('')}</ul></div>`;
   }
   st.textContent='';
   document.getElementById('lt-book-result').innerHTML=html;
+}
+// ── مسار الرؤية: رسم صفحات الكتاب صوراً وقراءتها بصرياً (للكتب المشوّهة الخط) ──
+async function ltRenderPageImage(pdf,pageNum,maxW){
+  const page=await pdf.getPage(pageNum);
+  const base=page.getViewport({scale:1});
+  const scale=Math.max(0.6,Math.min(2,maxW/base.width));
+  const vp=page.getViewport({scale});
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
+  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  return canvas.toDataURL('image/jpeg',0.7);
+}
+async function ltVisionSliceBook(input){
+  const file=input.files[0];input.value='';
+  if(!file)return;
+  const grade=document.getElementById('ltb-grade').value;
+  const subject=document.getElementById('ltb-subject').value;
+  const semester=document.getElementById('ltb-semester').value;
+  const st=document.getElementById('lt-book-status');
+  document.getElementById('lt-book-result').innerHTML='';
+  if(!grade||!subject){st.textContent='❌ اختر الصف والمادة أولاً';return;}
+  if(!/\.pdf$/i.test(file.name)){st.textContent='❌ مسار الرؤية يقبل ملفات PDF فقط';return;}
+  let rows=[];
+  try{const{data}=await sb.from('curriculum').select('unit,lesson,sort').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester);rows=(data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));}catch(e){}
+  if(!rows.length){st.textContent='❌ لا توجد دروس لهذه المادة في المنهج — أضفها أولاً';return;}
+  st.textContent='⏳ جاري تجهيز صفحات الكتاب...';
+  let pdf;
+  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
+  catch(e){st.textContent='❌ فشل فتح الـ PDF';return;}
+  const N=pdf.numPages;
+  const BATCH=4;let full='';
+  for(let p=1;p<=N;p+=BATCH){
+    const last=Math.min(p+BATCH-1,N);
+    st.textContent=`👁 جاري قراءة الصفحات ${egToArabic(p)}–${egToArabic(last)} من ${egToArabic(N)} بالرؤية...`;
+    const imgs=[];
+    for(let k=p;k<=last;k++){try{imgs.push(await ltRenderPageImage(pdf,k,1100));}catch(e){}}
+    if(!imgs.length)continue;
+    try{
+      const{data,error}=await sb.functions.invoke('ocr-pages',{body:{images:imgs}});
+      if(error){let r=error.message||'خطأ';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)r=j.error;}}catch(_){}st.textContent='❌ فشل القراءة بالرؤية: '+r;return;}
+      (data&&data.pages||[]).forEach(t=>{if(t)full+=t+'\n';});
+    }catch(e){st.textContent='❌ خطأ أثناء القراءة بالرؤية';return;}
+  }
+  try{full=full.normalize('NFKC');}catch(e){}
+  const chars=full.trim().length;
+  if(chars<200){st.textContent='';document.getElementById('lt-book-result').innerHTML='<div style="color:#b26a00;font-size:13px">⚠️ لم تُقرأ صفحات كافية — تأكد أن الملف PDF صحيح.</div>';return;}
+  await ltSliceAndSave(full,rows,grade,subject,semester,chars);
 }
 async function loadAiSettings(){
   if(!sb)return;
