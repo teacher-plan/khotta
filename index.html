@@ -10857,6 +10857,7 @@ function ltNormName(s){
   return (s||'').replace(/[ً-ْٰـ]/g,'')
     .replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
     .replace(/^\s*(الدرس|درس|الوحدة|وحدة)\s+[^:：\-]*[:：\-]\s*/,'')
+    .replace(/\s*[\(（][\d٠-٩\s]*[\)）]\s*$/,'') // إزالة اللاحقة الرقمية مثل «(١)» في النهاية
     .replace(/\s+/g,' ').trim();
 }
 async function ltSliceBook(input){
@@ -10875,7 +10876,12 @@ async function ltSliceBook(input){
   st.textContent='⏳ جاري استخراج نصّ الكتاب...';
   let full='';
   try{full=await egExtractFileText(file);}catch(e){st.textContent='❌ فشل قراءة الملف';return;}
-  if(!full.trim()){st.textContent='⚠️ لم يُستخرج نص (قد يكون الكتاب صوراً ممسوحة — يحتاج OCR)';return;}
+  const chars=full.trim().length;
+  if(chars<800){
+    st.textContent='';
+    document.getElementById('lt-book-result').innerHTML=`<div style="color:#b26a00;font-size:13px;line-height:1.9"><b>⚠️ الكتاب لا يحتوي نصّاً قابلاً للاستخراج (${egToArabic(chars)} حرف فقط).</b><br>هذا يعني أن الملف <b>صور ممسوحة</b> (شائع في كتب الرياضيات والعلوم) — استخراج النص لا يعمل معه، ويحتاج <b>مسار الرؤية/OCR</b> الذي خطّطنا له.<br>جرّب مادة نصّية (تربية إسلامية/اجتماعيات) للتأكد أن التقطيع يعمل، أو ننتقل لبناء مسار الرؤية للعلوم.</div>`;
+    return;
+  }
   // تقطيع: إيجاد بداية كل درس بالترتيب
   const{norm,map}=ltNormMap(full);
   let cursor=0;const starts=[];
@@ -10906,6 +10912,7 @@ async function ltSliceBook(input){
   if(recs.length){try{const{error}=await sb.from('lesson_texts').upsert(recs,{onConflict:'lesson_id'});if(error)saveErr=error.message;}catch(e){saveErr=String(e);}}
   const total=rows.length;
   let html=`<div style="font-weight:700;font-size:13px;color:${found.length===total?'#2e7d32':'#b26a00'}">طوبِق ${egToArabic(found.length)} من ${egToArabic(total)} درساً${found.length===total?' ✅':''}</div>`;
+  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">استُخرج ${egToArabic(chars)} حرف من الكتاب${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق (قد تكون العناوين صوراً أو صياغتها مختلفة عن المنهج).':''}</div>`;
   if(saveErr){html+=`<div style="color:var(--red);font-size:12px;margin-top:6px">فشل الحفظ: ${escHtml(saveErr)}</div>`;}
   else{html+=`<div style="color:var(--muted);font-size:12px;margin-top:4px">تم حفظ نصّ ${egToArabic(found.length)} درساً — جاهزة للتوليد الدقيق تلقائياً.</div>`;}
   if(missing.length){
