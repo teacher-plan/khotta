@@ -1919,7 +1919,8 @@ input,textarea,select{font-size:16px !important;}
   <div id="lib-view-units" style="display:none">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <button class="arc-btn" onclick="libBackToSubjects()" style="padding:8px 16px">← رجوع للمواد</button>
-      <div id="lib-units-banner" style="font-size:16px;font-weight:800;color:var(--text)"></div>
+      <div id="lib-units-banner" style="font-size:16px;font-weight:800;color:var(--text);flex:1"></div>
+      <button class="arc-btn" onclick="libOpenExamBank()" style="padding:8px 16px;background:rgba(192,57,43,.12);color:var(--red);font-weight:700">🗂️ بنك الاختبارات</button>
     </div>
     <input class="arc-search" type="text" id="lib-units-search" placeholder="ابحث عن درس..." oninput="libFilterLessons(this.value)" style="margin-bottom:14px">
     <div id="lib-units-list"></div>
@@ -1936,6 +1937,15 @@ input,textarea,select{font-size:16px !important;}
       <button id="lib-add-file-btn" class="setup-btn primary" style="display:none" onclick="openLibAddModal()">➕ إضافة ملف</button>
     </div>
     <div id="lib-lesson-files"></div>
+  </div>
+
+  <!-- شاشة 5: بنك الاختبارات المنشورة (مجمّع حسب الفصل والوحدة) -->
+  <div id="lib-view-exambank" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="arc-btn" onclick="libBackToUnits()" style="padding:8px 16px">← رجوع للدروس</button>
+      <div id="lib-exambank-banner" style="font-size:16px;font-weight:800;color:var(--text)">🗂️ بنك الاختبارات</div>
+    </div>
+    <div id="lib-exambank-list"></div>
   </div>
 </div></div>
 
@@ -2061,6 +2071,7 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <div class="eg-result-actions">
       <button class="eg-export" onclick="egExport()">📄 طباعة / حفظ PDF</button>
+      <button class="eg-regen" id="eg-publish-btn" onclick="egPublishToLibrary()">📚 نشر في المكتبة</button>
       <button class="eg-regen" onclick="egSaveToBank()">💾 حفظ في البنك</button>
       <button class="eg-regen" onclick="egGenerate()">🔄 إعادة التوليد</button>
     </div>
@@ -9882,7 +9893,7 @@ function libEscAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace
 function libGradeName(n){const a=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];return 'الصف '+(a[n-1]||n);}
 
 function libShowView(v){
-  ['grades','subjects','units','lesson'].forEach(x=>{
+  ['grades','subjects','units','lesson','exambank'].forEach(x=>{
     const el=document.getElementById('lib-view-'+x);
     if(el)el.style.display=(x===v)?'block':'none';
   });
@@ -10050,6 +10061,50 @@ function libOpenFile(idx){
   const f=_libFileCards[idx];if(!f)return;
   if(f.file_type==='pdf'&&(f.url||'').includes('supabase'))openPdf(f.url,(f.title||(f.url||'').split('/').pop()));
   else window.open(f.url,'_blank','noopener');
+}
+
+// بنك الاختبارات: كل الاختبارات المنشورة للمادة مجمّعة حسب الفصل ثم الوحدة
+function libOpenExamBank(){
+  libShowView('exambank');
+  document.getElementById('lib-exambank-banner').textContent='🗂️ بنك الاختبارات — '+libState.subject+' • '+libGradeName(libState.grade);
+  const box=document.getElementById('lib-exambank-list');
+  const seen={},exams=[];
+  Object.values(libFilesByLesson).forEach(arr=>(arr||[]).forEach(f=>{
+    if(f.content_type!=='exam')return;
+    const key=f.url||('id'+f.id);
+    if(seen[key])return;seen[key]=1;exams.push(f);
+  }));
+  if(!exams.length){box.innerHTML='<div class="lib-empty">📭 لا توجد اختبارات منشورة بعد لهذه المادة.<br><small>ولّد اختباراً من المولّد واضغط «نشر في المكتبة».</small></div>';return;}
+  const groups={};
+  exams.forEach(f=>{
+    const sem=f.semester||'غير محدّد',unit=f.unit||'عام';
+    (groups[sem]=groups[sem]||{});(groups[sem][unit]=groups[sem][unit]||[]).push(f);
+  });
+  let html='';
+  Object.keys(groups).forEach(sem=>{
+    html+='<div style="font-weight:800;color:var(--text);margin:16px 0 8px;font-size:15px">📅 '+escHtml(sem)+'</div>';
+    Object.keys(groups[sem]).forEach(unit=>{
+      html+='<div style="font-size:13px;font-weight:700;color:var(--muted);margin:8px 0 6px">📚 '+escHtml(unit)+'</div><div class="lib-links-grid">';
+      groups[sem][unit].forEach(f=>{
+        const u=(f.url||'').replace(/'/g,"\\'");
+        const del=isAdmin()?`<button class="lib-link-delete" onclick="event.stopPropagation();deleteLibExam('${u}')" title="حذف">✕</button>`:'';
+        html+=`<div class="lib-link-card" onclick="window.open('${u}','_blank','noopener')"><div class="lib-link-icon">📝</div><div class="lib-link-info"><div class="lib-link-title">${escHtml(f.title||'اختبار')}</div><div class="lib-link-meta">اختبار • اضغط للفتح</div></div>${del}</div>`;
+      });
+      html+='</div>';
+    });
+  });
+  box.innerHTML=html;
+}
+async function deleteLibExam(url){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  if(!await uiConfirm('حذف هذا الاختبار من المكتبة العامة نهائياً؟'))return;
+  try{
+    const{error}=await sb.from('library_files').delete().eq('url',url).eq('content_type','exam');
+    if(error){toast('فشل الحذف',true);return;}
+    toast('تم الحذف','ok');
+    await libLoadFiles(libState.grade,libState.subject);
+    libOpenExamBank();
+  }catch(e){toast('حدث خطأ',true);}
 }
 
 function extractYoutubeId(url){
@@ -10358,24 +10413,21 @@ async function egGenerate(){
   }
 }
 
-function egExport(){
-  // إزالة تذييل الشاشة من المحتوى (نستخدم تذييلاً ثابتاً يتكرر بكل صفحة عند الطباعة)
+// محتوى الورقة نظيفاً (بلا مقابض/تذييل شاشة) داخل غلاف نسبي للكائنات المطلقة
+function egResultContent(){
   const clone=document.getElementById('eg-result').cloneNode(true);
   clone.querySelectorAll('.eg-handle,.eg-del,.eg-spacer').forEach(n=>n.remove());
   clone.querySelectorAll('.eg-obj').forEach(n=>n.classList.remove('sel'));
-  let content=clone.innerHTML
-    .replace(/<div class="eg-screen-footer"[\s\S]*?<\/div>\s*$/,'');
-  // غلاف نسبي ليُحدّد مرجع التموضع للكائنات المطلقة (الأشكال/الصور المحرّكة)
-  content='<div style="position:relative">'+content+'</div>';
-  const w=window.open('','_blank');
-  if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
+  const content=clone.innerHTML.replace(/<div class="eg-screen-footer"[\s\S]*?<\/div>\s*$/,'');
+  return '<div style="position:relative">'+content+'</div>';
+}
+// مستند HTML مستقل قابل للطباعة/الفتح (يُستخدم للطباعة وللنشر في المكتبة)
+function egBuildDoc(content){
   const cfg=egExportCfg;
   const LOGO='https://khotati.com/khottah_icon_120.png';
   const fontHref='https://fonts.googleapis.com/css2?family='+cfg.font.replace(/ /g,'+')+':wght@400;700&display=swap';
   const footer=`<div class="eg-pfooter">${cfg.logo?`<img src="${LOGO}" alt=""/>`:''}<span>${escHtml(cfg.footer)}</span></div>`;
-  // النموذج: @page هامش موحّد → الإطار الثابت عند حافة المنطقة القابلة للطباعة،
-  // وحشوة body تُبقي كل المحتوى داخل الإطار، ومساحة سفلية تمنع تداخله مع التذييل.
-  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>اختبار</title>
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>اختبار</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="${fontHref}" rel="stylesheet">
 <style>
   @page{margin:12mm;}
@@ -10392,9 +10444,54 @@ function egExport(){
 <div class="page-frame"></div>
 ${content}
 ${footer}
-</body></html>`);
+</body></html>`;
+}
+function egExport(){
+  const w=window.open('','_blank');
+  if(!w){toast('السماح بالنوافذ المنبثقة مطلوب للطباعة',true);return;}
+  w.document.write(egBuildDoc(egResultContent()));
   w.document.close();
   setTimeout(()=>{try{w.focus();w.print();}catch(e){}},800);
+}
+// بيانات الدروس المختارة كاملةً (تُستكمل الفصل الدراسي من شجرة الوحدات)
+function egSelectedMeta(){
+  return Object.keys(egSelected).map(lid=>{
+    let sem='';const cur=egSelected[lid]||{};
+    for(const u of egUnits){const l=(u.lessons||[]).find(x=>x.lessonId===lid);if(l){sem=l.semester||'';break;}}
+    return {lessonId:lid,name:cur.name||'',unit:cur.unit||'',semester:sem};
+  });
+}
+// نشر الاختبار في المكتبة العامة: يُرفع كملف HTML عام ويُربط بكل درس مختار
+async function egPublishToLibrary(){
+  const R=document.getElementById('eg-result');
+  if(!R||!R.textContent.trim()){toast('لا يوجد اختبار لنشره',true);return;}
+  if(typeof sb==='undefined'||!sb){toast('لا يوجد اتصال بالخادم',true);return;}
+  const meta=egSelectedMeta();
+  if(!meta.length){toast('لا توجد دروس مرتبطة بالاختبار',true);return;}
+  const grade=document.getElementById('eg-grade').value;
+  const subject=document.getElementById('eg-subject').value;
+  const def='اختبار '+subject+' — '+new Date().toLocaleDateString('ar');
+  const title=(prompt('اسم الاختبار كما يظهر في المكتبة العامة:',def)||'').trim();
+  if(!title)return;
+  const btn=document.getElementById('eg-publish-btn');if(btn){btn.disabled=true;btn.textContent='⏳ جاري النشر...';}
+  try{
+    const doc=egBuildDoc(egResultContent());
+    const blob=new Blob([doc],{type:'text/html'});
+    const path='exams/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.html';
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{cacheControl:'3600',upsert:false,contentType:'text/html'});
+    if(upErr){toast('فشل رفع الملف: '+upErr.message,true);return;}
+    const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
+    const url=pub.publicUrl;
+    const rows=meta.map(m=>({
+      grade:String(grade),subject,semester:m.semester||'',unit:m.unit||'',
+      lesson:m.name,lesson_id:m.lessonId,content_type:'exam',title,url,file_type:'html',
+      created_by:(currentUser&&currentUser.email)||''
+    }));
+    const{error:insErr}=await sb.from('library_files').insert(rows);
+    if(insErr){toast('فشل النشر: '+insErr.message,true);return;}
+    toast('✅ تم نشر الاختبار في المكتبة العامة','ok');
+  }catch(e){toast('حدث خطأ أثناء النشر',true);}
+  finally{const b=document.getElementById('eg-publish-btn');if(b){b.disabled=false;b.textContent='📚 نشر في المكتبة';}}
 }
 
 // ── أدوات تحرير ورقة الاختبار (شريط شبيه بـ Word) ──
