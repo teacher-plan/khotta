@@ -10841,6 +10841,21 @@ async function ltUploadExtracted(){
     document.getElementById('lt-index-result').innerHTML='';
   }catch(e){st.textContent='❌ فشل الرفع: '+(e.message||'خطأ');}
 }
+// استخراج نصّ الكتاب كاملاً (كل الصفحات) مع تطبيع Unicode لتوحيد الأحرف العربية
+async function ltExtractBookText(file){
+  if(/\.txt$/i.test(file.name)||file.type==='text/plain'){let t=await file.text();try{t=t.normalize('NFKC');}catch(e){}return t;}
+  await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let out='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    out+=tc.items.map(it=>it.str).join(' ')+'\n';
+  }
+  try{out=out.normalize('NFKC');}catch(e){}
+  return out;
+}
 // تطبيع نصّ عربي مع خريطة مواضع للأصل (لإيجاد بدايات الدروس بدقّة)
 function ltNormMap(orig){
   let out='';const map=[];
@@ -10854,6 +10869,7 @@ function ltNormMap(orig){
   return {norm:out,map};
 }
 function ltNormName(s){
+  try{s=(s||'').normalize('NFKC');}catch(e){}
   return (s||'').replace(/[ً-ْٰـ]/g,'')
     .replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
     .replace(/^\s*(الدرس|درس|الوحدة|وحدة)\s+[^:：\-]*[:：\-]\s*/,'')
@@ -10875,7 +10891,7 @@ async function ltSliceBook(input){
   if(!rows.length){st.textContent='❌ لا توجد دروس لهذه المادة في المنهج — أضفها أولاً';return;}
   st.textContent='⏳ جاري استخراج نصّ الكتاب...';
   let full='';
-  try{full=await egExtractFileText(file);}catch(e){st.textContent='❌ فشل قراءة الملف';return;}
+  try{full=await ltExtractBookText(file);}catch(e){st.textContent='❌ فشل قراءة الملف';return;}
   const chars=full.trim().length;
   if(chars<800){
     st.textContent='';
@@ -10912,7 +10928,11 @@ async function ltSliceBook(input){
   if(recs.length){try{const{error}=await sb.from('lesson_texts').upsert(recs,{onConflict:'lesson_id'});if(error)saveErr=error.message;}catch(e){saveErr=String(e);}}
   const total=rows.length;
   let html=`<div style="font-weight:700;font-size:13px;color:${found.length===total?'#2e7d32':'#b26a00'}">طوبِق ${egToArabic(found.length)} من ${egToArabic(total)} درساً${found.length===total?' ✅':''}</div>`;
-  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">استُخرج ${egToArabic(chars)} حرف من الكتاب${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق (قد تكون العناوين صوراً أو صياغتها مختلفة عن المنهج).':''}</div>`;
+  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">استُخرج ${egToArabic(chars)} حرف من الكتاب${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق.':''}</div>`;
+  if(found.length<total){
+    const sample=full.replace(/\s+/g,' ').trim().slice(0,300);
+    html+=`<div style="margin-top:8px;font-size:11px;color:var(--muted)">عيّنة من النصّ المستخرج (للتشخيص):<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;direction:rtl;max-height:120px;overflow:auto">${escHtml(sample)||'(فارغ)'}</div></div>`;
+  }
   if(saveErr){html+=`<div style="color:var(--red);font-size:12px;margin-top:6px">فشل الحفظ: ${escHtml(saveErr)}</div>`;}
   else{html+=`<div style="color:var(--muted);font-size:12px;margin-top:4px">تم حفظ نصّ ${egToArabic(found.length)} درساً — جاهزة للتوليد الدقيق تلقائياً.</div>`;}
   if(missing.length){
