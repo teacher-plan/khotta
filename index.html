@@ -2404,6 +2404,36 @@ input,textarea,select{font-size:16px !important;}
     <p>تحكّم المشرف في سلوك الذكاء الاصطناعي وإعداداته</p>
   </div>
 
+  <!-- 🧠 مساعد المحتوى الذكي: استخراج الفهرس + تقطيع الكتاب لنصّ كل درس -->
+  <div class="eg-card">
+    <div class="eg-step-title">🧠 مساعد المحتوى الذكي</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">جهّز <b>نصّ كل درس مرة واحدة</b> من الكتاب، فيولّد المعلمون اختبارات دقيقة دون رفع أي شيء. اختر الصف والمادة والفصل، ثم استخرج الفهرس واقطع الكتاب.</p>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">الصف</label><select id="lt-grade" onchange="ltOnChange(this)"><option value="">الصف</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">المادة</label><select id="lt-subject" onchange="ltOnChange(this)"><option value="">المادة</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="lt-semester" onchange="ltOnChange(this)"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
+    </div>
+
+    <!-- خطوة ١: استخراج الفهرس من صورة -->
+    <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">📷 ١) استخراج أسماء الدروس من صورة الفهرس</div>
+      <input type="file" id="lt-index-img" accept="image/*" multiple onchange="ltExtractIndex(this)" style="display:none">
+      <button type="button" class="eg-regen" onclick="document.getElementById('lt-index-img').click()">اختر صورة/صور الفهرس</button>
+      <div id="lt-index-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      <div id="lt-index-result" style="margin-top:8px"></div>
+    </div>
+
+    <!-- خطوة ٢: إرفاق الكتاب وتقطيعه -->
+    <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:12px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">📚 ٢) إرفاق الكتاب كاملاً وتقطيعه لنصّ كل درس</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">يتطلّب وجود دروس هذه المادة في المنهج أولاً (استخرجها من الفهرس بالأعلى وأضفها من «إدارة الدروس»).</div>
+      <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this)" style="display:none">
+      <button type="button" class="eg-regen" onclick="document.getElementById('lt-book-pdf').click()">اختر ملف الكتاب (PDF/نص)</button>
+      <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      <div id="lt-book-result" style="margin-top:8px"></div>
+    </div>
+  </div>
+
   <div class="eg-card">
     <div class="eg-step-title">📝 تعليمات توجيه الذكاء الاصطناعي</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">تُرسَل مع كل طلب توليد لتوجيه أسلوب الأسئلة ومستواها (اللغة، المنهج العماني، نمط الوزارة، أساليب مفضّلة/ممنوعة). تُحفظ فوراً وتُطبَّق على كل المعلمين.</p>
@@ -4557,7 +4587,7 @@ function showPage(id,btn){
   if(id==='stats')renderStats();
   if(id==='library')loadLibrary();
   if(id==='examgen')egInit();
-  if(id==='aimanage')loadAiSettings();
+  if(id==='aimanage'){loadAiSettings();ltInit();}
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
@@ -10462,8 +10492,17 @@ async function egGenerate(){
   const lessons=Object.values(egSelected);
   if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
   if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
-  // أنواع وأعداد الأسئلة لكل درس على حدة
-  const lessonSpecs=lessons.map(l=>({name:l.name,types:(l.types&&l.types.length?l.types:['mcq']),count:l.count||3}));
+  // جلب نصّ الدروس المخزّن (إن جهّزه المشرف) لتوليد دقيق بلا إرفاق من المعلم
+  let ltMap={};
+  try{
+    const ids=Object.keys(egSelected);
+    if(typeof sb!=='undefined'&&sb&&ids.length){
+      const{data}=await sb.from('lesson_texts').select('lesson_id,text').in('lesson_id',ids);
+      (data||[]).forEach(r=>{if(r.text)ltMap[r.lesson_id]=r.text;});
+    }
+  }catch(e){}
+  // أنواع وأعداد الأسئلة لكل درس على حدة (+ نصّه المخزّن إن وُجد)
+  const lessonSpecs=Object.entries(egSelected).map(([lid,l])=>({name:l.name,types:(l.types&&l.types.length?l.types:['mcq']),count:l.count||3,text:ltMap[lid]||''}));
   const types=[...new Set(lessonSpecs.flatMap(l=>l.types))];
   const qcount=lessonSpecs.reduce((s,l)=>s+l.count,0);
   if(!qcount){toast('حدّد عدد أسئلة لكل درس',true);return;}
@@ -10707,6 +10746,119 @@ function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;i
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
 let _aiConsumed=0;
+// ══ مساعد المحتوى الذكي (المشرف): استخراج الفهرس + تقطيع الكتاب لنصّ كل درس ══
+const LT_MAX=40000; // سقف نصّ الدرس الواحد
+function ltInit(){
+  const g=document.getElementById('lt-grade');if(g&&g.options.length<=1){g.innerHTML='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');}
+}
+async function ltOnChange(el){
+  const grade=document.getElementById('lt-grade').value;
+  const ssel=document.getElementById('lt-subject');
+  document.getElementById('lt-index-result').innerHTML='';
+  document.getElementById('lt-book-result').innerHTML='';
+  document.getElementById('lt-index-status').textContent='';
+  document.getElementById('lt-book-status').textContent='';
+  if(el&&el.id==='lt-grade'){
+    ssel.innerHTML='<option value="">المادة</option>';
+    if(grade){
+      try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade));
+        const subs=[...new Set((data||[]).map(r=>r.subject))];
+        ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');}catch(e){}
+    }
+  }
+}
+function ltFileToDataUrl(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
+async function ltExtractIndex(input){
+  const files=[...input.files];input.value='';
+  if(!files.length)return;
+  const st=document.getElementById('lt-index-status');
+  st.textContent='⏳ جاري قراءة الفهرس...';
+  try{
+    const images=[];for(const f of files.slice(0,6)){if(f.size>8*1024*1024){st.textContent='❌ حجم صورة كبير (الحد 8MB)';return;}images.push(await ltFileToDataUrl(f));}
+    const{data,error}=await sb.functions.invoke('extract-lessons',{body:{images}});
+    if(error){let r=error.message||'خطأ';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)r=j.error;}}catch(_){}st.textContent='❌ '+r;return;}
+    const units=(data&&data.units)||[];
+    if(!units.length){st.textContent='⚠️ لم تُستخرج دروس — جرّب صورة أوضح';return;}
+    const totalL=units.reduce((s,u)=>s+((u.lessons||[]).length),0);
+    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجعها ثم أضفها في «إدارة الدروس»';
+    let txt='';units.forEach(u=>{txt+='== '+(u.unit||'عام')+' ==\n';(u.lessons||[]).forEach(l=>{txt+=l+'\n';});txt+='\n';});
+    document.getElementById('lt-index-result').innerHTML=`<textarea id="lt-index-text" rows="10" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt.trim())}</textarea><button class="eg-regen" style="margin-top:6px" onclick="ltCopyIndex()">📋 نسخ القائمة</button>`;
+  }catch(e){st.textContent='❌ فشل استخراج الفهرس';}
+}
+function ltCopyIndex(){const t=document.getElementById('lt-index-text');if(!t)return;t.select();try{document.execCommand('copy');toast('تم النسخ','ok');}catch(e){}}
+// تطبيع نصّ عربي مع خريطة مواضع للأصل (لإيجاد بدايات الدروس بدقّة)
+function ltNormMap(orig){
+  let out='';const map=[];
+  for(let i=0;i<orig.length;i++){
+    let c=orig[i];
+    if(/[ً-ْٰـ]/.test(c))continue; // تشكيل + تطويل
+    if(/\s/.test(c)){if(out.endsWith(' '))continue;c=' ';}
+    else{c=c.replace(/[أإآ]/,'ا').replace(/ى/,'ي').replace(/ة/,'ه');}
+    out+=c;map.push(i);
+  }
+  return {norm:out,map};
+}
+function ltNormName(s){
+  return (s||'').replace(/[ً-ْٰـ]/g,'')
+    .replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
+    .replace(/^\s*(الدرس|درس|الوحدة|وحدة)\s+[^:：\-]*[:：\-]\s*/,'')
+    .replace(/\s+/g,' ').trim();
+}
+async function ltSliceBook(input){
+  const file=input.files[0];input.value='';
+  if(!file)return;
+  const grade=document.getElementById('lt-grade').value;
+  const subject=document.getElementById('lt-subject').value;
+  const semester=document.getElementById('lt-semester').value;
+  const st=document.getElementById('lt-book-status');
+  if(!grade||!subject){st.textContent='❌ اختر الصف والمادة أولاً';return;}
+  st.textContent='⏳ جاري قراءة دروس المنهج...';
+  // دروس المنهج مرتّبة
+  let rows=[];
+  try{const{data}=await sb.from('curriculum').select('unit,lesson,sort').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester);rows=(data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));}catch(e){}
+  if(!rows.length){st.textContent='❌ لا توجد دروس لهذه المادة في المنهج — أضفها أولاً';return;}
+  st.textContent='⏳ جاري استخراج نصّ الكتاب...';
+  let full='';
+  try{full=await egExtractFileText(file);}catch(e){st.textContent='❌ فشل قراءة الملف';return;}
+  if(!full.trim()){st.textContent='⚠️ لم يُستخرج نص (قد يكون الكتاب صوراً ممسوحة — يحتاج OCR)';return;}
+  // تقطيع: إيجاد بداية كل درس بالترتيب
+  const{norm,map}=ltNormMap(full);
+  let cursor=0;const starts=[];
+  rows.forEach(r=>{
+    const key=ltNormName(r.lesson);
+    let pos=-1;
+    if(key&&key.length>=3){pos=norm.indexOf(key,cursor);if(pos<0)pos=norm.indexOf(key);}
+    starts.push(pos>=0?map[pos]:-1);
+    if(pos>=0)cursor=pos+key.length;
+  });
+  // بناء نصّ كل درس (من بدايته حتى بداية الدرس التالي الموجود)
+  const found=[],missing=[];
+  for(let i=0;i<rows.length;i++){
+    if(starts[i]<0){missing.push(rows[i].lesson);continue;}
+    let end=full.length;
+    for(let j=i+1;j<rows.length;j++){if(starts[j]>starts[i]){end=starts[j];break;}}
+    const text=full.slice(starts[i],end).trim().slice(0,LT_MAX);
+    found.push({unit:rows[i].unit,lesson:rows[i].lesson,text});
+  }
+  st.textContent=`⏳ جاري حفظ ${egToArabic(found.length)} درساً...`;
+  // حفظ في lesson_texts
+  const recs=found.map(f=>({
+    lesson_id:stableLessonId(semester,subject,String(grade),f.unit,f.lesson),
+    grade:String(grade),subject,semester,unit:f.unit,lesson:f.lesson,
+    text:f.text,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()
+  }));
+  let saveErr='';
+  if(recs.length){try{const{error}=await sb.from('lesson_texts').upsert(recs,{onConflict:'lesson_id'});if(error)saveErr=error.message;}catch(e){saveErr=String(e);}}
+  const total=rows.length;
+  let html=`<div style="font-weight:700;font-size:13px;color:${found.length===total?'#2e7d32':'#b26a00'}">طوبِق ${egToArabic(found.length)} من ${egToArabic(total)} درساً${found.length===total?' ✅':''}</div>`;
+  if(saveErr){html+=`<div style="color:var(--red);font-size:12px;margin-top:6px">فشل الحفظ: ${escHtml(saveErr)}</div>`;}
+  else{html+=`<div style="color:var(--muted);font-size:12px;margin-top:4px">تم حفظ نصّ ${egToArabic(found.length)} درساً — جاهزة للتوليد الدقيق تلقائياً.</div>`;}
+  if(missing.length){
+    html+=`<div style="margin-top:10px;font-size:12px;color:#b26a00"><b>دروس لم يُعثر عليها في الكتاب (${egToArabic(missing.length)}):</b><ul style="margin:6px 0;padding-inline-start:18px">${missing.map(m=>'<li>'+escHtml(m)+'</li>').join('')}</ul>تأكد أن عناوينها في المنهج تطابق ما في الكتاب، أو أن الكتاب نصّي لا صور.</div>`;
+  }
+  st.textContent='';
+  document.getElementById('lt-book-result').innerHTML=html;
+}
 async function loadAiSettings(){
   if(!sb)return;
   try{
