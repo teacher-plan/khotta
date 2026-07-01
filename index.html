@@ -2410,8 +2410,8 @@ input,textarea,select{font-size:16px !important;}
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">جهّز <b>نصّ كل درس مرة واحدة</b> من الكتاب، فيولّد المعلمون اختبارات دقيقة دون رفع أي شيء. اختر الصف والمادة والفصل، ثم استخرج الفهرس واقطع الكتاب.</p>
     <div class="eg-row">
       <div style="flex:1"><label class="eg-lbl">الصف</label><select id="lt-grade" onchange="ltOnChange(this)"><option value="">الصف</option></select></div>
-      <div style="flex:1"><label class="eg-lbl">المادة</label><select id="lt-subject" onchange="ltOnChange(this)"><option value="">المادة</option></select></div>
       <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="lt-semester" onchange="ltOnChange(this)"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">المادة</label><select id="lt-subject" onchange="ltOnChange(this)"><option value="">المادة</option></select></div>
     </div>
 
     <!-- خطوة ١: استخراج الفهرس من صورة -->
@@ -2426,7 +2426,7 @@ input,textarea,select{font-size:16px !important;}
     <!-- خطوة ٢: إرفاق الكتاب وتقطيعه -->
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:12px">
       <div style="font-weight:700;font-size:13px;margin-bottom:8px">📚 ٢) إرفاق الكتاب كاملاً وتقطيعه لنصّ كل درس</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">يتطلّب وجود دروس هذه المادة في المنهج أولاً (استخرجها من الفهرس بالأعلى وأضفها من «إدارة الدروس»).</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">استخرج الفهرس بالأعلى واضغط «رفع المحتوى» أولاً، ثم ارفع الكتاب هنا للتقطيع.</div>
       <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this)" style="display:none">
       <button type="button" class="eg-regen" onclick="document.getElementById('lt-book-pdf').click()">اختر ملف الكتاب (PDF/نص)</button>
       <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
@@ -10752,20 +10752,27 @@ function ltInit(){
   const g=document.getElementById('lt-grade');if(g&&g.options.length<=1){g.innerHTML='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');}
 }
 async function ltOnChange(el){
-  const grade=document.getElementById('lt-grade').value;
-  const ssel=document.getElementById('lt-subject');
   document.getElementById('lt-index-result').innerHTML='';
   document.getElementById('lt-book-result').innerHTML='';
   document.getElementById('lt-index-status').textContent='';
   document.getElementById('lt-book-status').textContent='';
-  if(el&&el.id==='lt-grade'){
-    ssel.innerHTML='<option value="">المادة</option>';
-    if(grade){
-      try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade));
-        const subs=[...new Set((data||[]).map(r=>r.subject))];
-        ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');}catch(e){}
-    }
-  }
+  if(el&&(el.id==='lt-grade'||el.id==='lt-semester'))await ltReloadSubjects();
+}
+// المواد المعروضة = التي لم يُرفع لها محتوى بعد (لا دروس في المنهج)
+async function ltReloadSubjects(){
+  const grade=parseInt(document.getElementById('lt-grade').value);
+  const semester=document.getElementById('lt-semester').value;
+  const ssel=document.getElementById('lt-subject');
+  ssel.innerHTML='<option value="">المادة</option>';
+  if(!grade)return;
+  let subs=[];
+  if(grade<=4&&typeof FIRST_CYCLE_SUBJECTS!=='undefined'){subs=FIRST_CYCLE_SUBJECTS.slice();}
+  else{try{const{data}=await sb.from('subjects').select('subject,sort').eq('grade',grade).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
+  const withContent=new Set();
+  try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade)).eq('semester',semester);(data||[]).forEach(r=>withContent.add(r.subject));}catch(e){}
+  const empty=subs.filter(s=>!withContent.has(s));
+  if(!empty.length){ssel.innerHTML='<option value="">— كل المواد لديها محتوى —</option>';return;}
+  ssel.innerHTML='<option value="">المادة</option>'+empty.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
 }
 function ltFileToDataUrl(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
 async function ltExtractIndex(input){
@@ -10780,12 +10787,37 @@ async function ltExtractIndex(input){
     const units=(data&&data.units)||[];
     if(!units.length){st.textContent='⚠️ لم تُستخرج دروس — جرّب صورة أوضح';return;}
     const totalL=units.reduce((s,u)=>s+((u.lessons||[]).length),0);
-    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجعها ثم أضفها في «إدارة الدروس»';
-    let txt='';units.forEach(u=>{txt+='== '+(u.unit||'عام')+' ==\n';(u.lessons||[]).forEach(l=>{txt+=l+'\n';});txt+='\n';});
-    document.getElementById('lt-index-result').innerHTML=`<textarea id="lt-index-text" rows="10" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt.trim())}</textarea><button class="eg-regen" style="margin-top:6px" onclick="ltCopyIndex()">📋 نسخ القائمة</button>`;
+    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجعها وصحّحها ثم اضغط «رفع المحتوى»';
+    // التنسيق: عنوان الوحدة ثم دروسها، وسطران فارغان بين الوحدات (يتعرّف عليهما محلّل المحتوى)
+    const txt=units.map(u=>[(u.unit||'عام'),...(u.lessons||[])].join('\n')).join('\n\n\n');
+    document.getElementById('lt-index-result').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">راجع القائمة (عنوان الوحدة يليه دروسها، وسطران فارغان بين وحدة وأخرى):</div><textarea id="lt-index-text" rows="12" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt)}</textarea><button class="eg-generate" style="margin-top:8px" onclick="ltUploadExtracted()">⬆️ رفع المحتوى للمنهج</button>`;
   }catch(e){st.textContent='❌ فشل استخراج الفهرس';}
 }
-function ltCopyIndex(){const t=document.getElementById('lt-index-text');if(!t)return;t.select();try{document.execCommand('copy');toast('تم النسخ','ok');}catch(e){}}
+// رفع المحتوى المستخرَج للمنهج مباشرة (يستعمل نفس محلّل رفع المحتوى: سطران فارغان = وحدة جديدة)
+async function ltUploadExtracted(){
+  const t=document.getElementById('lt-index-text');if(!t)return;
+  const grade=parseInt(document.getElementById('lt-grade').value);
+  const subject=document.getElementById('lt-subject').value;
+  const semester=document.getElementById('lt-semester').value;
+  if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
+  const units=parseUploadedContent(t.value);
+  if(!units.length){toast('لم يُعثر على وحدات — تأكد من وجود سطرين فارغين بين الوحدات',true);return;}
+  const totalL=units.reduce((s,u)=>s+u.lessons.length,0);
+  if(!await uiConfirm(`رفع ${egToArabic(units.length)} وحدة و${egToArabic(totalL)} درساً لـ${subject} — ${libGradeName(grade)} — ${semester}؟\nسيُستبدل أي محتوى قديم لهذه المادة.`))return;
+  const st=document.getElementById('lt-index-status');st.textContent='⏳ جاري رفع المحتوى...';
+  try{
+    await sb.from('curriculum').delete().eq('semester',semester).eq('subject',subject).eq('grade',grade);
+    const ex=await sb.from('subjects').select('subject').eq('semester',semester).eq('subject',subject).eq('grade',grade);
+    if(!ex.data||!ex.data.length){await sb.from('subjects').insert([{semester,subject,grade,sort:99}]);}
+    const rows=[];let sort=1;
+    units.forEach(u=>u.lessons.forEach(l=>rows.push({semester,subject,grade,unit:u.name,lesson:l,sort:sort++})));
+    const{error}=await sb.from('curriculum').insert(rows);
+    if(error)throw error;
+    if(typeof clearCurriculumCache==='function')clearCurriculumCache();
+    st.textContent=`✅ تم رفع ${egToArabic(rows.length)} درساً — الآن ارفع الكتاب بالأسفل للتقطيع.`;
+    document.getElementById('lt-index-result').innerHTML='';
+  }catch(e){st.textContent='❌ فشل الرفع: '+(e.message||'خطأ');}
+}
 // تطبيع نصّ عربي مع خريطة مواضع للأصل (لإيجاد بدايات الدروس بدقّة)
 function ltNormMap(orig){
   let out='';const map=[];
