@@ -78,13 +78,18 @@ Deno.serve(async (req) => {
 
     if (!lessons.length) return json({ error: "no_lessons" }, 400);
 
-    // بناء سياق الدروس: النص الفعلي إن توفّر، وإلا الاسم فقط
-    const lessonCtx = lessons.map((l: { name?: string; text?: string }, i: number) => {
+    // بناء سياق الدروس: النص الفعلي إن توفّر، والأنواع/العدد المطلوب لكل درس إن حُدّد
+    const lessonCtx = lessons.map((l: { name?: string; text?: string; types?: string[]; count?: number }, i: number) => {
       const name = l.name || `درس ${i + 1}`;
       const text = (l.text || "").slice(0, 12000);
-      return text ? `### ${name}\n${text}` : `### ${name}`;
+      const lt = Array.isArray(l.types) ? l.types.filter((t) => allowedTypes.includes(t)) : [];
+      const spec = (lt.length || l.count)
+        ? ` (المطلوب: ${l.count || "?"} سؤال${lt.length ? "، أنواع: " + lt.map((t) => TYPE_LABELS[t] || t).join("، ") : ""})`
+        : "";
+      return (text ? `### ${name}${spec}\n${text}` : `### ${name}${spec}`);
     }).join("\n\n");
 
+    const perLesson = lessons.some((l: { types?: string[]; count?: number }) => (Array.isArray(l.types) && l.types.length) || l.count);
     const typesList = types.map((t: string) => TYPE_LABELS[t] || t).join("، ");
 
     const system = [
@@ -109,6 +114,9 @@ Deno.serve(async (req) => {
       `الصف: ${grade} | المادة: ${subject}`,
       `أنواع الأسئلة المطلوبة: ${typesList}`,
       `العدد الإجمالي للأسئلة: ${count}`,
+      perLesson
+        ? "التزم بعدد الأسئلة وأنواعها المحدّدة لكل درس بين قوسين تحت اسمه، ورتّب الأسئلة حسب ترتيب الدروس."
+        : "",
       teacherPrompt ? `توجيهات المعلم: ${teacherPrompt}` : "",
       "",
       "محتوى الدروس:",
