@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     // بناء سياق الدروس: النص الفعلي إن توفّر، والأنواع/العدد المطلوب لكل درس إن حُدّد
     const lessonCtx = lessons.map((l: { name?: string; text?: string; types?: string[]; count?: number }, i: number) => {
       const name = l.name || `درس ${i + 1}`;
-      const text = (l.text || "").slice(0, 12000);
+      const text = (l.text || "").slice(0, 20000);
       const lt = Array.isArray(l.types) ? l.types.filter((t) => allowedTypes.includes(t)) : [];
       const spec = (lt.length || l.count)
         ? ` (المطلوب: ${l.count || "?"} سؤال${lt.length ? "، أنواع: " + lt.map((t) => TYPE_LABELS[t] || t).join("، ") : ""})`
