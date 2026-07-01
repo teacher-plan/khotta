@@ -10978,7 +10978,7 @@ async function ltRenderPageImage(pdf,pageNum,maxW){
   const vp=page.getViewport({scale});
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
   await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-  return canvas.toDataURL('image/jpeg',0.7);
+  return canvas.toDataURL('image/jpeg',0.6);
 }
 async function ltVisionSliceBook(input){
   const file=input.files[0];input.value='';
@@ -10998,11 +10998,11 @@ async function ltVisionSliceBook(input){
   try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
   catch(e){st.textContent='❌ فشل فتح الـ PDF';return;}
   const N=pdf.numPages;
-  const BATCH=1;let full='';let failedPages=0;
+  const BATCH=3;let full='';let failedPages=0;
   for(let p=1;p<=N;p+=BATCH){
     const last=Math.min(p+BATCH-1,N);
     const imgs=[];
-    for(let k=p;k<=last;k++){try{imgs.push(await ltRenderPageImage(pdf,k,950));}catch(e){}}
+    for(let k=p;k<=last;k++){try{imgs.push(await ltRenderPageImage(pdf,k,800));}catch(e){}}
     if(!imgs.length)continue;
     // إعادة محاولة حتى ٣ مرات مع تجاوز الدفعة الفاشلة بدل إيقاف كل شيء
     let ok=false,lastErr='';
