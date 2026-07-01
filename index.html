@@ -10325,17 +10325,23 @@ async function egGenerate(){
   const lessonsList=lessons.map(l=>l.name).join('، ');
   const btn=document.querySelector('.eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد الأسئلة...';}
-  let qHtml=null,real=false;
+  let qHtml=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
       const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessons.map(l=>({name:l.name})),types,count:qcount,total,teacherPrompt}});
       if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
         qHtml=egRenderAiQuestions(data.questions);real=true;
-      }else if(error||data&&data.error){
-        console.warn('generate-exam:',error||data.error);
+      }else{
+        if(error){
+          reason=error.message||'خطأ في الاتصال بالوظيفة';
+          try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error+(j.detail?(': '+JSON.stringify(j.detail).slice(0,160)):'');}}catch(_){}
+        }else if(data&&data.error){reason=data.error+(data.detail?(': '+JSON.stringify(data.detail).slice(0,160)):'');}
+        else if(data&&Array.isArray(data.questions)){reason='الوظيفة أرجعت 0 أسئلة';}
+        else{reason='استجابة غير متوقعة';}
+        console.warn('generate-exam:',reason,error||data);
       }
-    }
-  }catch(e){console.warn('generate-exam call failed',e);}
+    }else{reason='لا يوجد اتصال بالخادم';}
+  }catch(e){reason=String(e);console.warn('generate-exam call failed',e);}
   if(!qHtml)qHtml=egMockQuestions(types,qcount,lessons); // رجوع تلقائي للتجريبي
   const R=document.getElementById('eg-result');
   R.innerHTML=egPaperWrap(qHtml,grade,subject,total,lessonsList);
@@ -10345,7 +10351,11 @@ async function egGenerate(){
   document.getElementById('eg-result-card').scrollIntoView({behavior:'smooth'});
   egCreditSet(egCreditGet()-3);
   if(btn){btn.disabled=false;btn.textContent='⚡ ولّد الاختبار';}
-  toast(real?'✅ تم توليد الاختبار':'✅ تم التوليد (نسخة تجريبية — لم يُفعّل الربط بعد)','ok');
+  if(real){toast('✅ تم توليد الاختبار','ok');}
+  else{
+    const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
+    toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
+  }
 }
 
 function egExport(){
