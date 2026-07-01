@@ -1985,16 +1985,19 @@ input,textarea,select{font-size:16px !important;}
   <!-- ٣) الخيارات -->
   <div class="eg-card" id="eg-options-card" style="display:none">
     <div class="eg-step-title">٣. خيارات الاختبار</div>
-    <label class="eg-lbl">أنواع الأسئلة</label>
-    <div class="eg-types">
-      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="mcq" checked> اختيار من متعدد</label>
-      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="essay"> مقالي</label>
-      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="tf"> صح وخطأ</label>
-      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="fill"> إكمال الفراغ</label>
-      <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="match"> توصيل</label>
+    <!-- الأنواع أصبحت لكل درس (تظهر تحت كل درس عند اختياره في القسم ٢) — تبقى هذه مخفية كمرجع للأنواع المسموحة -->
+    <div id="eg-global-types" style="display:none">
+      <div class="eg-types">
+        <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="mcq" checked> اختيار من متعدد</label>
+        <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="essay"> مقالي</label>
+        <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="tf"> صح وخطأ</label>
+        <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="fill"> إكمال الفراغ</label>
+        <label class="eg-chip"><input type="checkbox" class="eg-qtype" value="match"> توصيل</label>
+      </div>
     </div>
+    <div style="background:rgba(46,125,50,.08);border:1px solid rgba(46,125,50,.25);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);margin-bottom:12px">💡 حدّد <b>نوع وعدد الأسئلة لكل درس</b> من تحت اسم الدرس في القسم ٢ بالأعلى.</div>
+    <input type="hidden" id="eg-qcount" value="10">
     <div class="eg-row">
-      <div style="flex:1"><label class="eg-lbl">عدد الأسئلة</label><input type="number" id="eg-qcount" value="10" min="1" max="50"></div>
       <div style="flex:1"><label class="eg-lbl">عدد الصفحات (تقريبي)</label><input type="number" id="eg-pages" value="2" min="1" max="10"></div>
       <div style="flex:1"><label class="eg-lbl">الدرجة الكلية</label><input type="number" id="eg-total" value="20" min="1" max="100"></div>
     </div>
@@ -10344,25 +10347,59 @@ async function egOnSubjectChange(){
   egRenderTree();
 }
 
+const EG_TYPE_LBL={mcq:'اختيار',essay:'مقالي',tf:'صح/خطأ',fill:'إكمال',match:'توصيل'};
 function egRenderTree(){
   const tree=document.getElementById('eg-lessons-tree');
   if(!egUnits.length){tree.innerHTML='<div class="lib-empty">📭 لا توجد دروس لهذه المادة</div>';egUpdateCount();return;}
   tree.innerHTML=egUnits.map(u=>{
-    const lessons=u.lessons.map(l=>`<label class="eg-lesson-check" data-name="${libEscAttr(l.name)}"><input type="checkbox" class="eg-lcheck" value="${l.lessonId}" data-name="${libEscAttr(l.name)}" data-unit="${libEscAttr(u.name)}" onchange="egToggleLesson(this)"> ${escHtml(l.name)}</label>`).join('');
+    const lessons=u.lessons.map(l=>{
+      const sel=egSelected[l.lessonId];
+      return `<div class="eg-lesson-item" data-name="${libEscAttr(l.name)}">
+        <label class="eg-lesson-check"><input type="checkbox" class="eg-lcheck" value="${l.lessonId}" data-name="${libEscAttr(l.name)}" data-unit="${libEscAttr(u.name)}" ${sel?'checked':''} onchange="egToggleLesson(this)"> ${escHtml(l.name)}</label>
+        <div class="eg-lesson-cfg" id="eg-cfg-${l.lessonId}" style="display:${sel?'block':'none'};margin:2px 26px 8px;padding:${sel?'8px 10px':'0'};background:var(--card);border:${sel?'1px solid var(--border)':'none'};border-radius:8px">${sel?egLessonCfgHtml(l.lessonId):''}</div>
+      </div>`;
+    }).join('');
     return `<div class="eg-unit-block"><div class="eg-unit-head" onclick="const e=this.nextElementSibling;e.style.display=e.style.display==='none'?'block':'none'">📚 <span style="flex:1">${escHtml(u.name)}</span><span style="font-size:11px;color:var(--muted)">${egToArabic(u.lessons.length)} درس</span></div><div class="eg-unit-lessons">${lessons}</div></div>`;
   }).join('');
   egUpdateCount();
 }
-
+// عناصر تحكم مصغّرة لكل درس: أنواع الأسئلة + عددها
+function egLessonCfgHtml(lid){
+  const cfg=egSelected[lid];if(!cfg)return'';
+  const chips=(egLimits.types||['mcq']).map(t=>`<label class="eg-mini-chip" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:3px 9px;cursor:pointer;margin:2px"><input type="checkbox" ${cfg.types.includes(t)?'checked':''} onchange="egLessonType('${lid}','${t}',this.checked)" style="margin:0"> ${EG_TYPE_LBL[t]||t}</label>`).join('');
+  return `<div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center">${chips}</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--muted)">عدد الأسئلة:
+      <input type="number" min="1" max="${egLimits.maxQ||30}" value="${cfg.count}" onchange="egLessonCount('${lid}',this.value)" style="width:64px;padding:4px 6px"></div>`;
+}
 function egToggleLesson(cb){
-  if(cb.checked)egSelected[cb.value]={name:cb.getAttribute('data-name'),unit:cb.getAttribute('data-unit')};
-  else delete egSelected[cb.value];
+  const lid=cb.value;
+  if(cb.checked){
+    const def=(egLimits.types&&egLimits.types.includes('mcq'))?'mcq':(egLimits.types&&egLimits.types[0]||'mcq');
+    egSelected[lid]={name:cb.getAttribute('data-name'),unit:cb.getAttribute('data-unit'),types:[def],count:3};
+  }else delete egSelected[lid];
+  const box=document.getElementById('eg-cfg-'+lid);
+  if(box){
+    if(cb.checked){box.innerHTML=egLessonCfgHtml(lid);box.style.display='block';box.style.padding='8px 10px';box.style.border='1px solid var(--border)';}
+    else{box.innerHTML='';box.style.display='none';box.style.padding='0';box.style.border='none';}
+  }
   egUpdateCount();
 }
-
+function egLessonType(lid,t,on){
+  const c=egSelected[lid];if(!c)return;
+  if(on){if(!c.types.includes(t))c.types.push(t);}
+  else{if(c.types.length<=1){toast('يجب اختيار نوع واحد على الأقل للدرس',true);const box=document.getElementById('eg-cfg-'+lid);if(box)box.innerHTML=egLessonCfgHtml(lid);return;}c.types=c.types.filter(x=>x!==t);}
+  egUpdateCount();
+}
+function egLessonCount(lid,v){
+  const c=egSelected[lid];if(!c)return;
+  c.count=Math.max(1,Math.min(egLimits.maxQ||30,parseInt(v)||1));
+  egUpdateCount();
+}
 function egUpdateCount(){
-  const n=Object.keys(egSelected).length;
-  document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس مختار)';
+  const ids=Object.keys(egSelected);
+  const n=ids.length;
+  const totalQ=ids.reduce((s,id)=>s+(egSelected[id].count||0),0);
+  document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس — '+egToArabic(totalQ)+' سؤال)';
   document.getElementById('eg-options-card').style.display=n>0?'block':'none';
 }
 
@@ -10425,9 +10462,11 @@ async function egGenerate(){
   const lessons=Object.values(egSelected);
   if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
   if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
-  const types=[...document.querySelectorAll('.eg-qtype:checked')].map(c=>c.value);
-  if(!types.length){toast('اختر نوع سؤال واحد على الأقل',true);return;}
-  const qcount=Math.max(1,Math.min(egLimits.maxQ||50,parseInt(document.getElementById('eg-qcount').value)||10));
+  // أنواع وأعداد الأسئلة لكل درس على حدة
+  const lessonSpecs=lessons.map(l=>({name:l.name,types:(l.types&&l.types.length?l.types:['mcq']),count:l.count||3}));
+  const types=[...new Set(lessonSpecs.flatMap(l=>l.types))];
+  const qcount=lessonSpecs.reduce((s,l)=>s+l.count,0);
+  if(!qcount){toast('حدّد عدد أسئلة لكل درس',true);return;}
   const total=Math.max(1,Math.min(100,parseInt(document.getElementById('eg-total').value)||20));
   const grade=document.getElementById('eg-grade').value;
   const subject=document.getElementById('eg-subject').value;
@@ -10438,7 +10477,7 @@ async function egGenerate(){
   let qHtml=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
-      const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessons.map(l=>({name:l.name})),types,count:qcount,total,teacherPrompt,referenceText:egRefText||'',sampleExam:egSampleText||''}});
+      const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessonSpecs,types,count:qcount,total,teacherPrompt,referenceText:egRefText||'',sampleExam:egSampleText||''}});
       if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
         qHtml=egRenderAiQuestions(data.questions);real=true;
       }else{
