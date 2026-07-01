@@ -72,6 +72,9 @@ Deno.serve(async (req) => {
     if (!types.length) types = ["mcq"];
     const count = Math.max(1, Math.min(maxQ, parseInt(b.count) || 10));
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 2000);
+    // مرفقات المعلم: مرجع لتوليد دقيق من المحتوى، ونموذج لمحاكاة الأسلوب والتنسيق
+    const referenceText = String(b.referenceText || "").slice(0, 60000);
+    const sampleExam = String(b.sampleExam || "").slice(0, 30000);
 
     if (!lessons.length) return json({ error: "no_lessons" }, 400);
 
@@ -87,7 +90,12 @@ Deno.serve(async (req) => {
     const system = [
       "أنت معلّم خبير في إعداد الاختبارات المدرسية في سلطنة عُمان.",
       "صُغ الأسئلة باللغة العربية الفصحى السليمة، وفق مستوى الصف الدراسي المحدد.",
-      "استند حصراً إلى محتوى الدروس المُعطى. إن لم يتوفّر نص كافٍ، استعمل الموضوع المعروف للدرس بحذر.",
+      referenceText
+        ? "استند حصراً إلى «المرجع» المُرفق لصياغة الأسئلة؛ لا تختلق معلومات خارجه. إن لم يغطِّ المرجع نقطة، فتجاهلها."
+        : "استند إلى محتوى الدروس المُعطى. إن لم يتوفّر نص كافٍ، استعمل الموضوع المعروف للدرس بحذر.",
+      sampleExam
+        ? "حاكِ أسلوب «النموذج» المُرفق وتنسيقه وصياغته وتوزيع درجاته قدر الإمكان، دون نسخ أسئلته حرفياً."
+        : "",
       "أعِد الناتج بصيغة JSON فقط دون أي نص خارج JSON.",
       adminPrompt,
     ].filter(Boolean).join("\n");
@@ -105,6 +113,8 @@ Deno.serve(async (req) => {
       "",
       "محتوى الدروس:",
       lessonCtx,
+      referenceText ? `\n=== المرجع (استند إليه حصراً) ===\n${referenceText}` : "",
+      sampleExam ? `\n=== نموذج للاختبار (حاكِ أسلوبه وتنسيقه فقط) ===\n${sampleExam}` : "",
       "",
       `أعد النتيجة بهذا الشكل حصراً (JSON): ${schema}`,
       "options تُملأ فقط لأسئلة mcq. colA/colB فقط لأسئلة match. وزّع الأنواع المطلوبة على العدد الإجمالي.",

@@ -2010,6 +2010,21 @@ input,textarea,select{font-size:16px !important;}
         <span class="eg-prompt-eg" onclick="egAddPromptEg(this)">• نوّع الأسئلة بين سهل ومتوسط وصعب</span>
       </div>
     </div>
+    <div class="eg-attach-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <div style="flex:1;min-width:220px">
+        <label class="eg-lbl">📎 أرفق نموذجاً للاختبار <span style="color:var(--muted);font-weight:400">(اختياري — للأسلوب والتنسيق)</span></label>
+        <input type="file" id="eg-sample-file" accept=".pdf,.txt" onchange="egAttachFile(this,'sample')" style="display:none">
+        <button type="button" class="eg-regen" style="width:100%" onclick="document.getElementById('eg-sample-file').click()">اختر ملف نموذج (PDF/نص)</button>
+        <div id="eg-sample-status" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label class="eg-lbl">📚 أرفق مرجعاً للتوليد بدقّة <span style="color:var(--muted);font-weight:400">(اختياري — نص الدرس/الكتاب)</span></label>
+        <input type="file" id="eg-ref-file" accept=".pdf,.txt" onchange="egAttachFile(this,'ref')" style="display:none">
+        <button type="button" class="eg-regen" style="width:100%" onclick="document.getElementById('eg-ref-file').click()">اختر ملف مرجع (PDF/نص)</button>
+        <div id="eg-ref-status" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.8">💡 المرجع يجعل الأسئلة من محتوى الكتاب حرفياً؛ والنموذج يجعل الشكل والأسلوب مطابقين لاختبارات الوزارة.</div>
     <button class="eg-generate" onclick="egGenerate()">⚡ ولّد الاختبار</button>
   </div>
 
@@ -10122,6 +10137,41 @@ let egSelected={};   // lessonId -> {name,unit}
 let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
 let egExportCfg={font:'Cairo',size:13,header:'سلطنة عُمان — وزارة التربية والتعليم',footer:'خطتي الفصلية — منصة المعلمين',logo:true};
 let examBank=[];
+let egSampleText='';   // نص نموذج الاختبار المرفق (للأسلوب)
+let egRefText='';      // نص المرجع المرفق (لتوليد دقيق من المحتوى)
+// استخراج نص من ملف PDF أو نص عادي
+async function egExtractFileText(file){
+  if(!file)return'';
+  if(/\.txt$/i.test(file.name)||file.type==='text/plain')return (await file.text()).slice(0,60000);
+  await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let out='';
+  for(let p=1;p<=pdf.numPages&&out.length<60000;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    out+=tc.items.map(it=>it.str).join(' ')+'\n';
+  }
+  return out.slice(0,60000);
+}
+async function egAttachFile(input,kind){
+  const file=input.files[0];
+  const status=document.getElementById(kind==='sample'?'eg-sample-status':'eg-ref-status');
+  if(!file){if(kind==='sample')egSampleText='';else egRefText='';if(status)status.textContent='';return;}
+  if(file.size>25*1024*1024){toast('الحد الأقصى 25MB',true);input.value='';return;}
+  if(status)status.textContent='⏳ جاري استخراج النص...';
+  try{
+    const txt=await egExtractFileText(file);
+    if(!txt.trim()){if(status)status.textContent='⚠️ لم يُستخرج نص (قد يكون الملف صوراً ممسوحة)';return;}
+    if(kind==='sample')egSampleText=txt;else egRefText=txt;
+    if(status)status.innerHTML='✅ '+escHtml(file.name)+' — '+egToArabic(txt.length)+' حرف <a href="#" onclick="egClearAttach(event,\''+kind+'\')" style="color:var(--red)">إزالة</a>';
+  }catch(e){if(status)status.textContent='❌ فشل استخراج النص من الملف';}
+}
+function egClearAttach(ev,kind){
+  if(ev)ev.preventDefault();
+  if(kind==='sample'){egSampleText='';document.getElementById('eg-sample-file').value='';document.getElementById('eg-sample-status').textContent='';}
+  else{egRefText='';document.getElementById('eg-ref-file').value='';document.getElementById('eg-ref-status').textContent='';}
+}
 // ── بنك الأسئلة: حفظ/استرجاع الاختبارات المولّدة (يُخزَّن ضمن ملف المعلم ويتزامن) ──
 function egCleanResultHtml(){
   const R=document.getElementById('eg-result');if(!R)return'';
@@ -10280,6 +10330,11 @@ async function egOnSubjectChange(){
   document.getElementById('eg-options-card').style.display='none';
   document.getElementById('eg-result-card').style.display='none';
   egSelected={};
+  egSampleText='';egRefText='';
+  const ss=document.getElementById('eg-sample-status');if(ss)ss.textContent='';
+  const rs=document.getElementById('eg-ref-status');if(rs)rs.textContent='';
+  const sf=document.getElementById('eg-sample-file');if(sf)sf.value='';
+  const rf=document.getElementById('eg-ref-file');if(rf)rf.value='';
   if(!grade||!subject){document.getElementById('eg-lessons-card').style.display='none';return;}
   const tree=document.getElementById('eg-lessons-tree');
   tree.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
@@ -10383,7 +10438,7 @@ async function egGenerate(){
   let qHtml=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
-      const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessons.map(l=>({name:l.name})),types,count:qcount,total,teacherPrompt}});
+      const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessons.map(l=>({name:l.name})),types,count:qcount,total,teacherPrompt,referenceText:egRefText||'',sampleExam:egSampleText||''}});
       if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
         qHtml=egRenderAiQuestions(data.questions);real=true;
       }else{
