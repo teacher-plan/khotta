@@ -10905,6 +10905,26 @@ async function ltSliceBook(input){
   }
   await ltSliceAndSave(full,rows,grade,subject,semester,chars);
 }
+// مطابقة مرنة: تطابق حرفي أولاً، ثم مطابقة بالكلمات (تجمّع أغلب كلمات الاسم)
+function ltFuzzyFind(norm,name,from){
+  let pos=norm.indexOf(name,from);if(pos>=0)return pos;
+  pos=norm.indexOf(name);if(pos>=0)return pos; // قد يكون قبل المؤشّر (نادر)
+  const toks=name.split(' ').filter(w=>w.length>=3);
+  if(toks.length<2)return -1; // كلمة واحدة غير مميّزة → لا نخاطر
+  const anchor=toks.slice().sort((a,b)=>b.length-a.length)[0];
+  let best=-1,bestScore=0,searchFrom=from;
+  for(let guard=0;guard<200;guard++){
+    const a=norm.indexOf(anchor,searchFrom);
+    if(a<0)break;
+    const win=norm.slice(a,a+name.length+40);
+    let hit=0;toks.forEach(t=>{if(win.indexOf(t)>=0)hit++;});
+    const score=hit/toks.length;
+    if(score>bestScore){bestScore=score;best=a;}
+    if(bestScore>=1)break;
+    searchFrom=a+anchor.length;
+  }
+  return (best>=0&&bestScore>=0.6)?best:-1;
+}
 // المنطق المشترك: تقطيع النصّ حسب عناوين الدروس + الحفظ + عرض النتيجة
 async function ltSliceAndSave(full,rows,grade,subject,semester,chars){
   const st=document.getElementById('lt-book-status');
@@ -10913,7 +10933,7 @@ async function ltSliceAndSave(full,rows,grade,subject,semester,chars){
   rows.forEach(r=>{
     const key=ltNormName(r.lesson);
     let pos=-1;
-    if(key&&key.length>=3){pos=norm.indexOf(key,cursor);if(pos<0)pos=norm.indexOf(key);}
+    if(key&&key.length>=3)pos=ltFuzzyFind(norm,key,cursor);
     starts.push(pos>=0?map[pos]:-1);
     if(pos>=0)cursor=pos+key.length;
   });
