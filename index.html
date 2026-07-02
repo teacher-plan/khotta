@@ -10903,7 +10903,7 @@ async function ltSliceBook(input){
     document.getElementById('lt-book-result').innerHTML=`<div style="color:#b26a00;font-size:13px;line-height:1.9"><b>⚠️ الكتاب لا يحتوي نصّاً قابلاً للاستخراج (${egToArabic(chars)} حرف فقط).</b><br>هذا يعني أن الملف <b>صور ممسوحة</b> (شائع في كتب الرياضيات والعلوم) — استخراج النص لا يعمل معه، ويحتاج <b>مسار الرؤية/OCR</b> الذي خطّطنا له.<br>جرّب مادة نصّية (تربية إسلامية/اجتماعيات) للتأكد أن التقطيع يعمل، أو ننتقل لبناء مسار الرؤية للعلوم.</div>`;
     return;
   }
-  await ltSliceAndSave(full,rows,grade,subject,semester,chars);
+  await ltSliceAndSave(full,rows,grade,subject,semester,chars,false);
 }
 // مطابقة مرنة: تطابق حرفي أولاً، ثم مطابقة بالكلمات (تجمّع أغلب كلمات الاسم)
 function ltFuzzyFind(norm,name,from){
@@ -10925,17 +10925,33 @@ function ltFuzzyFind(norm,name,from){
   }
   return (best>=0&&bestScore>=0.6)?best:-1;
 }
+// مطابقة بالذكاء: تعيد لكل درس مقتطفاً حرفياً من بدايته في النصّ
+async function ltAiMatch(full,rows){
+  try{
+    const{data,error}=await sb.functions.invoke('match-lessons',{body:{lessons:rows.map(r=>r.lesson),text:full}});
+    if(error||!data||!Array.isArray(data.matches))return null;
+    return data.matches;
+  }catch(e){return null;}
+}
 // المنطق المشترك: تقطيع النصّ حسب عناوين الدروس + الحفظ + عرض النتيجة
-async function ltSliceAndSave(full,rows,grade,subject,semester,chars){
+// useAi=true → مطابقة دلالية بالذكاء أولاً ثم البرمجية كاحتياط
+async function ltSliceAndSave(full,rows,grade,subject,semester,chars,useAi){
   const st=document.getElementById('lt-book-status');
+  let aiMatches=null;
+  if(useAi){st.textContent='🤖 جاري المطابقة الذكية للدروس...';aiMatches=await ltAiMatch(full,rows);}
   const{norm,map}=ltNormMap(full);
   let cursor=0;const starts=[];
-  rows.forEach(r=>{
-    const key=ltNormName(r.lesson);
-    let pos=-1;
-    if(key&&key.length>=3)pos=ltFuzzyFind(norm,key,cursor);
+  rows.forEach((r,i)=>{
+    let pos=-1,used=0;
+    // ١) المقتطف من الذكاء (إن توفّر)
+    if(aiMatches&&aiMatches[i]){
+      const sk=ltNormName(aiMatches[i]);
+      if(sk&&sk.length>=4){let p=norm.indexOf(sk,cursor);if(p<0)p=norm.indexOf(sk);if(p>=0){pos=p;used=sk.length;}}
+    }
+    // ٢) احتياط: مطابقة برمجية مرنة
+    if(pos<0){const key=ltNormName(r.lesson);if(key&&key.length>=3){const p=ltFuzzyFind(norm,key,cursor);if(p>=0){pos=p;used=key.length;}}}
     starts.push(pos>=0?map[pos]:-1);
-    if(pos>=0)cursor=pos+key.length;
+    if(pos>=0)cursor=pos+used;
   });
   const found=[],missing=[];
   for(let i=0;i<rows.length;i++){
@@ -11021,7 +11037,7 @@ async function ltVisionSliceBook(input){
   const chars=full.trim().length;
   if(chars<200){st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:#b26a00;font-size:13px">⚠️ لم تُقرأ صفحات كافية${failedPages?(' ('+egToArabic(failedPages)+' صفحة فشلت)'):''} — تأكد من الاتصال وحاول مجدداً.</div>`;return;}
   window._ltFailedPages=failedPages;
-  await ltSliceAndSave(full,rows,grade,subject,semester,chars);
+  await ltSliceAndSave(full,rows,grade,subject,semester,chars,true);
 }
 async function loadAiSettings(){
   if(!sb)return;
