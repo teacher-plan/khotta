@@ -2431,13 +2431,22 @@ input,textarea,select{font-size:16px !important;}
       <div style="flex:1"><label class="eg-lbl">المادة (لها محتوى)</label><select id="ltb-subject"><option value="">المادة</option></select></div>
     </div>
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
-      <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this)" style="display:none">
-      <input type="file" id="lt-book-vision" accept=".pdf" onchange="ltVisionSliceBook(this)" style="display:none">
+      <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this.files[0]);this.value=''" style="display:none">
+      <input type="file" id="lt-book-vision" accept=".pdf" onchange="ltVisionSliceBook(this.files[0]);this.value=''" style="display:none">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-pdf').click()">📄 تقطيع نصّي (سريع/مجاني)</button>
         <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-vision').click()">👁 تقطيع بالرؤية (رياضيات/علوم)</button>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:6px">جرّب «النصّي» أولاً. إن ظهر ٠ تطابق أو رموز غريبة (خطوط مشوّهة)، استخدم «بالرؤية» — يقرأ الصفحات كصور (أدقّ للرياضيات/العلوم، أبطأ وأعلى تكلفة قليلاً).</div>
+      <div style="border-top:1px dashed var(--border);margin-top:12px;padding-top:12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">🔗 أو ألصق رابط الكتاب (PDF مباشر من موقع الوزارة) بدل تنزيله:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="url" id="lt-book-url" placeholder="https://.../book.pdf" dir="ltr" style="flex:1;min-width:200px;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:12px">
+          <button type="button" class="eg-regen" style="min-width:120px" onclick="ltFetchBookUrl()">⬇️ جلب الرابط</button>
+        </div>
+        <div id="lt-url-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+        <div id="lt-url-actions" style="margin-top:8px"></div>
+      </div>
       <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div id="lt-book-result" style="margin-top:8px"></div>
     </div>
@@ -10881,8 +10890,7 @@ function ltNormName(s){
     .replace(/\s*[\(（][\d٠-٩\s]*[\)）]\s*$/,'') // إزالة اللاحقة الرقمية مثل «(١)» في النهاية
     .replace(/\s+/g,' ').trim();
 }
-async function ltSliceBook(input){
-  const file=input.files[0];input.value='';
+async function ltSliceBook(file){
   if(!file)return;
   const grade=document.getElementById('ltb-grade').value;
   const subject=document.getElementById('ltb-subject').value;
@@ -10986,6 +10994,30 @@ async function ltSliceAndSave(full,rows,grade,subject,semester,chars,useAi){
   st.textContent='';
   document.getElementById('lt-book-result').innerHTML=html;
 }
+// جلب الكتاب من رابط خارجي عبر الخادم (تجاوز CORS) ثم إتاحة التقطيع منه
+async function ltFetchBookUrl(){
+  const url=(document.getElementById('lt-book-url').value||'').trim();
+  const st=document.getElementById('lt-url-status');
+  const act=document.getElementById('lt-url-actions');
+  act.innerHTML='';
+  if(!/^https?:\/\/.+/i.test(url)){st.textContent='❌ ألصق رابطاً صحيحاً يبدأ بـ http';return;}
+  st.textContent='⏳ جاري جلب الكتاب من الرابط (قد يستغرق حسب الحجم)...';
+  try{
+    const{data,error}=await sb.functions.invoke('fetch-book',{body:{url}});
+    if(error){let r=error.message||'خطأ';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)r=j.error+(j.status?(' ('+j.status+')'):'');}}catch(_){}st.textContent='❌ فشل الجلب: '+r;return;}
+    if(!data||!data.url){st.textContent='❌ لم يُجلب الملف';return;}
+    // تحميل الـ PDF من التخزين الداخلي (لا مشكلة CORS)
+    const res=await fetch(data.url);
+    if(!res.ok){st.textContent='❌ تعذّر تحميل الملف المجلوب';return;}
+    const buf=await res.arrayBuffer();
+    window._ltUrlFile=new File([buf],'book.pdf',{type:'application/pdf'});
+    const mb=(data.bytes/1048576).toFixed(1).replace('.',',');
+    st.textContent='✅ تم جلب الكتاب ('+egToArabic(mb)+' م.ب) — اختر طريقة التقطيع:';
+    act.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button type="button" class="eg-regen" style="flex:1;min-width:160px" onclick="ltSliceBook(window._ltUrlFile)">📄 تقطيع نصّي</button>'
+      +'<button type="button" class="eg-regen" style="flex:1;min-width:160px" onclick="ltVisionSliceBook(window._ltUrlFile)">👁 تقطيع بالرؤية</button></div>';
+  }catch(e){st.textContent='❌ خطأ أثناء الجلب';}
+}
 // ── مسار الرؤية: رسم صفحات الكتاب صوراً وقراءتها بصرياً (للكتب المشوّهة الخط) ──
 async function ltRenderPageImage(pdf,pageNum,maxW){
   const page=await pdf.getPage(pageNum);
@@ -10996,8 +11028,7 @@ async function ltRenderPageImage(pdf,pageNum,maxW){
   await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
   return canvas.toDataURL('image/jpeg',0.6);
 }
-async function ltVisionSliceBook(input){
-  const file=input.files[0];input.value='';
+async function ltVisionSliceBook(file){
   if(!file)return;
   const grade=document.getElementById('ltb-grade').value;
   const subject=document.getElementById('ltb-subject').value;
