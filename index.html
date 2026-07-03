@@ -10933,41 +10933,74 @@ function ltFuzzyFind(norm,name,from){
   }
   return (best>=0&&bestScore>=0.6)?best:-1;
 }
-// مطابقة بالذكاء: تعيد لكل درس مقتطفاً حرفياً من بدايته في النصّ
-async function ltAiMatch(full,rows){
+// تقسيم النصّ إلى مقاطع عند علامات §§ (تجاهل كل ما قبل أول علامة)
+function ltParseSegments(full){
+  const idx=full.indexOf('§§');
+  if(idx<0)return null;
+  const parts=full.slice(idx).split('§§').map(s=>s.trim()).filter(Boolean);
+  return parts.map(p=>{
+    const nl=p.indexOf('\n');
+    const heading=(nl<0?p:p.slice(0,nl)).replace(/\s+/g,' ').trim();
+    return {heading,text:p.trim().slice(0,LT_MAX)};
+  });
+}
+// مطابقة الذكاء: يربط كل درس برقم العنوان الأنسب من قائمة العناوين
+async function ltAiMatchHeadings(rows,headings){
   try{
-    const{data,error}=await sb.functions.invoke('match-lessons',{body:{lessons:rows.map(r=>r.lesson),text:full}});
+    const{data,error}=await sb.functions.invoke('match-lessons',{body:{lessons:rows.map(r=>r.lesson),headings}});
     if(error||!data||!Array.isArray(data.matches))return null;
-    return data.matches;
+    return data.matches.map(x=>parseInt(x));
   }catch(e){return null;}
 }
+// احتياط برمجي: أقرب عنوان لاسم الدرس بتغطية الكلمات
+function ltFuzzyHeading(name,normHeadings){
+  const key=ltNormName(name);if(!key)return -1;
+  let best=-1,bestScore=0;
+  const toks=key.split(' ').filter(w=>w.length>=3);if(!toks.length)return -1;
+  normHeadings.forEach((h,i)=>{
+    if(h.indexOf(key)>=0||key.indexOf(h)>=0){if(1>bestScore){bestScore=1;best=i;}return;}
+    let hit=0;toks.forEach(t=>{if(h.indexOf(t)>=0)hit++;});
+    const score=hit/toks.length;
+    if(score>bestScore){bestScore=score;best=i;}
+  });
+  return bestScore>=0.5?best:-1;
+}
 // المنطق المشترك: تقطيع النصّ حسب عناوين الدروس + الحفظ + عرض النتيجة
-// useAi=true → مطابقة دلالية بالذكاء أولاً ثم البرمجية كاحتياط
+// useAi=true → مسار §§ الحتمي (تقسيم عند العلامات + ربط بالأرقام) للكتب المقروءة بالرؤية
 async function ltSliceAndSave(full,rows,grade,subject,semester,chars,useAi){
   const st=document.getElementById('lt-book-status');
-  let aiMatches=null;
-  if(useAi){st.textContent='🤖 جاري المطابقة الذكية للدروس...';aiMatches=await ltAiMatch(full,rows);}
-  const{norm,map}=ltNormMap(full);
-  let cursor=0;const starts=[];
-  rows.forEach((r,i)=>{
-    let pos=-1,used=0;
-    // ١) المقتطف من الذكاء (إن توفّر)
-    if(aiMatches&&aiMatches[i]){
-      const sk=ltNormName(aiMatches[i]);
-      if(sk&&sk.length>=4){let p=norm.indexOf(sk,cursor);if(p<0)p=norm.indexOf(sk);if(p>=0){pos=p;used=sk.length;}}
-    }
-    // ٢) احتياط: مطابقة برمجية مرنة
-    if(pos<0){const key=ltNormName(r.lesson);if(key&&key.length>=3){const p=ltFuzzyFind(norm,key,cursor);if(p>=0){pos=p;used=key.length;}}}
-    starts.push(pos>=0?map[pos]:-1);
-    if(pos>=0)cursor=pos+used;
-  });
   const found=[],missing=[];
-  for(let i=0;i<rows.length;i++){
-    if(starts[i]<0){missing.push(rows[i].lesson);continue;}
-    let end=full.length;
-    for(let j=i+1;j<rows.length;j++){if(starts[j]>starts[i]){end=starts[j];break;}}
-    const text=full.slice(starts[i],end).replace(/§§\s*/g,'').trim().slice(0,LT_MAX);
-    found.push({unit:rows[i].unit,lesson:rows[i].lesson,text});
+  const segs=useAi?ltParseSegments(full):null;
+  if(segs&&segs.length){
+    // ── المسار الحتمي: مقاطع §§ ──
+    st.textContent='🤖 جاري ربط الدروس بالعناوين...';
+    const headings=segs.map(s=>s.heading);
+    const normHeadings=headings.map(ltNormName);
+    let aiIdx=await ltAiMatchHeadings(rows,headings);
+    const usedSeg={};
+    rows.forEach((r,i)=>{
+      let idx=(aiIdx&&Number.isInteger(aiIdx[i])&&aiIdx[i]>=0&&aiIdx[i]<segs.length)?aiIdx[i]:-1;
+      if(idx<0)idx=ltFuzzyHeading(r.lesson,normHeadings); // احتياط برمجي
+      if(idx>=0){found.push({unit:r.unit,lesson:r.lesson,text:segs[idx].text.replace(/§§\s*/g,'').trim()});usedSeg[idx]=1;}
+      else missing.push(r.lesson);
+    });
+  }else{
+    // ── المسار البرمجي القديم (نصّي بلا علامات) ──
+    const{norm,map}=ltNormMap(full);
+    let cursor=0;const starts=[];
+    rows.forEach(r=>{
+      let pos=-1,used=0;
+      const key=ltNormName(r.lesson);if(key&&key.length>=3){const p=ltFuzzyFind(norm,key,cursor);if(p>=0){pos=p;used=key.length;}}
+      starts.push(pos>=0?map[pos]:-1);
+      if(pos>=0)cursor=pos+used;
+    });
+    for(let i=0;i<rows.length;i++){
+      if(starts[i]<0){missing.push(rows[i].lesson);continue;}
+      let end=full.length;
+      for(let j=i+1;j<rows.length;j++){if(starts[j]>starts[i]){end=starts[j];break;}}
+      const text=full.slice(starts[i],end).replace(/§§\s*/g,'').trim().slice(0,LT_MAX);
+      found.push({unit:rows[i].unit,lesson:rows[i].lesson,text});
+    }
   }
   st.textContent=`⏳ جاري حفظ ${egToArabic(found.length)} درساً...`;
   const recs=found.map(f=>({
@@ -10981,10 +11014,10 @@ async function ltSliceAndSave(full,rows,grade,subject,semester,chars,useAi){
   let html='';
   if(window._ltFailedPages){html+=`<div style="color:#b26a00;font-size:12px;margin-bottom:6px">⚠️ تعذّرت قراءة ${egToArabic(window._ltFailedPages)} صفحة (تُجوهلت) — قد تنقص بعض الدروس.</div>`;window._ltFailedPages=0;}
   html+=`<div style="font-weight:700;font-size:13px;color:${found.length===total?'#2e7d32':'#b26a00'}">طوبِق ${egToArabic(found.length)} من ${egToArabic(total)} درساً${found.length===total?' ✅':''}</div>`;
-  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">حجم النصّ ${egToArabic(chars||full.trim().length)} حرف${found.length===0?' — النصّ موجود لكن عناوين الدروس لم تُطابَق.':''}</div>`;
+  html+=`<div style="font-size:11px;color:var(--muted);margin-top:2px">حجم النصّ ${egToArabic(chars||full.trim().length)} حرف${segs?(' · '+egToArabic(segs.length)+' عنوان (§§) مكتشف'):' · بلا علامات §§ (مسار برمجي)'}${found.length===0?' — لم تُطابَق العناوين.':''}</div>`;
   if(found.length<total){
-    const sample=full.replace(/\s+/g,' ').trim().slice(0,300);
-    html+=`<div style="margin-top:8px;font-size:11px;color:var(--muted)">عيّنة من النصّ (للتشخيص):<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;direction:rtl;max-height:120px;overflow:auto">${escHtml(sample)||'(فارغ)'}</div></div>`;
+    const sample=segs?segs.map(s=>s.heading).slice(0,12).join(' | '):full.replace(/\s+/g,' ').trim().slice(0,300);
+    html+=`<div style="margin-top:8px;font-size:11px;color:var(--muted)">${segs?'العناوين المكتشفة (للتشخيص):':'عيّنة من النصّ (للتشخيص):'}<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:4px;direction:rtl;max-height:120px;overflow:auto">${escHtml(sample)||'(فارغ)'}</div></div>`;
   }
   if(saveErr){html+=`<div style="color:var(--red);font-size:12px;margin-top:6px">فشل الحفظ: ${escHtml(saveErr)}</div>`;}
   else{html+=`<div style="color:var(--muted);font-size:12px;margin-top:4px">تم حفظ نصّ ${egToArabic(found.length)} درساً — جاهزة للتوليد الدقيق تلقائياً.</div>`;}
