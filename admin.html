@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>لوحة المشرف — خطتي الفصلية</title>
+<link rel="icon" href="/khottah_icon_192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f4f0eb;--surface:#fff;--card:#f9f6f2;--border:#d8ccc4;
+  --gold:#b8860b;--gold2:#9a7010;--red:#c0392b;--red2:#e74c3c;--g1:#1a7a3a;--g2:#27ae60;--g3:#1a5a2a;
+  --white:#1a1010;--muted:#7a6060;--text:#2a1a1a;--green:#27ae60;
+  --grid-color:rgba(139,90,43,.06);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;
+  background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;background-attachment:fixed;}
+.admin-top{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#2a1a1a,#3a2020);color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.15);}
+.admin-top .brand{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px;}
+.admin-top .brand .crown{color:var(--gold);}
+.signout-link{color:#fff;font-size:12px;cursor:pointer;background:rgba(255,255,255,.12);border:none;border-radius:99px;padding:7px 14px;font-family:'Cairo',sans-serif;font-weight:700;}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 60px;}
+.admin-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+.nav-btn{padding:8px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.nav-btn:hover{border-color:var(--gold);color:var(--gold);}
+.nav-btn.active{background:linear-gradient(135deg,var(--red),#e67e22);border:2px solid var(--gold);color:#fff;}
+.page{display:none;}
+.page.active{display:block;}
+.page-header{text-align:center;margin-bottom:20px;}
+.page-header .tag{display:inline-block;background:rgba(192,57,43,.1);color:var(--red);border-radius:99px;padding:4px 14px;font-size:12px;font-weight:700;margin-bottom:8px;}
+.page-header h1{margin:6px 0;font-size:22px;}
+.page-header p{color:var(--muted);font-size:13px;margin:0;}
+.gate{display:flex;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:20px;}
+.gate-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px 26px;max-width:380px;}
+.gate-box h2{margin:0 0 10px;font-size:18px;}
+.gate-box p{color:var(--muted);font-size:13px;line-height:1.9;margin:0 0 16px;}
+.gate-box a{display:inline-block;background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;text-decoration:none;border-radius:12px;padding:11px 22px;font-weight:700;font-size:14px;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:#2a1a1a;color:#fff;padding:12px 22px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;transition:all .3s;z-index:2000;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.ok{background:linear-gradient(135deg,var(--g1),var(--g2));}
+.toast.err{background:linear-gradient(135deg,var(--red),var(--red2));}
+/* ui-confirm */
+.ui-confirm-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:3000;padding:20px;}
+.ui-confirm-box{background:var(--surface);border-radius:16px;padding:22px;max-width:360px;width:100%;text-align:center;}
+.ui-confirm-title{font-weight:800;font-size:16px;margin-bottom:8px;}
+.ui-confirm-msg{color:var(--muted);font-size:13px;line-height:1.9;margin-bottom:18px;white-space:pre-line;}
+.ui-confirm-actions{display:flex;gap:10px;}
+.ui-confirm-actions button{flex:1;padding:11px;border-radius:10px;border:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+.ui-confirm-ok{background:var(--red);color:#fff;}
+.ui-confirm-cancel{background:var(--card);color:var(--text);border:1px solid var(--border)!important;}
+</style>
+</head>
+<body>
+
+<div id="admin-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--muted);font-size:14px">⏳ جاري التحقّق...</div>
+
+<!-- بوّابة غير المصرّح -->
+<div class="gate" id="admin-gate" style="display:none">
+  <div class="gate-box">
+    <h2>🔒 لوحة المشرف</h2>
+    <p id="gate-msg">هذه الصفحة مخصّصة لمشرف المنصة فقط.</p>
+    <a href="/index.html">الذهاب لتسجيل الدخول</a>
+  </div>
+</div>
+
+<!-- اللوحة (للمشرف المصرّح) -->
+<div id="admin-app" style="display:none">
+  <div class="admin-top">
+    <div class="brand"><span class="crown">👑</span> لوحة مشرف المنصة</div>
+    <button class="signout-link" onclick="adminSignOut()">تسجيل الخروج</button>
+  </div>
+  <div class="wrap">
+    <div class="admin-nav" id="admin-nav">
+      <!-- أزرار الأقسام تُضاف مع نقل كل قسم -->
+    </div>
+    <div id="admin-pages">
+      <div class="page active" id="page-home">
+        <div class="page-header">
+          <div class="tag">👑 لوحة المشرف</div>
+          <h1>مرحباً بك</h1>
+          <p>ستُنقل أقسام إدارة المنصة إلى هنا تباعاً. القسم الأول قيد التجهيز.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="ui-confirm-bg" id="ui-confirm-bg">
+  <div class="ui-confirm-box">
+    <div class="ui-confirm-title" id="ui-confirm-title">تأكيد</div>
+    <div class="ui-confirm-msg" id="ui-confirm-msg"></div>
+    <div class="ui-confirm-actions">
+      <button class="ui-confirm-cancel" id="ui-confirm-cancel">إلغاء</button>
+      <button class="ui-confirm-ok" id="ui-confirm-ok">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ الأساس المشترك للوحة المشرف ══
+const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
+const ADMIN_EMAIL='teacherplane2026project@gmail.com';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+let currentUser=null;
+
+function isAdmin(){if(!currentUser)return false;return (currentUser.email||'').toLowerCase().trim()===ADMIN_EMAIL.toLowerCase();}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+let _tt;function toast(msg,type=false){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type==='ok'?' ok':type===true?' err':'');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2500);}
+function uiConfirm(message,opts){opts=opts||{};return new Promise(resolve=>{
+  const bg=document.getElementById('ui-confirm-bg');
+  document.getElementById('ui-confirm-title').textContent=opts.title||'تأكيد';
+  document.getElementById('ui-confirm-msg').textContent=message;
+  const ok=document.getElementById('ui-confirm-ok'),cancel=document.getElementById('ui-confirm-cancel');
+  ok.textContent=opts.okText||'تأكيد';cancel.textContent=opts.cancelText||'إلغاء';
+  bg.style.display='flex';
+  const done=(v)=>{bg.style.display='none';ok.onclick=cancel.onclick=null;resolve(v);};
+  ok.onclick=()=>done(true);cancel.onclick=()=>done(false);
+});}
+async function adminSignOut(){try{await sb.auth.signOut();}catch(e){}location.replace('/index.html');}
+
+function showAdminPage(id,btn){
+  document.querySelectorAll('#admin-pages .page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#admin-nav .nav-btn').forEach(b=>b.classList.remove('active'));
+  const pg=document.getElementById('page-'+id);if(pg)pg.classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+// ══ بوّابة المصادقة ══
+(async function initAdmin(){
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    currentUser=session?session.user:null;
+  }catch(e){}
+  document.getElementById('admin-loading').style.display='none';
+  if(!currentUser){
+    document.getElementById('gate-msg').textContent='يجب تسجيل الدخول أولاً بحساب المشرف.';
+    document.getElementById('admin-gate').style.display='flex';return;
+  }
+  if(!isAdmin()){
+    document.getElementById('gate-msg').textContent='حسابك ليس حساب مشرف المنصة. هذه الصفحة محظورة.';
+    document.getElementById('admin-gate').style.display='flex';return;
+  }
+  document.getElementById('admin-app').style.display='block';
+})();
+</script>
+</body>
+</html>
