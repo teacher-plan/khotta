@@ -53,6 +53,20 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Cairo',sans-se
 .ui-confirm-cancel{background:var(--card);color:var(--text);border:1px solid var(--border)!important;}
 .admin-panel-card{background:var(--card);border:1.5px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:20px;}
 .grade-btn{padding:8px 16px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
+.eg-credit-track{height:8px;background:var(--border);border-radius:99px;overflow:hidden;}
+.eg-credit-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:99px;transition:width .4s;}
+.eg-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+.eg-step-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:15px;color:var(--gold);margin-bottom:12px;}
+.eg-row{display:flex;gap:10px;flex-wrap:wrap;}
+.eg-card select,.eg-card input[type=number]{flex:1;min-width:120px;padding:9px 12px;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;outline:none;}
+.eg-lbl{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:10px 0 5px;}
+.eg-types{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
+.eg-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.eg-chip input{accent-color:var(--gold);width:15px;height:15px;}
+.eg-generate{width:100%;margin-top:14px;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;font-family:'Cairo',sans-serif;font-weight:800;font-size:14px;cursor:pointer;}
+.eg-generate:hover{opacity:.92;}
+.eg-export,.eg-regen{flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+.eg-export{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border:none;}
 </style>
 </head>
 <body>
@@ -78,6 +92,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Cairo',sans-se
     <div class="admin-nav" id="admin-nav">
       <button class="nav-btn active" onclick="showAdminPage('home',this)">🏠 الرئيسية</button>
       <button class="nav-btn" onclick="showAdminPage('violtypes',this)">⚠️ أنواع المخالفات</button>
+      <button class="nav-btn" onclick="showAdminPage('aimanage',this)">🧠 إدارة مولّد الاختبارات</button>
     </div>
     <div id="admin-pages">
       <div class="page active" id="page-home">
@@ -106,6 +121,158 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Cairo',sans-se
             <button class="grade-btn" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;font-weight:700;white-space:nowrap" onclick="addViolationType()">➕ إضافة</button>
           </div>
           <div id="violtypes-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+        </div>
+      </div></div>
+
+      <div class="page" id="page-aimanage"><div class="wrap">
+        <div class="page-header">
+          <div class="tag">🧠 إدارة مولّد الاختبارات</div>
+          <h1>إدارة مولّد الاختبارات</h1>
+          <p>تحكّم المشرف في سلوك الذكاء الاصطناعي وإعداداته</p>
+        </div>
+
+        <!-- 📷 مساعد المحتوى (١): قراءة الفهرس ورفع أسماء الدروس -->
+        <div class="eg-card">
+          <div class="eg-step-title">📷 قراءة الفهرس (رفع أسماء الدروس)</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">استخرج أسماء الوحدات والدروس من صورة الفهرس وارفعها للمنهج. تظهر هنا <b>المواد الفارغة فقط</b> (التي لم يُرفع لها محتوى بعد).</p>
+          <div class="eg-row">
+            <div style="flex:1"><label class="eg-lbl">الصف</label><select id="lt-grade" onchange="ltOnChange(this)"><option value="">الصف</option></select></div>
+            <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="lt-semester" onchange="ltOnChange(this)"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
+            <div style="flex:1"><label class="eg-lbl">المادة (فارغة)</label><select id="lt-subject"><option value="">المادة</option></select></div>
+          </div>
+          <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
+            <input type="file" id="lt-index-img" accept="image/*" multiple onchange="ltExtractIndex(this)" style="display:none">
+            <button type="button" class="eg-regen" onclick="document.getElementById('lt-index-img').click()">اختر صورة/صور الفهرس</button>
+            <div id="lt-index-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+            <div id="lt-index-result" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- 📚 مساعد المحتوى (٢): رفع الكتاب كاملاً (لتوليد الأسئلة من نطاق كل درس) -->
+        <div class="eg-card">
+          <div class="eg-step-title">📚 رفع الكتاب</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع كتاب المادة كاملاً. لاحقاً يستخرج الذكاء نطاق صفحات كل درس من الفهرس، فيولّد المعلم أسئلة من صفحات درسه مباشرةً — بلا تقطيع.</p>
+          <div class="eg-row">
+            <div style="flex:1"><label class="eg-lbl">الصف</label><select id="ltb-grade" onchange="ltbOnChange(this)"><option value="">الصف</option></select></div>
+            <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="ltb-semester" onchange="ltbOnChange(this)"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
+            <div style="flex:1"><label class="eg-lbl">المادة (لها محتوى)</label><select id="ltb-subject"><option value="">المادة</option></select></div>
+          </div>
+          <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
+            <div class="eg-row" style="align-items:flex-end">
+              <div style="flex:2;min-width:180px">
+                <label class="eg-lbl">ملف الكتاب (PDF)</label>
+                <input type="file" id="lt-book-file" accept=".pdf" onchange="ltPickBook(this.files[0])" style="display:none">
+                <button type="button" class="eg-regen" style="width:100%" onclick="document.getElementById('lt-book-file').click()">📄 اختر ملف الكتاب</button>
+              </div>
+              <div style="flex:1;min-width:150px">
+                <label class="eg-lbl">ورقة الـPDF لصفحة الكتاب رقم ١</label>
+                <input type="number" id="lt-book-offset" value="1" min="1" title="أي ورقة في ملف الـPDF تحمل صفحة الكتاب رقم ١ (بعد الغلاف والمقدمة)؟">
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 «ورقة الـPDF لصفحة الكتاب ١»: افتح الـPDF وانظر أي ورقة فيه تحمل الصفحة المرقّمة «١» في الكتاب (الغلاف والمقدمة يزيحان الترقيم). تُستخدم لمطابقة أرقام الفهرس بالصفحات الصحيحة.</div>
+            <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+            <div id="lt-book-result" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="eg-card">
+          <div class="eg-step-title">📝 تعليمات توجيه الذكاء الاصطناعي</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">تُرسَل مع كل طلب توليد لتوجيه أسلوب الأسئلة ومستواها (اللغة، المنهج العماني، نمط الوزارة، أساليب مفضّلة/ممنوعة). تُحفظ فوراً وتُطبَّق على كل المعلمين.</p>
+          <textarea id="ai-system-prompt" rows="9" style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:12px;outline:none;line-height:1.9;box-sizing:border-box" placeholder="مثال: صُغ الأسئلة باللغة العربية الفصحى، وفق منهج سلطنة عُمان. راعِ المستوى الدراسي للصف. نوّع مستويات الصعوبة. تجنّب الأسئلة الغامضة أو خارج المحتوى المحدد..."></textarea>
+          <button class="eg-generate" style="margin-top:12px" onclick="saveAiSettings()">💾 حفظ التعليمات</button>
+          <div id="ai-save-status" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
+        </div>
+
+        <!-- التحكم والحدود -->
+        <div class="eg-card">
+          <div class="eg-step-title">⚙️ التحكم والحدود</div>
+          <label class="eg-chip" style="margin-bottom:14px;display:inline-flex"><input type="checkbox" id="ai-gen-enabled" checked> تفعيل المولّد للمعلمين</label>
+          <label class="eg-lbl">نموذج الذكاء الاصطناعي</label>
+          <select id="ai-model" class="eg-card" style="width:100%;margin-bottom:6px" dir="ltr" onchange="egAiModelDesc()">
+            <option value="deepseek/deepseek-chat" data-desc="⭐ الأرخص والأسرع مع عربية جيدة جداً — الخيار الموصى به لمعظم الاختبارات." data-tag="موصى به · اقتصادي">DeepSeek V3 — الأرخص والأسرع (موصى به)</option>
+            <option value="deepseek/deepseek-reasoner" data-desc="استدلال أقوى ومناسب للأسئلة التحليلية والمقالية العميقة، لكنه أبطأ وأغلى قليلاً." data-tag="استدلال قوي">DeepSeek Reasoner — استدلال أقوى</option>
+            <option value="google/gemini-2.5-flash" data-desc="⭐ يقرأ ويحلّل الملفات الكبيرة (كتب/مراجع كاملة) بسياق ضخم، وسريع ورخيص في الوقت نفسه — الأنسب عند إرفاق مرجع طويل." data-tag="موصى به للملفات الكبيرة · رخيص">Gemini 2.5 Flash — تحليل الملفات الكبيرة (موصى به)</option>
+            <option value="google/gemini-2.5-flash-lite" data-desc="أرخص خيارات جوجل، جيّد للاختبارات البسيطة وتوفير التكلفة إلى أقصى حد." data-tag="الأرخص">Gemini Flash-Lite — الأرخص</option>
+            <option value="openai/gpt-5-mini" data-desc="متوازن من OpenAI بين الجودة والتكلفة، صياغة أسئلة منظّمة وواضحة." data-tag="متوازن">GPT-5 mini — متوازن</option>
+            <option value="anthropic/claude-haiku-4.5" data-desc="عربية ممتازة وصياغة راقية وسريع، أغلى قليلاً من DeepSeek — جودة عالية بتكلفة معقولة." data-tag="عربية ممتازة">Claude Haiku 4.5 — عربية ممتازة</option>
+            <option value="anthropic/claude-sonnet-4.6" data-desc="أعلى جودة عربية وأدقّها في اتباع التعليمات والمواصفات الوزارية، لكنه الأغلى — للاختبارات المهمة." data-tag="أعلى جودة">Claude Sonnet 4.6 — أعلى جودة (الأغلى)</option>
+          </select>
+          <div id="ai-model-desc" style="font-size:12px;color:var(--muted);margin-bottom:6px;line-height:1.8"></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">يُطبَّق على كل عمليات التوليد لدى جميع المعلمين. جرّب وقارن الجودة مقابل التكلفة.</div>
+          <div class="eg-row">
+            <div style="flex:1"><label class="eg-lbl">أقصى عدد أسئلة</label><input type="number" id="ai-max-q" value="30" min="1" max="100"></div>
+            <div style="flex:1"><label class="eg-lbl">أقصى عدد صفحات</label><input type="number" id="ai-max-pages" value="5" min="1" max="20"></div>
+          </div>
+          <label class="eg-lbl">أنواع الأسئلة المسموحة</label>
+          <div class="eg-types">
+            <label class="eg-chip"><input type="checkbox" class="ai-atype" value="mcq" checked> اختيار من متعدد</label>
+            <label class="eg-chip"><input type="checkbox" class="ai-atype" value="essay" checked> مقالي</label>
+            <label class="eg-chip"><input type="checkbox" class="ai-atype" value="tf" checked> صح وخطأ</label>
+            <label class="eg-chip"><input type="checkbox" class="ai-atype" value="fill" checked> إكمال الفراغ</label>
+            <label class="eg-chip"><input type="checkbox" class="ai-atype" value="match" checked> توصيل</label>
+          </div>
+          <button class="eg-generate" style="margin-top:12px" onclick="saveAiLimits()">💾 حفظ التحكم والحدود</button>
+        </div>
+
+        <!-- قالب التصدير -->
+        <div class="eg-card">
+          <div class="eg-step-title">🖨️ قالب التصدير</div>
+          <div class="eg-row">
+            <div style="flex:1"><label class="eg-lbl">الخط</label>
+              <select id="ex-font" onchange="exPreview()">
+                <option value="Cairo">Cairo (حديث)</option>
+                <option value="Tajawal">Tajawal (حديث)</option>
+                <option value="Amiri">Amiri (نسخ تقليدي)</option>
+                <option value="Noto Naskh Arabic">Noto Naskh (نسخ)</option>
+              </select>
+            </div>
+            <div style="flex:1"><label class="eg-lbl">حجم الخط (px)</label><input type="number" id="ex-size" value="13" min="10" max="20" oninput="exPreview()"></div>
+          </div>
+          <label class="eg-lbl">ترويسة الورقة</label>
+          <input type="text" id="ex-header" value="سلطنة عُمان — وزارة التربية والتعليم" oninput="exPreview()">
+          <label class="eg-lbl">نص التذييل</label>
+          <input type="text" id="ex-footer" value="خطتي الفصلية — منصة المعلمين" oninput="exPreview()">
+          <label class="eg-chip" style="margin-top:12px;display:inline-flex"><input type="checkbox" id="ex-logo" checked onchange="exPreview()"> إظهار الشعار في التذييل</label>
+          <label class="eg-lbl" style="margin-top:14px">معاينة مباشرة (نموذج ورقة A4)</label>
+          <div style="background:#5a5a5a;padding:16px;border-radius:10px;border:1px solid var(--border);overflow:auto;text-align:center">
+            <div id="ex-preview" style="background:#fff;color:#111;width:100%;max-width:420px;aspect-ratio:1/1.414;margin:0 auto;box-shadow:0 6px 22px rgba(0,0,0,.4);padding:26px 24px;font-size:13px;line-height:1.9;text-align:right;position:relative;overflow:hidden"></div>
+          </div>
+          <button class="eg-generate" style="margin-top:12px" onclick="saveExportTemplate()">💾 حفظ قالب التصدير</button>
+        </div>
+
+        <!-- ميزانية التوليد -->
+        <div class="eg-card">
+          <div class="eg-step-title">💰 ميزانية التوليد</div>
+          <div class="eg-row">
+            <div style="flex:1"><label class="eg-lbl">رصيد كل معلم سنوياً ($)</label><input type="number" id="ai-budget-per" value="6" min="0" step="0.5" oninput="aiComputeBudget()"></div>
+            <div style="flex:1"><label class="eg-lbl">عدد المعلمين المشتركين</label><input type="number" id="ai-teacher-count" value="0" min="0" oninput="aiComputeBudget()"></div>
+          </div>
+          <button class="eg-export" style="margin-top:10px;width:auto;padding:8px 14px;flex:none" onclick="aiFetchTeacherCount()">🔄 جلب العدد الفعلي</button>
+          <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted);font-size:13px;font-weight:600">إجمالي الميزانية السنوية</span><span id="ai-total-budget" style="color:var(--gold);font-size:18px;font-weight:800">$0</span></div>
+          <button class="eg-generate" style="margin-top:12px" onclick="saveAiBudget()">💾 حفظ الميزانية</button>
+        </div>
+
+        <!-- عدّاد الاستهلاك -->
+        <div class="eg-card">
+          <div class="eg-step-title">📊 عدّاد الرصيد / التوكنز</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px"><span>الرصيد المتبقي (كل المعلمين)</span><span id="ai-remain-pct" style="color:var(--gold)">١٠٠٪</span></div>
+          <div class="eg-credit-track" style="height:14px"><div class="eg-credit-fill" id="ai-remain-fill" style="width:100%"></div></div>
+          <div style="display:grid;gap:6px;font-size:12.5px;margin-top:14px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">الإجمالي</span><span id="ai-g-total" style="font-weight:700">$0</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">المستهلك</span><span id="ai-g-used" style="font-weight:700">$0</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">المتبقي</span><span id="ai-g-remain" style="font-weight:700;color:var(--gold)">$0</span></div>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7">الاستهلاك يُحدَّث تلقائياً عند ربط Claude. حالياً تجريبي (٠ مستهلك).</p>
+        </div>
+
+        <div class="eg-card">
+          <div class="eg-step-title">ℹ️ إعدادات المولّد (للعلم)</div>
+          <div style="display:grid;gap:8px;font-size:13px">
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">النموذج المستخدم</span><span style="font-weight:700">Claude Sonnet 4.6</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">مصدر المحتوى</span><span style="font-weight:700">المكتبة المعتمدة حصراً</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">رصيد التوليد لكل معلم</span><span style="font-weight:700">سنوي محدود</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">حالة الربط بالذكاء</span><span style="font-weight:700;color:var(--gold)">قيد التجهيز (واجهة تجريبية)</span></div>
+          </div>
         </div>
       </div></div>
     </div>
@@ -153,6 +320,7 @@ function showAdminPage(id,btn){
   const pg=document.getElementById('page-'+id);if(pg)pg.classList.add('active');
   if(btn)btn.classList.add('active');
   if(id==='violtypes')loadViolationTypesAdmin();
+  if(id==='aimanage'){ltInit();loadAiSettings();}
 }
 
 // ══ VIOLATION TYPES MANAGEMENT (إدارة المخالفات) ══════
@@ -246,6 +414,344 @@ async function moveViolationType(index,direction){
     ]);
     loadViolationTypesAdmin();
   }catch(e){toast('فشل تغيير الترتيب',true);}
+}
+
+// ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
+let _aiConsumed=0;
+let _pdfjsLoading=null;
+const FIRST_CYCLE_SUBJECTS=['اللغة العربية','الرياضيات','العلوم','التربية الإسلامية','اللغة الإنجليزية','التربية الفنية','التربية الرياضية','المهارات الحياتية','التربية الموسيقية','دراسات اجتماعية'];
+function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
+function libGradeName(n){const a=['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'];return 'الصف '+(a[n-1]||n);}
+function clearCurriculumCache(){
+  try{
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('curr:'))keys.push(k);}
+    keys.forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+}
+function stableLessonId(semester,subject,grade,unit,lesson){
+  const raw=`${semester}|${subject}|${grade}|${unit}|${lesson}`;
+  let h=5381;
+  for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}
+  return 'L'+h.toString(36);
+}
+function loadPdfJs(){
+  if(typeof pdfjsLib!=='undefined')return Promise.resolve();
+  if(_pdfjsLoading)return _pdfjsLoading;
+  _pdfjsLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    s.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';resolve();};
+    s.onerror=()=>reject(new Error('فشل تحميل PDF.js'));
+    document.head.appendChild(s);
+  });
+  return _pdfjsLoading;
+}
+async function ltRenderPageBlob(pdf,pageNum,maxW,quality){
+  const page=await pdf.getPage(pageNum);
+  const base=page.getViewport({scale:1});
+  const scale=Math.max(0.5,Math.min(2,maxW/base.width));
+  const vp=page.getViewport({scale});
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
+  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  return await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality||0.6));
+}
+async function ltPickBook(file){
+  const st=document.getElementById('lt-book-status');
+  document.getElementById('lt-book-result').innerHTML='';
+  if(!file){return;}
+  const grade=document.getElementById('ltb-grade').value;
+  const subject=document.getElementById('ltb-subject').value;
+  const semester=document.getElementById('ltb-semester').value;
+  if(!grade||!subject){if(st)st.textContent='❌ اختر الصف والمادة أولاً';return;}
+  if(!/\.pdf$/i.test(file.name)){if(st)st.textContent='❌ الملف يجب أن يكون PDF';return;}
+  const offset=parseInt(document.getElementById('lt-book-offset').value)||1;
+  let pdf;
+  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
+  catch(e){if(st)st.textContent='❌ فشل فتح الـ PDF';return;}
+  const N=pdf.numPages;
+  if(!await uiConfirm(`سيُرفع الكتاب (${egToArabic(N)} صفحة) كصور لـ${subject} — ${libGradeName(Number(grade))} — ${semester}.\nإزاحة الترقيم: ${egToArabic(offset)}.\nقد يستغرق عدة دقائق. متابعة؟`))return;
+  const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','');
+  for(let p=1;p<=N;p++){
+    let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
+    if(!blob){if(st){st.textContent='';}document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل تجهيز الصفحة ${egToArabic(p)} — أعد المحاولة.</div>`;return;}
+    let ok=false,lastErr='';
+    for(let attempt=1;attempt<=3&&!ok;attempt++){
+      if(st)st.textContent=`⬆️ رفع الصفحة ${egToArabic(p)} من ${egToArabic(N)}${attempt>1?' (محاولة '+egToArabic(attempt)+')':''}...`;
+      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});if(error){lastErr=error.message;}else ok=true;}
+      catch(e){lastErr=String(e&&e.message||e);}
+      if(!ok&&attempt<3)await new Promise(r=>setTimeout(r,1200*attempt));
+    }
+    if(!ok){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل رفع الصفحة ${egToArabic(p)}: ${escHtml(lastErr||'اتصال')}<br>أُوقفت العملية — أعد المحاولة.</div>`;return;}
+  }
+  if(st)st.textContent='⏳ جاري تسجيل مصدر الكتاب...';
+  try{
+    const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester'});
+    if(error)throw error;
+  }catch(e){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">فشل تسجيل المصدر: ${escHtml(e.message||'خطأ')}</div>`;return;}
+  if(st)st.textContent='';
+  document.getElementById('lt-book-result').innerHTML=`<div style="color:#2e7d32;font-weight:700;font-size:13px">✅ تم رفع ${egToArabic(N)} صفحة وتسجيل الكتاب.</div><div style="color:var(--muted);font-size:12px;margin-top:4px">الآن يستطيع المعلم توليد أسئلة من صفحات كل درس مباشرةً.</div>`;
+}
+function ltInit(){
+  const opts='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
+  const g=document.getElementById('lt-grade');if(g&&g.options.length<=1)g.innerHTML=opts;
+  const gb=document.getElementById('ltb-grade');if(gb&&gb.options.length<=1)gb.innerHTML=opts;
+}
+async function ltOnChange(el){
+  document.getElementById('lt-index-result').innerHTML='';
+  document.getElementById('lt-book-result').innerHTML='';
+  document.getElementById('lt-index-status').textContent='';
+  document.getElementById('lt-book-status').textContent='';
+  if(el&&(el.id==='lt-grade'||el.id==='lt-semester'))await ltReloadSubjects();
+}
+async function ltReloadSubjects(){
+  const grade=parseInt(document.getElementById('lt-grade').value);
+  const semester=document.getElementById('lt-semester').value;
+  const ssel=document.getElementById('lt-subject');
+  ssel.innerHTML='<option value="">المادة</option>';
+  if(!grade)return;
+  let subs=[];
+  if(grade<=4){subs=FIRST_CYCLE_SUBJECTS.slice();}
+  else{try{const{data}=await sb.from('subjects').select('subject,sort').eq('grade',grade).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
+  const withContent=new Set();
+  try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade)).eq('semester',semester);(data||[]).forEach(r=>withContent.add(r.subject));}catch(e){}
+  const empty=subs.filter(s=>!withContent.has(s));
+  if(!empty.length){ssel.innerHTML='<option value="">— كل المواد لديها محتوى —</option>';return;}
+  ssel.innerHTML='<option value="">المادة</option>'+empty.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+}
+async function ltbOnChange(el){
+  document.getElementById('lt-book-result').innerHTML='';
+  document.getElementById('lt-book-status').textContent='';
+  if(el&&(el.id==='ltb-grade'||el.id==='ltb-semester'))await ltbReloadSubjects();
+}
+async function ltbReloadSubjects(){
+  const grade=parseInt(document.getElementById('ltb-grade').value);
+  const semester=document.getElementById('ltb-semester').value;
+  const ssel=document.getElementById('ltb-subject');
+  ssel.innerHTML='<option value="">المادة</option>';
+  if(!grade)return;
+  let subs=[];
+  try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade)).eq('semester',semester);subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}
+  if(!subs.length){ssel.innerHTML='<option value="">— لا مواد لها محتوى —</option>';return;}
+  ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+}
+function ltFileToDataUrl(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
+async function ltExtractIndex(input){
+  const files=[...input.files];input.value='';
+  if(!files.length)return;
+  const st=document.getElementById('lt-index-status');
+  st.textContent='⏳ جاري قراءة الفهرس...';
+  try{
+    const images=[];for(const f of files.slice(0,6)){if(f.size>8*1024*1024){st.textContent='❌ حجم صورة كبير (الحد 8MB)';return;}images.push(await ltFileToDataUrl(f));}
+    const{data,error}=await sb.functions.invoke('extract-lessons',{body:{images}});
+    if(error){let r=error.message||'خطأ';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)r=j.error;}}catch(_){}st.textContent='❌ '+r;return;}
+    const units=(data&&data.units)||[];
+    if(!units.length){st.textContent='⚠️ لم تُستخرج دروس — جرّب صورة أوضح';return;}
+    const totalL=units.reduce((s,u)=>s+((u.lessons||[]).length),0);
+    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجع الأسماء والأرقام ثم اضغط «رفع المحتوى»';
+    const lessonLine=(l)=>{const name=(typeof l==='string')?l:((l&&l.name)||'');const page=(l&&typeof l==='object')?(parseInt(l.page)||0):0;return page>0?(name+' | '+page):name;};
+    const txt=units.map(u=>[(u.unit||'عام'),...(u.lessons||[]).map(lessonLine)].join('\n')).join('\n\n\n');
+    document.getElementById('lt-index-result').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">راجع القائمة: كل سطر «اسم الدرس | رقم الصفحة». عنوان الوحدة في سطر مستقل، وسطران فارغان بين وحدة وأخرى. (الرقم لا يظهر للمعلم — يُستخدم داخلياً للتوليد).</div><textarea id="lt-index-text" rows="14" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt)}</textarea><button class="eg-generate" style="margin-top:8px" onclick="ltUploadExtracted()">⬆️ رفع المحتوى للمنهج</button>`;
+  }catch(e){st.textContent='❌ فشل استخراج الفهرس';}
+}
+function ltParseIndexText(text){
+  const blocks=(text||'').split(/\n\s*\n\s*\n+/).map(b=>b.trim()).filter(Boolean);
+  const units=[];
+  for(const block of blocks){
+    const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!lines.length)continue;
+    const unit=lines[0];const lessons=[];
+    for(let i=1;i<lines.length;i++){
+      let line=lines[i],page=null,name=line;
+      const bar=line.lastIndexOf('|');
+      if(bar>=0){
+        const after=line.slice(bar+1).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+        const num=parseInt(after);
+        if(!isNaN(num)){page=num;name=line.slice(0,bar).trim();}
+      }
+      name=name.replace(/^[\d٠-٩①-⑨\-•*●○◦▪▫\[\(\.:\)]+\s*/,'').trim();
+      if(name)lessons.push({name,page});
+    }
+    if(lessons.length)units.push({unit,lessons});
+  }
+  return units;
+}
+async function ltUploadExtracted(){
+  const t=document.getElementById('lt-index-text');if(!t)return;
+  const grade=parseInt(document.getElementById('lt-grade').value);
+  const subject=document.getElementById('lt-subject').value;
+  const semester=document.getElementById('lt-semester').value;
+  if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
+  const units=ltParseIndexText(t.value);
+  if(!units.length){toast('لم يُعثر على وحدات — تأكد من وجود سطرين فارغين بين الوحدات',true);return;}
+  const totalL=units.reduce((s,u)=>s+u.lessons.length,0);
+  const withPage=units.reduce((s,u)=>s+u.lessons.filter(l=>l.page).length,0);
+  if(!await uiConfirm(`رفع ${egToArabic(units.length)} وحدة و${egToArabic(totalL)} درساً (منها ${egToArabic(withPage)} برقم صفحة) لـ${subject} — ${libGradeName(grade)} — ${semester}؟\nسيُستبدل أي محتوى قديم لهذه المادة.`))return;
+  const st=document.getElementById('lt-index-status');st.textContent='⏳ جاري رفع المحتوى...';
+  try{
+    await sb.from('curriculum').delete().eq('semester',semester).eq('subject',subject).eq('grade',grade);
+    const ex=await sb.from('subjects').select('subject').eq('semester',semester).eq('subject',subject).eq('grade',grade);
+    if(!ex.data||!ex.data.length){await sb.from('subjects').insert([{semester,subject,grade,sort:99}]);}
+    const rows=[];let sort=1;
+    units.forEach(u=>u.lessons.forEach(l=>rows.push({semester,subject,grade,unit:u.unit,lesson:l.name,page:l.page||null,sort:sort++})));
+    const{error}=await sb.from('curriculum').insert(rows);
+    if(error)throw error;
+    clearCurriculumCache();
+    st.textContent=`✅ تم رفع ${egToArabic(rows.length)} درساً — الآن ارفع الكتاب من البطاقة بالأسفل.`;
+    document.getElementById('lt-index-result').innerHTML='';
+  }catch(e){st.textContent='❌ فشل الرفع: '+(e.message||'خطأ');}
+}
+async function loadAiSettings(){
+  if(!sb)return;
+  try{
+    const{data}=await sb.from('ai_settings').select('key,value');
+    const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    const ta=document.getElementById('ai-system-prompt');if(ta)ta.value=m.system_prompt||'';
+    const per=document.getElementById('ai-budget-per');if(per)per.value=m.per_teacher_usd||'6';
+    const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=m.teacher_count||'0';
+    const en=document.getElementById('ai-gen-enabled');if(en)en.checked=(m.generator_enabled!=='0');
+    const mdl=document.getElementById('ai-model');if(mdl){const val=m.ai_model||'deepseek/deepseek-chat';if(![...mdl.options].some(o=>o.value===val)){const o=document.createElement('option');o.value=val;o.textContent=val+' (مخصّص)';o.setAttribute('data-desc','نموذج مخصّص أدخلته يدوياً.');mdl.appendChild(o);}mdl.value=val;egAiModelDesc();}
+    const mq=document.getElementById('ai-max-q');if(mq)mq.value=m.max_questions||'30';
+    const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
+    const at=(m.allowed_types||'mcq,essay,tf,fill,match').split(',');
+    document.querySelectorAll('.ai-atype').forEach(c=>{c.checked=at.includes(c.value);});
+    const ef=document.getElementById('ex-font');if(ef)ef.value=m.export_font||'Cairo';
+    const es=document.getElementById('ex-size');if(es)es.value=m.export_size||'13';
+    const eh=document.getElementById('ex-header');if(eh)eh.value=m.export_header||'سلطنة عُمان — وزارة التربية والتعليم';
+    const efo=document.getElementById('ex-footer');if(efo)efo.value=m.export_footer||'خطتي الفصلية — منصة المعلمين';
+    const el=document.getElementById('ex-logo');if(el)el.checked=(m.export_logo!=='0');
+    if(document.getElementById('ex-preview'))exPreview();
+    _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
+    aiComputeBudget();
+  }catch(e){}
+}
+function exFontHref(f){return 'https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+':wght@400;700&display=swap';}
+function exEnsureFont(f){
+  const id='exfont-'+f.replace(/ /g,'-');
+  if(document.getElementById(id))return;
+  const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=exFontHref(f);document.head.appendChild(l);
+}
+function exPreview(){
+  const font=document.getElementById('ex-font').value;
+  const size=parseInt(document.getElementById('ex-size').value)||13;
+  const header=document.getElementById('ex-header').value;
+  const footer=document.getElementById('ex-footer').value;
+  const logo=document.getElementById('ex-logo').checked;
+  exEnsureFont(font);
+  const box=document.getElementById('ex-preview');
+  box.style.fontFamily=`'${font}',sans-serif`;
+  box.style.fontSize=size+'px';
+  box.innerHTML=`<div style="position:absolute;inset:10px;border:1.5px solid #333;border-radius:5px;pointer-events:none"></div>
+    <div style="position:relative;padding:6px 6px 30px">
+    <div style="float:left;border:1.3px solid #333;border-radius:6px;padding:4px 8px;text-align:center;font-size:.82em;color:#111"><div style="font-weight:700">الدرجة الكلية</div><div style="font-size:1.3em;font-weight:800">... / ٢٠</div></div>
+    <div style="text-align:center;margin-bottom:4px"><b>${escHtml(header)}</b></div>
+    <h2 style="text-align:center;margin:0 0 6px;color:#111;font-size:1.4em">اختبار تجريبي — الصف الثامن</h2>
+    <div style="display:flex;justify-content:space-between;font-size:.9em;color:#444;clear:both"><span>الاسم: .................</span><span>التاريخ: ..../..../٢٠..</span></div>
+    <hr style="border:none;border-top:1px solid #ccc;margin:10px 0">
+    <div style="margin:8px 0"><b>١.</b> اختر الإجابة الصحيحة من درس الأعداد النسبية:<div style="padding-right:16px;color:#333">أ) خيار ١ &nbsp; ب) خيار ٢ &nbsp; ج) خيار ٣ &nbsp; د) خيار ٤</div></div>
+    <div style="margin:8px 0"><b>٢.</b> ( صح / خطأ ) المعادلة الخطية لها حل واحد فقط.</div>
+    <div style="margin:8px 0"><b>٣.</b> أكمل الفراغ: ناتج جمع عددين نسبيين هو ............... .</div>
+    <div style="margin:8px 0"><b>٤.</b> سؤال مقالي: اشرح بالتفصيل ...............................<br>......................................................................</div>
+    <hr style="border:none;border-top:1px solid #ccc;margin:10px 0">
+    <div style="text-align:center;font-size:.78em;color:#888;display:flex;align-items:center;justify-content:center;gap:6px">${logo?'<img src="https://khotati.com/khottah_icon_120.png" style="width:16px;height:16px;border-radius:3px"/>':''}<span>${escHtml(footer)}</span></div>
+    </div>`;
+}
+async function saveExportTemplate(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'export_font',value:document.getElementById('ex-font').value,updated_at:new Date().toISOString()},
+      {key:'export_size',value:String(document.getElementById('ex-size').value||13),updated_at:new Date().toISOString()},
+      {key:'export_header',value:document.getElementById('ex-header').value,updated_at:new Date().toISOString()},
+      {key:'export_footer',value:document.getElementById('ex-footer').value,updated_at:new Date().toISOString()},
+      {key:'export_logo',value:document.getElementById('ex-logo').checked?'1':'0',updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ قالب التصدير','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ قالب التصدير';}}
+}
+function egAiModelDesc(){
+  const sel=document.getElementById('ai-model');const box=document.getElementById('ai-model-desc');
+  if(!sel||!box)return;
+  const o=sel.options[sel.selectedIndex];if(!o){box.textContent='';return;}
+  const tag=o.getAttribute('data-tag'),desc=o.getAttribute('data-desc')||'';
+  box.innerHTML=(tag?`<span style="display:inline-block;background:rgba(46,125,50,.12);color:#2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:6px">${escHtml(tag)}</span>`:'')+escHtml(desc);
+}
+async function saveAiLimits(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const enabled=document.getElementById('ai-gen-enabled').checked?'1':'0';
+  const model=document.getElementById('ai-model')?document.getElementById('ai-model').value:'deepseek/deepseek-chat';
+  const maxQ=document.getElementById('ai-max-q').value||'30';
+  const maxP=document.getElementById('ai-max-pages').value||'5';
+  const types=[...document.querySelectorAll('.ai-atype:checked')].map(c=>c.value).join(',')||'mcq';
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'generator_enabled',value:enabled,updated_at:new Date().toISOString()},
+      {key:'ai_model',value:model,updated_at:new Date().toISOString()},
+      {key:'max_questions',value:String(maxQ),updated_at:new Date().toISOString()},
+      {key:'max_pages',value:String(maxP),updated_at:new Date().toISOString()},
+      {key:'allowed_types',value:types,updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ التحكم والحدود','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ التحكم والحدود';}}
+}
+function aiComputeBudget(){
+  const per=parseFloat(document.getElementById('ai-budget-per')?.value)||0;
+  const count=parseInt(document.getElementById('ai-teacher-count')?.value)||0;
+  const total=per*count;
+  const used=_aiConsumed||0;
+  const remain=Math.max(0,total-used);
+  const pct=total>0?Math.round((remain/total)*100):100;
+  const fmt=n=>'$'+(Math.round(n*100)/100)+' ('+(Math.round(n/2.6*100)/100)+' ر.ع)';
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('ai-total-budget',fmt(total));
+  set('ai-g-total',fmt(total));
+  set('ai-g-used',fmt(used));
+  set('ai-g-remain',fmt(remain));
+  set('ai-remain-pct',egToArabic(pct)+'٪');
+  const fill=document.getElementById('ai-remain-fill');if(fill)fill.style.width=pct+'%';
+}
+async function aiFetchTeacherCount(){
+  if(!sb)return;
+  try{
+    const{count,error}=await sb.from('profiles').select('*',{count:'exact',head:true});
+    if(!error&&count!=null){const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=count;aiComputeBudget();toast('عدد الحسابات: '+count,'ok');}
+    else toast('تعذّر جلب العدد',true);
+  }catch(e){toast('تعذّر جلب العدد',true);}
+}
+async function saveAiBudget(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const per=document.getElementById('ai-budget-per').value||'0';
+  const count=document.getElementById('ai-teacher-count').value||'0';
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'per_teacher_usd',value:String(per),updated_at:new Date().toISOString()},
+      {key:'teacher_count',value:String(count),updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);
+    else{toast('✅ تم حفظ الميزانية','ok');aiComputeBudget();}
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ الميزانية';}}
+}
+async function saveAiSettings(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const ta=document.getElementById('ai-system-prompt');
+  const status=document.getElementById('ai-save-status');
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const{error}=await sb.from('ai_settings').upsert({key:'system_prompt',value:ta.value,updated_at:new Date().toISOString()},{onConflict:'key'});
+    if(error){if(status){status.textContent='❌ فشل الحفظ: '+error.message;status.style.color='var(--red)';}}
+    else{if(status){status.textContent='✅ تم الحفظ';status.style.color='var(--green2,#27ae60)';}toast('✅ تم حفظ التعليمات','ok');}
+  }catch(e){if(status){status.textContent='❌ حدث خطأ';status.style.color='var(--red)';}}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ التعليمات';}}
 }
 
 // ══ بوّابة المصادقة ══
