@@ -10833,34 +10833,59 @@ async function ltExtractIndex(input){
     const units=(data&&data.units)||[];
     if(!units.length){st.textContent='⚠️ لم تُستخرج دروس — جرّب صورة أوضح';return;}
     const totalL=units.reduce((s,u)=>s+((u.lessons||[]).length),0);
-    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجعها وصحّحها ثم اضغط «رفع المحتوى»';
-    // التنسيق: عنوان الوحدة ثم دروسها، وسطران فارغان بين الوحدات (يتعرّف عليهما محلّل المحتوى)
-    const txt=units.map(u=>[(u.unit||'عام'),...(u.lessons||[])].join('\n')).join('\n\n\n');
-    document.getElementById('lt-index-result').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">راجع القائمة (عنوان الوحدة يليه دروسها، وسطران فارغان بين وحدة وأخرى):</div><textarea id="lt-index-text" rows="12" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt)}</textarea><button class="eg-generate" style="margin-top:8px" onclick="ltUploadExtracted()">⬆️ رفع المحتوى للمنهج</button>`;
+    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجع الأسماء والأرقام ثم اضغط «رفع المحتوى»';
+    // كل درس: «الاسم | رقم صفحة البداية». الرقم يُخزَّن منفصلاً ولا يظهر للمعلم.
+    const lessonLine=(l)=>{const name=(typeof l==='string')?l:((l&&l.name)||'');const page=(l&&typeof l==='object')?(parseInt(l.page)||0):0;return page>0?(name+' | '+page):name;};
+    const txt=units.map(u=>[(u.unit||'عام'),...(u.lessons||[]).map(lessonLine)].join('\n')).join('\n\n\n');
+    document.getElementById('lt-index-result').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">راجع القائمة: كل سطر «اسم الدرس | رقم الصفحة». عنوان الوحدة في سطر مستقل، وسطران فارغان بين وحدة وأخرى. (الرقم لا يظهر للمعلم — يُستخدم داخلياً للتوليد).</div><textarea id="lt-index-text" rows="14" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt)}</textarea><button class="eg-generate" style="margin-top:8px" onclick="ltUploadExtracted()">⬆️ رفع المحتوى للمنهج</button>`;
   }catch(e){st.textContent='❌ فشل استخراج الفهرس';}
 }
-// رفع المحتوى المستخرَج للمنهج مباشرة (يستعمل نفس محلّل رفع المحتوى: سطران فارغان = وحدة جديدة)
+// محلّل الفهرس: سطران فارغان = وحدة جديدة، وكل درس «الاسم | رقم الصفحة»
+function ltParseIndexText(text){
+  const blocks=(text||'').split(/\n\s*\n\s*\n+/).map(b=>b.trim()).filter(Boolean);
+  const units=[];
+  for(const block of blocks){
+    const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!lines.length)continue;
+    const unit=lines[0];const lessons=[];
+    for(let i=1;i<lines.length;i++){
+      let line=lines[i],page=null,name=line;
+      const bar=line.lastIndexOf('|');
+      if(bar>=0){
+        const after=line.slice(bar+1).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+        const num=parseInt(after);
+        if(!isNaN(num)){page=num;name=line.slice(0,bar).trim();}
+      }
+      name=name.replace(/^[\d٠-٩①-⑨\-•*●○◦▪▫\[\(\.:\)]+\s*/,'').trim();
+      if(name)lessons.push({name,page});
+    }
+    if(lessons.length)units.push({unit,lessons});
+  }
+  return units;
+}
+// رفع المحتوى المستخرَج للمنهج (اسم نظيف في lesson، رقم الصفحة منفصل في page)
 async function ltUploadExtracted(){
   const t=document.getElementById('lt-index-text');if(!t)return;
   const grade=parseInt(document.getElementById('lt-grade').value);
   const subject=document.getElementById('lt-subject').value;
   const semester=document.getElementById('lt-semester').value;
   if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
-  const units=parseUploadedContent(t.value);
+  const units=ltParseIndexText(t.value);
   if(!units.length){toast('لم يُعثر على وحدات — تأكد من وجود سطرين فارغين بين الوحدات',true);return;}
   const totalL=units.reduce((s,u)=>s+u.lessons.length,0);
-  if(!await uiConfirm(`رفع ${egToArabic(units.length)} وحدة و${egToArabic(totalL)} درساً لـ${subject} — ${libGradeName(grade)} — ${semester}؟\nسيُستبدل أي محتوى قديم لهذه المادة.`))return;
+  const withPage=units.reduce((s,u)=>s+u.lessons.filter(l=>l.page).length,0);
+  if(!await uiConfirm(`رفع ${egToArabic(units.length)} وحدة و${egToArabic(totalL)} درساً (منها ${egToArabic(withPage)} برقم صفحة) لـ${subject} — ${libGradeName(grade)} — ${semester}؟\nسيُستبدل أي محتوى قديم لهذه المادة.`))return;
   const st=document.getElementById('lt-index-status');st.textContent='⏳ جاري رفع المحتوى...';
   try{
     await sb.from('curriculum').delete().eq('semester',semester).eq('subject',subject).eq('grade',grade);
     const ex=await sb.from('subjects').select('subject').eq('semester',semester).eq('subject',subject).eq('grade',grade);
     if(!ex.data||!ex.data.length){await sb.from('subjects').insert([{semester,subject,grade,sort:99}]);}
     const rows=[];let sort=1;
-    units.forEach(u=>u.lessons.forEach(l=>rows.push({semester,subject,grade,unit:u.name,lesson:l,sort:sort++})));
+    units.forEach(u=>u.lessons.forEach(l=>rows.push({semester,subject,grade,unit:u.unit,lesson:l.name,page:l.page||null,sort:sort++})));
     const{error}=await sb.from('curriculum').insert(rows);
     if(error)throw error;
     if(typeof clearCurriculumCache==='function')clearCurriculumCache();
-    st.textContent=`✅ تم رفع ${egToArabic(rows.length)} درساً — الآن ارفع الكتاب بالأسفل للتقطيع.`;
+    st.textContent=`✅ تم رفع ${egToArabic(rows.length)} درساً — الآن ارفع الكتاب من البطاقة بالأسفل.`;
     document.getElementById('lt-index-result').innerHTML='';
   }catch(e){st.textContent='❌ فشل الرفع: '+(e.message||'خطأ');}
 }
