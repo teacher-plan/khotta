@@ -10502,6 +10502,34 @@ function egPaperWrap(qHtml,grade,subject,total,lessonsList){
     <div style="font-size:12px;color:#444;margin-top:4px">الدروس: ${escHtml(lessonsList)}</div>
     <hr>${qHtml}<hr>`;
 }
+// يبني روابط صور صفحات الدروس المختارة من مصدر الكتاب (للتوليد بالرؤية)
+async function egVisionImages(grade,subject,semester){
+  if(typeof sb==='undefined'||!sb)return null;
+  let bs=null;
+  try{const r=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).maybeSingle();bs=r.data;}catch(e){return null;}
+  if(!bs||!bs.base_path||!bs.page_count)return null;
+  const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
+  let cur=null;
+  try{const r=await sb.from('curriculum').select('unit,lesson,sort,page').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester);cur=r.data;}catch(e){return null;}
+  if(!cur||!cur.length)return null;
+  const sorted=cur.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const pub=(sheet)=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
+  const images=[],lessonNames=[],seen={};
+  Object.values(egSelected).forEach(sel=>{
+    const idx=sorted.findIndex(r=>r.unit===sel.unit&&r.lesson===sel.name);
+    if(idx<0)return;
+    const start=parseInt(sorted[idx].page);if(!start)return;
+    let end=pageCount;
+    for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+    if(end<start)end=start;
+    lessonNames.push(sel.name);
+    for(let bp=start;bp<=end&&images.length<30;bp++){
+      const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+      const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
+    }
+  });
+  return images.length?{images,lessonNames}:null;
+}
 async function egGenerate(){
   const lessons=Object.values(egSelected);
   if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
@@ -10523,6 +10551,7 @@ async function egGenerate(){
   const total=Math.max(1,Math.min(100,parseInt(document.getElementById('eg-total').value)||20));
   const grade=document.getElementById('eg-grade').value;
   const subject=document.getElementById('eg-subject').value;
+  const semester=(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول';
   const teacherPrompt=(document.getElementById('eg-prompt')?.value||'').trim();
   const lessonsList=lessons.map(l=>l.name).join('، ');
   const btn=document.querySelector('.eg-generate');
@@ -10530,6 +10559,16 @@ async function egGenerate(){
   let qHtml=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
+      // ١) محاولة التوليد بالرؤية من صور صفحات الدرس (إن رفع المشرف الكتاب)
+      let vis=null;try{vis=await egVisionImages(grade,subject,semester);}catch(e){}
+      if(vis&&vis.images.length){
+        if(btn)btn.textContent='👁 جاري قراءة صفحات الدرس وتوليد الأسئلة...';
+        const{data:vd,error:ve}=await sb.functions.invoke('generate-exam-vision',{body:{grade,subject,lessonNames:vis.lessonNames,images:vis.images,types,count:qcount,total,teacherPrompt}});
+        if(!ve&&vd&&Array.isArray(vd.questions)&&vd.questions.length){qHtml=egRenderAiQuestions(vd.questions);real=true;}
+        else{if(ve){reason=ve.message||'خطأ الرؤية';try{if(ve.context&&ve.context.json){const j=await ve.context.json();if(j&&j.error)reason='رؤية: '+j.error;}}catch(_){}}else if(vd&&vd.error){reason='رؤية: '+vd.error;}console.warn('generate-exam-vision:',reason,ve||vd);}
+      }
+      // ٢) احتياط: التوليد النصّي (اسم الدرس/النصّ المخزّن) إن لم تنجح الرؤية
+      if(!qHtml){
       const{data,error}=await sb.functions.invoke('generate-exam',{body:{grade,subject,lessons:lessonSpecs,types,count:qcount,total,teacherPrompt,referenceText:egRefText||'',sampleExam:egSampleText||''}});
       if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
         qHtml=egRenderAiQuestions(data.questions);real=true;
@@ -10542,6 +10581,7 @@ async function egGenerate(){
         else{reason='استجابة غير متوقعة';}
         console.warn('generate-exam:',reason,error||data);
       }
+      } // نهاية احتياط النصّي
     }else{reason='لا يوجد اتصال بالخادم';}
   }catch(e){reason=String(e);console.warn('generate-exam call failed',e);}
   if(!qHtml)qHtml=egMockQuestions(types,qcount,lessons); // رجوع تلقائي للتجريبي
