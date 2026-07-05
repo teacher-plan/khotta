@@ -10764,16 +10764,53 @@ let _aiConsumed=0;
 const LT_MAX=40000; // سقف نصّ الدرس الواحد
 let _ltBookFile=null;
 // اختيار ملف الكتاب (المرحلة التالية: تخزينه + استخراج نطاقات الفهرس)
-function ltPickBook(file){
+// رسم صفحة PDF إلى Blob صورة (JPEG مضغوطة)
+async function ltRenderPageBlob(pdf,pageNum,maxW,quality){
+  const page=await pdf.getPage(pageNum);
+  const base=page.getViewport({scale:1});
+  const scale=Math.max(0.5,Math.min(2,maxW/base.width));
+  const vp=page.getViewport({scale});
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
+  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  return await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality||0.6));
+}
+// رفع الكتاب: تحويل كل صفحة لصورة وتخزينها + تسجيل المصدر (الخيار ب)
+async function ltPickBook(file){
   const st=document.getElementById('lt-book-status');
-  if(!file){_ltBookFile=null;if(st)st.textContent='';return;}
+  document.getElementById('lt-book-result').innerHTML='';
+  if(!file){return;}
   const grade=document.getElementById('ltb-grade').value;
   const subject=document.getElementById('ltb-subject').value;
+  const semester=document.getElementById('ltb-semester').value;
   if(!grade||!subject){if(st)st.textContent='❌ اختر الصف والمادة أولاً';return;}
-  _ltBookFile=file;
+  if(!/\.pdf$/i.test(file.name)){if(st)st.textContent='❌ الملف يجب أن يكون PDF';return;}
   const offset=parseInt(document.getElementById('lt-book-offset').value)||1;
-  const mb=(file.size/1048576).toFixed(1);
-  if(st)st.innerHTML=`✅ تم اختيار «${escHtml(file.name)}» (${egToArabic(mb)} م.ب) · إزاحة الترقيم: ${egToArabic(offset)}<br><span style="color:var(--muted);font-size:11px">المرحلة التالية: تخزين الكتاب واستخراج نطاق صفحات كل درس من الفهرس.</span>`;
+  let pdf;
+  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
+  catch(e){if(st)st.textContent='❌ فشل فتح الـ PDF';return;}
+  const N=pdf.numPages;
+  if(!await uiConfirm(`سيُرفع الكتاب (${egToArabic(N)} صفحة) كصور لـ${subject} — ${libGradeName(Number(grade))} — ${semester}.\nإزاحة الترقيم: ${egToArabic(offset)}.\nقد يستغرق عدة دقائق. متابعة؟`))return;
+  const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','');
+  for(let p=1;p<=N;p++){
+    let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
+    if(!blob){if(st){st.textContent='';}document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل تجهيز الصفحة ${egToArabic(p)} — أعد المحاولة.</div>`;return;}
+    let ok=false,lastErr='';
+    for(let attempt=1;attempt<=3&&!ok;attempt++){
+      if(st)st.textContent=`⬆️ رفع الصفحة ${egToArabic(p)} من ${egToArabic(N)}${attempt>1?' (محاولة '+egToArabic(attempt)+')':''}...`;
+      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});if(error){lastErr=error.message;}else ok=true;}
+      catch(e){lastErr=String(e&&e.message||e);}
+      if(!ok&&attempt<3)await new Promise(r=>setTimeout(r,1200*attempt));
+    }
+    if(!ok){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل رفع الصفحة ${egToArabic(p)}: ${escHtml(lastErr||'اتصال')}<br>أُوقفت العملية — أعد المحاولة.</div>`;return;}
+  }
+  // تسجيل المصدر
+  if(st)st.textContent='⏳ جاري تسجيل مصدر الكتاب...';
+  try{
+    const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester'});
+    if(error)throw error;
+  }catch(e){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">فشل تسجيل المصدر: ${escHtml(e.message||'خطأ')}</div>`;return;}
+  if(st)st.textContent='';
+  document.getElementById('lt-book-result').innerHTML=`<div style="color:#2e7d32;font-weight:700;font-size:13px">✅ تم رفع ${egToArabic(N)} صفحة وتسجيل الكتاب.</div><div style="color:var(--muted);font-size:12px;margin-top:4px">الآن يستطيع المعلم توليد أسئلة من صفحات كل درس مباشرةً.</div>`;
 }
 function ltInit(){
   const opts='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
