@@ -2421,32 +2421,28 @@ input,textarea,select{font-size:16px !important;}
     </div>
   </div>
 
-  <!-- 📚 مساعد المحتوى (٢): تقطيع الكتاب لنصّ كل درس -->
+  <!-- 📚 مساعد المحتوى (٢): رفع الكتاب كاملاً (لتوليد الأسئلة من نطاق كل درس) -->
   <div class="eg-card">
-    <div class="eg-step-title">📚 تقطيع الكتاب (نصّ كل درس)</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع الكتاب كاملاً ليُقطّع تلقائياً لنصّ كل درس، فيولّد المعلمون بدقّة بلا رفع. تظهر هنا <b>المواد التي لها محتوى</b> (جاهزة للتقطيع).</p>
+    <div class="eg-step-title">📚 رفع الكتاب</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع كتاب المادة كاملاً. لاحقاً يستخرج الذكاء نطاق صفحات كل درس من الفهرس، فيولّد المعلم أسئلة من صفحات درسه مباشرةً — بلا تقطيع.</p>
     <div class="eg-row">
       <div style="flex:1"><label class="eg-lbl">الصف</label><select id="ltb-grade" onchange="ltbOnChange(this)"><option value="">الصف</option></select></div>
       <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="ltb-semester" onchange="ltbOnChange(this)"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
       <div style="flex:1"><label class="eg-lbl">المادة (لها محتوى)</label><select id="ltb-subject"><option value="">المادة</option></select></div>
     </div>
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
-      <input type="file" id="lt-book-pdf" accept=".pdf,.txt" onchange="ltSliceBook(this.files[0]);this.value=''" style="display:none">
-      <input type="file" id="lt-book-vision" accept=".pdf" onchange="ltVisionSliceBook(this.files[0]);this.value=''" style="display:none">
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-pdf').click()">📄 تقطيع نصّي (سريع/مجاني)</button>
-        <button type="button" class="eg-regen" style="flex:1;min-width:180px" onclick="document.getElementById('lt-book-vision').click()">👁 تقطيع بالرؤية (رياضيات/علوم)</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">جرّب «النصّي» أولاً. إن ظهر ٠ تطابق أو رموز غريبة (خطوط مشوّهة)، استخدم «بالرؤية» — يقرأ الصفحات كصور (أدقّ للرياضيات/العلوم، أبطأ وأعلى تكلفة قليلاً).</div>
-      <div style="border-top:1px dashed var(--border);margin-top:12px;padding-top:12px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">🔗 أو ألصق رابط الكتاب (PDF مباشر من موقع الوزارة) بدل تنزيله:</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input type="url" id="lt-book-url" placeholder="https://.../book.pdf" dir="ltr" style="flex:1;min-width:200px;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:12px">
-          <button type="button" class="eg-regen" style="min-width:120px" onclick="ltFetchBookUrl()">⬇️ جلب الرابط</button>
+      <div class="eg-row" style="align-items:flex-end">
+        <div style="flex:2;min-width:180px">
+          <label class="eg-lbl">ملف الكتاب (PDF)</label>
+          <input type="file" id="lt-book-file" accept=".pdf" onchange="ltPickBook(this.files[0])" style="display:none">
+          <button type="button" class="eg-regen" style="width:100%" onclick="document.getElementById('lt-book-file').click()">📄 اختر ملف الكتاب</button>
         </div>
-        <div id="lt-url-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-        <div id="lt-url-actions" style="margin-top:8px"></div>
+        <div style="flex:1;min-width:150px">
+          <label class="eg-lbl">ورقة الـPDF لصفحة الكتاب رقم ١</label>
+          <input type="number" id="lt-book-offset" value="1" min="1" title="أي ورقة في ملف الـPDF تحمل صفحة الكتاب رقم ١ (بعد الغلاف والمقدمة)؟">
+        </div>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 «ورقة الـPDF لصفحة الكتاب ١»: افتح الـPDF وانظر أي ورقة فيه تحمل الصفحة المرقّمة «١» في الكتاب (الغلاف والمقدمة يزيحان الترقيم). تُستخدم لمطابقة أرقام الفهرس بالصفحات الصحيحة.</div>
       <div id="lt-book-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div id="lt-book-result" style="margin-top:8px"></div>
     </div>
@@ -10766,6 +10762,19 @@ function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;i
 let _aiConsumed=0;
 // ══ مساعد المحتوى الذكي (المشرف): استخراج الفهرس + تقطيع الكتاب لنصّ كل درس ══
 const LT_MAX=40000; // سقف نصّ الدرس الواحد
+let _ltBookFile=null;
+// اختيار ملف الكتاب (المرحلة التالية: تخزينه + استخراج نطاقات الفهرس)
+function ltPickBook(file){
+  const st=document.getElementById('lt-book-status');
+  if(!file){_ltBookFile=null;if(st)st.textContent='';return;}
+  const grade=document.getElementById('ltb-grade').value;
+  const subject=document.getElementById('ltb-subject').value;
+  if(!grade||!subject){if(st)st.textContent='❌ اختر الصف والمادة أولاً';return;}
+  _ltBookFile=file;
+  const offset=parseInt(document.getElementById('lt-book-offset').value)||1;
+  const mb=(file.size/1048576).toFixed(1);
+  if(st)st.innerHTML=`✅ تم اختيار «${escHtml(file.name)}» (${egToArabic(mb)} م.ب) · إزاحة الترقيم: ${egToArabic(offset)}<br><span style="color:var(--muted);font-size:11px">المرحلة التالية: تخزين الكتاب واستخراج نطاق صفحات كل درس من الفهرس.</span>`;
+}
 function ltInit(){
   const opts='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
   const g=document.getElementById('lt-grade');if(g&&g.options.length<=1)g.innerHTML=opts;
