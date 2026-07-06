@@ -4547,6 +4547,10 @@ function showApp(data){
   buildTracker();
   applyFilter();
   update();
+  // مزامنة دروس المعلم تلقائياً مع المنهج (تطابق ما يرفعه المشرف من قارئ الفهرس)
+  if(!isAdmin()&&teacherConfig&&teacherConfig.grades&&teacherConfig.grades.length){
+    setTimeout(()=>{try{refreshLessonsFromDB({silent:true});}catch(e){}},500);
+  }
   loadCvProfile();
   loadRemindersUI();
   startClassWatcher();
@@ -6142,14 +6146,15 @@ async function cascadeUpdateTemplateColumns(subject,grade,oldCols,newCols){
 }
 
 // إعادة جلب الدروس من قاعدة البيانات وتحديث teacher_config
-async function refreshLessonsFromDB(){
+async function refreshLessonsFromDB(opts){
+  const silent=opts&&opts.silent;
   if(!teacherConfig||!teacherConfig.grades||!teacherConfig.grades.length){
-    toast('❌ لا يوجد إعداد محفوظ',true);
+    if(!silent)toast('❌ لا يوجد إعداد محفوظ',true);
     return;
   }
-  if(!sb){toast('❌ لا يوجد اتصال بقاعدة البيانات',true);return;}
-  
-  toast('🔄 جاري تحديث الدروس...');
+  if(!sb){if(!silent)toast('❌ لا يوجد اتصال بقاعدة البيانات',true);return;}
+
+  if(!silent)toast('🔄 جاري تحديث الدروس...');
   clearCurriculumCache(); // مسح cache لضمان جلب آخر البيانات
   
   try{
@@ -6191,6 +6196,7 @@ async function refreshLessonsFromDB(){
     applyFilter();
     update();
     
+    if(silent)return;
     if(issues.length){
       alert(`تم التحديث:\n✅ ${updatedGrades} مادة-صف تم تحديثها\n📚 ${totalLessons} درس إجمالاً\n\nملاحظات:\n${issues.join('\n')}`);
     }else{
@@ -6198,7 +6204,7 @@ async function refreshLessonsFromDB(){
     }
   }catch(e){
     console.error('خطأ في التحديث:',e);
-    toast('❌ فشل التحديث: '+e.message,true);
+    if(!silent)toast('❌ فشل التحديث: '+e.message,true);
   }
 }
 
