@@ -1922,6 +1922,10 @@ input,textarea,select{font-size:16px !important;}
       <div id="lib-units-banner" style="font-size:16px;font-weight:800;color:var(--text);flex:1"></div>
       <button class="arc-btn" onclick="libOpenExamBank()" style="padding:8px 16px;background:rgba(192,57,43,.12);color:var(--red);font-weight:700">🗂️ بنك الاختبارات</button>
     </div>
+    <div id="lib-sem-selector" style="display:none;gap:8px;margin-bottom:14px">
+      <button id="lib-sem-btn-0" class="arc-btn" style="padding:9px 20px;font-size:13px;font-weight:800" onclick="libSetSemester('الفصل الأول')">الفصل الأول</button>
+      <button id="lib-sem-btn-1" class="arc-btn" style="padding:9px 20px;font-size:13px;font-weight:800" onclick="libSetSemester('الفصل الثاني')">الفصل الثاني</button>
+    </div>
     <input class="arc-search" type="text" id="lib-units-search" placeholder="ابحث عن درس..." oninput="libFilterLessons(this.value)" style="margin-bottom:14px">
     <div id="lib-units-list"></div>
   </div>
@@ -9973,7 +9977,7 @@ function libRenderGrades(){
   if(!grid)return;
   let grades=[];
   if(isAdmin()){
-    grades=[5,6,7,8,9,10,11,12];
+    grades=[1,2,3,4,5,6,7,8,9,10,11,12];
   }else if(teacherConfig&&teacherConfig.grades){
     grades=[...new Set(teacherConfig.grades.map(g=>Number(g.num||g.grade)))].filter(n=>n).sort((a,b)=>a-b);
   }
@@ -9989,14 +9993,19 @@ async function libOpenGrade(grade){
   grid.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
   _libSubjects=[];
   if(isAdmin()){
-    try{
-      const{data}=await sb.from('subjects').select('subject,sort').eq('grade',String(grade)).order('sort');
-      _libSubjects=[...new Set((data||[]).map(r=>r.subject))];
-      if(!_libSubjects.length){
-        const{data:c}=await sb.from('curriculum').select('subject').eq('grade',String(grade));
-        _libSubjects=[...new Set((c||[]).map(r=>r.subject))];
-      }
-    }catch(e){}
+    if(grade<=4){
+      // الحلقة الأولى: قائمة المواد الثابتة
+      _libSubjects=(typeof FIRST_CYCLE_SUBJECTS!=='undefined')?FIRST_CYCLE_SUBJECTS.slice():[];
+    }else{
+      try{
+        const{data}=await sb.from('subjects').select('subject,sort').eq('grade',String(grade)).order('sort');
+        _libSubjects=[...new Set((data||[]).map(r=>r.subject))];
+        if(!_libSubjects.length){
+          const{data:c}=await sb.from('curriculum').select('subject').eq('grade',String(grade));
+          _libSubjects=[...new Set((c||[]).map(r=>r.subject))];
+        }
+      }catch(e){}
+    }
   }else if(teacherConfig&&teacherConfig.grades){
     _libSubjects=[...new Set(teacherConfig.grades.filter(g=>Number(g.num||g.grade)===grade).map(g=>g.subject))];
   }
@@ -10004,7 +10013,7 @@ async function libOpenGrade(grade){
   grid.innerHTML=_libSubjects.map((s,i)=>`<div class="arc-gs-card" onclick="libOpenSubject(${i})"><div class="arc-gs-icon" style="font-size:34px">📖</div><div class="arc-gs-name">${escHtml(s)}</div></div>`).join('');
 }
 
-async function libBuildUnits(grade,subject){
+async function libBuildUnits(grade,subject,semester){
   if(!isAdmin()&&teacherConfig&&teacherConfig.grades){
     const sem=teacherConfig.semester||'';
     const entry=teacherConfig.grades.find(g=>Number(g.num||g.grade)===grade&&g.subject===subject);
@@ -10013,9 +10022,11 @@ async function libBuildUnits(grade,subject){
     }
     return [];
   }
-  // المشرف: من جدول المنهج (كلا الفصلين)
+  // المشرف: من جدول المنهج — يُفصَل حسب الفصل الدراسي إن مُرِّر
   try{
-    const{data}=await sb.from('curriculum').select('subject,grade,semester,unit,lesson,sort').eq('grade',String(grade)).eq('subject',subject);
+    let q=sb.from('curriculum').select('subject,grade,semester,unit,lesson,sort').eq('grade',String(grade)).eq('subject',subject);
+    if(semester)q=q.eq('semester',semester);
+    const{data}=await q;
     const rows=(data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
     const map={};const order=[];
     rows.forEach(r=>{
@@ -10046,12 +10057,36 @@ async function libOpenSubject(idx){
   libState.subject=subject;
   libShowView('units');
   document.getElementById('lib-units-banner').textContent='📖 '+subject+' — '+libGradeName(libState.grade);
-  const list=document.getElementById('lib-units-list');
-  list.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
   const su=document.getElementById('lib-units-search');if(su)su.value='';
-  _libUnits=await libBuildUnits(libState.grade,subject);
+  // محدّد الفصل الدراسي للمشرف فقط (يفصل دروس الفصلين رغم تشابه أسماء الوحدات)
+  const semSel=document.getElementById('lib-sem-selector');
+  if(semSel)semSel.style.display=isAdmin()?'flex':'none';
+  if(isAdmin()&&!libState.semFilter)libState.semFilter='الفصل الأول';
+  libRenderSemButtons();
   await libLoadFiles(libState.grade,subject);
+  await libReloadUnits();
+}
+async function libReloadUnits(){
+  const list=document.getElementById('lib-units-list');
+  if(list)list.innerHTML='<p style="color:var(--muted)">جارٍ التحميل...</p>';
+  const sem=isAdmin()?libState.semFilter:null;
+  _libUnits=await libBuildUnits(libState.grade,libState.subject,sem);
   libRenderUnits();
+}
+function libSetSemester(sem){
+  libState.semFilter=sem;
+  libRenderSemButtons();
+  libReloadUnits();
+}
+function libRenderSemButtons(){
+  ['الفصل الأول','الفصل الثاني'].forEach((s,i)=>{
+    const b=document.getElementById('lib-sem-btn-'+i);
+    if(!b)return;
+    const active=libState.semFilter===s;
+    b.style.background=active?'linear-gradient(135deg,var(--red),var(--gold2))':'var(--surface)';
+    b.style.color=active?'#fff':'var(--muted)';
+    b.style.borderColor=active?'var(--gold)':'var(--border)';
+  });
 }
 
 function libRenderUnits(){
