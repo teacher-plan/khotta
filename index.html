@@ -1407,7 +1407,6 @@ input,textarea,select{font-size:16px !important;}
   <button class="nav-btn" data-page="library" onclick="showPage('library',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></span> المكتبة</button>
   <button class="nav-btn" data-page="examgen" onclick="showPage('examgen',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> مولّد الاختبارات</button>
   <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> المراسلات</button>
-  <button class="nav-btn admin-only" data-page="users" onclick="showPage('users',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></span> المعلمون</button>
 
   <button class="nav-btn admin-only" data-page="analytics" onclick="showPage('analytics',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</button>
   <button class="nav-btn admin-only" data-page="schools" onclick="showPage('schools',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></span> إدارة المدارس</button>
@@ -2165,7 +2164,17 @@ input,textarea,select{font-size:16px !important;}
   <div id="panel-msgs" style="display:none;">
     <div class="admin-panel-card">
       <div class="admin-panel-header">
-        <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل الخاصة</h3>
+        <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg> إرسال رسالة خاصة لمعلم</h3>
+        <div id="msg-teachers-count" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <input id="msg-teacher-search" class="users-search" type="text" placeholder="🔍 ابحث عن معلم..." oninput="filterMsgTeachers()"/>
+      <div id="msg-teachers-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+    <div class="admin-panel-card">
+      <div class="admin-panel-header">
+        <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> الرسائل المُرسَلة</h3>
         <div id="msgs-count" style="font-size:12px;color:var(--muted)"></div>
       </div>
       <div id="private-msgs-list" style="display:flex;flex-direction:column;gap:8px">
@@ -2203,25 +2212,7 @@ input,textarea,select{font-size:16px !important;}
 
 </div></div>
 
-<!-- ══ USERS PAGE ══ -->
-<div class="page" id="page-users"><div class="wrap">
-  <div class="page-header">
-    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></span> المعلمون</div>
-    <h1>المعلمون المسجلون</h1>
-    <p>قائمة بجميع المعلمين المسجلين في الموقع</p>
-  </div>
-  <div class="admin-panel-card">
-    <div class="admin-panel-header">
-      <h3><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></span> المعلمون</h3>
-      <button class="grade-btn" onclick="loadAdminUsers()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-weight:700">🔄 تحديث</button>
-    </div>
-    <input id="users-search" class="users-search" type="text" placeholder="🔍 ابحث عن معلم..." oninput="filterUsers()"/>
-    <div id="users-count" style="font-size:11px;color:var(--muted);margin-bottom:10px"></div>
-    <div id="users-list" style="display:flex;flex-direction:column;gap:8px">
-      <div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>
-    </div>
-  </div>
-</div></div>
+<!-- قسم «المعلمون» دُمج: قائمة المراسلة في المراسلات، والتواصل/التعطيل في جدول الإحصائيات -->
 
 <!-- ══ ANALYTICS ══ -->
 <div class="page" id="page-analytics"><div class="wrap">
@@ -4616,7 +4607,6 @@ function showPage(id,btn){
   if(id==='schools')loadSchools();
   if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='announcements'){loadAnnouncements();}
-  if(id==='users')loadAdminUsers();
   if(id==='timetable')loadAnnouncementBanner();
   if(id==='tracker'){
     setTimeout(()=>{
@@ -5291,10 +5281,65 @@ function switchMsgTab(tab){
   if(tab==='surveys'){renderSurveyBuilder();loadSurveyResults();}
 }
 
+// جلب بيانات المعلمين (مشترك بين المراسلات وجدول الإحصائيات)
+async function loadTeachersData(){
+  const q=await sb.from('profiles').select('id,data,updated_at').order('updated_at',{ascending:false});
+  if(q.error)throw q.error;
+  const{data:bannedData}=await sb.from('banned_users').select('user_id');
+  const bannedSet=new Set((bannedData||[]).map(r=>r.user_id));
+  _allUsers=(q.data||[]).map(u=>{
+    const d=u.data||{};
+    return{...u,
+      _email:d.email||'',
+      _name:d.display_name||d.teacher_name||d.full_name||(d.email?d.email.split('@')[0]:'—'),
+      _phone:d.teacher_phone||'',
+      _config:typeof d.teacher_config==='object'&&d.teacher_config!==null?d.teacher_config:{},
+      _enabled:!bannedSet.has(u.id)
+    };
+  });
+  return _allUsers;
+}
+// قائمة المعلمين في المراسلات — لكل معلم زر «رسالة» لإنشاء رسالة خاصة
+function renderMsgTeachers(users){
+  const box=document.getElementById('msg-teachers-list');
+  if(!box)return;
+  const list=users.filter(u=>(u._email||'')!==ADMIN_EMAIL);
+  if(!list.length){box.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">لا توجد نتائج</div>';return;}
+  box.innerHTML=list.map((u,i)=>{
+    const name=u._name||'—';const email=u._email||'';
+    const subject=(u._config&&typeof u._config.subject==='string')?u._config.subject:'';
+    return `<div class="user-item">
+      <div class="user-info" style="flex:1;min-width:0">
+        <div class="user-name">${i+1}. ${escHtml(name)}</div>
+        ${email?`<div class="user-email">${escHtml(email)}</div>`:''}
+        ${subject?`<div class="user-meta">${escHtml(subject)}</div>`:''}
+      </div>
+      <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="openMsgModal('${escHtml(u.id)}','${escHtml(name)}','${escHtml(email)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
+    </div>`;
+  }).join('');
+}
+function filterMsgTeachers(){
+  const q=(document.getElementById('msg-teacher-search')?.value||'').toLowerCase();
+  const filtered=!q?_allUsers:_allUsers.filter(u=>{
+    const name=(u._name||'').toLowerCase(),email=(u._email||'').toLowerCase();
+    const subject=((u._config||{}).subject||'').toLowerCase();
+    return name.includes(q)||email.includes(q)||subject.includes(q);
+  });
+  renderMsgTeachers(filtered);
+}
 async function loadPrivateMessages(){
   const list=document.getElementById('private-msgs-list');
   const countEl=document.getElementById('msgs-count');
   if(!list)return;
+  // قائمة المعلمين لإنشاء رسالة خاصة (للمشرف فقط)
+  if(isAdmin()){
+    try{
+      await loadTeachersData();
+      const tc=document.getElementById('msg-teachers-count');if(tc)tc.textContent=`${_allUsers.filter(u=>(u._email||'')!==ADMIN_EMAIL).length} معلم`;
+      const ts=document.getElementById('msg-teacher-search');if(ts)ts.value='';
+      renderMsgTeachers(_allUsers);
+    }catch(e){const box=document.getElementById('msg-teachers-list');if(box)box.innerHTML=`<div style="color:var(--red2);font-size:12px">❌ خطأ: ${e.message||''}</div>`;}
+  }
   list.innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">⏳ جاري التحميل...</div>';
   try{
     let query=sb.from('private_messages').select('*').order('created_at',{ascending:false});
@@ -5666,7 +5711,8 @@ async function toggleUserAccess(userId, name, enable){
       if(error&&error.code!=='23505')throw error;
       toast(`⛔ تم تعطيل حساب ${name}`);
     }
-    await loadAdminUsers();
+    // تحديث جدول الإحصائيات (حيث زر التفعيل/التعطيل الآن)
+    if(typeof loadAnalytics==='function')await loadAnalytics();
   }catch(e){
     toast('❌ خطأ: '+(e.message||''),true);
   }
@@ -8467,28 +8513,46 @@ async function loadAnalytics(){
     document.getElementById('an-msgs').textContent=(msgs?.length||0).toLocaleString('ar');
     document.getElementById('an-survey-res').textContent=(surveyRes?.length||0).toLocaleString('ar');
 
-    // ══ جدول النشاط ══
+    // ══ جدول النشاط (يشمل التواصل وتعطيل الحساب — بديل قسم المعلمون) ══
+    const{data:bannedData}=await sb.from('banned_users').select('user_id');
+    const bannedSet=new Set((bannedData||[]).map(r=>r.user_id));
     const sorted=[...(profiles||[])].sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0));
     const actTable=document.getElementById('an-activity-table');
-    actTable.innerHTML=`<table class="analytics-table">
-      <thead><tr><th>#</th><th>اسم المعلم</th><th>المادة</th><th>الصف</th><th>آخر دخول</th><th>الحالة</th></tr></thead>
+    actTable.innerHTML=`<div style="overflow-x:auto"><table class="analytics-table">
+      <thead><tr><th>#</th><th>اسم المعلم</th><th>المادة</th><th>الصف</th><th>آخر دخول</th><th>الحالة</th><th>التواصل</th><th>الحساب</th></tr></thead>
       <tbody>${sorted.map((p,i)=>{
         const d=p.data||{};
         const name=d.display_name||d.teacher_name||d.full_name||d.email||'—';
+        const email=d.email||'';
         const subj=d.teacher_config?.subject||'—';
         const grade=d.teacher_config?.grades?.[0]?.num?`الصف ${d.teacher_config.grades[0].num}`:'—';
-        const last=p.updated_at?getLastSeenText(p.updated_at):'لم يدخل';
+        const ls=p.updated_at?getLastSeenText(p.updated_at):{text:'لم يدخل'};
         const isAct=p.updated_at&&new Date(p.updated_at)>weekAgo;
-        return `<tr>
+        const phone=d.teacher_phone||'';
+        let waNum='';
+        if(phone){let pp=phone.replace(/\D/g,'');if(pp.startsWith('00'))pp=pp.substring(2);if(pp.length===8)pp='968'+pp;waNum=pp;}
+        const isAdminUser=email===ADMIN_EMAIL;
+        const enabled=!bannedSet.has(p.id);
+        const contactCell=phone
+          ? `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap"><span dir="ltr" style="font-size:11px;color:var(--muted)">${escHtml(phone)}</span>${waNum?`<a href="https://wa.me/${waNum}" target="_blank" rel="noopener" title="واتساب" style="display:inline-flex;background:#25D366;color:#fff;border-radius:6px;padding:4px 7px;text-decoration:none"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M20.52 3.449A11.94 11.94 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg></a>`:''}</div>`
+          : '<span style="color:var(--muted);font-size:11px">—</span>';
+        const acctCell=isAdminUser
+          ? '<span style="color:var(--gold);font-size:11px;font-weight:700">مشرف</span>'
+          : (enabled
+            ? `<button class="user-disable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escHtml(p.id)}','${escHtml(name).replace(/'/g,"\\'")}',false)">تعطيل</button>`
+            : `<button class="user-enable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escHtml(p.id)}','${escHtml(name).replace(/'/g,"\\'")}',true)">تفعيل</button>`);
+        return `<tr style="${!enabled&&!isAdminUser?'opacity:.55':''}">
           <td style="color:var(--muted)">${i+1}</td>
           <td style="font-weight:700">${escHtml(name)}</td>
           <td>${escHtml(subj)}</td>
           <td>${escHtml(grade)}</td>
-          <td style="color:var(--muted)">${last}</td>
-          <td><span class="${isAct?'active':'inactive'}-dot"></span> ${isAct?'نشط':'غائب'}</td>
+          <td style="color:var(--muted)">${escHtml(ls.text)}</td>
+          <td style="white-space:nowrap"><span class="${isAct?'active':'inactive'}-dot"></span> ${isAct?'نشط':'غائب'}</td>
+          <td>${contactCell}</td>
+          <td>${acctCell}</td>
         </tr>`;
       }).join('')}</tbody>
-    </table>`;
+    </table></div>`;
 
     // ══ مخطط المواد ══
     const subjEl=document.getElementById('an-subjects-chart');
