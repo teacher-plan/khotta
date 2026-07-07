@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
         model,
         messages: [{ role: "user", content: userPrompt }],
         modalities: ["image", "text"],
+        image_config: { aspect_ratio: "9:16" },
       }),
     });
     const or = await orResp.json();

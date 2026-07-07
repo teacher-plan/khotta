@@ -2154,6 +2154,11 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <label class="eg-lbl">توجيهات إضافية للمولّد <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
     <textarea id="ppt-prompt" rows="3" placeholder="اكتب أي ملاحظات تريد أن يراعيها المولّد..." style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none;line-height:1.8;resize:vertical"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0 4px;cursor:pointer;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px">
+      <input type="checkbox" id="ppt-visual" style="width:18px;height:18px;accent-color:var(--gold)">
+      <span style="font-size:13px;font-weight:700">🎨 النمط المرسوم الفاخر</span>
+      <span style="font-size:11.5px;color:var(--muted)">كل شريحة تُرسم بالكامل بالذكاء الاصطناعي (مثل الإنفوجرافيك) — أبطأ وأعلى جودة</span>
+    </label>
     <button class="eg-generate" onclick="pptGenerate()">🖼️ ولّد العرض التقديمي</button>
   </div>
 
@@ -11009,13 +11014,18 @@ async function pptGenerate(){
   }catch(e){reason=String(e);console.warn('generate-presentation call failed',e);}
   if(!slides)slides=pptMockSlides(subject,lessonsList);
   pptSlides=slides;
+  pptVisualImages=null;
+  const _pk=document.getElementById('ppt-theme-picker');if(_pk)_pk.style.display='';
+  const _pl=document.querySelector('#eg-ppt-result-card .eg-lbl');if(_pl)_pl.style.display='';
+  const visual=real&&document.getElementById('ppt-visual')?.checked;
   pptRenderThemePicker();
   pptRenderPreview();
   document.getElementById('eg-ppt-result-card').style.display='block';
   document.getElementById('eg-ppt-result-card').scrollIntoView({behavior:'smooth'});
   egCreditSet(egCreditGet()-3);
   if(btn){btn.disabled=false;btn.textContent='🖼️ ولّد العرض التقديمي';}
-  if(real){toast('✅ تم توليد العرض التقديمي','ok');}
+  if(visual){await pptVisualGenerate(grade,subject);}
+  else if(real){toast('✅ تم توليد العرض التقديمي','ok');}
   else{
     const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
     toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
@@ -11067,6 +11077,50 @@ function infoDownload(){
   const subject=document.getElementById('eg-subject').value||'درس';
   a.download='إنفوجرافيك-'+subject+'-'+new Date().toISOString().slice(0,10)+'.png';
   document.body.appendChild(a);a.click();a.remove();
+}
+
+// ══ النمط المرسوم الفاخر — كل شريحة تُرسم كاملة بالذكاء الاصطناعي ══
+let pptVisualImages=null;
+async function pptVisualGenerate(grade,subject){
+  const total=pptSlides.length;
+  pptVisualImages=new Array(total).fill(null);
+  const prev=document.getElementById('ppt-slides-preview');
+  const picker=document.getElementById('ppt-theme-picker');
+  if(picker)picker.style.display='none';
+  const pickLbl=document.querySelector('#eg-ppt-result-card .eg-lbl');
+  if(pickLbl)pickLbl.style.display='none';
+  prev.innerHTML='<div id="ppt-visual-progress" style="text-align:center;padding:24px;font-weight:700;color:var(--gold)">🎨 جاري رسم الشرائح... ٠/'+egToArabic(total)+'</div><div id="ppt-visual-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>';
+  const grid=document.getElementById('ppt-visual-grid');
+  const prog=document.getElementById('ppt-visual-progress');
+  let done=0,ok=0;
+  const worker=async(i)=>{
+    const s=pptSlides[i];
+    const kind=i===0?'cover':(i===total-1?'closing':'content');
+    try{
+      const{data,error}=await sb.functions.invoke('generate-slide-image',{
+        body:{grade,subject,title:s.title||'',bullets:s.bullets||[],slideNo:i+1,slideTotal:total,kind}
+      });
+      if(!error&&data&&data.image){
+        pptVisualImages[i]=data.image;ok++;
+        const cell=document.createElement('div');
+        cell.style.cssText='position:relative';
+        cell.innerHTML='<img src="'+data.image+'" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><span style="position:absolute;top:6px;right:6px;background:var(--gold);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px">'+egToArabic(i+1)+'</span>';
+        grid.appendChild(cell);
+      }else{console.warn('slide image '+(i+1)+' failed',error||data);}
+    }catch(e){console.warn('slide image '+(i+1)+' error',e);}
+    done++;
+    if(prog)prog.textContent='🎨 جاري رسم الشرائح... '+egToArabic(done)+'/'+egToArabic(total);
+  };
+  // ٣ رسمات متوازية — توازن بين السرعة وحدود المزود
+  const queue=[...Array(total).keys()];
+  await Promise.all(Array.from({length:Math.min(3,total)},async()=>{
+    while(queue.length)await worker(queue.shift());
+  }));
+  egCreditSet(Math.max(0,egCreditGet()-total));
+  if(prog)prog.textContent=ok===total
+    ?'✅ اكتمل رسم جميع الشرائح ('+egToArabic(total)+')'
+    :'⚠️ اكتمل '+egToArabic(ok)+' من '+egToArabic(total)+' — الشرائح الناقصة ستُبنى بالقالب العادي عند التنزيل';
+  toast(ok===total?'✅ تم رسم العرض كاملاً':'⚠️ بعض الشرائح لم تُرسم — أعد المحاولة أو نزّل كما هو',ok===total?'ok':true);
 }
 
 // قوالب العروض التقديمية — لكل قالب لوحة ألوان ونمط زخرفي
@@ -11184,6 +11238,27 @@ async function pptDownload(){
     await loadPptxJs();
     const subject=document.getElementById('eg-subject').value||'الدرس';
     const grade=document.getElementById('eg-grade').value;
+    // النمط المرسوم: شرائح صور كاملة + ملاحظات المعلم
+    if(pptVisualImages&&pptVisualImages.some(Boolean)){
+      const vp=new PptxGenJS();
+      vp.defineLayout({name:'KH169V',width:10,height:5.63});
+      vp.layout='KH169V';
+      pptSlides.forEach((s,i)=>{
+        const sl=vp.addSlide();
+        const img=pptVisualImages[i];
+        if(img){sl.addImage({data:img,x:0,y:0,w:10,h:5.63});}
+        else{
+          sl.background={color:'F4F0EB'};
+          sl.addText(s.title||'',{x:.5,y:.4,w:9,h:.9,align:'right',fontFace:'Cairo',fontSize:26,bold:true,color:'1A5A2A',rtlMode:true});
+          sl.addText((s.bullets||[]).map(b=>'• '+b).join('\n'),{x:.5,y:1.5,w:9,h:3.6,align:'right',fontFace:'Cairo',fontSize:16,color:'2A1A1A',rtlMode:true});
+        }
+        if(s.notes)sl.addNotes(String(s.notes));
+      });
+      await vp.writeFile({fileName:'عرض-مرسوم-'+subject+'-'+new Date().toISOString().slice(0,10)+'.pptx'});
+      if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}
+      toast('✅ تم تنزيل العرض المرسوم','ok');
+      return;
+    }
     const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
     const pptx=new PptxGenJS();
     pptx.defineLayout({name:'KH169',width:10,height:5.63});
