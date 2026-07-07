@@ -2486,11 +2486,21 @@ input,textarea,select{font-size:16px !important;}
 <!-- ══ AI / EXAM GENERATOR MANAGEMENT (admin) ══ -->
 <div class="page" id="page-aimanage"><div class="wrap">
   <div class="page-header">
-    <div class="tag">🧠 إدارة مولّد الاختبارات</div>
-    <h1>إدارة مولّد الاختبارات</h1>
-    <p>تحكّم المشرف في سلوك الذكاء الاصطناعي وإعداداته</p>
+    <div class="tag">🧠 إدارة المولّد</div>
+    <h1>إدارة المولّد</h1>
+    <p>تحكّم المشرف في المحتوى والاختبارات والعروض والميزانية</p>
   </div>
 
+  <!-- تبويبات إدارة المولّد -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--border);flex-wrap:wrap;">
+    <button id="aitab-content" onclick="switchAiTab('content')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--gold);border-bottom:2px solid var(--gold);margin-bottom:-2px">📥 المحتوى</button>
+    <button id="aitab-exam" onclick="switchAiTab('exam')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">📝 الاختبارات</button>
+    <button id="aitab-ppt" onclick="switchAiTab('ppt')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">🎨 العروض والرسم</button>
+    <button id="aitab-budget" onclick="switchAiTab('budget')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">💰 الميزانية</button>
+  </div>
+
+  <!-- ═ تبويب ١: المحتوى (الفهرس + الكتاب) ═ -->
+  <div id="aipanel-content">
   <!-- 📷 مساعد المحتوى (١): قراءة الفهرس ورفع أسماء الدروس -->
   <div class="eg-card">
     <div class="eg-step-title">📷 قراءة الفهرس (رفع أسماء الدروس)</div>
@@ -2534,7 +2544,10 @@ input,textarea,select{font-size:16px !important;}
       <div id="lt-book-result" style="margin-top:8px"></div>
     </div>
   </div>
+  </div>
 
+  <!-- ═ تبويب ٢: الاختبارات (التعليمات + الحدود + قالب التصدير) ═ -->
+  <div id="aipanel-exam" style="display:none">
   <div class="eg-card">
     <div class="eg-step-title">📝 تعليمات توجيه الذكاء الاصطناعي</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">تُرسَل مع كل طلب توليد لتوجيه أسلوب الأسئلة ومستواها (اللغة، المنهج العماني، نمط الوزارة، أساليب مفضّلة/ممنوعة). تُحفظ فوراً وتُطبَّق على كل المعلمين.</p>
@@ -2599,7 +2612,10 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <button class="eg-generate" style="margin-top:12px" onclick="saveExportTemplate()">💾 حفظ قالب التصدير</button>
   </div>
+  </div>
 
+  <!-- ═ تبويب ٣: العروض والرسم ═ -->
+  <div id="aipanel-ppt" style="display:none">
   <!-- إدارة العروض التقديمية -->
   <div class="eg-card">
     <div class="eg-step-title">🖼️ إدارة العروض التقديمية</div>
@@ -2628,9 +2644,21 @@ input,textarea,select{font-size:16px !important;}
 
     <label class="eg-chip" style="margin-top:12px;display:inline-flex"><input type="checkbox" id="ppt-logo" checked> إظهار شعار الموقع بجانب اسم المنصة في التذييل</label>
 
+    <div style="border-top:1px dashed var(--border);margin:16px 0 12px"></div>
+    <label class="eg-lbl">🎨 نموذج الرسم (الإنفوجرافيك + العروض المرسومة)</label>
+    <select id="img-model" style="width:100%">
+      <option value="google/gemini-2.5-flash-image">اقتصادي — Nano Banana (~٤ سنت/صورة)</option>
+      <option value="google/gemini-3.1-flash-image-preview">متوازن — Nano Banana 2 (~٧ سنت/صورة)</option>
+      <option value="google/gemini-3-pro-image-preview">فاخر — Nano Banana Pro (~١٤-٢١ سنت/صورة)</option>
+    </select>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:6px">النموذج الأفخم أدق في كتابة النص العربي داخل الرسم وأغنى تفاصيل — والأغلى تكلفة. التغيير يسري فوراً على كل التوليدات الجديدة.</p>
+
     <button class="eg-generate" style="margin-top:14px" onclick="savePptSettings()">💾 حفظ إعدادات العروض التقديمية</button>
   </div>
+  </div>
 
+  <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
+  <div id="aipanel-budget" style="display:none">
   <!-- ميزانية التوليد -->
   <div class="eg-card">
     <div class="eg-step-title">💰 ميزانية التوليد</div>
@@ -2655,15 +2683,6 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7">الاستهلاك يُحدَّث تلقائياً عند ربط Claude. حالياً تجريبي (٠ مستهلك).</p>
   </div>
-
-  <div class="eg-card">
-    <div class="eg-step-title">ℹ️ إعدادات المولّد (للعلم)</div>
-    <div style="display:grid;gap:8px;font-size:13px">
-      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">النموذج المستخدم</span><span style="font-weight:700">Claude Sonnet 4.6</span></div>
-      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">مصدر المحتوى</span><span style="font-weight:700">المكتبة المعتمدة حصراً</span></div>
-      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">رصيد التوليد لكل معلم</span><span style="font-weight:700">سنوي محدود</span></div>
-      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">حالة الربط بالذكاء</span><span style="font-weight:700;color:var(--gold)">قيد التجهيز (واجهة تجريبية)</span></div>
-    </div>
   </div>
 </div></div>
 
@@ -5386,6 +5405,19 @@ async function saveAnnouncement(){
   }catch(e){
     toast('❌ خطأ في النشر: '+(e.message||''),true);
   }
+}
+
+// تبويبات صفحة إدارة المولّد
+function switchAiTab(tab){
+  ['content','exam','ppt','budget'].forEach(t=>{
+    const p=document.getElementById('aipanel-'+t);
+    if(p)p.style.display=t===tab?'block':'none';
+    const b=document.getElementById('aitab-'+t);
+    if(!b)return;
+    const active=t===tab;
+    b.style.color=active?'var(--gold)':'var(--muted)';
+    b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
+  });
 }
 
 function switchMsgTab(tab){
@@ -11155,9 +11187,11 @@ async function savePptSettings(){
       titleSize:parseInt(document.getElementById('ppt-title-size').value)||26,
       bodySize:parseInt(document.getElementById('ppt-body-size').value)||18,
       brand:document.getElementById('ppt-brand').value||'منصة خطتي الفصلية',
-      logo:document.getElementById('ppt-logo').checked
+      logo:document.getElementById('ppt-logo').checked,
+      imgModel:document.getElementById('img-model')?.value||'google/gemini-2.5-flash-image'
     };
     const{error}=await sb.from('ai_settings').upsert([
+      {key:'slide_model',value:v.imgModel,updated_at:new Date().toISOString()},
       {key:'ppt_system_prompt',value:v.systemPrompt,updated_at:new Date().toISOString()},
       {key:'ppt_font',value:v.font,updated_at:new Date().toISOString()},
       {key:'ppt_title_size',value:String(v.titleSize),updated_at:new Date().toISOString()},
@@ -11632,6 +11666,7 @@ async function loadAiSettings(){
     const pbs=document.getElementById('ppt-body-size');if(pbs)pbs.value=pptSettings.bodySize;
     const pb=document.getElementById('ppt-brand');if(pb)pb.value=pptSettings.brand;
     const pl=document.getElementById('ppt-logo');if(pl)pl.checked=pptSettings.logo;
+    const im=document.getElementById('img-model');if(im)im.value=m.slide_model||'google/gemini-2.5-flash-image';
     if(document.getElementById('ex-preview'))exPreview();
     _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
     aiComputeBudget();
