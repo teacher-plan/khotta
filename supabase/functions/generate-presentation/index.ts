@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
-    const adminPrompt = st.system_prompt || "";
+    // برومبت خاص للعروض التقديمية إن ضبطه المشرف، وإلا نرجع للعام
+    const adminPrompt = st.ppt_system_prompt || st.system_prompt || "";
 
     const b = await req.json().catch(() => ({}));
     const grade = String(b.grade || "");

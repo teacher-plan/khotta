@@ -2571,6 +2571,37 @@ input,textarea,select{font-size:16px !important;}
     <button class="eg-generate" style="margin-top:12px" onclick="saveExportTemplate()">💾 حفظ قالب التصدير</button>
   </div>
 
+  <!-- إدارة العروض التقديمية -->
+  <div class="eg-card">
+    <div class="eg-step-title">🖼️ إدارة العروض التقديمية</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">إعدادات خاصة بمولّد العروض التقديمية (PPT): تعليمات الذكاء، الخط، حجمه، اسم المنصة، والشعار.</p>
+
+    <label class="eg-lbl">تعليمات توجيه الذكاء الاصطناعي للعرض التقديمي</label>
+    <textarea id="ppt-system-prompt" rows="6" style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:12px;outline:none;line-height:1.9;box-sizing:border-box" placeholder="مثال: اجعل الشرائح تدرّجاً تربوياً (أهداف ← مفاهيم ← مثال ← نشاط ← خلاصة). استخدم لغة تشويقية مناسبة للطلاب. تجنّب النص المطوّل — استبدله بنقاط قصيرة عالية القيمة..."></textarea>
+
+    <div class="eg-row" style="margin-top:12px">
+      <div style="flex:1">
+        <label class="eg-lbl">خط العنوان والنقاط</label>
+        <select id="ppt-font" onchange="pptSaveSettingsPreview()">
+          <option value="Cairo">Cairo (حديث)</option>
+          <option value="Tajawal">Tajawal (حديث)</option>
+          <option value="Amiri">Amiri (نسخ تقليدي)</option>
+          <option value="Noto Naskh Arabic">Noto Naskh (نسخ)</option>
+          <option value="Arial">Arial</option>
+        </select>
+      </div>
+      <div style="flex:1"><label class="eg-lbl">حجم عنوان الشريحة</label><input type="number" id="ppt-title-size" value="26" min="16" max="44"></div>
+      <div style="flex:1"><label class="eg-lbl">حجم نص النقاط</label><input type="number" id="ppt-body-size" value="18" min="10" max="28"></div>
+    </div>
+
+    <label class="eg-lbl">اسم المنصة (يظهر في التذييل)</label>
+    <input type="text" id="ppt-brand" value="منصة خطتي الفصلية" style="width:100%">
+
+    <label class="eg-chip" style="margin-top:12px;display:inline-flex"><input type="checkbox" id="ppt-logo" checked> إظهار شعار الموقع بجانب اسم المنصة في التذييل</label>
+
+    <button class="eg-generate" style="margin-top:14px" onclick="savePptSettings()">💾 حفظ إعدادات العروض التقديمية</button>
+  </div>
+
   <!-- ميزانية التوليد -->
   <div class="eg-card">
     <div class="eg-step-title">💰 ميزانية التوليد</div>
@@ -10950,6 +10981,55 @@ async function pptGenerate(){
   }
 }
 // قوالب العروض التقديمية — لكل قالب لوحة ألوان ونمط زخرفي
+// إعدادات مولّد العروض التقديمية (يديرها المشرف من صفحة الإدارة)
+let pptSettings={
+  systemPrompt:'',
+  font:'Cairo',
+  titleSize:26,
+  bodySize:18,
+  brand:'منصة خطتي الفصلية',
+  logo:true
+};
+// شعار الموقع مضمّن base64 (لا حاجة لجلب شبكي عند التصدير)
+let PPT_LOGO_B64=null;
+async function ensurePptLogo(){
+  if(PPT_LOGO_B64!==null)return PPT_LOGO_B64;
+  try{
+    const res=await fetch('/khottah_icon_120.png');
+    const blob=await res.blob();
+    PPT_LOGO_B64=await new Promise((res2,rej)=>{const r=new FileReader();r.onload=()=>res2(r.result);r.onerror=rej;r.readAsDataURL(blob);});
+  }catch(e){PPT_LOGO_B64='';}
+  return PPT_LOGO_B64;
+}
+async function savePptSettings(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const v={
+      systemPrompt:document.getElementById('ppt-system-prompt').value||'',
+      font:document.getElementById('ppt-font').value||'Cairo',
+      titleSize:parseInt(document.getElementById('ppt-title-size').value)||26,
+      bodySize:parseInt(document.getElementById('ppt-body-size').value)||18,
+      brand:document.getElementById('ppt-brand').value||'منصة خطتي الفصلية',
+      logo:document.getElementById('ppt-logo').checked
+    };
+    const{error}=await sb.from('ai_settings').upsert([
+      {key:'ppt_system_prompt',value:v.systemPrompt,updated_at:new Date().toISOString()},
+      {key:'ppt_font',value:v.font,updated_at:new Date().toISOString()},
+      {key:'ppt_title_size',value:String(v.titleSize),updated_at:new Date().toISOString()},
+      {key:'ppt_body_size',value:String(v.bodySize),updated_at:new Date().toISOString()},
+      {key:'ppt_brand',value:v.brand,updated_at:new Date().toISOString()},
+      {key:'ppt_logo',value:v.logo?'1':'0',updated_at:new Date().toISOString()}
+    ],{onConflict:'key'});
+    if(error){toast('فشل الحفظ: '+error.message,true);return;}
+    Object.assign(pptSettings,v);
+    toast('✅ تم حفظ إعدادات العروض التقديمية','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ إعدادات العروض التقديمية';}}
+}
+function pptSaveSettingsPreview(){/* placeholder — قد نضيف معاينة مباشرة لاحقاً */}
+
 // قوالب فاخرة: لون داكن + نهاية تدرّج + لونان مميّزان + خلفية محتوى فاتحة
 const PPT_THEMES={
   royal:{name:'ملكي',dark:'241528',grad:'4A2C5E',accent:'E0B341',accent2:'B06AB3',light:'FBF7FF',text:'2E1A34'},
@@ -10989,7 +11069,7 @@ function pptRenderPreview(){
           ${(s.bullets||[]).map(b=>`<li style="--dot:#${t.accent}">${escHtml(b)}</li>`).join('')}
         </ul>
       </div>
-      <div class="ppt-slide-foot" style="color:#${t.accent}"><span>منصة خطتي الفصلية</span><span>${egToArabic(i+1)} / ${egToArabic(pptSlides.length)}</span></div>
+      <div class="ppt-slide-foot" style="color:#${t.accent}"><span style="display:inline-flex;align-items:center;gap:5px">${(pptSettings.logo!==false)?'<img src="/khottah_icon_120.png" style="width:14px;height:14px;border-radius:3px" alt="">':''}${escHtml(pptSettings.brand||'منصة خطتي الفصلية')}</span><span>${egToArabic(i+1)} / ${egToArabic(pptSlides.length)}</span></div>
     </div>`).join('');
 }
 function pptUpdateBullets(i,el){
@@ -11020,6 +11100,14 @@ async function pptDownload(){
     pptx.defineLayout({name:'KH169',width:10,height:5.63});
     pptx.layout='KH169';
     const total=pptSlides.length;
+    // إعدادات المشرف
+    const FONT=pptSettings.font||'Cairo';
+    const TSZ=pptSettings.titleSize||26;
+    const BSZ=pptSettings.bodySize||18;
+    const BRAND=pptSettings.brand||'منصة خطتي الفصلية';
+    const SHOW_LOGO=pptSettings.logo!==false;
+    let logoData='';
+    if(SHOW_LOGO){logoData=await ensurePptLogo();}
     const circle=(sl,x,y,d,color,transp)=>sl.addShape(pptx.ShapeType.ellipse,{x,y,w:d,h:d,fill:{color,transparency:transp}});
     // ── الغلاف: خلفية داكنة + دوائر زخرفية + عنوان كبير وخط accent ──
     const cover=pptx.addSlide();
@@ -11027,11 +11115,13 @@ async function pptDownload(){
     circle(cover,-1.7,-1.7,4.4,t.accent,82);
     circle(cover,8.3,3.9,3.4,t.accent2,80);
     circle(cover,8.8,-0.8,1.5,t.accent2,45);
-    cover.addText(subject,{x:0.7,y:1.85,w:8.6,h:1.15,align:'center',fontFace:'Arial',fontSize:44,bold:true,color:'FFFFFF',rtlMode:true});
+    cover.addText(subject,{x:0.7,y:1.85,w:8.6,h:1.15,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*1.55),bold:true,color:'FFFFFF',rtlMode:true});
     cover.addShape(pptx.ShapeType.roundRect,{x:4.2,y:3.08,w:1.6,h:0.1,fill:{color:t.accent},rectRadius:0.05});
-    cover.addText('الصف '+libGradeName(Number(grade)),{x:0.7,y:3.28,w:8.6,h:0.5,align:'center',fontFace:'Arial',fontSize:20,color:t.accent,rtlMode:true});
-    cover.addText('منصة خطتي الفصلية',{x:0.7,y:5.02,w:8.6,h:0.4,align:'center',fontFace:'Arial',fontSize:12,color:'CFCFCF',rtlMode:true});
-    // ── شرائح المحتوى: خلفية داكنة متناسقة + زخارف + شارة رقم + عنوان يمين + نقاط بيضاء ──
+    cover.addText('الصف '+libGradeName(Number(grade)),{x:0.7,y:3.28,w:8.6,h:0.5,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*0.78),color:t.accent,rtlMode:true});
+    // شعار + اسم المنصة في تذييل الغلاف (المشرف يتحكم بهما)
+    if(SHOW_LOGO&&logoData){try{cover.addImage({data:logoData,x:4.36,y:4.95,w:0.3,h:0.3});}catch(e){}}
+    cover.addText(BRAND,{x:0.7,y:5.02,w:8.6,h:0.4,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*0.46),color:'CFCFCF',rtlMode:true});
+    // ── شرائح المحتوى ──
     pptSlides.forEach((s,idx)=>{
       const sl=pptx.addSlide();
       sl.background={color:t.dark};
@@ -11039,18 +11129,20 @@ async function pptDownload(){
       circle(sl,8.6,4.2,2.8,t.accent2,84);
       // شارة الرقم
       sl.addShape(pptx.ShapeType.ellipse,{x:0.42,y:0.36,w:0.66,h:0.66,fill:{color:t.accent}});
-      sl.addText(String(idx+1),{x:0.42,y:0.36,w:0.66,h:0.66,align:'center',valign:'middle',fontFace:'Arial',fontSize:20,bold:true,color:t.dark});
+      sl.addText(String(idx+1),{x:0.42,y:0.36,w:0.66,h:0.66,align:'center',valign:'middle',fontFace:FONT,fontSize:Math.round(TSZ*0.77),bold:true,color:t.dark});
       // العنوان يمين + خط accent تحته
-      sl.addText(s.title||'',{x:1.25,y:0.42,w:8.3,h:0.72,align:'right',valign:'middle',fontFace:'Arial',fontSize:26,bold:true,color:'FFFFFF',rtlMode:true});
+      sl.addText(s.title||'',{x:1.25,y:0.42,w:8.3,h:0.72,align:'right',valign:'middle',fontFace:FONT,fontSize:TSZ,bold:true,color:'FFFFFF',rtlMode:true});
       sl.addShape(pptx.ShapeType.roundRect,{x:6.85,y:1.18,w:2.7,h:0.07,fill:{color:t.accent},rectRadius:0.035});
       // النقاط
-      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'25CF',indent:20},align:'right',rtlMode:true,fontSize:18,color:'F2F2F2',breakLine:true,paraSpaceAfter:16}}));
-      if(bullets.length)sl.addText(bullets,{x:0.7,y:1.55,w:8.6,h:3.5,valign:'top',fontFace:'Arial'});
+      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'25CF',indent:20},align:'right',rtlMode:true,fontSize:BSZ,color:'F2F2F2',breakLine:true,paraSpaceAfter:Math.round(BSZ*0.9)}}));
+      if(bullets.length)sl.addText(bullets,{x:0.7,y:1.55,w:8.6,h:3.5,valign:'top',fontFace:FONT});
       if(s.notes)try{sl.addNotes(String(s.notes));}catch(e){}
-      // تذييل
+      // تذييل: شعار + اسم المنصة على اليسار، ترقيم على اليمين
       sl.addShape(pptx.ShapeType.line,{x:0.6,y:5.3,w:8.8,h:0,line:{color:t.accent,width:1,transparency:40}});
-      sl.addText('منصة خطتي الفصلية',{x:0.6,y:5.33,w:5,h:0.26,align:'left',fontFace:'Arial',fontSize:9,color:t.accent2});
-      sl.addText((idx+1)+' / '+total,{x:6,y:5.33,w:3.4,h:0.26,align:'right',fontFace:'Arial',fontSize:9,color:t.accent});
+      let brandX=0.6;
+      if(SHOW_LOGO&&logoData){try{sl.addImage({data:logoData,x:0.6,y:5.32,w:0.28,h:0.28});brandX=0.95;}catch(e){}}
+      sl.addText(BRAND,{x:brandX,y:5.33,w:5,h:0.26,align:'left',fontFace:FONT,fontSize:10,color:t.accent2});
+      sl.addText((idx+1)+' / '+total,{x:6,y:5.33,w:3.4,h:0.26,align:'right',fontFace:FONT,fontSize:10,color:t.accent});
     });
     const fname='عرض '+subject+' — '+libGradeName(Number(grade))+'.pptx';
     await pptx.writeFile({fileName:fname});
@@ -11363,6 +11455,19 @@ async function loadAiSettings(){
     const eh=document.getElementById('ex-header');if(eh)eh.value=m.export_header||'سلطنة عُمان — وزارة التربية والتعليم';
     const efo=document.getElementById('ex-footer');if(efo)efo.value=m.export_footer||'خطتي الفصلية — منصة المعلمين';
     const el=document.getElementById('ex-logo');if(el)el.checked=(m.export_logo!=='0');
+    // إعدادات مولّد العروض التقديمية (منفصلة عن اختبارات)
+    pptSettings.systemPrompt=m.ppt_system_prompt||'';
+    pptSettings.font=m.ppt_font||'Cairo';
+    pptSettings.titleSize=parseInt(m.ppt_title_size)||26;
+    pptSettings.bodySize=parseInt(m.ppt_body_size)||18;
+    pptSettings.brand=m.ppt_brand||'منصة خطتي الفصلية';
+    pptSettings.logo=(m.ppt_logo!=='0');
+    const psp=document.getElementById('ppt-system-prompt');if(psp)psp.value=pptSettings.systemPrompt;
+    const pf=document.getElementById('ppt-font');if(pf)pf.value=pptSettings.font;
+    const pts=document.getElementById('ppt-title-size');if(pts)pts.value=pptSettings.titleSize;
+    const pbs=document.getElementById('ppt-body-size');if(pbs)pbs.value=pptSettings.bodySize;
+    const pb=document.getElementById('ppt-brand');if(pb)pb.value=pptSettings.brand;
+    const pl=document.getElementById('ppt-logo');if(pl)pl.checked=pptSettings.logo;
     if(document.getElementById('ex-preview'))exPreview();
     _aiConsumed=parseFloat(m.consumed_usd||'0')||0;
     aiComputeBudget();
