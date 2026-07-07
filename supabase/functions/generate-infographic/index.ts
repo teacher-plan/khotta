@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 1500);
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
-    // نموذج الصور — قابل للتبديل من ai_settings (مفتاح info_model)
-    const model = st.info_model || "google/gemini-3-pro-image-preview";
+    // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
+    const model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
 
     // نمط بصري ثابت مستوحى من إنفوجرافيك NotebookLM (باستيل + رسوم كرتونية تعليمية)
     const stylePrompt = st.info_style_prompt || [
