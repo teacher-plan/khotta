@@ -2009,6 +2009,11 @@ input,textarea,select{font-size:16px !important;}
         <span class="eg-mode-lbl">عرض تقديمي</span>
         <span class="eg-mode-sub">شرائح PowerPoint جاهزة للشرح</span>
       </button>
+      <button type="button" class="eg-mode-btn" id="eg-mode-btn-info" onclick="egSetMode('info')">
+        <span class="eg-mode-ic">🎨</span>
+        <span class="eg-mode-lbl">إنفوجرافيك</span>
+        <span class="eg-mode-sub">ملصق مرسوم يلخّص الدرس بصرياً</span>
+      </button>
     </div>
   </div>
 
@@ -2161,6 +2166,25 @@ input,textarea,select{font-size:16px !important;}
     <div class="eg-result-actions">
       <button class="eg-export" onclick="pptDownload()">⬇️ تنزيل PowerPoint (.pptx)</button>
       <button class="eg-regen" onclick="pptGenerate()">🔄 إعادة التوليد</button>
+    </div>
+  </div>
+
+  <!-- ٣) خيارات الإنفوجرافيك -->
+  <div class="eg-card" id="eg-info-options-card" style="display:none">
+    <div class="eg-step-title">٣. خيارات الإنفوجرافيك</div>
+    <label class="eg-lbl">توجيهات إضافية للمولّد <span style="color:var(--muted);font-weight:400">(اختياري — مثل: ركّز على قاعدة القسمة، أضف مثالاً حياتياً...)</span></label>
+    <textarea id="info-prompt" rows="3" placeholder="اكتب أي ملاحظات تريد أن يراعيها المولّد..." style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none;line-height:1.8;resize:vertical"></textarea>
+    <div style="font-size:12px;color:var(--muted);margin:8px 0">⏱ توليد الإنفوجرافيك يستغرق ٣٠-٩٠ ثانية — يُرسم بالكامل بالذكاء الاصطناعي.</div>
+    <button class="eg-generate" onclick="infoGenerate()">🎨 ولّد الإنفوجرافيك</button>
+  </div>
+
+  <!-- ٤) نتيجة الإنفوجرافيك -->
+  <div class="eg-card" id="eg-info-result-card" style="display:none">
+    <div class="eg-step-title">٤. الإنفوجرافيك المُولّد</div>
+    <div id="info-preview" style="text-align:center"></div>
+    <div class="eg-result-actions">
+      <button class="eg-export" onclick="infoDownload()">⬇️ تنزيل الصورة (PNG)</button>
+      <button class="eg-regen" onclick="infoGenerate()">🔄 إعادة التوليد</button>
     </div>
   </div>
 </div></div>
@@ -10391,7 +10415,7 @@ function libBackToUnits(){libShowView('units');}
 // ══ مولّد الاختبارات (واجهة — توليد وهمي بلا API) ══
 let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
-let egMode=null;      // 'exam' | 'ppt'
+let egMode=null;      // 'exam' | 'ppt' | 'info'
 let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
 let egExportCfg={font:'Cairo',size:13,header:'سلطنة عُمان — وزارة التربية والتعليم',footer:'خطتي الفصلية — منصة المعلمين',logo:true};
 let examBank=[];
@@ -10538,6 +10562,8 @@ async function egApplyConfig(){
     document.getElementById('eg-result-card').style.display='none';
     document.getElementById('eg-ppt-options-card').style.display='none';
     document.getElementById('eg-ppt-result-card').style.display='none';
+    document.getElementById('eg-info-options-card').style.display='none';
+    document.getElementById('eg-info-result-card').style.display='none';
     return false;
   }
   if(notice)notice.style.display='none';
@@ -10561,8 +10587,11 @@ async function egInit(){
   document.getElementById('eg-result-card').style.display='none';
   document.getElementById('eg-ppt-options-card').style.display='none';
   document.getElementById('eg-ppt-result-card').style.display='none';
+  document.getElementById('eg-info-options-card').style.display='none';
+  document.getElementById('eg-info-result-card').style.display='none';
   document.getElementById('eg-mode-btn-exam').classList.remove('active');
   document.getElementById('eg-mode-btn-ppt').classList.remove('active');
+  document.getElementById('eg-mode-btn-info').classList.remove('active');
   const ok=await egApplyConfig();
   if(!ok)return;
   egCreditRender();
@@ -10579,6 +10608,7 @@ function egSetMode(mode){
   egMode=mode;
   document.getElementById('eg-mode-btn-exam').classList.toggle('active',mode==='exam');
   document.getElementById('eg-mode-btn-ppt').classList.toggle('active',mode==='ppt');
+  document.getElementById('eg-mode-btn-info').classList.toggle('active',mode==='info');
   document.getElementById('eg-step1-card').style.display='block';
   // إعادة ضبط ما بعد اختيار الصف/المادة عند تبديل النوع
   document.getElementById('eg-lessons-card').style.display='none';
@@ -10586,6 +10616,8 @@ function egSetMode(mode){
   document.getElementById('eg-result-card').style.display='none';
   document.getElementById('eg-ppt-options-card').style.display='none';
   document.getElementById('eg-ppt-result-card').style.display='none';
+  document.getElementById('eg-info-options-card').style.display='none';
+  document.getElementById('eg-info-result-card').style.display='none';
   egSelected={};
   if(egUnits.length)egRenderTree();
 }
@@ -10598,6 +10630,8 @@ async function egOnGradeChange(){
   document.getElementById('eg-result-card').style.display='none';
   document.getElementById('eg-ppt-options-card').style.display='none';
   document.getElementById('eg-ppt-result-card').style.display='none';
+  document.getElementById('eg-info-options-card').style.display='none';
+  document.getElementById('eg-info-result-card').style.display='none';
   egSelected={};
   if(!grade){ssel.innerHTML='<option value="">المادة</option>';return;}
   let subjects=[];
@@ -10615,6 +10649,8 @@ async function egOnSubjectChange(){
   document.getElementById('eg-result-card').style.display='none';
   document.getElementById('eg-ppt-options-card').style.display='none';
   document.getElementById('eg-ppt-result-card').style.display='none';
+  document.getElementById('eg-info-options-card').style.display='none';
+  document.getElementById('eg-info-result-card').style.display='none';
   egSelected={};
   egSampleText='';egRefText='';
   const ss=document.getElementById('eg-sample-status');if(ss)ss.textContent='';
@@ -10637,7 +10673,7 @@ function egRenderTree(){
   tree.innerHTML=egUnits.map(u=>{
     const lessons=u.lessons.map(l=>{
       const sel=egSelected[l.lessonId];
-      const cfgBox=(egMode==='ppt')?'':`<div class="eg-lesson-cfg" id="eg-cfg-${l.lessonId}" style="display:${sel?'block':'none'};margin:2px 26px 8px;padding:${sel?'8px 10px':'0'};background:var(--card);border:${sel?'1px solid var(--border)':'none'};border-radius:8px">${sel?egLessonCfgHtml(l.lessonId):''}</div>`;
+      const cfgBox=(egMode!=='exam')?'':`<div class="eg-lesson-cfg" id="eg-cfg-${l.lessonId}" style="display:${sel?'block':'none'};margin:2px 26px 8px;padding:${sel?'8px 10px':'0'};background:var(--card);border:${sel?'1px solid var(--border)':'none'};border-radius:8px">${sel?egLessonCfgHtml(l.lessonId):''}</div>`;
       return `<div class="eg-lesson-item" data-name="${libEscAttr(l.name)}">
         <label class="eg-lesson-check"><input type="checkbox" class="eg-lcheck" value="${l.lessonId}" data-name="${libEscAttr(l.name)}" data-unit="${libEscAttr(u.name)}" ${sel?'checked':''} onchange="egToggleLesson(this)"> ${escHtml(l.name)}</label>
         ${cfgBox}
@@ -10661,7 +10697,7 @@ function egToggleLesson(cb){
     const def=(egLimits.types&&egLimits.types.includes('mcq'))?'mcq':(egLimits.types&&egLimits.types[0]||'mcq');
     egSelected[lid]={name:cb.getAttribute('data-name'),unit:cb.getAttribute('data-unit'),types:[def],count:3};
   }else delete egSelected[lid];
-  if(egMode!=='ppt'){
+  if(egMode==='exam'){
     const box=document.getElementById('eg-cfg-'+lid);
     if(box){
       if(cb.checked){box.innerHTML=egLessonCfgHtml(lid);box.style.display='block';box.style.padding='8px 10px';box.style.border='1px solid var(--border)';}
@@ -10687,6 +10723,11 @@ function egUpdateCount(){
   if(egMode==='ppt'){
     document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس مختار)';
     document.getElementById('eg-ppt-options-card').style.display=n>0?'block':'none';
+    return;
+  }
+  if(egMode==='info'){
+    document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس مختار)';
+    document.getElementById('eg-info-options-card').style.display=n>0?'block':'none';
     return;
   }
   const totalQ=ids.reduce((s,id)=>s+(egSelected[id].count||0),0);
@@ -10980,6 +11021,54 @@ async function pptGenerate(){
     toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
   }
 }
+// ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل عبر Gemini 3 Pro Image ══
+let infoImage=null;
+async function infoGenerate(){
+  const lessons=Object.values(egSelected);
+  if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
+  if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
+  const grade=document.getElementById('eg-grade').value;
+  const subject=document.getElementById('eg-subject').value;
+  const teacherPrompt=(document.getElementById('info-prompt')?.value||'').trim();
+  const btn=document.querySelector('#eg-info-options-card .eg-generate');
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري رسم الإنفوجرافيك... (قد يستغرق دقيقة)';}
+  let img=null,reason='';
+  try{
+    if(typeof sb!=='undefined'&&sb){
+      const{data,error}=await sb.functions.invoke('generate-infographic',{
+        body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt}
+      });
+      if(!error&&data&&data.image){img=data.image;}
+      else{
+        if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}}
+        else if(data&&data.error){reason=data.error;}
+        console.warn('generate-infographic:',reason,error||data);
+      }
+    }else{reason='لا يوجد اتصال بالخادم';}
+  }catch(e){reason=String(e);console.warn('generate-infographic call failed',e);}
+  if(btn){btn.disabled=false;btn.textContent='🎨 ولّد الإنفوجرافيك';}
+  if(!img){
+    const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
+    toast('⚠️ تعذّر توليد الإنفوجرافيك'+(showDetail?(' — '+reason):'، حاول مجدداً'),true);
+    return;
+  }
+  infoImage=img;
+  document.getElementById('info-preview').innerHTML=
+    '<img src="'+img+'" alt="إنفوجرافيك الدرس" style="max-width:100%;border-radius:14px;border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.15)">';
+  document.getElementById('eg-info-result-card').style.display='block';
+  document.getElementById('eg-info-result-card').scrollIntoView({behavior:'smooth'});
+  egCreditSet(egCreditGet()-3);
+  toast('✅ تم توليد الإنفوجرافيك','ok');
+}
+function infoDownload(){
+  if(!infoImage){toast('ولّد الإنفوجرافيك أولاً',true);return;}
+  const a=document.createElement('a');
+  a.href=infoImage;
+  const subject=document.getElementById('eg-subject').value||'درس';
+  a.download='إنفوجرافيك-'+subject+'-'+new Date().toISOString().slice(0,10)+'.png';
+  document.body.appendChild(a);a.click();a.remove();
+}
+
 // قوالب العروض التقديمية — لكل قالب لوحة ألوان ونمط زخرفي
 // إعدادات مولّد العروض التقديمية (يديرها المشرف من صفحة الإدارة)
 let pptSettings={
