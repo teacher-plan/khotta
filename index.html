@@ -924,6 +924,19 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .lib-lesson-name{font-size:13px;font-weight:600;color:var(--text);}
 .lib-lesson-count{font-size:11px;color:var(--gold);font-weight:700;white-space:nowrap;}
 /* مولّد الاختبارات */
+.eg-mode-row{display:flex;gap:12px;flex-wrap:wrap;}
+.eg-mode-btn{flex:1;min-width:150px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px 12px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
+.eg-mode-btn:hover{border-color:var(--gold);transform:translateY(-2px);}
+.eg-mode-btn.active{background:linear-gradient(135deg,var(--red),var(--red2));border-color:var(--gold);}
+.eg-mode-btn.active .eg-mode-lbl,.eg-mode-btn.active .eg-mode-sub{color:#fff;}
+.eg-mode-ic{font-size:30px;}
+.eg-mode-lbl{font-weight:800;font-size:14px;color:var(--text);}
+.eg-mode-sub{font-size:11px;color:var(--muted);text-align:center;}
+.ppt-slide-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+.ppt-slide-num{font-size:11px;color:var(--gold);font-weight:700;margin-bottom:4px;}
+.ppt-slide-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;outline:none;}
+.ppt-slide-bullets{margin:0;padding-right:20px;font-size:13px;line-height:1.9;color:var(--text);}
+.ppt-slide-bullets li{outline:none;margin-bottom:4px;}
 .eg-credit{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
 .eg-credit-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
 .eg-credit-top span:last-child{color:var(--gold);}
@@ -2002,7 +2015,7 @@ input,textarea,select{font-size:16px !important;}
     <div id="eg-lessons-tree"></div>
   </div>
 
-  <!-- ٣) الخيارات -->
+  <!-- ٣) الخيارات (اختبار) -->
   <div class="eg-card" id="eg-options-card" style="display:none">
     <div class="eg-step-title">٣. خيارات الاختبار</div>
     <!-- الأنواع أصبحت لكل درس (تظهر تحت كل درس عند اختياره في القسم ٢) — تبقى هذه مخفية كمرجع للأنواع المسموحة -->
@@ -2112,6 +2125,27 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-regen" id="eg-publish-btn" onclick="egPublishToLibrary()">📚 نشر في المكتبة</button>
       <button class="eg-regen" onclick="egSaveToBank()">💾 حفظ في البنك</button>
       <button class="eg-regen" onclick="egGenerate()">🔄 إعادة التوليد</button>
+    </div>
+  </div>
+
+  <!-- ٣) الخيارات (عرض تقديمي) -->
+  <div class="eg-card" id="eg-ppt-options-card" style="display:none">
+    <div class="eg-step-title">٣. خيارات العرض التقديمي</div>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">عدد الشرائح (تقريبي)</label><input type="number" id="ppt-slides" value="8" min="3" max="20"></div>
+    </div>
+    <label class="eg-lbl">توجيهات إضافية للمولّد <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+    <textarea id="ppt-prompt" rows="3" placeholder="اكتب أي ملاحظات تريد أن يراعيها المولّد..." style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none;line-height:1.8;resize:vertical"></textarea>
+    <button class="eg-generate" onclick="pptGenerate()">🖼️ ولّد العرض التقديمي</button>
+  </div>
+
+  <!-- ٤) نتيجة العرض التقديمي -->
+  <div class="eg-card" id="eg-ppt-result-card" style="display:none">
+    <div class="eg-step-title">٤. الشرائح المُولّدة <span class="eg-count">(مسودة — عدّل النص بالضغط عليه قبل التنزيل)</span></div>
+    <div id="ppt-slides-preview"></div>
+    <div class="eg-result-actions">
+      <button class="eg-export" onclick="pptDownload()">⬇️ تنزيل PowerPoint (.pptx)</button>
+      <button class="eg-regen" onclick="pptGenerate()">🔄 إعادة التوليد</button>
     </div>
   </div>
 </div></div>
@@ -10311,6 +10345,7 @@ function libBackToUnits(){libShowView('units');}
 // ══ مولّد الاختبارات (واجهة — توليد وهمي بلا API) ══
 let egUnits=[];
 let egSelected={};   // lessonId -> {name,unit}
+let egMode=null;      // 'exam' | 'ppt'
 let egLimits={enabled:true,maxQ:50,maxPages:10,types:['mcq','essay','tf','fill','match']};
 let egExportCfg={font:'Cairo',size:13,header:'سلطنة عُمان — وزارة التربية والتعليم',footer:'خطتي الفصلية — منصة المعلمين',logo:true};
 let examBank=[];
@@ -10446,19 +10481,22 @@ async function egApplyConfig(){
   }catch(e){}
   const notice=document.getElementById('eg-disabled-notice');
   const credit=document.querySelector('#page-examgen .eg-credit');
-  const step1=document.getElementById('eg-step1-card');
+  const modeCard=document.getElementById('eg-mode-card');
   if(!egLimits.enabled){
     if(notice)notice.style.display='block';
     if(credit)credit.style.display='none';
-    if(step1)step1.style.display='none';
+    if(modeCard)modeCard.style.display='none';
+    document.getElementById('eg-step1-card').style.display='none';
     document.getElementById('eg-lessons-card').style.display='none';
     document.getElementById('eg-options-card').style.display='none';
     document.getElementById('eg-result-card').style.display='none';
+    document.getElementById('eg-ppt-options-card').style.display='none';
+    document.getElementById('eg-ppt-result-card').style.display='none';
     return false;
   }
   if(notice)notice.style.display='none';
   if(credit)credit.style.display='';
-  if(step1)step1.style.display='';
+  if(modeCard)modeCard.style.display='';
   const qc=document.getElementById('eg-qcount');if(qc){qc.max=egLimits.maxQ;if(+qc.value>egLimits.maxQ)qc.value=egLimits.maxQ;}
   const pg=document.getElementById('eg-pages');if(pg){pg.max=egLimits.maxPages;if(+pg.value>egLimits.maxPages)pg.value=egLimits.maxPages;}
   document.querySelectorAll('#eg-options-card .eg-qtype').forEach(c=>{
@@ -10470,10 +10508,15 @@ async function egApplyConfig(){
 }
 
 async function egInit(){
-  egSelected={};egUnits=[];
+  egSelected={};egUnits=[];egMode=null;
+  document.getElementById('eg-step1-card').style.display='none';
   document.getElementById('eg-lessons-card').style.display='none';
   document.getElementById('eg-options-card').style.display='none';
   document.getElementById('eg-result-card').style.display='none';
+  document.getElementById('eg-ppt-options-card').style.display='none';
+  document.getElementById('eg-ppt-result-card').style.display='none';
+  document.getElementById('eg-mode-btn-exam').classList.remove('active');
+  document.getElementById('eg-mode-btn-ppt').classList.remove('active');
   const ok=await egApplyConfig();
   if(!ok)return;
   egCreditRender();
@@ -10485,12 +10528,30 @@ async function egInit(){
   document.getElementById('eg-subject').innerHTML='<option value="">المادة</option>';
 }
 
+// اختيار نوع التوليد: اختبار أو عرض تقديمي
+function egSetMode(mode){
+  egMode=mode;
+  document.getElementById('eg-mode-btn-exam').classList.toggle('active',mode==='exam');
+  document.getElementById('eg-mode-btn-ppt').classList.toggle('active',mode==='ppt');
+  document.getElementById('eg-step1-card').style.display='block';
+  // إعادة ضبط ما بعد اختيار الصف/المادة عند تبديل النوع
+  document.getElementById('eg-lessons-card').style.display='none';
+  document.getElementById('eg-options-card').style.display='none';
+  document.getElementById('eg-result-card').style.display='none';
+  document.getElementById('eg-ppt-options-card').style.display='none';
+  document.getElementById('eg-ppt-result-card').style.display='none';
+  egSelected={};
+  if(egUnits.length)egRenderTree();
+}
+
 async function egOnGradeChange(){
   const grade=Number(document.getElementById('eg-grade').value);
   const ssel=document.getElementById('eg-subject');
   document.getElementById('eg-lessons-card').style.display='none';
   document.getElementById('eg-options-card').style.display='none';
   document.getElementById('eg-result-card').style.display='none';
+  document.getElementById('eg-ppt-options-card').style.display='none';
+  document.getElementById('eg-ppt-result-card').style.display='none';
   egSelected={};
   if(!grade){ssel.innerHTML='<option value="">المادة</option>';return;}
   let subjects=[];
@@ -10506,6 +10567,8 @@ async function egOnSubjectChange(){
   const subject=document.getElementById('eg-subject').value;
   document.getElementById('eg-options-card').style.display='none';
   document.getElementById('eg-result-card').style.display='none';
+  document.getElementById('eg-ppt-options-card').style.display='none';
+  document.getElementById('eg-ppt-result-card').style.display='none';
   egSelected={};
   egSampleText='';egRefText='';
   const ss=document.getElementById('eg-sample-status');if(ss)ss.textContent='';
@@ -10528,9 +10591,10 @@ function egRenderTree(){
   tree.innerHTML=egUnits.map(u=>{
     const lessons=u.lessons.map(l=>{
       const sel=egSelected[l.lessonId];
+      const cfgBox=(egMode==='ppt')?'':`<div class="eg-lesson-cfg" id="eg-cfg-${l.lessonId}" style="display:${sel?'block':'none'};margin:2px 26px 8px;padding:${sel?'8px 10px':'0'};background:var(--card);border:${sel?'1px solid var(--border)':'none'};border-radius:8px">${sel?egLessonCfgHtml(l.lessonId):''}</div>`;
       return `<div class="eg-lesson-item" data-name="${libEscAttr(l.name)}">
         <label class="eg-lesson-check"><input type="checkbox" class="eg-lcheck" value="${l.lessonId}" data-name="${libEscAttr(l.name)}" data-unit="${libEscAttr(u.name)}" ${sel?'checked':''} onchange="egToggleLesson(this)"> ${escHtml(l.name)}</label>
-        <div class="eg-lesson-cfg" id="eg-cfg-${l.lessonId}" style="display:${sel?'block':'none'};margin:2px 26px 8px;padding:${sel?'8px 10px':'0'};background:var(--card);border:${sel?'1px solid var(--border)':'none'};border-radius:8px">${sel?egLessonCfgHtml(l.lessonId):''}</div>
+        ${cfgBox}
       </div>`;
     }).join('');
     return `<div class="eg-unit-block"><div class="eg-unit-head" onclick="const e=this.nextElementSibling;e.style.display=e.style.display==='none'?'block':'none'">📚 <span style="flex:1">${escHtml(u.name)}</span><span style="font-size:11px;color:var(--muted)">${egToArabic(u.lessons.length)} درس</span></div><div class="eg-unit-lessons">${lessons}</div></div>`;
@@ -10551,10 +10615,12 @@ function egToggleLesson(cb){
     const def=(egLimits.types&&egLimits.types.includes('mcq'))?'mcq':(egLimits.types&&egLimits.types[0]||'mcq');
     egSelected[lid]={name:cb.getAttribute('data-name'),unit:cb.getAttribute('data-unit'),types:[def],count:3};
   }else delete egSelected[lid];
-  const box=document.getElementById('eg-cfg-'+lid);
-  if(box){
-    if(cb.checked){box.innerHTML=egLessonCfgHtml(lid);box.style.display='block';box.style.padding='8px 10px';box.style.border='1px solid var(--border)';}
-    else{box.innerHTML='';box.style.display='none';box.style.padding='0';box.style.border='none';}
+  if(egMode!=='ppt'){
+    const box=document.getElementById('eg-cfg-'+lid);
+    if(box){
+      if(cb.checked){box.innerHTML=egLessonCfgHtml(lid);box.style.display='block';box.style.padding='8px 10px';box.style.border='1px solid var(--border)';}
+      else{box.innerHTML='';box.style.display='none';box.style.padding='0';box.style.border='none';}
+    }
   }
   egUpdateCount();
 }
@@ -10572,6 +10638,11 @@ function egLessonCount(lid,v){
 function egUpdateCount(){
   const ids=Object.keys(egSelected);
   const n=ids.length;
+  if(egMode==='ppt'){
+    document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس مختار)';
+    document.getElementById('eg-ppt-options-card').style.display=n>0?'block':'none';
+    return;
+  }
   const totalQ=ids.reduce((s,id)=>s+(egSelected[id].count||0),0);
   document.getElementById('eg-sel-count').textContent='('+egToArabic(n)+' درس — '+egToArabic(totalQ)+' سؤال)';
   document.getElementById('eg-options-card').style.display=n>0?'block':'none';
@@ -10809,6 +10880,117 @@ async function egPublishToLibrary(){
     toast('✅ تم نشر الاختبار في المكتبة العامة','ok');
   }catch(e){toast('حدث خطأ أثناء النشر',true);}
   finally{const b=document.getElementById('eg-publish-btn');if(b){b.disabled=false;b.textContent='📚 نشر في المكتبة';}}
+}
+
+// ══ مولّد العروض التقديمية (PowerPoint) ══
+let pptSlides=[];
+function pptMockSlides(subject,lessonsList){
+  return [
+    {title:subject||'عنوان الدرس',bullets:['نظرة عامة على '+(lessonsList||'الدرس')]},
+    {title:'الأهداف',bullets:['هدف تعليمي أول','هدف تعليمي ثانٍ','هدف تعليمي ثالث']},
+    {title:'الشرح',bullets:['نقطة شرح أولى','نقطة شرح ثانية','مثال توضيحي']},
+    {title:'خلاصة',bullets:['ملخّص أهم الأفكار','سؤال للمراجعة']}
+  ];
+}
+async function pptGenerate(){
+  const lessons=Object.values(egSelected);
+  if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
+  if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
+  const grade=document.getElementById('eg-grade').value;
+  const subject=document.getElementById('eg-subject').value;
+  const semester=(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول';
+  const slideCount=Math.max(3,Math.min(20,parseInt(document.getElementById('ppt-slides').value)||8));
+  const teacherPrompt=(document.getElementById('ppt-prompt')?.value||'').trim();
+  const lessonsList=lessons.map(l=>l.name).join('، ');
+  const btn=document.querySelector('#eg-ppt-options-card .eg-generate');
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد الشرائح...';}
+  let slides=null,real=false,reason='';
+  try{
+    if(typeof sb!=='undefined'&&sb){
+      let vis=null;try{vis=await egVisionImages(grade,subject,semester);}catch(e){}
+      const body=vis&&vis.images.length
+        ?{grade,subject,lessonNames:vis.lessonNames,images:vis.images,slideCount,teacherPrompt}
+        :{grade,subject,lessonNames:lessons.map(l=>l.name),slideCount,teacherPrompt};
+      const{data,error}=await sb.functions.invoke('generate-presentation',{body});
+      if(!error&&data&&Array.isArray(data.slides)&&data.slides.length){slides=data.slides;real=true;}
+      else{
+        if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}}
+        else if(data&&data.error){reason=data.error;}
+        console.warn('generate-presentation:',reason,error||data);
+      }
+    }else{reason='لا يوجد اتصال بالخادم';}
+  }catch(e){reason=String(e);console.warn('generate-presentation call failed',e);}
+  if(!slides)slides=pptMockSlides(subject,lessonsList);
+  pptSlides=slides;
+  pptRenderPreview();
+  document.getElementById('eg-ppt-result-card').style.display='block';
+  document.getElementById('eg-ppt-result-card').scrollIntoView({behavior:'smooth'});
+  egCreditSet(egCreditGet()-3);
+  if(btn){btn.disabled=false;btn.textContent='🖼️ ولّد العرض التقديمي';}
+  if(real){toast('✅ تم توليد العرض التقديمي','ok');}
+  else{
+    const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
+    toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
+  }
+}
+function pptRenderPreview(){
+  const box=document.getElementById('ppt-slides-preview');
+  box.innerHTML=pptSlides.map((s,i)=>`
+    <div class="ppt-slide-card">
+      <div class="ppt-slide-num">شريحة ${egToArabic(i+1)}</div>
+      <div class="ppt-slide-title" contenteditable="true" oninput="pptSlides[${i}].title=this.textContent">${escHtml(s.title||'')}</div>
+      <ul class="ppt-slide-bullets" contenteditable="true" oninput="pptUpdateBullets(${i},this)">
+        ${(s.bullets||[]).map(b=>`<li>${escHtml(b)}</li>`).join('')}
+      </ul>
+    </div>`).join('');
+}
+function pptUpdateBullets(i,el){
+  pptSlides[i].bullets=[...el.querySelectorAll('li')].map(li=>li.textContent.trim()).filter(Boolean);
+}
+function loadPptxJs(){
+  if(typeof PptxGenJS!=='undefined')return Promise.resolve();
+  if(window._pptxLoading)return window._pptxLoading;
+  window._pptxLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgenjs.bundle.js';
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('فشل تحميل مكتبة PowerPoint'));
+    document.head.appendChild(s);
+  });
+  return window._pptxLoading;
+}
+async function pptDownload(){
+  if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
+  const btn=document.querySelector('#eg-ppt-result-card .eg-export');
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري التجهيز...';}
+  try{
+    await loadPptxJs();
+    const subject=document.getElementById('eg-subject').value||'الدرس';
+    const grade=document.getElementById('eg-grade').value;
+    const pptx=new PptxGenJS();
+    pptx.defineLayout({name:'A4',width:10,height:5.63});
+    pptx.layout='A4';
+    const GOLD='B8860B',DARK='2A1A1A';
+    // شريحة العنوان
+    let title=pptx.addSlide();
+    title.background={color:DARK};
+    title.addText(subject,{x:0.5,y:2.0,w:9,h:1.2,align:'center',fontFace:'Arial',fontSize:36,bold:true,color:'FFFFFF'});
+    title.addText('الصف '+libGradeName(Number(grade)),{x:0.5,y:3.2,w:9,h:0.6,align:'center',fontFace:'Arial',fontSize:18,color:GOLD});
+    title.addText('خطتي الفصلية',{x:0.5,y:5.0,w:9,h:0.4,align:'center',fontFace:'Arial',fontSize:11,color:'AAAAAA'});
+    pptSlides.forEach(s=>{
+      const sl=pptx.addSlide();
+      sl.background={color:'FFFFFF'};
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:10,h:0.9,fill:{color:DARK}});
+      sl.addText(s.title||'',{x:0.4,y:0.12,w:9.2,h:0.65,fontFace:'Arial',fontSize:22,bold:true,color:'FFFFFF',align:'right',rtlMode:true});
+      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:true,align:'right',rtlMode:true,fontSize:16,color:'222222',breakLine:true,paraSpaceAfter:10}}));
+      if(bullets.length)sl.addText(bullets,{x:0.6,y:1.2,w:8.8,h:4.0,fontFace:'Arial',valign:'top'});
+      sl.addText('خطتي الفصلية',{x:0.4,y:5.25,w:9.2,h:0.3,align:'center',fontFace:'Arial',fontSize:9,color:'999999'});
+    });
+    const fname='عرض '+subject+' — '+libGradeName(Number(grade))+'.pptx';
+    await pptx.writeFile({fileName:fname});
+    toast('✅ تم تنزيل العرض التقديمي','ok');
+  }catch(e){toast('❌ فشل إنشاء الملف: '+(e.message||''),true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}}
 }
 
 // ── أدوات تحرير ورقة الاختبار (شريط شبيه بـ Word) ──
