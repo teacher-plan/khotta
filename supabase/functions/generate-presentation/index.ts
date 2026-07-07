@@ -41,7 +41,6 @@ Deno.serve(async (req) => {
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
-    const model = st.vision_model || "google/gemini-2.5-flash";
     const adminPrompt = st.system_prompt || "";
 
     const b = await req.json().catch(() => ({}));
@@ -53,17 +52,23 @@ Deno.serve(async (req) => {
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 2000);
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
+    // النموذج الذي يختاره المشرف من لوحة التحكم (ارفع الجودة باختيار Claude Sonnet مثلاً).
+    // عند إرفاق صور صفحات الكتاب نحتاج نموذجاً يدعم الرؤية، فنرجع لنموذج الرؤية إن كان المختار لا يدعمها.
+    let model = st.ai_model || st.vision_model || "google/gemini-2.5-flash";
+    if (images.length && /deepseek/i.test(model)) model = st.vision_model || "google/gemini-2.5-flash";
+
     const schema =
-      '{"slides":[{"title":"عنوان الشريحة","bullets":["نقطة أولى","نقطة ثانية"]}]}';
+      '{"slides":[{"title":"عنوان الشريحة","bullets":["نقطة أولى","نقطة ثانية"],"notes":"ملاحظات شرح للمعلم لهذه الشريحة"}]}';
 
     const system = [
-      "أنت معلّم خبير في إعداد عروض تقديمية تعليمية (PowerPoint) في سلطنة عُمان.",
+      "أنت معلّم خبير في إعداد عروض تقديمية تعليمية احترافية (PowerPoint) في سلطنة عُمان.",
       images.length
         ? "الصور المرفقة هي صفحات الدرس من كتاب الطالب. اقرأها بدقّة وابنِ الشرائح من محتواها حصراً."
-        : "لا توجد صور مرفقة؛ اعتمد على اسم/أسماء الدرس المذكورة وابنِ شرائح تعليمية عامة عالية الجودة حولها.",
-      "كل شريحة: عنوان قصير + 3-5 نقاط مختصرة (لا فقرات طويلة).",
-      "أوّل شريحة تمهيدية (أهداف الدرس)، والأخيرة خلاصة/مراجعة.",
-      "صُغ بالعربية الفصحى وفق مستوى الصف.",
+        : "لا توجد صور مرفقة؛ اعتمد على اسم/أسماء الدرس المذكورة وابنِ شرائح تعليمية عالية الجودة حولها.",
+      "ابنِ عرضاً متكاملاً بتسلسل تربوي: شريحة أهداف الدرس، ثم شرائح تشرح المفاهيم الرئيسية واحداً تلو الآخر بتدرّج، ثم شريحة مثال/تطبيق، ثم شريحة نشاط أو سؤال للطلاب، وأخيراً شريحة خلاصة ومراجعة.",
+      "كل شريحة: عنوان واضح قصير + 3-5 نقاط مختصرة ومفيدة (لا فقرات طويلة، ولا حشو).",
+      "لكل شريحة اكتب في حقل notes ملاحظات شرح موجزة للمعلم (ما يقوله أو يركّز عليه) — جملتان إلى ثلاث.",
+      "صُغ بالعربية الفصحى وفق مستوى الصف، بلغة تعليمية جذّابة ودقيقة.",
       "أعد الناتج بصيغة JSON فقط دون أي نص خارجه.",
       adminPrompt,
     ].filter(Boolean).join("\n");
@@ -95,7 +100,7 @@ Deno.serve(async (req) => {
         ],
         response_format: { type: "json_object" },
         temperature: 0.5,
-        max_tokens: 4000,
+        max_tokens: 6000,
       }),
     });
     const or = await orResp.json();
