@@ -939,14 +939,17 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .ppt-theme-swatch .bar{height:16px;}
 .ppt-theme-swatch .body{flex:1;display:flex;align-items:center;padding:0 8px;font-size:9px;font-weight:700;}
 .ppt-theme-name{font-size:10.5px;font-weight:700;color:var(--text);padding:5px 4px;text-align:center;font-family:'Cairo',sans-serif;}
-/* معاينة الشرائح — تعكس القالب المختار */
-.ppt-slide-card{border-radius:10px;overflow:hidden;margin-bottom:12px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.ppt-slide-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
-.ppt-slide-num{font-size:10px;font-weight:700;opacity:.85;}
-.ppt-slide-title{font-size:15px;font-weight:800;outline:none;flex:1;}
-.ppt-slide-body{padding:12px 18px;}
-.ppt-slide-bullets{margin:0;padding-right:20px;font-size:13px;line-height:2;}
-.ppt-slide-bullets li{outline:none;margin-bottom:4px;}
+/* معاينة الشرائح — شرائح 16:9 مبهرة تعكس القالب */
+.ppt-slide-card{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;margin-bottom:16px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-family:'Cairo',sans-serif;}
+.ppt-deco{position:absolute;border-radius:50%;pointer-events:none;}
+.ppt-slide-head{position:absolute;top:5%;right:5%;left:16%;display:flex;align-items:center;justify-content:flex-end;gap:12px;z-index:3;}
+.ppt-slide-title{font-size:clamp(15px,3.4vw,26px);font-weight:900;outline:none;text-align:right;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.15);}
+.ppt-slide-numbadge{position:absolute;top:6%;left:5%;width:clamp(26px,6vw,44px);height:clamp(26px,6vw,44px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(12px,2.6vw,20px);z-index:4;box-shadow:0 3px 8px rgba(0,0,0,.25);}
+.ppt-slide-body{position:absolute;top:26%;right:6%;left:6%;bottom:11%;z-index:3;overflow:auto;}
+.ppt-slide-bullets{margin:0;padding:0;list-style:none;}
+.ppt-slide-bullets li{outline:none;position:relative;padding-right:22px;margin-bottom:clamp(4px,1.4vw,12px);font-size:clamp(11px,2.5vw,17px);font-weight:600;line-height:1.6;text-align:right;}
+.ppt-slide-bullets li::before{content:'';position:absolute;right:0;top:.5em;width:9px;height:9px;border-radius:50%;background:var(--dot,#fff);box-shadow:0 0 6px var(--dot,#fff);}
+.ppt-slide-foot{position:absolute;bottom:3.5%;right:6%;left:6%;display:flex;justify-content:space-between;align-items:center;font-size:clamp(8px,1.7vw,11px);font-weight:700;z-index:3;opacity:.9;}
 .eg-credit{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
 .eg-credit-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
 .eg-credit-top span:last-child{color:var(--gold);}
@@ -10947,20 +10950,23 @@ async function pptGenerate(){
   }
 }
 // قوالب العروض التقديمية — لكل قالب لوحة ألوان ونمط زخرفي
+// قوالب فاخرة: لون داكن + نهاية تدرّج + لونان مميّزان + خلفية محتوى فاتحة
 const PPT_THEMES={
-  royal:{name:'ملكي',dark:'2A1A1A',accent:'B8860B',light:'F9F6F2',text:'2A1A1A',titleOnDark:'FFFFFF',bulletColor:'B8860B'},
-  ocean:{name:'محيط',dark:'0F3D5C',accent:'2E9CCA',light:'EAF4FA',text:'173A4E',titleOnDark:'FFFFFF',bulletColor:'2E9CCA'},
-  forest:{name:'غابة',dark:'14532D',accent:'2FA36B',light:'ECF7F0',text:'14432A',titleOnDark:'FFFFFF',bulletColor:'2FA36B'},
-  sunset:{name:'غروب',dark:'6A2C1E',accent:'E07A3F',light:'FBF0E9',text:'4A1E14',titleOnDark:'FFFFFF',bulletColor:'E07A3F'}
+  royal:{name:'ملكي',dark:'241528',grad:'4A2C5E',accent:'E0B341',accent2:'B06AB3',light:'FBF7FF',text:'2E1A34'},
+  ocean:{name:'محيط',dark:'0B2E4A',grad:'1E6091',accent:'34C6E8',accent2:'5CE1B6',light:'EEF8FC',text:'123047'},
+  forest:{name:'غابة',dark:'0E3B22',grad:'1F7A46',accent:'5FD38A',accent2:'D9E64B',light:'EFF9F0',text:'123A24'},
+  sunset:{name:'غروب',dark:'5E1E30',grad:'C0392B',accent:'F5A623',accent2:'FF7E5F',light:'FFF5EE',text:'46141F'},
+  midnight:{name:'ليل',dark:'0D1B3E',grad:'2C3E9E',accent:'6D8DFF',accent2:'B06AFF',light:'F1F3FF',text:'141C3A'},
+  coral:{name:'مرجان',dark:'6B1E4A',grad:'C33C7A',accent:'FF8FB1',accent2:'FFC46B',light:'FFF2F7',text:'4A1330'}
 };
 let pptTheme='royal';
 function pptRenderThemePicker(){
   const box=document.getElementById('ppt-theme-picker');if(!box)return;
   box.innerHTML=Object.entries(PPT_THEMES).map(([k,t])=>`
     <button type="button" class="ppt-theme-btn${k===pptTheme?' active':''}" onclick="pptSetTheme('${k}')">
-      <div class="ppt-theme-swatch" style="background:#${t.light}">
-        <div class="bar" style="background:#${t.dark}"></div>
-        <div class="body" style="color:#${t.accent}">Aa • عنوان</div>
+      <div class="ppt-theme-swatch" style="background:linear-gradient(135deg,#${t.dark},#${t.grad})">
+        <div class="bar" style="background:#${t.accent}"></div>
+        <div class="body" style="color:#${t.accent2};background:linear-gradient(135deg,#${t.dark},#${t.grad})">Aa عنوان</div>
       </div>
       <div class="ppt-theme-name">${t.name}</div>
     </button>`).join('');
@@ -10970,16 +10976,20 @@ function pptRenderPreview(){
   const box=document.getElementById('ppt-slides-preview');
   const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
   box.innerHTML=pptSlides.map((s,i)=>`
-    <div class="ppt-slide-card" style="background:#${t.light}">
-      <div class="ppt-slide-head" style="background:#${t.dark}">
+    <div class="ppt-slide-card" style="background:linear-gradient(135deg,#${t.dark} 0%,#${t.grad} 100%)">
+      <div class="ppt-deco" style="width:42%;padding-bottom:42%;background:#${t.accent};opacity:.16;top:-14%;left:-10%"></div>
+      <div class="ppt-deco" style="width:26%;padding-bottom:26%;background:#${t.accent2};opacity:.20;bottom:-9%;right:-6%"></div>
+      <div class="ppt-deco" style="width:12%;padding-bottom:12%;background:#${t.accent2};opacity:.5;top:14%;right:9%"></div>
+      <div class="ppt-slide-numbadge" style="background:#${t.accent};color:#${t.dark}">${egToArabic(i+1)}</div>
+      <div class="ppt-slide-head">
         <div class="ppt-slide-title" contenteditable="true" style="color:#fff" oninput="pptSlides[${i}].title=this.textContent">${escHtml(s.title||'')}</div>
-        <div class="ppt-slide-num" style="color:#${t.accent}">${egToArabic(i+1)}</div>
       </div>
       <div class="ppt-slide-body">
-        <ul class="ppt-slide-bullets" contenteditable="true" style="color:#${t.text}" oninput="pptUpdateBullets(${i},this)">
-          ${(s.bullets||[]).map(b=>`<li>${escHtml(b)}</li>`).join('')}
+        <ul class="ppt-slide-bullets" contenteditable="true" oninput="pptUpdateBullets(${i},this)" style="color:#fff">
+          ${(s.bullets||[]).map(b=>`<li style="--dot:#${t.accent}">${escHtml(b)}</li>`).join('')}
         </ul>
       </div>
+      <div class="ppt-slide-foot" style="color:#${t.accent}"><span>منصة خطتي الفصلية</span><span>${egToArabic(i+1)} / ${egToArabic(pptSlides.length)}</span></div>
     </div>`).join('');
 }
 function pptUpdateBullets(i,el){
@@ -11010,34 +11020,37 @@ async function pptDownload(){
     pptx.defineLayout({name:'KH169',width:10,height:5.63});
     pptx.layout='KH169';
     const total=pptSlides.length;
-    // ── شريحة العنوان: خلفية داكنة + شريط لون مميّز + عنوان كبير ──
+    const circle=(sl,x,y,d,color,transp)=>sl.addShape(pptx.ShapeType.ellipse,{x,y,w:d,h:d,fill:{color,transparency:transp}});
+    // ── الغلاف: خلفية داكنة + دوائر زخرفية + عنوان كبير وخط accent ──
     const cover=pptx.addSlide();
     cover.background={color:t.dark};
-    cover.addShape(pptx.ShapeType.rect,{x:0,y:2.55,w:10,h:0.06,fill:{color:t.accent}});
-    cover.addShape(pptx.ShapeType.rect,{x:0,y:0,w:0.22,h:5.63,fill:{color:t.accent}});
-    cover.addText(subject,{x:0.6,y:1.75,w:8.8,h:1.0,align:'center',fontFace:'Arial',fontSize:40,bold:true,color:t.titleOnDark,rtlMode:true});
-    cover.addText('الصف '+libGradeName(Number(grade)),{x:0.6,y:2.75,w:8.8,h:0.6,align:'center',fontFace:'Arial',fontSize:20,color:t.accent,rtlMode:true});
-    cover.addText('منصة خطتي الفصلية',{x:0.6,y:5.02,w:8.8,h:0.4,align:'center',fontFace:'Arial',fontSize:12,color:'CFCFCF',rtlMode:true});
-    // ── شرائح المحتوى ──
+    circle(cover,-1.7,-1.7,4.4,t.accent,82);
+    circle(cover,8.3,3.9,3.4,t.accent2,80);
+    circle(cover,8.8,-0.8,1.5,t.accent2,45);
+    cover.addText(subject,{x:0.7,y:1.85,w:8.6,h:1.15,align:'center',fontFace:'Arial',fontSize:44,bold:true,color:'FFFFFF',rtlMode:true});
+    cover.addShape(pptx.ShapeType.roundRect,{x:4.2,y:3.08,w:1.6,h:0.1,fill:{color:t.accent},rectRadius:0.05});
+    cover.addText('الصف '+libGradeName(Number(grade)),{x:0.7,y:3.28,w:8.6,h:0.5,align:'center',fontFace:'Arial',fontSize:20,color:t.accent,rtlMode:true});
+    cover.addText('منصة خطتي الفصلية',{x:0.7,y:5.02,w:8.6,h:0.4,align:'center',fontFace:'Arial',fontSize:12,color:'CFCFCF',rtlMode:true});
+    // ── شرائح المحتوى: خلفية داكنة متناسقة + زخارف + شارة رقم + عنوان يمين + نقاط بيضاء ──
     pptSlides.forEach((s,idx)=>{
       const sl=pptx.addSlide();
-      sl.background={color:t.light};
-      // ترويسة داكنة + شريط لون + عنوان بمحاذاة يمين
-      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:10,h:1.0,fill:{color:t.dark}});
-      sl.addShape(pptx.ShapeType.rect,{x:0,y:1.0,w:10,h:0.07,fill:{color:t.accent}});
-      // رقم الشريحة في دائرة لونية
-      sl.addShape(pptx.ShapeType.ellipse,{x:0.35,y:0.24,w:0.52,h:0.52,fill:{color:t.accent}});
-      sl.addText(String(idx+1),{x:0.35,y:0.24,w:0.52,h:0.52,align:'center',valign:'middle',fontFace:'Arial',fontSize:16,bold:true,color:t.dark});
-      sl.addText(s.title||'',{x:1.05,y:0.12,w:8.6,h:0.76,align:'right',valign:'middle',fontFace:'Arial',fontSize:24,bold:true,color:t.titleOnDark,rtlMode:true});
+      sl.background={color:t.dark};
+      circle(sl,-1.35,-1.35,3.6,t.accent,84);
+      circle(sl,8.6,4.2,2.8,t.accent2,84);
+      // شارة الرقم
+      sl.addShape(pptx.ShapeType.ellipse,{x:0.42,y:0.36,w:0.66,h:0.66,fill:{color:t.accent}});
+      sl.addText(String(idx+1),{x:0.42,y:0.36,w:0.66,h:0.66,align:'center',valign:'middle',fontFace:'Arial',fontSize:20,bold:true,color:t.dark});
+      // العنوان يمين + خط accent تحته
+      sl.addText(s.title||'',{x:1.25,y:0.42,w:8.3,h:0.72,align:'right',valign:'middle',fontFace:'Arial',fontSize:26,bold:true,color:'FFFFFF',rtlMode:true});
+      sl.addShape(pptx.ShapeType.roundRect,{x:6.85,y:1.18,w:2.7,h:0.07,fill:{color:t.accent},rectRadius:0.035});
       // النقاط
-      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'2022'},align:'right',rtlMode:true,fontSize:17,color:t.text,breakLine:true,paraSpaceAfter:14}}));
-      if(bullets.length)sl.addText(bullets,{x:0.7,y:1.45,w:8.6,h:3.7,valign:'top',fontFace:'Arial'});
-      // ملاحظات المعلم (تظهر في قسم Notes بالبوربوينت)
+      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'25CF',indent:20},align:'right',rtlMode:true,fontSize:18,color:'F2F2F2',breakLine:true,paraSpaceAfter:16}}));
+      if(bullets.length)sl.addText(bullets,{x:0.7,y:1.55,w:8.6,h:3.5,valign:'top',fontFace:'Arial'});
       if(s.notes)try{sl.addNotes(String(s.notes));}catch(e){}
-      // تذييل: اسم المنصة + ترقيم (بلا صورة بعيدة لتفادي فشل التصدير)
-      sl.addShape(pptx.ShapeType.rect,{x:0,y:5.33,w:10,h:0.3,fill:{color:t.dark}});
-      sl.addText('منصة خطتي الفصلية',{x:0.4,y:5.35,w:5,h:0.26,align:'left',fontFace:'Arial',fontSize:9,color:'DDDDDD'});
-      sl.addText((idx+1)+' / '+total,{x:6,y:5.35,w:3.6,h:0.26,align:'right',fontFace:'Arial',fontSize:9,color:t.accent});
+      // تذييل
+      sl.addShape(pptx.ShapeType.line,{x:0.6,y:5.3,w:8.8,h:0,line:{color:t.accent,width:1,transparency:40}});
+      sl.addText('منصة خطتي الفصلية',{x:0.6,y:5.33,w:5,h:0.26,align:'left',fontFace:'Arial',fontSize:9,color:t.accent2});
+      sl.addText((idx+1)+' / '+total,{x:6,y:5.33,w:3.4,h:0.26,align:'right',fontFace:'Arial',fontSize:9,color:t.accent});
     });
     const fname='عرض '+subject+' — '+libGradeName(Number(grade))+'.pptx';
     await pptx.writeFile({fileName:fname});
