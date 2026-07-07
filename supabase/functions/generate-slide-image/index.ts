@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
     const kind = ["cover", "content", "closing"].includes(b.kind) ? b.kind : "content";
     if (!title) return json({ error: "no_title" }, 400);
 
-    const model = st.info_model || "google/gemini-3-pro-image-preview";
+    // الشرائح تستخدم Nano Banana 2 (أرخص ~4×) — قابل للترقية من ai_settings (مفتاح slide_model)
+    const model = st.slide_model || "google/gemini-3.1-flash-image-preview";
 
     // نظام بصري موحّد لكل شرائح العرض الواحد — قابل للتخصيص من ai_settings
     const style = st.slide_style_prompt || [
