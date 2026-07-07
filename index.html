@@ -11006,10 +11006,9 @@ async function pptDownload(){
     const subject=document.getElementById('eg-subject').value||'الدرس';
     const grade=document.getElementById('eg-grade').value;
     const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
-    const LOGO='https://khotati.com/khottah_icon_120.png';
     const pptx=new PptxGenJS();
-    pptx.defineLayout({name:'WIDE',width:10,height:5.63});
-    pptx.layout='WIDE';
+    pptx.defineLayout({name:'KH169',width:10,height:5.63});
+    pptx.layout='KH169';
     const total=pptSlides.length;
     // ── شريحة العنوان: خلفية داكنة + شريط لون مميّز + عنوان كبير ──
     const cover=pptx.addSlide();
@@ -11033,11 +11032,10 @@ async function pptDownload(){
       // النقاط
       const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'2022'},align:'right',rtlMode:true,fontSize:17,color:t.text,breakLine:true,paraSpaceAfter:14}}));
       if(bullets.length)sl.addText(bullets,{x:0.7,y:1.45,w:8.6,h:3.7,valign:'top',fontFace:'Arial'});
-      // تذييل: شعار + اسم المنصة + ترقيم
+      // تذييل: اسم المنصة + ترقيم (بلا صورة بعيدة لتفادي فشل التصدير)
       sl.addShape(pptx.ShapeType.rect,{x:0,y:5.33,w:10,h:0.3,fill:{color:t.dark}});
-      try{sl.addImage({path:LOGO,x:0.3,y:5.36,w:0.24,h:0.24});}catch(e){}
-      sl.addText('خطتي الفصلية',{x:0.6,y:5.35,w:4,h:0.26,align:'left',fontFace:'Arial',fontSize:9,color:'DDDDDD'});
-      sl.addText((idx+1)+' / '+total,{x:6,y:5.35,w:3.7,h:0.26,align:'right',fontFace:'Arial',fontSize:9,color:t.accent});
+      sl.addText('منصة خطتي الفصلية',{x:0.4,y:5.35,w:5,h:0.26,align:'left',fontFace:'Arial',fontSize:9,color:'DDDDDD'});
+      sl.addText((idx+1)+' / '+total,{x:6,y:5.35,w:3.6,h:0.26,align:'right',fontFace:'Arial',fontSize:9,color:t.accent});
     });
     const fname='عرض '+subject+' — '+libGradeName(Number(grade))+'.pptx';
     await pptx.writeFile({fileName:fname});
