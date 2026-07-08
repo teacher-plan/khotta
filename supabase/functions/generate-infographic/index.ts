@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 1500);
     const size = ["1K", "2K", "4K"].includes(b.size) ? b.size : "2K";
+    const aspect = ["9:16", "3:4", "1:1", "16:9", "21:9", "2:3", "4:3"].includes(b.aspect) ? b.aspect : "9:16";
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
     // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
@@ -71,6 +72,7 @@ Deno.serve(async (req) => {
       "لخّص أهم المفاهيم والقواعد والأمثلة في أقسام واضحة مرقّمة (أولاً، ثانياً، ثالثاً...) مع تمثيل بصري مرسوم لكل مفهوم.",
       teacherPrompt ? `توجيهات المعلم: ${teacherPrompt}` : "",
       stylePrompt,
+      `توجه التصميم: ${["16:9", "21:9"].includes(aspect) ? "أفقي عريض — وزّع الأقسام جنباً إلى جنب" : aspect === "1:1" ? "مربع متوازن" : "عمودي طولي — الأقسام فوق بعضها"}.`,
     ].filter(Boolean).join("\n");
 
     const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
         model,
         messages: [{ role: "user", content: userPrompt }],
         modalities: ["image", "text"],
-        image_config: { aspect_ratio: "9:16", image_size: size },
+        image_config: { aspect_ratio: aspect, image_size: size },
       }),
     });
     const or = await orResp.json();

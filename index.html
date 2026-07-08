@@ -2177,11 +2177,25 @@ input,textarea,select{font-size:16px !important;}
   <!-- ٣) خيارات الإنفوجرافيك -->
   <div class="eg-card" id="eg-info-options-card" style="display:none">
     <div class="eg-step-title">٣. خيارات الإنفوجرافيك</div>
-    <label class="eg-lbl">حجم الصورة</label>
-    <select id="info-size" style="width:100%;margin-bottom:10px">
-      <option value="2K">عادي (2K) — درس واحد أو درسان</option>
-      <option value="4K">كبير (4K) — عدة دروس / وحدة كاملة، تفاصيل أدق وتكلفة أعلى قليلاً</option>
-    </select>
+    <div class="eg-row">
+      <div style="flex:1">
+        <label class="eg-lbl">مقاس الصورة</label>
+        <select id="info-aspect" style="width:100%">
+          <option value="9:16">📱 طولي (9:16) — ملصق درس واحد</option>
+          <option value="3:4">📄 ورقة (3:4) — قريب من A4 للطباعة</option>
+          <option value="1:1">⬜ مربع (1:1) — مشاركة ووسائط</option>
+          <option value="16:9">🖥️ عريض (16:9) — عرض على الشاشة</option>
+          <option value="21:9">📊 بانورامي (21:9) — عدة دروس جنباً إلى جنب</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label class="eg-lbl">جودة التفاصيل</label>
+        <select id="info-size" style="width:100%">
+          <option value="2K">عادية (2K)</option>
+          <option value="4K">عالية (4K) — لعدة دروس والطباعة الكبيرة</option>
+        </select>
+      </div>
+    </div>
     <label class="eg-lbl">توجيهات إضافية للمولّد <span style="color:var(--muted);font-weight:400">(اختياري — مثل: ركّز على قاعدة القسمة، أضف مثالاً حياتياً...)</span></label>
     <textarea id="info-prompt" rows="3" placeholder="اكتب أي ملاحظات تريد أن يراعيها المولّد..." style="width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none;line-height:1.8;resize:vertical"></textarea>
     <div style="font-size:12px;color:var(--muted);margin:8px 0">⏱ توليد الإنفوجرافيك يستغرق ٣٠-٩٠ ثانية — يُرسم بالكامل بالذكاء الاصطناعي.</div>
@@ -11121,8 +11135,9 @@ async function infoGenerate(){
   try{
     if(typeof sb!=='undefined'&&sb){
       const size=document.getElementById('info-size')?.value||'2K';
+      const aspect=document.getElementById('info-aspect')?.value||'9:16';
       const{data,error}=await sb.functions.invoke('generate-infographic',{
-        body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt,size}
+        body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt,size,aspect}
       });
       if(!error&&data&&data.image){img=data.image;}
       else{
