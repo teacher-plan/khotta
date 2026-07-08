@@ -49,10 +49,16 @@ Deno.serve(async (req) => {
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 1500);
     const size = ["1K", "2K", "4K"].includes(b.size) ? b.size : "2K";
     const aspect = ["9:16", "3:4", "1:1", "16:9", "21:9", "2:3", "4:3"].includes(b.aspect) ? b.aspect : "9:16";
-    if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
+    // وضع التعديل: صورة موجودة + تعليمات تغيير موضعي
+    const editPrompt = String(b.editPrompt || "").slice(0, 1000);
+    const editImage = (typeof b.editImage === "string" && b.editImage.startsWith("data:image/")) ? b.editImage : "";
+    const isEdit = !!(editImage && editPrompt);
+    if (!isEdit && !lessonNames.length) return json({ error: "no_lessons" }, 400);
 
     // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
-    const model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
+    let model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
+    // التعديل بالوصف يتطلب نموذج جوجل (يستقبل صورة ويعيد صورة معدّلة)
+    if (isEdit && !model.startsWith("google/")) model = "google/gemini-3.1-flash-image-preview";
 
     // نمط بصري ثابت مستوحى من إنفوجرافيك NotebookLM (باستيل + رسوم كرتونية تعليمية)
     const stylePrompt = st.info_style_prompt || [
@@ -111,6 +117,39 @@ Deno.serve(async (req) => {
       const img = d.b64_json ? "data:image/png;base64," + d.b64_json : (d.url || "");
       return { ok: !!img, detail: j, img };
     };
+
+    // ═ وضع التعديل بالوصف: نرسل الصورة الحالية + التعليمات ونستلم نسخة معدّلة ═
+    if (isEdit) {
+      const editInstr = [
+        "هذه صورة إنفوجرافيك تعليمي بالعربية.",
+        `أعد رسم نفس الصورة بالضبط مع تطبيق هذا التعديل فقط: «${editPrompt}».`,
+        "حافظ حرفياً على كل شيء آخر دون أي تغيير: التخطيط، الألوان، الرسومات، وجميع النصوص الأخرى وأماكنها.",
+        "أخرج الصورة بنفس أبعاد الصورة الأصلية ونفس أسلوبها تماماً.",
+      ].join("\n");
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Infographic Editor",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: [
+            { type: "text", text: editInstr },
+            { type: "image_url", image_url: { url: editImage } },
+          ] }],
+          modalities: ["image", "text"],
+        }),
+      });
+      const or = await r.json();
+      if (!r.ok) return json({ error: "provider_error", detail: or }, 502);
+      const msg = or?.choices?.[0]?.message;
+      const outImg = msg?.images?.[0]?.image_url?.url || "";
+      if (!outImg) return json({ error: "no_image", detail: msg?.content || null }, 502);
+      return json({ image: outImg, model, usage: or?.usage || null, edited: true });
+    }
 
     let img = "";
     let usage: unknown = null;

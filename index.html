@@ -2206,6 +2206,14 @@ input,textarea,select{font-size:16px !important;}
   <div class="eg-card" id="eg-info-result-card" style="display:none">
     <div class="eg-step-title">٤. الإنفوجرافيك المُولّد</div>
     <div id="info-preview" style="text-align:center"></div>
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:12px">
+      <label class="eg-lbl">✏️ اطلب تعديلاً على الصورة <span style="color:var(--muted);font-weight:400">(مثل: صحّح كلمة كذا في العنوان، غيّر لون القسم الثاني، احذف الرسمة الفلانية...)</span></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" id="info-edit-prompt" placeholder="اكتب التعديل المطلوب بدقة..." style="flex:1;min-width:200px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:10px;outline:none" onkeydown="if(event.key==='Enter')infoEdit()">
+        <button class="eg-regen" id="info-edit-btn" style="flex:none" onclick="infoEdit()">✏️ نفّذ التعديل</button>
+        <button class="eg-regen" id="info-undo-btn" style="flex:none;display:none" onclick="infoUndo()">↩️ النسخة السابقة</button>
+      </div>
+    </div>
     <div class="eg-result-actions">
       <button class="eg-export" onclick="infoDownload()">⬇️ تنزيل الصورة (PNG)</button>
       <button class="eg-regen" onclick="infoGenerate()">🔄 إعادة التوليد</button>
@@ -11175,7 +11183,86 @@ async function brandImage(dataUrl){
 }
 
 // ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل عبر Gemini 3 Pro Image ══
-let infoImage=null;
+let infoImage=null;      // النسخة المعروضة (بختم الشعار)
+let infoImageRaw=null;   // النسخة الخام قبل الختم — تُستخدم للتعديل بالوصف
+let infoImagePrevRaw=null; // للنسخة السابقة (تراجع خطوة واحدة)
+
+// عرض نتيجة (خام) في البطاقة: ختم الشعار ثم إظهار
+async function infoShowRaw(raw){
+  infoImageRaw=raw;
+  let branded=raw;
+  try{branded=await brandImage(raw);}catch(e){}
+  infoImage=branded;
+  document.getElementById('info-preview').innerHTML=
+    '<img src="'+branded+'" alt="إنفوجرافيك الدرس" style="max-width:100%;border-radius:14px;border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.15)">';
+  document.getElementById('eg-info-result-card').style.display='block';
+}
+
+// تصغير الصور الضخمة (4K) قبل إرسالها للتعديل — حدود حجم الطلب
+function infoShrinkForEdit(dataUrl){
+  return new Promise(res=>{
+    if(dataUrl.length<6_000_000)return res(dataUrl);
+    const im=new Image();
+    im.onload=()=>{
+      try{
+        const MAX=2048;
+        const sc=Math.min(1,MAX/Math.max(im.width,im.height));
+        if(sc>=1)return res(dataUrl);
+        const c=document.createElement('canvas');
+        c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        res(c.toDataURL('image/jpeg',0.92));
+      }catch(e){res(dataUrl);}
+    };
+    im.onerror=()=>res(dataUrl);
+    im.src=dataUrl;
+  });
+}
+
+// التعديل بالوصف: نرسل النسخة الخام + التعليمات ونستلم نسخة معدّلة
+async function infoEdit(){
+  const p=(document.getElementById('info-edit-prompt')?.value||'').trim();
+  if(!p){toast('اكتب التعديل المطلوب أولاً',true);return;}
+  if(!infoImageRaw){toast('ولّد الإنفوجرافيك أولاً',true);return;}
+  if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
+  const btn=document.getElementById('info-edit-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري التعديل...';}
+  let img=null,reason='';
+  try{
+    const editImage=await infoShrinkForEdit(infoImageRaw);
+    const{data,error}=await sb.functions.invoke('generate-infographic',{
+      body:{editImage,editPrompt:p,
+        grade:document.getElementById('eg-grade').value,
+        subject:document.getElementById('eg-subject').value}
+    });
+    if(!error&&data&&data.image){img=data.image;}
+    else{
+      if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}}
+      else if(data&&data.error){reason=data.error+(data.detail?' | '+JSON.stringify(data.detail).slice(0,400):'');}
+      console.warn('info edit:',reason,error||data);
+    }
+  }catch(e){reason=String(e);console.warn('info edit failed',e);}
+  if(btn){btn.disabled=false;btn.textContent='✏️ نفّذ التعديل';}
+  if(!img){
+    const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
+    toast('⚠️ تعذّر التعديل'+(showDetail?(' — '+reason):'، حاول بصياغة أوضح'),true);
+    return;
+  }
+  infoImagePrevRaw=infoImageRaw;
+  const ub=document.getElementById('info-undo-btn');if(ub)ub.style.display='';
+  await infoShowRaw(img);
+  egCreditSet(egCreditGet()-1);
+  document.getElementById('info-edit-prompt').value='';
+  toast('✅ تم تطبيق التعديل','ok');
+}
+
+function infoUndo(){
+  if(!infoImagePrevRaw){toast('لا توجد نسخة سابقة',true);return;}
+  const cur=infoImageRaw;
+  infoShowRaw(infoImagePrevRaw);
+  infoImagePrevRaw=cur; // تبديل: يمكن الرجوع والتقدم بين النسختين
+  toast('↩️ تم التبديل إلى النسخة الأخرى','ok');
+}
 async function infoGenerate(){
   const lessons=Object.values(egSelected);
   if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
@@ -11207,11 +11294,10 @@ async function infoGenerate(){
     toast('⚠️ تعذّر توليد الإنفوجرافيك'+(showDetail?(' — '+reason):'، حاول مجدداً'),true);
     return;
   }
-  try{img=await brandImage(img);}catch(e){}
-  infoImage=img;
-  document.getElementById('info-preview').innerHTML=
-    '<img src="'+img+'" alt="إنفوجرافيك الدرس" style="max-width:100%;border-radius:14px;border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.15)">';
-  document.getElementById('eg-info-result-card').style.display='block';
+  infoImagePrevRaw=null;
+  const _ub=document.getElementById('info-undo-btn');if(_ub)_ub.style.display='none';
+  const _ep=document.getElementById('info-edit-prompt');if(_ep)_ep.value='';
+  await infoShowRaw(img);
   document.getElementById('eg-info-result-card').scrollIntoView({behavior:'smooth'});
   egCreditSet(egCreditGet()-3);
   toast('✅ تم توليد الإنفوجرافيك','ok');
