@@ -10586,8 +10586,8 @@ async function egDeleteFromBank(id){
 }
 
 function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
-function egCreditGet(){let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
-function egCreditSet(v){v=Math.max(0,Math.min(100,v));localStorage.setItem('egCreditPct',String(v));egCreditRender();}
+function egCreditGet(){if(typeof isAdmin==='function'&&isAdmin())return 100;let v=parseInt(localStorage.getItem('egCreditPct'));return isNaN(v)?100:Math.max(0,Math.min(100,v));}
+function egCreditSet(v){if(typeof isAdmin==='function'&&isAdmin()){egCreditRender();return;}v=Math.max(0,Math.min(100,v));localStorage.setItem('egCreditPct',String(v));egCreditRender();}
 function egCreditRender(){const v=egCreditGet();const f=document.getElementById('eg-credit-fill');const p=document.getElementById('eg-credit-pct');if(f)f.style.width=v+'%';if(p)p.textContent=egToArabic(v)+'٪';}
 
 async function egApplyConfig(){
