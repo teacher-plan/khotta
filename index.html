@@ -11636,7 +11636,12 @@ async function dpJump(mode,i){
   setTimeout(()=>{
     const cb=[...document.querySelectorAll('#eg-lessons-tree input[type="checkbox"]')].find(c=>(c.getAttribute('data-name')||'')===it.lesson);
     if(cb&&!cb.checked)cb.click();
-    const lc=document.getElementById('eg-lessons-card');if(lc)lc.scrollIntoView({behavior:'smooth'});
+    // كل شيء جاهز: إطلاق التوليد فوراً دون أي ضغطة إضافية
+    setTimeout(()=>{
+      if(mode==='info'){toast('🎨 يرسم إنفوجرافيك الدرس الآن…','ok');infoGenerate();const rc=document.getElementById('eg-info-options-card');if(rc)rc.scrollIntoView({behavior:'smooth'});}
+      else if(mode==='exam'){toast('📝 يولّد أسئلة التقييم الآن…','ok');egGenerate();const oc=document.getElementById('eg-options-card');if(oc)oc.scrollIntoView({behavior:'smooth'});}
+      else if(mode==='ppt'){toast('🖼️ يولّد العرض الآن…','ok');pptGenerate();}
+    },350);
   },400);
 }
 
