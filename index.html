@@ -10660,12 +10660,33 @@ async function egInit(){
   document.getElementById('eg-subject').innerHTML='<option value="">المادة</option>';
 }
 
-// اختيار نوع التوليد: اختبار أو عرض تقديمي
-function egSetMode(mode){
+// إن كان المعلم يدرّس صفاً ومادة واحدة فقط (مهما تعددت الشعب) نتخطى خطوة الاختيار
+function egSingleCombo(){
+  if(typeof isAdmin==='function'&&isAdmin())return null;
+  if(!teacherConfig||!Array.isArray(teacherConfig.grades)||!teacherConfig.grades.length)return null;
+  const set=new Set(teacherConfig.grades.map(g=>Number(g.num||g.grade)+'|'+(g.subject||'')).filter(k=>!k.startsWith('NaN')&&!k.endsWith('|')));
+  if(set.size!==1)return null;
+  const[gr,su]=[...set][0].split('|');
+  return{grade:Number(gr),subject:su};
+}
+
+// اختيار نوع التوليد: اختبار أو عرض تقديمي أو إنفوجرافيك
+async function egSetMode(mode){
   egMode=mode;
   document.getElementById('eg-mode-btn-exam').classList.toggle('active',mode==='exam');
   document.getElementById('eg-mode-btn-ppt').classList.toggle('active',mode==='ppt');
   document.getElementById('eg-mode-btn-info').classList.toggle('active',mode==='info');
+  const single=egSingleCombo();
+  if(single){
+    // صف ومادة واحدة: اختيار تلقائي وإخفاء الخطوة الأولى
+    document.getElementById('eg-step1-card').style.display='none';
+    const gs=document.getElementById('eg-grade');
+    if(gs.value!==String(single.grade)){gs.value=String(single.grade);await egOnGradeChange();}
+    document.getElementById('eg-subject').value=single.subject;
+    egSelected={};
+    await egOnSubjectChange();
+    return;
+  }
   document.getElementById('eg-step1-card').style.display='block';
   // إعادة ضبط ما بعد اختيار الصف/المادة عند تبديل النوع
   document.getElementById('eg-lessons-card').style.display='none';
