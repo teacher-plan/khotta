@@ -11063,6 +11063,44 @@ async function pptGenerate(){
     toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
   }
 }
+// ══ ختم العلامة — شارة الشعار واسم المنصة على كل صورة مولّدة ══
+let _brandLogoImg=null;
+function brandLoadLogo(){
+  return new Promise(res=>{
+    if(_brandLogoImg)return res(_brandLogoImg);
+    const im=new Image();
+    im.onload=()=>{_brandLogoImg=im;res(im);};
+    im.onerror=()=>res(null);
+    im.src='/khottah_icon_120.png';
+  });
+}
+async function brandImage(dataUrl){
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl;});
+    const logo=await brandLoadLogo();
+    const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+    const x=c.getContext('2d');x.drawImage(img,0,0);
+    const brand=(typeof pptSettings!=='undefined'&&pptSettings.brand)||'منصة خطتي الفصلية';
+    const s=Math.max(15,Math.round(img.width*0.017));
+    x.font='700 '+s+'px Cairo, sans-serif';
+    const tw=x.measureText(brand).width;
+    const pad=Math.round(s*0.7),lh=Math.round(s*1.45),h=Math.round(s*2.1);
+    const w=tw+pad*3+(logo?lh+Math.round(s*0.4):0);
+    const mx=Math.round(img.width*0.016),my=mx;
+    const bx=img.width-w-mx,by=img.height-h-my,r=h/2;
+    x.save();
+    x.shadowColor='rgba(0,0,0,.25)';x.shadowBlur=Math.round(s*0.5);x.shadowOffsetY=1;
+    x.fillStyle='rgba(255,255,255,.92)';
+    x.beginPath();x.moveTo(bx+r,by);x.arcTo(bx+w,by,bx+w,by+h,r);x.arcTo(bx+w,by+h,bx,by+h,r);x.arcTo(bx,by+h,bx,by,r);x.arcTo(bx,by,bx+w,by,r);x.closePath();x.fill();
+    x.restore();
+    if(logo)x.drawImage(logo,bx+w-pad-lh,by+(h-lh)/2,lh,lh);
+    x.fillStyle='#2A1A1A';x.textBaseline='middle';x.textAlign='right';
+    x.font='700 '+s+'px Cairo, sans-serif';
+    x.fillText(brand,bx+w-pad-(logo?lh+Math.round(s*0.4):0),by+h/2+1);
+    return c.toDataURL('image/png');
+  }catch(e){console.warn('brandImage failed',e);return dataUrl;}
+}
+
 // ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل عبر Gemini 3 Pro Image ══
 let infoImage=null;
 async function infoGenerate(){
@@ -11094,6 +11132,7 @@ async function infoGenerate(){
     toast('⚠️ تعذّر توليد الإنفوجرافيك'+(showDetail?(' — '+reason):'، حاول مجدداً'),true);
     return;
   }
+  try{img=await brandImage(img);}catch(e){}
   infoImage=img;
   document.getElementById('info-preview').innerHTML=
     '<img src="'+img+'" alt="إنفوجرافيك الدرس" style="max-width:100%;border-radius:14px;border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.15)">';
@@ -11133,10 +11172,12 @@ async function pptVisualGenerate(grade,subject){
         body:{grade,subject,title:s.title||'',bullets:s.bullets||[],slideNo:i+1,slideTotal:total,kind}
       });
       if(!error&&data&&data.image){
-        pptVisualImages[i]=data.image;ok++;
+        let bimg=data.image;
+        try{bimg=await brandImage(bimg);}catch(e){}
+        pptVisualImages[i]=bimg;ok++;
         const cell=document.createElement('div');
         cell.style.cssText='position:relative';
-        cell.innerHTML='<img src="'+data.image+'" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><span style="position:absolute;top:6px;right:6px;background:var(--gold);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px">'+egToArabic(i+1)+'</span>';
+        cell.innerHTML='<img src="'+bimg+'" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><span style="position:absolute;top:6px;right:6px;background:var(--gold);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px">'+egToArabic(i+1)+'</span>';
         grid.appendChild(cell);
       }else{console.warn('slide image '+(i+1)+' failed',error||data);}
     }catch(e){console.warn('slide image '+(i+1)+' error',e);}
