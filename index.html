@@ -3868,6 +3868,17 @@ async function bootApp(session){
     showAuthState('auth-login');
   }
 
+  // إظهار أخطاء العودة من Google (كانت تضيع بصمت في الرابط)
+  try{
+    const qp=new URLSearchParams(location.search+'&'+location.hash.replace(/^#/,''));
+    const ec=qp.get('error_code');
+    if(ec){
+      const msgs={identity_already_exists:'⚠️ حساب Google هذا مربوط بمستخدم آخر في المنصة — اختر حساب Google مختلفاً لهذا المستخدم'};
+      toast(msgs[ec]||('⚠️ فشل ربط Google: '+(qp.get('error_description')||ec)),true);
+      history.replaceState(null,'',location.pathname);
+    }
+  }catch(e){}
+
   // راقب تغيّر حالة الدخول (بعد رجوع المستخدم من Google)
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='SIGNED_IN'&&session){
