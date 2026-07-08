@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
     const slideNo = Math.max(1, parseInt(b.slideNo) || 1);
     const slideTotal = Math.max(1, parseInt(b.slideTotal) || 1);
     const kind = ["cover", "content", "closing"].includes(b.kind) ? b.kind : "content";
-    if (!title) return json({ error: "no_title" }, 400);
+    // عنوان احتياطي بدل إفشال الشريحة إن جاء العنوان فارغاً
+    const safeTitle = title || (kind === "closing" ? "شكراً لكم" : subject || `شريحة ${slideNo}`);
 
     // نموذج الرسم الموحّد — يُبدَّل من ai_settings (مفتاح slide_model) بدون نشر
     const model = st.slide_model || "google/gemini-2.5-flash-image";
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
     const userPrompt = [
       `ارسم شريحة عرض تقديمي تعليمية واحدة (الشريحة ${slideNo} من ${slideTotal}) لمادة ${subject}${grade ? " للصف " + grade : ""}.`,
       kindPrompt,
-      `العنوان (اكتبه حرفياً): «${title}»`,
+      `العنوان (اكتبه حرفياً): «${safeTitle}»`,
       bullets.length ? `النقاط (اكتبها حرفياً كما هي):\n${bullets.map((x, i) => `${i + 1}. ${x}`).join("\n")}` : "",
       style,
     ].filter(Boolean).join("\n");
