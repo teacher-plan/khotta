@@ -6834,8 +6834,10 @@ function resolveLocalUrl(url){
 function openDriveFile(url,name){
   const real=resolveLocalUrl(url);
   if(!real){toast('❌ الملف غير متاح',true);return;}
+  // روابط درايف /view ترفض العرض داخل إطار — صيغة /preview مخصصة للإدماج داخل الصفحة
+  const embed=/drive\.google\.com\/file\/d\//.test(real)?real.replace(/\/view(\?[^#]*)?$/,'/preview'):real;
   document.getElementById('pdf-title').textContent=name;
-  document.getElementById('pdf-frame').src=real;
+  document.getElementById('pdf-frame').src=embed;
   const openLink=document.getElementById('pdf-open-new-tab');
   if(openLink)openLink.href=real;
   document.getElementById('pdf-modal').classList.remove('hidden');
