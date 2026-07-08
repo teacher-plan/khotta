@@ -80,22 +80,26 @@ Deno.serve(async (req) => {
       style,
     ].filter(Boolean).join("\n");
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://khotati.com",
-        "X-Title": "Khotta Visual Slides",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: userPrompt }],
-        modalities: ["image", "text"],
-        image_config: { aspect_ratio: "16:9" },
-      }),
-    });
-    const or = await orResp.json();
+    // إن رفض النموذج إعداد المقاس نعيد المحاولة بدونه بدل إفشال الشريحة
+    const call = (cfg: Record<string, unknown> | null) =>
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Visual Slides",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: userPrompt }],
+          modalities: ["image", "text"],
+          ...(cfg ? { image_config: cfg } : {}),
+        }),
+      });
+    let orResp = await call({ aspect_ratio: "16:9" });
+    let or = await orResp.json();
+    if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
 
     const msg = or?.choices?.[0]?.message;

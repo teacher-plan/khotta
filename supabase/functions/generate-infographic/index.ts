@@ -75,22 +75,27 @@ Deno.serve(async (req) => {
       `توجه التصميم: ${["16:9", "21:9"].includes(aspect) ? "أفقي عريض — وزّع الأقسام جنباً إلى جنب" : aspect === "1:1" ? "مربع متوازن" : "عمودي طولي — الأقسام فوق بعضها"}.`,
     ].filter(Boolean).join("\n");
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://khotati.com",
-        "X-Title": "Khotta Infographic Generator",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: userPrompt }],
-        modalities: ["image", "text"],
-        image_config: { aspect_ratio: aspect, image_size: size },
-      }),
-    });
-    const or = await orResp.json();
+    // بعض النماذج لا تقبل كل إعدادات المقاس/الجودة — نحاول كاملة ثم نتدرّج تلقائياً
+    const call = (cfg: Record<string, unknown> | null) =>
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Infographic Generator",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: userPrompt }],
+          modalities: ["image", "text"],
+          ...(cfg ? { image_config: cfg } : {}),
+        }),
+      });
+    let orResp = await call({ aspect_ratio: aspect, image_size: size });
+    let or = await orResp.json();
+    if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
+    if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
 
     // OpenRouter يعيد الصور في message.images[] كـ data URL (base64)
