@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 1500);
+    const size = ["1K", "2K", "4K"].includes(b.size) ? b.size : "2K";
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
     // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
         model,
         messages: [{ role: "user", content: userPrompt }],
         modalities: ["image", "text"],
-        image_config: { aspect_ratio: "9:16" },
+        image_config: { aspect_ratio: "9:16", image_size: size },
       }),
     });
     const or = await orResp.json();
