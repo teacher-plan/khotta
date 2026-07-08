@@ -953,6 +953,18 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .prep-qa b{color:var(--text);}
 .prep-qa .ans{color:var(--green);font-size:12.5px;}
 
+/* وهج زر الخطة عند الدخول + زر التحضير النابض */
+.nav-btn.nav-glow{position:relative;border-color:var(--gold)!important;animation:navGlowPulse 1.8s ease-in-out infinite;overflow:hidden;}
+.nav-btn.nav-glow::after{content:'';position:absolute;top:0;left:-80%;width:60%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,215,120,.45),transparent);animation:navShimmer 2.2s ease-in-out infinite;}
+@keyframes navGlowPulse{0%,100%{box-shadow:0 0 0 0 rgba(184,134,11,.45);}50%{box-shadow:0 0 14px 3px rgba(184,134,11,.35);}}
+@keyframes navShimmer{0%{left:-80%;}60%,100%{left:120%;}}
+.dp-btn.prep-pulse{background:linear-gradient(135deg,var(--gold),var(--red2));color:#fff;border:none;font-size:13px;padding:9px 18px;animation:dpPulse 1.6s ease-in-out infinite;}
+@keyframes dpPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(184,134,11,.5);}50%{transform:scale(1.045);box-shadow:0 0 0 10px rgba(184,134,11,0);}}
+.dp-btn.ready-btn{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border:none;}
+.dp-btn[disabled]{opacity:.75;cursor:wait;transform:none!important;}
+.dpb-sec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
+.dpb-sec-title{font-weight:800;font-size:13.5px;color:var(--gold);margin-bottom:8px;}
+
 .eg-mode-row{display:flex;gap:12px;flex-wrap:wrap;}
 .eg-mode-btn{flex:1;min-width:150px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px 12px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
 .eg-mode-btn:hover{border-color:var(--gold);transform:translateY(-2px);}
@@ -2287,6 +2299,23 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة</button>
       <button class="eg-regen" style="flex:1" onclick="dpSaveEdits()" id="prep-save-btn">💾 حفظ تعديلاتي</button>
       <button class="eg-regen" style="flex:1" onclick="dpRegenerate()">🔄 إعادة التوليد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ معاينة التحضير الشامل (نافذة) ══ -->
+<div class="modal-bg" id="dp-bundle-modal" style="display:none">
+  <div class="modal" style="max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h3 style="margin:0;color:var(--gold)" id="dpb-title">✨ تحضيرك جاهز</h3>
+      <button class="modal-cancel" onclick="dpCloseBundle()" style="padding:4px 12px">✕</button>
+    </div>
+    <div id="dpb-sub" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+    <div id="dpb-body" style="overflow-y:auto;flex:1"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
+      <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
+      <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
     </div>
   </div>
 </div>
@@ -4832,6 +4861,7 @@ function showPage(id,btn){
   btn.classList.add('active','ripple');
   try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
+  if(id==='tracker'){const nb=document.querySelector('.nav-btn[data-page="tracker"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
   if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},150);}
@@ -11458,6 +11488,10 @@ function dpToday(){const d=new Date();return DP_DAYS[d.getDay()]+' '+d.toLocaleD
 let _dpRenderT=null;
 function renderDailyPrepSoon(){clearTimeout(_dpRenderT);_dpRenderT=setTimeout(renderDailyPrep,200);}
 
+// حزمة التحضير الشامل لكل درس: خطة + إنفوجرافيك + تقييم
+let dpBundles=new Map(); // lessonId → {status:'idle|working|ready|saved', prog, plan, infoBranded, examHtml, missing:[]}
+function dpBundle(id){return dpBundles.get(id)||{status:'idle'};}
+
 async function renderDailyPrep(){
   const card=document.getElementById('daily-prep-card');
   if(!card)return;
@@ -11467,11 +11501,22 @@ async function renderDailyPrep(){
   document.getElementById('dp-date').textContent=dpToday();
   await dpLoadPreps();
   document.getElementById('dp-items').innerHTML=items.map((it,i)=>{
-    const ready=dpPreps.has(it.lessonId);
-    const busy=dpBusy.has(it.lessonId);
-    const st=busy?'<span class="dp-status wait">☕ يتجهز الآن…</span>'
-      :ready?'<span class="dp-status ready">جاهز ✅</span>'
-      :'<span class="dp-status wait">لم يُجهّز بعد</span>';
+    const b=dpBundle(it.lessonId);
+    let st,actions;
+    if(b.status==='working'){
+      st='<span class="dp-status wait">☕ يجهّز الآن…</span>';
+      actions=`<button class="dp-btn" disabled>⏳ ${escHtml(b.prog||'يجهّز…')}</button>`;
+    }else if(b.status==='ready'){
+      st='<span class="dp-status ready">التحضير جاهز ✅</span>';
+      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ التحضير جاهز — معاينة</button>
+        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>`;
+    }else if(b.status==='saved'){
+      st='<span class="dp-status ready">محفوظ في بطاقة الدرس 📎</span>';
+      actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>`;
+    }else{
+      st='<span class="dp-status wait">بانتظارك</span>';
+      actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
+    }
     return `<div class="dp-item">
       <div class="dp-item-top">
         <div><div class="dp-lesson">📗 ${escHtml(it.lesson)}</div>
@@ -11479,16 +11524,158 @@ async function renderDailyPrep(){
         ${st}
       </div>
       <div class="dp-actions">
-        <button class="dp-btn main" onclick="dpOpenPlan(${i})">📋 خطة الحصة</button>
-        <button class="dp-btn" onclick="dpJump('info',${i})">🎨 إنفوجرافيك</button>
-        <button class="dp-btn" onclick="dpJump('exam',${i})">📝 تقييم</button>
+        ${actions}
         <button class="dp-btn done-btn" onclick="dpMarkDone(${i})">✅ أنجزت الحصة</button>
       </div>
     </div>`;
   }).join('');
   window._dpItems=items;
-  // تجهيز صامت في الخلفية لما لم يُجهَّز بعد (بلا إزعاج المعلم)
-  setTimeout(()=>{items.filter(it=>!dpPreps.has(it.lessonId)&&!dpBusy.has(it.lessonId)).slice(0,3).forEach((it,k)=>setTimeout(()=>dpEnsurePrep(it,true),k*2500));},1200);
+  // وهج زر الخطة لجذب المعلم عند الدخول (إن لم يزره بعد في هذه الجلسة)
+  try{
+    if(!sessionStorage.getItem('dpGlowSeen')&&!document.getElementById('page-tracker').classList.contains('active')){
+      const nb=document.querySelector('.nav-btn[data-page="tracker"]');
+      if(nb)nb.classList.add('nav-glow');
+    }
+  }catch(e){}
+}
+
+// ✨ التحضير الشامل: خطة + إنفوجرافيك + تقييم في تدفق واحد
+async function dpPrepareAll(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
+  if(dpBundle(it.lessonId).status==='working')return;
+  const b={status:'working',prog:'(١/٣) خطة الحصة…',missing:[]};
+  dpBundles.set(it.lessonId,b);
+  renderDailyPrep();
+  const setProg=t=>{b.prog=t;renderDailyPrep();};
+
+  // ١) خطة الحصة
+  const rec=await dpEnsurePrep(it,true);
+  if(rec)b.plan=rec.plan;else b.missing.push('الخطة');
+
+  // ٢) الإنفوجرافيك
+  setProg('(٢/٣) يرسم الإنفوجرافيك…');
+  try{
+    const{data,error}=await sb.functions.invoke('generate-infographic',{
+      body:{grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:'',size:'2K',aspect:'9:16'}
+    });
+    if(!error&&data&&data.image){
+      let img=data.image;
+      try{img=await brandImage(img);}catch(e){}
+      b.infoBranded=img;
+    }else{b.missing.push('الإنفوجرافيك');console.warn('bundle info:',error||data);}
+  }catch(e){b.missing.push('الإنفوجرافيك');console.warn('bundle info',e);}
+
+  // ٣) أسئلة التقييم
+  setProg('(٣/٣) يولّد أسئلة التقييم…');
+  try{
+    let lessonText='';
+    try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
+    const{data,error}=await sb.functions.invoke('generate-exam',{
+      body:{grade:String(it.gradeNum),subject:it.subject,
+        lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
+        types:['mcq','tf'],count:5,total:10,teacherPrompt:'',referenceText:'',sampleExam:''}
+    });
+    if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
+      b.examHtml=egRenderAiQuestions(data.questions);
+    }else{b.missing.push('التقييم');console.warn('bundle exam:',error||data);}
+  }catch(e){b.missing.push('التقييم');console.warn('bundle exam',e);}
+
+  if(b.plan||b.infoBranded||b.examHtml){
+    b.status='ready';
+    egCreditSet(egCreditGet()-5);
+    toast(b.missing.length?('⚠️ التحضير جاهز عدا: '+b.missing.join('، ')):'✨ تحضيرك جاهز بالكامل!','ok');
+  }else{
+    b.status='idle';
+    toast('⚠️ تعذّر التحضير — أعد المحاولة',true);
+  }
+  renderDailyPrep();
+}
+
+// 👁️ معاينة الحزمة كاملة
+function dpOpenBundle(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status!=='ready'&&b.status!=='saved')return;
+  dpCurrentItem=it;window._dpBundleIdx=i;
+  document.getElementById('dpb-title').textContent='✨ تحضير درس: '+it.lesson;
+  document.getElementById('dpb-sub').textContent='الصف '+egToArabic(it.gradeNum)+' · '+it.subject+' · '+it.unit;
+  const parts=[];
+  if(b.plan){
+    const p=b.plan;
+    parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">📋 خطة الحصة (٤٥ دقيقة)</div>
+      <ul class="prep-list">${(p.objectives||[]).slice(0,4).map(o=>'<li>'+escHtml(o)+'</li>').join('')}</ul>
+      ${(p.phases||[]).map(ph=>`<div style="font-size:12.5px;line-height:1.9;margin-top:6px"><b style="color:var(--gold)">${escHtml(ph.name)} (${egToArabic(ph.minutes||0)}د):</b> ${escHtml(ph.detail||'')}</div>`).join('')}
+    </div>`);
+  }
+  if(b.infoBranded){
+    parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">🎨 إنفوجرافيك الدرس</div>
+      <div style="text-align:center"><img src="${b.infoBranded}" style="max-width:100%;max-height:420px;border-radius:12px;border:1px solid var(--border)"></div></div>`);
+  }
+  if(b.examHtml){
+    parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">📝 أسئلة التقييم</div>
+      <div style="font-size:13px;line-height:2">${b.examHtml}</div></div>`);
+  }
+  if(b.missing&&b.missing.length)parts.push(`<div style="font-size:12px;color:var(--red2);text-align:center">⚠️ لم يكتمل: ${b.missing.join('، ')}</div>`);
+  document.getElementById('dpb-body').innerHTML=parts.join('');
+  document.getElementById('dpb-save-btn').textContent=b.status==='saved'?'✅ محفوظ في بطاقة الدرس':'💾 حفظ في بطاقة الدرس';
+  document.getElementById('dp-bundle-modal').style.display='flex';
+}
+function dpCloseBundle(){document.getElementById('dp-bundle-modal').style.display='none';}
+function dpEditPlanFromBundle(){
+  const i=window._dpBundleIdx;
+  dpCloseBundle();
+  if(typeof i==='number')dpOpenPlan(i);
+}
+
+function dpDataUrlToFile(dataUrl,name){
+  const[meta,b64]=dataUrl.split(',');
+  const mime=(meta.match(/data:([^;]+)/)||[])[1]||'image/png';
+  const bin=atob(b64);const arr=new Uint8Array(bin.length);
+  for(let j=0;j<bin.length;j++)arr[j]=bin.charCodeAt(j);
+  return new File([arr],name,{type:mime});
+}
+
+// 💾 حفظ الحزمة كملفات مرفقة في بطاقة الدرس
+async function dpSaveBundle(i){
+  if(typeof i!=='number')i=window._dpBundleIdx;
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status==='saved'){toast('محفوظ مسبقاً في بطاقة الدرس 📎','ok');return;}
+  if(b.status!=='ready')return;
+  toast('⬆️ يرفع ملفات التحضير إلى بطاقة الدرس…');
+  const files=[];
+  if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
+  if(b.plan){
+    const html=dpPlanDocHtml(it,b.plan);
+    files.push(new File([new Blob([html],{type:'text/html'})],'خطة الحصة — '+it.lesson+'.html',{type:'text/html'}));
+  }
+  if(b.examHtml){
+    let doc=b.examHtml;
+    try{doc=egBuildDoc(egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson));}catch(e){}
+    files.push(new File([new Blob([doc],{type:'text/html'})],'تقييم — '+it.lesson+'.html',{type:'text/html'}));
+  }
+  let okCount=0;
+  for(const f of files){
+    try{
+      const r=await driveUpload(f,'[درس-'+it.lessonId+'] '+f.name);
+      if(r){
+        if(!lessonFiles[it.lessonId])lessonFiles[it.lessonId]=[];
+        lessonFiles[it.lessonId].push({id:Date.now().toString()+okCount,name:f.name,size:f.size,type:f.type,driveId:r.id,viewLink:r.viewLink,downloadLink:r.downloadLink,previewLink:r.previewLink});
+        okCount++;
+      }
+    }catch(e){console.warn('bundle upload',e);}
+  }
+  if(okCount){
+    scheduleSave();
+    try{refreshLessonFiles(it.lessonId);}catch(e){}
+    b.status='saved';
+    renderDailyPrep();
+    const btn=document.getElementById('dpb-save-btn');if(btn)btn.textContent='✅ محفوظ في بطاقة الدرس';
+    toast('📎 حُفظ التحضير ('+egToArabic(okCount)+' ملفات) في بطاقة الدرس','ok');
+  }else{
+    toast('❌ فشل الرفع — تأكد من ربط Google Drive في الإعدادات',true);
+  }
 }
 
 // توليد خطة الحصة (أو جلبها من المخزن)
@@ -11578,14 +11765,10 @@ async function dpRegenerate(){
   else body.innerHTML='<div style="text-align:center;padding:30px;color:var(--red2)">تعذّر التوليد — أعد المحاولة</div>';
 }
 
-// طباعة الخطة كورقة أنيقة
-function dpPrintPlan(){
-  const it=dpCurrentItem;if(!it)return;
-  const rec=dpPreps.get(it.lessonId);if(!rec)return;
-  const p=rec.plan;
+// مستند الخطة كصفحة كاملة (للطباعة وللحفظ كملف مرفق)
+function dpPlanDocHtml(it,p){
   const esc=s=>String(s||'').replace(/</g,'&lt;');
-  const w=window.open('','_blank');
-  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>
   <style>body{font-family:'Cairo',sans-serif;padding:28px;color:#222;line-height:1.9;font-size:13.5px}
   h1{font-size:20px;color:#1a5a2a;border-bottom:2px solid #b8860b;padding-bottom:8px}
   .meta{color:#777;font-size:12px;margin-bottom:14px}
@@ -11603,7 +11786,19 @@ function dpPrintPlan(){
   ${(p.quickQuestions&&p.quickQuestions.length)?`<div class="sec"><b class="t">📝 التقييم الختامي</b>${p.quickQuestions.map((q,i)=>`<div><b>${i+1}. ${esc(q.q)}</b><br><span class="ans">✔ ${esc(q.a)}</span></div>`).join('')}</div>`:''}
   ${p.homework?`<div class="sec"><b class="t">🏠 الواجب</b>${esc(p.homework)}</div>`:''}
   <div class="foot">أُعدت عبر منصة خطتي الفصلية</div>
-  <script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+  </body></html>`;
+}
+
+// طباعة الخطة كورقة أنيقة
+function dpPrintPlan(){
+  const it=dpCurrentItem;if(!it)return;
+  const b=dpBundle(it.lessonId);
+  const rec=dpPreps.get(it.lessonId);
+  const plan=(b&&b.plan)||(rec&&rec.plan);
+  if(!plan){toast('لا توجد خطة للطباعة',true);return;}
+  const w=window.open('','_blank');
+  if(!w){toast('اسمح بالنوافذ المنبثقة للطباعة',true);return;}
+  w.document.write(dpPlanDocHtml(it,plan).replace('</body>','<script>setTimeout(()=>window.print(),400)<\/script></body>'));
   w.document.close();
 }
 
@@ -11624,7 +11819,7 @@ function dpMarkDone(i){
 // قفزة ذكية للمولّد والدرس محدد مسبقاً
 async function dpJump(mode,i){
   const it=(window._dpItems||[])[i];if(!it)return;
-  showPage('examgen');
+  showPage('examgen',document.querySelector('.nav-btn[data-page="examgen"]')||document.querySelector('.nav-btn'));
   try{await egInit();}catch(e){}
   await egSetMode(mode);
   const single=egSingleCombo();
