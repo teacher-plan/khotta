@@ -2679,6 +2679,18 @@ input,textarea,select{font-size:16px !important;}
 
   <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
   <div id="aipanel-budget" style="display:none">
+  <!-- رصيد OpenRouter الفعلي -->
+  <div class="eg-card">
+    <div class="eg-step-title">🔑 رصيد OpenRouter الفعلي</div>
+    <div style="display:grid;gap:8px;font-size:13.5px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">الرصيد المتبقي</span><span id="orb-remaining" style="font-weight:800;color:var(--gold);font-size:18px">—</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">إجمالي المشحون</span><span id="orb-total" style="font-weight:700">—</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">إجمالي المستهلك</span><span id="orb-used" style="font-weight:700">—</span></div>
+    </div>
+    <div class="eg-credit-track" style="height:12px;margin-top:10px"><div class="eg-credit-fill" id="orb-fill" style="width:0%"></div></div>
+    <button class="eg-export" style="margin-top:12px;width:auto;padding:8px 14px" onclick="loadOrBalance(true)">🔄 تحديث الرصيد</button>
+    <span id="orb-status" style="font-size:11.5px;color:var(--muted);margin-right:8px"></span>
+  </div>
   <!-- ميزانية التوليد -->
   <div class="eg-card">
     <div class="eg-step-title">💰 ميزانية التوليد</div>
@@ -5438,6 +5450,27 @@ function switchAiTab(tab){
     b.style.color=active?'var(--gold)':'var(--muted)';
     b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
   });
+  if(tab==='budget')loadOrBalance();
+}
+
+// جلب رصيد OpenRouter الفعلي (للمشرف)
+let _orbLoaded=false;
+async function loadOrBalance(force){
+  if(_orbLoaded&&!force)return;
+  const st=document.getElementById('orb-status');
+  if(st)st.textContent='⏳ جارٍ الجلب...';
+  try{
+    const{data,error}=await sb.functions.invoke('openrouter-balance',{body:{}});
+    if(error||!data||data.error)throw new Error((data&&data.error)||'err');
+    _orbLoaded=true;
+    const fmt=v=>'$'+Number(v).toFixed(2);
+    document.getElementById('orb-remaining').textContent=fmt(data.remaining);
+    document.getElementById('orb-total').textContent=fmt(data.total);
+    document.getElementById('orb-used').textContent=fmt(data.used);
+    const pct=data.total>0?Math.round(data.remaining/data.total*100):0;
+    document.getElementById('orb-fill').style.width=pct+'%';
+    if(st)st.textContent='آخر تحديث: الآن';
+  }catch(e){if(st)st.textContent='تعذّر الجلب — انشر دالة openrouter-balance أولاً';}
 }
 
 function switchMsgTab(tab){
