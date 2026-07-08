@@ -3388,13 +3388,26 @@ async function driveUpload(file,fileName){
     const form=new FormData();
     form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
     form.append('file',file);
-    const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
+    let res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
       method:'POST',
       headers:{Authorization:'Bearer '+googleAccessToken},
       body:form
     });
+    // انتهت صلاحية التوكن الحي؟ جدّد بصمت من الخادم وأعد المحاولة — بلا إزعاج المعلم
+    if(res.status===401){
+      googleAccessToken=null;driveTokenExpiry=1;driveFolderId=null;
+      if(await ensureDriveToken()){
+        const folderId2=await ensureDriveFolder();
+        const form2=new FormData();
+        form2.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId2]})],{type:'application/json'}));
+        form2.append('file',file);
+        res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
+          method:'POST',headers:{Authorization:'Bearer '+googleAccessToken},body:form2
+        });
+      }
+    }
     if(!res.ok){
-      if(res.status===401){toast('❌ صلاحية Google منتهية. سجّل الدخول من جديد',true);}
+      if(res.status===401){toast('❌ انتهت صلاحية ربط Google — أعد الربط من الإعدادات مرة واحدة',true);}
       else{toast('❌ فشل رفع الملف على Drive',true);}
       console.error('drive upload failed:',res.status,await res.text());
       return null;
