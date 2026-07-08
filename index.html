@@ -11164,8 +11164,8 @@ async function infoGenerate(){
       });
       if(!error&&data&&data.image){img=data.image;}
       else{
-        if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}}
-        else if(data&&data.error){reason=data.error;}
+        if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}}
+        else if(data&&data.error){reason=data.error+(data.detail?' | '+JSON.stringify(data.detail).slice(0,400):'');}
         console.warn('generate-infographic:',reason,error||data);
       }
     }else{reason='لا يوجد اتصال بالخادم';}
