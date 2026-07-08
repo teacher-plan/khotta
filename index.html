@@ -11537,6 +11537,15 @@ async function renderDailyPrep(){
   card.style.display='';
   document.getElementById('dp-date').textContent=dpToday();
   await dpLoadPreps();
+  // استرجاع الحزم المحفوظة محلياً (لا يضيع شيء عند تحديث الصفحة)
+  for(const it of items){
+    if(!dpBundles.has(it.lessonId)){
+      try{
+        const saved=await dpIdbGet(dpKey(it));
+        if(saved&&saved.status){saved.missing=saved.missing||dpMissingParts(saved);dpBundles.set(it.lessonId,saved);}
+      }catch(e){}
+    }
+  }
   document.getElementById('dp-items').innerHTML=items.map((it,i)=>{
     const b=dpBundle(it.lessonId);
     let st,actions;
@@ -11544,8 +11553,10 @@ async function renderDailyPrep(){
       st='<span class="dp-status wait">☕ يجهّز الآن…</span>';
       actions=`<button class="dp-btn" disabled>⏳ ${escHtml(b.prog||'يجهّز…')}</button>`;
     }else if(b.status==='ready'){
-      st='<span class="dp-status ready">التحضير جاهز ✅</span>';
-      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ التحضير جاهز — معاينة</button>
+      const inc=b.missing&&b.missing.length;
+      st=inc?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
+      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ ${inc?'معاينة':'التحضير جاهز — معاينة'}</button>
+        ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
         <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>`;
     }else if(b.status==='saved'){
       st='<span class="dp-status ready">محفوظ في بطاقة الدرس 📎</span>';
@@ -11578,6 +11589,132 @@ async function renderDailyPrep(){
 
 // ✨ التحضير الشامل المترابط: خطة → عرض مبني عليها → تقييم لأهدافها → إنفوجرافيك ملخّص
 // مع استيراد فوري من مخزن المنصة المشترك إن سبق تحضير الدرس (صفر رصيد)
+// ══ ثبات الحزمة عبر تحديث الصفحة (IndexedDB — الحجم يتجاوز حدود localStorage) ══
+function dpIdbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('khotta_dp',1);r.onupgradeneeded=()=>{r.result.createObjectStore('bundles');};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function dpIdbSet(k,v){try{const db=await dpIdbOpen();return new Promise(res=>{const tx=db.transaction('bundles','readwrite');tx.objectStore('bundles').put(v,k);tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);});}catch(e){return false;}}
+async function dpIdbGet(k){try{const db=await dpIdbOpen();return new Promise(res=>{const rq=db.transaction('bundles').objectStore('bundles').get(k);rq.onsuccess=()=>res(rq.result||null);rq.onerror=()=>res(null);});}catch(e){return null;}}
+function dpKey(it){return ((typeof currentUser!=='undefined'&&currentUser&&currentUser.id)?currentUser.id:'x')+'|'+it.lessonId;}
+function dpPersist(it,b){
+  try{
+    dpIdbSet(dpKey(it),{status:b.status==='working'?'ready':(b.status||'ready'),plan:b.plan||null,slides:b.slides||null,examHtml:b.examHtml||null,infoRaw:b.infoRaw||null,infoBranded:b.infoBranded||null,slideImgs:b.slideImgs||null,slideImgsRaw:b.slideImgsRaw||null,missing:b.missing||[]});
+  }catch(e){}
+}
+
+// الأجزاء الناقصة في الحزمة
+function dpMissingParts(b){
+  const m=[];
+  if(!b.plan)m.push('الخطة');
+  if(!(b.slides&&b.slides.length))m.push('العرض');
+  else if(!(b.slideImgs&&b.slideImgs.filter(Boolean).length===b.slides.length))m.push('رسوم العرض');
+  if(!b.examHtml)m.push('التقييم');
+  if(!b.infoBranded)m.push('الإنفوجرافيك');
+  return m;
+}
+function dpPlanCtx(b){
+  const p=b.plan||{};
+  return{objectives:(p.objectives||[]).join('؛ '),outline:(p.phases||[]).map(ph=>ph.name+': '+String(ph.detail||'').slice(0,120)).join(' | ')};
+}
+
+// ══ خطوات التوليد — كل خطوة تتخطى نفسها إن كان جزؤها جاهزاً (تسمح بإكمال الناقص فقط) ══
+async function dpStepPlan(it,b,setProg){
+  if(b.plan)return;
+  setProg('(١/٤) يعدّ خطة الدرس…');
+  const rec=await dpEnsurePrep(it,true);
+  if(rec)b.plan=rec.plan;
+}
+async function dpStepSlidesText(it,b,setProg){
+  if(b.slides&&b.slides.length)return;
+  setProg('(٢/٤) يبني العرض من الخطة…');
+  const ctx=dpPlanCtx(b);
+  try{
+    const pptPrompt=[
+      'ابنِ الشرائح على خطة الحصة التالية حرفياً:',
+      ctx.objectives?('الأهداف: '+ctx.objectives):'',
+      ctx.outline?('سير الحصة: '+ctx.outline):'',
+      'ركّز على المحتوى التعليمي الثمين الذي يحقق الأهداف — لا حشو ولا زينة.',
+    ].filter(Boolean).join('\n').slice(0,1900);
+    const{data,error}=await sb.functions.invoke('generate-presentation',{
+      body:{grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],slideCount:8,teacherPrompt:pptPrompt}
+    });
+    if(!error&&data&&Array.isArray(data.slides)&&data.slides.length){b.slides=data.slides;}
+    else{console.warn('bundle ppt:',error||data);}
+  }catch(e){console.warn('bundle ppt',e);}
+}
+async function dpStepDrawSlides(it,b,setProg){
+  if(!(b.slides&&b.slides.length))return;
+  const total=b.slides.length;
+  if(!(b.slideImgsRaw&&b.slideImgsRaw.length===total))b.slideImgsRaw=new Array(total).fill(null);
+  if(!(b.slideImgs&&b.slideImgs.length===total))b.slideImgs=new Array(total).fill(null);
+  // يرسم الشرائح الناقصة فقط — الرسوم الجاهزة لا تُهدر
+  const idxs=[...Array(total).keys()].filter(ix=>!b.slideImgs[ix]);
+  if(!idxs.length)return;
+  let drawn=total-idxs.length;
+  const worker=async(idx)=>{
+    const s=b.slides[idx];
+    const kind=idx===0?'cover':(idx===total-1?'closing':'content');
+    try{
+      const{data,error}=await sb.functions.invoke('generate-slide-image',{
+        body:{grade:String(it.gradeNum),subject:it.subject,title:s.title||'',bullets:s.bullets||[],slideNo:idx+1,slideTotal:total,kind}
+      });
+      if(!error&&data&&data.image){
+        b.slideImgsRaw[idx]=data.image;
+        try{b.slideImgs[idx]=await brandImage(data.image);}catch(e){b.slideImgs[idx]=data.image;}
+      }else{console.warn('slide draw '+(idx+1)+' failed',error||data);}
+    }catch(e){console.warn('slide draw '+(idx+1),e);}
+    drawn++;setProg('(٢/٤) يرسم شرائح العرض… '+egToArabic(drawn)+'/'+egToArabic(total));
+  };
+  await Promise.all(Array.from({length:Math.min(3,idxs.length)},async()=>{while(idxs.length)await worker(idxs.shift());}));
+}
+async function dpStepExam(it,b,setProg){
+  if(b.examHtml)return;
+  setProg('(٣/٤) يصيغ تقييم الأهداف…');
+  const ctx=dpPlanCtx(b);
+  try{
+    let lessonText='';
+    try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
+    const examPrompt=ctx.objectives?('صُغ الأسئلة بحيث تقيس تحقق هذه الأهداف تحديداً: '+ctx.objectives).slice(0,1500):'';
+    const{data,error}=await sb.functions.invoke('generate-exam',{
+      body:{grade:String(it.gradeNum),subject:it.subject,
+        lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
+        types:['mcq','tf'],count:5,total:10,teacherPrompt:examPrompt,referenceText:'',sampleExam:''}
+    });
+    if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
+      b.examHtml=egRenderAiQuestions(data.questions);
+    }else{console.warn('bundle exam:',error||data);}
+  }catch(e){console.warn('bundle exam',e);}
+}
+async function dpStepInfo(it,b,setProg){
+  if(b.infoBranded)return;
+  setProg('(٤/٤) يرسم ملخّص الدرس…');
+  const ctx=dpPlanCtx(b);
+  try{
+    const infoPrompt=('اجعل الإنفوجرافيك ملخصاً شاملاً للدرس يثبّت أهم النقاط في ذهن الطالب.'+(ctx.objectives?(' غطِّ هذه الأهداف: '+ctx.objectives):'')).slice(0,1400);
+    const{data,error}=await sb.functions.invoke('generate-infographic',{
+      body:{grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:infoPrompt,size:'2K',aspect:'9:16'}
+    });
+    if(!error&&data&&data.image){
+      b.infoRaw=data.image;
+      try{b.infoBranded=await brandImage(data.image);}catch(e){b.infoBranded=data.image;}
+    }else{console.warn('bundle info:',error||data);}
+  }catch(e){console.warn('bundle info',e);}
+}
+async function dpRunSteps(it,b,setProg){
+  await dpStepPlan(it,b,setProg);
+  await dpStepSlidesText(it,b,setProg);
+  await dpStepDrawSlides(it,b,setProg);
+  await dpStepExam(it,b,setProg);
+  await dpStepInfo(it,b,setProg);
+  b.missing=dpMissingParts(b);
+}
+// نشر الحزم المكتملة فقط للمخزن المشترك
+async function dpPublishShared(it,b){
+  if(b.missing.length||!(b.plan&&b.slides&&b.examHtml&&b.infoRaw&&b.slideImgsRaw&&b.slideImgsRaw.every(Boolean)))return;
+  try{
+    const uid=(await sb.auth.getUser()).data?.user?.id;
+    await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,slide_imgs:b.slideImgsRaw,created_by:uid||null});
+  }catch(e){/* موجود مسبقاً أو الجدول غير جاهز — لا يؤثر على المعلم */}
+}
+
 async function dpPrepareAll(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   if(dpBundle(it.lessonId).status==='working')return;
@@ -11593,13 +11730,15 @@ async function dpPrepareAll(i){
       b.plan=sh.plan;
       b.slides=sh.slides||null;
       b.examHtml=sh.exam_html||null;
-      if(sh.info_b64){try{b.infoBranded=await brandImage(sh.info_b64);}catch(e){b.infoBranded=sh.info_b64;}}
+      if(sh.info_b64){b.infoRaw=sh.info_b64;try{b.infoBranded=await brandImage(sh.info_b64);}catch(e){b.infoBranded=sh.info_b64;}}
       if(sh.slide_imgs&&Array.isArray(sh.slide_imgs)&&sh.slide_imgs.length){
         b.slideImgsRaw=sh.slide_imgs;
         b.slideImgs=[];
         for(const im of sh.slide_imgs){try{b.slideImgs.push(await brandImage(im));}catch(e){b.slideImgs.push(im);}}
       }
+      b.missing=dpMissingParts(b);
       b.status='ready';b.imported=true;
+      dpPersist(it,b);
       renderDailyPrep();
       toast('⚡ استُورد التحضير جاهزاً من مكتبة المنصة — بلا استهلاك رصيد!','ok');
       try{
@@ -11613,101 +11752,38 @@ async function dpPrepareAll(i){
 
   if(egCreditGet()<=0){b.status='idle';renderDailyPrep();toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
 
-  // ١) خطة الدرس — الأساس الذي يُبنى عليه كل شيء
-  setProg('(١/٤) يعدّ خطة الدرس…');
-  const rec=await dpEnsurePrep(it,true);
-  if(rec)b.plan=rec.plan;else b.missing.push('الخطة');
-
-  // خلاصة الخطة تُمرَّر للمراحل التالية لضمان الترابط
-  const p=b.plan||{};
-  const objectives=(p.objectives||[]).join('؛ ');
-  const outline=(p.phases||[]).map(ph=>ph.name+': '+String(ph.detail||'').slice(0,120)).join(' | ');
-
-  // ٢) العرض التقديمي — نصوصه من الخطة، وكل شريحة تُرسم بمحرك الإنفوجرافيك (محتوى ثمين + رسوم توضيحية فقط)
-  setProg('(٢/٤) يبني العرض من الخطة…');
-  try{
-    const pptPrompt=[
-      'ابنِ الشرائح على خطة الحصة التالية حرفياً:',
-      objectives?('الأهداف: '+objectives):'',
-      outline?('سير الحصة: '+outline):'',
-      'ركّز على المحتوى التعليمي الثمين الذي يحقق الأهداف — لا حشو ولا زينة.',
-    ].filter(Boolean).join('\n').slice(0,1900);
-    const{data,error}=await sb.functions.invoke('generate-presentation',{
-      body:{grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],slideCount:8,teacherPrompt:pptPrompt}
-    });
-    if(!error&&data&&Array.isArray(data.slides)&&data.slides.length){b.slides=data.slides;}
-    else{b.missing.push('العرض');console.warn('bundle ppt:',error||data);}
-  }catch(e){b.missing.push('العرض');console.warn('bundle ppt',e);}
-
-  // ٢-ب) رسم الشرائح بالذكاء الاصطناعي — ٣ بالتوازي
-  if(b.slides&&b.slides.length){
-    const total=b.slides.length;
-    b.slideImgsRaw=new Array(total).fill(null);
-    b.slideImgs=new Array(total).fill(null);
-    let drawn=0;
-    const worker=async(idx)=>{
-      const s=b.slides[idx];
-      const kind=idx===0?'cover':(idx===total-1?'closing':'content');
-      try{
-        const{data,error}=await sb.functions.invoke('generate-slide-image',{
-          body:{grade:String(it.gradeNum),subject:it.subject,title:s.title||'',bullets:s.bullets||[],slideNo:idx+1,slideTotal:total,kind}
-        });
-        if(!error&&data&&data.image){
-          b.slideImgsRaw[idx]=data.image;
-          try{b.slideImgs[idx]=await brandImage(data.image);}catch(e){b.slideImgs[idx]=data.image;}
-        }else{console.warn('slide draw '+(idx+1)+' failed',error||data);}
-      }catch(e){console.warn('slide draw '+(idx+1),e);}
-      drawn++;setProg('(٢/٤) يرسم شرائح العرض… '+egToArabic(drawn)+'/'+egToArabic(total));
-    };
-    const q=[...Array(total).keys()];
-    await Promise.all(Array.from({length:Math.min(3,total)},async()=>{while(q.length)await worker(q.shift());}));
-    if(!b.slideImgs.some(Boolean))b.missing.push('رسوم العرض');
-  }
-
-  // ٣) التقييم — يقيس أهداف الخطة تحديداً
-  setProg('(٣/٤) يصيغ تقييم الأهداف…');
-  try{
-    let lessonText='';
-    try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
-    const examPrompt=objectives?('صُغ الأسئلة بحيث تقيس تحقق هذه الأهداف تحديداً: '+objectives).slice(0,1500):'';
-    const{data,error}=await sb.functions.invoke('generate-exam',{
-      body:{grade:String(it.gradeNum),subject:it.subject,
-        lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
-        types:['mcq','tf'],count:5,total:10,teacherPrompt:examPrompt,referenceText:'',sampleExam:''}
-    });
-    if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
-      b.examHtml=egRenderAiQuestions(data.questions);
-    }else{b.missing.push('التقييم');console.warn('bundle exam:',error||data);}
-  }catch(e){b.missing.push('التقييم');console.warn('bundle exam',e);}
-
-  // ٤) الإنفوجرافيك — ملخّص الدرس البصري
-  setProg('(٤/٤) يرسم ملخّص الدرس…');
-  try{
-    const infoPrompt=('اجعل الإنفوجرافيك ملخصاً شاملاً للدرس يثبّت أهم النقاط في ذهن الطالب.'+(objectives?(' غطِّ هذه الأهداف: '+objectives):'')).slice(0,1400);
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
-      body:{grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:infoPrompt,size:'2K',aspect:'9:16'}
-    });
-    if(!error&&data&&data.image){
-      b.infoRaw=data.image;
-      try{b.infoBranded=await brandImage(data.image);}catch(e){b.infoBranded=data.image;}
-    }else{b.missing.push('الإنفوجرافيك');console.warn('bundle info:',error||data);}
-  }catch(e){b.missing.push('الإنفوجرافيك');console.warn('bundle info',e);}
+  await dpRunSteps(it,b,setProg);
 
   if(b.plan||b.slides||b.infoBranded||b.examHtml){
     b.status='ready';
     egCreditSet(egCreditGet()-5);
-    toast(b.missing.length?('⚠️ التحضير جاهز عدا: '+b.missing.join('، ')):'✨ تحضيرك المترابط جاهز بالكامل!','ok');
-    // 🌟 نشر صامت لمخزن المنصة المشترك — المعلم التالي يستورده مجاناً (الحزم المكتملة فقط)
-    if(!b.missing.length&&b.plan&&b.slides&&b.examHtml&&b.infoRaw&&b.slideImgsRaw&&b.slideImgsRaw.every(Boolean)){
-      try{
-        const uid=(await sb.auth.getUser()).data?.user?.id;
-        await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,slide_imgs:b.slideImgsRaw,created_by:uid||null});
-      }catch(e){/* موجود مسبقاً أو الجدول غير جاهز — لا يؤثر على المعلم */}
-    }
+    toast(b.missing.length?('⚠️ التحضير جاهز عدا: '+b.missing.join('، ')+' — اضغط «أكمل الناقص»'):'✨ تحضيرك المترابط جاهز بالكامل!','ok');
+    await dpPublishShared(it,b);
   }else{
     b.status='idle';
     toast('⚠️ تعذّر التحضير — أعد المحاولة',true);
   }
+  dpPersist(it,b);
+  renderDailyPrep();
+}
+
+// 🔁 إكمال الأجزاء الناقصة فقط — بلا إهدار الرسوم الجاهزة
+async function dpCompleteMissing(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(!b||b.status==='working')return;
+  b.missing=dpMissingParts(b);
+  if(!b.missing.length){renderDailyPrep();toast('✅ الحزمة مكتملة أصلاً','ok');return;}
+  if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
+  b.status='working';b.prog='يكمل الناقص…';
+  dpBundles.set(it.lessonId,b);
+  renderDailyPrep();
+  const setProg=t=>{b.prog=t;renderDailyPrep();};
+  await dpRunSteps(it,b,setProg);
+  b.status='ready';
+  toast(b.missing.length?('⚠️ ما زال ناقصاً: '+b.missing.join('، ')):'✅ اكتمل التحضير بالكامل!',b.missing.length?true:'ok');
+  await dpPublishShared(it,b);
+  dpPersist(it,b);
   renderDailyPrep();
 }
 
@@ -11858,6 +11934,7 @@ async function dpSaveBundle(i){
     scheduleSave();
     try{refreshLessonFiles(it.lessonId);}catch(e){}
     b.status='saved';
+    dpPersist(it,b);
     renderDailyPrep();
     const btn=document.getElementById('dpb-save-btn');if(btn)btn.textContent='✅ محفوظ في بطاقة الدرس';
     toast('📎 حُفظ التحضير ('+egToArabic(okCount)+' ملفات) في بطاقة الدرس','ok');
