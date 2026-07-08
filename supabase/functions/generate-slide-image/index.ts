@@ -97,16 +97,37 @@ Deno.serve(async (req) => {
           ...(cfg ? { image_config: cfg } : {}),
         }),
       });
-    let orResp = await call({ aspect_ratio: "16:9" });
-    let or = await orResp.json();
-    if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    let img = "";
+    let usage: unknown = null;
+    if (model.startsWith("google/")) {
+      let orResp = await call({ aspect_ratio: "16:9" });
+      let or = await orResp.json();
+      if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
+      if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+      const msg = or?.choices?.[0]?.message;
+      img = msg?.images?.[0]?.image_url?.url || "";
+      usage = or?.usage || null;
+      if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
+    } else {
+      // النماذج غير جوجل (مثل Seedream) عبر واجهة الصور الموحدة /v1/images
+      const r = await fetch("https://openrouter.ai/api/v1/images", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Visual Slides",
+        },
+        body: JSON.stringify({ model, prompt: userPrompt, resolution: "2K", aspect_ratio: "16:9" }),
+      });
+      const j = await r.json();
+      if (!r.ok) return json({ error: "provider_error", detail: j }, 502);
+      const d = j?.data?.[0] || {};
+      img = d.b64_json ? "data:image/png;base64," + d.b64_json : (d.url || "");
+      if (!img) return json({ error: "no_image", detail: j }, 502);
+    }
 
-    const msg = or?.choices?.[0]?.message;
-    const img = msg?.images?.[0]?.image_url?.url || "";
-    if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
-
-    return json({ image: img, model, usage: or?.usage || null });
+    return json({ image: img, model, usage });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }

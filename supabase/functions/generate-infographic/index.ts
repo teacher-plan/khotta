@@ -92,18 +92,44 @@ Deno.serve(async (req) => {
           ...(cfg ? { image_config: cfg } : {}),
         }),
       });
-    let orResp = await call({ aspect_ratio: aspect, image_size: size });
-    let or = await orResp.json();
-    if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
-    if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    // النماذج غير جوجل (مثل Seedream) تعمل عبر واجهة الصور الموحدة /v1/images فقط
+    const callImagesApi = async () => {
+      const r = await fetch("https://openrouter.ai/api/v1/images", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Infographic Generator",
+        },
+        body: JSON.stringify({ model, prompt: userPrompt, resolution: size, aspect_ratio: aspect }),
+      });
+      const j = await r.json();
+      if (!r.ok) return { ok: false, detail: j, img: "" };
+      const d = j?.data?.[0] || {};
+      const img = d.b64_json ? "data:image/png;base64," + d.b64_json : (d.url || "");
+      return { ok: !!img, detail: j, img };
+    };
 
-    // OpenRouter يعيد الصور في message.images[] كـ data URL (base64)
-    const msg = or?.choices?.[0]?.message;
-    const img = msg?.images?.[0]?.image_url?.url || "";
-    if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
+    let img = "";
+    let usage: unknown = null;
+    if (model.startsWith("google/")) {
+      let orResp = await call({ aspect_ratio: aspect, image_size: size });
+      let or = await orResp.json();
+      if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
+      if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
+      if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+      const msg = or?.choices?.[0]?.message;
+      img = msg?.images?.[0]?.image_url?.url || "";
+      usage = or?.usage || null;
+      if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
+    } else {
+      const r = await callImagesApi();
+      if (!r.ok) return json({ error: "provider_error", detail: r.detail }, 502);
+      img = r.img;
+    }
 
-    return json({ image: img, model, usage: or?.usage || null });
+    return json({ image: img, model, usage });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }
