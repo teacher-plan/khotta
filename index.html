@@ -924,6 +924,35 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .lib-lesson-name{font-size:13px;font-weight:600;color:var(--text);}
 .lib-lesson-count{font-size:11px;color:var(--gold);font-weight:700;white-space:nowrap;}
 /* مولّد الاختبارات */
+/* ☀️ مساعد التحضير اليومي */
+.dp-card{background:linear-gradient(135deg,rgba(184,134,11,.08),rgba(26,122,58,.06)),var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 6px 24px rgba(184,134,11,.12);}
+.dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.dp-title{font-size:18px;font-weight:900;color:var(--gold);}
+.dp-date{font-size:12px;color:var(--muted);margin-top:2px;}
+.dp-hint{font-size:11px;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:5px 10px;}
+.dp-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.dp-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.dp-lesson{font-weight:800;font-size:14.5px;color:var(--text);}
+.dp-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.dp-status{font-size:11px;font-weight:700;border-radius:12px;padding:3px 10px;white-space:nowrap;}
+.dp-status.ready{background:rgba(39,174,96,.12);color:var(--green);border:1px solid rgba(39,174,96,.35);}
+.dp-status.wait{background:rgba(184,134,11,.1);color:var(--gold);border:1px solid rgba(184,134,11,.3);}
+.dp-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.dp-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;}
+.dp-btn:hover{border-color:var(--gold);transform:translateY(-1px);}
+.dp-btn.main{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-color:transparent;}
+.dp-btn.done-btn{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border-color:transparent;margin-right:auto;}
+.dp-empty{text-align:center;color:var(--muted);font-size:13px;padding:14px;}
+.prep-sec{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.prep-sec-title{font-weight:800;font-size:13px;color:var(--gold);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+.prep-min{font-size:11px;background:rgba(184,134,11,.12);border:1px solid rgba(184,134,11,.3);color:var(--gold);border-radius:10px;padding:1px 9px;font-weight:700;}
+.prep-detail{font-size:13px;line-height:1.9;color:var(--text);outline:none;border-radius:6px;padding:2px 4px;}
+.prep-detail:focus{background:rgba(184,134,11,.06);box-shadow:0 0 0 1.5px rgba(184,134,11,.3);}
+.prep-list{margin:0;padding-right:18px;font-size:13px;line-height:2;}
+.prep-qa{font-size:13px;line-height:1.9;margin-bottom:8px;}
+.prep-qa b{color:var(--text);}
+.prep-qa .ans{color:var(--green);font-size:12.5px;}
+
 .eg-mode-row{display:flex;gap:12px;flex-wrap:wrap;}
 .eg-mode-btn{flex:1;min-width:150px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px 12px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
 .eg-mode-btn:hover{border-color:var(--gold);transform:translateY(-2px);}
@@ -1546,6 +1575,18 @@ input,textarea,select{font-size:16px !important;}
 <!-- ══ TRACKER ══ -->
 <div class="page" id="page-tracker"><div class="wrap">
   <div class="page-header"><div class="tag">📚 الخطة الفصلية</div><h1 id="tracker-title">الخطة الفصلية</h1><p>اضغط على الدرس لما تخلص منه ✅</p></div>
+
+  <!-- ☀️ مساعد التحضير اليومي -->
+  <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
+    <div class="dp-head">
+      <div>
+        <div class="dp-title">☀️ يومك جاهز</div>
+        <div class="dp-date" id="dp-date"></div>
+      </div>
+      <span class="dp-hint">بعد الحصة اضغط ✅ ليتجهز درس الغد تلقائياً</span>
+    </div>
+    <div id="dp-items"></div>
+  </div>
 
   
   <!-- ══ لوحة المشرف (محتوى المناهج) ══ -->
@@ -2229,6 +2270,23 @@ input,textarea,select{font-size:16px !important;}
     <div class="ui-confirm-actions">
       <button class="ui-confirm-cancel" id="ui-confirm-cancel">إلغاء</button>
       <button class="ui-confirm-ok danger" id="ui-confirm-ok">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ خطة الحصة (نافذة) ══ -->
+<div class="modal-bg" id="prep-modal" style="display:none">
+  <div class="modal" style="max-width:680px;width:100%;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h3 style="margin:0;color:var(--gold)" id="prep-modal-title">📋 خطة الحصة</h3>
+      <button class="modal-cancel" onclick="dpCloseModal()" style="padding:4px 12px">✕</button>
+    </div>
+    <div id="prep-modal-sub" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+    <div id="prep-modal-body" style="overflow-y:auto;flex:1"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="eg-export" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة</button>
+      <button class="eg-regen" style="flex:1" onclick="dpSaveEdits()" id="prep-save-btn">💾 حفظ تعديلاتي</button>
+      <button class="eg-regen" style="flex:1" onclick="dpRegenerate()">🔄 إعادة التوليد</button>
     </div>
   </div>
 </div>
@@ -6494,6 +6552,7 @@ function buildTracker(){
     secEl._built=false;
     secEl.appendChild(lEl);sectionsEl.appendChild(secEl);
   });
+  try{renderDailyPrepSoon();}catch(e){}
 }
 
 function toggleUnit(secId){
@@ -11355,6 +11414,230 @@ async function pptVisualGenerate(grade,subject){
     ?'✅ اكتمل رسم جميع الشرائح ('+egToArabic(total)+')'
     :'⚠️ اكتمل '+egToArabic(ok)+' من '+egToArabic(total)+' — الشرائح الناقصة ستُبنى بالقالب العادي عند التنزيل';
   toast(ok===total?'✅ تم رسم العرض كاملاً':'⚠️ بعض الشرائح لم تُرسم — أعد المحاولة أو نزّل كما هو',ok===total?'ok':true);
+}
+
+// ═══════════ ☀️ مساعد التحضير اليومي ═══════════
+let dpPreps=new Map();      // lessonId → {plan, edited}
+let dpPrepsLoaded=false;
+let dpCurrentItem=null;     // العنصر المفتوح في النافذة
+let dpBusy=new Set();       // دروس قيد التوليد الآن
+
+// الدرس التالي (أول درس غير منجز) لكل صف/مادة في خطة المعلم
+function dpNextLessons(){
+  const out=[];
+  if(typeof isAdmin==='function'&&isAdmin())return out;
+  if(!teacherConfig||!Array.isArray(teacherConfig.grades))return out;
+  const seen=new Set();
+  teacherConfig.grades.forEach((g,gi)=>{
+    if(!g.units)return;
+    for(const u of g.units){
+      for(const l of (u.lessons||[])){
+        if(!get(l.id).done){
+          const key=(g.num||g.grade)+'|'+(g.subject||'')+'|'+l.id;
+          if(!seen.has(key)){seen.add(key);out.push({gi,gradeNum:Number(g.num||g.grade),subject:g.subject||teacherConfig.subject||'',unit:u.name,lesson:l.name,lessonId:l.id});}
+          return;
+        }
+      }
+    }
+  });
+  return out;
+}
+
+async function dpLoadPreps(){
+  if(dpPrepsLoaded)return;
+  try{
+    const{data}=await sb.from('lesson_preps').select('lesson_id,plan,edited');
+    (data||[]).forEach(r=>dpPreps.set(r.lesson_id,{plan:r.plan,edited:!!r.edited}));
+    dpPrepsLoaded=true;
+  }catch(e){console.warn('dpLoadPreps',e);}
+}
+
+const DP_DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+function dpToday(){const d=new Date();return DP_DAYS[d.getDay()]+' '+d.toLocaleDateString('ar-OM-u-nu-arab',{day:'numeric',month:'long'});}
+
+let _dpRenderT=null;
+function renderDailyPrepSoon(){clearTimeout(_dpRenderT);_dpRenderT=setTimeout(renderDailyPrep,200);}
+
+async function renderDailyPrep(){
+  const card=document.getElementById('daily-prep-card');
+  if(!card)return;
+  const items=dpNextLessons();
+  if(!items.length){card.style.display='none';return;}
+  card.style.display='';
+  document.getElementById('dp-date').textContent=dpToday();
+  await dpLoadPreps();
+  document.getElementById('dp-items').innerHTML=items.map((it,i)=>{
+    const ready=dpPreps.has(it.lessonId);
+    const busy=dpBusy.has(it.lessonId);
+    const st=busy?'<span class="dp-status wait">☕ يتجهز الآن…</span>'
+      :ready?'<span class="dp-status ready">جاهز ✅</span>'
+      :'<span class="dp-status wait">لم يُجهّز بعد</span>';
+    return `<div class="dp-item">
+      <div class="dp-item-top">
+        <div><div class="dp-lesson">📗 ${escHtml(it.lesson)}</div>
+        <div class="dp-meta">الصف ${egToArabic(it.gradeNum)} · ${escHtml(it.subject)} · ${escHtml(it.unit)}</div></div>
+        ${st}
+      </div>
+      <div class="dp-actions">
+        <button class="dp-btn main" onclick="dpOpenPlan(${i})">📋 خطة الحصة</button>
+        <button class="dp-btn" onclick="dpJump('info',${i})">🎨 إنفوجرافيك</button>
+        <button class="dp-btn" onclick="dpJump('exam',${i})">📝 تقييم</button>
+        <button class="dp-btn done-btn" onclick="dpMarkDone(${i})">✅ أنجزت الحصة</button>
+      </div>
+    </div>`;
+  }).join('');
+  window._dpItems=items;
+  // تجهيز صامت في الخلفية لما لم يُجهَّز بعد (بلا إزعاج المعلم)
+  setTimeout(()=>{items.filter(it=>!dpPreps.has(it.lessonId)&&!dpBusy.has(it.lessonId)).slice(0,3).forEach((it,k)=>setTimeout(()=>dpEnsurePrep(it,true),k*2500));},1200);
+}
+
+// توليد خطة الحصة (أو جلبها من المخزن)
+async function dpEnsurePrep(it,silent){
+  if(dpPreps.has(it.lessonId))return dpPreps.get(it.lessonId);
+  if(dpBusy.has(it.lessonId))return null;
+  dpBusy.add(it.lessonId);
+  if(!silent)renderDailyPrepSoon();
+  try{
+    const{data,error}=await sb.functions.invoke('generate-lesson-plan',{
+      body:{grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson}
+    });
+    if(!error&&data&&data.plan){
+      dpPreps.set(it.lessonId,{plan:data.plan,edited:false});
+      try{
+        const uid=(await sb.auth.getUser()).data?.user?.id;
+        if(uid)await sb.from('lesson_preps').upsert({user_id:uid,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:data.plan,edited:false,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});
+      }catch(e){console.warn('prep save',e);}
+      return dpPreps.get(it.lessonId);
+    }
+    if(!silent)toast('⚠️ تعذّر تجهيز خطة الحصة'+((isAdmin()&&(data?.error||error?.message))?' — '+(data?.error||error.message):''),true);
+  }catch(e){if(!silent)toast('⚠️ تعذّر تجهيز خطة الحصة',true);console.warn('dpEnsurePrep',e);}
+  finally{dpBusy.delete(it.lessonId);renderDailyPrepSoon();}
+  return null;
+}
+
+// فتح نافذة خطة الحصة
+async function dpOpenPlan(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  dpCurrentItem=it;
+  document.getElementById('prep-modal-title').textContent='📋 خطة الحصة — '+it.lesson;
+  document.getElementById('prep-modal-sub').textContent='الصف '+egToArabic(it.gradeNum)+' · '+it.subject+' · '+it.unit;
+  document.getElementById('prep-modal').style.display='flex';
+  const body=document.getElementById('prep-modal-body');
+  let rec=dpPreps.get(it.lessonId);
+  if(!rec){
+    body.innerHTML='<div style="text-align:center;padding:40px 10px;color:var(--muted)">☕ يجهّز الذكاء الاصطناعي خطة حصتك الآن…<br><span style="font-size:11px">٢٠-٤٠ ثانية تقريباً</span></div>';
+    rec=await dpEnsurePrep(it,false);
+    if(!rec){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--red2)">تعذّر التوليد — أعد المحاولة</div>';return;}
+  }
+  dpRenderPlan(rec.plan);
+}
+
+function dpRenderPlan(p){
+  const body=document.getElementById('prep-modal-body');
+  const phases=(p.phases||[]).map((ph,i)=>`<div class="prep-sec"><div class="prep-sec-title"><span>${escHtml(ph.name||'')}</span><span class="prep-min">${egToArabic(ph.minutes||0)} د</span></div><div class="prep-detail" contenteditable="true" data-ph="${i}">${escHtml(ph.detail||'')}</div></div>`).join('');
+  const objs=(p.objectives||[]).map(o=>'<li>'+escHtml(o)+'</li>').join('');
+  const mats=(p.materials||[]).map(m=>'<li>'+escHtml(m)+'</li>').join('');
+  const qs=(p.quickQuestions||[]).map((q,i)=>`<div class="prep-qa"><b>${egToArabic(i+1)}. ${escHtml(q.q||'')}</b><br><span class="ans">✔ ${escHtml(q.a||'')}</span></div>`).join('');
+  body.innerHTML=`
+    <div class="prep-sec"><div class="prep-sec-title">🎯 الأهداف</div><ul class="prep-list">${objs}</ul></div>
+    ${mats?`<div class="prep-sec"><div class="prep-sec-title">🧰 الوسائل</div><ul class="prep-list">${mats}</ul></div>`:''}
+    ${phases}
+    ${qs?`<div class="prep-sec"><div class="prep-sec-title">📝 أسئلة التقييم الختامي</div>${qs}</div>`:''}
+    ${p.homework?`<div class="prep-sec"><div class="prep-sec-title">🏠 الواجب</div><div class="prep-detail" contenteditable="true" data-hw="1">${escHtml(p.homework)}</div></div>`:''}
+    ${p.tip?`<div class="prep-sec" style="border-color:var(--gold)"><div class="prep-sec-title">💡 نصيحة</div><div style="font-size:12.5px;line-height:1.9">${escHtml(p.tip)}</div></div>`:''}
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">✏️ اضغط على أي فقرة لتعديلها ثم «حفظ تعديلاتي»</div>`;
+}
+
+function dpCloseModal(){document.getElementById('prep-modal').style.display='none';dpCurrentItem=null;}
+
+// حفظ تعديلات المعلم (نواة ذاكرة المعلم مستقبلاً)
+async function dpSaveEdits(){
+  const it=dpCurrentItem;if(!it)return;
+  const rec=dpPreps.get(it.lessonId);if(!rec)return;
+  const p=rec.plan;
+  document.querySelectorAll('#prep-modal-body .prep-detail[data-ph]').forEach(el=>{
+    const i=parseInt(el.dataset.ph);if(p.phases&&p.phases[i])p.phases[i].detail=el.textContent.trim();
+  });
+  const hw=document.querySelector('#prep-modal-body .prep-detail[data-hw]');
+  if(hw)p.homework=hw.textContent.trim();
+  rec.edited=true;
+  try{
+    const uid=(await sb.auth.getUser()).data?.user?.id;
+    if(uid)await sb.from('lesson_preps').upsert({user_id:uid,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:p,edited:true,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});
+    toast('💾 حُفظت تعديلاتك','ok');
+  }catch(e){toast('تعذّر الحفظ',true);}
+}
+
+async function dpRegenerate(){
+  const it=dpCurrentItem;if(!it)return;
+  dpPreps.delete(it.lessonId);
+  const body=document.getElementById('prep-modal-body');
+  body.innerHTML='<div style="text-align:center;padding:40px 10px;color:var(--muted)">🔄 يعيد التوليد…</div>';
+  const rec=await dpEnsurePrep(it,false);
+  if(rec)dpRenderPlan(rec.plan);
+  else body.innerHTML='<div style="text-align:center;padding:30px;color:var(--red2)">تعذّر التوليد — أعد المحاولة</div>';
+}
+
+// طباعة الخطة كورقة أنيقة
+function dpPrintPlan(){
+  const it=dpCurrentItem;if(!it)return;
+  const rec=dpPreps.get(it.lessonId);if(!rec)return;
+  const p=rec.plan;
+  const esc=s=>String(s||'').replace(/</g,'&lt;');
+  const w=window.open('','_blank');
+  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>
+  <style>body{font-family:'Cairo',sans-serif;padding:28px;color:#222;line-height:1.9;font-size:13.5px}
+  h1{font-size:20px;color:#1a5a2a;border-bottom:2px solid #b8860b;padding-bottom:8px}
+  .meta{color:#777;font-size:12px;margin-bottom:14px}
+  .sec{border:1px solid #ddd;border-radius:8px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid}
+  .sec b.t{color:#9a7010;display:block;margin-bottom:4px}
+  .min{float:left;background:#f6efe0;border-radius:10px;padding:0 10px;font-size:11px;color:#9a7010}
+  ul{margin:4px 0;padding-right:20px}
+  .ans{color:#1a7a3a;font-size:12px}
+  .foot{text-align:center;color:#999;font-size:11px;margin-top:18px;border-top:1px solid #eee;padding-top:8px}</style></head><body>
+  <h1>📋 خطة حصة — ${esc(it.lesson)}</h1>
+  <div class="meta">الصف ${esc(it.gradeNum)} · ${esc(it.subject)} · ${esc(it.unit)} · ${dpToday()}</div>
+  <div class="sec"><b class="t">🎯 الأهداف</b><ul>${(p.objectives||[]).map(o=>'<li>'+esc(o)+'</li>').join('')}</ul></div>
+  ${(p.materials&&p.materials.length)?`<div class="sec"><b class="t">🧰 الوسائل</b><ul>${p.materials.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul></div>`:''}
+  ${(p.phases||[]).map(ph=>`<div class="sec"><span class="min">${esc(ph.minutes)} د</span><b class="t">${esc(ph.name)}</b>${esc(ph.detail)}</div>`).join('')}
+  ${(p.quickQuestions&&p.quickQuestions.length)?`<div class="sec"><b class="t">📝 التقييم الختامي</b>${p.quickQuestions.map((q,i)=>`<div><b>${i+1}. ${esc(q.q)}</b><br><span class="ans">✔ ${esc(q.a)}</span></div>`).join('')}</div>`:''}
+  ${p.homework?`<div class="sec"><b class="t">🏠 الواجب</b>${esc(p.homework)}</div>`:''}
+  <div class="foot">أُعدت عبر منصة خطتي الفصلية</div>
+  <script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ✅ أنجزت الحصة: تحديث الخطة + إشعال تجهيز الدرس التالي تلقائياً
+function dpMarkDone(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const cur=get(it.lessonId);cur.done=true;state[it.lessonId]=cur;
+  scheduleSave();
+  try{applyFilter();update();buildTracker();}catch(e){}
+  toast('✅ درس منجز — يجهّز درس الغد الآن ☕','ok');
+  setTimeout(async()=>{
+    await renderDailyPrep();
+    const next=dpNextLessons().find(n=>n.gi===it.gi);
+    if(next&&!dpPreps.has(next.lessonId))dpEnsurePrep(next,true);
+  },400);
+}
+
+// قفزة ذكية للمولّد والدرس محدد مسبقاً
+async function dpJump(mode,i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  showPage('examgen');
+  try{await egInit();}catch(e){}
+  await egSetMode(mode);
+  const single=egSingleCombo();
+  if(!single){
+    const gs=document.getElementById('eg-grade');
+    gs.value=String(it.gradeNum);await egOnGradeChange();
+    document.getElementById('eg-subject').value=it.subject;await egOnSubjectChange();
+  }
+  setTimeout(()=>{
+    const cb=[...document.querySelectorAll('#eg-lessons-tree input[type="checkbox"]')].find(c=>(c.getAttribute('data-name')||'')===it.lesson);
+    if(cb&&!cb.checked)cb.click();
+    const lc=document.getElementById('eg-lessons-card');if(lc)lc.scrollIntoView({behavior:'smooth'});
+  },400);
 }
 
 // قوالب العروض التقديمية — لكل قالب لوحة ألوان ونمط زخرفي
