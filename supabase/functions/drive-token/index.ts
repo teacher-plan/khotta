@@ -49,7 +49,11 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!row?.refresh_token) return json({ error: "not_linked" }, 404);
+    if (!row?.refresh_token) { console.error("drive-token: not_linked for", user.id); return json({ error: "not_linked" }, 404); }
+    if (!Deno.env.get("GOOGLE_CLIENT_ID") || !Deno.env.get("GOOGLE_CLIENT_SECRET")) {
+      console.error("drive-token: GOOGLE_CLIENT_ID/SECRET secrets are missing!");
+      return json({ error: "server_not_configured" }, 500);
+    }
 
     // تبادل refresh_token بتوكن وصول جديد من جوجل
     const resp = await fetch("https://oauth2.googleapis.com/token", {
@@ -66,6 +70,7 @@ Deno.serve(async (req) => {
     const g = await resp.json();
     if (!resp.ok || !g.access_token) {
       // refresh_token قد يكون أُبطل (المستخدم ألغى الإذن) — يحتاج إعادة ربط
+      console.error("drive-token: refresh_failed", JSON.stringify(g).slice(0, 300));
       return json({ error: "refresh_failed", detail: g }, 400);
     }
 
