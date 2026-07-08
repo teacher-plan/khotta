@@ -119,7 +119,8 @@ Deno.serve(async (req) => {
           "HTTP-Referer": "https://khotati.com",
           "X-Title": "Khotta Visual Slides",
         },
-        body: JSON.stringify({ model, prompt: userPrompt, resolution: "2K", aspect_ratio: "16:9" }),
+        // Seedream يشترط حداً أدنى كبيراً للبكسلات وسعره ثابت — نرسل دائماً 4K
+        body: JSON.stringify({ model, prompt: userPrompt, resolution: "4K", aspect_ratio: "16:9" }),
       });
       const j = await r.json();
       if (!r.ok) return json({ error: "provider_error", detail: j }, 502);

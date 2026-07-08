@@ -102,7 +102,8 @@ Deno.serve(async (req) => {
           "HTTP-Referer": "https://khotati.com",
           "X-Title": "Khotta Infographic Generator",
         },
-        body: JSON.stringify({ model, prompt: userPrompt, resolution: size, aspect_ratio: aspect }),
+        // Seedream يشترط حداً أدنى كبيراً للبكسلات وسعره ثابت — نرسل دائماً 4K
+        body: JSON.stringify({ model, prompt: userPrompt, resolution: "4K", aspect_ratio: aspect }),
       });
       const j = await r.json();
       if (!r.ok) return { ok: false, detail: j, img: "" };
