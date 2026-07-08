@@ -6673,7 +6673,7 @@ function lessonFileRowHtml(lessonId,f){
   const icon=(f.type&&f.type.startsWith('image/'))?'🖼️':n.endsWith('.pptx')?'📊':n.endsWith('.pdf')?'📄':'📎';
   const openUrl=f.previewLink||f.viewLink||'';
   const dlUrl=f.downloadLink||f.viewLink||'';
-  return`<div class="lesson-file-item"><span>${icon}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="openDriveFile('${openUrl}','${(f.name||'').replace(/'/g,"\\'")}')">👁️ معاينة</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="window.open('${dlUrl}','_blank')">⬇️ تحميل</button></div>`;
+  return`<div class="lesson-file-item"><span>${icon}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="openDriveFile('${openUrl}','${(f.name||'').replace(/'/g,"\\'")}')">👁️ معاينة</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="window.open('${dlUrl}','_blank')">⬇️ تحميل</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="deleteLessonFile('${lessonId}','${f.id}','${f.driveId||''}')">🗑️</button></div>`;
 }
 function refreshLessonFiles(lessonId){
   const container=document.getElementById('lfl-'+lessonId);if(!container)return;
@@ -11588,12 +11588,17 @@ async function dpPrepareAll(i){
 
   // ⚡ أولاً: هل حضّر معلم آخر هذا الدرس من قبل؟ استيراد فوري بلا رصيد
   try{
-    const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64').eq('lesson_id',it.lessonId).maybeSingle();
+    const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',it.lessonId).maybeSingle();
     if(sh&&sh.plan){
       b.plan=sh.plan;
       b.slides=sh.slides||null;
       b.examHtml=sh.exam_html||null;
       if(sh.info_b64){try{b.infoBranded=await brandImage(sh.info_b64);}catch(e){b.infoBranded=sh.info_b64;}}
+      if(sh.slide_imgs&&Array.isArray(sh.slide_imgs)&&sh.slide_imgs.length){
+        b.slideImgsRaw=sh.slide_imgs;
+        b.slideImgs=[];
+        for(const im of sh.slide_imgs){try{b.slideImgs.push(await brandImage(im));}catch(e){b.slideImgs.push(im);}}
+      }
       b.status='ready';b.imported=true;
       renderDailyPrep();
       toast('⚡ استُورد التحضير جاهزاً من مكتبة المنصة — بلا استهلاك رصيد!','ok');
@@ -11618,8 +11623,8 @@ async function dpPrepareAll(i){
   const objectives=(p.objectives||[]).join('؛ ');
   const outline=(p.phases||[]).map(ph=>ph.name+': '+String(ph.detail||'').slice(0,120)).join(' | ');
 
-  // ٢) العرض التقديمي — مبني على الخطة، محتوى أولاً ورسوم توضيحية فقط
-  setProg('(٢/٤) يبني العرض التقديمي من الخطة…');
+  // ٢) العرض التقديمي — نصوصه من الخطة، وكل شريحة تُرسم بمحرك الإنفوجرافيك (محتوى ثمين + رسوم توضيحية فقط)
+  setProg('(٢/٤) يبني العرض من الخطة…');
   try{
     const pptPrompt=[
       'ابنِ الشرائح على خطة الحصة التالية حرفياً:',
@@ -11633,6 +11638,31 @@ async function dpPrepareAll(i){
     if(!error&&data&&Array.isArray(data.slides)&&data.slides.length){b.slides=data.slides;}
     else{b.missing.push('العرض');console.warn('bundle ppt:',error||data);}
   }catch(e){b.missing.push('العرض');console.warn('bundle ppt',e);}
+
+  // ٢-ب) رسم الشرائح بالذكاء الاصطناعي — ٣ بالتوازي
+  if(b.slides&&b.slides.length){
+    const total=b.slides.length;
+    b.slideImgsRaw=new Array(total).fill(null);
+    b.slideImgs=new Array(total).fill(null);
+    let drawn=0;
+    const worker=async(idx)=>{
+      const s=b.slides[idx];
+      const kind=idx===0?'cover':(idx===total-1?'closing':'content');
+      try{
+        const{data,error}=await sb.functions.invoke('generate-slide-image',{
+          body:{grade:String(it.gradeNum),subject:it.subject,title:s.title||'',bullets:s.bullets||[],slideNo:idx+1,slideTotal:total,kind}
+        });
+        if(!error&&data&&data.image){
+          b.slideImgsRaw[idx]=data.image;
+          try{b.slideImgs[idx]=await brandImage(data.image);}catch(e){b.slideImgs[idx]=data.image;}
+        }else{console.warn('slide draw '+(idx+1)+' failed',error||data);}
+      }catch(e){console.warn('slide draw '+(idx+1),e);}
+      drawn++;setProg('(٢/٤) يرسم شرائح العرض… '+egToArabic(drawn)+'/'+egToArabic(total));
+    };
+    const q=[...Array(total).keys()];
+    await Promise.all(Array.from({length:Math.min(3,total)},async()=>{while(q.length)await worker(q.shift());}));
+    if(!b.slideImgs.some(Boolean))b.missing.push('رسوم العرض');
+  }
 
   // ٣) التقييم — يقيس أهداف الخطة تحديداً
   setProg('(٣/٤) يصيغ تقييم الأهداف…');
@@ -11668,10 +11698,10 @@ async function dpPrepareAll(i){
     egCreditSet(egCreditGet()-5);
     toast(b.missing.length?('⚠️ التحضير جاهز عدا: '+b.missing.join('، ')):'✨ تحضيرك المترابط جاهز بالكامل!','ok');
     // 🌟 نشر صامت لمخزن المنصة المشترك — المعلم التالي يستورده مجاناً (الحزم المكتملة فقط)
-    if(!b.missing.length&&b.plan&&b.slides&&b.examHtml&&b.infoRaw){
+    if(!b.missing.length&&b.plan&&b.slides&&b.examHtml&&b.infoRaw&&b.slideImgsRaw&&b.slideImgsRaw.every(Boolean)){
       try{
         const uid=(await sb.auth.getUser()).data?.user?.id;
-        await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,created_by:uid||null});
+        await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,slide_imgs:b.slideImgsRaw,created_by:uid||null});
       }catch(e){/* موجود مسبقاً أو الجدول غير جاهز — لا يؤثر على المعلم */}
     }
   }else{
@@ -11697,7 +11727,12 @@ function dpOpenBundle(i){
       ${(p.phases||[]).map(ph=>`<div style="font-size:12.5px;line-height:1.9;margin-top:6px"><b style="color:var(--gold)">${escHtml(ph.name)} (${egToArabic(ph.minutes||0)}د):</b> ${escHtml(ph.detail||'')}</div>`).join('')}
     </div>`);
   }
-  if(b.slides&&b.slides.length){
+  if(b.slideImgs&&b.slideImgs.some(Boolean)){
+    parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">🖥️ العرض التقديمي المرسوم (${egToArabic(b.slideImgs.filter(Boolean).length)} شرائح — مبني على خطة الدرس)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+      ${b.slideImgs.map((im,j)=>im?`<div style="position:relative"><img src="${im}" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:9px;border:1px solid var(--border)"><span style="position:absolute;top:5px;right:5px;background:var(--gold);color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:0 7px">${egToArabic(j+1)}</span></div>`:'').join('')}
+      </div></div>`);
+  }else if(b.slides&&b.slides.length){
     parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">🖥️ العرض التقديمي (${egToArabic(b.slides.length)} شرائح — مبني على خطة الدرس)</div>
       ${b.slides.map((s,j)=>`<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:var(--surface)"><b style="font-size:13px;color:var(--gold)">${egToArabic(j+1)}. ${escHtml(s.title||'')}</b><div style="font-size:12px;line-height:1.9;margin-top:3px">${(s.bullets||[]).map(x=>'• '+escHtml(x)).join('<br>')}</div></div>`).join('')}</div>`);
   }
@@ -11719,6 +11754,26 @@ function dpEditPlanFromBundle(){
   const i=window._dpBundleIdx;
   dpCloseBundle();
   if(typeof i==='number')dpOpenPlan(i);
+}
+
+// بناء العرض من الشرائح المرسومة بالذكاء (صور كاملة + ملاحظات المعلم)
+async function dpBuildPptxFromImages(it,slides,imgs){
+  await loadPptxJs();
+  const pptx=new PptxGenJS();
+  pptx.defineLayout({name:'KHDPI',width:10,height:5.63});pptx.layout='KHDPI';
+  imgs.forEach((im,i)=>{
+    const sl=pptx.addSlide();
+    if(im)sl.addImage({data:im,x:0,y:0,w:10,h:5.63});
+    else{
+      sl.background={color:'F4F0EB'};
+      const s=slides[i]||{};
+      sl.addText(s.title||'',{x:.5,y:.4,w:9,h:.9,align:'right',fontFace:'Cairo',fontSize:26,bold:true,color:'1A5A2A',rtlMode:true});
+      sl.addText((s.bullets||[]).map(x=>'• '+x).join('\n'),{x:.5,y:1.5,w:9,h:3.6,align:'right',fontFace:'Cairo',fontSize:16,color:'2A1A1A',rtlMode:true});
+    }
+    const s=slides[i];if(s&&s.notes)sl.addNotes(String(s.notes));
+  });
+  const blob=await pptx.write('blob');
+  return new File([blob],'عرض تقديمي — '+it.lesson+'.pptx',{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
 }
 
 // بناء ملف العرض التقديمي: ألوان جميلة، محتوى أولاً، بلا زخارف زائدة
@@ -11766,7 +11821,10 @@ async function dpSaveBundle(i){
   toast('⬆️ يجهّز ملفات PDF ويرفعها إلى بطاقة الدرس…');
   const files=[];
   if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
-  if(b.slides&&b.slides.length){
+  if(b.slideImgs&&b.slideImgs.some(Boolean)){
+    try{files.push(await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs));}
+    catch(e){console.warn('pptx img build',e);}
+  }else if(b.slides&&b.slides.length){
     try{files.push(await dpBuildPptxFile(it,b.slides));}
     catch(e){console.warn('pptx build',e);}
   }

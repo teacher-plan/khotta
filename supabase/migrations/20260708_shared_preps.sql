@@ -25,3 +25,6 @@ create policy "shared_insert" on shared_preps for insert with check (auth.uid() 
 -- المشرف فقط يحذف/يستبدل محتوى غير مناسب
 drop policy if exists "shared_admin_delete" on shared_preps;
 create policy "shared_admin_delete" on shared_preps for delete using (is_app_admin());
+
+-- شرائح العرض المرسومة (صور base64) ضمن الحزمة المشتركة
+alter table shared_preps add column if not exists slide_imgs jsonb;
