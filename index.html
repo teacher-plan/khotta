@@ -11643,17 +11643,23 @@ async function dpSaveBundle(i){
   const b=dpBundle(it.lessonId);
   if(b.status==='saved'){toast('محفوظ مسبقاً في بطاقة الدرس 📎','ok');return;}
   if(b.status!=='ready')return;
-  toast('⬆️ يرفع ملفات التحضير إلى بطاقة الدرس…');
+  toast('⬆️ يجهّز ملفات PDF ويرفعها إلى بطاقة الدرس…');
   const files=[];
   if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
   if(b.plan){
-    const html=dpPlanDocHtml(it,b.plan);
-    files.push(new File([new Blob([html],{type:'text/html'})],'خطة الحصة — '+it.lesson+'.html',{type:'text/html'}));
+    try{files.push(await dpHtmlToPdfFile(DP_PLAN_CSS+dpPlanBodyHtml(it,b.plan),'خطة الحصة — '+it.lesson+'.pdf'));}
+    catch(e){console.warn('plan pdf fallback',e);
+      files.push(new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'خطة الحصة — '+it.lesson+'.html',{type:'text/html'}));}
   }
   if(b.examHtml){
-    let doc=b.examHtml;
-    try{doc=egBuildDoc(egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson));}catch(e){}
-    files.push(new File([new Blob([doc],{type:'text/html'})],'تقييم — '+it.lesson+'.html',{type:'text/html'}));
+    try{
+      let paper='';
+      try{paper=egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson);}catch(e){paper='<div class="dp-doc">'+b.examHtml+'</div>';}
+      files.push(await dpHtmlToPdfFile('<div style="background:#fff;padding:6px">'+paper+'</div>','تقييم — '+it.lesson+'.pdf'));
+    }catch(e){console.warn('exam pdf fallback',e);
+      let doc=b.examHtml;
+      try{doc=egBuildDoc(egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson));}catch(_){}
+      files.push(new File([new Blob([doc],{type:'text/html'})],'تقييم — '+it.lesson+'.html',{type:'text/html'}));}
   }
   let okCount=0;
   for(const f of files){
@@ -11766,18 +11772,18 @@ async function dpRegenerate(){
 }
 
 // مستند الخطة كصفحة كاملة (للطباعة وللحفظ كملف مرفق)
-function dpPlanDocHtml(it,p){
+const DP_PLAN_CSS=`<style>.dp-doc{font-family:'Cairo',sans-serif;direction:rtl;text-align:right;padding:28px;color:#222;line-height:1.9;font-size:13.5px;background:#fff}
+.dp-doc h1{font-size:20px;color:#1a5a2a;border-bottom:2px solid #b8860b;padding-bottom:8px;margin:0 0 8px}
+.dp-doc .meta{color:#777;font-size:12px;margin-bottom:14px}
+.dp-doc .sec{border:1px solid #ddd;border-radius:8px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid}
+.dp-doc .sec b.t{color:#9a7010;display:block;margin-bottom:4px}
+.dp-doc .min{float:left;background:#f6efe0;border-radius:10px;padding:0 10px;font-size:11px;color:#9a7010}
+.dp-doc ul{margin:4px 0;padding-right:20px}
+.dp-doc .ans{color:#1a7a3a;font-size:12px}
+.dp-doc .foot{text-align:center;color:#999;font-size:11px;margin-top:18px;border-top:1px solid #eee;padding-top:8px}</style>`;
+function dpPlanBodyHtml(it,p){
   const esc=s=>String(s||'').replace(/</g,'&lt;');
-  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>
-  <style>body{font-family:'Cairo',sans-serif;padding:28px;color:#222;line-height:1.9;font-size:13.5px}
-  h1{font-size:20px;color:#1a5a2a;border-bottom:2px solid #b8860b;padding-bottom:8px}
-  .meta{color:#777;font-size:12px;margin-bottom:14px}
-  .sec{border:1px solid #ddd;border-radius:8px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid}
-  .sec b.t{color:#9a7010;display:block;margin-bottom:4px}
-  .min{float:left;background:#f6efe0;border-radius:10px;padding:0 10px;font-size:11px;color:#9a7010}
-  ul{margin:4px 0;padding-right:20px}
-  .ans{color:#1a7a3a;font-size:12px}
-  .foot{text-align:center;color:#999;font-size:11px;margin-top:18px;border-top:1px solid #eee;padding-top:8px}</style></head><body>
+  return `<div class="dp-doc">
   <h1>📋 خطة حصة — ${esc(it.lesson)}</h1>
   <div class="meta">الصف ${esc(it.gradeNum)} · ${esc(it.subject)} · ${esc(it.unit)} · ${dpToday()}</div>
   <div class="sec"><b class="t">🎯 الأهداف</b><ul>${(p.objectives||[]).map(o=>'<li>'+esc(o)+'</li>').join('')}</ul></div>
@@ -11786,7 +11792,41 @@ function dpPlanDocHtml(it,p){
   ${(p.quickQuestions&&p.quickQuestions.length)?`<div class="sec"><b class="t">📝 التقييم الختامي</b>${p.quickQuestions.map((q,i)=>`<div><b>${i+1}. ${esc(q.q)}</b><br><span class="ans">✔ ${esc(q.a)}</span></div>`).join('')}</div>`:''}
   ${p.homework?`<div class="sec"><b class="t">🏠 الواجب</b>${esc(p.homework)}</div>`:''}
   <div class="foot">أُعدت عبر منصة خطتي الفصلية</div>
-  </body></html>`;
+  </div>`;
+}
+function dpPlanDocHtml(it,p){
+  const esc=s=>String(s||'').replace(/</g,'&lt;');
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>${DP_PLAN_CSS}</head><body>${dpPlanBodyHtml(it,p)}</body></html>`;
+}
+
+// تحويل HTML إلى ملف PDF حقيقي (خط عربي سليم عبر الرسم النقطي)
+let _h2pLoading=null;
+function loadHtml2Pdf(){
+  if(window.html2pdf)return Promise.resolve();
+  if(_h2pLoading)return _h2pLoading;
+  _h2pLoading=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload=res;s.onerror=()=>{_h2pLoading=null;rej(new Error('html2pdf load failed'));};
+    document.head.appendChild(s);
+  });
+  return _h2pLoading;
+}
+async function dpHtmlToPdfFile(innerHtml,name){
+  await loadHtml2Pdf();
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-11000px;top:0;width:794px;background:#fff;z-index:-1;direction:rtl';
+  holder.innerHTML=innerHtml;
+  document.body.appendChild(holder);
+  try{
+    const blob=await html2pdf().set({
+      margin:[8,8,10,8],
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy']}
+    }).from(holder).outputPdf('blob');
+    return new File([blob],name,{type:'application/pdf'});
+  }finally{holder.remove();}
 }
 
 // طباعة الخطة كورقة أنيقة
