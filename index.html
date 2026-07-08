@@ -3413,6 +3413,15 @@ async function driveUpload(file,fileName){
       return null;
     }
     const j=await res.json();
+    // إتاحة الملف لكل من معه الرابط — حتى تعمل المعاينة والتحميل من أي جهاز
+    // دون الحاجة لتسجيل دخول جوجل بنفس الحساب (حاسوب المدرسة، جوال آخر...)
+    try{
+      await fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+googleAccessToken,'Content-Type':'application/json'},
+        body:JSON.stringify({role:'reader',type:'anyone'})
+      });
+    }catch(e){console.warn('share permission failed',e);}
     const view='https://drive.google.com/file/d/'+j.id+'/view';
     return{
       id:j.id,name:j.name||fileName,size:file.size,
