@@ -964,6 +964,11 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .dp-btn[disabled]{opacity:.75;cursor:wait;transform:none!important;}
 .dpb-sec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
 .dpb-sec-title{font-weight:800;font-size:13.5px;color:var(--gold);margin-bottom:8px;}
+/* موشن التحضير داخل بطاقة الدرس — نفس مربعات شاشة الدخول مصغّرة */
+.dp-working{display:flex;align-items:center;gap:14px;width:100%;background:rgba(184,134,11,.06);border:1.5px dashed var(--gold);border-radius:12px;padding:12px 14px;}
+.dp-mini-squares{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:42px;height:42px;flex:none;margin:0;}
+.dp-working-title{font-weight:800;font-size:13.5px;color:var(--gold);}
+.dp-working-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 
 .eg-mode-row{display:flex;gap:12px;flex-wrap:wrap;}
 .eg-mode-btn{flex:1;min-width:150px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px 12px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
@@ -11546,12 +11551,19 @@ async function renderDailyPrep(){
       }catch(e){}
     }
   }
+  const miniLoader=(title,sub)=>`<div class="dp-working">
+      <div class="loader-squares dp-mini-squares"><div class="lsq lsq-1"></div><div class="lsq lsq-2"></div><div class="lsq lsq-3"></div><div class="lsq lsq-4"></div><div class="lsq lsq-5"></div><div class="lsq lsq-6"></div><div class="lsq lsq-7"></div><div class="lsq lsq-8"></div><div class="lsq lsq-9"></div></div>
+      <div><div class="dp-working-title">${title}</div><div class="dp-working-sub">${escHtml(sub||'')}</div></div>
+    </div>`;
   document.getElementById('dp-items').innerHTML=items.map((it,i)=>{
     const b=dpBundle(it.lessonId);
     let st,actions;
     if(b.status==='working'){
-      st='<span class="dp-status wait">☕ يجهّز الآن…</span>';
-      actions=`<button class="dp-btn" disabled>⏳ ${escHtml(b.prog||'يجهّز…')}</button>`;
+      st='<span class="dp-status wait">⏳ قيد التحضير</span>';
+      actions=miniLoader('⏳ الدرس قيد التحضير — لا تغلق الصفحة',(b.prog||'يبدأ…'));
+    }else if(b.status==='saving'){
+      st='<span class="dp-status wait">⬆️ جارٍ الحفظ</span>';
+      actions=miniLoader('⬆️ جارٍ حفظ التحضير في بطاقة الدرس…',(b.prog||''));
     }else if(b.status==='ready'){
       const inc=b.missing&&b.missing.length;
       st=inc?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
@@ -11573,7 +11585,7 @@ async function renderDailyPrep(){
       </div>
       <div class="dp-actions">
         ${actions}
-        <button class="dp-btn done-btn" onclick="dpMarkDone(${i})">✅ أنجزت الحصة</button>
+        ${(b.status==='working'||b.status==='saving')?'':`<button class="dp-btn done-btn" onclick="dpMarkDone(${i})">✅ أنجزت الحصة</button>`}
       </div>
     </div>`;
   }).join('');
@@ -11894,7 +11906,13 @@ async function dpSaveBundle(i){
   const b=dpBundle(it.lessonId);
   if(b.status==='saved'){toast('محفوظ مسبقاً في بطاقة الدرس 📎','ok');return;}
   if(b.status!=='ready')return;
-  toast('⬆️ يجهّز ملفات PDF ويرفعها إلى بطاقة الدرس…');
+  // حالة «جارٍ الحفظ» — تبقى ظاهرة حتى التأكد الفعلي من وجود الملفات في البطاقة
+  b.status='saving';b.prog='يجهّز الملفات…';
+  dpBundles.set(it.lessonId,b);
+  renderDailyPrep();
+  const setSaveProg=t=>{b.prog=t;renderDailyPrep();};
+  const mbtn=document.getElementById('dpb-save-btn');
+  if(mbtn){mbtn.disabled=true;mbtn.textContent='⏳ جارٍ الحفظ في بطاقة الدرس…';}
   const files=[];
   if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
   if(b.slideImgs&&b.slideImgs.some(Boolean)){
@@ -11919,26 +11937,53 @@ async function dpSaveBundle(i){
       try{doc=egBuildDoc(egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson));}catch(_){}
       files.push(new File([new Blob([doc],{type:'text/html'})],'تقييم — '+it.lesson+'.html',{type:'text/html'}));}
   }
+  // عند إعادة الحفظ بعد نجاح جزئي: ارفع الملفات الناقصة فقط (لا تكرار)
+  const existing=lessonFiles[it.lessonId]||[];
+  const pend=files.filter(f=>!existing.some(x=>x.name===f.name&&x.driveId));
+  if(!pend.length&&files.length){
+    b.status='saved';dpPersist(it,b);renderDailyPrep();
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
+    toast('📎 كل الملفات محفوظة مسبقاً في بطاقة الدرس','ok');
+    return;
+  }
   let okCount=0;
-  for(const f of files){
+  const newIds=[];
+  for(let fi=0;fi<pend.length;fi++){
+    const f=pend[fi];
+    setSaveProg('يرفع الملفات… '+egToArabic(fi+1)+'/'+egToArabic(pend.length)+' ('+escHtml(f.name)+')');
     try{
       const r=await driveUpload(f,'[درس-'+it.lessonId+'] '+f.name);
-      if(r){
+      if(r&&r.id){
         if(!lessonFiles[it.lessonId])lessonFiles[it.lessonId]=[];
-        lessonFiles[it.lessonId].push({id:Date.now().toString()+okCount,name:f.name,size:f.size,type:f.type,driveId:r.id,viewLink:r.viewLink,downloadLink:r.downloadLink,previewLink:r.previewLink});
+        const entry={id:Date.now().toString()+okCount,name:f.name,size:f.size,type:f.type,driveId:r.id,viewLink:r.viewLink,downloadLink:r.downloadLink,previewLink:r.previewLink};
+        lessonFiles[it.lessonId].push(entry);
+        newIds.push(entry.id);
         okCount++;
       }
     }catch(e){console.warn('bundle upload',e);}
   }
-  if(okCount){
+  // ✔️ التحقق الفعلي: الملفات موجودة في بطاقة الدرس (بمعرّفات درايف حقيقية) قبل إعلان النجاح
+  setSaveProg('يتأكد من وجود الملفات في البطاقة…');
+  const verified=newIds.filter(id=>(lessonFiles[it.lessonId]||[]).some(f=>f.id===id&&f.driveId)).length;
+  if(verified&&verified===pend.length){
     scheduleSave();
     try{refreshLessonFiles(it.lessonId);}catch(e){}
     b.status='saved';
     dpPersist(it,b);
     renderDailyPrep();
-    const btn=document.getElementById('dpb-save-btn');if(btn)btn.textContent='✅ محفوظ في بطاقة الدرس';
-    toast('📎 حُفظ التحضير ('+egToArabic(okCount)+' ملفات) في بطاقة الدرس','ok');
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
+    toast('📎 تم التأكد: التحضير ('+egToArabic(verified)+' ملفات) محفوظ في بطاقة الدرس','ok');
+  }else if(verified){
+    scheduleSave();
+    try{refreshLessonFiles(it.lessonId);}catch(e){}
+    b.status='ready';
+    renderDailyPrep();
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='💾 حفظ في بطاقة الدرس';}
+    toast('⚠️ حُفظ '+egToArabic(verified)+' من '+egToArabic(pend.length)+' ملفات — أعد الحفظ لرفع الباقي فقط',true);
   }else{
+    b.status='ready';
+    renderDailyPrep();
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='💾 حفظ في بطاقة الدرس';}
     toast('❌ فشل الرفع — تأكد من ربط Google Drive في الإعدادات',true);
   }
 }
