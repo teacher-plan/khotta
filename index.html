@@ -12733,9 +12733,10 @@ async function segImportFromUrl(){
   try{
     const{data,error}=await sb.functions.invoke('fetch-book',{body:{url}});
     if(error||!data||!data.url){
-      const reason=(data&&data.error)||error?.message||'خطأ غير معروف';
-      const msgs={not_pdf:'الرابط لا يشير لملف PDF فعلي',too_large:'الملف أكبر من الحد المسموح (٦٠ ميجا)',source_error:'تعذّر الوصول للرابط',fetch_failed:'تعذّر الاتصال بالرابط',empty_or_blocked:'الملف فارغ أو الموقع يحجب الجلب الآلي'};
-      st.textContent='❌ '+(msgs[reason]||('فشل الجلب: '+reason));
+      let reason=(data&&data.error)||error?.message||'خطأ غير معروف';
+      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}
+      const msgs={not_pdf:'الرابط لا يشير لملف PDF فعلي',too_large:'الملف أكبر من الحد المسموح (٢٠٠ ميجا)',source_error:'تعذّر الوصول للرابط (الموقع رفض الطلب)',fetch_failed:'تعذّر الاتصال بالرابط',empty_or_blocked:'الملف فارغ أو الموقع يحجب الجلب الآلي',bad_url:'الرابط غير صالح'};
+      st.textContent='❌ '+(msgs[reason]||('فشل الجلب: '+reason))+(isAdmin&&isAdmin()?' ['+reason+']':'');
       return;
     }
     st.textContent='📥 تم الجلب — يحمّل الملف للمعالجة…';
