@@ -11752,7 +11752,6 @@ async function dpPrepareAll(i){
       b.status='ready';b.imported=true;
       dpPersist(it,b);
       renderDailyPrep();
-      toast('⚡ استُورد التحضير جاهزاً من مكتبة المنصة — بلا استهلاك رصيد!','ok');
       try{
         const uid=(await sb.auth.getUser()).data?.user?.id;
         if(uid)await sb.from('lesson_preps').upsert({user_id:uid,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:sh.plan,edited:false,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});
@@ -11769,7 +11768,6 @@ async function dpPrepareAll(i){
   if(b.plan||b.slides||b.infoBranded||b.examHtml){
     b.status='ready';
     egCreditSet(egCreditGet()-5);
-    toast(b.missing.length?('⚠️ التحضير جاهز عدا: '+b.missing.join('، ')+' — اضغط «أكمل الناقص»'):'✨ تحضيرك المترابط جاهز بالكامل!','ok');
     await dpPublishShared(it,b);
   }else{
     b.status='idle';
@@ -11785,7 +11783,7 @@ async function dpCompleteMissing(i){
   const b=dpBundle(it.lessonId);
   if(!b||b.status==='working')return;
   b.missing=dpMissingParts(b);
-  if(!b.missing.length){renderDailyPrep();toast('✅ الحزمة مكتملة أصلاً','ok');return;}
+  if(!b.missing.length){renderDailyPrep();return;}
   if(egCreditGet()<=0){toast('انتهى رصيد التوليد لهذا الاشتراك',true);return;}
   b.status='working';b.prog='يكمل الناقص…';
   dpBundles.set(it.lessonId,b);
@@ -11793,7 +11791,6 @@ async function dpCompleteMissing(i){
   const setProg=t=>{b.prog=t;renderDailyPrep();};
   await dpRunSteps(it,b,setProg);
   b.status='ready';
-  toast(b.missing.length?('⚠️ ما زال ناقصاً: '+b.missing.join('، ')):'✅ اكتمل التحضير بالكامل!',b.missing.length?true:'ok');
   await dpPublishShared(it,b);
   dpPersist(it,b);
   renderDailyPrep();
@@ -11904,7 +11901,7 @@ async function dpSaveBundle(i){
   if(typeof i!=='number')i=window._dpBundleIdx;
   const it=(window._dpItems||[])[i];if(!it)return;
   const b=dpBundle(it.lessonId);
-  if(b.status==='saved'){toast('محفوظ مسبقاً في بطاقة الدرس 📎','ok');return;}
+  if(b.status==='saved')return;
   if(b.status!=='ready')return;
   // حالة «جارٍ الحفظ» — تبقى ظاهرة حتى التأكد الفعلي من وجود الملفات في البطاقة
   b.status='saving';b.prog='يجهّز الملفات…';
@@ -11943,7 +11940,6 @@ async function dpSaveBundle(i){
   if(!pend.length&&files.length){
     b.status='saved';dpPersist(it,b);renderDailyPrep();
     if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
-    toast('📎 كل الملفات محفوظة مسبقاً في بطاقة الدرس','ok');
     return;
   }
   let okCount=0;
@@ -11972,7 +11968,6 @@ async function dpSaveBundle(i){
     dpPersist(it,b);
     renderDailyPrep();
     if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
-    toast('📎 تم التأكد: التحضير ('+egToArabic(verified)+' ملفات) محفوظ في بطاقة الدرس','ok');
   }else if(verified){
     scheduleSave();
     try{refreshLessonFiles(it.lessonId);}catch(e){}
