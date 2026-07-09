@@ -46,9 +46,13 @@ Deno.serve(async (req) => {
     const subject = String(b.subject || "");
     const unit = String(b.unit || "");
     const lesson = String(b.lesson || "");
+    const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 12) : [];
     if (!lesson) return json({ error: "no_lesson" }, 400);
 
-    const model = st.ai_model || "google/gemini-2.5-flash";
+    // عند إرفاق صفحات الكتاب نحتاج نموذجاً يدعم الرؤية
+    const model = images.length
+      ? (st.vision_model || st.ai_model || "google/gemini-2.5-flash")
+      : (st.ai_model || "google/gemini-2.5-flash");
 
     // عمر الطلاب في عُمان: الصف الأول = ٧ سنوات (العمر = الصف + ٦)
     const gradeNum = parseInt(grade) || 0;
@@ -71,6 +75,7 @@ Deno.serve(async (req) => {
     const system = [
       "أنت خبير مناهج وطرائق تدريس متمرس في سلطنة عُمان، تعدّ تحضيراً رسمياً بهيكل منصة نور، مبنياً على أسس تربوية بحتة.",
       "المنهج المعتمد: منهج كامبردج (Cambridge) كما يطبَّق في مدارس سلطنة عُمان — راعِ فلسفته: الفهم العميق، الاستقصاء، وربط التعلم بالحياة.",
+      images.length ? "الصور المرفقة هي صفحات هذا الدرس من كتاب الطالب المعتمد. اقرأها بدقّة وابنِ التحضير من محتواها الفعلي حصراً (المفاهيم، الأمثلة، الأنشطة، الأرقام كما وردت) لا من معرفة عامة." : "",
       age ? `أعمار الطلاب: ${age} سنوات تقريباً (الصف ${grade}) — كل الصياغات والأنشطة والأمثلة يجب أن تناسب هذا العمر النمائي بدقة.` : "",
       "المخرجات التعليمية (outcomes): 3-5 مخرجات بصيغة «أنا أستطيع أن …» موزعة على مستويات بلوم مختلفة، وحقل level يحدد المستوى (التذكر، الفهم، التطبيق، التحليل...).",
       "الاستراتيجيات (strategies): 2-3 استراتيجيات تدريس حقيقية مناسبة للدرس والعمر (التعلم التعاوني، لعب الأدوار، الاستقصاء...).",
@@ -90,6 +95,10 @@ Deno.serve(async (req) => {
       `الدرس: ${lesson}`,
     ].filter(Boolean).join("\n");
 
+    // محتوى المستخدم: نص + صور صفحات الدرس إن وُجدت
+    const userContent: unknown[] = [{ type: "text", text: userMsg }];
+    for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
+
     const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -102,7 +111,7 @@ Deno.serve(async (req) => {
         model,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: userMsg },
+          { role: "user", content: images.length ? userContent : userMsg },
         ],
         response_format: { type: "json_object" },
         temperature: 0.4,

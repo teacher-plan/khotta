@@ -11627,10 +11627,48 @@ function dpHeaderData(it){
   };
 }
 
+// جلب صور صفحات الدرس الواحد من الكتاب المقطّع (فارغ إن لم يُقطّع بعد → رجوع آمن للاسم)
+async function dpLessonImages(it){
+  try{
+    const semester=(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول';
+    const{data:bs}=await sb.from('book_sources').select('*').eq('grade',String(it.gradeNum)).eq('subject',it.subject).eq('semester',semester).maybeSingle();
+    if(!bs||!bs.base_path||!bs.page_count)return [];
+    const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
+    const{data:cur}=await sb.from('curriculum').select('unit,lesson,sort,page').eq('grade',String(it.gradeNum)).eq('subject',it.subject).eq('semester',semester);
+    if(!cur||!cur.length)return [];
+    const sorted=cur.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+    const idx=sorted.findIndex(r=>r.unit===it.unit&&r.lesson===it.lesson);
+    if(idx<0)return [];
+    const start=parseInt(sorted[idx].page);if(!start)return [];
+    let end=pageCount;
+    for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+    if(end<start)end=start;
+    const pub=(sheet)=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
+    const images=[],seen={};
+    for(let bp=start;bp<=end&&images.length<12;bp++){
+      const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+      const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
+    }
+    return images;
+  }catch(e){console.warn('dpLessonImages',e);return [];}
+}
+
 // ══ خطوات التوليد — كل خطوة تتخطى نفسها إن كان جزؤها جاهزاً (تسمح بإكمال الناقص فقط) ══
 async function dpStepPlan(it,b,setProg){
   if(b.plan)return;
   setProg('(١/٤) يعدّ خطة الدرس…');
+  // مع صفحات الكتاب إن توفرت (تحضير مبني على المحتوى الفعلي)
+  if(b.images&&b.images.length){
+    try{
+      const{data,error}=await sb.functions.invoke('generate-lesson-plan',{
+        body:{grade:String(it.gradeNum),subject:it.subject,unit:it.unit,lesson:it.lesson,images:b.images}
+      });
+      if(!error&&data&&data.plan){b.plan=data.plan;
+        try{const uid=(await sb.auth.getUser()).data?.user?.id;if(uid)await sb.from('lesson_preps').upsert({user_id:uid,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:data.plan,edited:false,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});dpPreps.set(it.lessonId,{plan:data.plan,edited:false});}catch(e){}
+        return;}
+      console.warn('plan vision failed, fallback',error||data);
+    }catch(e){console.warn('plan vision err',e);}
+  }
   const rec=await dpEnsurePrep(it,true);
   if(rec)b.plan=rec.plan;
 }
@@ -11646,9 +11684,9 @@ async function dpStepSlidesText(it,b,setProg){
       ctx.outline?('سير الحصة: '+ctx.outline):'',
       'ركّز على المحتوى التعليمي الثمين الذي يحقق المخرجات — لا حشو ولا زينة.',
     ].filter(Boolean).join('\n').slice(0,1900);
-    const{data,error}=await sb.functions.invoke('generate-presentation',{
-      body:{grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],slideCount:8,teacherPrompt:pptPrompt}
-    });
+    const pptBody={grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],slideCount:8,teacherPrompt:pptPrompt};
+    if(b.images&&b.images.length)pptBody.images=b.images;
+    const{data,error}=await sb.functions.invoke('generate-presentation',{body:pptBody});
     if(!error&&data&&Array.isArray(data.slides)&&data.slides.length){b.slides=data.slides;}
     else{console.warn('bundle ppt:',error||data);}
   }catch(e){console.warn('bundle ppt',e);}
@@ -11683,14 +11721,22 @@ async function dpStepExam(it,b,setProg){
   setProg('(٣/٤) يصيغ تقييم الأهداف…');
   const ctx=dpPlanCtx(b);
   try{
-    let lessonText='';
-    try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
     const examPrompt=(dpAgeCtx(it)+' '+(ctx.objectives?('صُغ الأسئلة بحيث تقيس تحقق هذه المخرجات تحديداً: '+ctx.objectives):'')).slice(0,1500);
-    const{data,error}=await sb.functions.invoke('generate-exam',{
-      body:{grade:String(it.gradeNum),subject:it.subject,
-        lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
-        types:['mcq','tf'],count:5,total:10,teacherPrompt:examPrompt,referenceText:'',sampleExam:''}
-    });
+    let data,error;
+    if(b.images&&b.images.length){
+      // تقييم من صفحات الكتاب الفعلية (رؤية)
+      ({data,error}=await sb.functions.invoke('generate-exam-vision',{
+        body:{grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],images:b.images,types:['mcq','tf'],count:5,total:10,teacherPrompt:examPrompt}
+      }));
+    }else{
+      let lessonText='';
+      try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
+      ({data,error}=await sb.functions.invoke('generate-exam',{
+        body:{grade:String(it.gradeNum),subject:it.subject,
+          lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
+          types:['mcq','tf'],count:5,total:10,teacherPrompt:examPrompt,referenceText:'',sampleExam:''}
+      }));
+    }
     if(!error&&data&&Array.isArray(data.questions)&&data.questions.length){
       b.examHtml=egRenderAiQuestions(data.questions);
     }else{console.warn('bundle exam:',error||data);}
@@ -11702,9 +11748,9 @@ async function dpStepInfo(it,b,setProg){
   const ctx=dpPlanCtx(b);
   try{
     const infoPrompt=(dpAgeCtx(it)+' اجعل الإنفوجرافيك ملخصاً شاملاً للدرس يثبّت أهم النقاط في ذهن الطالب.'+(ctx.objectives?(' غطِّ هذه المخرجات: '+ctx.objectives):'')).slice(0,1400);
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
-      body:{grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:infoPrompt,size:'2K',aspect:'9:16'}
-    });
+    const infoBody={grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:infoPrompt,size:'2K',aspect:'9:16'};
+    if(b.images&&b.images.length)infoBody.images=b.images;
+    const{data,error}=await sb.functions.invoke('generate-infographic',{body:infoBody});
     if(!error&&data&&data.image){
       b.infoRaw=data.image;
       try{b.infoBranded=await brandImage(data.image);}catch(e){b.infoBranded=data.image;}
@@ -11712,6 +11758,8 @@ async function dpStepInfo(it,b,setProg){
   }catch(e){console.warn('bundle info',e);}
 }
 async function dpRunSteps(it,b,setProg){
+  // جلب صفحات الدرس مرة واحدة — تُمرَّر لكل الخطوات (فارغة إن لم يُقطّع الكتاب بعد)
+  if(!b.images){setProg('يجهّز محتوى الدرس…');b.images=await dpLessonImages(it);}
   await dpStepPlan(it,b,setProg);
   await dpStepSlidesText(it,b,setProg);
   await dpStepDrawSlides(it,b,setProg);

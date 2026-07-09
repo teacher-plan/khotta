@@ -47,6 +47,8 @@ Deno.serve(async (req) => {
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
     const teacherPrompt = String(b.teacherPrompt || "").slice(0, 1500);
+    // صفحات الدرس من الكتاب المقطّع (مرجع محتوى)
+    const bookImages: string[] = Array.isArray(b.images) ? b.images.slice(0, 10) : [];
     const size = ["1K", "2K", "4K"].includes(b.size) ? b.size : "2K";
     const aspect = ["9:16", "3:4", "1:1", "16:9", "21:9", "2:3", "4:3"].includes(b.aspect) ? b.aspect : "9:16";
     // وضع التعديل: صورة موجودة + تعليمات تغيير موضعي
@@ -75,11 +77,16 @@ Deno.serve(async (req) => {
     const userPrompt = [
       `أنشئ إنفوجرافيك تعليمياً واحداً متكاملاً بالعربية الفصحى لطلاب ${grade ? "الصف " + grade : "المدرسة"} في مادة ${subject}.`,
       `موضوع الدرس/الدروس: ${lessonNames.join("، ")}.`,
+      bookImages.length ? "الصور المرفقة هي صفحات هذا الدرس من كتاب الطالب المعتمد — اقرأ محتواها ولخّص مفاهيمه وأمثلته وقواعده الفعلية في الإنفوجرافيك (لا من معرفة عامة)." : "",
       "لخّص أهم المفاهيم والقواعد والأمثلة في أقسام واضحة مرقّمة (أولاً، ثانياً، ثالثاً...) مع تمثيل بصري مرسوم لكل مفهوم.",
       teacherPrompt ? `توجيهات المعلم: ${teacherPrompt}` : "",
       stylePrompt,
       `توجه التصميم: ${["16:9", "21:9"].includes(aspect) ? "أفقي عريض — وزّع الأقسام جنباً إلى جنب" : aspect === "1:1" ? "مربع متوازن" : "عمودي طولي — الأقسام فوق بعضها"}.`,
     ].filter(Boolean).join("\n");
+
+    // محتوى الطلب: النص + صفحات الدرس المرجعية (إن وُجدت)
+    const genContent: unknown[] = [{ type: "text", text: userPrompt }];
+    for (const u of bookImages) genContent.push({ type: "image_url", image_url: { url: u } });
 
     // بعض النماذج لا تقبل كل إعدادات المقاس/الجودة — نحاول كاملة ثم نتدرّج تلقائياً
     const call = (cfg: Record<string, unknown> | null) =>
@@ -93,7 +100,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: userPrompt }],
+          messages: [{ role: "user", content: bookImages.length ? genContent : userPrompt }],
           modalities: ["image", "text"],
           ...(cfg ? { image_config: cfg } : {}),
         }),
