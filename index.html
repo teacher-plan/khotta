@@ -12805,12 +12805,29 @@ async function segRun(){
   segRenderReview(clean);
 }
 function segRowHtml(l,thumb){
-  return `<div class="seg-row" style="display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px" data-unit="${escHtml(l.unit||'')}">
+  return `<div class="seg-row" style="display:flex;gap:6px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px" data-unit="${escHtml(l.unit||'')}">
       <img src="${l.page?thumb(l.page):''}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none" onerror="this.style.visibility='hidden'">
-      <input class="seg-lesson" value="${escHtml(l.lesson||'')}" placeholder="اسم الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
-      <input class="seg-page" type="number" value="${l.page||''}" title="صفحة البداية (المطبوعة)" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
+      <input class="seg-lesson" value="${escHtml(l.lesson||'')}" placeholder="اسم الدرس" style="flex:2;min-width:110px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+      <div style="display:flex;align-items:center;gap:2px;flex:none">
+        <button type="button" class="arc-btn" style="padding:3px 7px;font-size:11px" title="أنقص صفحة البداية (وأزح كل الدروس التالية معها)" onclick="segShiftPage(this,-1)">−</button>
+        <input class="seg-page" type="number" value="${l.page||''}" title="صفحة البداية (المطبوعة)" style="width:52px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 4px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
+        <button type="button" class="arc-btn" style="padding:3px 7px;font-size:11px" title="أزد صفحة البداية (وأزح كل الدروس التالية معها)" onclick="segShiftPage(this,1)">+</button>
+      </div>
       <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>
     </div>`;
+}
+// زيادة/نقصان صفحة درس واحد + إزاحة كل الدروس التالية بنفس المقدار (تصحيح إزاحة الترقيم تراكمياً)
+function segShiftPage(btn,delta){
+  const row=btn.closest('.seg-row');
+  const rows=[...document.querySelectorAll('#seg-review .seg-row')];
+  const startIdx=rows.indexOf(row);
+  if(startIdx<0)return;
+  for(let i=startIdx;i<rows.length;i++){
+    const inp=rows[i].querySelector('.seg-page');
+    const v=(parseInt(inp.value)||0)+delta;
+    inp.value=v>0?v:'';
+    segThumbUpdate(inp);
+  }
 }
 function segRenderReview(lessons){
   const rev=document.getElementById('seg-review');
