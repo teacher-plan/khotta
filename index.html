@@ -2665,6 +2665,20 @@ input,textarea,select{font-size:16px !important;}
       <div id="lt-book-result" style="margin-top:8px"></div>
     </div>
   </div>
+
+  <!-- ✂️ التقطيع الذكي: الذكاء يحدد الدروس وحدودها من صفحات الكتاب -->
+  <div class="eg-card">
+    <div class="eg-step-title">✂️ التقطيع الذكي للكتاب</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">بعد رفع الكتاب: يقرأ الذكاء صفحاته ويحدد <b>كل درس وأين يبدأ</b> تلقائياً. راجع الخريطة، صحح ما يلزم، ثم اعتمد — فترتبط كل الدروس بصفحاتها.</p>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl">الصف</label><select id="seg-grade" onchange="segReloadSubjects()"><option value="">الصف</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="seg-semester" onchange="segReloadSubjects()"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">المادة (لها كتاب مرفوع)</label><select id="seg-subject"><option value="">المادة</option></select></div>
+    </div>
+    <button class="eg-generate" style="margin-top:12px" onclick="segRun()">✂️ قطّع تلقائياً</button>
+    <div id="seg-status" style="font-size:12.5px;color:var(--gold);font-weight:700;margin-top:10px"></div>
+    <div id="seg-review" style="margin-top:10px"></div>
+  </div>
   </div>
 
   <!-- ═ تبويب ٢: الاختبارات (التعليمات + الحدود + قالب التصدير) ═ -->
@@ -12664,6 +12678,120 @@ function ltInit(){
   const opts='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
   const g=document.getElementById('lt-grade');if(g&&g.options.length<=1)g.innerHTML=opts;
   const gb=document.getElementById('ltb-grade');if(gb&&gb.options.length<=1)gb.innerHTML=opts;
+  const gs=document.getElementById('seg-grade');if(gs&&gs.options.length<=1)gs.innerHTML=opts;
+}
+
+// ═══════════ ✂️ التقطيع الذكي للكتاب ═══════════
+let segCtx=null;
+async function segReloadSubjects(){
+  const grade=document.getElementById('seg-grade').value;
+  const semester=document.getElementById('seg-semester').value;
+  const ssel=document.getElementById('seg-subject');
+  ssel.innerHTML='<option value="">المادة</option>';
+  document.getElementById('seg-review').innerHTML='';
+  document.getElementById('seg-status').textContent='';
+  if(!grade)return;
+  try{
+    const{data}=await sb.from('book_sources').select('subject').eq('grade',String(grade)).eq('semester',semester);
+    const subs=[...new Set((data||[]).map(r=>r.subject))];
+    if(!subs.length){ssel.innerHTML='<option value="">— لا كتب مرفوعة لهذا الصف/الفصل —</option>';return;}
+    ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+  }catch(e){}
+}
+async function segRun(){
+  const grade=document.getElementById('seg-grade').value;
+  const semester=document.getElementById('seg-semester').value;
+  const subject=document.getElementById('seg-subject').value;
+  const st=document.getElementById('seg-status');
+  const rev=document.getElementById('seg-review');
+  rev.innerHTML='';
+  if(!grade||!subject){st.textContent='❌ اختر الصف والمادة أولاً';return;}
+  let bs=null;
+  try{const r=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).maybeSingle();bs=r.data;}catch(e){}
+  if(!bs||!bs.base_path||!bs.page_count){st.textContent='❌ لا يوجد كتاب مرفوع لهذه المادة';return;}
+  segCtx={grade,semester,subject,base:bs.base_path,offset:bs.offset_pages||1,pageCount:bs.page_count};
+  const BATCH=32;
+  let all=[],prevContext='',failed=0;
+  for(let s=1;s<=bs.page_count;s+=BATCH){
+    const e=Math.min(bs.page_count,s+BATCH-1);
+    st.textContent='✂️ يقرأ الذكاء الأوراق '+egToArabic(s)+'-'+egToArabic(e)+' من '+egToArabic(bs.page_count)+'… (الدروس المكتشفة حتى الآن: '+egToArabic(all.length)+')';
+    try{
+      const{data,error}=await sb.functions.invoke('segment-book',{
+        body:{grade,subject,basePath:bs.base_path,sheetStart:s,sheetEnd:e,prevContext}
+      });
+      if(!error&&data&&Array.isArray(data.lessons)){
+        data.lessons.forEach(l=>{if(l&&l.lesson)all.push({unit:String(l.unit||'').trim(),lesson:String(l.lesson||'').trim(),page:parseInt(l.printedPage)||((parseInt(l.sheet)||s)-(segCtx.offset-1))});});
+        prevContext='آخر وحدة: '+(data.lastUnit||(all.length?all[all.length-1].unit:''))+'؛ آخر الدروس: '+all.slice(-3).map(x=>x.lesson).join('، ');
+      }else{failed++;console.warn('segment batch',s,error||data);}
+    }catch(e2){failed++;console.warn('segment batch',s,e2);}
+  }
+  // ترتيب وتنظيف: حسب الصفحة، وإزالة التكرار القريب
+  all.sort((a,b)=>(a.page||0)-(b.page||0));
+  const clean=[];all.forEach(l=>{if(!clean.some(x=>x.lesson===l.lesson&&Math.abs((x.page||0)-(l.page||0))<3))clean.push(l);});
+  if(!clean.length){st.textContent='❌ لم يتعرف الذكاء على دروس — جرب نموذج رسم/رؤية أقوى (seg_model) أو تحقق من الكتاب';return;}
+  st.textContent='✅ اكتشف '+egToArabic(clean.length)+' درساً'+(failed?(' (تعذرت '+egToArabic(failed)+' دفعات — قد تنقص دروس)'):'')+' — راجع وصحح ثم اعتمد:';
+  segRenderReview(clean);
+}
+function segRenderReview(lessons){
+  const rev=document.getElementById('seg-review');
+  const thumb=p=>{const sheet=(parseInt(p)||1)+(segCtx.offset-1);return sb.storage.from('library-files').getPublicUrl(segCtx.base+'/p'+sheet+'.jpg').data.publicUrl;};
+  rev.innerHTML=`<div style="display:grid;gap:8px">${lessons.map((l,i)=>`
+    <div class="seg-row" style="display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px">
+      <img src="${thumb(l.page)}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none" onerror="this.style.visibility='hidden'">
+      <input class="seg-unit" value="${escHtml(l.unit)}" placeholder="الوحدة" style="flex:1.2;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+      <input class="seg-lesson" value="${escHtml(l.lesson)}" placeholder="الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+      <input class="seg-page" type="number" value="${l.page||''}" title="صفحة البداية (المطبوعة)" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
+      <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>
+    </div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="eg-export" style="flex:2" onclick="segApprove()">✅ اعتماد الخريطة وربط الدروس</button>
+      <button class="eg-regen" style="flex:1" onclick="segAddRow()">➕ إضافة درس</button>
+    </div>`;
+}
+function segThumbUpdate(inp){
+  if(!segCtx)return;
+  const img=inp.closest('.seg-row').querySelector('img');
+  if(!img)return;
+  const sheet=(parseInt(inp.value)||1)+(segCtx.offset-1);
+  img.style.visibility='visible';
+  img.src=sb.storage.from('library-files').getPublicUrl(segCtx.base+'/p'+sheet+'.jpg').data.publicUrl;
+}
+function segAddRow(){
+  const grid=document.querySelector('#seg-review > div');
+  if(!grid)return;
+  const div=document.createElement('div');
+  div.className='seg-row';
+  div.style.cssText='display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px';
+  div.innerHTML=`<span style="width:44px;flex:none"></span>
+    <input class="seg-unit" placeholder="الوحدة" style="flex:1.2;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <input class="seg-lesson" placeholder="الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <input class="seg-page" type="number" placeholder="صفحة" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>`;
+  grid.appendChild(div);
+}
+async function segApprove(){
+  if(!segCtx)return;
+  const rows=[...document.querySelectorAll('#seg-review .seg-row')].map(r=>({
+    unit:r.querySelector('.seg-unit').value.trim(),
+    lesson:r.querySelector('.seg-lesson').value.trim(),
+    page:parseInt(r.querySelector('.seg-page').value)||null
+  })).filter(r=>r.lesson);
+  if(!rows.length){toast('لا توجد دروس للاعتماد',true);return;}
+  if(rows.some(r=>!r.unit)){toast('أكمل اسم الوحدة لكل درس',true);return;}
+  const st=document.getElementById('seg-status');
+  // تحذير الاستبدال إن وُجد منهج سابق
+  let existing=0;
+  try{const{count}=await sb.from('curriculum').select('*',{count:'exact',head:true}).eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester);existing=count||0;}catch(e){}
+  if(existing&&!await uiConfirm('توجد '+egToArabic(existing)+' دروس مسجلة مسبقاً لهذه المادة — سيتم استبدالها بالخريطة الجديدة. متابعة؟'))return;
+  st.textContent='⏳ يعتمد الخريطة ويربط الدروس…';
+  try{
+    if(existing)await sb.from('curriculum').delete().eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester);
+    const ins=rows.map((r,i)=>({grade:String(segCtx.grade),subject:segCtx.subject,semester:segCtx.semester,unit:r.unit,lesson:r.lesson,sort:i+1,page:r.page}));
+    const{error}=await sb.from('curriculum').insert(ins);
+    if(error)throw error;
+    st.textContent='';
+    document.getElementById('seg-review').innerHTML='<div style="color:#2e7d32;font-weight:800;font-size:13.5px;padding:10px;background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.3);border-radius:10px">✅ اعتُمدت الخريطة: '+egToArabic(rows.length)+' درساً مرتبطاً بصفحاته — كل التوليدات ستقرأ الآن من محتوى الكتاب الحقيقي 🔥</div>';
+  }catch(e){st.textContent='❌ فشل الاعتماد: '+escHtml(e.message||'خطأ');}
 }
 async function ltOnChange(el){
   document.getElementById('lt-index-result').innerHTML='';
