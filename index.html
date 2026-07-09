@@ -951,6 +951,8 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .prep-list{margin:0;padding-right:18px;font-size:13px;line-height:2;}
 .prep-qa{font-size:13px;line-height:1.9;margin-bottom:8px;}
 .prep-qa b{color:var(--text);}
+.lvl-badge{display:inline-block;background:rgba(184,134,11,.14);border:1px solid rgba(184,134,11,.35);color:var(--gold2);font-size:10.5px;font-weight:800;border-radius:9px;padding:0 8px;margin-left:4px;}
+.prep-sec .sec-body{min-width:0;}
 .prep-qa .ans{color:var(--green);font-size:12.5px;}
 
 /* وهج زر الخطة عند الدخول + زر التحضير النابض */
@@ -11624,7 +11626,26 @@ function dpMissingParts(b){
 }
 function dpPlanCtx(b){
   const p=b.plan||{};
-  return{objectives:(p.objectives||[]).join('؛ '),outline:(p.phases||[]).map(ph=>ph.name+': '+String(ph.detail||'').slice(0,120)).join(' | ')};
+  const objs=(p.outcomes&&p.outcomes.length)?p.outcomes.map(o=>(o&&o.text)||o):(p.objectives||[]);
+  const steps=(p.procedures&&p.procedures.length)?p.procedures:(p.phases||[]);
+  return{objectives:objs.join('؛ '),outline:steps.map(ph=>((ph.title||ph.name||'')+': '+String(ph.detail||'').slice(0,120))).join(' | ')};
+}
+// سياق إلزامي لكل توليدات الحزمة: منهج كامبردج + العمر النمائي (الصف الأول = ٧ سنوات)
+function dpAgeCtx(it){
+  const age=Number(it.gradeNum)+6;
+  return 'المنهج المعتمد: كامبردج كما يطبق في سلطنة عُمان. أعمار الطلاب: '+age+' سنوات تقريباً (الصف '+it.gradeNum+') — يجب أن تناسب الصياغة والأمثلة والأنشطة هذا العمر النمائي بدقة، وبمنهجية تربوية بحتة.';
+}
+// البيانات الأولية لترويسة التحضير الرسمي
+function dpHeaderData(it){
+  const d=new Date();
+  const y=d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;
+  const name=(typeof profileCache!=='undefined'&&profileCache&&profileCache.full_name)||(typeof currentUser!=='undefined'&&currentUser&&currentUser.user_metadata&&(currentUser.user_metadata.full_name||currentUser.user_metadata.name))||'';
+  return{
+    year:y+'م / '+(y+1)+'م',
+    sem:(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول',
+    grade:'الصف '+egToArabic(it.gradeNum),
+    subject:it.subject,unit:it.unit,lesson:it.lesson,teacher:name
+  };
 }
 
 // ══ خطوات التوليد — كل خطوة تتخطى نفسها إن كان جزؤها جاهزاً (تسمح بإكمال الناقص فقط) ══
@@ -11640,10 +11661,11 @@ async function dpStepSlidesText(it,b,setProg){
   const ctx=dpPlanCtx(b);
   try{
     const pptPrompt=[
+      dpAgeCtx(it),
       'ابنِ الشرائح على خطة الحصة التالية حرفياً:',
-      ctx.objectives?('الأهداف: '+ctx.objectives):'',
+      ctx.objectives?('المخرجات: '+ctx.objectives):'',
       ctx.outline?('سير الحصة: '+ctx.outline):'',
-      'ركّز على المحتوى التعليمي الثمين الذي يحقق الأهداف — لا حشو ولا زينة.',
+      'ركّز على المحتوى التعليمي الثمين الذي يحقق المخرجات — لا حشو ولا زينة.',
     ].filter(Boolean).join('\n').slice(0,1900);
     const{data,error}=await sb.functions.invoke('generate-presentation',{
       body:{grade:String(it.gradeNum),subject:it.subject,lessonNames:[it.lesson],slideCount:8,teacherPrompt:pptPrompt}
@@ -11684,7 +11706,7 @@ async function dpStepExam(it,b,setProg){
   try{
     let lessonText='';
     try{const{data:lt}=await sb.from('lesson_texts').select('text').eq('lesson_id',it.lessonId).maybeSingle();if(lt&&lt.text)lessonText=lt.text;}catch(e){}
-    const examPrompt=ctx.objectives?('صُغ الأسئلة بحيث تقيس تحقق هذه الأهداف تحديداً: '+ctx.objectives).slice(0,1500):'';
+    const examPrompt=(dpAgeCtx(it)+' '+(ctx.objectives?('صُغ الأسئلة بحيث تقيس تحقق هذه المخرجات تحديداً: '+ctx.objectives):'')).slice(0,1500);
     const{data,error}=await sb.functions.invoke('generate-exam',{
       body:{grade:String(it.gradeNum),subject:it.subject,
         lessons:[{name:it.lesson,types:['mcq','tf'],count:5,text:lessonText}],
@@ -11700,7 +11722,7 @@ async function dpStepInfo(it,b,setProg){
   setProg('(٤/٤) يرسم ملخّص الدرس…');
   const ctx=dpPlanCtx(b);
   try{
-    const infoPrompt=('اجعل الإنفوجرافيك ملخصاً شاملاً للدرس يثبّت أهم النقاط في ذهن الطالب.'+(ctx.objectives?(' غطِّ هذه الأهداف: '+ctx.objectives):'')).slice(0,1400);
+    const infoPrompt=(dpAgeCtx(it)+' اجعل الإنفوجرافيك ملخصاً شاملاً للدرس يثبّت أهم النقاط في ذهن الطالب.'+(ctx.objectives?(' غطِّ هذه المخرجات: '+ctx.objectives):'')).slice(0,1400);
     const{data,error}=await sb.functions.invoke('generate-infographic',{
       body:{grade:it.gradeNum,subject:it.subject,lessonNames:[it.lesson],teacherPrompt:infoPrompt,size:'2K',aspect:'9:16'}
     });
@@ -11807,10 +11829,18 @@ function dpOpenBundle(i){
   const parts=[];
   if(b.plan){
     const p=b.plan;
-    parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">📋 خطة الحصة (٤٥ دقيقة)</div>
-      <ul class="prep-list">${(p.objectives||[]).slice(0,4).map(o=>'<li>'+escHtml(o)+'</li>').join('')}</ul>
-      ${(p.phases||[]).map(ph=>`<div style="font-size:12.5px;line-height:1.9;margin-top:6px"><b style="color:var(--gold)">${escHtml(ph.name)} (${egToArabic(ph.minutes||0)}د):</b> ${escHtml(ph.detail||'')}</div>`).join('')}
-    </div>`);
+    if(dpIsNoor(p)){
+      parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">📋 التحضير (هيكل منصة نور)</div>
+        <ul class="prep-list">${(p.outcomes||[]).slice(0,5).map(o=>`<li><span class="lvl-badge">${escHtml((o&&o.level)||'')}</span> ${escHtml((o&&o.text)||o||'')}</li>`).join('')}</ul>
+        ${(p.procedures||[]).slice(0,3).map(ph=>`<div style="font-size:12.5px;line-height:1.9;margin-top:6px"><b style="color:var(--gold)">${escHtml(ph.title||'')} (${egToArabic(ph.minutes||0)}د):</b> ${escHtml(String(ph.detail||'').slice(0,180))}…</div>`).join('')}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">التحضير الكامل بأقسامه (تهيئة، تقويم تكويني وختامي…) في «تعديل الخطة» وملف Word</div>
+      </div>`);
+    }else{
+      parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">📋 خطة الحصة (٤٥ دقيقة)</div>
+        <ul class="prep-list">${(p.objectives||[]).slice(0,4).map(o=>'<li>'+escHtml(o)+'</li>').join('')}</ul>
+        ${(p.phases||[]).map(ph=>`<div style="font-size:12.5px;line-height:1.9;margin-top:6px"><b style="color:var(--gold)">${escHtml(ph.name)} (${egToArabic(ph.minutes||0)}د):</b> ${escHtml(ph.detail||'')}</div>`).join('')}
+      </div>`);
+    }
   }
   if(b.slideImgs&&b.slideImgs.some(Boolean)){
     parts.push(`<div class="dpb-sec"><div class="dpb-sec-title">🖥️ العرض التقديمي المرسوم (${egToArabic(b.slideImgs.filter(Boolean).length)} شرائح — مبني على خطة الدرس)</div>
@@ -11920,9 +11950,10 @@ async function dpSaveBundle(i){
     catch(e){console.warn('pptx build',e);}
   }
   if(b.plan){
-    try{files.push(await dpHtmlToPdfFile(DP_PLAN_CSS+dpPlanBodyHtml(it,b.plan),'خطة الحصة — '+it.lesson+'.pdf'));}
-    catch(e){console.warn('plan pdf fallback',e);
-      files.push(new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'خطة الحصة — '+it.lesson+'.html',{type:'text/html'}));}
+    // التحضير الرسمي بصيغة Word (هيكل نور + ترويسة البيانات) — جاهز للنسخ واللصق في منصة نور
+    try{files.push(dpPlanWordFile(it,b.plan));}
+    catch(e){console.warn('plan word fallback',e);
+      files.push(new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'تحضير — '+it.lesson+'.html',{type:'text/html'}));}
   }
   if(b.examHtml){
     try{
@@ -12024,8 +12055,43 @@ async function dpOpenPlan(i){
   dpRenderPlan(rec.plan);
 }
 
+// زر نسخ القسم — لِلَصق المباشر في منصة نور
+async function dpCopySec(btn){
+  try{
+    const body=btn.closest('.prep-sec').querySelector('.sec-body');
+    await navigator.clipboard.writeText(body.innerText.trim());
+    const old=btn.textContent;btn.textContent='✓ نُسخ';setTimeout(()=>{btn.textContent=old;},1400);
+  }catch(e){toast('تعذّر النسخ',true);}
+}
+function dpSecHtml(title,inner,extra){
+  return `<div class="prep-sec"${extra||''}><div class="prep-sec-title"><span>${title}</span><button class="arc-btn" style="padding:2px 9px;font-size:10px" onclick="dpCopySec(this)">📋 نسخ</button></div><div class="sec-body">${inner}</div></div>`;
+}
+function dpIsNoor(p){return !!(p&&(p.outcomes||p.procedures));}
+
 function dpRenderPlan(p){
   const body=document.getElementById('prep-modal-body');
+  if(dpIsNoor(p)){
+    const outs=(p.outcomes||[]).map(o=>`<li><span class="lvl-badge">${escHtml((o&&o.level)||'')}</span> ${escHtml((o&&o.text)||o||'')}</li>`).join('');
+    const strats=(p.strategies||[]).map(s=>'<li>'+escHtml(s)+'</li>').join('');
+    const res=(p.resources||[]).map(s=>'<li>'+escHtml(s)+'</li>').join('');
+    const cons=(p.concepts||[]).map(s=>'<li>'+escHtml(s)+'</li>').join('');
+    const procs=(p.procedures||[]).map((ph,i)=>`<div style="margin-bottom:8px"><b style="color:var(--text);font-size:12.5px">${escHtml(ph.title||('الخطوة '+egToArabic(i+1)))} <span class="prep-min">${egToArabic(ph.minutes||0)} د</span></b><div class="prep-detail" contenteditable="true" data-proc="${i}">${escHtml(ph.detail||'')}</div></div>`).join('');
+    const sums=(p.summative||[]).map((q,i)=>`<div class="prep-qa"><b>${egToArabic(i+1)}. ${escHtml(q.q||'')}</b>${q.outcome?`<span style="font-size:11px;color:var(--gold)"> — يقيس: ${escHtml(q.outcome)}</span>`:''}<br><span class="ans">✔ ${escHtml(q.a||'')}</span></div>`).join('');
+    body.innerHTML=`
+      ${dpSecHtml('🎯 المخرجات التعليمية (أنا أستطيع)','<ul class="prep-list">'+outs+'</ul>')}
+      ${strats?dpSecHtml('🧭 الاستراتيجيات','<ul class="prep-list">'+strats+'</ul>'):''}
+      ${res?dpSecHtml('📚 المصادر التعليمية','<ul class="prep-list">'+res+'</ul>'):''}
+      ${cons?dpSecHtml('🔑 المفاهيم','<ul class="prep-list">'+cons+'</ul>'):''}
+      ${dpSecHtml('🚀 التهيئة والتمهيد والتعلم القبلي',`<div class="prep-detail" contenteditable="true" data-w="1">${escHtml(p.warmup||'')}</div>`)}
+      ${dpSecHtml('🧩 الأنشطة التدريسية / إجراءات سير الدرس',procs)}
+      ${dpSecHtml('👁️ التقويم التكويني',`<div class="prep-detail" contenteditable="true" data-form="1">${escHtml(p.formative||'')}</div>`)}
+      ${sums?dpSecHtml('📝 التقويم الختامي (يقيس المخرجات)',sums):''}
+      ${p.homework?dpSecHtml('🏠 الواجب',`<div class="prep-detail" contenteditable="true" data-hw="1">${escHtml(p.homework)}</div>`):''}
+      ${p.tip?`<div class="prep-sec" style="border-color:var(--gold)"><div class="prep-sec-title">💡 نصيحة</div><div style="font-size:12.5px;line-height:1.9">${escHtml(p.tip)}</div></div>`:''}
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">📋 «نسخ» بجانب كل قسم لِلَصقه في منصة نور مباشرة · ✏️ اضغط أي فقرة لتعديلها ثم «حفظ تعديلاتي»</div>`;
+    return;
+  }
+  // الهيكل القديم (خطط مولّدة قبل التحديث)
   const phases=(p.phases||[]).map((ph,i)=>`<div class="prep-sec"><div class="prep-sec-title"><span>${escHtml(ph.name||'')}</span><span class="prep-min">${egToArabic(ph.minutes||0)} د</span></div><div class="prep-detail" contenteditable="true" data-ph="${i}">${escHtml(ph.detail||'')}</div></div>`).join('');
   const objs=(p.objectives||[]).map(o=>'<li>'+escHtml(o)+'</li>').join('');
   const mats=(p.materials||[]).map(m=>'<li>'+escHtml(m)+'</li>').join('');
@@ -12037,7 +12103,7 @@ function dpRenderPlan(p){
     ${qs?`<div class="prep-sec"><div class="prep-sec-title">📝 أسئلة التقييم الختامي</div>${qs}</div>`:''}
     ${p.homework?`<div class="prep-sec"><div class="prep-sec-title">🏠 الواجب</div><div class="prep-detail" contenteditable="true" data-hw="1">${escHtml(p.homework)}</div></div>`:''}
     ${p.tip?`<div class="prep-sec" style="border-color:var(--gold)"><div class="prep-sec-title">💡 نصيحة</div><div style="font-size:12.5px;line-height:1.9">${escHtml(p.tip)}</div></div>`:''}
-    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">✏️ اضغط على أي فقرة لتعديلها ثم «حفظ تعديلاتي»</div>`;
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">✏️ اضغط على أي فقرة لتعديلها ثم «حفظ تعديلاتي» — هذه خطة بالهيكل القديم؛ أعد التوليد للحصول على هيكل نور</div>`;
 }
 
 function dpCloseModal(){document.getElementById('prep-modal').style.display='none';dpCurrentItem=null;}
@@ -12050,6 +12116,13 @@ async function dpSaveEdits(){
   document.querySelectorAll('#prep-modal-body .prep-detail[data-ph]').forEach(el=>{
     const i=parseInt(el.dataset.ph);if(p.phases&&p.phases[i])p.phases[i].detail=el.textContent.trim();
   });
+  document.querySelectorAll('#prep-modal-body .prep-detail[data-proc]').forEach(el=>{
+    const i=parseInt(el.dataset.proc);if(p.procedures&&p.procedures[i])p.procedures[i].detail=el.textContent.trim();
+  });
+  const wu=document.querySelector('#prep-modal-body .prep-detail[data-w]');
+  if(wu)p.warmup=wu.textContent.trim();
+  const fo=document.querySelector('#prep-modal-body .prep-detail[data-form]');
+  if(fo)p.formative=fo.textContent.trim();
   const hw=document.querySelector('#prep-modal-body .prep-detail[data-hw]');
   if(hw)p.homework=hw.textContent.trim();
   rec.edited=true;
@@ -12098,6 +12171,49 @@ function dpPlanDocHtml(it,p){
   return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>خطة حصة — ${esc(it.lesson)}</title>${DP_PLAN_CSS}</head><body>${dpPlanBodyHtml(it,p)}</body></html>`;
 }
 
+// ══ التحضير الرسمي بصيغة Word (هيكل منصة نور + ترويسة البيانات الأولية) ══
+function dpPlanWordHtml(it,p){
+  const esc=s=>String(s||'').replace(/</g,'&lt;');
+  const hd=dpHeaderData(it);
+  const H='#1a5a2a',G='#9a7010',BR='#c9b48a';
+  const cell=(l,v)=>`<td style="border:1px solid ${BR};padding:6px 10px;background:#faf6ee;font-weight:bold;color:${G};white-space:nowrap">${l}</td><td style="border:1px solid ${BR};padding:6px 10px">${esc(v)}</td>`;
+  const secT=t=>`<h2 style="font-size:15px;color:${H};background:#f0ead8;border-right:4px solid ${G};padding:6px 12px;border-radius:4px;margin:18px 0 8px">${t}</h2>`;
+  const ul=arr=>'<ul style="margin:4px 0;padding-right:22px;line-height:2">'+ (arr||[]).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+  let secs='';
+  if(dpIsNoor(p)){
+    secs+=secT('المخرجات التعليمية')+'<ul style="margin:4px 0;padding-right:22px;line-height:2.1">'+(p.outcomes||[]).map(o=>`<li><b style="color:${G}">[${esc((o&&o.level)||'')}]</b> ${esc((o&&o.text)||o||'')}</li>`).join('')+'</ul>';
+    if(p.strategies&&p.strategies.length)secs+=secT('الاستراتيجيات')+ul(p.strategies);
+    if(p.resources&&p.resources.length)secs+=secT('المصادر التعليمية')+ul(p.resources);
+    if(p.concepts&&p.concepts.length)secs+=secT('المفاهيم')+ul(p.concepts);
+    secs+=secT('التهيئة والتمهيد والتعلم القبلي')+`<p style="line-height:2.1;margin:4px 0">${esc(p.warmup||'')}</p>`;
+    secs+=secT('الأنشطة التدريسية / إجراءات سير الدرس')+(p.procedures||[]).map((ph,i)=>`<p style="line-height:2.1;margin:6px 0"><b>${esc(ph.title||('الخطوة '+(i+1)))}</b> <span style="color:${G};font-size:12px">(${esc(ph.minutes||'')} دقيقة)</span><br>${esc(ph.detail||'')}</p>`).join('');
+    secs+=secT('التقويم التكويني')+`<p style="line-height:2.1;margin:4px 0">${esc(p.formative||'')}</p>`;
+    if(p.summative&&p.summative.length)secs+=secT('التقويم الختامي')+(p.summative||[]).map((q,i)=>`<p style="line-height:2;margin:6px 0"><b>${i+1}. ${esc(q.q||'')}</b>${q.outcome?` <span style="color:${G};font-size:12px">(يقيس: ${esc(q.outcome)})</span>`:''}<br><span style="color:${H}">الإجابة: ${esc(q.a||'')}</span></p>`).join('');
+    if(p.homework)secs+=secT('الواجب المنزلي')+`<p style="line-height:2;margin:4px 0">${esc(p.homework)}</p>`;
+  }else{
+    secs+=secT('الأهداف')+ul(p.objectives);
+    if(p.materials&&p.materials.length)secs+=secT('الوسائل')+ul(p.materials);
+    secs+=(p.phases||[]).map(ph=>secT(ph.name||'')+`<p style="line-height:2.1">${esc(ph.detail||'')}</p>`).join('');
+  }
+  return `<html dir="rtl" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>تحضير — ${esc(it.lesson)}</title></head>
+  <body style="font-family:'Sakkal Majalla','Traditional Arabic','Cairo',Arial;font-size:15px;color:#222;direction:rtl">
+  <div style="text-align:center;margin-bottom:4px;font-weight:bold;color:${H};font-size:20px">تحضير درس</div>
+  <div style="text-align:center;color:${G};font-size:12px;margin-bottom:14px">سلطنة عُمان — وزارة التربية والتعليم</div>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:6px">
+    <tr>${cell('العام الدراسي',hd.year)}${cell('الفصل الدراسي',hd.sem)}</tr>
+    <tr>${cell('الصف',hd.grade)}${cell('المادة',hd.subject)}</tr>
+    <tr>${cell('الوحدة',hd.unit)}${cell('الدرس',hd.lesson)}</tr>
+    <tr>${cell('اسم المعلم',hd.teacher||'……………………')}${cell('التاريخ','……………………')}</tr>
+  </table>
+  ${secs}
+  <p style="text-align:center;color:#999;font-size:11px;border-top:1px solid #eee;padding-top:8px;margin-top:20px">أُعد عبر منصة خطتي الفصلية</p>
+  </body></html>`;
+}
+function dpPlanWordFile(it,p){
+  const html='﻿'+dpPlanWordHtml(it,p);
+  return new File([new Blob([html],{type:'application/msword'})],'تحضير — '+it.lesson+'.doc',{type:'application/msword'});
+}
+
 // تحويل HTML إلى ملف PDF حقيقي (خط عربي سليم عبر الرسم النقطي)
 let _h2pLoading=null;
 function loadHtml2Pdf(){
@@ -12137,7 +12253,7 @@ function dpPrintPlan(){
   if(!plan){toast('لا توجد خطة للطباعة',true);return;}
   const w=window.open('','_blank');
   if(!w){toast('اسمح بالنوافذ المنبثقة للطباعة',true);return;}
-  w.document.write(dpPlanDocHtml(it,plan).replace('</body>','<script>setTimeout(()=>window.print(),400)<\/script></body>'));
+  w.document.write(dpPlanWordHtml(it,plan).replace('</body>','<script>setTimeout(()=>window.print(),400)<\/script></body>'));
   w.document.close();
 }
 
