@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
     const sheetStart = Math.max(1, parseInt(b.sheetStart) || 1);
     const sheetEnd = Math.max(sheetStart, parseInt(b.sheetEnd) || sheetStart);
     const prevContext = String(b.prevContext || "").slice(0, 800);
+    const mode = b.mode === "index" ? "index" : "scan";
     if (!basePath) return json({ error: "no_book" }, 400);
     if (sheetEnd - sheetStart > 39) return json({ error: "batch_too_large" }, 400);
 
@@ -59,19 +60,30 @@ Deno.serve(async (req) => {
     const imgUrl = (sheet: number) =>
       `${supaUrl}/storage/v1/object/public/library-files/${basePath}/p${sheet}.jpg`;
 
-    const content: unknown[] = [{
-      type: "text",
-      text: [
+    // نص التعليمات حسب الوضع: قراءة الفهرس (بنية رسمية) أو مسح الصفحات (احتياط)
+    const promptText = mode === "index"
+      ? [
+        `هذه صور الأوراق الأولى من كتاب ${subject} للصف ${grade} (منهج كامبردج — سلطنة عُمان).`,
+        "مهمتك: ابحث عن صفحة/صفحات الفهرس (جدول المحتويات) واستخرج منها البنية الرسمية الكاملة للكتاب.",
+        "أعد الوحدات بالترتيب، وتحت كل وحدة دروسها الفعلية بالترتيب كما وردت في الفهرس حرفياً، مع رقم الصفحة المطبوع لكل درس كما هو مذكور أمامه في الفهرس.",
+        "مهم جداً: اعتمد على الفهرس الرسمي فقط. لا تعتبر العناوين الفرعية أو الأنشطة أو المصطلحات دروساً — الدروس هي فقط ما يذكره الفهرس كدروس. لا تخترع دروساً ولا تكرر.",
+        "تجاهل: المقدمة، التمهيد، صفحات المراجعة العامة، الملاحق.",
+        'أعد JSON فقط بهذا الشكل: {"units":[{"unit":"اسم الوحدة","lessons":[{"lesson":"اسم الدرس","printedPage":12}]}]}',
+        "إن لم تجد فهرساً واضحاً في هذه الأوراق، أعد: {\"units\":[]}",
+      ].join("\n")
+      : [
         `هذه صور أوراق متتالية من كتاب ${subject} للصف ${grade} (منهج كامبردج — سلطنة عُمان).`,
         `الورقة الأولى المعروضة هي الورقة رقم ${sheetStart} في الملف، والأخيرة رقم ${sheetEnd} (بترتيب العرض).`,
         prevContext ? `سياق سابق من الأوراق التي قبلها: ${prevContext}` : "",
         "مهمتك: حدد كل درس جديد يبدأ داخل هذه الأوراق.",
         "علامات بداية الدرس: صفحة عنوان مميزة باسم الدرس، ترقيم دروس (درس ١-٢ مثلاً)، تغيير تصميم واضح، أهداف تعلم جديدة.",
-        "لكل درس أعد: unit (اسم الوحدة التي ينتمي لها كما في الكتاب — وإن لم تظهر في هذه الأوراق فاستنتجها من السياق السابق)، lesson (اسم الدرس كما هو مكتوب حرفياً)، printedPage (رقم الصفحة المطبوع على صفحة بداية الدرس — الرقم الظاهر في زاوية الصفحة، وليس ترتيب الورقة)، sheet (رقم الورقة في العرض الحالي التي يبدأ عندها الدرس).",
-        "تجاهل: المقدمة، الفهرس، صفحات الأنشطة العامة، المراجعات، الملاحق — الدروس الفعلية فقط.",
-        'أعد JSON فقط: {"lessons":[{"unit":"...","lesson":"...","printedPage":12,"sheet":14}],"lastUnit":"آخر وحدة ظاهرة حتى نهاية هذه الأوراق"}',
-      ].filter(Boolean).join("\n"),
-    }];
+        "مهم: لا تعتبر العناوين الفرعية داخل الدرس أو أسماء الأنشطة دروساً مستقلة — الدرس الحقيقي فقط.",
+        "لكل درس أعد: unit (اسم الوحدة كما في الكتاب — وإن لم تظهر فاستنتجها من السياق السابق)، lesson (اسم الدرس حرفياً)، printedPage (رقم الصفحة المطبوع)، sheet (رقم الورقة في العرض الحالي).",
+        "تجاهل: المقدمة، الفهرس، صفحات الأنشطة العامة، المراجعات، الملاحق.",
+        'أعد JSON فقط: {"lessons":[{"unit":"...","lesson":"...","printedPage":12,"sheet":14}],"lastUnit":"آخر وحدة ظاهرة"}',
+      ].filter(Boolean).join("\n");
+
+    const content: unknown[] = [{ type: "text", text: promptText }];
     for (let s = sheetStart; s <= sheetEnd; s++) {
       content.push({ type: "image_url", image_url: { url: imgUrl(s) } });
     }
@@ -96,13 +108,25 @@ Deno.serve(async (req) => {
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: { lessons?: unknown[]; lastUnit?: string } | null = null;
+    let parsed: { lessons?: unknown[]; units?: unknown[]; lastUnit?: string } | null = null;
     try { parsed = JSON.parse(text); }
     catch (_) { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
-    if (!parsed || !Array.isArray(parsed.lessons)) {
-      return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
+    if (!parsed) return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
+
+    if (mode === "index") {
+      // تسطيح بنية الوحدات إلى قائمة دروس مرتبة
+      const units = Array.isArray(parsed.units) ? parsed.units : [];
+      const lessons: unknown[] = [];
+      for (const u of units as Array<{ unit?: string; lessons?: Array<{ lesson?: string; printedPage?: number }> }>) {
+        const uname = String(u?.unit || "").trim();
+        for (const l of (Array.isArray(u?.lessons) ? u.lessons : [])) {
+          if (l && l.lesson) lessons.push({ unit: uname, lesson: String(l.lesson).trim(), printedPage: parseInt(String(l.printedPage)) || null });
+        }
+      }
+      return json({ lessons, units, mode, model, usage: or?.usage || null });
     }
-    return json({ lessons: parsed.lessons, lastUnit: parsed.lastUnit || "", model, usage: or?.usage || null });
+    if (!Array.isArray(parsed.lessons)) return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
+    return json({ lessons: parsed.lessons, lastUnit: parsed.lastUnit || "", mode, model, usage: or?.usage || null });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }

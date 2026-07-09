@@ -12714,6 +12714,26 @@ async function segRun(){
   try{const r=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).maybeSingle();bs=r.data;}catch(e){}
   if(!bs||!bs.base_path||!bs.page_count){st.textContent='❌ لا يوجد كتاب مرفوع لهذه المادة';return;}
   segCtx={grade,semester,subject,base:bs.base_path,offset:bs.offset_pages||1,pageCount:bs.page_count};
+
+  // ═ المرحلة ١: قراءة الفهرس الرسمي (المصدر الموثوق لأسماء الوحدات والدروس) ═
+  st.textContent='📖 يقرأ الفهرس الرسمي لاستخراج الوحدات ودروسها…';
+  try{
+    const idxEnd=Math.min(bs.page_count,16);
+    const{data,error}=await sb.functions.invoke('segment-book',{
+      body:{grade,subject,basePath:bs.base_path,sheetStart:1,sheetEnd:idxEnd,mode:'index'}
+    });
+    if(!error&&data&&Array.isArray(data.lessons)&&data.lessons.length>=3){
+      const idx=data.lessons.map(l=>({unit:String(l.unit||'').trim(),lesson:String(l.lesson||'').trim(),page:parseInt(l.printedPage)||null})).filter(l=>l.lesson);
+      if(idx.length>=3){
+        st.textContent='✅ استُخرج '+egToArabic(idx.length)+' درساً من الفهرس الرسمي — راجع وصحّح ثم اعتمد:';
+        segRenderReview(idx);
+        return;
+      }
+    }
+    console.warn('index mode weak, falling back to scan',error||data);
+  }catch(e){console.warn('index mode failed, falling back',e);}
+
+  // ═ المرحلة ٢ (احتياط): مسح كل الصفحات إن لم يوجد فهرس واضح ═
   const BATCH=32;
   let all=[],prevContext='',failed=0;
   for(let s=1;s<=bs.page_count;s+=BATCH){
@@ -12736,20 +12756,34 @@ async function segRun(){
   st.textContent='✅ اكتشف '+egToArabic(clean.length)+' درساً'+(failed?(' (تعذرت '+egToArabic(failed)+' دفعات — قد تنقص دروس)'):'')+' — راجع وصحح ثم اعتمد:';
   segRenderReview(clean);
 }
+function segRowHtml(l,thumb){
+  return `<div class="seg-row" style="display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px" data-unit="${escHtml(l.unit||'')}">
+      <img src="${l.page?thumb(l.page):''}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none" onerror="this.style.visibility='hidden'">
+      <input class="seg-lesson" value="${escHtml(l.lesson||'')}" placeholder="اسم الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+      <input class="seg-page" type="number" value="${l.page||''}" title="صفحة البداية (المطبوعة)" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
+      <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>
+    </div>`;
+}
 function segRenderReview(lessons){
   const rev=document.getElementById('seg-review');
   const thumb=p=>{const sheet=(parseInt(p)||1)+(segCtx.offset-1);return sb.storage.from('library-files').getPublicUrl(segCtx.base+'/p'+sheet+'.jpg').data.publicUrl;};
-  rev.innerHTML=`<div style="display:grid;gap:8px">${lessons.map((l,i)=>`
-    <div class="seg-row" style="display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px">
-      <img src="${thumb(l.page)}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none" onerror="this.style.visibility='hidden'">
-      <input class="seg-unit" value="${escHtml(l.unit)}" placeholder="الوحدة" style="flex:1.2;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
-      <input class="seg-lesson" value="${escHtml(l.lesson)}" placeholder="الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
-      <input class="seg-page" type="number" value="${l.page||''}" title="صفحة البداية (المطبوعة)" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
-      <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>
-    </div>`).join('')}</div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+  // تجميع الدروس تحت وحداتها بالترتيب
+  const order=[],groups={};
+  lessons.forEach(l=>{const u=(l.unit||'بدون وحدة').trim();if(!groups[u]){groups[u]=[];order.push(u);}groups[u].push(l);});
+  const unitsHtml=order.map((u,ui)=>`
+    <div class="seg-unit-block" data-unit-idx="${ui}" style="border:1.5px solid var(--gold);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:rgba(184,134,11,.04)">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:800;color:var(--gold);white-space:nowrap">📦 الوحدة</span>
+        <input class="seg-unit-name" value="${escHtml(u)}" placeholder="اسم الوحدة" style="flex:1;background:var(--surface);border:1px solid var(--gold);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;color:var(--text)">
+        <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" title="حذف الوحدة ودروسها" onclick="this.closest('.seg-unit-block').remove()">🗑️</button>
+      </div>
+      <div class="seg-lessons" style="display:grid;gap:7px">${groups[u].map(l=>segRowHtml(l,thumb)).join('')}</div>
+      <button class="eg-regen" style="margin-top:8px;padding:5px 12px;font-size:11.5px" onclick="segAddRow(this)">➕ درس في هذه الوحدة</button>
+    </div>`).join('');
+  rev.innerHTML=`${unitsHtml}
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
       <button class="eg-export" style="flex:2" onclick="segApprove()">✅ اعتماد الخريطة وربط الدروس</button>
-      <button class="eg-regen" style="flex:1" onclick="segAddRow()">➕ إضافة درس</button>
+      <button class="eg-regen" style="flex:1" onclick="segAddUnit()">➕ إضافة وحدة</button>
     </div>`;
 }
 function segThumbUpdate(inp){
@@ -12760,28 +12794,49 @@ function segThumbUpdate(inp){
   img.style.visibility='visible';
   img.src=sb.storage.from('library-files').getPublicUrl(segCtx.base+'/p'+sheet+'.jpg').data.publicUrl;
 }
-function segAddRow(){
-  const grid=document.querySelector('#seg-review > div');
-  if(!grid)return;
+// إضافة درس داخل وحدة (يُستدعى من زر الوحدة)
+function segAddRow(btn){
+  const block=btn&&btn.closest('.seg-unit-block');
+  const list=block?block.querySelector('.seg-lessons'):null;
+  if(!list)return;
   const div=document.createElement('div');
   div.className='seg-row';
   div.style.cssText='display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px';
   div.innerHTML=`<span style="width:44px;flex:none"></span>
-    <input class="seg-unit" placeholder="الوحدة" style="flex:1.2;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
-    <input class="seg-lesson" placeholder="الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
-    <input class="seg-page" type="number" placeholder="صفحة" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <input class="seg-lesson" placeholder="اسم الدرس" style="flex:2;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <input class="seg-page" type="number" placeholder="صفحة" style="width:64px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px" onchange="segThumbUpdate(this)">
     <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-row').remove()">🗑️</button>`;
-  grid.appendChild(div);
+  list.appendChild(div);
+}
+// إضافة وحدة جديدة فارغة
+function segAddUnit(){
+  const rev=document.getElementById('seg-review');
+  const actions=rev.lastElementChild;
+  const block=document.createElement('div');
+  block.className='seg-unit-block';
+  block.style.cssText='border:1.5px solid var(--gold);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:rgba(184,134,11,.04)';
+  block.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:800;color:var(--gold);white-space:nowrap">📦 الوحدة</span>
+      <input class="seg-unit-name" placeholder="اسم الوحدة" style="flex:1;background:var(--surface);border:1px solid var(--gold);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;color:var(--text)">
+      <button class="arc-btn del" style="padding:4px 9px;font-size:11px;flex:none" onclick="this.closest('.seg-unit-block').remove()">🗑️</button>
+    </div><div class="seg-lessons" style="display:grid;gap:7px"></div>
+    <button class="eg-regen" style="margin-top:8px;padding:5px 12px;font-size:11.5px" onclick="segAddRow(this)">➕ درس في هذه الوحدة</button>`;
+  rev.insertBefore(block,actions);
 }
 async function segApprove(){
   if(!segCtx)return;
-  const rows=[...document.querySelectorAll('#seg-review .seg-row')].map(r=>({
-    unit:r.querySelector('.seg-unit').value.trim(),
-    lesson:r.querySelector('.seg-lesson').value.trim(),
-    page:parseInt(r.querySelector('.seg-page').value)||null
-  })).filter(r=>r.lesson);
+  // اجمع الدروس مرتبة حسب ترتيب الوحدات ثم الدروس داخلها
+  const rows=[];
+  document.querySelectorAll('#seg-review .seg-unit-block').forEach(block=>{
+    const unit=(block.querySelector('.seg-unit-name')?.value||'').trim();
+    block.querySelectorAll('.seg-row').forEach(r=>{
+      const lesson=(r.querySelector('.seg-lesson')?.value||'').trim();
+      const page=parseInt(r.querySelector('.seg-page')?.value)||null;
+      if(lesson)rows.push({unit,lesson,page});
+    });
+  });
   if(!rows.length){toast('لا توجد دروس للاعتماد',true);return;}
-  if(rows.some(r=>!r.unit)){toast('أكمل اسم الوحدة لكل درس',true);return;}
+  if(rows.some(r=>!r.unit)){toast('أكمل اسم كل وحدة',true);return;}
   const st=document.getElementById('seg-status');
   // تحذير الاستبدال إن وُجد منهج سابق
   let existing=0;
