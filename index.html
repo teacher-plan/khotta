@@ -2634,6 +2634,13 @@ input,textarea,select{font-size:16px !important;}
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
       <input type="file" id="seg-book-file" accept=".pdf" onchange="segUploadAndSegment(this.files[0]);this.value=''" style="display:none">
       <button type="button" class="eg-generate" style="width:100%" onclick="document.getElementById('seg-book-file').click()">📄 اختر ملف الكتاب (PDF) وابدأ</button>
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:11px;color:var(--muted)">أو</span><div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="url" id="seg-book-url" placeholder="🔗 الصق رابط ملف الكتاب (PDF) مباشرةً..." style="flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'Cairo',sans-serif;font-size:13px" dir="ltr">
+        <button type="button" class="eg-regen" style="flex:none;padding:9px 16px" onclick="segImportFromUrl()">⬇️ استيراد</button>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
         <label class="eg-lbl" style="margin:0;white-space:nowrap">إزاحة الترقيم (متقدم)</label>
         <input type="number" id="seg-offset" value="1" min="1" style="width:70px" title="أي ورقة في الـPDF تحمل الصفحة المرقّمة «١» في الكتاب. اتركها ١ إن كان الترقيم يبدأ من أول ورقة.">
@@ -12712,6 +12719,32 @@ async function segReloadSubjects(){
   try{const{data}=await sb.from('book_sources').select('subject').eq('grade',String(grade)).eq('semester',semester);(data||[]).forEach(r=>withBook.add(r.subject));}catch(e){}
   if(!subs.length){ssel.innerHTML='<option value="">— لا مواد لهذا الصف —</option>';return;}
   ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}${withBook.has(s)?' 📗':''}</option>`).join('');
+}
+// استيراد كتاب من رابط PDF خارجي (عبر الخادم لتجاوز قيود CORS) ثم نفس تدفق الرفع والتقطيع
+async function segImportFromUrl(){
+  const st=document.getElementById('seg-status');
+  const urlInp=document.getElementById('seg-book-url');
+  const url=(urlInp.value||'').trim();
+  const grade=document.getElementById('seg-grade').value;
+  const subject=document.getElementById('seg-subject').value;
+  if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
+  if(!/^https?:\/\/.+/i.test(url)){toast('الصق رابطاً صحيحاً يبدأ بـ http:// أو https://',true);return;}
+  st.textContent='⬇️ يجلب الملف من الرابط (قد يستغرق دقيقة حسب حجمه)…';
+  try{
+    const{data,error}=await sb.functions.invoke('fetch-book',{body:{url}});
+    if(error||!data||!data.url){
+      const reason=(data&&data.error)||error?.message||'خطأ غير معروف';
+      const msgs={not_pdf:'الرابط لا يشير لملف PDF فعلي',too_large:'الملف أكبر من الحد المسموح (٦٠ ميجا)',source_error:'تعذّر الوصول للرابط',fetch_failed:'تعذّر الاتصال بالرابط',empty_or_blocked:'الملف فارغ أو الموقع يحجب الجلب الآلي'};
+      st.textContent='❌ '+(msgs[reason]||('فشل الجلب: '+reason));
+      return;
+    }
+    st.textContent='📥 تم الجلب — يحمّل الملف للمعالجة…';
+    const fresp=await fetch(data.url);
+    const blob=await fresp.blob();
+    const file=new File([blob],'imported-book.pdf',{type:'application/pdf'});
+    urlInp.value='';
+    await segUploadAndSegment(file);
+  }catch(e){st.textContent='❌ تعذّر استيراد الكتاب من الرابط';console.warn('segImportFromUrl',e);}
 }
 // رفع كتاب PDF كصور ثم التقطيع الذكي مباشرةً — تدفق واحد
 async function segUploadAndSegment(file){
