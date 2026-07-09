@@ -21,7 +21,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const MAX_BYTES = 200 * 1024 * 1024; // سقف 200MB
+const MAX_BYTES = 300 * 1024 * 1024; // سقف 300MB
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
