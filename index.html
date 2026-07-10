@@ -1033,12 +1033,12 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .gm-end .big{font-size:52px;margin:0;animation:gmPop .5s;}
 @keyframes gmPop{0%{transform:scale(.5)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
 /* 🙋 قرعة الطلاب */
-#gm-pick-bg{position:absolute;inset:0;z-index:8;background:rgba(15,10,30,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;}
-.gm-pick-panel{background:rgba(255,252,245,.97);border-radius:18px;padding:16px;width:100%;max-width:360px;box-shadow:0 14px 44px rgba(0,0,0,.45);font-family:'Cairo',sans-serif;}
-.gm-pick-slot{height:72px;border-radius:13px;background:#fff;overflow:hidden;position:relative;box-shadow:inset 0 10px 16px rgba(0,0,0,.18),inset 0 -10px 16px rgba(0,0,0,.18);border:2px solid rgba(109,40,217,.35);}
-.gm-pick-slot::after{content:'';position:absolute;inset-inline:10px;top:50%;height:0;border-top:2px dashed rgba(109,40,217,.3);}
+#gm-pick-bg{position:absolute;top:58px;inset-inline-start:10px;z-index:8;width:240px;max-width:calc(100vw - 20px);}
+.gm-pick-panel{background:rgba(255,252,245,.96);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.4);font-family:'Cairo',sans-serif;border:1px solid rgba(109,40,217,.25);}
+.gm-pick-slot{height:52px;border-radius:11px;background:#fff;overflow:hidden;position:relative;box-shadow:inset 0 8px 12px rgba(0,0,0,.16),inset 0 -8px 12px rgba(0,0,0,.16);border:2px solid rgba(109,40,217,.35);}
+.gm-pick-slot::after{content:'';position:absolute;inset-inline:8px;top:50%;height:0;border-top:2px dashed rgba(109,40,217,.3);}
 .gm-pick-strip{position:absolute;inset-inline:0;top:0;}
-.gm-pick-row{height:72px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#3d3428;white-space:nowrap;padding:0 8px;}
+.gm-pick-row{height:52px;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:800;color:#3d3428;white-space:nowrap;padding:0 6px;overflow:hidden;}
 .gm-pick-row.winner{color:#b45309;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
@@ -2444,15 +2444,17 @@ input,textarea,select{font-size:16px !important;}
   </div>
   <div id="gm-stage-body"></div>
   <!-- 🙋 قرعة الطلاب -->
-  <div id="gm-pick-bg" style="display:none" onclick="if(event.target===this)gmPickClose()">
+  <div id="gm-pick-bg" style="display:none">
     <div class="gm-pick-panel">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <select id="gm-pick-class" style="flex:1;background:#fff;border:1.5px solid #d8cdbb;border-radius:9px;padding:8px;font-family:'Cairo',sans-serif;font-size:13px" onchange="gmPickClassChange()"></select>
-        <button class="gm-x" style="background:rgba(0,0,0,.12);color:#3d3428" onclick="gmPickClose()">✕</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <select id="gm-pick-class" style="flex:1;min-width:0;background:#fff;border:1.5px solid #d8cdbb;border-radius:8px;padding:5px 6px;font-family:'Cairo',sans-serif;font-size:11.5px" onchange="gmPickClassChange()"></select>
+        <button class="gm-x" style="background:rgba(0,0,0,.12);color:#3d3428;padding:3px 9px;font-size:12px" onclick="gmPickClose()">✕</button>
       </div>
       <div class="gm-pick-slot"><div class="gm-pick-strip" id="gm-pick-strip"><div class="gm-pick-row">؟</div></div></div>
-      <div id="gm-pick-count" style="text-align:center;font-size:12.5px;color:#8a7c68;font-weight:700;margin:10px 0 12px"></div>
-      <button class="gm-btn" style="width:100%" id="gm-pick-go" onclick="gmPickDraw()">🎲 اختر طالباً</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <button class="gm-btn" style="flex:1;padding:8px 10px;font-size:13px" id="gm-pick-go" onclick="gmPickDraw()">🎲 اختر</button>
+        <span id="gm-pick-count" style="font-size:11px;color:#8a7c68;font-weight:700;white-space:nowrap"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -12158,13 +12160,15 @@ function gmPickSetup(){
 }
 function gmPickDayKey(cid){return 'gmPick_'+cid+'_'+new Date().toISOString().slice(0,10);}
 function gmPickOpen(){
+  const bg=document.getElementById('gm-pick-bg');
+  if(bg.style.display==='block'){gmPickClose();return;}
   const sel=document.getElementById('gm-pick-class');
   const classes=gmPickClasses();
   if(!classes.length)return;
   const saved=localStorage.getItem('gmPickClass');
   sel.innerHTML=classes.map(c=>`<option value="${escHtml(c.id)}">${escHtml(c.label)} (${egToArabic(c.n)})</option>`).join('');
   if(saved&&classes.some(c=>c.id===saved))sel.value=saved;
-  document.getElementById('gm-pick-bg').style.display='flex';
+  document.getElementById('gm-pick-bg').style.display='block';
   gmPickRefresh();
 }
 function gmPickClose(){document.getElementById('gm-pick-bg').style.display='none';}
@@ -12207,7 +12211,7 @@ function gmPickDraw(){
   const go=document.getElementById('gm-pick-go');
   go.disabled=true;
   // شريط أسماء يتدحرج ثانيتين ثم يستقر على المختار
-  const ROW=72,DUR=2000;
+  const ROW=52,DUR=2000;
   const rows=[];
   const shuffled=list.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   for(let i=0;rows.length<16;i++)rows.push(gmPickShort(shuffled[i%shuffled.length].name));
