@@ -2428,6 +2428,7 @@ input,textarea,select{font-size:16px !important;}
     <div id="gm-stage-title"></div>
     <div id="gm-stage-actions">
       <div id="gm-stage-hud"></div>
+      <button class="gm-x" id="gm-music-btn" style="display:none" onclick="gmToggleMusic()">🎵</button>
       <button class="gm-x" id="gm-mute-btn" onclick="gmToggleMute()">🔊</button>
       <button class="gm-x" onclick="gmClose()">✕</button>
     </div>
@@ -5785,7 +5786,7 @@ async function gmThemeGenerate(){
   btn.disabled=false;btn.textContent='🎨 توليد الثيم ورفعه (مرة واحدة)';
 }
 // ═ 🔊 إدارة أصوات الألعاب (مشرف) ═
-const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة']};
+const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة'],music:['🎵 موسيقى الخلفية (مقطع حلقي)']};
 async function gmSfxSlots(){
   const box=document.getElementById('gm-sfx-slots');if(!box)return;
   let have={};
@@ -5793,7 +5794,7 @@ async function gmSfxSlots(){
     const{data}=await sb.storage.from('library-files').list('game-sfx');
     (data||[]).forEach(f=>{have[f.name.replace('.mp3','')]=true;});
   }catch(e){}
-  box.innerHTML=GM_SFX_KINDS.map(k=>`<div class="gm-row" style="margin:0">
+  box.innerHTML=GM_SFX_KINDS.concat([GM_MUSIC_KEY]).map(k=>`<div class="gm-row" style="margin:0">
     <span style="flex:1;font-weight:700;font-size:13px">${GM_SFX_LBL[k][0]}</span>
     <span style="font-size:11px;color:var(--muted);flex:none">${have[k]?'مخصص ✅':'افتراضي'}</span>
     <button class="arc-btn" style="flex:none;padding:4px 10px;font-size:12px" onclick="gmSfxPreview('${k}',${have[k]?'true':'false'})">▶️</button>
@@ -5802,7 +5803,8 @@ async function gmSfxSlots(){
   </div>`).join('');
 }
 function gmSfxPreview(kind,custom){
-  if(custom){const a=new Audio(gmSfxUrl(kind)+'?t='+Date.now());a.play().catch(()=>toast('تعذّر التشغيل',true));}
+  if(custom){const a=new Audio(gmSfxUrl(kind)+'?t='+Date.now());if(kind===GM_MUSIC_KEY)a.volume=0.4;a.play().catch(()=>toast('تعذّر التشغيل',true));if(kind===GM_MUSIC_KEY)setTimeout(()=>a.pause(),8000);}
+  else if(kind===GM_MUSIC_KEY)toast('لا توجد موسيقى مرفوعة بعد',true);
   else{const m=gmMuted;gmMuted=false;gmSfx={};gmSound(kind);gmMuted=m;}
 }
 function gmSfxUpload(kind){
@@ -5810,13 +5812,14 @@ function gmSfxUpload(kind){
   inp.type='file';inp.accept='audio/mpeg,audio/mp3,.mp3';
   inp.onchange=async()=>{
     const f=inp.files[0];if(!f)return;
-    if(f.size>1024*1024){toast('الملف كبير — اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
+    const maxSz=kind===GM_MUSIC_KEY?3*1024*1024:1024*1024;
+    if(f.size>maxSz){toast(kind===GM_MUSIC_KEY?'الملف كبير — اختر مقطعاً أقل من ٣ ميجا':'الملف كبير — اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
     toast('⏳ جاري الرفع...','ok');
     try{
       const{error}=await sb.storage.from('library-files').upload('game-sfx/'+kind+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
       if(error)throw error;
       localStorage.setItem('gmSfxV',String(Date.now()));
-      gmSfxLoaded=false;gmSfx={};
+      gmSfxLoaded=false;gmSfx={};gmMusicAudio=null;gmMusicAvail=false;
       toast('✅ رُفع الصوت وسيسمعه الجميع','ok');
       gmSfxSlots();
     }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
@@ -5828,7 +5831,7 @@ async function gmSfxDelete(kind){
   try{
     await sb.storage.from('library-files').remove(['game-sfx/'+kind+'.mp3']);
     localStorage.setItem('gmSfxV',String(Date.now()));
-    gmSfxLoaded=false;gmSfx={};
+    gmSfxLoaded=false;gmSfx={};gmMusicAudio=null;gmMusicAvail=false;
     gmSfxSlots();
   }catch(e){toast('تعذّر الحذف',true);}
 }
@@ -11739,6 +11742,7 @@ function zzfx(...t){
 }
 // أصوات مخصصة مرفوعة من الإدارة (game-sfx/<kind>.mp3) — الأولوية لها، وZzFX احتياط
 const GM_SFX_KINDS=['ok','bad','pop','win','spin'];
+const GM_MUSIC_KEY='music'; // مقطع حلقي اختياري للخلفية (يُرفع من الإدارة)
 let gmSfx={};        // kind -> HTMLAudioElement (جاهز) | null (غير موجود)
 let gmSfxLoaded=false;
 function gmSfxUrl(kind){return sb.storage.from('library-files').getPublicUrl('game-sfx/'+kind+'.mp3').data.publicUrl;}
@@ -11771,6 +11775,32 @@ function gmToggleMute(){
   const b=document.getElementById('gm-mute-btn');if(b)b.textContent=gmMuted?'🔇':'🔊';
   if(!gmMuted)gmSound('pop');
 }
+// ─ 🎵 موسيقى الخلفية الاختيارية ─
+let gmMusicAudio=null,gmMusicOn=localStorage.getItem('gmMusicOn')==='1',gmMusicAvail=false;
+function gmMusicInit(){
+  const btn=document.getElementById('gm-music-btn');
+  if(gmMusicAudio){if(btn)btn.style.display=gmMusicAvail?'':'none';gmMusicApply();return;}
+  const a=new Audio();
+  a.loop=true;a.volume=0.25;a.preload='auto';
+  a.oncanplaythrough=()=>{gmMusicAvail=true;if(btn)btn.style.display='';gmMusicApply();};
+  a.onerror=()=>{gmMusicAvail=false;if(btn)btn.style.display='none';};
+  a.src=sb.storage.from('library-files').getPublicUrl('game-sfx/music.mp3').data.publicUrl+'?v='+(localStorage.getItem('gmSfxV')||'1');
+  gmMusicAudio=a;
+  if(btn)btn.style.display='none';
+}
+function gmMusicApply(){
+  const btn=document.getElementById('gm-music-btn');
+  if(btn){btn.style.opacity=gmMusicOn?'1':'.45';}
+  if(!gmMusicAudio||!gmMusicAvail)return;
+  if(gmMusicOn)gmMusicAudio.play().catch(()=>{});
+  else gmMusicAudio.pause();
+}
+function gmToggleMusic(){
+  gmMusicOn=!gmMusicOn;
+  localStorage.setItem('gmMusicOn',gmMusicOn?'1':'0');
+  gmMusicApply();
+}
+function gmMusicStop(){if(gmMusicAudio){gmMusicAudio.pause();gmMusicAudio.currentTime=0;}}
 
 async function gmLoadThemes(){
   try{
@@ -11982,7 +12012,7 @@ function gmPlayWith(items,title){
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
   document.body.style.overflow='hidden';
-  gmLoadSfx();
+  gmLoadSfx();gmMusicInit();
   const mb=document.getElementById('gm-mute-btn');if(mb)mb.textContent=gmMuted?'🔇':'🔊';
   if(gmTpl==='wheel')gmRunWheel(items);
   else if(gmTpl==='match')gmRunMatch(items);
@@ -11994,7 +12024,7 @@ function gmPlayWith(items,title){
   else gmRunQuiz(items);
 }
 function gmClose(){
-  clearInterval(gmQuizTimer);
+  clearInterval(gmQuizTimer);gmMusicStop();
   document.getElementById('gm-stage-bg').style.display='none';
   document.getElementById('gm-stage-body').innerHTML='';
   document.getElementById('gm-stage-hud').innerHTML='';
@@ -12029,6 +12059,8 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
     const d=await gmFetchB64(gmSfxUrl(k));
     if(d&&d.startsWith('data:audio'))sfx[k]=d;
   }
+  const musicB64=await gmFetchB64(gmSfxUrl(GM_MUSIC_KEY));
+  const music=(musicB64&&musicB64.startsWith('data:audio'))?musicB64:null;
   const fns=[escHtml,egToArabic,gmConfetti,zzfx,gmRunWheel,gmRunMatch,gmRunQuiz,gmRunBalloon,gmRunBox,gmRunMemory,gmRunGroups].map(f=>f.toString()).join('\n');
   const runFn={wheel:'gmRunWheel',match:'gmRunMatch',quiz:'gmRunQuiz',balloon:'gmRunBalloon',box:'gmRunBox',memory:'gmRunMemory',groups:'gmRunGroups'}[tpl]||'gmRunQuiz';
   const bgStyle=bg?`url('${bg}')`:'linear-gradient(135deg,#2a1f4d,#1c1730)';
@@ -12042,7 +12074,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('</style></head><body>');
   parts.push(`<div id="gm-stage-bg" style="background-image:${bgStyle}">`);
   parts.push('<div id="gm-stage-veil"></div><canvas id="gm-confetti"></canvas>');
-  parts.push('<div id="gm-stage-head">'+(logoB64?'<div id="gm-stage-brand"><img src="'+logoB64+'" alt=""><b>خطتي</b></div>':'')+'<div id="gm-stage-title">'+escHtml(title)+'</div><div id="gm-stage-actions"><div id="gm-stage-hud"></div><button class="gm-x" id="gm-mute-btn">🔊</button></div></div>');
+  parts.push('<div id="gm-stage-head">'+(logoB64?'<div id="gm-stage-brand"><img src="'+logoB64+'" alt=""><b>خطتي</b></div>':'')+'<div id="gm-stage-title">'+escHtml(title)+'</div><div id="gm-stage-actions"><div id="gm-stage-hud"></div>'+(music?'<button class="gm-x" id="gm-music-btn" style="opacity:.45">🎵</button>':'')+'<button class="gm-x" id="gm-mute-btn">🔊</button></div></div>');
   parts.push('<div id="gm-stage-body"></div></div>');
   parts.push('<div style="position:fixed;bottom:6px;left:10px;z-index:9;font-size:10px;color:rgba(255,255,255,.55);font-family:Tahoma">منصة خطتي الفصلية 🎮</div>');
   parts.push('<scr'+'ipt>');
@@ -12059,6 +12091,10 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('var gmItems='+JSON.stringify(items)+';');
   parts.push('var gmGroupNames='+JSON.stringify(groupNames||[])+';');
   parts.push("document.getElementById('gm-mute-btn').onclick=function(){gmMuted=!gmMuted;this.textContent=gmMuted?'🔇':'🔊';};");
+  if(music){
+    parts.push('var GM_MUSIC='+JSON.stringify(music)+';var gmMusic=new Audio(GM_MUSIC);gmMusic.loop=true;gmMusic.volume=.25;var gmMusicOn=false;');
+    parts.push("document.getElementById('gm-music-btn').onclick=function(){gmMusicOn=!gmMusicOn;this.style.opacity=gmMusicOn?'1':'.45';if(gmMusicOn)gmMusic.play().catch(function(){});else gmMusic.pause();};");
+  }
   parts.push(runFn+'(gmItems);');
   parts.push('</scr'+'ipt></body></html>');
   return new Blob(['\ufeff'+parts.join('\n')],{type:'text/html;charset=utf-8'});
