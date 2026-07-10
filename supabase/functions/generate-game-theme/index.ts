@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
         }),
       });
 
-    let orResp = await call({ aspect_ratio: "16:9", image_size: "2K" });
+    let orResp = await call({ aspect_ratio: "16:9", image_size: "1K" });
     let or = await orResp.json();
     if (!orResp.ok) { orResp = await call({ aspect_ratio: "16:9" }); or = await orResp.json(); }
     if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
@@ -129,13 +129,16 @@ Deno.serve(async (req) => {
     const img = or?.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
     if (!img || !img.startsWith("data:image/")) return json({ error: "no_image" }, 502);
 
-    // فك الترميز والرفع لتخزين دائم
+    // فك الترميز والرفع لتخزين دائم (بنوع الصورة الحقيقي)
+    const mimeM = img.match(/^data:(image\/\w+);base64,/);
+    const mime = mimeM ? mimeM[1] : "image/png";
+    const ext = mime.split("/")[1].replace("jpeg", "jpg");
     const b64 = img.split(",")[1];
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const path = `game-themes/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+    const path = `game-themes/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: upErr } = await admin.storage.from("library-files").upload(path, bin, {
       cacheControl: "31536000",
-      contentType: "image/png",
+      contentType: mime,
       upsert: false,
     });
     if (upErr) return json({ error: "upload_failed", detail: upErr.message }, 500);

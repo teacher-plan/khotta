@@ -83,26 +83,33 @@ Deno.serve(async (req) => {
     const userContent: unknown[] = [{ type: "text", text: userMsg }];
     for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://khotati.com",
-        "X-Title": "Khotta Game Generator",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: images.length ? userContent : userMsg },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.5,
-        max_tokens: 2000,
-      }),
-    });
-    const or = await orResp.json();
+    const callOr = (withImages: boolean) =>
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Game Generator",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: withImages ? userContent : userMsg },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.5,
+          max_tokens: 2000,
+        }),
+      });
+    let orResp = await callOr(images.length > 0);
+    let or = await orResp.json();
+    // النموذج لا يدعم الصور؟ نعيد المحاولة نصياً (من اسم الدرس فقط)
+    if (!orResp.ok && images.length && /image input|multimodal|support image/i.test(JSON.stringify(or))) {
+      orResp = await callOr(false);
+      or = await orResp.json();
+    }
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
 
     const text = or?.choices?.[0]?.message?.content || "";
