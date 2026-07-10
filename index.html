@@ -13496,12 +13496,29 @@ async function dpSaveBundle(i){
   if(mbtn){mbtn.disabled=true;mbtn.textContent='⏳ جارٍ الحفظ في بطاقة الدرس…';}
   const files=[];
   if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
-  if(b.slideImgs&&b.slideImgs.some(Boolean)){
-    try{files.push(await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs));}
-    catch(e){console.warn('pptx img build',e);}
-  }else if(b.slides&&b.slides.length){
-    try{files.push(await dpBuildPptxFile(it,b.slides));}
-    catch(e){console.warn('pptx build',e);}
+  // العرض التقديمي: سلسلة تراجع تضمن ألا يضيع أبداً
+  // PPTX من الصور ← PPTX نصي ← ملف HTML عرض (بلا أي مكتبة خارجية)
+  if((b.slideImgs&&b.slideImgs.some(Boolean))||(b.slides&&b.slides.length)){
+    let pptOk=false;
+    if(b.slideImgs&&b.slideImgs.some(Boolean)){
+      try{files.push(await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs));pptOk=true;}
+      catch(e){console.warn('pptx img build',e);}
+    }
+    if(!pptOk&&b.slides&&b.slides.length){
+      try{files.push(await dpBuildPptxFile(it,b.slides));pptOk=true;}
+      catch(e){console.warn('pptx build',e);}
+    }
+    if(!pptOk){
+      try{
+        const imgs=(b.slideImgs||[]);
+        const slidesHtml=(b.slides&&b.slides.length?b.slides:imgs.map(()=>({}))).map((sl,ix)=>imgs[ix]
+          ?`<div style="page-break-after:always;margin:0 0 20px"><img src="${imgs[ix]}" style="width:100%;border-radius:8px"></div>`
+          :`<div style="page-break-after:always;background:#f8f5ef;border:1px solid #ddd;border-radius:10px;padding:28px;margin:0 0 20px;font-family:Arial"><h2 style="color:#1a5a2a;margin:0 0 14px">${escHtml(sl.title||'')}</h2><ul style="line-height:2.2;font-size:16px">${(sl.bullets||[]).map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul></div>`).join('');
+        const doc='\ufeff<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>'+escHtml(it.lesson)+'</title></head><body style="max-width:900px;margin:20px auto;padding:0 14px">'+slidesHtml+'</body></html>';
+        files.push(new File([new Blob([doc],{type:'text/html'})],'عرض تقديمي — '+it.lesson+'.html',{type:'text/html'}));
+        toast('⚠️ تعذّر بناء ملف PowerPoint — حُفظ العرض كملف HTML بديل',true);
+      }catch(e){console.warn('slides html fallback',e);toast('⚠️ تعذّر حفظ العرض التقديمي — أعد الحفظ لاحقاً',true);}
+    }
   }
   if(b.plan){
     // التحضير الرسمي بصيغة Word (هيكل نور + ترويسة البيانات) — جاهز للنسخ واللصق في منصة نور
