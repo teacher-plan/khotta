@@ -12044,14 +12044,30 @@ function gmPlayWith(items,title){
   document.body.style.overflow='hidden';
   gmLoadSfx();gmMusicInit();gmPickSetup();
   const mb=document.getElementById('gm-mute-btn');if(mb)mb.innerHTML=gmMuted?GM_IC_MUTED:GM_IC_SOUND;
-  if(gmTpl==='wheel')gmRunWheel(items);
-  else if(gmTpl==='match')gmRunMatch(items);
-  else if(gmTpl==='quiz')gmRunQuiz(items);
-  else if(gmTpl==='balloon')gmRunBalloon(items);
-  else if(gmTpl==='box')gmRunBox(items);
-  else if(gmTpl==='memory')gmRunMemory(items);
-  else if(gmTpl==='groups')gmRunGroups(items);
-  else gmRunQuiz(items);
+  gmRunCurrent=()=>{
+    if(gmTpl==='wheel')gmRunWheel(items);
+    else if(gmTpl==='match')gmRunMatch(items);
+    else if(gmTpl==='quiz')gmRunQuiz(items);
+    else if(gmTpl==='balloon')gmRunBalloon(items);
+    else if(gmTpl==='box')gmRunBox(items);
+    else if(gmTpl==='memory')gmRunMemory(items);
+    else if(gmTpl==='groups')gmRunGroups(items);
+    else gmRunQuiz(items);
+  };
+  // شاشة البدء — اللعب لا يبدأ إلا بضغطة (وتفتح صلاحية الصوت في المتصفح)
+  document.getElementById('gm-stage-hud').innerHTML='';
+  document.getElementById('gm-stage-body').innerHTML=`<div class="gm-panel gm-end" style="max-width:420px">
+    <p class="big">${(GM_TPL_LBL[gmTpl]||'🎮').split(' ')[0]}</p>
+    <h2 style="margin:6px 0">${escHtml(title)}</h2>
+    <p style="color:#8a7c68;margin:0 0 16px;font-size:13px">${egToArabic(items.length)} ${GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً'}</p>
+    <button class="gm-btn" style="font-size:18px;padding:14px 44px" onclick="gmStart()">▶️ ابدأ اللعب</button>
+  </div>`;
+}
+let gmRunCurrent=null;
+function gmStart(){
+  gmSound('pop');
+  gmMusicApply();
+  if(gmRunCurrent)gmRunCurrent();
 }
 function gmClose(){
   clearInterval(gmQuizTimer);gmMusicStop();
@@ -12126,7 +12142,8 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
     parts.push('var GM_MUSIC='+JSON.stringify(music)+';var gmMusic=new Audio(GM_MUSIC);gmMusic.loop=true;gmMusic.volume=.25;var gmMusicOn=false;');
     parts.push("document.getElementById('gm-music-btn').onclick=function(){gmMusicOn=!gmMusicOn;this.style.opacity=gmMusicOn?'1':'.45';if(gmMusicOn)gmMusic.play().catch(function(){});else gmMusic.pause();};");
   }
-  parts.push(runFn+'(gmItems);');
+  parts.push("document.getElementById('gm-stage-body').innerHTML='<div class=\"gm-panel gm-end\" style=\"max-width:420px\"><h2 style=\"margin:6px 0\">'+"+JSON.stringify(title)+"+'</h2><button class=\"gm-btn\" style=\"font-size:18px;padding:14px 44px\" id=\"gm-start-btn\">▶️ ابدأ اللعب</button></div>';");
+  parts.push("document.getElementById('gm-start-btn').onclick=function(){"+runFn+"(gmItems);};");
   parts.push('</scr'+'ipt></body></html>');
   return new Blob(['\ufeff'+parts.join('\n')],{type:'text/html;charset=utf-8'});
 }
@@ -12325,7 +12342,7 @@ function gmRunMatch(pairs){
       sel.classList.remove('sel');sel.classList.add('done');b.classList.add('done');
       done++;sel=null;hud();
       if(done===pairs.length){gmSound('win');gmConfetti();setTimeout(()=>{
-        body.innerHTML=`<div class="gm-panel gm-end"><p class="big">🏆</p><h2 style="margin:6px 0">أحسنتم!</h2><p style="color:#8a7c68;margin:0 0 14px">اكتملت المطابقة في ${egToArabic(tries)} محاولة</p><button class="gm-btn" onclick="gmRunMatch(gmItems)">🔄 جولة جديدة</button></div>`;
+        body.innerHTML=`<div class="gm-panel gm-end"><p class="big">🏆</p><h2 style="margin:6px 0">أحسنتم!</h2><p style="color:#8a7c68;margin:0 0 14px">اكتملت المطابقة في ${egToArabic(tries)} محاولة</p><button class="gm-btn" onclick="gmRunMatch(gmItems)">🔄 إعادة التشغيل</button></div>`;
       },900);}
     }else{
       gmSound('bad');
@@ -12345,7 +12362,7 @@ function gmRunQuiz(qs){
     clearInterval(gmQuizTimer);
     if(qi>=qs.length){
       gmSound('win');gmConfetti();
-      body.innerHTML=`<div class="gm-panel gm-end"><p class="big">${score>=qs.length*70?'🏆':'⭐'}</p><h2 style="margin:6px 0">${egToArabic(score)} نقطة!</h2><p style="color:#8a7c68;margin:0 0 14px">${score>=qs.length*70?'أداء بطولي!':'أحسنتم — جرّبوا أسرع في الجولة القادمة'}</p><button class="gm-btn" onclick="gmRunQuiz(gmItems)">🔄 جولة جديدة</button></div>`;
+      body.innerHTML=`<div class="gm-panel gm-end"><p class="big">${score>=qs.length*70?'🏆':'⭐'}</p><h2 style="margin:6px 0">${egToArabic(score)} نقطة!</h2><p style="color:#8a7c68;margin:0 0 14px">${score>=qs.length*70?'أداء بطولي!':'أحسنتم — جرّبوا أسرع في الجولة القادمة'}</p><button class="gm-btn" onclick="gmRunQuiz(gmItems)">🔄 إعادة التشغيل</button></div>`;
       return;
     }
     const Q=qs[qi];hud();
@@ -12387,7 +12404,7 @@ function gmRunBalloon(qs){
   const show=()=>{
     if(qi>=qs.length){
       gmSound('win');gmConfetti();
-      body.innerHTML=`<div class="gm-panel gm-end"><p class="big">🎉</p><h2 style="margin:6px 0">${egToArabic(score)} نقطة!</h2><button class="gm-btn" onclick="gmRunBalloon(gmItems)">🔄 جولة جديدة</button></div>`;
+      body.innerHTML=`<div class="gm-panel gm-end"><p class="big">🎉</p><h2 style="margin:6px 0">${egToArabic(score)} نقطة!</h2><button class="gm-btn" onclick="gmRunBalloon(gmItems)">🔄 إعادة التشغيل</button></div>`;
       return;
     }
     const Q=qs[qi];hud();
@@ -12422,7 +12439,8 @@ function gmRunBox(items){
     if(b.classList.contains('open'))return;
     b.classList.add('open');gmSound('pop');
     opened++;hud();
-    if(opened===items.length){gmSound('win');gmConfetti();}
+    if(opened===items.length){gmSound('win');gmConfetti();
+      setTimeout(()=>{body.insertAdjacentHTML('beforeend',`<div style="text-align:center;margin-top:14px"><button class="gm-btn" onclick="gmRunBox(gmItems)">🔄 إعادة التشغيل</button></div>`);},600);}
   });
 }
 // ─ 🧠 محرك بطاقات الذاكرة ─
@@ -12448,7 +12466,7 @@ function gmRunMemory(pairs){
         setTimeout(()=>{x.classList.add('done');y.classList.add('done');lock=false;},350);
         done++;hud();
         if(done===pairs.length){setTimeout(()=>{gmSound('win');gmConfetti();
-          body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">🏆 أحسنتم! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunMemory(gmItems)">🔄 جولة جديدة</button></div>`);},500);}
+          body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">🏆 أحسنتم! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunMemory(gmItems)">🔄 إعادة التشغيل</button></div>`);},500);}
       }else{
         gmSound('bad');
         setTimeout(()=>{x.classList.remove('flip');y.classList.remove('flip');lock=false;},900);
@@ -12485,7 +12503,7 @@ function gmRunGroups(items){
       bk.querySelector('.gm-grp-list').appendChild(sel);
       sel=null;done++;hud();
       if(done===items.length){gmSound('win');gmConfetti();
-        body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">🏆 فرز مكتمل! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunGroups(gmItems)">🔄 جولة جديدة</button></div>`);}
+        body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">🏆 فرز مكتمل! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunGroups(gmItems)">🔄 إعادة التشغيل</button></div>`);}
     }else{
       gmSound('bad');
       bk.classList.add('err');const b2=bk;
