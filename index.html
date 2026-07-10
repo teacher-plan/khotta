@@ -11777,6 +11777,18 @@ let gmItems=[];                    // محتوى اللعبة الحالي
 let gmGroupNames=['المجموعة الأولى','المجموعة الثانية']; // لأسلوب الفرز
 let gmThemes=[];                   // الثيمات المتاحة
 const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'items',memory:'pairs',groups:'groups',millionaire:'quiz',race:'quiz',boxes:'quiz'};
+// ثيم إجباري مرتبط بقالب معين (يُحدد بالاسم من مكتبة الثيمات)
+const GM_TPL_THEME={millionaire:'استوديو المليون'};
+function gmForcedTheme(tpl){
+  const nm=GM_TPL_THEME[tpl];if(!nm)return null;
+  return gmThemes.find(t=>(t.name||'').includes(nm))||null;
+}
+function gmApplyForcedTheme(){
+  const sel=document.getElementById('gm-theme');if(!sel)return;
+  const f=gmForcedTheme(gmTpl);
+  if(f){sel.value=f.id;sel.disabled=true;sel.title='ثيم هذه اللعبة ثابت: '+f.name;}
+  else{sel.disabled=false;sel.title='';}
+}
 const GM_TPL_LBL={wheel:'🎡 العجلة',match:'🃏 المطابقة',quiz:'❓ اختبار السرعة',balloon:'🎈 فرقع البالون',box:'📦 افتح الصندوق',memory:'🧠 بطاقات الذاكرة',groups:'🗂️ فرز المجموعات',millionaire:'💰 من سيربح المليون',race:'🏎️ سباق الفريقين',boxes:'🧨 كنوز وقنابل'};
 
 // ─ 🔊 محرك الأصوات الاحترافي — ZzFX (Zuper Zmall Zound Zynth) v1.3.2, MIT © Frank Force ─
@@ -11875,12 +11887,14 @@ async function gmLoadThemes(){
     const cur=sel.value;
     sel.innerHTML='<option value="">كلاسيكي (بلا خلفية)</option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.emoji||'🎨')} ${escHtml(t.name)}</option>`).join('');
     if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
+    gmApplyForcedTheme();
   }catch(e){console.warn('gmLoadThemes',e);}
 }
 function gmPickTpl(t){
   const prevStruct=GM_STRUCT[gmTpl];
   gmTpl=t;
   document.querySelectorAll('.gm-tpl-btn').forEach(b=>b.classList.toggle('active',b.dataset.tpl===t));
+  gmApplyForcedTheme();
   // بنية المحتوى تغيّرت؟ نفرغ المحرر (البنى غير متوافقة)
   if(GM_STRUCT[t]!==prevStruct&&gmItems.length){gmItems=[];document.getElementById('eg-game-result-card').style.display='none';}
 }
@@ -12000,7 +12014,7 @@ async function gmSave(){
   const lessons=Object.values(egSelected);
   const grade=document.getElementById('eg-grade').value;
   const subject=document.getElementById('eg-subject').value;
-  const themeSel=document.getElementById('gm-theme').value||null;
+  const themeSel=(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value||null;
   const title=(lessons[0]?lessons[0].name:'لعبة')+' — '+GM_TPL_LBL[gmTpl];
   try{
     const{error}=await sb.from('games').insert({
@@ -12054,6 +12068,7 @@ async function gmOpenSaved(id){
     gmItems=(g.content&&g.content.items)||[];
     if(g.content&&g.content.groupNames&&g.content.groupNames.length>=2)gmGroupNames=g.content.groupNames.map(String);
     const ts=document.getElementById('gm-theme');if(g.theme_id&&ts)ts.value=g.theme_id;
+    gmApplyForcedTheme();
     gmPlayWith(gmItems,g.title||'لعبة');
   }catch(e){console.warn('gmOpenSaved',e);}
 }
@@ -12072,7 +12087,7 @@ function gmPlay(){
 function gmPlayWith(items,title){
   const stage=document.getElementById('gm-stage-bg');
   const themeSel=document.getElementById('gm-theme');
-  const theme=gmThemes.find(t=>t.id===themeSel.value);
+  const theme=gmForcedTheme(gmTpl)||gmThemes.find(t=>t.id===themeSel.value);
   stage.style.backgroundImage=theme&&theme.bg_url?`url("${theme.bg_url}")`:'linear-gradient(135deg,#2a1f4d,#1c1730)';
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
@@ -12197,7 +12212,7 @@ async function gmDownload(){
   const lessons=Object.values(egSelected);
   const title=(lessons[0]?lessons[0].name+' — ':'')+GM_TPL_LBL[gmTpl];
   toast('⏳ يجهّز ملف اللعبة...','ok');
-  const blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,document.getElementById('gm-theme').value);
+  const blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value);
   gmDownloadBlob(blob,'لعبة - '+title.replace(/[\\/:*?"<>|]/g,'')+'.html');
   toast('⬇️ حُمّلت اللعبة — تعمل بأي متصفح بلا إنترنت','ok');
 }
@@ -12208,7 +12223,8 @@ async function gmDownloadSaved(id){
     if(!gmThemes.length)await gmLoadThemes();
     toast('⏳ يجهّز ملف اللعبة...','ok');
     const gn=(g.content&&g.content.groupNames)||gmGroupNames;
-    const blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',g.theme_id);
+    const gth=(gmForcedTheme(g.template)||{}).id||g.theme_id;
+    const blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',gth);
     gmDownloadBlob(blob,'لعبة - '+String(g.title||'لعبة').replace(/[\\/:*?"<>|]/g,'')+'.html');
   }catch(e){toast('تعذّر تجهيز الملف',true);console.warn(e);}
 }
