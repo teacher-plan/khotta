@@ -1035,12 +1035,11 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 /* 🙋 قرعة الطلاب */
 #gm-pick-bg{position:absolute;inset:0;z-index:8;background:rgba(15,10,30,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;}
 .gm-pick-panel{background:rgba(255,252,245,.97);border-radius:18px;padding:16px;width:100%;max-width:360px;box-shadow:0 14px 44px rgba(0,0,0,.45);font-family:'Cairo',sans-serif;}
-.gm-pick-card{perspective:800px;height:120px;}
-.gm-pick-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.7,.3,1.2);}
-.gm-pick-card.flip .gm-pick-inner{transform:rotateY(180deg);}
-.gm-pick-face{position:absolute;inset:0;border-radius:14px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-weight:800;}
-.gm-pick-front{background:linear-gradient(145deg,#6d28d9,#8b5cf6);color:#fff;font-size:44px;}
-.gm-pick-back{background:linear-gradient(145deg,#d97706,#fbbf24);color:#fff;font-size:24px;transform:rotateY(180deg);padding:10px;text-align:center;line-height:1.5;}
+.gm-pick-slot{height:72px;border-radius:13px;background:#fff;overflow:hidden;position:relative;box-shadow:inset 0 10px 16px rgba(0,0,0,.18),inset 0 -10px 16px rgba(0,0,0,.18);border:2px solid rgba(109,40,217,.35);}
+.gm-pick-slot::after{content:'';position:absolute;inset-inline:10px;top:50%;height:0;border-top:2px dashed rgba(109,40,217,.3);}
+.gm-pick-strip{position:absolute;inset-inline:0;top:0;}
+.gm-pick-row{height:72px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#3d3428;white-space:nowrap;padding:0 8px;}
+.gm-pick-row.winner{color:#b45309;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
 .gm-balloon{position:relative;width:128px;height:158px;border:none;cursor:pointer;background:var(--bc);border-radius:50% 50% 50% 50%/58% 58% 42% 42%;box-shadow:inset -10px -12px 0 rgba(0,0,0,.14),0 8px 20px rgba(0,0,0,.3);animation:gmBob 2.6s ease-in-out infinite alternate;font-family:'Cairo',sans-serif;transition:transform .15s;}
@@ -2451,7 +2450,7 @@ input,textarea,select{font-size:16px !important;}
         <select id="gm-pick-class" style="flex:1;background:#fff;border:1.5px solid #d8cdbb;border-radius:9px;padding:8px;font-family:'Cairo',sans-serif;font-size:13px" onchange="gmPickClassChange()"></select>
         <button class="gm-x" style="background:rgba(0,0,0,.12);color:#3d3428" onclick="gmPickClose()">✕</button>
       </div>
-      <div class="gm-pick-card" id="gm-pick-card"><div class="gm-pick-inner" id="gm-pick-inner"><div class="gm-pick-face gm-pick-front">؟</div><div class="gm-pick-face gm-pick-back" id="gm-pick-name"></div></div></div>
+      <div class="gm-pick-slot"><div class="gm-pick-strip" id="gm-pick-strip"><div class="gm-pick-row">؟</div></div></div>
       <div id="gm-pick-count" style="text-align:center;font-size:12.5px;color:#8a7c68;font-weight:700;margin:10px 0 12px"></div>
       <button class="gm-btn" style="width:100%" id="gm-pick-go" onclick="gmPickDraw()">🎲 اختر طالباً</button>
     </div>
@@ -12171,7 +12170,9 @@ function gmPickOpen(){
 function gmPickClose(){document.getElementById('gm-pick-bg').style.display='none';}
 function gmPickClassChange(){
   localStorage.setItem('gmPickClass',document.getElementById('gm-pick-class').value);
-  const card=document.getElementById('gm-pick-card');card.classList.remove('flip');
+  const strip=document.getElementById('gm-pick-strip');
+  strip.style.transition='none';strip.style.transform='translateY(0)';
+  strip.innerHTML='<div class="gm-pick-row">؟</div>';
   gmPickRefresh();
 }
 function gmPickRefresh(){
@@ -12181,6 +12182,12 @@ function gmPickRefresh(){
   try{picked=JSON.parse(localStorage.getItem(gmPickDayKey(cid))||'[]');}catch(e){}
   picked=picked.filter(id=>list.some(s=>s.id===id));
   document.getElementById('gm-pick-count').textContent='أجاب اليوم: '+egToArabic(picked.length)+' / '+egToArabic(list.length);
+}
+// اختصار الاسم: الأول + الثاني + الأخير، مع إسقاط «بن/بنت»
+function gmPickShort(full){
+  const parts=String(full||'').trim().split(/\s+/).filter(w=>w!=='بن'&&w!=='بنت');
+  if(parts.length<=3)return parts.join(' ');
+  return parts[0]+' '+parts[1]+' '+parts[parts.length-1];
 }
 function gmPickDraw(){
   const cid=document.getElementById('gm-pick-class').value;
@@ -12196,20 +12203,29 @@ function gmPickDraw(){
   const chosen=pool[Math.floor(Math.random()*pool.length)];
   picked.push(chosen.id);
   localStorage.setItem(key,JSON.stringify(picked));
-  const card=document.getElementById('gm-pick-card');
-  const nameEl=document.getElementById('gm-pick-name');
+  const strip=document.getElementById('gm-pick-strip');
   const go=document.getElementById('gm-pick-go');
   go.disabled=true;
-  card.classList.remove('flip');
-  gmSound('spin');
+  // شريط أسماء يتدحرج ثانيتين ثم يستقر على المختار
+  const ROW=72,DUR=2000;
+  const rows=[];
+  const shuffled=list.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  for(let i=0;rows.length<16;i++)rows.push(gmPickShort(shuffled[i%shuffled.length].name));
+  rows.push(gmPickShort(chosen.name));
+  strip.style.transition='none';strip.style.transform='translateY(0)';
+  strip.innerHTML=rows.map((n,i)=>`<div class="gm-pick-row${i===rows.length-1?' winner':''}">${escHtml(n)}</div>`).join('');
+  void strip.offsetWidth;
+  strip.style.transition='transform '+DUR+'ms cubic-bezier(.15,.85,.25,1)';
+  strip.style.transform='translateY(-'+((rows.length-1)*ROW)+'px)';
+  // صوت تكات يتباطأ مع الشريط ثم نغمة الاختيار
+  let d=60,t=0;
+  while(t<DUR-260){setTimeout(()=>gmSound('pop'),t);t+=d;d*=1.18;}
   setTimeout(()=>{
-    nameEl.textContent=chosen.name;
-    card.classList.add('flip');
     gmSound('ok');
     gmPickRefresh();
     if(cycled)toast('🔁 مرّ الجميع — بدأت جولة عادلة جديدة','ok');
     go.disabled=false;
-  },350);
+  },DUR+80);
 }
 // ─ 🎊 كونفيتي ─
 function gmConfetti(){
