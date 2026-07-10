@@ -1041,6 +1041,24 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .gm-pick-strip{position:absolute;inset-inline:0;top:0;}
 .gm-pick-row{height:52px;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:800;color:#3d3428;white-space:nowrap;padding:0 6px;overflow:hidden;}
 .gm-pick-row.winner{color:#b45309;}
+/* المليون + السباق + الكنوز */
+.gm-mill-wrap{display:flex;gap:12px;width:100%;max-width:760px;align-items:flex-start;}
+.gm-ladder{flex:none;width:110px;display:flex;flex-direction:column;gap:3px;background:rgba(255,252,245,.9);border-radius:14px;padding:8px;max-height:70vh;overflow:auto;}
+.gm-lad{font-size:11px;font-weight:800;color:#8a7c68;text-align:center;padding:3px 4px;border-radius:7px;font-variant-numeric:tabular-nums;}
+.gm-lad.cur{background:linear-gradient(90deg,#d97706,#fbbf24);color:#fff;}
+.gm-lad.done{color:#15803d;}
+@media(max-width:640px){.gm-mill-wrap{flex-direction:column}.gm-ladder{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center;max-height:none}}
+.gm-lifes{display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;}
+.gm-life{border:2px solid rgba(109,40,217,.35);background:#fff;border-radius:999px;padding:6px 13px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:800;color:#6d28d9;cursor:pointer;}
+.gm-life:disabled{opacity:.35;cursor:default;text-decoration:line-through;}
+.gm-race-lane{display:flex;align-items:center;gap:3px;border:2px dashed;border-radius:11px;padding:5px 8px;margin:5px 0;background:rgba(255,255,255,.6);}
+.gm-race-cell{flex:1;height:30px;border-radius:6px;background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;font-size:19px;transition:.3s;}
+.gm-race-cell.fin{background:repeating-linear-gradient(45deg,#333 0 5px,#fff 5px 10px);}
+.gm-tbox-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+@media(max-width:480px){.gm-tbox-grid{grid-template-columns:repeat(3,1fr)}}
+.gm-tbox{min-height:58px;border:none;border-radius:11px;background:linear-gradient(145deg,#b45309,#d97706);color:#fff;font-size:24px;cursor:pointer;font-family:'Cairo',sans-serif;box-shadow:0 4px 10px rgba(0,0,0,.25);transition:.15s;}
+.gm-tbox:not(:disabled):hover{transform:scale(1.06);}
+.gm-tbox.open{background:rgba(255,255,255,.85);color:#3d3428;font-size:12px;font-weight:800;box-shadow:none;padding:4px;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
 .gm-balloon{position:relative;width:128px;height:158px;border:none;cursor:pointer;background:var(--bc);border-radius:50% 50% 50% 50%/58% 58% 42% 42%;box-shadow:inset -10px -12px 0 rgba(0,0,0,.14),0 8px 20px rgba(0,0,0,.3);animation:gmBob 2.6s ease-in-out infinite alternate;font-family:'Cairo',sans-serif;transition:transform .15s;}
@@ -2393,6 +2411,9 @@ input,textarea,select{font-size:16px !important;}
       <button type="button" class="gm-tpl-btn" data-tpl="box" onclick="gmPickTpl('box')"><span class="gm-tpl-ic">📦</span><span class="gm-tpl-lbl">افتح الصندوق</span><span class="gm-tpl-sub">صناديق مغلقة تخفي أسئلة</span></button>
       <button type="button" class="gm-tpl-btn" data-tpl="memory" onclick="gmPickTpl('memory')"><span class="gm-tpl-ic">🧠</span><span class="gm-tpl-lbl">بطاقات الذاكرة</span><span class="gm-tpl-sub">اقلب بطاقتين وطابقهما</span></button>
       <button type="button" class="gm-tpl-btn" data-tpl="groups" onclick="gmPickTpl('groups')"><span class="gm-tpl-ic">🗂️</span><span class="gm-tpl-lbl">فرز المجموعات</span><span class="gm-tpl-sub">ضع كل عنصر في مجموعته</span></button>
+      <button type="button" class="gm-tpl-btn" data-tpl="millionaire" onclick="gmPickTpl('millionaire')"><span class="gm-tpl-ic">💰</span><span class="gm-tpl-lbl">من سيربح المليون</span><span class="gm-tpl-sub">سلم جوائز ووسائل مساعدة</span></button>
+      <button type="button" class="gm-tpl-btn" data-tpl="race" onclick="gmPickTpl('race')"><span class="gm-tpl-ic">🏎️</span><span class="gm-tpl-lbl">سباق الفريقين</span><span class="gm-tpl-sub">إجابة صحيحة تقدّم سيارتك</span></button>
+      <button type="button" class="gm-tpl-btn" data-tpl="boxes" onclick="gmPickTpl('boxes')"><span class="gm-tpl-ic">🧨</span><span class="gm-tpl-lbl">كنوز وقنابل</span><span class="gm-tpl-sub">أجب وافتح صندوقاً وخاطر</span></button>
     </div>
     <div class="eg-row" style="margin-top:12px">
       <div style="flex:1">
@@ -11741,8 +11762,8 @@ let gmTpl='wheel';                 // القالب المختار
 let gmItems=[];                    // محتوى اللعبة الحالي
 let gmGroupNames=['المجموعة الأولى','المجموعة الثانية']; // لأسلوب الفرز
 let gmThemes=[];                   // الثيمات المتاحة
-const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'items',memory:'pairs',groups:'groups'};
-const GM_TPL_LBL={wheel:'🎡 العجلة',match:'🃏 المطابقة',quiz:'❓ اختبار السرعة',balloon:'🎈 فرقع البالون',box:'📦 افتح الصندوق',memory:'🧠 بطاقات الذاكرة',groups:'🗂️ فرز المجموعات'};
+const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'items',memory:'pairs',groups:'groups',millionaire:'quiz',race:'quiz',boxes:'quiz'};
+const GM_TPL_LBL={wheel:'🎡 العجلة',match:'🃏 المطابقة',quiz:'❓ اختبار السرعة',balloon:'🎈 فرقع البالون',box:'📦 افتح الصندوق',memory:'🧠 بطاقات الذاكرة',groups:'🗂️ فرز المجموعات',millionaire:'💰 من سيربح المليون',race:'🏎️ سباق الفريقين',boxes:'🧨 كنوز وقنابل'};
 
 // ─ 🔊 محرك الأصوات الاحترافي — ZzFX (Zuper Zmall Zound Zynth) v1.3.2, MIT © Frank Force ─
 let gmAC=null,gmMuted=localStorage.getItem('gmMuted')==='1';
@@ -12052,6 +12073,9 @@ function gmPlayWith(items,title){
     else if(gmTpl==='box')gmRunBox(items);
     else if(gmTpl==='memory')gmRunMemory(items);
     else if(gmTpl==='groups')gmRunGroups(items);
+    else if(gmTpl==='millionaire')gmRunMillionaire(items);
+    else if(gmTpl==='race')gmRunRace(items);
+    else if(gmTpl==='boxes')gmRunBoxes(items);
     else gmRunQuiz(items);
   };
   // شاشة البدء — اللعب لا يبدأ إلا بضغطة (وتفتح صلاحية الصوت في المتصفح)
@@ -12107,8 +12131,8 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   }
   const musicB64=await gmFetchB64(gmSfxUrl(GM_MUSIC_KEY));
   const music=(musicB64&&musicB64.startsWith('data:audio'))?musicB64:null;
-  const fns=[escHtml,egToArabic,gmConfetti,zzfx,gmRunWheel,gmRunMatch,gmRunQuiz,gmRunBalloon,gmRunBox,gmRunMemory,gmRunGroups].map(f=>f.toString()).join('\n');
-  const runFn={wheel:'gmRunWheel',match:'gmRunMatch',quiz:'gmRunQuiz',balloon:'gmRunBalloon',box:'gmRunBox',memory:'gmRunMemory',groups:'gmRunGroups'}[tpl]||'gmRunQuiz';
+  const fns=[escHtml,egToArabic,gmConfetti,zzfx,gmRunWheel,gmRunMatch,gmRunQuiz,gmRunBalloon,gmRunBox,gmRunMemory,gmRunGroups,gmRunMillionaire,gmRunRace,gmRunBoxes].map(f=>f.toString()).join('\n');
+  const runFn={wheel:'gmRunWheel',match:'gmRunMatch',quiz:'gmRunQuiz',balloon:'gmRunBalloon',box:'gmRunBox',memory:'gmRunMemory',groups:'gmRunGroups',millionaire:'gmRunMillionaire',race:'gmRunRace',boxes:'gmRunBoxes'}[tpl]||'gmRunQuiz';
   const bgStyle=bg?`url('${bg}')`:'linear-gradient(135deg,#2a1f4d,#1c1730)';
   const logoB64=await gmFetchB64('khottah_icon_120.png');
   const parts=[];
@@ -12255,6 +12279,166 @@ function gmPickDraw(){
     if(cycled)toast('🔁 مرّ الجميع — بدأت جولة عادلة جديدة','ok');
     go.disabled=false;
   },DUR+80);
+}
+// ─ 💰 محرك من سيربح المليون ─
+function gmRunMillionaire(qs){
+  const body=document.getElementById('gm-stage-body');
+  const n=qs.length;
+  // سلم الجوائز: تصاعد هندسي من ١٠٠ حتى المليون
+  const prizes=[];for(let i=0;i<n;i++)prizes.push(Math.round(100*Math.pow(1000000/100,i/(Math.max(n-1,1))))); 
+  const fmt=v=>egToArabic(v>=1000000?'١٬٠٠٠٬٠٠٠':v.toLocaleString('en').replace(/,/g,'٬'));
+  let qi=0,lifes={fifty:true,ask:true,swap:true},swapped=null;
+  const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span>💰 ${qi>0?fmt(prizes[qi-1]):'٠'}</span><span>${egToArabic(Math.min(qi+1,n))} / ${egToArabic(n)}</span>`;};
+  const gameOver=(won,prize)=>{
+    if(won){gmSound('win');gmConfetti();}else gmSound('bad');
+    body.innerHTML=`<div class="gm-panel gm-end"><p class="big">${won?'👑':'💔'}</p><h2 style="margin:6px 0">${won?'مبرووووك! ربحت المليون!':'انتهت الرحلة'}</h2><p style="color:#8a7c68;margin:0 0 14px">الرصيد النهائي: <b>${fmt(prize)}</b> نقطة</p><button class="gm-btn" onclick="gmRunMillionaire(gmItems)">🔄 إعادة التشغيل</button></div>`;
+  };
+  const show=()=>{
+    if(qi>=n){gameOver(true,prizes[n-1]);return;}
+    const Q=swapped&&swapped.at===qi?swapped.q:qs[qi];hud();
+    const ladder=prizes.map((p,i)=>`<div class="gm-lad ${i===qi?'cur':''} ${i<qi?'done':''}">${fmt(p)}</div>`).reverse().join('');
+    body.innerHTML=`<div class="gm-mill-wrap"><div class="gm-panel" style="flex:1;min-width:0">
+      <div class="gm-lifes">
+        <button class="gm-life" id="gml-fifty" ${lifes.fifty?'':'disabled'}>✂️ ٥٠:٥٠</button>
+        <button class="gm-life" id="gml-ask" ${lifes.ask?'':'disabled'}>🙋 سؤال الصف</button>
+        <button class="gm-life" id="gml-swap" ${lifes.swap?'':'disabled'}>🔄 تبديل السؤال</button>
+      </div>
+      <p class="gm-qtext">${escHtml(Q.q)}</p>
+      <div class="gm-choices">${Q.c.map((c,i)=>c?`<button class="gm-choice" data-i="${i}">${escHtml(c)}</button>`:'').join('')}</div>
+      <div id="gml-poll" style="display:none;margin-top:12px"></div>
+    </div><div class="gm-ladder">${ladder}</div></div>`;
+    document.getElementById('gml-fifty').onclick=()=>{
+      if(!lifes.fifty)return;lifes.fifty=false;gmSound('pop');
+      document.getElementById('gml-fifty').disabled=true;
+      const wrong=Q.c.map((c,i)=>i).filter(i=>c=>true).filter(i=>i!==(Q.a||0)&&Q.c[i]);
+      wrong.sort(()=>Math.random()-.5).slice(0,2).forEach(i=>{const b=body.querySelector('.gm-choice[data-i="'+i+'"]');if(b){b.style.visibility='hidden';}});
+    };
+    document.getElementById('gml-ask').onclick=()=>{
+      if(!lifes.ask)return;lifes.ask=false;gmSound('pop');
+      document.getElementById('gml-ask').disabled=true;
+      // تصويت الصف: انحياز واضح للإجابة الصحيحة مع تشويش واقعي
+      const vis=Q.c.map((c,i)=>({c,i})).filter(o=>o.c&&body.querySelector('.gm-choice[data-i="'+o.i+'"]')?.style.visibility!=='hidden');
+      let rest=100,bars=vis.map(o=>({...o,p:0}));
+      const corr=bars.find(b=>b.i===(Q.a||0));if(corr){corr.p=55+Math.floor(Math.random()*25);rest-=corr.p;}
+      bars.filter(b=>b!==corr).forEach((b,k,arr)=>{const v=k===arr.length-1?rest:Math.floor(Math.random()*rest);b.p=v;rest-=v;});
+      document.getElementById('gml-poll').style.display='block';
+      document.getElementById('gml-poll').innerHTML='<div style="font-size:11.5px;color:#8a7c68;font-weight:700;margin-bottom:4px">🙋 تصويت الصف:</div>'+bars.map(b=>`<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="font-size:11px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(b.c)}</span><div style="flex:1;height:12px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden"><i style="display:block;height:100%;width:${b.p}%;background:linear-gradient(90deg,#6d28d9,#8b5cf6)"></i></div><b style="font-size:11px">${egToArabic(b.p)}٪</b></div>`).join('');
+    };
+    document.getElementById('gml-swap').onclick=()=>{
+      if(!lifes.swap)return;lifes.swap=false;gmSound('pop');
+      // بديل: سؤال غير مستخدم بعد، وإلا يبقى الحالي
+      const alt=qs.find((x,ix)=>ix>qi);
+      if(alt){const ix=qs.indexOf(alt);qs.splice(ix,1);qs.push(Q);swapped=null;}
+      show();
+    };
+    body.querySelectorAll('.gm-choice').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.i;
+      body.querySelectorAll('.gm-choice').forEach(x=>x.onclick=null);
+      if(i===(Q.a||0)){b.classList.add('good');gmSound('ok');qi++;setTimeout(show,1200);}
+      else{b.classList.add('bad');const cb=body.querySelector('.gm-choice[data-i="'+(Q.a||0)+'"]');if(cb)cb.classList.add('good');setTimeout(()=>gameOver(false,qi>0?prizes[qi-1]:0),1400);}
+    });
+  };
+  show();
+}
+// ─ 🏎️ محرك سباق الفريقين ─
+function gmRunRace(qs){
+  const body=document.getElementById('gm-stage-body');
+  const FINISH=Math.max(3,Math.min(6,Math.ceil(qs.length/2)));
+  let pos={a:0,b:0},turn='a',qi=0;
+  const T={a:{name:'الفريق الأحمر',car:'🚗',color:'#dc2626'},b:{name:'الفريق الأزرق',car:'🚙',color:'#2563eb'}};
+  const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span style="color:#fca5a5">🔴 ${egToArabic(pos.a)}</span><span style="color:#93c5fd">🔵 ${egToArabic(pos.b)}</span>`;};
+  const track=()=>['a','b'].map(t=>{
+    const cells=[];for(let i=0;i<=FINISH;i++)cells.push(`<div class="gm-race-cell ${i===FINISH?'fin':''}">${pos[t]===i?T[t].car:''}</div>`);
+    return `<div class="gm-race-lane" style="border-color:${T[t].color}55"><b style="color:${T[t].color};font-size:11px;min-width:78px">${T[t].name}</b>${cells.join('')}🏁</div>`;
+  }).join('');
+  const finish=(w)=>{
+    gmSound('win');gmConfetti();
+    body.innerHTML=`<div class="gm-panel gm-end"><p class="big">🏆</p><h2 style="margin:6px 0;color:${T[w].color}">${T[w].name} يفوز بالسباق!</h2><div style="margin:10px 0">${track()}</div><button class="gm-btn" onclick="gmRunRace(gmItems)">🔄 إعادة التشغيل</button></div>`;
+  };
+  const ask=(team,isSteal)=>{
+    const Q=qs[qi%qs.length];hud();
+    body.innerHTML=`<div class="gm-panel">
+      <div style="margin-bottom:10px">${track()}</div>
+      <div style="text-align:center;font-weight:800;font-size:14px;color:${T[team].color};margin-bottom:8px">${isSteal?'⚡ فرصة خطف لـ':'دور'} ${T[team].name} ${T[team].car}</div>
+      <p class="gm-qtext" style="font-size:18px">${escHtml(Q.q)}</p>
+      <div class="gm-choices">${Q.c.map((c,i)=>c?`<button class="gm-choice" data-i="${i}">${escHtml(c)}</button>`:'').join('')}</div></div>`;
+    body.querySelectorAll('.gm-choice').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.i;
+      body.querySelectorAll('.gm-choice').forEach(x=>x.onclick=null);
+      if(i===(Q.a||0)){
+        b.classList.add('good');gmSound('ok');
+        pos[team]++;qi++;hud();
+        if(pos[team]>=FINISH){setTimeout(()=>finish(team),900);return;}
+        turn=(isSteal?team:(team==='a'?'b':'a'));
+        setTimeout(()=>ask(turn,false),1100);
+      }else{
+        b.classList.add('bad');gmSound('bad');
+        const cb=body.querySelector('.gm-choice[data-i="'+(Q.a||0)+'"]');
+        if(!isSteal){
+          // خطأ — الفريق الآخر يخطف نفس السؤال
+          setTimeout(()=>ask(team==='a'?'b':'a',true),1100);
+        }else{
+          if(cb)cb.classList.add('good');
+          qi++;turn=(team==='a'?'b':'a');
+          setTimeout(()=>ask(turn,false),1300);
+        }
+      }
+    });
+  };
+  ask('a',false);
+}
+// ─ 🧨 محرك كنوز وقنابل ─
+function gmRunBoxes(qs){
+  const body=document.getElementById('gm-stage-body');
+  const T={a:{name:'الفريق الأحمر',color:'#dc2626'},b:{name:'الفريق الأزرق',color:'#2563eb'}};
+  let score={a:0,b:0},turn='a',qi=0;
+  // مكافآت الصناديق: كنوز وقنابل وسرقة ومضاعفة
+  const NB=Math.min(12,Math.max(8,qs.length+2));
+  const pool=['+100','+100','+50','+50','+200','x2','bomb','bomb','steal','+150','+50','+100'].slice(0,NB).sort(()=>Math.random()-.5);
+  let boxes=pool.map((r,i)=>({r,open:false}));
+  const RLBL={'+50':'💎 +٥٠','+100':'💎 +١٠٠','+150':'💎 +١٥٠','+200':'💰 +٢٠٠','x2':'✨ ×٢ رصيدك','bomb':'🧨 قنبلة! −١٠٠','steal':'🕵️ اسرق ١٠٠ من الخصم'};
+  const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span style="color:#fca5a5">🔴 ${egToArabic(score.a)}</span><span style="color:#93c5fd">🔵 ${egToArabic(score.b)}</span>`;};
+  const grid=(clickable)=>`<div class="gm-tbox-grid">${boxes.map((b,i)=>`<button class="gm-tbox ${b.open?'open':''}" data-i="${i}" ${b.open||!clickable?'disabled':''}>${b.open?RLBL[b.r]:'🎁'}</button>`).join('')}</div>`;
+  const finish=()=>{
+    gmSound('win');gmConfetti();
+    const w=score.a===score.b?null:(score.a>score.b?'a':'b');
+    body.innerHTML=`<div class="gm-panel gm-end"><p class="big">${w?'🏆':'🤝'}</p><h2 style="margin:6px 0;color:${w?T[w].color:'#8a7c68'}">${w?T[w].name+' يفوز!':'تعادل مثير!'}</h2><p style="color:#8a7c68;margin:0 0 14px">🔴 ${egToArabic(score.a)} — ${egToArabic(score.b)} 🔵</p><button class="gm-btn" onclick="gmRunBoxes(gmItems)">🔄 إعادة التشغيل</button></div>`;
+  };
+  const ask=()=>{
+    if(qi>=qs.length||boxes.every(b=>b.open)){finish();return;}
+    const Q=qs[qi];hud();
+    body.innerHTML=`<div class="gm-panel">
+      <div style="text-align:center;font-weight:800;font-size:14px;color:${T[turn].color};margin-bottom:8px">دور ${T[turn].name}</div>
+      <p class="gm-qtext" style="font-size:18px">${escHtml(Q.q)}</p>
+      <div class="gm-choices">${Q.c.map((c,i)=>c?`<button class="gm-choice" data-i="${i}">${escHtml(c)}</button>`:'').join('')}</div></div>`;
+    body.querySelectorAll('.gm-choice').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.i;
+      body.querySelectorAll('.gm-choice').forEach(x=>x.onclick=null);
+      qi++;
+      if(i===(Q.a||0)){b.classList.add('good');gmSound('ok');setTimeout(pickBox,900);}
+      else{
+        b.classList.add('bad');gmSound('bad');
+        const cb=body.querySelector('.gm-choice[data-i="'+(Q.a||0)+'"]');if(cb)cb.classList.add('good');
+        turn=turn==='a'?'b':'a';
+        setTimeout(ask,1300);
+      }
+    });
+  };
+  const pickBox=()=>{
+    body.innerHTML=`<div class="gm-panel"><div style="text-align:center;font-weight:800;font-size:15px;color:${T[turn].color};margin-bottom:10px">أحسنت يا ${T[turn].name}! اختر صندوقاً 🎁</div>${grid(true)}</div>`;
+    body.querySelectorAll('.gm-tbox:not(.open)').forEach(btn=>btn.onclick=()=>{
+      const bx=boxes[+btn.dataset.i];bx.open=true;
+      const other=turn==='a'?'b':'a';
+      if(bx.r==='bomb'){gmSound('bad');score[turn]=Math.max(0,score[turn]-100);}
+      else if(bx.r==='steal'){gmSound('pop');const amt=Math.min(100,score[other]);score[other]-=amt;score[turn]+=amt;}
+      else if(bx.r==='x2'){gmSound('win');score[turn]*=2;}
+      else{gmSound('ok');score[turn]+=parseInt(bx.r.slice(1));}
+      hud();
+      body.innerHTML=`<div class="gm-panel"><div style="text-align:center;font-size:34px;margin:4px 0">${RLBL[bx.r]}</div><div style="text-align:center;font-size:13px;color:#8a7c68;font-weight:700;margin-bottom:10px">رصيد ${T[turn].name}: ${egToArabic(score[turn])}</div>${grid(false)}<div style="text-align:center;margin-top:12px"><button class="gm-btn" id="gm-next">التالي ◀</button></div></div>`;
+      document.getElementById('gm-next').onclick=()=>{turn=other;ask();};
+    });
+  };
+  ask();
 }
 // ─ 🎊 كونفيتي ─
 function gmConfetti(){
