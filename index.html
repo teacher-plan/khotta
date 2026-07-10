@@ -11655,28 +11655,34 @@ let gmThemes=[];                   // الثيمات المتاحة
 const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'items',memory:'pairs',groups:'groups'};
 const GM_TPL_LBL={wheel:'🎡 العجلة',match:'🃏 المطابقة',quiz:'❓ اختبار السرعة',balloon:'🎈 فرقع البالون',box:'📦 افتح الصندوق',memory:'🧠 بطاقات الذاكرة',groups:'🗂️ فرز المجموعات'};
 
-// ─ 🔊 محرك الأصوات (WebAudio — بلا ملفات) ─
+// ─ 🔊 محرك الأصوات الاحترافي — ZzFX (Zuper Zmall Zound Zynth) v1.3.2, MIT © Frank Force ─
 let gmAC=null,gmMuted=localStorage.getItem('gmMuted')==='1';
-function gmTone(freq,dur,type,delay,vol){
-  const t=gmAC.currentTime+(delay||0);
-  const o=gmAC.createOscillator(),g=gmAC.createGain();
-  o.type=type||'sine';o.frequency.setValueAtTime(freq,t);
-  g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(vol||0.22,t+0.015);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  o.connect(g).connect(gmAC.destination);
-  o.start(t);o.stop(t+dur+0.05);
+function zzfx(...t){
+  if(!gmAC)gmAC=new(window.AudioContext||window.webkitAudioContext)();
+  if(gmAC.state==='suspended')gmAC.resume();
+  let[p=1,k=.05,b=220,e=0,r=0,tt=.1,q=0,D=1,u=0,y=0,v=0,z=0,l=0,E=0,A=0,F=0,c=0,w=1,m=0,B=0,N=0]=t,
+  M=Math,d=2*M.PI,R=44100,G=u*=500*d/R/R,C=b*=(1-k+2*k*M.random(k=[]))*d/R,
+  g=0,H=0,a=0,n=1,I=0,J=0,f=0,h=N<0?-1:1,x=d*h*N*2/R,L=M.cos(x),Z=M.sin,K=Z(x)/4,O=1+K,
+  X=-2*L/O,Y=(1-K)/O,P=(1+h*L)/2/O,Q=-(h+L)/O,S=P,T=0,U=0,V=0,W=0;
+  e=R*e+9;m*=R;r*=R;tt*=R;c*=R;y*=500*d/R**3;A*=d/R;v*=d/R;z*=R;l=R*l|0;p*=.3;
+  for(h=e+m+r+tt+c|0;a<h;k[a++]=f*p)
+    ++J%(100*F|0)||(f=q?1<q?2<q?3<q?Z(g**3):M.max(M.min(M.tan(g),1),-1):1-(2*g/d%2+2)%2:1-4*M.abs(M.round(g/d)-g/d):Z(g),
+    f=(l?1-B+B*Z(d*a/l):1)*(f<0?-1:1)*M.abs(f)**D*(a<e?a/e:a<e+m?1-(a-e)/m*(1-w):a<e+m+r?w:a<h-c?(h-a-c)/tt*w:0),
+    f=c?f/2+(c>a?0:(a<h-c?1:(h-a)/c)*k[a-c|0]/2/p):f,
+    N?f=W=S*T+Q*(T=U)+P*(U=f)-Y*V-X*(V=W):0),
+    x=(b+=u+=y)*M.cos(A*H++),g+=x+x*E*Z(a**5),
+    n&&++n>z&&(b+=v,C+=v,n=0),!l||++I%l||(b=C,u=G,n=n||1);
+  const bf=gmAC.createBuffer(1,h,R);bf.getChannelData(0).set(k);
+  const src=gmAC.createBufferSource();src.buffer=bf;src.connect(gmAC.destination);src.start();
 }
 function gmSound(kind){
   if(gmMuted)return;
   try{
-    if(!gmAC)gmAC=new(window.AudioContext||window.webkitAudioContext)();
-    if(gmAC.state==='suspended')gmAC.resume();
-    if(kind==='ok'){gmTone(660,.12,'sine');gmTone(880,.18,'sine',.09);}
-    else if(kind==='bad'){gmTone(180,.22,'sawtooth',0,.14);gmTone(140,.25,'sawtooth',.05,.12);}
-    else if(kind==='pop'){gmTone(520,.06,'square',0,.18);gmTone(760,.05,'square',.03,.12);}
-    else if(kind==='win'){[523,659,784,1047].forEach((f,i)=>gmTone(f,.22,'triangle',i*.13,.25));}
-    else if(kind==='spin'){gmTone(440,.08,'triangle',0,.1);}
+    if(kind==='ok')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);                       // 🪙 عملة نجاح
+    else if(kind==='bad')zzfx(1.4,.05,144,.01,0,.25,1,1.3,-4,0,0,0,0,0,0,.1,0,.6,.06);  // ❌ طنين خطأ
+    else if(kind==='pop')zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);      // 🫧 فرقعة
+    else if(kind==='win')zzfx(1.1,.05,539,0,.04,.29,1,1.92,0,0,567,.02,.02,0,0,0,.04);  // 🏆 لحن فوز
+    else if(kind==='spin')zzfx(.8,.05,270,0,.09,.14,1,1.9,0,0,-63,.03);                 // 🎡 تدوير
   }catch(e){}
 }
 function gmToggleMute(){
