@@ -1041,6 +1041,20 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .gm-pick-strip{position:absolute;inset-inline:0;top:0;}
 .gm-pick-row{height:52px;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:800;color:#3d3428;white-space:nowrap;padding:0 6px;overflow:hidden;}
 .gm-pick-row.winner{color:#b45309;}
+/* 💰 مظهر استوديو المليون */
+.gm-mill-panel{background:linear-gradient(165deg,rgba(28,18,74,.93),rgba(10,7,36,.95));border:1px solid rgba(147,112,219,.45);color:#fff;box-shadow:0 14px 44px rgba(0,0,0,.55),0 0 60px rgba(109,40,217,.25);}
+.gm-mill-panel .gm-qtext{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+.gm-mill-panel .gm-choice{background:linear-gradient(180deg,#221457,#0d0930);border:2px solid #7c5ce0;color:#fff;clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);border-radius:0;padding:15px 22px;box-shadow:inset 0 0 18px rgba(124,92,224,.25);}
+.gm-mill-panel .gm-choice:hover{border-color:#ffd76a;background:linear-gradient(180deg,#3a2a17,#1d1408);box-shadow:inset 0 0 18px rgba(255,215,106,.3);}
+.gm-mill-panel .gm-choice.good{background:linear-gradient(180deg,#0c4a22,#052912);border-color:#22c55e;color:#86efac;box-shadow:0 0 22px rgba(34,197,94,.5);}
+.gm-mill-panel .gm-choice.bad{background:linear-gradient(180deg,#5b1010,#2a0606);border-color:#ef4444;color:#fca5a5;box-shadow:0 0 22px rgba(239,68,68,.5);}
+.gm-mill-panel .gm-life{background:linear-gradient(180deg,#221457,#0d0930);border-color:#7c5ce0;color:#c4b5fd;}
+.gm-mill-panel .gm-life:hover:not(:disabled){border-color:#ffd76a;color:#ffd76a;}
+.gm-mill-ladder{background:linear-gradient(180deg,rgba(28,18,74,.92),rgba(10,7,36,.95));border:1px solid rgba(147,112,219,.4);box-shadow:0 10px 30px rgba(0,0,0,.5);}
+.gm-mill-ladder .gm-lad{color:#8f83c9;}
+.gm-mill-ladder .gm-lad.cur{background:linear-gradient(90deg,#b8860b,#ffd76a,#b8860b);color:#1d1408;box-shadow:0 0 16px rgba(255,215,106,.6);}
+.gm-mill-ladder .gm-lad.done{color:#4ade80;}
+.gm-mill-btn{background:linear-gradient(135deg,#b8860b,#ffd76a);color:#1d1408;box-shadow:0 4px 18px rgba(255,215,106,.4);}
 /* المليون + السباق + الكنوز */
 .gm-mill-wrap{display:flex;gap:12px;width:100%;max-width:760px;align-items:flex-start;}
 .gm-ladder{flex:none;width:110px;display:flex;flex-direction:column;gap:3px;background:rgba(255,252,245,.9);border-radius:14px;padding:8px;max-height:70vh;overflow:auto;}
@@ -12291,13 +12305,13 @@ function gmRunMillionaire(qs){
   const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span>💰 ${qi>0?fmt(prizes[qi-1]):'٠'}</span><span>${egToArabic(Math.min(qi+1,n))} / ${egToArabic(n)}</span>`;};
   const gameOver=(won,prize)=>{
     if(won){gmSound('win');gmConfetti();}else gmSound('bad');
-    body.innerHTML=`<div class="gm-panel gm-end"><p class="big">${won?'👑':'💔'}</p><h2 style="margin:6px 0">${won?'مبرووووك! ربحت المليون!':'انتهت الرحلة'}</h2><p style="color:#8a7c68;margin:0 0 14px">الرصيد النهائي: <b>${fmt(prize)}</b> نقطة</p><button class="gm-btn" onclick="gmRunMillionaire(gmItems)">🔄 إعادة التشغيل</button></div>`;
+    body.innerHTML=`<div class="gm-panel gm-mill-panel gm-end"><p class="big">${won?'👑':'💔'}</p><h2 style="margin:6px 0;color:#ffd76a">${won?'مبرووووك! ربحت المليون!':'انتهت الرحلة'}</h2><p style="color:#c4b5fd;margin:0 0 14px">الرصيد النهائي: <b style="color:#ffd76a">${fmt(prize)}</b> نقطة</p><button class="gm-btn gm-mill-btn" onclick="gmRunMillionaire(gmItems)">🔄 إعادة التشغيل</button></div>`;
   };
   const show=()=>{
     if(qi>=n){gameOver(true,prizes[n-1]);return;}
     const Q=swapped&&swapped.at===qi?swapped.q:qs[qi];hud();
     const ladder=prizes.map((p,i)=>`<div class="gm-lad ${i===qi?'cur':''} ${i<qi?'done':''}">${fmt(p)}</div>`).reverse().join('');
-    body.innerHTML=`<div class="gm-mill-wrap"><div class="gm-panel" style="flex:1;min-width:0">
+    body.innerHTML=`<div class="gm-mill-wrap"><div class="gm-panel gm-mill-panel" style="flex:1;min-width:0">
       <div class="gm-lifes">
         <button class="gm-life" id="gml-fifty" ${lifes.fifty?'':'disabled'}>✂️ ٥٠:٥٠</button>
         <button class="gm-life" id="gml-ask" ${lifes.ask?'':'disabled'}>🙋 سؤال الصف</button>
@@ -12306,7 +12320,7 @@ function gmRunMillionaire(qs){
       <p class="gm-qtext">${escHtml(Q.q)}</p>
       <div class="gm-choices">${Q.c.map((c,i)=>c?`<button class="gm-choice" data-i="${i}">${escHtml(c)}</button>`:'').join('')}</div>
       <div id="gml-poll" style="display:none;margin-top:12px"></div>
-    </div><div class="gm-ladder">${ladder}</div></div>`;
+    </div><div class="gm-ladder gm-mill-ladder">${ladder}</div></div>`;
     document.getElementById('gml-fifty').onclick=()=>{
       if(!lifes.fifty)return;lifes.fifty=false;gmSound('pop');
       document.getElementById('gml-fifty').disabled=true;
@@ -12322,7 +12336,7 @@ function gmRunMillionaire(qs){
       const corr=bars.find(b=>b.i===(Q.a||0));if(corr){corr.p=55+Math.floor(Math.random()*25);rest-=corr.p;}
       bars.filter(b=>b!==corr).forEach((b,k,arr)=>{const v=k===arr.length-1?rest:Math.floor(Math.random()*rest);b.p=v;rest-=v;});
       document.getElementById('gml-poll').style.display='block';
-      document.getElementById('gml-poll').innerHTML='<div style="font-size:11.5px;color:#8a7c68;font-weight:700;margin-bottom:4px">🙋 تصويت الصف:</div>'+bars.map(b=>`<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="font-size:11px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(b.c)}</span><div style="flex:1;height:12px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden"><i style="display:block;height:100%;width:${b.p}%;background:linear-gradient(90deg,#6d28d9,#8b5cf6)"></i></div><b style="font-size:11px">${egToArabic(b.p)}٪</b></div>`).join('');
+      document.getElementById('gml-poll').innerHTML='<div style="font-size:11.5px;color:#c4b5fd;font-weight:700;margin-bottom:4px">🙋 تصويت الصف:</div>'+bars.map(b=>`<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="font-size:11px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(b.c)}</span><div style="flex:1;height:12px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden"><i style="display:block;height:100%;width:${b.p}%;background:linear-gradient(90deg,#6d28d9,#8b5cf6)"></i></div><b style="font-size:11px">${egToArabic(b.p)}٪</b></div>`).join('');
     };
     document.getElementById('gml-swap').onclick=()=>{
       if(!lifes.swap)return;lifes.swap=false;gmSound('pop');
