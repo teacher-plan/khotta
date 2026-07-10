@@ -2922,6 +2922,13 @@ input,textarea,select{font-size:16px !important;}
     <button class="eg-generate" style="margin-top:10px" id="gmth-gen-btn" onclick="gmThemeGenerate()">🎨 توليد الثيم ورفعه (مرة واحدة)</button>
     <div id="gmth-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px"></div>
   </div>
+
+  <!-- 🔊 أصوات الألعاب المخصصة -->
+  <div class="eg-card">
+    <div class="eg-step-title">🔊 أصوات الألعاب الاحترافية</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع ملف MP3 لكل حدث ليحل محل الصوت المولّد لدى <b>كل المعلمين</b> فوراً. مصادر موصى بها: kenney.nl (مجاني CC0)، mixkit.co (مجاني)، أو AudioJungle (مدفوع). الحذف يعيد الصوت الافتراضي.</p>
+    <div id="gm-sfx-slots" style="display:grid;gap:8px"></div>
+  </div>
   </div>
 
   <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
@@ -5732,7 +5739,7 @@ function switchAiTab(tab){
     b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
   });
   if(tab==='budget')loadOrBalance();
-  if(tab==='ppt')gmThemeList();
+  if(tab==='ppt'){gmThemeList();gmSfxSlots();}
 }
 
 // ═ 🎮 إدارة ثيمات الألعاب (مشرف) ═
@@ -5769,6 +5776,54 @@ async function gmThemeGenerate(){
     }
   }catch(e){toast('⚠️ تعذّر توليد الثيم',true);console.warn(e);}
   btn.disabled=false;btn.textContent='🎨 توليد الثيم ورفعه (مرة واحدة)';
+}
+// ═ 🔊 إدارة أصوات الألعاب (مشرف) ═
+const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة']};
+async function gmSfxSlots(){
+  const box=document.getElementById('gm-sfx-slots');if(!box)return;
+  let have={};
+  try{
+    const{data}=await sb.storage.from('library-files').list('game-sfx');
+    (data||[]).forEach(f=>{have[f.name.replace('.mp3','')]=true;});
+  }catch(e){}
+  box.innerHTML=GM_SFX_KINDS.map(k=>`<div class="gm-row" style="margin:0">
+    <span style="flex:1;font-weight:700;font-size:13px">${GM_SFX_LBL[k][0]}</span>
+    <span style="font-size:11px;color:var(--muted);flex:none">${have[k]?'مخصص ✅':'افتراضي'}</span>
+    <button class="arc-btn" style="flex:none;padding:4px 10px;font-size:12px" onclick="gmSfxPreview('${k}',${have[k]?'true':'false'})">▶️</button>
+    <button class="arc-btn" style="flex:none;padding:4px 10px;font-size:12px" onclick="gmSfxUpload('${k}')">⬆️ رفع</button>
+    ${have[k]?`<button class="arc-btn del" style="flex:none;padding:4px 10px;font-size:12px" onclick="gmSfxDelete('${k}')">🗑️</button>`:''}
+  </div>`).join('');
+}
+function gmSfxPreview(kind,custom){
+  if(custom){const a=new Audio(gmSfxUrl(kind)+'?t='+Date.now());a.play().catch(()=>toast('تعذّر التشغيل',true));}
+  else{const m=gmMuted;gmMuted=false;gmSfx={};gmSound(kind);gmMuted=m;}
+}
+function gmSfxUpload(kind){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='audio/mpeg,audio/mp3,.mp3';
+  inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    if(f.size>1024*1024){toast('الملف كبير — اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
+    toast('⏳ جاري الرفع...','ok');
+    try{
+      const{error}=await sb.storage.from('library-files').upload('game-sfx/'+kind+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
+      if(error)throw error;
+      localStorage.setItem('gmSfxV',String(Date.now()));
+      gmSfxLoaded=false;gmSfx={};
+      toast('✅ رُفع الصوت وسيسمعه الجميع','ok');
+      gmSfxSlots();
+    }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
+  };
+  inp.click();
+}
+async function gmSfxDelete(kind){
+  if(!(await uiConfirm('حذف الصوت','سيعود هذا الحدث للصوت الافتراضي المولّد. متابعة؟')))return;
+  try{
+    await sb.storage.from('library-files').remove(['game-sfx/'+kind+'.mp3']);
+    localStorage.setItem('gmSfxV',String(Date.now()));
+    gmSfxLoaded=false;gmSfx={};
+    gmSfxSlots();
+  }catch(e){toast('تعذّر الحذف',true);}
 }
 async function gmThemeDelete(id){
   if(!(await uiConfirm('حذف الثيم','سيختفي من قوائم كل المعلمين — الألعاب المحفوظة به ستعود للخلفية الكلاسيكية. متابعة؟')))return;
@@ -11675,9 +11730,27 @@ function zzfx(...t){
   const bf=gmAC.createBuffer(1,h,R);bf.getChannelData(0).set(k);
   const src=gmAC.createBufferSource();src.buffer=bf;src.connect(gmAC.destination);src.start();
 }
+// أصوات مخصصة مرفوعة من الإدارة (game-sfx/<kind>.mp3) — الأولوية لها، وZzFX احتياط
+const GM_SFX_KINDS=['ok','bad','pop','win','spin'];
+let gmSfx={};        // kind -> HTMLAudioElement (جاهز) | null (غير موجود)
+let gmSfxLoaded=false;
+function gmSfxUrl(kind){return sb.storage.from('library-files').getPublicUrl('game-sfx/'+kind+'.mp3').data.publicUrl;}
+function gmLoadSfx(){
+  if(gmSfxLoaded||typeof sb==='undefined'||!sb)return;
+  gmSfxLoaded=true;
+  GM_SFX_KINDS.forEach(k=>{
+    const a=new Audio();
+    a.preload='auto';
+    a.oncanplaythrough=()=>{gmSfx[k]=a;};
+    a.onerror=()=>{gmSfx[k]=null;};
+    a.src=gmSfxUrl(k)+'?v='+(localStorage.getItem('gmSfxV')||'1');
+  });
+}
 function gmSound(kind){
   if(gmMuted)return;
   try{
+    const a=gmSfx[kind];
+    if(a){const c=a.cloneNode();c.volume=0.9;c.play().catch(()=>{});return;}
     if(kind==='ok')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);                       // 🪙 عملة نجاح
     else if(kind==='bad')zzfx(1.4,.05,144,.01,0,.25,1,1.3,-4,0,0,0,0,0,0,.1,0,.6,.06);  // ❌ طنين خطأ
     else if(kind==='pop')zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);      // 🫧 فرقعة
@@ -11882,6 +11955,7 @@ function gmPlayWith(items,title){
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
   document.body.style.overflow='hidden';
+  gmLoadSfx();
   const mb=document.getElementById('gm-mute-btn');if(mb)mb.textContent=gmMuted?'🔇':'🔊';
   if(gmTpl==='wheel')gmRunWheel(items);
   else if(gmTpl==='match')gmRunMatch(items);
