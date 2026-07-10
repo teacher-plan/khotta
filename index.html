@@ -12652,7 +12652,8 @@ async function fhSend(){
     document.getElementById('fh-typing')?.remove();
     if(error||!data||!data.reply){
       let reason=(data&&data.error)||error?.message||'';
-      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}
+      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}
+      if(data&&data.detail)reason+=' | '+JSON.stringify(data.detail).slice(0,400);
       fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد 😔 حاول مرة أخرى.'+(isAdmin()&&reason?' ['+reason+']':'')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply});
