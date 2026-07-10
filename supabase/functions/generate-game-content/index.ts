@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const grade = String(b.grade || "");
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
-    const structure = ["pairs", "quiz", "items"].includes(b.structure) ? b.structure : "quiz";
+    const structure = ["pairs", "quiz", "items", "groups"].includes(b.structure) ? b.structure : "quiz";
     const count = Math.max(3, Math.min(15, parseInt(b.count) || 6));
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 12) : [];
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
@@ -63,11 +63,13 @@ Deno.serve(async (req) => {
       pairs: '{"items":[{"a":"المصطلح أو المفهوم (قصير)","b":"معناه أو مقابله (قصير)"}]}',
       quiz: '{"items":[{"q":"نص السؤال","c":["خيار ١","خيار ٢","خيار ٣","خيار ٤"],"a":0}]}',
       items: '{"items":["سؤال أو عنصر قصير","سؤال آخر"]}',
+      groups: '{"groupNames":["اسم المجموعة الأولى","اسم المجموعة الثانية"],"items":[{"t":"عنصر قصير","g":0}]}',
     };
     const structureNotes: Record<string, string> = {
       pairs: "أزواج مطابقة: كل زوج مصطلح/مفهوم من الدرس ومعناه. اجعل النصين قصيرين (كلمة إلى ٦ كلمات) ليظهرا على بطاقات لعب صغيرة.",
       quiz: "أسئلة اختيار من متعدد بأربعة خيارات، حقل a هو موضع الإجابة الصحيحة (٠-٣). أسئلة قصيرة مباشرة تناسب مسابقة سريعة موقوتة على شاشة الصف.",
-      items: "قائمة أسئلة/مهام قصيرة جداً (سطر واحد) تُكتب على قطاعات عجلة عشوائية — يُسأل بها الطالب شفهياً.",
+      items: "قائمة أسئلة/مهام قصيرة جداً (سطر واحد) تُكتب على قطاعات عجلة عشوائية أو داخل صناديق مغلقة — يُسأل بها الطالب شفهياً.",
+      groups: "تصنيف: اختر تصنيفاً ثنائياً جوهرياً في الدرس (مثل: مذكر/مؤنث، صلب/سائل، أكبر من/أصغر من)، ضع اسمي المجموعتين في groupNames، وكل عنصر قصير مع حقل g يحدد مجموعته الصحيحة (٠ أو ١). وزّع العناصر بالتساوي تقريباً.",
     };
 
     const system = [
@@ -113,13 +115,13 @@ Deno.serve(async (req) => {
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: { items?: unknown[] } | null = null;
+    let parsed: { items?: unknown[]; groupNames?: string[] } | null = null;
     try { parsed = JSON.parse(text); }
     catch (_) { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
     if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) {
       return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
     }
-    return json({ items: parsed.items, structure, model, usage: or?.usage || null });
+    return json({ items: parsed.items, groupNames: parsed.groupNames || null, structure, model, usage: or?.usage || null });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }
