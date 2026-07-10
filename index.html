@@ -13079,8 +13079,11 @@ async function renderDailyPrep(){
         ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
         <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>`;
     }else if(b.status==='saved'){
+      const incS=b.missing&&b.missing.length;
       st='<span class="dp-status ready">محفوظ في بطاقة الدرس 📎</span>';
-      actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>`;
+      actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
+        ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
+        <button class="dp-btn" onclick="dpResave(${i})">📤 أعد الحفظ (يرفع الناقص فقط)</button>`;
     }else{
       st='<span class="dp-status wait">بانتظارك</span>';
       actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
@@ -13354,6 +13357,15 @@ async function dpPrepareAll(i){
 }
 
 // 🔁 إكمال الأجزاء الناقصة فقط — بلا إهدار الرسوم الجاهزة
+// إعادة حفظ حزمة محفوظة: يرفع الملفات الناقصة فقط (لا يكرر الموجود في البطاقة)
+async function dpResave(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status!=='saved')return;
+  b.status='ready';
+  dpBundles.set(it.lessonId,b);
+  await dpSaveBundle(i);
+}
 async function dpCompleteMissing(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   const b=dpBundle(it.lessonId);
