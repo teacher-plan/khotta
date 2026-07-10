@@ -5718,7 +5718,7 @@ async function gmThemeGenerate(){
     const{data,error}=await sb.functions.invoke('generate-game-theme',{body:{name,emoji,desc}});
     if(error||!data||!data.theme){
       let reason=(data&&data.error)||error?.message||'خطأ غير معروف';
-      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}
+      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,300);}}catch(_){}
       toast('⚠️ تعذّر توليد الثيم — '+reason,true);
     }else{
       toast('✅ تم توليد الثيم «'+name+'» ورفعه','ok');
@@ -11648,8 +11648,8 @@ async function gmGenerate(){
     });
     if(!error&&data&&data.items)items=data.items;
     else{
-      if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}}
-      else if(data&&data.error)reason=data.error;
+      if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}}
+      else if(data&&data.error)reason=data.error+(data.detail?' | '+JSON.stringify(data.detail).slice(0,400):'');
     }
   }catch(e){reason=String(e);}
   if(btn){btn.disabled=false;btn.textContent='🎲 ولّد محتوى اللعبة';}
