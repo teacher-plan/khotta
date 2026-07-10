@@ -22,6 +22,50 @@ function json(body: unknown, status = 200) {
 
 const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
 
+// إنشاء جداول الألعاب ذاتياً إن لم تكن موجودة (احتياط إن لم تُطبَّق الهجرة)
+async function ensureGameTables() {
+  const dbUrl = Deno.env.get("SUPABASE_DB_URL");
+  if (!dbUrl) throw new Error("no SUPABASE_DB_URL");
+  const { default: postgres } = await import("https://deno.land/x/postgresjs@v3.4.5/mod.js");
+  const sql = postgres(dbUrl, { prepare: false });
+  try {
+    await sql.unsafe(`
+      create table if not exists game_themes (
+        id uuid primary key default gen_random_uuid(),
+        name text not null,
+        emoji text default '🎨',
+        bg_url text,
+        colors jsonb,
+        created_by uuid,
+        created_at timestamptz default now()
+      );
+      alter table game_themes enable row level security;
+      drop policy if exists "themes_read" on game_themes;
+      create policy "themes_read" on game_themes for select to authenticated using (true);
+      drop policy if exists "themes_admin_insert" on game_themes;
+      create policy "themes_admin_insert" on game_themes for insert to authenticated with check (is_app_admin());
+      drop policy if exists "themes_admin_delete" on game_themes;
+      create policy "themes_admin_delete" on game_themes for delete to authenticated using (is_app_admin());
+      create table if not exists games (
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null default auth.uid(),
+        grade text, subject text, unit text, lesson text,
+        title text,
+        template text not null,
+        theme_id uuid references game_themes(id) on delete set null,
+        content jsonb not null,
+        created_at timestamptz default now()
+      );
+      alter table games enable row level security;
+      drop policy if exists "games_own" on games;
+      create policy "games_own" on games for all to authenticated
+        using (user_id = auth.uid()) with check (user_id = auth.uid());
+    `);
+  } finally {
+    await sql.end({ timeout: 3 });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -97,9 +141,21 @@ Deno.serve(async (req) => {
     if (upErr) return json({ error: "upload_failed", detail: upErr.message }, 500);
     const { data: pub } = admin.storage.from("library-files").getPublicUrl(path);
 
-    const { data: row, error: insErr } = await admin.from("game_themes").insert({
+    let { data: row, error: insErr } = await admin.from("game_themes").insert({
       name, emoji, bg_url: pub.publicUrl, colors, created_by: user.id,
     }).select().single();
+    // الجدول غير موجود؟ ننشئه ذاتياً ثم نعيد المحاولة
+    if (insErr && (insErr.code === "42P01" || /does not exist|schema cache/i.test(insErr.message || ""))) {
+      try {
+        await ensureGameTables();
+        const retry = await admin.from("game_themes").insert({
+          name, emoji, bg_url: pub.publicUrl, colors, created_by: user.id,
+        }).select().single();
+        row = retry.data; insErr = retry.error;
+      } catch (e) {
+        return json({ error: "db_error", detail: "bootstrap: " + String(e) }, 500);
+      }
+    }
     if (insErr) return json({ error: "db_error", detail: insErr.message }, 500);
 
     return json({ theme: row, model, usage: or?.usage || null });
