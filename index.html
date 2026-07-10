@@ -1032,6 +1032,15 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .gm-end{text-align:center;padding:16px 0;}
 .gm-end .big{font-size:52px;margin:0;animation:gmPop .5s;}
 @keyframes gmPop{0%{transform:scale(.5)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+/* 🙋 قرعة الطلاب */
+#gm-pick-bg{position:absolute;inset:0;z-index:8;background:rgba(15,10,30,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;}
+.gm-pick-panel{background:rgba(255,252,245,.97);border-radius:18px;padding:16px;width:100%;max-width:360px;box-shadow:0 14px 44px rgba(0,0,0,.45);font-family:'Cairo',sans-serif;}
+.gm-pick-card{perspective:800px;height:120px;}
+.gm-pick-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.7,.3,1.2);}
+.gm-pick-card.flip .gm-pick-inner{transform:rotateY(180deg);}
+.gm-pick-face{position:absolute;inset:0;border-radius:14px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-weight:800;}
+.gm-pick-front{background:linear-gradient(145deg,#6d28d9,#8b5cf6);color:#fff;font-size:44px;}
+.gm-pick-back{background:linear-gradient(145deg,#d97706,#fbbf24);color:#fff;font-size:24px;transform:rotateY(180deg);padding:10px;text-align:center;line-height:1.5;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
 .gm-balloon{position:relative;width:128px;height:158px;border:none;cursor:pointer;background:var(--bc);border-radius:50% 50% 50% 50%/58% 58% 42% 42%;box-shadow:inset -10px -12px 0 rgba(0,0,0,.14),0 8px 20px rgba(0,0,0,.3);animation:gmBob 2.6s ease-in-out infinite alternate;font-family:'Cairo',sans-serif;transition:transform .15s;}
@@ -2428,12 +2437,25 @@ input,textarea,select{font-size:16px !important;}
     <div id="gm-stage-title"></div>
     <div id="gm-stage-actions">
       <div id="gm-stage-hud"></div>
+      <button class="gm-x" id="gm-pick-btn" style="display:none" onclick="gmPickOpen()" title="اختيار طالب عشوائياً">🙋</button>
       <button class="gm-x" id="gm-music-btn" style="display:none" onclick="gmToggleMusic()">🎵</button>
       <button class="gm-x" id="gm-mute-btn" onclick="gmToggleMute()">🔊</button>
       <button class="gm-x" onclick="gmClose()">✕</button>
     </div>
   </div>
   <div id="gm-stage-body"></div>
+  <!-- 🙋 قرعة الطلاب -->
+  <div id="gm-pick-bg" style="display:none" onclick="if(event.target===this)gmPickClose()">
+    <div class="gm-pick-panel">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <select id="gm-pick-class" style="flex:1;background:#fff;border:1.5px solid #d8cdbb;border-radius:9px;padding:8px;font-family:'Cairo',sans-serif;font-size:13px" onchange="gmPickClassChange()"></select>
+        <button class="gm-x" style="background:rgba(0,0,0,.12);color:#3d3428" onclick="gmPickClose()">✕</button>
+      </div>
+      <div class="gm-pick-card" id="gm-pick-card"><div class="gm-pick-inner" id="gm-pick-inner"><div class="gm-pick-face gm-pick-front">؟</div><div class="gm-pick-face gm-pick-back" id="gm-pick-name"></div></div></div>
+      <div id="gm-pick-count" style="text-align:center;font-size:12.5px;color:#8a7c68;font-weight:700;margin:10px 0 12px"></div>
+      <button class="gm-btn" style="width:100%" id="gm-pick-go" onclick="gmPickDraw()">🎲 اختر طالباً</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ نافذة التأكيد الموحّدة ══ -->
@@ -12012,7 +12034,7 @@ function gmPlayWith(items,title){
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
   document.body.style.overflow='hidden';
-  gmLoadSfx();gmMusicInit();
+  gmLoadSfx();gmMusicInit();gmPickSetup();
   const mb=document.getElementById('gm-mute-btn');if(mb)mb.textContent=gmMuted?'🔇':'🔊';
   if(gmTpl==='wheel')gmRunWheel(items);
   else if(gmTpl==='match')gmRunMatch(items);
@@ -12125,6 +12147,69 @@ async function gmDownloadSaved(id){
     const blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',g.theme_id);
     gmDownloadBlob(blob,'لعبة - '+String(g.title||'لعبة').replace(/[\\/:*?"<>|]/g,'')+'.html');
   }catch(e){toast('تعذّر تجهيز الملف',true);console.warn(e);}
+}
+// ─ 🙋 قرعة الطلاب داخل اللعبة (بذاكرة عدالة يومية) ─
+function gmPickClasses(){
+  if(typeof teacherConfig==='undefined'||!teacherConfig||!teacherConfig.grades)return [];
+  return teacherConfig.grades.flatMap(g=>(g.classes||[]).map(c=>({id:c.id,label:(c.name||'')+' — '+(g.subject||''),n:(typeof students!=='undefined'&&students[c.id]||[]).length}))).filter(c=>c.n>0);
+}
+function gmPickSetup(){
+  const btn=document.getElementById('gm-pick-btn');
+  if(btn)btn.style.display=gmPickClasses().length?'':'none';
+}
+function gmPickDayKey(cid){return 'gmPick_'+cid+'_'+new Date().toISOString().slice(0,10);}
+function gmPickOpen(){
+  const sel=document.getElementById('gm-pick-class');
+  const classes=gmPickClasses();
+  if(!classes.length)return;
+  const saved=localStorage.getItem('gmPickClass');
+  sel.innerHTML=classes.map(c=>`<option value="${escHtml(c.id)}">${escHtml(c.label)} (${egToArabic(c.n)})</option>`).join('');
+  if(saved&&classes.some(c=>c.id===saved))sel.value=saved;
+  document.getElementById('gm-pick-bg').style.display='flex';
+  gmPickRefresh();
+}
+function gmPickClose(){document.getElementById('gm-pick-bg').style.display='none';}
+function gmPickClassChange(){
+  localStorage.setItem('gmPickClass',document.getElementById('gm-pick-class').value);
+  const card=document.getElementById('gm-pick-card');card.classList.remove('flip');
+  gmPickRefresh();
+}
+function gmPickRefresh(){
+  const cid=document.getElementById('gm-pick-class').value;
+  const list=(typeof students!=='undefined'&&students[cid])||[];
+  let picked=[];
+  try{picked=JSON.parse(localStorage.getItem(gmPickDayKey(cid))||'[]');}catch(e){}
+  picked=picked.filter(id=>list.some(s=>s.id===id));
+  document.getElementById('gm-pick-count').textContent='أجاب اليوم: '+egToArabic(picked.length)+' / '+egToArabic(list.length);
+}
+function gmPickDraw(){
+  const cid=document.getElementById('gm-pick-class').value;
+  const list=(typeof students!=='undefined'&&students[cid])||[];
+  if(!list.length)return;
+  const key=gmPickDayKey(cid);
+  let picked=[];
+  try{picked=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+  picked=picked.filter(id=>list.some(s=>s.id===id));
+  let pool=list.filter(s=>!picked.includes(s.id));
+  let cycled=false;
+  if(!pool.length){pool=list.slice();picked=[];cycled=true;} // اكتملت الدورة — جولة عادلة جديدة
+  const chosen=pool[Math.floor(Math.random()*pool.length)];
+  picked.push(chosen.id);
+  localStorage.setItem(key,JSON.stringify(picked));
+  const card=document.getElementById('gm-pick-card');
+  const nameEl=document.getElementById('gm-pick-name');
+  const go=document.getElementById('gm-pick-go');
+  go.disabled=true;
+  card.classList.remove('flip');
+  gmSound('spin');
+  setTimeout(()=>{
+    nameEl.textContent=chosen.name;
+    card.classList.add('flip');
+    gmSound('ok');
+    gmPickRefresh();
+    if(cycled)toast('🔁 مرّ الجميع — بدأت جولة عادلة جديدة','ok');
+    go.disabled=false;
+  },350);
 }
 // ─ 🎊 كونفيتي ─
 function gmConfetti(){
