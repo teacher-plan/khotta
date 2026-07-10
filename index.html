@@ -996,11 +996,16 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 #gm-stage-bg{position:fixed;inset:0;z-index:4000;background:#1c1730 center/cover no-repeat;display:flex;flex-direction:column;font-family:'Cairo',sans-serif;}
 #gm-stage-veil{position:absolute;inset:0;background:rgba(20,14,40,.35);pointer-events:none;}
 #gm-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;}
-#gm-stage-head{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;padding:14px 20px;color:#fff;}
-#gm-stage-title{font-weight:800;font-size:17px;text-shadow:0 2px 8px rgba(0,0,0,.6);}
-#gm-stage-hud{display:flex;gap:8px;font-weight:800;font-size:14px;}
-#gm-stage-hud span{background:rgba(0,0,0,.45);border-radius:9px;padding:4px 14px;backdrop-filter:blur(4px);}
-.gm-x{background:rgba(0,0,0,.45);border:none;color:#fff;border-radius:9px;padding:6px 14px;font-size:15px;cursor:pointer;font-family:'Cairo',sans-serif;}
+#gm-stage-head{position:relative;z-index:3;display:flex;align-items:center;gap:10px;padding:8px 12px;color:#fff;background:rgba(18,12,38,.78);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.1);min-height:52px;}
+#gm-stage-brand{display:flex;align-items:center;gap:7px;flex:none;}
+#gm-stage-brand img{width:30px;height:30px;border-radius:8px;display:block;}
+#gm-stage-brand b{font-size:12.5px;font-weight:800;color:#fff;white-space:nowrap;}
+#gm-stage-title{flex:1;min-width:0;font-weight:800;font-size:14.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#gm-stage-actions{display:flex;gap:6px;align-items:center;flex:none;}
+#gm-stage-hud{display:flex;gap:5px;font-weight:800;font-size:12.5px;}
+#gm-stage-hud span{background:rgba(255,255,255,.14);border-radius:8px;padding:4px 10px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.gm-x{background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:8px;padding:5px 11px;font-size:14px;cursor:pointer;font-family:'Cairo',sans-serif;flex:none;line-height:1.3;}
+@media(max-width:520px){#gm-stage-brand b{display:none}#gm-stage-title{font-size:13px}}
 #gm-stage-body{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 16px 26px;overflow:auto;}
 .gm-panel{background:rgba(255,252,245,.94);border-radius:20px;padding:22px 20px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4);color:#3d3428;}
 .gm-btn{background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;border:none;border-radius:12px;padding:12px 30px;font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(109,40,217,.4);}
@@ -2419,8 +2424,9 @@ input,textarea,select{font-size:16px !important;}
   <div id="gm-stage-veil"></div>
   <canvas id="gm-confetti"></canvas>
   <div id="gm-stage-head">
+    <div id="gm-stage-brand"><img src="khottah_icon_120.png" alt="خطتي"><b>خطتي</b></div>
     <div id="gm-stage-title"></div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div id="gm-stage-actions">
       <div id="gm-stage-hud"></div>
       <button class="gm-x" id="gm-mute-btn" onclick="gmToggleMute()">🔊</button>
       <button class="gm-x" onclick="gmClose()">✕</button>
@@ -12026,6 +12032,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   const fns=[escHtml,egToArabic,gmConfetti,zzfx,gmRunWheel,gmRunMatch,gmRunQuiz,gmRunBalloon,gmRunBox,gmRunMemory,gmRunGroups].map(f=>f.toString()).join('\n');
   const runFn={wheel:'gmRunWheel',match:'gmRunMatch',quiz:'gmRunQuiz',balloon:'gmRunBalloon',box:'gmRunBox',memory:'gmRunMemory',groups:'gmRunGroups'}[tpl]||'gmRunQuiz';
   const bgStyle=bg?`url('${bg}')`:'linear-gradient(135deg,#2a1f4d,#1c1730)';
+  const logoB64=await gmFetchB64('khottah_icon_120.png');
   const parts=[];
   parts.push('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">');
   parts.push('<title>'+escHtml(title)+'</title><style>');
@@ -12035,7 +12042,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('</style></head><body>');
   parts.push(`<div id="gm-stage-bg" style="background-image:${bgStyle}">`);
   parts.push('<div id="gm-stage-veil"></div><canvas id="gm-confetti"></canvas>');
-  parts.push('<div id="gm-stage-head"><div id="gm-stage-title">'+escHtml(title)+'</div><div style="display:flex;gap:8px;align-items:center"><div id="gm-stage-hud"></div><button class="gm-x" id="gm-mute-btn">🔊</button></div></div>');
+  parts.push('<div id="gm-stage-head">'+(logoB64?'<div id="gm-stage-brand"><img src="'+logoB64+'" alt=""><b>خطتي</b></div>':'')+'<div id="gm-stage-title">'+escHtml(title)+'</div><div id="gm-stage-actions"><div id="gm-stage-hud"></div><button class="gm-x" id="gm-mute-btn">🔊</button></div></div>');
   parts.push('<div id="gm-stage-body"></div></div>');
   parts.push('<div style="position:fixed;bottom:6px;left:10px;z-index:9;font-size:10px;color:rgba(255,255,255,.55);font-family:Tahoma">منصة خطتي الفصلية 🎮</div>');
   parts.push('<scr'+'ipt>');
