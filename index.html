@@ -3711,9 +3711,19 @@ async function dbSave(payload){
   hideSyncing(ok);
   return ok;
 }
+// الحفظ صامت في الخلفية — النجاح هو الوضع الطبيعي فلا يُعلن عنه،
+// ولا نزعج المعلم إلا عند الفشل الفعلي
 let syncTimer2;
-function showSyncing(){const el=document.getElementById('sync-status');const fill=document.getElementById('sync-bar-fill');document.getElementById('sync-text').textContent='جاري الحفظ...';el.classList.add('show');fill.style.width='70%';}
-function hideSyncing(ok){const el=document.getElementById('sync-status');const fill=document.getElementById('sync-bar-fill');document.getElementById('sync-text').textContent=ok?'تم الحفظ ✅':'تعذّر الحفظ ⚠️';fill.style.width=ok?'100%':'30%';clearTimeout(syncTimer2);syncTimer2=setTimeout(()=>{el.classList.remove('show');fill.style.width='0%';},2000);}
+function showSyncing(){}
+function hideSyncing(ok){
+  if(ok)return;
+  const el=document.getElementById('sync-status');const fill=document.getElementById('sync-bar-fill');
+  if(!el)return;
+  document.getElementById('sync-text').textContent='تعذّر الحفظ ⚠️ تحقق من الاتصال';
+  el.classList.add('show');fill.style.width='30%';
+  clearTimeout(syncTimer2);
+  syncTimer2=setTimeout(()=>{el.classList.remove('show');fill.style.width='0%';},3500);
+}
 function fmtSize(b){if(!b)return'';if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(2)+'MB';}
 
 // ══ GOOGLE DRIVE (تخزين الملفات الحقيقي) ══════════════════
