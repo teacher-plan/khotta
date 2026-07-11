@@ -1,5 +1,5 @@
 // ══ Service Worker - خطتي الفصلية ══
-const CACHE_NAME = 'khotta-42c5b80'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
+const CACHE_NAME = 'khotta-safe1'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
 self.addEventListener('install', e => {
   // تجهيز الصفحة الرئيسية في الكاش فور التثبيت — حتى أول فتحة بعد التحديث تكون فورية
@@ -37,18 +37,43 @@ self.addEventListener('fetch', e => {
   const isHTML = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
 
+  // لا نخزّن صفحة إلا بعد قراءتها كاملة والتأكد من سلامتها —
+  // يمنع تسميم الكاش بنسخة مبتورة إذا انقطع التنزيل في المنتصف
+  const MIN_HTML_BYTES = 200000; // صفحتنا ~1MB؛ أقل من هذا = مبتورة
+  const cacheFullHtml = async (request, fresh) => {
+    try {
+      if (!fresh || !fresh.ok) return;
+      const buf = await fresh.clone().arrayBuffer();
+      if (buf.byteLength < MIN_HTML_BYTES) return; // مبتورة — لا تُخزَّن
+      const c = await caches.open(CACHE_NAME);
+      await c.put(request, new Response(buf, { status: 200, headers: fresh.headers }));
+    } catch (_) { /* التخزين اجتهادي */ }
+  };
+  const validCached = async (request) => {
+    const hit = await caches.match(request);
+    if (!hit) return null;
+    try {
+      const buf = await hit.clone().arrayBuffer();
+      if (buf.byteLength < MIN_HTML_BYTES) {
+        (await caches.open(CACHE_NAME)).delete(request); // نسخة فاسدة قديمة — تُحذف
+        return null;
+      }
+      return new Response(buf, { status: 200, headers: hit.headers });
+    } catch (_) { return null; }
+  };
+
   if (isHTML) {
     e.respondWith((async () => {
-      const cached = await caches.match(req)
-        || await caches.match('/index.html')
-        || await caches.match('/');
+      const cached = await validCached(req)
+        || await validCached('/index.html')
+        || await validCached('/');
       // تحديث بالخلفية دائماً (لا ننتظره)
       const refresh = fetch(req).then(fresh => {
-        if (fresh && fresh.ok) caches.open(CACHE_NAME).then(c => c.put(req, fresh.clone()));
+        cacheFullHtml(req, fresh);
         return fresh;
       }).catch(() => cached);
-      if (cached) return cached;       // ⚡ فتح فوري من الكاش
-      return refresh;                   // لا كاش بعد؟ من الشبكة
+      if (cached) return cached;       // ⚡ فتح فوري من كاش سليم مؤكد
+      return refresh;                   // لا كاش سليم؟ من الشبكة
     })());
     return;
   }
