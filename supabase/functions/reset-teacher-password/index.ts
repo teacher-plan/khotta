@@ -69,9 +69,7 @@ Deno.serve(async (req) => {
     const { error: updErr } = await admin.auth.admin.updateUserById(targetId, { password: newPassword });
     if (updErr) return json({ error: "update_failed", detail: updErr.message }, 500);
 
-    const { error: dbErr } = await admin.from("pre_registrations").update({ account_password: newPassword }).eq("id", regId);
-    if (dbErr) return json({ error: "db_update_failed", detail: dbErr.message }, 500);
-
+    // كلمة المرور لا تُخزَّن — تُعرض للمشرف مرة واحدة فقط ليرسلها للمعلم
     return json({ password: newPassword });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);

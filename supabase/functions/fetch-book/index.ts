@@ -21,7 +21,22 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const MAX_BYTES = 300 * 1024 * 1024; // سقف 300MB
+const MAX_BYTES = 150 * 1024 * 1024; // سقف 150MB — أعلى من ذلك يتجاوز ذاكرة الدالة نفسها
+const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
+
+// حماية من SSRF: نجلب https فقط ومن مضيفات عامة (لا عناوين داخلية/خاصة)
+function isForbiddenHost(host: string) {
+  const h = host.toLowerCase();
+  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal")) return true;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    const p = h.split(".").map(Number);
+    if (p[0] === 10 || p[0] === 127 || p[0] === 0) return true;
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
+    if (p[0] === 169 && p[1] === 254) return true; // metadata
+  }
+  return false;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -35,10 +50,23 @@ Deno.serve(async (req) => {
     const jwt = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !user) return json({ error: "unauthorized" }, 401);
+    // استيراد الكتب من روابط خارجية صلاحية مشرف فقط
+    if ((user.email || "").toLowerCase() !== ADMIN_EMAIL) return json({ error: "forbidden" }, 403);
 
     const b = await req.json().catch(() => ({}));
     const url = String(b.url || "").trim();
-    if (!/^https?:\/\/.+/i.test(url)) return json({ error: "bad_url" }, 400);
+    let parsed: URL;
+    try { parsed = new URL(url); } catch (_) { return json({ error: "bad_url" }, 400); }
+    if (parsed.protocol !== "https:") return json({ error: "bad_url" }, 400);
+    if (isForbiddenHost(parsed.hostname)) return json({ error: "bad_url" }, 400);
+
+    // تنظيف الملفات المؤقتة القديمة (أقدم من ٢٤ ساعة) — لا تتراكم بعد اليوم
+    try {
+      const { data: cached } = await admin.storage.from("library-files").list("book-cache", { limit: 100 });
+      const dayAgo = Date.now() - 24 * 3600 * 1000;
+      const stale = (cached || []).filter((f) => parseInt(f.name.split("_")[0]) < dayAgo).map((f) => "book-cache/" + f.name);
+      if (stale.length) await admin.storage.from("library-files").remove(stale);
+    } catch (_) { /* التنظيف اجتهادي */ }
 
     // جلب الملف من المصدر الخارجي (الخادم لا تقيّده CORS)
     let resp: Response;

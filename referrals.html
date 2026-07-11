@@ -569,7 +569,7 @@ async function generateTeacherAccount(regId){
     if(error)throw error;
     const{error:allowErr}=await sb.from('allowed_emails').insert({email,cycle});
     if(allowErr)throw allowErr;
-    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
+    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email}).eq('id',regId);
     if(updErr)throw updErr;
     await loadRegistrations();
     renderAccountsTab();
@@ -597,7 +597,7 @@ async function createCustomTeacherAccount(regId){
     if(error)throw error;
     const{error:allowErr}=await sb.from('allowed_emails').insert({email,cycle});
     if(allowErr)throw allowErr;
-    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email,account_password:password}).eq('id',regId);
+    const{error:updErr}=await sb.from('pre_registrations').update({account_email:email}).eq('id',regId);
     if(updErr)throw updErr;
     await loadRegistrations();
     renderAccountsTab();
@@ -611,7 +611,7 @@ async function createCustomTeacherAccount(regId){
 function showTeacherAccount(regId){
   const r=registrations.find(x=>x.id===regId);
   if(!r||!r.account_email)return;
-  alert(`اسم المستخدم: ${r.account_email}\nكلمة المرور: ${r.account_password||'—'}`);
+  alert(`اسم المستخدم: ${r.account_email}\n\nكلمة المرور لا تُخزَّن لأسباب أمنية — عُرضت مرة واحدة عند الإنشاء.\nإن فقدها المعلم استخدم زر «إعادة تعيين كلمة المرور».`);
 }
 async function resetTeacherPassword(regId){
   const r=registrations.find(x=>x.id===regId);

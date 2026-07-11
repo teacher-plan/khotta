@@ -8,6 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY (نفس مفتاح generate-exam)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { takeQuota } from "../_shared/quota.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +42,10 @@ Deno.serve(async (req) => {
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
+
+    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
+    const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
+    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
     // برومبت خاص للعروض التقديمية إن ضبطه المشرف، وإلا نرجع للعام
     const adminPrompt = st.ppt_system_prompt || st.system_prompt || "";
 

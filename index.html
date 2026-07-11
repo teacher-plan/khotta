@@ -1323,7 +1323,7 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .reminder-toast .rt-icon{font-size:22px;}
 .reminder-toast .rt-close{background:none;border:none;color:#1a1010;font-size:18px;cursor:pointer;font-weight:800;padding:0 4px;}
 
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:linear-gradient(135deg,var(--red),var(--gold2));color:#fff;font-weight:700;padding:9px 20px;border-radius:10px;font-size:13px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0;pointer-events:none;z-index:999;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(60px);background:linear-gradient(135deg,var(--red),var(--gold2));color:#fff;font-weight:700;padding:9px 20px;border-radius:10px;font-size:13px;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0;pointer-events:none;z-index:6000;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast.err{background:linear-gradient(135deg,#7b0000,#c0392b);}
 .toast.ok{background:linear-gradient(135deg,#1a7a3a,#27ae60);}
@@ -12032,7 +12032,10 @@ async function gmGenerate(){
     }
   }catch(e){reason=String(e);}
   if(btn){btn.disabled=false;btn.textContent='🎲 ولّد محتوى اللعبة';}
-  if(!items){toast('⚠️ تعذّر توليد محتوى اللعبة'+(isAdmin()&&reason?' — '+reason:'، حاول مجدداً'),true);return;}
+  if(!items){
+    if(String(reason).includes('quota_exceeded'))toast('🔋 وصلت حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);
+    else toast('⚠️ تعذّر توليد محتوى اللعبة'+(isAdmin()&&reason?' — '+reason:'، حاول مجدداً'),true);
+    return;}
   gmItems=items;
   gmRenderEditor();
   document.getElementById('eg-game-result-card').style.display='block';
@@ -12655,7 +12658,8 @@ async function fhSend(){
       let reason=(data&&data.error)||error?.message||'';
       try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}
       if(data&&data.detail)reason+=' | '+JSON.stringify(data.detail).slice(0,400);
-      fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد 😔 حاول مرة أخرى.'+(isAdmin()&&reason?' ['+reason+']':'')});
+      if(String(reason).includes('quota_exceeded'))fhMsgs.push({role:'assistant',content:'وصلت حد استخدامك الشهري للمساعد 😊 يتجدد الرصيد مطلع الشهر القادم.'});
+      else fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد 😔 حاول مرة أخرى.'+(isAdmin()&&reason?' ['+reason+']':'')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply});
       if(data.chatId)fhChatId=data.chatId;
@@ -14284,7 +14288,7 @@ async function segImportFromUrl(){
     if(error||!data||!data.url){
       let reason=(data&&data.error)||error?.message||'خطأ غير معروف';
       try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;}}catch(_){}
-      const msgs={not_pdf:'الرابط لا يشير لملف PDF فعلي',too_large:'الملف أكبر من الحد المسموح (٣٠٠ ميجا)',source_error:'تعذّر الوصول للرابط (الموقع رفض الطلب)',fetch_failed:'تعذّر الاتصال بالرابط',empty_or_blocked:'الملف فارغ أو الموقع يحجب الجلب الآلي',bad_url:'الرابط غير صالح'};
+      const msgs={not_pdf:'الرابط لا يشير لملف PDF فعلي',too_large:'الملف أكبر من الحد المسموح (١٥٠ ميجا)',source_error:'تعذّر الوصول للرابط (الموقع رفض الطلب)',fetch_failed:'تعذّر الاتصال بالرابط',empty_or_blocked:'الملف فارغ أو الموقع يحجب الجلب الآلي',bad_url:'الرابط غير صالح'};
       st.textContent='❌ '+(msgs[reason]||('فشل الجلب: '+reason))+(isAdmin&&isAdmin()?' ['+reason+']':'');
       return;
     }

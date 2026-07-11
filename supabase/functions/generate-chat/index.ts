@@ -8,6 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { takeQuota } from "../_shared/quota.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +67,10 @@ Deno.serve(async (req) => {
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
+
+    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
+    const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
+    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
 
     const b = await req.json().catch(() => ({}));
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;

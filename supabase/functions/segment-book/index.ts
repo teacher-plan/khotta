@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
     const jwt = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !user) return json({ error: "unauthorized" }, 401);
+    // التقطيع الذكي أداة مشرف (مكلفة وتكتب محتوى مشتركاً)
+    if ((user.email || "").toLowerCase() !== "teacherplane2026project@gmail.com") return json({ error: "forbidden" }, 403);
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) return json({ error: "server_not_configured" }, 500);

@@ -10,6 +10,7 @@
 //   (SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY متوفّران تلقائياً)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { takeQuota } from "../_shared/quota.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -56,6 +57,10 @@ Deno.serve(async (req) => {
     const { data: rows } = await admin.from("ai_settings").select("key,value");
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
+
+    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
+    const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
+    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
 
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
 
