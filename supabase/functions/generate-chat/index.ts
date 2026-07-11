@@ -120,7 +120,8 @@ Deno.serve(async (req) => {
     if (!reply) return json({ error: "no_reply" }, 502);
 
     // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) ═
-    const newMessages = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }];
+    // سقف حجم المحادثة المحفوظة — لا تنمو بلا حد
+    const newMessages = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }].slice(-60);
     const title = (history.find((m) => m.role === "user")?.content || userMsg).slice(0, 60);
     let savedId = chatId;
     const doSave = async () => {

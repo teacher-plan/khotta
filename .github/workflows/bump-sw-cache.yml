@@ -1,0 +1,28 @@
+# ترقية إصدار كاش Service Worker تلقائياً عند كل تعديل على الواجهة —
+# يضمن وصول النسخة الجديدة لكل الأجهزة دون ترقية يدوية للرقم
+name: Bump SW Cache Version
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'cycle1.html'
+      - 'school.html'
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[sw-auto]')"
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rewrite cache version with commit hash
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          sed -i "s/const CACHE_NAME = '[^']*'/const CACHE_NAME = 'khotta-$SHORT'/" sw.js
+          if git diff --quiet sw.js; then echo "no change"; exit 0; fi
+          git config user.name "sw-bump-bot"
+          git config user.email "actions@github.com"
+          git add sw.js
+          git commit -m "chore: ترقية كاش SW إلى $SHORT [sw-auto]"
+          git push

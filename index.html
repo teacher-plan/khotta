@@ -2602,6 +2602,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
       <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
       <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
+      <button class="eg-regen" style="flex:1;display:none" id="dpb-flag-btn" onclick="dpFlagShared()">🚩 جودة رديئة؟</button>
     </div>
   </div>
 </div>
@@ -3076,6 +3077,12 @@ input,textarea,select{font-size:16px !important;}
 
   <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
   <div id="aipanel-budget" style="display:none">
+  <!-- 🏆 الخطط الذهبية المنشورة -->
+  <div class="eg-card">
+    <div class="eg-step-title">🏆 الخطط الذهبية المشتركة</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">التحضيرات التي نشرها المعلمون ويستوردها الجميع. 🚩 = بلاغات جودة (عند ٣ تُستبعد تلقائياً من الاستيراد حتى تحذفها أو تُحذف بلاغاتها).</p>
+    <div id="gp-list"><div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">⏳</div></div>
+  </div>
   <!-- رصيد OpenRouter الفعلي -->
   <div class="eg-card">
     <div class="eg-step-title">🔑 رصيد OpenRouter الفعلي</div>
@@ -3570,10 +3577,10 @@ async function dbLoad(forceFresh=false){
   }
   // لا يوجد كاش → جلب من Supabase
   try{
-    const {data,error}=await sb.from('profiles').select('data').eq('id',currentUser.id).maybeSingle();
+    const {data,error}=await sb.from('profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
     if(error){console.error('dbLoad error:',error);return profileCache;}
     profileCache=data?data.data:null;
-    if(profileCache)saveToCache(profileCache);
+    if(profileCache){profileCache._srvAt=data.updated_at||'';saveToCache(profileCache);}
     return profileCache;
   }catch(e){console.error('dbLoad exception:',e);return profileCache;}
 }
@@ -3591,6 +3598,7 @@ async function _syncFromServerInBackground(){
     const serverTime=serverData.updated_at||data.updated_at||'';
     // الخادم أحدث فعلاً؟
     if(serverTime>localTime){
+      serverData._srvAt=data.updated_at||'';
       profileCache=serverData;
       saveToCache(serverData);
       // إعادة رسم الجدول الحالي بهدوء (بدون مقاطعة المستخدم لو هو يدخل بيانات)
@@ -3631,18 +3639,45 @@ async function dbSave(payload){
   let ok=false;
   try{
     const current=profileCache||await dbLoad()||{};
+    // ⚔️ حماية الجهازين: هل حفظ جهاز آخر منذ آخر تحميل عندنا؟
+    // إن نعم: نأخذ نسخة الخادم الأحدث أساساً ونطبّق فوقها أقسام هذا الحفظ فقط —
+    // فلا يمسح هاتفُ الصف رصدَ درجات أُدخل من حاسوب البيت (أو العكس).
+    let base=current,conflictMerged=false;
+    try{
+      const{data:head}=await sb.from('profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
+      if(head&&head.updated_at&&head.data&&current._srvAt&&head.updated_at>current._srvAt){
+        base={...head.data};
+        conflictMerged=true;
+      }
+    }catch(_){/* تعذّر الفحص → نكمل بالسلوك المعتاد */}
     const gMeta=currentUser.user_metadata||{};
+    const now=new Date().toISOString();
     const merged={
-      ...current,...payload,
+      ...base,...payload,
       email:currentUser.email||'',
-      avatar_url:gMeta.avatar_url||gMeta.picture||current.avatar_url||'',
-      full_name:gMeta.full_name||gMeta.name||current.full_name||'',
-      updated_at:new Date().toISOString()
+      avatar_url:gMeta.avatar_url||gMeta.picture||base.avatar_url||'',
+      full_name:gMeta.full_name||gMeta.name||base.full_name||'',
+      updated_at:now
     };
-    const {error}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:merged,updated_at:new Date().toISOString()});
+    const {error}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:merged,updated_at:now});
     ok=!error;
     if(error){console.error('dbSave error:',error);}
-    else{profileCache=merged;saveToCache(merged);}
+    else{
+      merged._srvAt=now;
+      profileCache=merged;saveToCache(merged);
+      if(conflictMerged){
+        // حدّث الأقسام التي لم يلمسها هذا الحفظ بما جاء من الجهاز الآخر
+        try{
+          if(!('students' in payload)&&merged.students)students=merged.students;
+          if(!('grades' in payload)&&merged.grades)grades=merged.grades;
+          if(!('grade_types' in payload)&&merged.grade_types)gradeTypes=merged.grade_types;
+          if(!('behavior_students' in payload)&&merged.behavior_students)behaviorStudents=merged.behavior_students;
+          if(!('behavior_violations' in payload)&&merged.behavior_violations)behaviorViolations=merged.behavior_violations;
+          if(!('lesson_files' in payload)&&merged.lesson_files)lessonFiles=merged.lesson_files;
+        }catch(_){}
+        toast('🔄 وجدنا تعديلات أحدث من جهازك الآخر — دمجناها مع حفظك بأمان','ok');
+      }
+    }
   }catch(e){
     if(!navigator.onLine){
       toast('📵 لا يوجد اتصال بالإنترنت — سيتم الحفظ عند الاتصال',true);
@@ -5882,7 +5917,7 @@ function switchAiTab(tab){
     b.style.color=active?'var(--gold)':'var(--muted)';
     b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
   });
-  if(tab==='budget')loadOrBalance();
+  if(tab==='budget'){loadOrBalance();gpAdminList();}
   if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();}
 }
 
@@ -5920,6 +5955,42 @@ async function gmThemeGenerate(){
     }
   }catch(e){toast('⚠️ تعذّر توليد الثيم',true);console.warn(e);}
   btn.disabled=false;btn.textContent='🎨 توليد الثيم ورفعه (مرة واحدة)';
+}
+// ═ 🏆 إدارة الخطط الذهبية (مشرف) ═
+async function gpAdminList(){
+  const box=document.getElementById('gp-list');if(!box)return;
+  try{
+    const{data:preps}=await sb.from('shared_preps').select('lesson_id,grade,subject,unit,lesson,created_at').order('created_at',{ascending:false}).limit(100);
+    if(!preps||!preps.length){box.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px">لا توجد خطط منشورة بعد</div>';return;}
+    let flags={};
+    try{
+      const{data:fl}=await sb.from('shared_prep_flags').select('lesson_id');
+      (fl||[]).forEach(f=>{flags[f.lesson_id]=(flags[f.lesson_id]||0)+1;});
+    }catch(e){}
+    box.innerHTML=preps.map(p=>{
+      const fc=flags[p.lesson_id]||0;
+      return `<div class="gm-row" style="margin:0 0 6px${fc>=3?';border-color:#b91c1c;background:rgba(185,28,28,.06)':''}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.lesson||'')}</div>
+          <div style="font-size:10.5px;color:var(--muted)">الصف ${egToArabic(p.grade)} · ${escHtml(p.subject||'')} · ${escHtml(p.unit||'')}</div>
+        </div>
+        ${fc?`<span style="flex:none;font-size:11px;font-weight:800;color:${fc>=3?'#b91c1c':'var(--gold)'}">🚩 ${egToArabic(fc)}</span>`:''}
+        ${fc?`<button class="arc-btn" style="flex:none;padding:3px 8px;font-size:10.5px" title="حذف البلاغات وإعادة الاعتماد" onclick="gpClearFlags('${p.lesson_id}')">✅ اعتماد</button>`:''}
+        <button class="arc-btn del" style="flex:none;padding:3px 8px;font-size:11px" onclick="gpDeletePrep('${p.lesson_id}',this)">🗑️</button>
+      </div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">تعذّر الجلب</div>';}
+}
+async function gpDeletePrep(lid,btn){
+  if(!(await uiConfirm('حذف الخطة الذهبية','ستُحذف من المشاركة — أول معلم يحضّر الدرس لاحقاً ينشر نسخة جديدة. متابعة؟')))return;
+  try{
+    await sb.from('shared_preps').delete().eq('lesson_id',lid);
+    await sb.from('shared_prep_flags').delete().eq('lesson_id',lid);
+    btn.closest('.gm-row').remove();
+  }catch(e){toast('تعذّر الحذف',true);}
+}
+async function gpClearFlags(lid){
+  try{await sb.from('shared_prep_flags').delete().eq('lesson_id',lid);gpAdminList();toast('✅ أُعيد اعتماد الخطة','ok');}catch(e){toast('تعذّر',true);}
 }
 // ═ 🔊 إدارة أصوات الألعاب (مشرف) ═
 const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة'],music:['🎵 موسيقى الخلفية (مقطع حلقي)']};
@@ -13394,6 +13465,7 @@ function dpOpenBundle(i){
   const b=dpBundle(it.lessonId);
   if(b.status!=='ready'&&b.status!=='saved')return;
   dpCurrentItem=it;window._dpBundleIdx=i;
+  const fb=document.getElementById('dpb-flag-btn');if(fb)fb.style.display=b.imported?'':'none';
   document.getElementById('dpb-title').textContent='✨ تحضير درس: '+it.lesson;
   document.getElementById('dpb-sub').textContent='الصف '+egToArabic(it.gradeNum)+' · '+it.subject+' · '+it.unit;
   const parts=[];
@@ -13497,6 +13569,17 @@ function dpDataUrlToFile(dataUrl,name){
 }
 
 // 💾 حفظ الحزمة كملفات مرفقة في بطاقة الدرس
+// 🚩 تبليغ عن جودة حزمة مشتركة رديئة — عند ٣ بلاغات تُستبعد من الاستيراد
+async function dpFlagShared(){
+  const it=dpCurrentItem;if(!it)return;
+  if(!(await uiConfirm('تبليغ جودة','هذا التحضير أعدّه معلم آخر. هل تبلّغ عن جودته الرديئة؟ عند تعدد البلاغات يُستبعد من المشاركة ويُراجع.')))return;
+  try{
+    const{error}=await sb.from('shared_prep_flags').insert({lesson_id:it.lessonId});
+    if(error&&!String(error.message||'').includes('duplicate'))throw error;
+    toast('🚩 وصل بلاغك — شكراً لحرصك على الجودة','ok');
+    const fb=document.getElementById('dpb-flag-btn');if(fb)fb.style.display='none';
+  }catch(e){toast('تعذّر إرسال البلاغ',true);}
+}
 async function dpSaveBundle(i){
   if(typeof i!=='number')i=window._dpBundleIdx;
   const it=(window._dpItems||[])[i];if(!it)return;
