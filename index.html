@@ -13361,9 +13361,20 @@ async function renderDailyPrep(){
       fi.onload=()=>{fw.style.display='flex';};
       fi.onerror=()=>{fw.style.display='none';};
       fi.src=fhMascotUrl();
-      const msgs=['جهّزت لك يومك! ✨','دروس اليوم بانتظارك 👇','ضغطة واحدة ويومك حاضر 🚀','أنا حضّرت — عليك الإبداع 🌟'];
-      document.getElementById('dp-fahim-bubble').textContent=msgs[Math.floor(Math.random()*msgs.length)];
     }
+    // عبارة فهيم تصدق حالة اليوم الفعلية
+    const sts=items.map(x=>dpBundle(x.lessonId).status||'idle');
+    let msgs;
+    if(sts.some(t=>t==='working'))
+      msgs=['أعمل على تحضيرك الآن… ⏳','لحظات ويجهز درسك 🔥'];
+    else if(sts.every(t=>t==='idle'))
+      msgs=['اضغط ✨ وسأحضّر درسك كاملاً!','درسك بانتظار تجهيزي 👇','دعني أحضّر لك — ضغطة واحدة ✨'];
+    else if(sts.every(t=>t==='ready'||t==='saved'))
+      msgs=['جهّزت لك يومك! ✨','كل شيء حاضر — عليك الإبداع 🌟','يومك مكتمل التحضير 🚀'];
+    else
+      msgs=['بعض دروسك جاهزة — أكمل البقية 👇','أنجزنا جزءاً، هيا نكمل! 💪'];
+    const bb=document.getElementById('dp-fahim-bubble');
+    if(bb)bb.textContent=msgs[Math.floor(Math.random()*msgs.length)];
   }catch(e){}
   await dpLoadPreps();
   // استرجاع الحزم المحفوظة محلياً (لا يضيع شيء عند تحديث الصفحة)
