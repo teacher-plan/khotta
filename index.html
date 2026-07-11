@@ -1114,6 +1114,14 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .fh-suggest{align-self:center;display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:8px;}
 .fh-suggest button{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px 15px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;color:var(--text);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.05);transition:.15s;}
 .fh-suggest button:hover{border-color:#8b5cf6;color:#6d28d9;transform:translateY(-1px);}
+/* شبكة معاينة الثيمات (للمعلم) */
+.gm-theme-grid{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;}
+.gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:'Cairo',sans-serif;}
+.gm-theme-card:hover{border-color:var(--gold);transform:translateY(-2px);}
+.gm-theme-card.on{border-color:#6d28d9;box-shadow:0 0 0 2px rgba(109,40,217,.25);}
+.gm-theme-card .thumb{height:56px;background:linear-gradient(135deg,#2a1f4d,#1c1730) center/cover;}
+.gm-theme-card .nm{font-size:10.5px;font-weight:800;color:var(--text);padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gm-theme-card.locked{opacity:.45;pointer-events:none;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
 .gm-balloon{position:relative;width:128px;height:158px;border:none;cursor:pointer;background:var(--bc);border-radius:50% 50% 50% 50%/58% 58% 42% 42%;box-shadow:inset -10px -12px 0 rgba(0,0,0,.14),0 8px 20px rgba(0,0,0,.3);animation:gmBob 2.6s ease-in-out infinite alternate;font-family:'Cairo',sans-serif;transition:transform .15s;}
@@ -2471,14 +2479,15 @@ input,textarea,select{font-size:16px !important;}
       <button type="button" class="gm-tpl-btn" data-tpl="boxes" onclick="gmPickTpl('boxes')"><span class="gm-tpl-ic">🧨</span><span class="gm-tpl-lbl">كنوز وقنابل</span><span class="gm-tpl-sub">أجب وافتح صندوقاً وخاطر</span></button>
     </div>
     <div class="eg-row" style="margin-top:12px">
-      <div style="flex:1">
-        <label class="eg-lbl">🎨 الثيم</label>
-        <select id="gm-theme" style="width:100%"><option value="">كلاسيكي (بلا خلفية)</option></select>
-      </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <label class="eg-lbl">عدد العناصر</label>
         <input type="number" id="gm-count" min="3" max="15" value="6" style="width:100%">
       </div>
+    </div>
+    <label class="eg-lbl" style="margin-top:10px">🎨 الثيم</label>
+    <select id="gm-theme" style="display:none"><option value="">كلاسيكي (بلا خلفية)</option></select>
+    <div id="gm-theme-grid" class="gm-theme-grid"></div>
+    <div class="eg-row" style="display:none">
     </div>
     <div style="font-size:12px;color:var(--muted);margin:8px 0">💡 الذكاء يولّد المحتوى من الدرس، ويمكنك تعديله قبل اللعب — أو اكتبه يدوياً من زر التعديل بعد التوليد.</div>
     <button class="eg-generate" onclick="gmGenerate()">🎲 ولّد محتوى اللعبة</button>
@@ -3060,9 +3069,18 @@ input,textarea,select{font-size:16px !important;}
     <div id="gmth-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px"></div>
   </div>
 
+  <!-- 🎮 إعدادات كل لعبة -->
+  <div class="eg-card">
+    <div class="eg-step-title">🎮 إعدادات كل لعبة على حدة</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">لكل قالب: ثيم افتراضي (أو إجباري)، أصوات تخصّه تتجاوز العامة، وخيارات لعب دقيقة — كل ما تحفظه يسري فوراً على جميع المعلمين.</p>
+    <select id="gcfg-tpl" style="width:100%" onchange="gcfgRender()"></select>
+    <div id="gcfg-body" style="margin-top:12px"></div>
+    <button class="eg-generate" style="margin-top:12px" onclick="gcfgSave()">💾 حفظ إعدادات هذه اللعبة</button>
+  </div>
+
   <!-- 🔊 أصوات الألعاب المخصصة -->
   <div class="eg-card">
-    <div class="eg-step-title">🔊 أصوات الألعاب الاحترافية</div>
+    <div class="eg-step-title">🔊 الأصوات العامة (لكل الألعاب التي بلا أصوات خاصة)</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع ملف MP3 لكل حدث ليحل محل الصوت المولّد لدى <b>كل المعلمين</b> فوراً. مصادر موصى بها: kenney.nl (مجاني CC0)، mixkit.co (مجاني)، أو AudioJungle (مدفوع). الحذف يعيد الصوت الافتراضي.</p>
     <div id="gm-sfx-slots" style="display:grid;gap:8px"></div>
   </div>
@@ -5922,7 +5940,7 @@ function switchAiTab(tab){
     b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
   });
   if(tab==='budget'){loadOrBalance();gpAdminList();}
-  if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();}
+  if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();gmLoadThemes().then(()=>gcfgLoad());}
 }
 
 // ═ 🎮 إدارة ثيمات الألعاب (مشرف) ═
@@ -5993,6 +6011,111 @@ async function gpDeletePrep(lid,btn){
     try{await sb.from('shared_prep_ratings').delete().eq('lesson_id',lid);}catch(_){}
     btn.closest('.gm-row').remove();
   }catch(e){toast('تعذّر الحذف',true);}
+}
+// ═ 🎮 إعدادات كل لعبة (مشرف) — تُخزن في ai_settings مفتاح game_cfg ═
+let gcfg={};            // {tpl:{theme:'',lock:0,opts:{...}}}
+const GCFG_OPTS={
+  quiz:[['timer','مدة السؤال (ثانية)',30,5,120]],
+  balloon:[['penalty','خصم البالون الخاطئ',30,0,200]],
+  race:[['finish','طول المضمار (خطوات)',0,3,10]],
+  boxes:[['boxes','عدد الصناديق',0,6,16],['bombs','عدد القنابل',2,0,6]],
+  memory:[['hide','مدة كشف الخطأ (مللي ثانية)',900,300,3000]],
+  millionaire:[['fifty','وسيلة ٥٠:٥٠ (١=مفعلة)',1,0,1],['ask','سؤال الصف (١=مفعلة)',1,0,1],['swap','تبديل السؤال (١=مفعلة)',1,0,1]],
+};
+async function gcfgLoad(){
+  try{
+    const{data}=await sb.from('ai_settings').select('value').eq('key','game_cfg').maybeSingle();
+    gcfg=data&&data.value?JSON.parse(data.value):{};
+  }catch(e){gcfg={};}
+  const sel=document.getElementById('gcfg-tpl');if(!sel)return;
+  if(!sel.options.length||sel.options.length<5)
+    sel.innerHTML=Object.keys(GM_TPL_LBL).map(t=>`<option value="${t}">${GM_TPL_LBL[t]}</option>`).join('');
+  gcfgRender();
+}
+function gcfgRender(){
+  const tpl=document.getElementById('gcfg-tpl').value||'wheel';
+  const c=gcfg[tpl]||{};
+  const box=document.getElementById('gcfg-body');if(!box)return;
+  const themeCards=[['','كلاسيكي','🎨','']].concat(gmThemes.map(t=>[t.id,t.name,t.emoji,t.bg_url]))
+    .map(([id,nm,em,bg])=>`<button type="button" class="gm-theme-card ${((c.theme||'')===id)?'on':''}" data-id="${escHtml(id)}" onclick="gcfgPickTheme('${escHtml(id)}')">
+      <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div><div class="nm">${escHtml(em||'')} ${escHtml(nm)}</div></button>`).join('');
+  const opts=(GCFG_OPTS[tpl]||[]).map(([k,lbl,def,min,max])=>`<div style="flex:1;min-width:150px">
+      <label class="eg-lbl">${lbl}</label>
+      <input type="number" class="gcfg-opt" data-k="${k}" min="${min}" max="${max}" value="${(c.opts&&c.opts[k]!=null)?c.opts[k]:def}" placeholder="${def}" style="width:100%">
+    </div>`).join('');
+  box.innerHTML=`
+    <label class="eg-lbl">الثيم الافتراضي لهذه اللعبة</label>
+    <div class="gm-theme-grid" id="gcfg-theme-grid">${themeCards}</div>
+    <label class="eg-chip" style="display:inline-flex;margin:6px 0 12px"><input type="checkbox" id="gcfg-lock" ${c.lock?'checked':''}> 🔒 إجباري — المعلم لا يستطيع تغييره</label>
+    <label class="eg-lbl">🔊 أصوات خاصة بهذه اللعبة <span style="color:var(--muted);font-weight:400">(تتجاوز العامة — الحذف يعيدها للعامة)</span></label>
+    <div id="gcfg-snd" style="display:grid;gap:6px;margin-bottom:12px"></div>
+    ${opts?`<label class="eg-lbl">⚙️ خيارات اللعب</label><div class="eg-row" style="flex-wrap:wrap">${opts}</div>`:'<div style="font-size:12px;color:var(--muted)">لا خيارات لعب إضافية لهذا القالب</div>'}`;
+  gcfgSndSlots(tpl);
+}
+function gcfgPickTheme(id){
+  const tpl=document.getElementById('gcfg-tpl').value;
+  gcfg[tpl]=gcfg[tpl]||{};gcfg[tpl].theme=id;
+  document.querySelectorAll('#gcfg-theme-grid .gm-theme-card').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+}
+async function gcfgSndSlots(tpl){
+  const box=document.getElementById('gcfg-snd');if(!box)return;
+  let have={};
+  try{
+    const{data}=await sb.storage.from('library-files').list('game-sfx/tpl/'+tpl);
+    (data||[]).forEach(f=>{have[f.name.replace('.mp3','')]=true;});
+  }catch(e){}
+  box.innerHTML=GM_SFX_KINDS.map(k=>`<div class="gm-row" style="margin:0">
+    <span style="flex:1;font-weight:700;font-size:12.5px">${GM_SFX_LBL[k][0]}</span>
+    <span style="font-size:10.5px;color:var(--muted);flex:none">${have[k]?'خاص ✅':'العام'}</span>
+    ${have[k]?`<button class="arc-btn" style="flex:none;padding:3px 9px;font-size:11px" onclick="gcfgSndPlay('${tpl}','${k}')">▶️</button>`:''}
+    <button class="arc-btn" style="flex:none;padding:3px 9px;font-size:11px" onclick="gcfgSndUpload('${tpl}','${k}')">⬆️</button>
+    ${have[k]?`<button class="arc-btn del" style="flex:none;padding:3px 9px;font-size:11px" onclick="gcfgSndDelete('${tpl}','${k}')">🗑️</button>`:''}
+  </div>`).join('');
+}
+function gcfgSndUrl(tpl,k){return sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl;}
+function gcfgSndPlay(tpl,k){new Audio(gcfgSndUrl(tpl,k)+'?t='+Date.now()).play().catch(()=>toast('تعذّر التشغيل',true));}
+function gcfgSndUpload(tpl,k){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='audio/mpeg,audio/mp3,.mp3';
+  inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    if(f.size>1024*1024){toast('اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
+    toast('⏳ جاري الرفع...','ok');
+    try{
+      const{error}=await sb.storage.from('library-files').upload('game-sfx/tpl/'+tpl+'/'+k+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
+      if(error)throw error;
+      localStorage.setItem('gmSfxV',String(Date.now()));
+      gmSfxT={};
+      toast('✅ رُفع صوت '+GM_TPL_LBL[tpl],'ok');
+      gcfgSndSlots(tpl);
+    }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
+  };
+  inp.click();
+}
+async function gcfgSndDelete(tpl,k){
+  try{
+    await sb.storage.from('library-files').remove(['game-sfx/tpl/'+tpl+'/'+k+'.mp3']);
+    localStorage.setItem('gmSfxV',String(Date.now()));
+    gmSfxT={};
+    gcfgSndSlots(tpl);
+  }catch(e){toast('تعذّر الحذف',true);}
+}
+async function gcfgSave(){
+  const tpl=document.getElementById('gcfg-tpl').value;
+  gcfg[tpl]=gcfg[tpl]||{};
+  gcfg[tpl].lock=document.getElementById('gcfg-lock').checked?1:0;
+  const opts={};
+  document.querySelectorAll('#gcfg-body .gcfg-opt').forEach(inp=>{
+    const v=parseFloat(inp.value);
+    if(!isNaN(v))opts[inp.dataset.k]=v;
+  });
+  gcfg[tpl].opts=opts;
+  try{
+    const{error}=await sb.from('ai_settings').upsert({key:'game_cfg',value:JSON.stringify(gcfg),updated_at:new Date().toISOString()},{onConflict:'key'});
+    if(error)throw error;
+    gmGameCfg=gcfg;
+    toast('💾 حُفظت إعدادات '+GM_TPL_LBL[tpl]+' — تسري على الجميع فوراً','ok');
+  }catch(e){toast('تعذّر الحفظ: '+(e.message||''),true);}
 }
 // ═ 🔊 إدارة أصوات الألعاب (مشرف) ═
 const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة'],music:['🎵 موسيقى الخلفية (مقطع حلقي)']};
@@ -11964,6 +12087,8 @@ const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'ite
 // ثيم إجباري مرتبط بقالب معين (يُحدد بالاسم من مكتبة الثيمات)
 const GM_TPL_THEME={millionaire:'استوديو المليون'};
 function gmForcedTheme(tpl){
+  const c=gmGameCfg[tpl];
+  if(c&&c.lock&&c.theme){const t=gmThemes.find(x=>x.id===c.theme);if(t)return t;}
   const nm=GM_TPL_THEME[tpl];if(!nm)return null;
   return gmThemes.find(t=>(t.name||'').includes(nm))||null;
 }
@@ -11999,6 +12124,8 @@ function zzfx(...t){
 const GM_SFX_KINDS=['ok','bad','pop','win','spin'];
 const GM_MUSIC_KEY='music'; // مقطع حلقي اختياري للخلفية (يُرفع من الإدارة)
 let gmSfx={};        // kind -> HTMLAudioElement (جاهز) | null (غير موجود)
+let gmSfxT={};       // أصوات خاصة بالقالب: tpl -> {kind:Audio|null}
+let GM_OPT={};       // خيارات اللعب للقالب الحالي (من إعدادات المشرف)
 let gmSfxLoaded=false;
 function gmSfxUrl(kind){return sb.storage.from('library-files').getPublicUrl('game-sfx/'+kind+'.mp3').data.publicUrl;}
 function gmLoadSfx(){
@@ -12012,9 +12139,22 @@ function gmLoadSfx(){
     a.src=gmSfxUrl(k)+'?v='+(localStorage.getItem('gmSfxV')||'1');
   });
 }
+function gmLoadSfxT(tpl){
+  if(gmSfxT[tpl])return;
+  const bag={};gmSfxT[tpl]=bag;
+  GM_SFX_KINDS.forEach(k=>{
+    const a=new Audio();
+    a.preload='auto';
+    a.oncanplaythrough=()=>{bag[k]=a;};
+    a.onerror=()=>{bag[k]=null;};
+    a.src=sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl+'?v='+(localStorage.getItem('gmSfxV')||'1');
+  });
+}
 function gmSound(kind){
   if(gmMuted)return;
   try{
+    const at=(gmSfxT[gmTpl]||{})[kind];
+    if(at){const c=at.cloneNode();c.volume=0.9;c.play().catch(()=>{});return;}
     const a=gmSfx[kind];
     if(a){const c=a.cloneNode();c.volume=0.9;c.play().catch(()=>{});return;}
     if(kind==='ok')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);                       // 🪙 عملة نجاح
@@ -12068,7 +12208,13 @@ function gmToggleMusic(){
 }
 function gmMusicStop(){if(gmMusicAudio){gmMusicAudio.pause();gmMusicAudio.currentTime=0;}}
 
+let gmGameCfg={};   // إعدادات المشرف لكل قالب {theme,lock,opts}
+let gmThemeTouched=false; // هل اختار المعلم ثيماً بنفسه في هذه الجلسة؟
 async function gmLoadThemes(){
+  try{
+    const{data:cfgRow}=await sb.from('ai_settings').select('value').eq('key','game_cfg').maybeSingle();
+    gmGameCfg=cfgRow&&cfgRow.value?JSON.parse(cfgRow.value):{};
+  }catch(e){gmGameCfg={};}
   try{
     const{data}=await sb.from('game_themes').select('*').order('created_at');
     gmThemes=data||[];
@@ -12077,13 +12223,39 @@ async function gmLoadThemes(){
     sel.innerHTML='<option value="">كلاسيكي (بلا خلفية)</option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.emoji||'🎨')} ${escHtml(t.name)}</option>`).join('');
     if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
     gmApplyForcedTheme();
+    gmRenderThemeGrid();
   }catch(e){console.warn('gmLoadThemes',e);}
+}
+// شبكة الثيمات المصورة — تُبقي select المخفي متزامناً فتعمل كل المسارات القديمة
+function gmRenderThemeGrid(){
+  const grid=document.getElementById('gm-theme-grid');
+  const sel=document.getElementById('gm-theme');
+  if(!grid||!sel)return;
+  const forced=gmForcedTheme(gmTpl);
+  const cur=sel.value;
+  const card=(id,name,emoji,bg)=>`<button type="button" class="gm-theme-card ${cur===id?'on':''} ${forced&&forced.id!==id?'locked':''}" data-id="${escHtml(id)}" onclick="gmGridPick('${escHtml(id)}')">
+    <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div>
+    <div class="nm">${escHtml(emoji||'')} ${escHtml(name)}</div></button>`;
+  grid.innerHTML=card('','كلاسيكي','🎨','')+gmThemes.map(t=>card(t.id,t.name,t.emoji,t.bg_url)).join('');
+  if(forced)grid.title='ثيم هذه اللعبة ثابت: '+forced.name;else grid.title='';
+}
+function gmGridPick(id){
+  const sel=document.getElementById('gm-theme');
+  if(sel.disabled)return;
+  gmThemeTouched=true;
+  sel.value=id;
+  gmRenderThemeGrid();
 }
 function gmPickTpl(t){
   const prevStruct=GM_STRUCT[gmTpl];
   gmTpl=t;
   document.querySelectorAll('.gm-tpl-btn').forEach(b=>b.classList.toggle('active',b.dataset.tpl===t));
+  gmThemeTouched=false;
+  // ثيم المشرف الافتراضي لهذا القالب (غير الإجباري — المعلم يستطيع تغييره)
+  const dc=gmGameCfg[t];
+  if(dc&&dc.theme&&!dc.lock&&gmThemes.some(x=>x.id===dc.theme))document.getElementById('gm-theme').value=dc.theme;
   gmApplyForcedTheme();
+  gmRenderThemeGrid();
   // بنية المحتوى تغيّرت؟ نفرغ المحرر (البنى غير متوافقة)
   if(GM_STRUCT[t]!==prevStruct&&gmItems.length){gmItems=[];document.getElementById('eg-game-result-card').style.display='none';}
 }
@@ -12284,7 +12456,8 @@ function gmPlayWith(items,title){
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
   document.body.style.overflow='hidden';
-  gmLoadSfx();gmMusicInit();gmPickSetup();
+  gmLoadSfx();gmLoadSfxT(gmTpl);gmMusicInit();gmPickSetup();
+  GM_OPT=(gmGameCfg[gmTpl]&&gmGameCfg[gmTpl].opts)||{};
   const mb=document.getElementById('gm-mute-btn');if(mb)mb.innerHTML=gmMuted?GM_IC_MUTED:GM_IC_SOUND;
   gmRunCurrent=()=>{
     if(gmTpl==='wheel')gmRunWheel(items);
@@ -12347,7 +12520,9 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   // الأصوات المخصصة المرفوعة تُدمج داخل الملف (وإلا يبقى ZzFX الافتراضي)
   const sfx={};
   for(const k of GM_SFX_KINDS){
-    const d=await gmFetchB64(gmSfxUrl(k));
+    // صوت القالب الخاص أولاً، ثم العام
+    let d=await gmFetchB64(sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl);
+    if(!(d&&d.startsWith('data:audio')))d=await gmFetchB64(gmSfxUrl(k));
     if(d&&d.startsWith('data:audio'))sfx[k]=d;
   }
   const musicB64=await gmFetchB64(gmSfxUrl(GM_MUSIC_KEY));
@@ -12370,6 +12545,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('<div style="position:fixed;bottom:6px;left:10px;z-index:9;font-size:10px;color:rgba(255,255,255,.55);font-family:Tahoma">منصة خطتي الفصلية 🎮</div>');
   parts.push('<scr'+'ipt>');
   parts.push('var gmMuted=false,gmAC=null,gmQuizTimer=null;');
+  parts.push('var GM_OPT='+JSON.stringify((gmGameCfg[tpl]&&gmGameCfg[tpl].opts)||{})+',gmSfxT={},gmTpl='+JSON.stringify(tpl)+';');
   parts.push('var GM_SFX='+JSON.stringify(sfx)+';');
   parts.push('var gmSfxAudio={};Object.keys(GM_SFX).forEach(function(k){var a=new Audio(GM_SFX[k]);a.preload="auto";gmSfxAudio[k]=a;});');
   parts.push('function gmSound(kind){if(gmMuted)return;try{var a=gmSfxAudio[kind];if(a){var c=a.cloneNode();c.volume=.9;c.play().catch(function(){});return;}');
@@ -12509,7 +12685,7 @@ function gmRunMillionaire(qs){
   // سلم الجوائز: تصاعد هندسي من ١٠٠ حتى المليون
   const prizes=[];for(let i=0;i<n;i++)prizes.push(Math.round(100*Math.pow(1000000/100,i/(Math.max(n-1,1))))); 
   const fmt=v=>egToArabic(v>=1000000?'١٬٠٠٠٬٠٠٠':v.toLocaleString('en').replace(/,/g,'٬'));
-  let qi=0,lifes={fifty:true,ask:true,swap:true},swapped=null;
+  let qi=0,lifes={fifty:GM_OPT.fifty!==0,ask:GM_OPT.ask!==0,swap:GM_OPT.swap!==0},swapped=null;
   const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span>💰 ${qi>0?fmt(prizes[qi-1]):'٠'}</span><span>${egToArabic(Math.min(qi+1,n))} / ${egToArabic(n)}</span>`;};
   const gameOver=(won,prize)=>{
     if(won){gmSound('win');gmConfetti();}else gmSound('bad');
@@ -12565,7 +12741,7 @@ function gmRunMillionaire(qs){
 // ─ 🏎️ محرك سباق الفريقين ─
 function gmRunRace(qs){
   const body=document.getElementById('gm-stage-body');
-  const FINISH=Math.max(3,Math.min(6,Math.ceil(qs.length/2)));
+  const FINISH=GM_OPT.finish?Math.max(3,Math.min(10,Math.round(GM_OPT.finish))):Math.max(3,Math.min(6,Math.ceil(qs.length/2)));
   let pos={a:0,b:0},turn='a',qi=0;
   const T={a:{name:'الفريق الأحمر',car:'🚗',color:'#dc2626'},b:{name:'الفريق الأزرق',car:'🚙',color:'#2563eb'}};
   const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span style="color:#fca5a5">🔴 ${egToArabic(pos.a)}</span><span style="color:#93c5fd">🔵 ${egToArabic(pos.b)}</span>`;};
@@ -12615,8 +12791,15 @@ function gmRunBoxes(qs){
   const T={a:{name:'الفريق الأحمر',color:'#dc2626'},b:{name:'الفريق الأزرق',color:'#2563eb'}};
   let score={a:0,b:0},turn='a',qi=0;
   // مكافآت الصناديق: كنوز وقنابل وسرقة ومضاعفة
-  const NB=Math.min(12,Math.max(8,qs.length+2));
-  const pool=['+100','+100','+50','+50','+200','x2','bomb','bomb','steal','+150','+50','+100'].slice(0,NB).sort(()=>Math.random()-.5);
+  const NB=GM_OPT.boxes?Math.max(6,Math.min(16,Math.round(GM_OPT.boxes))):Math.min(12,Math.max(8,qs.length+2));
+  const bombN=GM_OPT.bombs!=null?Math.max(0,Math.min(6,Math.round(GM_OPT.bombs))):2;
+  const treasures=['+100','+50','+200','+150'];
+  const pool=[];
+  for(let i=0;i<bombN&&pool.length<NB;i++)pool.push('bomb');
+  if(pool.length<NB)pool.push('steal');
+  if(pool.length<NB)pool.push('x2');
+  for(let i=0;pool.length<NB;i++)pool.push(treasures[i%treasures.length]);
+  pool.sort(()=>Math.random()-.5);
   let boxes=pool.map((r,i)=>({r,open:false}));
   const RLBL={'+50':'💎 +٥٠','+100':'💎 +١٠٠','+150':'💎 +١٥٠','+200':'💰 +٢٠٠','x2':'✨ ×٢ رصيدك','bomb':'🧨 قنبلة! −١٠٠','steal':'🕵️ اسرق ١٠٠ من الخصم'};
   const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span style="color:#fca5a5">🔴 ${egToArabic(score.a)}</span><span style="color:#93c5fd">🔵 ${egToArabic(score.b)}</span>`;};
@@ -12891,7 +13074,7 @@ function gmRunQuiz(qs){
     const t0=performance.now();
     const bar=document.getElementById('gm-qb');
     gmQuizTimer=setInterval(()=>{
-      const left=1-(performance.now()-t0)/30000;
+      const left=1-(performance.now()-t0)/((GM_OPT.timer||30)*1000);
       if(bar)bar.style.width=Math.max(left*100,0)+'%';
       if(left<=0){clearInterval(gmQuizTimer);reveal(-1,t0);}
     },100);
@@ -12938,7 +13121,7 @@ function gmRunBalloon(qs){
         setTimeout(()=>{qi++;show();},650);
         body.querySelectorAll('.gm-balloon').forEach(x=>x.onclick=null);
       }else{
-        gmSound('bad');score=Math.max(0,score-30);hud();
+        gmSound('bad');score=Math.max(0,score-(GM_OPT.penalty!=null?GM_OPT.penalty:30));hud();
         b.classList.add('popped');b.onclick=null;
       }
     });
@@ -12988,7 +13171,7 @@ function gmRunMemory(pairs){
           body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">🏆 أحسنتم! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunMemory(gmItems)">🔄 إعادة التشغيل</button></div>`);},500);}
       }else{
         gmSound('bad');
-        setTimeout(()=>{x.classList.remove('flip');y.classList.remove('flip');lock=false;},900);
+        setTimeout(()=>{x.classList.remove('flip');y.classList.remove('flip');lock=false;},GM_OPT.hide||900);
       }
       flipped=[];
     }
