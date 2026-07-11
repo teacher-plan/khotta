@@ -2611,6 +2611,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
       <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
       <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
+      <button class="eg-regen" style="flex:1" id="dpb-drive-btn" onclick="dpDriveExport()">⬆️ رفع نسخ الملفات إلى درايف</button>
     </div>
     <!-- ⭐ تقييم التحضير المشترك (يظهر للمستورد فقط) -->
     <div id="dpb-rating" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center">
@@ -7304,6 +7305,9 @@ async function uploadLessonFile(e,lessonId){
   toast('✅ تم الرفع على Drive','ok');scheduleSave();
 }
 function lessonFileRowHtml(lessonId,f){
+  if(f.prep){
+    return`<div class="lesson-file-item" style="background:linear-gradient(90deg,rgba(109,40,217,.07),transparent)"><span>📦</span><span class="lfi-name">${escHtml(f.name||'تحضير الدرس')}</span><button class="arc-btn" style="padding:3px 10px;font-size:10px;" onclick="dpOpenPrepFromCard('${lessonId}')">👁️ فتح التحضير</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="dpRemovePrepFromCard('${lessonId}')">🗑️</button></div>`;
+  }
   const n=(f.name||'').toLowerCase();
   const icon=(f.type&&f.type.startsWith('image/'))?'🖼️':n.endsWith('.pptx')?'📊':n.endsWith('.pdf')?'📄':'📎';
   const openUrl=f.previewLink||f.viewLink||'';
@@ -13664,7 +13668,15 @@ function dpOpenBundle(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   const b=dpBundle(it.lessonId);
   if(b.status!=='ready'&&b.status!=='saved')return;
-  dpCurrentItem=it;window._dpBundleIdx=i;
+  window._dpBundleIdx=i;
+  dpOpenBundleIt(it,b,false);
+}
+function dpOpenBundleIt(it,b,fromCard){
+  dpCurrentItem=it;
+  const sv=document.getElementById('dpb-save-btn');
+  if(sv)sv.style.display=fromCard?'none':'';
+  const dv=document.getElementById('dpb-drive-btn');
+  if(dv){dv.disabled=false;dv.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
   const rb=document.getElementById('dpb-rating');
   if(rb){rb.style.display=b.imported?'':'none';if(b.imported)dpLoadRating(it.lessonId);}
   document.getElementById('dpb-title').textContent='✨ تحضير درس: '+it.lesson;
@@ -13799,19 +13811,69 @@ async function dpRate(n){
     dpLoadRating(it.lessonId);
   }catch(e){toast('تعذّر حفظ التقييم',true);}
 }
+// فتح التحضير من بطاقة الدرس — معاينة داخل المنصة بلا درايف
+async function dpOpenPrepFromCard(lessonId){
+  const entry=(lessonFiles[lessonId]||[]).find(f=>f.prep);
+  if(!entry||!entry.meta)return;
+  const it={lessonId,gradeNum:entry.meta.grade,subject:entry.meta.subject,unit:entry.meta.unit,lesson:entry.meta.lesson};
+  let b=dpBundles.get(lessonId);
+  if(!b||!b.plan){
+    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);}}catch(e){}
+  }
+  if(!b||!b.plan){
+    // جهاز آخر؟ جرّب نسخة الخطة الذهبية المشتركة
+    try{
+      const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
+      if(sh&&sh.plan){
+        b={status:'saved',plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
+        dpBundles.set(lessonId,b);
+      }
+    }catch(e){}
+  }
+  if(!b||!b.plan){toast('محتوى هذا التحضير محفوظ على الجهاز الذي أُعدّ عليه — افتحه من هناك أو أعد تحضيره هنا',true);return;}
+  if(b.status!=='ready')b.status='saved';
+  dpOpenBundleIt(it,b,true);
+}
+async function dpRemovePrepFromCard(lessonId){
+  if(!(await uiConfirm('إزالة التحضير','سيُزال التحضير من بطاقة الدرس (يبقى قابلاً للحفظ مجدداً من بطاقة اليوم). متابعة؟')))return;
+  lessonFiles[lessonId]=(lessonFiles[lessonId]||[]).filter(f=>!f.prep);
+  try{refreshLessonFiles(lessonId);}catch(e){}
+  scheduleSave();
+}
 async function dpSaveBundle(i){
   if(typeof i!=='number')i=window._dpBundleIdx;
   const it=(window._dpItems||[])[i];if(!it)return;
   const b=dpBundle(it.lessonId);
-  if(b.status==='saved')return;
   if(b.status!=='ready')return;
-  // حالة «جارٍ الحفظ» — تبقى ظاهرة حتى التأكد الفعلي من وجود الملفات في البطاقة
-  b.status='saving';b.prog='يجهّز الملفات…';
-  dpBundles.set(it.lessonId,b);
+  // ⚡ الحفظ فوري: التحضير ينتقل مباشرة إلى بطاقة الدرس (بلا رفع درايف)
+  // المعاينة تفتح داخل المنصة، ورفع نسخ الملفات إلى درايف زر اختياري في المعاينة
+  const lid=it.lessonId;
+  if(!lessonFiles[lid])lessonFiles[lid]=[];
+  lessonFiles[lid]=lessonFiles[lid].filter(f=>!f.prep);
+  lessonFiles[lid].unshift({
+    id:'prep_'+lid,prep:true,type:'khotta/prep',size:0,
+    name:'📦 تحضير الدرس — '+it.lesson,
+    meta:{grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson}
+  });
+  try{refreshLessonFiles(lid);}catch(e){}
+  scheduleSave();
+  b.status='saved';
+  dpPersist(it,b);
   renderDailyPrep();
-  const setSaveProg=t=>{b.prog=t;renderDailyPrep();};
-  const mbtn=document.getElementById('dpb-save-btn');
-  if(mbtn){mbtn.disabled=true;mbtn.textContent='⏳ جارٍ الحفظ في بطاقة الدرس…';}
+  const mb=document.getElementById('dpb-save-btn');
+  if(mb){mb.textContent='✅ في بطاقة الدرس';}
+  toast('📎 انتقل التحضير إلى بطاقة الدرس','ok');
+}
+async function dpDriveExport(i){
+  if(typeof i!=='number')i=window._dpBundleIdx;
+  const it=(typeof i==='number'&&(window._dpItems||[])[i])||dpCurrentItem;
+  if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status!=='ready'&&b.status!=='saved')return;
+  const prevStatus=b.status;
+  const setSaveProg=t=>{const m=document.getElementById('dpb-drive-btn');if(m)m.textContent='⏳ '+t;};
+  const mbtn=document.getElementById('dpb-drive-btn');
+  if(mbtn){mbtn.disabled=true;mbtn.textContent='⏳ يجهّز الملفات…';}
   const files=[];
   if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
   // العرض التقديمي: سلسلة تراجع تضمن ألا يضيع أبداً
@@ -13884,21 +13946,22 @@ async function dpSaveBundle(i){
   if(verified&&verified===pend.length){
     scheduleSave();
     try{refreshLessonFiles(it.lessonId);}catch(e){}
-    b.status='saved';
+    b.status=prevStatus;
     dpPersist(it,b);
     renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
+    toast('✅ رُفعت نسخ الملفات إلى درايف وبطاقة الدرس','ok');
   }else if(verified){
     scheduleSave();
     try{refreshLessonFiles(it.lessonId);}catch(e){}
-    b.status='ready';
+    b.status=prevStatus;
     renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='💾 حفظ في بطاقة الدرس';}
-    toast('⚠️ حُفظ '+egToArabic(verified)+' من '+egToArabic(pend.length)+' ملفات — أعد الحفظ لرفع الباقي فقط',true);
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
+    toast('⚠️ رُفع '+egToArabic(verified)+' من '+egToArabic(pend.length)+' ملفات — أعد المحاولة لرفع الباقي',true);
   }else{
-    b.status='ready';
+    b.status=prevStatus;
     renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='💾 حفظ في بطاقة الدرس';}
+    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
     toast('❌ فشل الرفع — تأكد من ربط Google Drive في الإعدادات',true);
   }
 }

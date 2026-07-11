@@ -104,37 +104,44 @@ Deno.serve(async (req) => {
     const userContent: unknown[] = [{ type: "text", text: userMsg }];
     for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://khotati.com",
-        "X-Title": "Khotta Lesson Prep",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: images.length ? userContent : userMsg },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-        max_tokens: 2500,
-      }),
-    });
-    const or = await orResp.json();
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    // الخطة هي أساس التحضير كله — لا نستسلم من أول محاولة:
+    // (١) محاولة كاملة (بالصور إن وُجدت) → (٢) إعادة عند خروج غير سليم → (٣) تراجع نصي بلا صور
+    const callOnce = async (withImages: boolean) => {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Lesson Prep",
+        },
+        body: JSON.stringify({
+          model: withImages ? model : (st.ai_model || "google/gemini-2.5-flash"),
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: withImages && images.length ? userContent : userMsg },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.4,
+          max_tokens: 3200,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) return { ok: false as const, detail: j };
+      const text = j?.choices?.[0]?.message?.content || "";
+      let plan: unknown;
+      try { plan = JSON.parse(text); }
+      catch (_) { const m = text.match(/\{[\s\S]*\}/); try { plan = m ? JSON.parse(m[0]) : null; } catch (_2) { plan = null; } }
+      const pl = plan as { procedures?: unknown[]; outcomes?: unknown[]; phases?: unknown[] } | null;
+      if (!pl || !(pl.procedures || pl.phases)) return { ok: false as const, detail: text.slice(0, 300) };
+      return { ok: true as const, plan, usage: j?.usage || null };
+    };
 
-    const text = or?.choices?.[0]?.message?.content || "";
-    let plan: unknown;
-    try { plan = JSON.parse(text); }
-    catch (_) { const m = text.match(/\{[\s\S]*\}/); plan = m ? JSON.parse(m[0]) : null; }
-    const pl = plan as { procedures?: unknown[]; outcomes?: unknown[]; phases?: unknown[] } | null;
-    if (!pl || !(pl.procedures || pl.phases)) {
-      return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
-    }
-    return json({ plan, model, usage: or?.usage || null });
+    let attempt = await callOnce(images.length > 0);
+    if (!attempt.ok) attempt = await callOnce(images.length > 0);          // إعادة مرة
+    if (!attempt.ok && images.length) attempt = await callOnce(false);     // تراجع نصي
+    if (!attempt.ok) return json({ error: "bad_output", detail: attempt.detail }, 502);
+    return json({ plan: attempt.plan, model, usage: attempt.usage });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }
