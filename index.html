@@ -12055,7 +12055,10 @@ function gmMusicApply(){
   const btn=document.getElementById('gm-music-btn');
   if(btn){btn.style.opacity=gmMusicOn?'1':'.45';}
   if(!gmMusicAudio||!gmMusicAvail)return;
-  if(gmMusicOn&&!gmMuted)gmMusicAudio.play().catch(()=>{});
+  // لا عزف إلا وساحة اللعب مفتوحة فعلاً — يمنع انطلاق المقطع بعد الخروج
+  // (كان تحميل الملف الطويل يكتمل بعد ضغط ✕ فيبدأ العزف والساحة مغلقة)
+  const stageOpen=document.getElementById('gm-stage-bg')?.style.display==='flex';
+  if(stageOpen&&gmMusicOn&&!gmMuted)gmMusicAudio.play().catch(()=>{});
   else gmMusicAudio.pause();
 }
 function gmToggleMusic(){
