@@ -925,20 +925,20 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .lib-lesson-count{font-size:11px;color:var(--gold);font-weight:700;white-space:nowrap;}
 /* مولّد الاختبارات */
 /* ☀️ مساعد التحضير اليومي */
-.dp-card{background:linear-gradient(135deg,rgba(184,134,11,.08),rgba(26,122,58,.06)),var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 6px 24px rgba(184,134,11,.12);}
-.dp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
-.dp-title{font-size:18px;font-weight:900;color:var(--gold);}
+.dp-card{background:linear-gradient(135deg,rgba(184,134,11,.08),rgba(26,122,58,.06)),var(--surface);border:1.5px solid var(--gold);border-radius:14px;padding:12px 14px;margin-bottom:14px;box-shadow:0 4px 16px rgba(184,134,11,.1);}
+.dp-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.dp-title{font-size:15.5px;font-weight:900;color:var(--gold);}
 .dp-date{font-size:12px;color:var(--muted);margin-top:2px;}
 .dp-hint{font-size:11px;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:5px 10px;}
-.dp-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.dp-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:9px 11px;margin-bottom:7px;}
 .dp-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
-.dp-lesson{font-weight:800;font-size:14.5px;color:var(--text);}
+.dp-lesson{font-weight:800;font-size:13px;color:var(--text);}
 .dp-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .dp-status{font-size:11px;font-weight:700;border-radius:12px;padding:3px 10px;white-space:nowrap;}
 .dp-status.ready{background:rgba(39,174,96,.12);color:var(--green);border:1px solid rgba(39,174,96,.35);}
 .dp-status.wait{background:rgba(184,134,11,.1);color:var(--gold);border:1px solid rgba(184,134,11,.3);}
 .dp-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
-.dp-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;}
+.dp-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;}
 .dp-btn:hover{border-color:var(--gold);transform:translateY(-1px);}
 .dp-btn.main{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-color:transparent;}
 .dp-btn.done-btn{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border-color:transparent;margin-right:auto;}
@@ -1699,7 +1699,7 @@ input,textarea,select{font-size:16px !important;}
         <div class="dp-title">☀️ يومك جاهز</div>
         <div class="dp-date" id="dp-date"></div>
       </div>
-      <span class="dp-hint">بعد الحصة اضغط ✅ ليتجهز درس الغد تلقائياً</span>
+
     </div>
     <div id="dp-items"></div>
   </div>
@@ -13387,17 +13387,16 @@ async function renderDailyPrep(){
     }else if(b.status==='ready'){
       const inc=b.missing&&b.missing.length;
       st=inc?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
-      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ ${inc?'معاينة':'التحضير جاهز — معاينة'}</button>
-        ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
-        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة تفاعلية</button>`;
+      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
+        ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
+        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ</button>
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>`;
     }else if(b.status==='saved'){
       const incS=b.missing&&b.missing.length;
       st='<span class="dp-status ready">محفوظ في بطاقة الدرس 📎</span>';
       actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
-        ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
-        <button class="dp-btn" onclick="dpResave(${i})">📤 أعد الحفظ</button>
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة تفاعلية</button>`;
+        ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>`;
     }else{
       st='<span class="dp-status wait">بانتظارك</span>';
       actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
