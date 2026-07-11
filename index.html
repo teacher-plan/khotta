@@ -1679,6 +1679,18 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- ══ TIMETABLE ══ -->
 <div class="page active" id="page-timetable"><div class="wrap">
+
+  <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
+    <div class="dp-head">
+      <div>
+        <div class="dp-title">☀️ يومك جاهز</div>
+        <div class="dp-date" id="dp-date"></div>
+      </div>
+      <span class="dp-hint">بعد الحصة اضغط ✅ ليتجهز درس الغد تلقائياً</span>
+    </div>
+    <div id="dp-items"></div>
+  </div>
+
   <div class="teacher-banner" style="position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;">
     <!-- جرس الإشعارات - يسار -->
     <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" style="position:absolute;left:0;">
@@ -1779,16 +1791,7 @@ input,textarea,select{font-size:16px !important;}
   <div class="page-header"><div class="tag">📚 الخطة الفصلية</div><h1 id="tracker-title">الخطة الفصلية</h1><p>اضغط على الدرس لما تخلص منه ✅</p></div>
 
   <!-- ☀️ مساعد التحضير اليومي -->
-  <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
-    <div class="dp-head">
-      <div>
-        <div class="dp-title">☀️ يومك جاهز</div>
-        <div class="dp-date" id="dp-date"></div>
-      </div>
-      <span class="dp-hint">بعد الحصة اضغط ✅ ليتجهز درس الغد تلقائياً</span>
-    </div>
-    <div id="dp-items"></div>
-  </div>
+  
 
   
   <!-- ══ لوحة المشرف (محتوى المناهج) ══ -->
@@ -5271,7 +5274,7 @@ function showPage(id,btn){
   btn.classList.add('active','ripple');
   try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
-  if(id==='tracker'){const nb=document.querySelector('.nav-btn[data-page="tracker"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
+  if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
   if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},150);}
@@ -5763,7 +5766,7 @@ function updateAdminButtons(){
     setTimeout(()=>{
       const currentActive=document.querySelector('.nav-btn.active:not([style*="display: none"])');
       if(!currentActive||currentActive.classList.contains('teacher-only')){
-        const trackerBtn=document.querySelector('.nav-btn[data-page="tracker"]');
+        const trackerBtn=document.querySelector('.nav-btn[data-page="timetable"]');
         if(trackerBtn){
           document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
           document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -13390,7 +13393,7 @@ async function renderDailyPrep(){
   // وهج زر الخطة لجذب المعلم عند الدخول (إن لم يزره بعد في هذه الجلسة)
   try{
     if(!sessionStorage.getItem('dpGlowSeen')&&!document.getElementById('page-tracker').classList.contains('active')){
-      const nb=document.querySelector('.nav-btn[data-page="tracker"]');
+      const nb=document.querySelector('.nav-btn[data-page="timetable"]');
       if(nb)nb.classList.add('nav-glow');
     }
   }catch(e){}
