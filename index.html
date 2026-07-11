@@ -6028,7 +6028,7 @@ function gmSfxUpload(kind){
       const{error}=await sb.storage.from('library-files').upload('game-sfx/'+kind+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
       if(error)throw error;
       localStorage.setItem('gmSfxV',String(Date.now()));
-      gmSfxLoaded=false;gmSfx={};gmMusicAudio=null;gmMusicAvail=false;
+      gmSfxLoaded=false;gmSfx={};gmMusicStop();gmMusicAudio=null;gmMusicAvail=false;
       toast('✅ رُفع الصوت وسيسمعه الجميع','ok');
       gmSfxSlots();
     }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
@@ -6040,7 +6040,7 @@ async function gmSfxDelete(kind){
   try{
     await sb.storage.from('library-files').remove(['game-sfx/'+kind+'.mp3']);
     localStorage.setItem('gmSfxV',String(Date.now()));
-    gmSfxLoaded=false;gmSfx={};gmMusicAudio=null;gmMusicAvail=false;
+    gmSfxLoaded=false;gmSfx={};gmMusicStop();gmMusicAudio=null;gmMusicAvail=false;
     gmSfxSlots();
   }catch(e){toast('تعذّر الحذف',true);}
 }
@@ -12034,7 +12034,9 @@ function gmToggleMute(){
   gmMuted=!gmMuted;
   localStorage.setItem('gmMuted',gmMuted?'1':'0');
   const b=document.getElementById('gm-mute-btn');if(b)b.innerHTML=gmMuted?GM_IC_MUTED:GM_IC_SOUND;
-  if(!gmMuted)gmSound('pop');
+  // الكتم يشمل الموسيقى — والإلغاء يعيدها إن كانت مفعّلة
+  if(gmMuted){if(typeof gmMusicAudio!=='undefined'&&gmMusicAudio)gmMusicAudio.pause();}
+  else{gmSound('pop');if(typeof gmMusicApply==='function')gmMusicApply();}
 }
 // ─ 🎵 موسيقى الخلفية الاختيارية ─
 let gmMusicAudio=null,gmMusicOn=localStorage.getItem('gmMusicOn')==='1',gmMusicAvail=false;
@@ -12053,7 +12055,7 @@ function gmMusicApply(){
   const btn=document.getElementById('gm-music-btn');
   if(btn){btn.style.opacity=gmMusicOn?'1':'.45';}
   if(!gmMusicAudio||!gmMusicAvail)return;
-  if(gmMusicOn)gmMusicAudio.play().catch(()=>{});
+  if(gmMusicOn&&!gmMuted)gmMusicAudio.play().catch(()=>{});
   else gmMusicAudio.pause();
 }
 function gmToggleMusic(){
@@ -12377,7 +12379,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('var gmItems='+JSON.stringify(items)+';');
   parts.push('var gmGroupNames='+JSON.stringify(groupNames||[])+';');
   parts.push('var GM_IC_SOUND='+JSON.stringify(GM_IC_SOUND)+',GM_IC_MUTED='+JSON.stringify(GM_IC_MUTED)+';');
-  parts.push("document.getElementById('gm-mute-btn').onclick=function(){gmMuted=!gmMuted;this.innerHTML=gmMuted?GM_IC_MUTED:GM_IC_SOUND;};");
+  parts.push("document.getElementById('gm-mute-btn').onclick=function(){gmMuted=!gmMuted;this.innerHTML=gmMuted?GM_IC_MUTED:GM_IC_SOUND;if(typeof gmMusic!=='undefined'){if(gmMuted)gmMusic.pause();else if(gmMusicOn)gmMusic.play().catch(function(){});}};");
   if(music){
     parts.push('var GM_MUSIC='+JSON.stringify(music)+';var gmMusic=new Audio(GM_MUSIC);gmMusic.loop=true;gmMusic.volume=.25;var gmMusicOn=false;');
     parts.push("document.getElementById('gm-music-btn').onclick=function(){gmMusicOn=!gmMusicOn;this.style.opacity=gmMusicOn?'1':'.45';if(gmMusicOn)gmMusic.play().catch(function(){});else gmMusic.pause();};");
