@@ -1114,6 +1114,11 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .fh-suggest{align-self:center;display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:8px;}
 .fh-suggest button{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px 15px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;color:var(--text);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.05);transition:.15s;}
 .fh-suggest button:hover{border-color:#8b5cf6;color:#6d28d9;transform:translateY(-1px);}
+/* 🎮 زر إنشاء لعبة — بارز جداً */
+.dp-btn.game-cta{background:linear-gradient(135deg,#f43f5e,#f97316,#fbbf24);background-size:200% 200%;color:#fff;border:none;font-weight:800;box-shadow:0 4px 14px rgba(244,63,94,.45);animation:gmCtaShift 3.5s ease-in-out infinite;}
+.dp-btn.game-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(244,63,94,.6);}
+@keyframes gmCtaShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@media (prefers-reduced-motion:reduce){.dp-btn.game-cta{animation:none}}
 /* شبكة معاينة الثيمات (للمعلم) */
 .gm-theme-grid{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;}
 .gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:'Cairo',sans-serif;}
@@ -13356,13 +13361,15 @@ async function renderDailyPrep(){
       st=inc?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
       actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ ${inc?'معاينة':'التحضير جاهز — معاينة'}</button>
         ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
-        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>`;
+        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ في بطاقة الدرس</button>
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة تفاعلية</button>`;
     }else if(b.status==='saved'){
       const incS=b.missing&&b.missing.length;
       st='<span class="dp-status ready">محفوظ في بطاقة الدرس 📎</span>';
       actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
         ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص (${b.missing.map(escHtml).join('، ')})</button>`:''}
-        <button class="dp-btn" onclick="dpResave(${i})">📤 أعد الحفظ (يرفع الناقص فقط)</button>`;
+        <button class="dp-btn" onclick="dpResave(${i})">📤 أعد الحفظ</button>
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة تفاعلية</button>`;
     }else{
       st='<span class="dp-status wait">بانتظارك</span>';
       actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
@@ -14243,6 +14250,7 @@ async function dpJump(mode,i){
       if(mode==='info'){toast('🎨 يرسم إنفوجرافيك الدرس الآن…','ok');infoGenerate();const rc=document.getElementById('eg-info-options-card');if(rc)rc.scrollIntoView({behavior:'smooth'});}
       else if(mode==='exam'){toast('📝 يولّد أسئلة التقييم الآن…','ok');egGenerate();const oc=document.getElementById('eg-options-card');if(oc)oc.scrollIntoView({behavior:'smooth'});}
       else if(mode==='ppt'){toast('🖼️ يولّد العرض الآن…','ok');pptGenerate();}
+      else if(mode==='game'){toast('🎮 اختر قالب اللعبة ثم ولّد محتواها','ok');const gc=document.getElementById('eg-game-options-card');if(gc)gc.scrollIntoView({behavior:'smooth'});}
     },350);
   },400);
 }
