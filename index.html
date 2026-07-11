@@ -6142,7 +6142,7 @@ function gcfgSndUpload(tpl,k){
   inp.onchange=async()=>{
     const f=inp.files[0];if(!f)return;
     if(f.size>1024*1024){toast('اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
-    toast('⏳ جاري الرفع...','ok');
+    uiBusy('⬆️ يرفع صوت اللعبة…');
     try{
       const{error}=await sb.storage.from('library-files').upload('game-sfx/tpl/'+tpl+'/'+k+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
       if(error)throw error;
@@ -6151,6 +6151,7 @@ function gcfgSndUpload(tpl,k){
       toast('✅ رُفع صوت '+GM_TPL_LBL[tpl],'ok');
       gcfgSndSlots(tpl);
     }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
+    finally{uiBusyDone();}
   };
   inp.click();
 }
@@ -6208,7 +6209,7 @@ function gmSfxUpload(kind){
     const f=inp.files[0];if(!f)return;
     const maxSz=kind===GM_MUSIC_KEY?3*1024*1024:1024*1024;
     if(f.size>maxSz){toast(kind===GM_MUSIC_KEY?'الملف كبير — اختر مقطعاً أقل من ٣ ميجا':'الملف كبير — اختر مؤثراً قصيراً أقل من ١ ميجا',true);return;}
-    toast('⏳ جاري الرفع...','ok');
+    uiBusy('⬆️ يرفع الصوت…');
     try{
       const{error}=await sb.storage.from('library-files').upload('game-sfx/'+kind+'.mp3',f,{upsert:true,contentType:'audio/mpeg',cacheControl:'3600'});
       if(error)throw error;
@@ -6217,6 +6218,7 @@ function gmSfxUpload(kind){
       toast('✅ رُفع الصوت وسيسمعه الجميع','ok');
       gmSfxSlots();
     }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
+    finally{uiBusyDone();}
   };
   inp.click();
 }
@@ -6241,7 +6243,7 @@ function fhMascotUpload(){
   inp.onchange=async()=>{
     const f=inp.files[0];if(!f)return;
     if(f.size>2*1024*1024){toast('الصورة كبيرة — أقل من ٢ ميجا',true);return;}
-    toast('⏳ جاري الرفع...','ok');
+    uiBusy('⬆️ يرفع الشخصية…');
     try{
       const{error}=await sb.storage.from('library-files').upload('assistant/mascot.png',f,{upsert:true,contentType:f.type||'image/png',cacheControl:'3600'});
       if(error)throw error;
@@ -6249,6 +6251,7 @@ function fhMascotUpload(){
       fhInited=false;fhInitMascot();fhMascotPrev();
       toast('✅ رُفعت الشخصية','ok');
     }catch(e){toast('تعذّر الرفع: '+(e.message||''),true);}
+    finally{uiBusyDone();}
   };
   inp.click();
 }
@@ -7347,8 +7350,9 @@ async function uploadLessonFile(e,lessonId){
   const file=e.target.files[0];e.target.value='';if(!file)return;
   if(file.size>MAX_FILE_SIZE){toast('❌ الحد الأقصى 500 ميجا',true);return;}
   const fileName=`[درس-${lessonId}] ${file.name}`;
-  toast('⬆️ جاري الرفع على Drive...');
+  uiBusy('⬆️ يرفع الملف إلى Drive…');
   const result=await driveUpload(file,fileName);
+  uiBusyDone();
   if(!result){toast('❌ فشل الرفع',true);return;}
   if(!lessonFiles[lessonId])lessonFiles[lessonId]=[];
   lessonFiles[lessonId].push({id:Date.now().toString(),name:file.name,size:file.size,type:file.type,driveId:result.id,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
@@ -7372,7 +7376,8 @@ function refreshLessonFiles(lessonId){
 
 async function deleteLessonFile(lessonId,fileId,driveId){
   if(!await uiConfirm('تأكيد حذف الملف؟'))return;
-  if(driveId)await driveDelete(driveId);
+  uiBusy('🗑️ يحذف الملف…');
+  try{if(driveId)await driveDelete(driveId);}finally{uiBusyDone();}
   lessonFiles[lessonId]=(lessonFiles[lessonId]||[]).filter(f=>f.id!==fileId);
   refreshLessonFiles(lessonId);
   toast('🗑️ تم الحذف');scheduleSave();
@@ -12644,8 +12649,10 @@ async function gmDownload(){
   if(items.length<2){toast('أكمل المحتوى أولاً (عنصران على الأقل)',true);return;}
   const lessons=Object.values(egSelected);
   const title=(lessons[0]?lessons[0].name+' — ':'')+GM_TPL_LBL[gmTpl];
-  toast('⏳ يجهّز ملف اللعبة...','ok');
-  const blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value);
+  uiBusy('🎮 يجهّز ملف اللعبة…');
+  let blob;
+  try{blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value);}
+  finally{uiBusyDone();}
   gmDownloadBlob(blob,'لعبة - '+title.replace(/[\\/:*?"<>|]/g,'')+'.html');
   toast('⬇️ حُمّلت اللعبة — تعمل بأي متصفح بلا إنترنت','ok');
 }
@@ -12654,10 +12661,12 @@ async function gmDownloadSaved(id){
     const{data:g}=await sb.from('games').select('*').eq('id',id).maybeSingle();
     if(!g)return;
     if(!gmThemes.length)await gmLoadThemes();
-    toast('⏳ يجهّز ملف اللعبة...','ok');
+    uiBusy('🎮 يجهّز ملف اللعبة…');
     const gn=(g.content&&g.content.groupNames)||gmGroupNames;
     const gth=(gmForcedTheme(g.template)||{}).id||g.theme_id;
-    const blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',gth);
+    let blob;
+    try{blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',gth);}
+    finally{uiBusyDone();}
     gmDownloadBlob(blob,'لعبة - '+String(g.title||'لعبة').replace(/[\\/:*?"<>|]/g,'')+'.html');
   }catch(e){toast('تعذّر تجهيز الملف',true);console.warn(e);}
 }
