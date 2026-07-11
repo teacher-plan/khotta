@@ -2602,7 +2602,11 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
       <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
       <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
-      <button class="eg-regen" style="flex:1;display:none" id="dpb-flag-btn" onclick="dpFlagShared()">🚩 جودة رديئة؟</button>
+    </div>
+    <!-- ⭐ تقييم التحضير المشترك (يظهر للمستورد فقط) -->
+    <div id="dpb-rating" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center">
+      <div id="dpb-rating-avg" style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px"></div>
+      <div id="dpb-rating-stars" style="font-size:24px;letter-spacing:4px;cursor:pointer;user-select:none"></div>
     </div>
   </div>
 </div>
@@ -3080,7 +3084,7 @@ input,textarea,select{font-size:16px !important;}
   <!-- 🏆 الخطط الذهبية المنشورة -->
   <div class="eg-card">
     <div class="eg-step-title">🏆 الخطط الذهبية المشتركة</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">التحضيرات التي نشرها المعلمون ويستوردها الجميع. 🚩 = بلاغات جودة (عند ٣ تُستبعد تلقائياً من الاستيراد حتى تحذفها أو تُحذف بلاغاتها).</p>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">التحضيرات التي نشرها المعلمون ويستوردها الجميع، مع متوسط تقييم المعلمين لكل منها (يحمرّ المنخفض عن ٢٫٥ بثلاثة تقييمات فأكثر) — احذف الرديء ليتولد بديل جديد.</p>
     <div id="gp-list"><div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">⏳</div></div>
   </div>
   <!-- رصيد OpenRouter الفعلي -->
@@ -5962,20 +5966,21 @@ async function gpAdminList(){
   try{
     const{data:preps}=await sb.from('shared_preps').select('lesson_id,grade,subject,unit,lesson,created_at').order('created_at',{ascending:false}).limit(100);
     if(!preps||!preps.length){box.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px">لا توجد خطط منشورة بعد</div>';return;}
-    let flags={};
+    let ratings={};
     try{
-      const{data:fl}=await sb.from('shared_prep_flags').select('lesson_id');
-      (fl||[]).forEach(f=>{flags[f.lesson_id]=(flags[f.lesson_id]||0)+1;});
+      const{data:rt}=await sb.from('shared_prep_ratings').select('lesson_id,stars');
+      (rt||[]).forEach(r=>{const o=ratings[r.lesson_id]||{sum:0,n:0};o.sum+=r.stars;o.n++;ratings[r.lesson_id]=o;});
     }catch(e){}
     box.innerHTML=preps.map(p=>{
-      const fc=flags[p.lesson_id]||0;
-      return `<div class="gm-row" style="margin:0 0 6px${fc>=3?';border-color:#b91c1c;background:rgba(185,28,28,.06)':''}">
+      const rt=ratings[p.lesson_id];
+      const avg=rt?(rt.sum/rt.n):null;
+      const low=avg!==null&&avg<2.5&&rt.n>=3;
+      return `<div class="gm-row" style="margin:0 0 6px${low?';border-color:#b91c1c;background:rgba(185,28,28,.06)':''}">
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.lesson||'')}</div>
           <div style="font-size:10.5px;color:var(--muted)">الصف ${egToArabic(p.grade)} · ${escHtml(p.subject||'')} · ${escHtml(p.unit||'')}</div>
         </div>
-        ${fc?`<span style="flex:none;font-size:11px;font-weight:800;color:${fc>=3?'#b91c1c':'var(--gold)'}">🚩 ${egToArabic(fc)}</span>`:''}
-        ${fc?`<button class="arc-btn" style="flex:none;padding:3px 8px;font-size:10.5px" title="حذف البلاغات وإعادة الاعتماد" onclick="gpClearFlags('${p.lesson_id}')">✅ اعتماد</button>`:''}
+        <span style="flex:none;font-size:11px;font-weight:800;color:${low?'#b91c1c':'var(--gold)'}">${rt?('⭐ '+egToArabic(avg.toFixed(1))+' ('+egToArabic(rt.n)+')'):'بلا تقييم'}</span>
         <button class="arc-btn del" style="flex:none;padding:3px 8px;font-size:11px" onclick="gpDeletePrep('${p.lesson_id}',this)">🗑️</button>
       </div>`;
     }).join('');
@@ -5985,12 +5990,9 @@ async function gpDeletePrep(lid,btn){
   if(!(await uiConfirm('حذف الخطة الذهبية','ستُحذف من المشاركة — أول معلم يحضّر الدرس لاحقاً ينشر نسخة جديدة. متابعة؟')))return;
   try{
     await sb.from('shared_preps').delete().eq('lesson_id',lid);
-    await sb.from('shared_prep_flags').delete().eq('lesson_id',lid);
+    try{await sb.from('shared_prep_ratings').delete().eq('lesson_id',lid);}catch(_){}
     btn.closest('.gm-row').remove();
   }catch(e){toast('تعذّر الحذف',true);}
-}
-async function gpClearFlags(lid){
-  try{await sb.from('shared_prep_flags').delete().eq('lesson_id',lid);gpAdminList();toast('✅ أُعيد اعتماد الخطة','ok');}catch(e){toast('تعذّر',true);}
 }
 // ═ 🔊 إدارة أصوات الألعاب (مشرف) ═
 const GM_SFX_LBL={ok:['🪙 إجابة صحيحة'],bad:['❌ إجابة خاطئة'],pop:['🫧 فرقعة / قلب بطاقة'],win:['🏆 الفوز'],spin:['🎡 تدوير العجلة'],music:['🎵 موسيقى الخلفية (مقطع حلقي)']};
@@ -13465,7 +13467,8 @@ function dpOpenBundle(i){
   const b=dpBundle(it.lessonId);
   if(b.status!=='ready'&&b.status!=='saved')return;
   dpCurrentItem=it;window._dpBundleIdx=i;
-  const fb=document.getElementById('dpb-flag-btn');if(fb)fb.style.display=b.imported?'':'none';
+  const rb=document.getElementById('dpb-rating');
+  if(rb){rb.style.display=b.imported?'':'none';if(b.imported)dpLoadRating(it.lessonId);}
   document.getElementById('dpb-title').textContent='✨ تحضير درس: '+it.lesson;
   document.getElementById('dpb-sub').textContent='الصف '+egToArabic(it.gradeNum)+' · '+it.subject+' · '+it.unit;
   const parts=[];
@@ -13569,16 +13572,34 @@ function dpDataUrlToFile(dataUrl,name){
 }
 
 // 💾 حفظ الحزمة كملفات مرفقة في بطاقة الدرس
-// 🚩 تبليغ عن جودة حزمة مشتركة رديئة — عند ٣ بلاغات تُستبعد من الاستيراد
-async function dpFlagShared(){
-  const it=dpCurrentItem;if(!it)return;
-  if(!(await uiConfirm('تبليغ جودة','هذا التحضير أعدّه معلم آخر. هل تبلّغ عن جودته الرديئة؟ عند تعدد البلاغات يُستبعد من المشاركة ويُراجع.')))return;
+// ⭐ تقييم التحضير المشترك بخمس نجوم
+async function dpLoadRating(lessonId){
+  const avgEl=document.getElementById('dpb-rating-avg');
+  const starsEl=document.getElementById('dpb-rating-stars');
+  if(!avgEl||!starsEl)return;
+  let avg=null,count=0,mine=0;
   try{
-    const{error}=await sb.from('shared_prep_flags').insert({lesson_id:it.lessonId});
-    if(error&&!String(error.message||'').includes('duplicate'))throw error;
-    toast('🚩 وصل بلاغك — شكراً لحرصك على الجودة','ok');
-    const fb=document.getElementById('dpb-flag-btn');if(fb)fb.style.display='none';
-  }catch(e){toast('تعذّر إرسال البلاغ',true);}
+    const{data}=await sb.from('shared_prep_ratings').select('stars,user_id').eq('lesson_id',lessonId);
+    if(data&&data.length){
+      count=data.length;
+      avg=data.reduce((t,r)=>t+r.stars,0)/count;
+      const uid=currentUser&&currentUser.id;
+      const m=data.find(r=>r.user_id===uid);if(m)mine=m.stars;
+    }
+  }catch(e){}
+  avgEl.textContent=count
+    ?('⭐ '+egToArabic(avg.toFixed(1))+' من ٥ ('+egToArabic(count)+(count>=3&&count<=10?' تقييمات':' تقييم')+')')
+    :'هذا التحضير لم يُقيَّم بعد — كن أول من يقيّمه';
+  starsEl.innerHTML=[1,2,3,4,5].map(n=>`<span data-n="${n}" style="color:${n<=mine?'var(--gold)':'var(--border)'}" onclick="dpRate(${n})">★</span>`).join('');
+}
+async function dpRate(n){
+  const it=dpCurrentItem;if(!it)return;
+  try{
+    const uid=currentUser&&currentUser.id;
+    const{error}=await sb.from('shared_prep_ratings').upsert({lesson_id:it.lessonId,user_id:uid,stars:n},{onConflict:'lesson_id,user_id'});
+    if(error)throw error;
+    dpLoadRating(it.lessonId);
+  }catch(e){toast('تعذّر حفظ التقييم',true);}
 }
 async function dpSaveBundle(i){
   if(typeof i!=='number')i=window._dpBundleIdx;
