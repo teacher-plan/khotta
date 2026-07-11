@@ -1,7 +1,16 @@
 // ══ Service Worker - خطتي الفصلية ══
 const CACHE_NAME = 'khotta-86b4dbe'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
-self.addEventListener('install', e => { self.skipWaiting(); });
+self.addEventListener('install', e => {
+  // تجهيز الصفحة الرئيسية في الكاش فور التثبيت — حتى أول فتحة بعد التحديث تكون فورية
+  e.waitUntil((async () => {
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.addAll(['/', '/index.html']);
+    } catch (_) { /* اجتهادي */ }
+    self.skipWaiting();
+  })());
+});
 
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
@@ -12,9 +21,11 @@ self.addEventListener('activate', e => {
   })());
 });
 
-// ═══ استراتيجية التخزين المؤقت (تعمل دون إنترنت + فتح فوري) ═══
-// HTML/التنقّل: الشبكة أولاً → تحديثات فورية دائماً، ورجوع للكاش عند انقطاع النت.
-// الملفات الثابتة (أيقونات/manifest): الكاش أولاً مع تحديث بالخلفية → فتح فوري.
+// ═══ استراتيجية التخزين المؤقت (فتح فوري + تحديث بالخلفية) ═══
+// HTML/التنقّل: الكاش فوراً (لا شاشة بيضاء أبداً) + جلب النسخة الجديدة بالخلفية
+//   للفتحة التالية. سلامة التحديثات مضمونة: كل نشر يرقّي إصدار الكاش تلقائياً
+//   (GitHub Actions) فيتجدد كل شيء خلال فتحتين على الأكثر.
+// الملفات الثابتة (أيقونات/manifest): الكاش أولاً مع تحديث بالخلفية.
 // الطلبات الخارجية (Supabase, Google Fonts): لا تُعترض إطلاقاً → بيانات حيّة دائماً.
 self.addEventListener('fetch', e => {
   const req = e.request;
@@ -28,20 +39,16 @@ self.addEventListener('fetch', e => {
 
   if (isHTML) {
     e.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
-        if (fresh && fresh.ok) {
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(req, fresh.clone());
-        }
+      const cached = await caches.match(req)
+        || await caches.match('/index.html')
+        || await caches.match('/');
+      // تحديث بالخلفية دائماً (لا ننتظره)
+      const refresh = fetch(req).then(fresh => {
+        if (fresh && fresh.ok) caches.open(CACHE_NAME).then(c => c.put(req, fresh.clone()));
         return fresh;
-      } catch (err) {
-        const cached = await caches.match(req)
-          || await caches.match('/index.html')
-          || await caches.match('/');
-        if (cached) return cached;
-        throw err;
-      }
+      }).catch(() => cached);
+      if (cached) return cached;       // ⚡ فتح فوري من الكاش
+      return refresh;                   // لا كاش بعد؟ من الشبكة
     })());
     return;
   }
