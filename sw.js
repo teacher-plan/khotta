@@ -1,5 +1,5 @@
 // ══ Service Worker - خطتي الفصلية ══
-const CACHE_NAME = 'khotta-v4'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
+const CACHE_NAME = 'khotta-c4da914'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 
