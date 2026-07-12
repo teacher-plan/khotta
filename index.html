@@ -14000,17 +14000,28 @@ function dpSaveFileLocal(file){
   setTimeout(()=>URL.revokeObjectURL(u),4000);
 }
 async function dpPrepPartDl(lessonId,part){
-  const r=await dpResolvePrep(lessonId);if(!r)return;
-  const{it,b}=r;
   uiBusy('⬇️ يجهّز الملف…');
+  if(part==='slides'){try{loadPptxJs();}catch(e){}} // تحميل المكتبة بالتوازي مع جلب المحتوى
+  const r=await dpResolvePrep(lessonId);if(!r){uiBusyDone();return;}
+  const{it,b}=r;
   try{
     let file=null;
     if(part==='plan'&&b.plan){
       try{file=dpPlanWordFile(it,b.plan);}
       catch(e){file=new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'تحضير — '+it.lesson+'.html',{type:'text/html'});}
     }else if(part==='slides'){
-      if(b.slideImgs&&b.slideImgs.some(Boolean)){try{file=await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs);}catch(e){console.warn('pptx img dl',e);}}
-      if(!file&&b.slides&&b.slides.length){try{file=await dpBuildPptxFile(it,b.slides);}catch(e){console.warn('pptx dl',e);}}
+      if(b._pptxFile){file=b._pptxFile;} // جاهز من تحميل سابق — فوري
+      else{
+        if(b.slideImgs&&b.slideImgs.some(Boolean)){
+          uiBusyText('🖼️ يضغط صور الشرائح…');
+          try{file=await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs);}catch(e){console.warn('pptx img dl',e);}
+        }
+        if(!file&&b.slides&&b.slides.length){
+          uiBusyText('📊 يبني ملف PowerPoint…');
+          try{file=await dpBuildPptxFile(it,b.slides);}catch(e){console.warn('pptx dl',e);}
+        }
+        if(file)b._pptxFile=file;
+      }
     }else if(part==='info'&&b.infoBranded){
       file=dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png');
     }else if(part==='exam'&&b.examHtml){
