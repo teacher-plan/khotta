@@ -16,6 +16,30 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap" media="print" onload="this.media='all'"/>
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700;800&display=swap"/></noscript>
+<!-- 🩺 وضع التشخيص: افتح الموقع بـ ?debug=1 ليظهر أي خطأ على الشاشة بدل شاشة فارغة -->
+<script>
+(function(){
+  if(!/[?&#]debug/.test(location.href))return;
+  function bar(msg){
+    var d=document.getElementById('dbg-bar');
+    if(!d){
+      d=document.createElement('div');d.id='dbg-bar';
+      d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1010;color:#fff;font:11px/1.7 monospace;padding:8px 10px;direction:ltr;text-align:left;white-space:pre-wrap;max-height:55vh;overflow:auto;word-break:break-all';
+      (document.body||document.documentElement).appendChild(d);
+    }
+    d.textContent+=msg+'\n';
+  }
+  window.__dbg=bar;
+  window.addEventListener('error',function(e){
+    if(e&&e.target&&(e.target.src||e.target.href))bar('LOAD FAIL: '+(e.target.src||e.target.href));
+    else bar('ERROR: '+(e&&e.message)+' @line '+(e&&e.lineno));
+  },true);
+  window.addEventListener('unhandledrejection',function(e){bar('PROMISE: '+((e.reason&&(e.reason.message||e.reason.toString()))||'?'));});
+  document.addEventListener('DOMContentLoaded',function(){bar('DOM ready ✓');});
+  window.addEventListener('load',function(){bar('page load ✓');});
+  bar('boot '+navigator.userAgent);
+})();
+</script>
 <!-- Supabase - يجب تحميله قبل باقي الكود -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- ExcelJS و FileSaver يتم تحميلها lazy عند الحاجة فقط (توفير ~2MB) -->
