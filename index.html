@@ -13792,14 +13792,27 @@ async function dpRunSteps(it,b,setProg){
   await dpStepInfo(it,b,setProg);
   b.missing=dpMissingParts(b);
 }
-// نشر الحزم المكتملة فقط للمخزن المشترك
+// 🧩 النشر للمخزن المشترك — كل جزء ملف مستقل:
+// يُنشر ما نجح توليده فوراً (ولو ناقصاً)، وأي توليد لاحق يملأ الفجوات فقط دون مسّ الموجود
 async function dpPublishShared(it,b){
-  if(b.missing.length||!(b.plan&&b.slides&&b.examHtml&&b.infoRaw&&b.slideImgsRaw&&b.slideImgsRaw.every(Boolean)))return;
+  if(!b.plan)return;
   try{
     const uid=(await sb.auth.getUser()).data?.user?.id;
-    await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,slide_imgs:b.slideImgsRaw,created_by:uid||null});
-  }catch(e){/* موجود مسبقاً أو الجدول غير جاهز — لا يؤثر على المعلم */}
-  b.imported=true; // صار نسخة المكتبة الذهبية — يظهر له صندوق التقييم
+    const slideImgsOk=(b.slideImgsRaw&&b.slideImgsRaw.length&&b.slideImgsRaw.every(Boolean))?b.slideImgsRaw:null;
+    const{data:ex}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',it.lessonId).maybeSingle();
+    if(!ex){
+      await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:(b.slides&&b.slides.length)?b.slides:null,exam_html:b.examHtml||null,info_b64:b.infoRaw||null,slide_imgs:slideImgsOk,created_by:uid||null});
+    }else{
+      const patch={};
+      if(!ex.plan&&b.plan)patch.plan=b.plan;
+      if(!(ex.slides&&ex.slides.length)&&b.slides&&b.slides.length)patch.slides=b.slides;
+      if(!ex.exam_html&&b.examHtml)patch.exam_html=b.examHtml;
+      if(!ex.info_b64&&b.infoRaw)patch.info_b64=b.infoRaw;
+      if(!(ex.slide_imgs&&ex.slide_imgs.some(Boolean))&&slideImgsOk)patch.slide_imgs=slideImgsOk;
+      if(Object.keys(patch).length)await sb.from('shared_preps').update(patch).eq('lesson_id',it.lessonId);
+    }
+  }catch(e){/* الجدول غير جاهز أو صلاحية ناقصة — لا يؤثر على المعلم */}
+  b.imported=true; // مرتبط بالمكتبة الذهبية — يظهر صندوق التقييم
 }
 
 async function dpPrepareAll(i){
@@ -13833,6 +13846,15 @@ async function dpPrepareAll(i){
         if(uid)await sb.from('lesson_preps').upsert({user_id:uid,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:sh.plan,edited:false,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});
         dpPreps.set(it.lessonId,{plan:sh.plan,edited:false});
       }catch(e){}
+      // 🧩 النسخة المستوردة ناقصة؟ أكمل الأجزاء الناقصة تلقائياً وانشرها للجميع
+      if(b.missing.length&&egCreditGet()>0){
+        b.status='working';b.prog='يكمل الأجزاء الناقصة…';renderDailyPrep();
+        await dpRunSteps(it,b,setProg);
+        await dpPublishShared(it,b);
+        dpLinkToCard(it,b);
+        dpPersist(it,b);
+        renderDailyPrep();
+      }
       return;
     }
   }catch(e){console.warn('shared check',e);}
