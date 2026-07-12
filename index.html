@@ -13856,7 +13856,19 @@ function dpShrinkImg(dataUrl,maxW,q){
 // بناء العرض من الشرائح المرسومة بالذكاء (صور كاملة + ملاحظات المعلم)
 async function dpBuildPptxFromImages(it,slides,imgs){
   await loadPptxJs();
-  imgs=await Promise.all(imgs.map(im=>im?dpShrinkImg(im,1600,.82):im));
+  // ضغط متسلسل بمهلة قصوى لكل صورة — لا يعلّق أبداً؛ عند التعذر تُستخدم الصورة الأصلية
+  const out=[];
+  for(let i=0;i<imgs.length;i++){
+    const im=imgs[i];
+    if(!im||im.length<400000){out.push(im);continue;}
+    try{uiBusyText('🖼️ يضغط صور الشرائح… '+egToArabic(i+1)+'/'+egToArabic(imgs.length));}catch(e){}
+    out.push(await Promise.race([
+      dpShrinkImg(im,1600,.82),
+      new Promise(r=>setTimeout(()=>r(im),8000))
+    ]));
+  }
+  imgs=out;
+  try{uiBusyText('📊 يبني ملف PowerPoint…');}catch(e){}
   const pptx=new PptxGenJS();
   pptx.defineLayout({name:'KHDPI',width:10,height:5.63});pptx.layout='KHDPI';
   imgs.forEach((im,i)=>{
