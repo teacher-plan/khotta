@@ -13767,6 +13767,7 @@ async function dpPublishShared(it,b){
     const uid=(await sb.auth.getUser()).data?.user?.id;
     await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:b.slides,exam_html:b.examHtml,info_b64:b.infoRaw,slide_imgs:b.slideImgsRaw,created_by:uid||null});
   }catch(e){/* موجود مسبقاً أو الجدول غير جاهز — لا يؤثر على المعلم */}
+  b.imported=true; // صار نسخة المكتبة الذهبية — يظهر له صندوق التقييم
 }
 
 async function dpPrepareAll(i){
@@ -14047,7 +14048,7 @@ async function dpOpenPrepFromCard(lessonId){
     try{
       const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
       if(sh&&sh.plan){
-        b={status:'saved',plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
+        b={status:'saved',imported:true,plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
         dpBundles.set(lessonId,b);
       }
     }catch(e){}
@@ -14075,7 +14076,7 @@ async function dpResolvePrep(lessonId){
     try{
       const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
       if(sh&&sh.plan){
-        b={status:'saved',plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
+        b={status:'saved',imported:true,plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
         dpBundles.set(lessonId,b);
       }
     }catch(e){}
@@ -14678,18 +14679,30 @@ async function pptDownload(){
   if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
   const btn=document.querySelector('#eg-ppt-result-card .eg-export');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري التجهيز...';}
+  uiBusy('⬇️ يجهّز ملف PowerPoint…');
   try{
     await loadPptxJs();
     const subject=document.getElementById('eg-subject').value||'الدرس';
     const grade=document.getElementById('eg-grade').value;
     // النمط المرسوم: شرائح صور كاملة + ملاحظات المعلم
     if(pptVisualImages&&pptVisualImages.some(Boolean)){
+      // ضغط الصور قبل الدمج — ملف أصغر وبناء أسرع (بمهلة قصوى لكل صورة)
+      const comp=[];
+      for(let i=0;i<pptVisualImages.length;i++){
+        const im=pptVisualImages[i];
+        if(!im||im.length<400000){comp.push(im);continue;}
+        uiBusyText('🖼️ يضغط صور الشرائح… '+egToArabic(i+1)+'/'+egToArabic(pptVisualImages.length));
+        await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
+        comp.push(await Promise.race([dpShrinkImg(im,1600,.82),new Promise(r=>setTimeout(()=>r(im),8000))]));
+      }
+      uiBusyText('📊 يبني ملف PowerPoint…');
+      await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
       const vp=new PptxGenJS();
       vp.defineLayout({name:'KH169V',width:10,height:5.63});
       vp.layout='KH169V';
       pptSlides.forEach((s,i)=>{
         const sl=vp.addSlide();
-        const img=pptVisualImages[i];
+        const img=comp[i];
         if(img){sl.addImage({data:img,x:0,y:0,w:10,h:5.63});}
         else{
           sl.background={color:'F4F0EB'};
@@ -14700,9 +14713,11 @@ async function pptDownload(){
       });
       await vp.writeFile({fileName:'عرض-مرسوم-'+subject+'-'+new Date().toISOString().slice(0,10)+'.pptx'});
       if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}
+      uiBusyDone();
       toast('✅ تم تنزيل العرض المرسوم','ok');
       return;
     }
+    uiBusyText('📊 يبني ملف PowerPoint…');
     const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
     const pptx=new PptxGenJS();
     pptx.defineLayout({name:'KH169',width:10,height:5.63});
@@ -14756,7 +14771,7 @@ async function pptDownload(){
     await pptx.writeFile({fileName:fname});
     toast('✅ تم تنزيل العرض التقديمي','ok');
   }catch(e){toast('❌ فشل إنشاء الملف: '+(e.message||''),true);}
-  finally{if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}}
+  finally{uiBusyDone();if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}}
 }
 
 // ── أدوات تحرير ورقة الاختبار (شريط شبيه بـ Word) ──
