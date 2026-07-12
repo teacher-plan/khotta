@@ -4929,6 +4929,15 @@ async function uploadSetupClassExcel(event, classId){
     _setupStudents[classId]=list;
     renderSetupClassesList();
     saveSetupDraft();
+    // 💾 حفظ فوري في الحساب أيضاً — القوائم لا تضيع حتى لو لم يكتمل المعالج أو تبدّل الجهاز
+    try{
+      if(typeof students!=='undefined'&&currentUser){
+        const formatted=list.map(s=>({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:s.name,phone:s.phone||''}));
+        students[classId]=formatted;
+        behaviorStudents[classId]=formatted.map(s=>({...s}));
+        scheduleSave();
+      }
+    }catch(e){}
     toast(`✅ تم تحميل ${list.length} طالب`,'ok');
   }catch(err){
     toast('❌ '+(err.message||'خطأ في قراءة الملف'),true);
