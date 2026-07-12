@@ -1649,6 +1649,21 @@ input,textarea,select{font-size:16px !important;}
 /* ══ 📊 الدرجات: فاصل أنيق بدل صندوق الأرقام ══ */
 .grades-divider{height:2px;margin:20px auto 18px;max-width:520px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(184,134,11,.55) 50%,transparent);position:relative;}
 .grades-divider::after{content:"✦";position:absolute;top:-9px;left:50%;transform:translateX(-50%);color:var(--gold);font-size:11px;background:var(--bg);padding:0 8px;}
+/* ══ 🗓️ مفكرة الأسبوع ══ */
+#wk-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:10px 0;}
+.wk-day{position:relative;border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:7px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;font-family:'Cairo',sans-serif;transition:.15s;}
+.wk-day .wd-n{font-size:9.5px;color:var(--muted);font-weight:700;}
+.wk-day .wd-d{font-size:15px;font-weight:800;color:var(--text);}
+.wk-day.today{border-color:var(--gold);}
+.wk-day.today .wd-d{color:var(--gold);}
+.wk-day.sel{background:linear-gradient(135deg,rgba(184,134,11,.16),transparent),var(--surface);border-color:var(--gold);box-shadow:0 3px 9px rgba(184,134,11,.22);}
+.wk-day:hover{transform:translateY(-1px);}
+.wd-dot{width:6px;height:6px;border-radius:50%;background:var(--red2);position:absolute;top:5px;inset-inline-end:6px;}
+#wk-event{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;}
+.wk-ev-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;}
+.wk-ev-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:700;font-family:'Cairo',sans-serif;color:var(--text);cursor:pointer;flex:none;}
+.wk-ev-btn:hover{border-color:var(--gold);color:var(--gold);}
+.wk-tasks-title{font-weight:800;font-size:13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-top:1px solid var(--border);padding-top:11px;}
 /* ══ 📈 الإحصائيات: بطاقات أرقى ══ */
 .stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.6),transparent 45%),var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:0 3px 12px rgba(42,26,26,.07);overflow:hidden;}
 .stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,rgba(184,134,11,.15),rgba(184,134,11,.6) 50%,rgba(184,134,11,.15));}
@@ -1983,25 +1998,17 @@ input,textarea,select{font-size:16px !important;}
     <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
   </div>
   
-  <!-- التقويم والمهام -->
+  <!-- 🗓️ مفكرة الأسبوع: التقويم والمهام في بطاقة واحدة -->
   <div class="sidebar-widgets">
-    <!-- التقويم الشهري -->
-    <div class="widget-card">
+    <div class="widget-card" style="grid-column:1/-1">
       <div class="widget-header">
-        <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
-        <div class="cal-title" id="cal-title">يناير 2026</div>
-        <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+        <button class="cal-nav-btn" onclick="wkShift(-1)">‹</button>
+        <div class="cal-title" id="wk-title">🗓️ مفكرة الأسبوع</div>
+        <button class="cal-nav-btn" onclick="wkShift(1)">›</button>
       </div>
-      <div class="calendar" id="calendar"></div>
-    </div>
-    
-    <!-- صندوق المهام -->
-    <div class="widget-card">
-      <div class="motivational-msg">💪 استمر! كل مهمة تنجزها خطوة نحو النجاح</div>
-      <div class="widget-header">
-        <span style="font-weight:700;font-size:13px">✓ المهام</span>
-        <button class="add-task-btn" onclick="addTask()">+</button>
-      </div>
+      <div id="wk-strip"></div>
+      <div id="wk-event"></div>
+      <div class="wk-tasks-title"><span>✓ مهامي</span><button class="add-task-btn" onclick="addTask()">+</button></div>
       <div class="tasks-list" id="tasks-list"></div>
       <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة..." onkeypress="if(event.key==='Enter')addTask()"/>
     </div>
@@ -15364,8 +15371,39 @@ let selectedDate=null;
 const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const dayNames=['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
 
-function prevMonth(){currentMonth--;if(currentMonth<0){currentMonth=11;currentYear--;}renderCalendar();}
-function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
+// ── 🗓️ مفكرة الأسبوع (دمج التقويم والمهام) ──
+let wkOffset=0,wkSelKey=null;
+function wkDays(){
+  const now=new Date();
+  const start=new Date(now);start.setDate(now.getDate()-now.getDay()+wkOffset*7);start.setHours(0,0,0,0);
+  return [...Array(7)].map((_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d;});
+}
+function renderWeekPlanner(){
+  const strip=document.getElementById('wk-strip');if(!strip)return;
+  const days=wkDays();
+  const today=new Date();today.setHours(0,0,0,0);
+  const f=days[0],l=days[6];
+  const t=document.getElementById('wk-title');
+  if(t)t.textContent=wkOffset===0?'🗓️ هذا الأسبوع':(f.getDate()+' '+monthNames[f.getMonth()]+' — '+l.getDate()+' '+monthNames[l.getMonth()]);
+  if(!wkSelKey){
+    const td=days.find(d=>d.getTime()===today.getTime())||days[0];
+    wkSelKey=`${td.getFullYear()}-${td.getMonth()}-${td.getDate()}`;
+  }
+  strip.innerHTML=days.map(d=>{
+    const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const isT=d.getTime()===today.getTime();
+    return `<button class="wk-day ${k===wkSelKey?'sel':''} ${isT?'today':''}" onclick="wkPick('${k}')">
+      <span class="wd-n">${dayNames[d.getDay()]}</span><span class="wd-d">${d.getDate()}</span>${calendarEvents[k]?'<span class="wd-dot"></span>':''}</button>`;
+  }).join('');
+  const ev=calendarEvents[wkSelKey];
+  const[y,m,dd]=wkSelKey.split('-').map(Number);
+  const box=document.getElementById('wk-event');
+  if(box)box.innerHTML=ev
+    ?`<span class="wk-ev-txt">📌 ${escHtml(ev)}</span><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">✏️</button>`
+    :`<span style="color:var(--muted);font-size:12px">لا حدث في هذا اليوم</span><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">➕ حدث</button>`;
+}
+function wkPick(k){wkSelKey=k;renderWeekPlanner();}
+function wkShift(d){wkOffset+=d;wkSelKey=null;renderWeekPlanner();}
 
 function saveCalendarEvents(){localStorage.setItem('calendarEvents',JSON.stringify(calendarEvents));}
 
@@ -15402,57 +15440,8 @@ function deleteEvent(){
   renderCalendar();
 }
 
-function jumpAndSelectDate(year,month,day,dir){
-  if(dir<0)prevMonth();else nextMonth();
-  setTimeout(()=>selectDate(year,month,day),0);
-}
-
-function renderCalendar(){
-  const calEl=document.getElementById('calendar');
-  if(!calEl){
-    console.error('عنصر التقويم غير موجود!');
-    return;
-  }
-  
-  document.getElementById('cal-title').textContent=monthNames[currentMonth]+' '+currentYear;
-  const firstDay=new Date(currentYear,currentMonth,1).getDay();
-  const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-  const daysInPrevMonth=new Date(currentYear,currentMonth,0).getDate();
-  const today=new Date();
-  let html='';
-  
-  // رؤوس الأيام
-  dayNames.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
-  
-  // أيام الشهر السابق
-  for(let i=firstDay-1;i>=0;i--){
-    const d=daysInPrevMonth-i;
-    let pm=currentMonth-1,py=currentYear;
-    if(pm<0){pm=11;py--;}
-    html+=`<div class="cal-day other-month" onclick="jumpAndSelectDate(${py},${pm},${d},-1)">${d}</div>`;
-  }
-
-  // أيام الشهر الحالي
-  for(let d=1;d<=daysInMonth;d++){
-    const isToday=d===today.getDate()&&currentMonth===today.getMonth()&&currentYear===today.getFullYear();
-    const key=`${currentYear}-${currentMonth}-${d}`;
-    const hasEvent=!!calendarEvents[key];
-    let classStr='cal-day';
-    if(isToday)classStr+=' today';
-    if(hasEvent)classStr+=' has-event';
-    html+=`<div class="${classStr}" onclick="selectDate(${currentYear},${currentMonth},${d})">${d}</div>`;
-  }
-
-  // أيام الشهر التالي لإكمال الجدول
-  const remaining=42-(firstDay+daysInMonth);
-  for(let i=1;i<=remaining;i++){
-    let nm=currentMonth+1,ny=currentYear;
-    if(nm>11){nm=0;ny++;}
-    html+=`<div class="cal-day other-month" onclick="jumpAndSelectDate(${ny},${nm},${i},1)">${i}</div>`;
-  }
-  
-  calEl.innerHTML=html;
-}
+// التقويم الشهري القديم دُمج في مفكرة الأسبوع
+function renderCalendar(){renderWeekPlanner();}
 
 // ══ TASKS ══════════════════════════════════════════════
 let tasks=JSON.parse(localStorage.getItem('userTasks')||'[]');
