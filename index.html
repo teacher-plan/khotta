@@ -1202,11 +1202,10 @@ body.lp #page-faheem .wrap{padding-top:0;}
 /* رأس فهيم يفسح لربع الدائرة */
 body.lp .fhp-card #fh-head{padding-inline-start:max(80px,calc((100vw - 940px)/2));}
 /* محتوى المحادثة في عمود قراءة مريح وسط الشاشة العريضة */
-body.lp .fhp-card #fh-head,
+body.lp .fhp-card #fh-head{padding-inline:max(16px,calc((100vw - 940px)/2));}
 body.lp .fhp-card .fh-cards,
-body.lp .fhp-card #fh-inputrow,
-body.lp .fhp-card .fhp-hist{padding-inline:max(16px,calc((100vw - 940px)/2));}
-body.lp .fhp-card #fh-body{padding-inline:max(20px,calc((100vw - 940px)/2));}
+body.lp .fhp-card #fh-inputrow{padding-inline:max(16px,calc((100% - 900px)/2));}
+body.lp .fhp-card #fh-body{padding-inline:max(20px,calc((100% - 900px)/2));}
 /* الجداول العريضة (الدرجات والسلوك) تبقى بعرضها الكامل */
 @media(min-width:1000px){
   body.lp #page-grades .wrap,body.lp #page-behavior .wrap{max-width:100%;}
@@ -1230,8 +1229,21 @@ body.lp .fhp-card #fh-body{padding-inline:max(20px,calc((100vw - 940px)/2));}
 .fh-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;color:var(--text);cursor:pointer;transition:.15s;}
 .fh-card:hover{border-color:var(--gold);transform:translateY(-1px);}
 .fh-card.act{background:linear-gradient(135deg,rgba(184,134,11,.14),rgba(255,215,106,.18));border-color:var(--gold);}
-.fhp-hist{border-top:1px solid var(--border);background:var(--card);padding:9px 14px;}
-.fhp-hist summary{cursor:pointer;font-size:12.5px;font-weight:800;color:var(--muted);}
+/* الشريط الجانبي للمحادثات السابقة — مفتوح دائماً على الشاشات الكبيرة */
+.fhp-row{flex:1;display:flex;min-height:0;}
+.fhp-main{flex:1;display:flex;flex-direction:column;min-width:0;}
+#fhp-side{width:272px;flex:none;border-inline-start:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;overflow:hidden;}
+.fhp-side-head{padding:12px 14px;font-size:12.5px;font-weight:800;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex:none;}
+.fhp-side-head .fh-hbtn{background:var(--surface);color:var(--text);}
+#fhp-hist-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:10px;}
+#fhp-side-close{display:none;}
+#fhp-side-btn{display:none;}
+@media(max-width:900px){
+  #fhp-side{position:fixed;top:0;left:0;bottom:0;width:min(300px,84vw);z-index:230;transform:translateX(-105%);transition:transform .25s ease;box-shadow:8px 0 30px rgba(0,0,0,.25);}
+  #fhp-side.open{transform:none;}
+  #fhp-side-close{display:inline-flex;}
+  #fhp-side-btn{display:inline-flex;}
+}
 #fh-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(135deg,#3b1d77,#6d28d9 60%,#7c3aed);color:#fff;}
 #fh-head .fh-name{font-weight:800;font-size:15px;color:#fff;display:flex;align-items:center;gap:6px;}
 #fh-head .fh-status{font-size:10.5px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;}
@@ -2761,24 +2773,31 @@ input,textarea,select{font-size:16px !important;}
         <div id="fh-avatar"></div>
         <div style="min-width:0"><div class="fh-name">فهيم — مساعدك التربوي</div><div class="fh-status"><span class="fh-dot"></span>يعرف صفوفك ودروسك ويجيب من واقعها</div></div>
       </div>
-      <button class="fh-hbtn" onclick="fhNewChat()" title="محادثة جديدة"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> جديدة</button>
+      <div style="display:flex;gap:6px;flex:none">
+        <button class="fh-hbtn" id="fhp-side-btn" onclick="fhSideToggle()" title="محادثاتي السابقة">🗂️</button>
+        <button class="fh-hbtn" onclick="fhNewChat()" title="محادثة جديدة"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> جديدة</button>
+      </div>
     </div>
-    <div class="fh-cards">
-      <button class="fh-card act" onclick="fhActPrep()">✨ حضّر لي درس الغد</button>
-      <button class="fh-card act" onclick="fhActGame()">🎮 اصنع لعبة لدرس اليوم</button>
-      <button class="fh-card" onclick="fhAsk('اكتب لي رسالة مهذبة وقصيرة لولي أمر طالب تراجع مستواه مؤخراً وأريد تعاونه معي')">📩 رسالة لولي أمر</button>
-      <button class="fh-card" onclick="fhAsk('اقترح تهيئة مشوقة لدرسي القادم')">💡 تهيئة مشوقة</button>
-      <button class="fh-card" onclick="fhAsk('أعطني استراتيجية تدريس نشطة تناسب درس اليوم مع خطوات تطبيقها في ٤٥ دقيقة')">🧠 استراتيجية نشطة</button>
+    <div class="fhp-row">
+      <div class="fhp-main">
+        <div class="fh-cards">
+          <button class="fh-card act" onclick="fhActPrep()">✨ حضّر لي درس الغد</button>
+          <button class="fh-card act" onclick="fhActGame()">🎮 اصنع لعبة لدرس اليوم</button>
+          <button class="fh-card" onclick="fhAsk('اكتب لي رسالة مهذبة وقصيرة لولي أمر طالب تراجع مستواه مؤخراً وأريد تعاونه معي')">📩 رسالة لولي أمر</button>
+          <button class="fh-card" onclick="fhAsk('اقترح تهيئة مشوقة لدرسي القادم')">💡 تهيئة مشوقة</button>
+          <button class="fh-card" onclick="fhAsk('أعطني استراتيجية تدريس نشطة تناسب درس اليوم مع خطوات تطبيقها في ٤٥ دقيقة')">🧠 استراتيجية نشطة</button>
+        </div>
+        <div id="fh-body"></div>
+        <div id="fh-inputrow">
+          <textarea id="fh-input" rows="1" placeholder="اسأل فهيم عن أي شيء تربوي..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
+          <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
+        </div>
+      </div>
+      <aside id="fhp-side">
+        <div class="fhp-side-head">🗂️ محادثاتي السابقة <button class="fh-hbtn" id="fhp-side-close" onclick="fhSideToggle()">✕</button></div>
+        <div id="fhp-hist-list"></div>
+      </aside>
     </div>
-    <div id="fh-body"></div>
-    <div id="fh-inputrow">
-      <textarea id="fh-input" rows="1" placeholder="اسأل فهيم عن أي شيء تربوي..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
-      <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
-    </div>
-    <details class="fhp-hist" ontoggle="if(this.open)fhHistory()">
-      <summary>🗂️ محادثاتي السابقة</summary>
-      <div id="fhp-hist-list" style="display:flex;flex-direction:column;gap:7px;padding:10px 2px 4px"></div>
-    </details>
   </div>
 </div></div>
 
@@ -13075,6 +13094,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')lpClose();});
 function fhPageInit(){
   fhInitMascot();
   if(!fhMsgs.length)fhWelcome();
+  fhHistory();
+}
+function fhSideToggle(){
+  const s=document.getElementById('fhp-side');
+  if(s)s.classList.toggle('open');
 }
 // ⚡ أفعال تنفيذية: فهيم لا يتكلم فقط — يعمل
 function fhActPrep(){
@@ -13159,7 +13183,7 @@ async function fhSend(){
       else fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد 😔 حاول مرة أخرى.'+(isAdmin()&&reason?' ['+reason+']':'')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply});
-      if(data.chatId)fhChatId=data.chatId;
+      if(data.chatId){const isNew=!fhChatId;fhChatId=data.chatId;if(isNew)try{fhHistory();}catch(e){}}
     }
   }catch(e){
     document.getElementById('fh-typing')?.remove();
@@ -13189,6 +13213,8 @@ async function fhOpenChat(id){
     fhChatId=c.id;
     fhMsgs=(c.messages||[]).filter(m=>m&&(m.role==='user'||m.role==='assistant'));
     fhRender();
+    // على الشاشات الصغيرة: أغلق الشريط الجانبي بعد اختيار المحادثة
+    const s=document.getElementById('fhp-side');if(s)s.classList.remove('open');
   }catch(e){}
 }
 async function fhDelChat(id,btn){
