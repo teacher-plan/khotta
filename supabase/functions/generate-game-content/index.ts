@@ -56,8 +56,9 @@ Deno.serve(async (req) => {
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 12) : [];
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
+    // مع صفحات الكتاب: نموذج رؤية مضمون دائماً (ai_model قد يكون نصياً فيُسقط الصور بصمت)
     const model = images.length
-      ? (st.vision_model || st.ai_model || "google/gemini-2.5-flash")
+      ? (st.vision_model || "google/gemini-2.5-flash")
       : (st.ai_model || "google/gemini-2.5-flash");
 
     const gradeNum = parseInt(grade) || 0;
@@ -110,10 +111,12 @@ Deno.serve(async (req) => {
           max_tokens: 2000,
         }),
       });
+    let grounded = images.length > 0;
     let orResp = await callOr(images.length > 0);
     let or = await orResp.json();
-    // النموذج لا يدعم الصور؟ نعيد المحاولة نصياً (من اسم الدرس فقط)
+    // النموذج لا يدعم الصور؟ نعيد المحاولة نصياً — مع إعلام الواجهة (grounded=false)
     if (!orResp.ok && images.length && /image input|multimodal|support image/i.test(JSON.stringify(or))) {
+      grounded = false;
       orResp = await callOr(false);
       or = await orResp.json();
     }
@@ -126,7 +129,7 @@ Deno.serve(async (req) => {
     if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) {
       return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
     }
-    return json({ items: parsed.items, groupNames: parsed.groupNames || null, structure, model, usage: or?.usage || null });
+    return json({ items: parsed.items, groupNames: parsed.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }

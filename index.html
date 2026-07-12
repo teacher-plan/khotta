@@ -12354,7 +12354,12 @@ async function gmGenerate(){
     const{data,error}=await sb.functions.invoke('generate-game-content',{
       body:{grade,subject,lessonNames:lessons.map(l=>l.name),structure:GM_STRUCT[gmTpl],count,images:(vis&&vis.images)||[]}
     });
-    if(!error&&data&&data.items){items=data.items;if(data.groupNames&&data.groupNames.length>=2)gmGroupNames=data.groupNames.map(String);}
+    if(!error&&data&&data.items){
+      items=data.items;
+      if(data.groupNames&&data.groupNames.length>=2)gmGroupNames=data.groupNames.map(String);
+      if(vis&&vis.images&&vis.images.length&&data.grounded===false)toast('⚠️ النموذج لم يقرأ صفحات الكتاب — ولّدت من اسم الدرس. راجع نموذج الرؤية في الإعدادات',true);
+      else if(!(vis&&vis.images&&vis.images.length))toast('ℹ️ هذا الدرس غير مربوط بصفحات الكتاب — المحتوى من اسم الدرس','ok');
+    }
     else{
       if(error){reason=error.message||'خطأ في الاتصال';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,400);}}catch(_){}}
       else if(data&&data.error)reason=data.error+(data.detail?' | '+JSON.stringify(data.detail).slice(0,400):'');

@@ -55,8 +55,9 @@ Deno.serve(async (req) => {
     if (!lesson) return json({ error: "no_lesson" }, 400);
 
     // عند إرفاق صفحات الكتاب نحتاج نموذجاً يدعم الرؤية
+    // مع صفحات الكتاب: نموذج رؤية مضمون (لا نمرّ بـ ai_model النصي)
     const model = images.length
-      ? (st.vision_model || st.ai_model || "google/gemini-2.5-flash")
+      ? (st.vision_model || "google/gemini-2.5-flash")
       : (st.ai_model || "google/gemini-2.5-flash");
 
     // عمر الطلاب في عُمان: الصف الأول = ٧ سنوات (العمر = الصف + ٦)
