@@ -13862,6 +13862,7 @@ async function dpBuildPptxFromImages(it,slides,imgs){
     const im=imgs[i];
     if(!im||im.length<400000){out.push(im);continue;}
     try{uiBusyText('🖼️ يضغط صور الشرائح… '+egToArabic(i+1)+'/'+egToArabic(imgs.length));}catch(e){}
+    await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25))); // فرصة للمتصفح ليرسم العدّاد قبل العمل الثقيل
     out.push(await Promise.race([
       dpShrinkImg(im,1600,.82),
       new Promise(r=>setTimeout(()=>r(im),8000))
@@ -13869,6 +13870,7 @@ async function dpBuildPptxFromImages(it,slides,imgs){
   }
   imgs=out;
   try{uiBusyText('📊 يبني ملف PowerPoint…');}catch(e){}
+  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
   const pptx=new PptxGenJS();
   pptx.defineLayout({name:'KHDPI',width:10,height:5.63});pptx.layout='KHDPI';
   imgs.forEach((im,i)=>{
