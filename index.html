@@ -1647,6 +1647,7 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div class="setup-nav">
         <button class="setup-btn secondary" onclick="goToStep2()">← رجوع</button>
+        <button class="setup-btn" style="background:var(--g1);color:#fff" onclick="setupSaveLists()">💾 حفظ القوائم</button>
         <button class="setup-btn primary" onclick="showSetupSummary()">مراجعة وتأكيد →</button>
       </div>
     </div>
@@ -1995,6 +1996,7 @@ input,textarea,select{font-size:16px !important;}
     <div style="padding:16px 20px;overflow-y:auto;flex:1;">
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">ارفع ملف Excel لكل شعبة لإكمال إعداد قائمة الطلاب</p>
       <div id="cs-classes-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="setup-btn" style="width:100%;margin-top:12px;background:var(--g1);color:#fff" onclick="setupSaveLists(true)">💾 حفظ القوائم</button>
     </div>
   </div>
 </div>
@@ -3768,7 +3770,7 @@ async function dbSave(payload){
           if(!('behavior_violations' in payload)&&merged.behavior_violations)behaviorViolations=merged.behavior_violations;
           if(!('lesson_files' in payload)&&merged.lesson_files)lessonFiles=merged.lesson_files;
         }catch(_){}
-        toast('🔄 وجدنا تعديلات أحدث من جهازك الآخر — دمجناها مع حفظك بأمان','ok');
+        /* الدمج يتم بصمت — لا حاجة لإزعاج المعلم بإشعار */
       }
     }
   }catch(e){
@@ -4923,7 +4925,7 @@ async function uploadSetupClassExcel(event, classId){
   const file=event.target.files[0];
   if(!file)return;
   event.target.value='';
-  toast('⏳ جاري قراءة الملف...');
+  uiBusy('📖 يقرأ ملف الأسماء…');
   try{
     const list=await parseStudentsFromExcelFile(file);
     _setupStudents[classId]=list;
@@ -4932,14 +4934,18 @@ async function uploadSetupClassExcel(event, classId){
     // 💾 حفظ فوري في الحساب أيضاً — القوائم لا تضيع حتى لو لم يكتمل المعالج أو تبدّل الجهاز
     try{
       if(typeof students!=='undefined'&&currentUser){
+        uiBusyText('💾 يحفظ القائمة في حسابك…');
         const formatted=list.map(s=>({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:s.name,phone:s.phone||''}));
         students[classId]=formatted;
         behaviorStudents[classId]=formatted.map(s=>({...s}));
-        scheduleSave();
+        saveCacheImmediate();
+        await dbSave({students,behavior_students:behaviorStudents});
       }
     }catch(e){}
-    toast(`✅ تم تحميل ${list.length} طالب`,'ok');
+    uiBusyDone();
+    toast(`✅ تم تحميل ${list.length} طالب وحفظهم`,'ok');
   }catch(err){
+    uiBusyDone();
     toast('❌ '+(err.message||'خطأ في قراءة الملف'),true);
   }
 }
@@ -10081,24 +10087,48 @@ function openCompleteStudentsSetup(){
   modal.style.display='flex';
 }
 
+// 💾 حفظ صريح لكل القوائم المرفوعة في حساب المعلم (زر «حفظ القوائم»)
+async function setupSaveLists(fromModal){
+  try{
+    // في معالج الإعداد: انقل كل ما رُفع في الخطوة الثالثة إلى قوائم الحساب أولاً
+    if(!fromModal&&typeof _setupStudents!=='undefined'){
+      Object.keys(_setupStudents).forEach(cid=>{
+        const list=_setupStudents[cid]||[];if(!list.length)return;
+        const formatted=list.map(s=>({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:s.name,phone:s.phone||''}));
+        students[cid]=formatted;
+        behaviorStudents[cid]=formatted.map(s=>({...s}));
+      });
+    }
+    uiBusy('💾 يحفظ القوائم في حسابك…');
+    saveCacheImmediate();
+    const ok=await dbSave({students,behavior_students:behaviorStudents});
+    uiBusyDone();
+    if(ok)toast('✅ حُفظت القوائم في حسابك — ستجدها من أي جهاز','ok');
+    else toast('⚠️ تعذّر الحفظ — تحقق من الاتصال وأعد المحاولة',true);
+  }catch(e){uiBusyDone();toast('⚠️ تعذّر الحفظ — أعد المحاولة',true);}
+}
 async function uploadCompleteSetupExcel(event, classId){
   const file=event.target.files[0];
   if(!file)return;
   event.target.value='';
-  toast('⏳ جاري قراءة الملف...');
+  uiBusy('📖 يقرأ ملف الأسماء…');
   try{
     const list=await parseStudentsFromExcelFile(file);
     // إضافة id لكل طالب (parser لا يضيف id)
     const withIds=list.map(s=>({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),...s}));
+    uiBusyText('💾 يحفظ القائمة في حسابك…');
     syncStudentsToBoth(classId, withIds);
+    await dbSave({students,behavior_students:behaviorStudents});
     // تحديث واجهة المودال
     const row=document.getElementById(`cs-row-${classId}`);
     const status=document.getElementById(`cs-status-${classId}`);
     if(row)row.className='setup-class-row has-students';
     if(status){status.className='scr-status filled';status.textContent=`✓ ${withIds.length} طالب`;}
-    toast(`✅ تم إضافة ${withIds.length} طالب`,'ok');
+    uiBusyDone();
+    toast(`✅ تم إضافة ${withIds.length} طالب وحفظهم`,'ok');
     setTimeout(()=>checkIncompleteSetup(),500);
   }catch(err){
+    uiBusyDone();
     toast('❌ '+(err.message||'خطأ في قراءة الملف'),true);
   }
 }
@@ -11843,6 +11873,7 @@ async function egGenerate(){
   const lessonsList=lessons.map(l=>l.name).join('، ');
   const btn=document.querySelector('.eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد الأسئلة...';}
+  uiBusy('📝 يولّد أسئلة الاختبار…');
   let qHtml=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
@@ -11850,6 +11881,7 @@ async function egGenerate(){
       let vis=null;try{vis=await egVisionImages(grade,subject,semester);}catch(e){}
       if(vis&&vis.images.length){
         if(btn)btn.textContent='👁 جاري قراءة صفحات الدرس وتوليد الأسئلة...';
+        uiBusyText('👁 يقرأ صفحات الدرس ويولّد الأسئلة…');
         const{data:vd,error:ve}=await sb.functions.invoke('generate-exam-vision',{body:{grade,subject,lessonNames:vis.lessonNames,images:vis.images,types,count:qcount,total,teacherPrompt}});
         if(!ve&&vd&&Array.isArray(vd.questions)&&vd.questions.length){qHtml=egRenderAiQuestions(vd.questions);real=true;}
         else{if(ve){reason=ve.message||'خطأ الرؤية';try{if(ve.context&&ve.context.json){const j=await ve.context.json();if(j&&j.error)reason='رؤية: '+j.error;}}catch(_){}}else if(vd&&vd.error){reason='رؤية: '+vd.error;}console.warn('generate-exam-vision:',reason,ve||vd);}
@@ -11871,6 +11903,7 @@ async function egGenerate(){
       } // نهاية احتياط النصّي
     }else{reason='لا يوجد اتصال بالخادم';}
   }catch(e){reason=String(e);console.warn('generate-exam call failed',e);}
+  uiBusyDone();
   if(!qHtml)qHtml=egMockQuestions(types,qcount,lessons); // رجوع تلقائي للتجريبي
   const R=document.getElementById('eg-result');
   R.innerHTML=egPaperWrap(qHtml,grade,subject,total,lessonsList);
@@ -11990,6 +12023,7 @@ async function pptGenerate(){
   const lessonsList=lessons.map(l=>l.name).join('، ');
   const btn=document.querySelector('#eg-ppt-options-card .eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد الشرائح...';}
+  uiBusy('🖥️ يولّد العرض التقديمي…');
   let slides=null,real=false,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
@@ -12018,9 +12052,10 @@ async function pptGenerate(){
   document.getElementById('eg-ppt-result-card').scrollIntoView({behavior:'smooth'});
   egCreditSet(egCreditGet()-3);
   if(btn){btn.disabled=false;btn.textContent='🖼️ ولّد العرض التقديمي';}
-  if(visual){await pptVisualGenerate(grade,subject);}
-  else if(real){toast('✅ تم توليد العرض التقديمي','ok');}
+  if(visual){uiBusyText('🖼️ يرسم شرائح العرض…');try{await pptVisualGenerate(grade,subject);}finally{uiBusyDone();}}
+  else if(real){uiBusyDone();toast('✅ تم توليد العرض التقديمي','ok');}
   else{
+    uiBusyDone();
     const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
     toast('⚠️ لم يُفعّل التوليد الفعلي'+(showDetail?(' — '+reason):' (نسخة تجريبية)'),true);
   }
@@ -12153,6 +12188,7 @@ async function infoGenerate(){
   const teacherPrompt=(document.getElementById('info-prompt')?.value||'').trim();
   const btn=document.querySelector('#eg-info-options-card .eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري رسم الإنفوجرافيك... (قد يستغرق دقيقة)';}
+  uiBusy('🎨 يرسم الإنفوجرافيك… قد يستغرق دقيقة');
   let img=null,reason='';
   try{
     if(typeof sb!=='undefined'&&sb){
@@ -12169,6 +12205,7 @@ async function infoGenerate(){
       }
     }else{reason='لا يوجد اتصال بالخادم';}
   }catch(e){reason=String(e);console.warn('generate-infographic call failed',e);}
+  uiBusyDone();
   if(btn){btn.disabled=false;btn.textContent='🎨 ولّد الإنفوجرافيك';}
   if(!img){
     const showDetail=(typeof isAdmin==='function'&&isAdmin()&&reason);
@@ -12264,13 +12301,18 @@ function gmLoadSfxT(tpl){
     a.src=sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl+'?v='+(localStorage.getItem('gmSfxV')||'1');
   });
 }
+let gmLiveSnd=[]; // الأصوات الجارية — توقف كلها عند إغلاق اللعبة
 function gmSound(kind){
   if(gmMuted)return;
+  // لا صوت بعد إغلاق مسرح اللعبة (المؤقتات المتأخرة تُهمَل) — في الملف المصدَّر لا يوجد المسرح فيعمل عادياً
+  const stg=document.getElementById('gm-stage-bg');
+  if(stg&&stg.style.display!=='flex')return;
   try{
+    gmLiveSnd=gmLiveSnd.filter(x=>!x.ended&&!x.paused);
     const at=(gmSfxT[gmTpl]||{})[kind];
-    if(at){const c=at.cloneNode();c.volume=0.9;c.play().catch(()=>{});return;}
+    if(at){const c=at.cloneNode();c.volume=0.9;gmLiveSnd.push(c);c.play().catch(()=>{});return;}
     const a=gmSfx[kind];
-    if(a){const c=a.cloneNode();c.volume=0.9;c.play().catch(()=>{});return;}
+    if(a){const c=a.cloneNode();c.volume=0.9;gmLiveSnd.push(c);c.play().catch(()=>{});return;}
     if(kind==='ok')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);                       // 🪙 عملة نجاح
     else if(kind==='bad')zzfx(1.4,.05,144,.01,0,.25,1,1.3,-4,0,0,0,0,0,0,.1,0,.6,.06);  // ❌ طنين خطأ
     else if(kind==='pop')zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);      // 🫧 فرقعة
@@ -12382,6 +12424,7 @@ async function gmGenerate(){
   const count=Math.max(3,Math.min(15,parseInt(document.getElementById('gm-count').value)||6));
   const btn=document.querySelector('#eg-game-options-card .eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد المحتوى من الدرس...';}
+  uiBusy('🎮 يولّد محتوى اللعبة من الدرس…');
   let items=null,reason='';
   try{
     const semester=(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول';
@@ -12400,6 +12443,7 @@ async function gmGenerate(){
       else if(data&&data.error)reason=data.error+(data.detail?' | '+JSON.stringify(data.detail).slice(0,400):'');
     }
   }catch(e){reason=String(e);}
+  uiBusyDone();
   if(btn){btn.disabled=false;btn.textContent='🎲 ولّد محتوى اللعبة';}
   if(!items){
     if(String(reason).includes('quota_exceeded'))toast('🔋 وصلت حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);
@@ -12612,6 +12656,8 @@ function gmStart(){
 }
 function gmClose(){
   clearInterval(gmQuizTimer);gmMusicStop();
+  // إيقاف كل الأصوات الجارية فوراً (صوت الفوز الطويل مثلاً)
+  try{gmLiveSnd.forEach(a=>{a.pause();a.currentTime=0;});gmLiveSnd=[];}catch(e){}
   document.getElementById('gm-stage-bg').style.display='none';
   document.getElementById('gm-stage-body').innerHTML='';
   document.getElementById('gm-stage-hud').innerHTML='';
