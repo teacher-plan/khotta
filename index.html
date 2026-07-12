@@ -3563,23 +3563,7 @@ let googleAccessToken=null;   // توكن Google لرفع الملفات على 
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
 const MAX_FILE_SIZE=500*1024*1024; // 500MB حد رفع
 
-// ─── تسجيل الدخول بحساب Google ───
-async function signInWithGoogle(){
-  const btn=document.getElementById('google-signin-btn');
-  if(btn){btn.disabled=true;document.getElementById('google-btn-text').textContent='جارٍ التحويل...';}
-  const {error}=await sb.auth.signInWithOAuth({
-    provider:'google',
-    options:{
-      redirectTo:window.location.href.split('#')[0],
-      scopes:'https://www.googleapis.com/auth/drive.file',
-      queryParams:{access_type:'offline',prompt:'consent'}
-    }
-  });
-  if(error){
-    if(btn){btn.disabled=false;document.getElementById('google-btn-text').textContent='تسجيل الدخول بحساب Google';}
-    toast('❌ تعذّر تسجيل الدخول: '+error.message,true);
-  }
-}
+
 // ─── تسجيل الدخول بالبريد/كلمة المرور (للمعلمين المُنشأة حساباتهم من الإدارة) ───
 async function loginWithPassword(){
   const email=document.getElementById('pw-login-email').value.trim();
@@ -3647,18 +3631,9 @@ function persistStudentsNow(){
   if(!currentUser)return;
   try{localStorage.setItem('kh_students_'+currentUser.id,JSON.stringify(students||{}));}catch(e){}
 }
-function loadPersistedGrades(){
-  if(!currentUser)return null;
-  try{const v=localStorage.getItem('kh_grades_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
-}
-function loadPersistedGradeTypes(){
-  if(!currentUser)return null;
-  try{const v=localStorage.getItem('kh_gtypes_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
-}
-function loadPersistedStudents(){
-  if(!currentUser)return null;
-  try{const v=localStorage.getItem('kh_students_'+currentUser.id);return v?JSON.parse(v):null;}catch(e){return null;}
-}
+
+
+
 async function dbLoad(forceFresh=false){
   if(!currentUser)return null;
   // أولاً: حاول من الكاش (إلا إذا طُلب جلب جديد)
@@ -3884,20 +3859,10 @@ async function driveDelete(fileId){
     return res.ok||res.status===404;
   }catch(e){console.error('drive delete error:',e);return false;}
 }
-async function driveGetStorageInfo(){
-  // صلاحية drive.file لا تسمح بقراءة إجمالي مساحة Drive (يرجّع 403)
-  // نرجّع null بهدوء — شريط المساحة يُخفى تلقائياً، والرفع/الحذف يعمل عادي
-  return null;
-}
-function isDriveFile(fileObj){return fileObj&&fileObj.driveId;}
-async function getFileUrl(fileObj){
-  if(isDriveFile(fileObj))return'https://drive.google.com/file/d/'+fileObj.driveId+'/view';
-  return'';
-}
-async function getDownloadUrl(fileObj){
-  if(isDriveFile(fileObj))return'https://drive.google.com/uc?export=download&id='+fileObj.driveId;
-  return'';
-}
+
+
+
+
 
 // ── ربط Google Drive للتخزين (يعمل لكل أنواع الحسابات: جوجل أو بريد/كلمة مرور) ──
 let driveTokenExpiry=0;   // وقت انتهاء توكن الوصول الحالي (ملّي ثانية)
@@ -4058,7 +4023,7 @@ async function saveChangedSchool(){
   closeChangeSchoolModal();
   toast(schoolId?`✅ تم ربط حسابك بمدرسة "${schoolName}"`:'✅ تم إلغاء ربط المدرسة','ok');
 }
-function reopenSetup(){document.getElementById('user-menu').classList.remove('show');showSetupScreen();}
+
 
 // نقطة الدخول: تنتظر تسجيل دخول Google عبر Supabase
 function hideLoader(){
@@ -4439,10 +4404,7 @@ function clearSetupInProgress(){
     try{localStorage.removeItem('kh_setup_inprogress_'+currentUser.id);}catch(e){}
   }
 }
-function isSetupInProgress(){
-  if(!currentUser)return false;
-  try{return localStorage.getItem('kh_setup_inprogress_'+currentUser.id)==='1';}catch(e){return false;}
-}
+
 // ── حالة الإعداد ──
 let setupSemester='';
 let gradeSubjectsMap={};       // {grade: [subjects]} مواد كل صف من جدول subjects
@@ -5383,8 +5345,7 @@ function showPage(id,btn){
 const dayMap2={0:'sun',1:'mon',2:'tue',3:'wed',4:'thu'};
 function currentDayKey(){const d=new Date().getDay();return({0:'sun',1:'mon',2:'tue',3:'wed',4:'thu',5:'fri',6:'sat'})[d];}
 
-// ══ TIMETABLE ══════════════════════════════════════════
-function getClassColor(key){return classConfig[key]?classConfig[key].color:'var(--text)';}
+
 function hexToRgba(hex,alpha){if(!hex||!hex.startsWith('#'))return`rgba(192,57,43,${alpha})`;const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${alpha})`;}
 function renderLegend(){
   const el=document.getElementById('legend');
@@ -5799,12 +5760,7 @@ function uiBusy(text){
 }
 function uiBusyText(text){const t=document.getElementById('ui-busy-text');if(t)t.textContent=text;}
 function uiBusyDone(){clearTimeout(_uiBusyWatch);const el=document.getElementById('ui-busy');if(el)el.style.display='none';}
-// تغليف عملية كاملة: يظهر المؤشر ويختفي مهما كانت النتيجة
-async function withBusy(text,fn){
-  uiBusy(text);
-  try{return await fn();}
-  finally{uiBusyDone();}
-}
+
 function escAttr(s){return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 async function editLesson(id){
@@ -6619,10 +6575,7 @@ document.addEventListener('click',function(e){
   }
 });
 
-function markOneRead(id){
-  // للتوافق مع الكود القديم
-  markOneReadByKey(String(id));
-}
+
 
 function markOneReadByKey(key){
   const readIds=getBellReadIds();
@@ -6846,17 +6799,7 @@ async function sendPrivateMsg(){
   }
 }
 
-function filterUsers(){
-  const q=(document.getElementById('users-search').value||'').toLowerCase();
-  if(!q){renderUsersList(_allUsers);return;}
-  const filtered=_allUsers.filter(u=>{
-    const name=(u._name||'').toLowerCase();
-    const email=(u._email||'').toLowerCase();
-    const subject=((u._config||{}).subject||'').toLowerCase();
-    return name.includes(q)||email.includes(q)||subject.includes(q);
-  });
-  renderUsersList(filtered);
-}
+
 
 // ════════════════════════════════════════════════════════════════
 // 🎯 إدارة قوالب الدرجات (للمشرف)
@@ -7389,16 +7332,7 @@ function toggleUnit(secId){
   }
 }
 
-function openVideoLink(lessonId){
-  const card=document.querySelector(`.lesson[data-id="${lessonId}"]`);
-  const inp=card?card.querySelector('[data-f="videoUrl"]'):null;
-  let url=((inp?inp.value:'')||get(lessonId).videoUrl||'').trim();
-  if(!url){toast('❌ لا يوجد رابط — الصقه أولاً',true);return;}
-  // احفظ القيمة الحالية قبل الفتح
-  const cur=get(lessonId);cur.videoUrl=inp?inp.value.trim():url;state[lessonId]=cur;scheduleSave();
-  if(!/^https?:\/\//i.test(url))url='https://'+url;
-  window.open(url,'_blank','noopener');
-}
+
 
 async function uploadLessonFile(e,lessonId){
   const file=e.target.files[0];e.target.value='';if(!file)return;
@@ -7989,46 +7923,7 @@ async function exportGradesExcel(){
     toast('❌ فشل التصدير: '+e.message,true);
   }
 }
-function printGradesSheet(){
-  const k=activeGradesClass;
-  if(!k){toast('اختر شعبة أولاً',true);return;}
-  const sList=students[k]||[];
-  const cols=(gradeTypes||[]).filter(c=>!c.classKey||c.classKey===k);
-  const totalMax=cols.reduce((s,c)=>s+(c.max||0),0);
-  const sg=grades[k]||{};
-  // رأس الجدول
-  let thead='<tr><th>#</th><th>الطالب</th>';
-  cols.forEach(c=>{thead+=`<th>${c.name}<br><small style="font-weight:400">${c.max}/</small></th>`;});
-  thead+=`<th>المجموع<br><small style="font-weight:400">${totalMax}/</small></th></tr>`;
-  // صفوف الطلاب
-  let tbody='';
-  sList.forEach((st,i)=>{
-    const sg2=sg[st.id]||{};
-    let pts=0;
-    let row=`<tr><td>${i+1}</td><td>${escapeHTML(st.name)}</td>`;
-    cols.forEach(c=>{
-      const v=sg2[c.id];
-      const num=v!=null&&!isNaN(v)?Number(v):null;
-      if(num!=null)pts+=num;
-      row+=`<td>${num!=null?num:'—'}</td>`;
-    });
-    row+=`<td class="total-cell">${pts>0||cols.some(c=>sg2[c.id]!=null)?pts:'—'}</td></tr>`;
-    tbody+=row;
-  });
-  const now=new Date().toLocaleDateString('ar-SA');
-  const classLabel=k.replace('_',' / الصف ');
-  document.getElementById('print-grades-area').style.display='block';
-  document.getElementById('print-grades-area').innerHTML=`
-    <div class="print-header">
-      <h2>كشف الدرجات — ${classLabel}</h2>
-      <p>المادة: ${teacherConfig?.subject||''} | الفصل: ${teacherConfig?.semester==='1'?'الأول':'الثاني'} | التاريخ: ${now}</p>
-      <p>المعلم: ${displayName||'المعلم'}</p>
-    </div>
-    <table class="print-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-    <div class="print-footer"><span>المنصة: khotati.com</span><span>عدد الطلاب: ${sList.length}</span></div>
-  `;
-  setTimeout(()=>{window.print();document.getElementById('print-grades-area').style.display='none';},200);
-}
+
 // تطبيع الاسم للبحث: إزالة بن/بنت/ابن، توحيد الهمزات، تقسيم لكلمات
 function normalizeForSearch(s){
   return (s||'')
@@ -8124,9 +8019,9 @@ function updateGradeCellUI(studentId,colId){
   const sumEl=document.getElementById('grades-summary');
   if(sumEl)sumEl.innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
 }
-async function delStudent(id){const k=activeGradesClass;if(!await uiConfirm('حذف الطالب وكل درجاته؟'))return;students[k]=(students[k]||[]).filter(s=>s.id!==id);if(grades[k])delete grades[k][id];renderGradesTable();toast('🗑️ تم الحذف');scheduleSave();}
+
 async function delGradeCol(id){if(!await uiConfirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
-function openImportStudents(){if(!activeGradesClass){toast('❌ اختر شعبة أولاً',true);return;}const allCls=getAllClasses();const cls=allCls.find(c=>c.id===activeGradesClass);document.getElementById('import-class-lbl').textContent='الشعبة: '+(cls?cls.name:'');document.getElementById('import-textarea').value='';document.getElementById('import-modal-bg').classList.remove('hidden');}
+
 function closeImportStudents(){document.getElementById('import-modal-bg').classList.add('hidden');}
 function importStudents(){const txt=document.getElementById('import-textarea').value;const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('❌ لا يوجد أسماء',true);return;}const k=activeGradesClass;if(!students[k])students[k]=[];const existing=new Set(students[k].map(s=>s.name));const added=lines.filter(n=>!existing.has(n));added.forEach(name=>{students[k].push({id:'s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name});});closeImportStudents();renderGradesTable();toast(`✅ تم إضافة ${added.length} طالب`+(lines.length-added.length>0?` (${lines.length-added.length} مكرر تم تجاهله)`:''),'ok');persistStudentsNow();scheduleSave();}
 
@@ -8799,10 +8694,7 @@ async function pushViolationToSchool(studentName,classId,classLabel,violationTyp
   }catch(e){/* صامت - لا نوقف تجربة المعلم لو فشلت الكتابة المشتركة */}
 }
 
-function loadBehaviorData(){
-  // البيانات تُحمَّل من Supabase في showApp تلقائياً
-  // هذه الدالة تبقى للتوافق فقط
-}
+
 
 function initBehaviorPage(){
   loadBehaviorPhone();
@@ -9711,43 +9603,7 @@ async function loadAnalytics(){
   }
 }
 
-function renderViolationsDetail(){
-  const wrap=document.getElementById('an-violations-detail');
-  if(!wrap)return;
-  const classes=Object.keys(behaviorStudents||{});
-  if(!classes.length){
-    wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:16px;font-size:12px">لا توجد بيانات سلوك بعد</div>';
-    return;
-  }
-  let html='';
-  let hasAny=false;
-  classes.forEach(cls=>{
-    const studs=behaviorStudents[cls]||[];
-    const violators=studs.filter(s=>(behaviorViolations[s.id]||[]).length>0);
-    if(!violators.length)return;
-    hasAny=true;
-    const clsLabel=(getAllClasses2&&getAllClasses2().find(c=>c.id===cls)?.label)||cls;
-    html+=`<div style="margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-      <div style="background:var(--surface);padding:9px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:700;color:var(--text);font-size:13px">${clsLabel}</span>
-        <span style="font-size:11px;color:var(--red2);background:rgba(192,57,43,.1);border-radius:10px;padding:2px 10px;">${violators.length} طالب مخالف</span>
-      </div>
-      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
-        ${violators.map(s=>{
-          const vList=behaviorViolations[s.id]||[];
-          const counts={};
-          vList.forEach(v=>{counts[v.type]=(counts[v.type]||0)+1;});
-          const tags=Object.entries(counts).map(([type,n])=>`<span style="background:rgba(192,57,43,.1);color:var(--red2);border-radius:10px;padding:2px 8px;font-size:10px;white-space:nowrap;">${escHtml(type)}${n>1?' ('+n+')':''}</span>`).join('');
-          return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 0;border-bottom:1px solid var(--border);">
-            <span style="font-size:12px;font-weight:700;color:var(--text);min-width:150px;">${escHtml(s.name)}</span>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">${tags}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  });
-  wrap.innerHTML=hasAny?html:'<div style="text-align:center;color:var(--muted);padding:16px;font-size:12px">لا توجد مخالفات مسجلة</div>';
-}
+
 
 // ══ CERTIFICATES & TOP STUDENTS ══════════════════════════
 let _tsSelectedCol=null;
@@ -10549,15 +10405,7 @@ async function loadSurveyResults(){
   }catch(e){console.warn('survey results error:',e);}
 }
 
-async function deleteSurvey(id){
-  if(!await uiConfirm('حذف هذا الاستبيان نهائياً مع جميع الإجابات؟'))return;
-  try{
-    await sb.from('survey_responses').delete().eq('survey_id',id);
-    await sb.from('surveys').delete().eq('id',id);
-    toast('✅ تم حذف الاستبيان','ok');
-    loadSurveyResults();
-  }catch(e){toast('❌ خطأ: '+e.message,true);}
-}
+
 async function deactivateSurvey(id){
   await sb.from('surveys').update({is_active:false}).eq('id',id);
   loadSurveyResults();
@@ -10760,7 +10608,7 @@ function dismissReminder(){document.getElementById('reminder-toast').classList.r
 function loadRemindersUI(){const t=document.getElementById('rs-toggle');t.classList.toggle('on',remindersConfig.enabled);document.getElementById('rs-mins').value=remindersConfig.minutes||10;}
 function toggleReminders(){remindersConfig.enabled=!remindersConfig.enabled;document.getElementById('rs-toggle').classList.toggle('on',remindersConfig.enabled);if(remindersConfig.enabled&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ تم تفعيل التذكيرات','ok');else toast('🔔 التذكيرات داخل الصفحة فقط');});}else{toast(remindersConfig.enabled?'✅ تم التفعيل':'❌ تم الإيقاف',remindersConfig.enabled?'ok':false);}scheduleSave();}
 function updReminderMins(){const v=parseInt(document.getElementById('rs-mins').value);if(v>0&&v<=60){remindersConfig.minutes=v;scheduleSave();}}
-function testReminder(){fireReminder({num:1},Object.keys(classConfig)[0]||'test',remindersConfig.minutes||10);}
+
 let watcherInterval;
 function startClassWatcher(){if(watcherInterval)clearInterval(watcherInterval);updateCurrentClassBanner();watcherInterval=setInterval(updateCurrentClassBanner,30000);}
 
@@ -13877,16 +13725,7 @@ async function dpPrepareAll(i){
   renderDailyPrep();
 }
 
-// 🔁 إكمال الأجزاء الناقصة فقط — بلا إهدار الرسوم الجاهزة
-// إعادة حفظ حزمة محفوظة: يرفع الملفات الناقصة فقط (لا يكرر الموجود في البطاقة)
-async function dpResave(i){
-  const it=(window._dpItems||[])[i];if(!it)return;
-  const b=dpBundle(it.lessonId);
-  if(b.status!=='saved')return;
-  b.status='ready';
-  dpBundles.set(it.lessonId,b);
-  await dpSaveBundle(i);
-}
+
 async function dpCompleteMissing(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   const b=dpBundle(it.lessonId);
@@ -14009,87 +13848,10 @@ function dpBuildSlidesHtmlFile(it,slides,imgs){
   const doc=dpSlidesHtmlDoc('عرض — '+it.lesson,slides||[],imgs||[]);
   return new File([new Blob([doc],{type:'text/html'})],'عرض — '+it.lesson+'.html',{type:'text/html'});
 }
-// ضغط صورة شريحة قبل دمجها في العرض — يسرّع البناء ويصغّر الملف دون فرق بصري
-function dpShrinkImg(dataUrl,maxW,q){
-  return new Promise(res=>{
-    try{
-      const im=new Image();
-      im.onload=()=>{
-        try{
-          const sc=Math.min(1,(maxW||1600)/im.width);
-          const c=document.createElement('canvas');
-          c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
-          c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-          const out=c.toDataURL('image/jpeg',q||.82);
-          res(out.length<dataUrl.length?out:dataUrl);
-        }catch(e){res(dataUrl);}
-      };
-      im.onerror=()=>res(dataUrl);
-      im.src=dataUrl;
-    }catch(e){res(dataUrl);}
-  });
-}
-// بناء العرض من الشرائح المرسومة بالذكاء (صور كاملة + ملاحظات المعلم)
-async function dpBuildPptxFromImages(it,slides,imgs){
-  await loadPptxJs();
-  // ضغط متسلسل بمهلة قصوى لكل صورة — لا يعلّق أبداً؛ عند التعذر تُستخدم الصورة الأصلية
-  const out=[];
-  for(let i=0;i<imgs.length;i++){
-    const im=imgs[i];
-    if(!im||im.length<400000){out.push(im);continue;}
-    try{uiBusyText('🖼️ يضغط صور الشرائح… '+egToArabic(i+1)+'/'+egToArabic(imgs.length));}catch(e){}
-    await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25))); // فرصة للمتصفح ليرسم العدّاد قبل العمل الثقيل
-    out.push(await Promise.race([
-      dpShrinkImg(im,1600,.82),
-      new Promise(r=>setTimeout(()=>r(im),8000))
-    ]));
-  }
-  imgs=out;
-  try{uiBusyText('📊 يبني ملف PowerPoint…');}catch(e){}
-  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
-  const pptx=new PptxGenJS();
-  pptx.defineLayout({name:'KHDPI',width:10,height:5.63});pptx.layout='KHDPI';
-  imgs.forEach((im,i)=>{
-    const sl=pptx.addSlide();
-    if(im)sl.addImage({data:im,x:0,y:0,w:10,h:5.63});
-    else{
-      sl.background={color:'F4F0EB'};
-      const s=slides[i]||{};
-      sl.addText(s.title||'',{x:.5,y:.4,w:9,h:.9,align:'right',fontFace:'Cairo',fontSize:26,bold:true,color:'1A5A2A',rtlMode:true});
-      sl.addText((s.bullets||[]).map(x=>'• '+x).join('\n'),{x:.5,y:1.5,w:9,h:3.6,align:'right',fontFace:'Cairo',fontSize:16,color:'2A1A1A',rtlMode:true});
-    }
-    const s=slides[i];if(s&&s.notes)sl.addNotes(String(s.notes));
-  });
-  const blob=await pptx.write('blob');
-  return new File([blob],'عرض تقديمي — '+it.lesson+'.pptx',{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
-}
 
-// بناء ملف العرض التقديمي: ألوان جميلة، محتوى أولاً، بلا زخارف زائدة
-async function dpBuildPptxFile(it,slides){
-  await loadPptxJs();
-  const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
-  const FONT=pptSettings.font||'Cairo',BRAND=pptSettings.brand||'منصة خطتي الفصلية';
-  const pptx=new PptxGenJS();
-  pptx.defineLayout({name:'KHDP',width:10,height:5.63});pptx.layout='KHDP';
-  // الغلاف
-  const cv=pptx.addSlide();cv.background={color:t.dark};
-  cv.addShape('ellipse',{x:-1.2,y:-1.5,w:4,h:4,fill:{color:t.grad},line:{type:'none'}});
-  cv.addShape('ellipse',{x:7.6,y:3.5,w:3.4,h:3.4,fill:{color:t.accent,transparency:70},line:{type:'none'}});
-  cv.addText(it.lesson,{x:.6,y:1.6,w:8.8,h:1.3,align:'center',fontFace:FONT,fontSize:34,bold:true,color:'FFFFFF',rtlMode:true});
-  cv.addText('الصف '+it.gradeNum+' — '+it.subject+' — '+it.unit,{x:.6,y:3.1,w:8.8,h:.6,align:'center',fontFace:FONT,fontSize:15,color:t.accent,rtlMode:true});
-  // شرائح المحتوى: خلفية فاتحة نظيفة + شريط لون + نص واضح
-  slides.forEach((s,i)=>{
-    const c=pptx.addSlide();c.background={color:t.light};
-    c.addShape('roundRect',{x:9.55,y:.45,w:.14,h:.85,rectRadius:.06,fill:{color:t.accent},line:{type:'none'}});
-    c.addText(s.title||'',{x:.55,y:.4,w:8.85,h:.9,align:'right',fontFace:FONT,fontSize:24,bold:true,color:t.text,rtlMode:true});
-    c.addText((s.bullets||[]).map(bl=>({text:String(bl),options:{bullet:{code:'2022',indent:14},breakLine:true}})),
-      {x:.7,y:1.55,w:8.75,h:3.35,align:'right',fontFace:FONT,fontSize:pptSettings.bodySize||18,color:t.text,rtlMode:true,lineSpacingMultiple:1.3});
-    c.addText(BRAND+'  ·  '+egToArabic(i+2)+'/'+egToArabic(slides.length+1),{x:.5,y:5.12,w:9,h:.35,align:'left',fontFace:FONT,fontSize:9,color:t.grad,rtlMode:true});
-    if(s.notes)c.addNotes(String(s.notes));
-  });
-  const blob=await pptx.write('blob');
-  return new File([blob],'عرض تقديمي — '+it.lesson+'.pptx',{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
-}
+
+
+
 
 function dpDataUrlToFile(dataUrl,name){
   const[meta,b64]=dataUrl.split(',');
@@ -14129,40 +13891,8 @@ async function dpRate(n){
     dpLoadRating(it.lessonId);
   }catch(e){toast('تعذّر حفظ التقييم',true);}
 }
-// فتح التحضير من بطاقة الدرس — معاينة داخل المنصة بلا درايف
-async function dpOpenPrepFromCard(lessonId){
-  const entry=(lessonFiles[lessonId]||[]).find(f=>f.prep);
-  if(!entry||!entry.meta)return;
-  const it={lessonId,gradeNum:entry.meta.grade,subject:entry.meta.subject,unit:entry.meta.unit,lesson:entry.meta.lesson};
-  let b=dpBundles.get(lessonId);
-  if(!b||!b.plan){
-    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);dpCloudPersist(it,b);}}catch(e){}
-  }
-  if(!b||!b.plan){
-    // ☁️ جهاز آخر؟ نسخة المعلم في القاعدة أولاً
-    const c=await dpCloudLoad(lessonId);
-    if(c){b=c;dpBundles.set(lessonId,b);}
-  }
-  if(!b||!b.plan){
-    // ثم نسخة الخطة الذهبية المشتركة
-    try{
-      const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
-      if(sh&&sh.plan){
-        b={status:'saved',imported:true,plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
-        dpBundles.set(lessonId,b);
-      }
-    }catch(e){}
-  }
-  if(!b||!b.plan){toast('محتوى هذا التحضير محفوظ على الجهاز الذي أُعدّ عليه — افتحه من هناك أو أعد تحضيره هنا',true);return;}
-  if(b.status!=='ready')b.status='saved';
-  dpOpenBundleIt(it,b,true);
-}
-async function dpRemovePrepFromCard(lessonId){
-  if(!(await uiConfirm('إزالة التحضير','سيُزال التحضير من بطاقة الدرس (يبقى قابلاً للحفظ مجدداً من بطاقة اليوم). متابعة؟')))return;
-  lessonFiles[lessonId]=(lessonFiles[lessonId]||[]).filter(f=>!f.prep);
-  try{refreshLessonFiles(lessonId);}catch(e){}
-  scheduleSave();
-}
+
+
 // ═ أجزاء التحضير في بطاقة الدرس: سطر مستقل لكل جزء (خطة/عرض/إنفو/تقييم) ═
 async function dpResolvePrep(lessonId){
   const entry=(lessonFiles[lessonId]||[]).find(f=>f.prep);
@@ -14201,7 +13931,6 @@ function dpSaveFileLocal(file){
 }
 async function dpPrepPartDl(lessonId,part){
   uiBusy('⬇️ يجهّز الملف…');
-  if(part==='slides'){try{loadPptxJs();}catch(e){}} // تحميل المكتبة بالتوازي مع جلب المحتوى
   const r=await dpResolvePrep(lessonId);if(!r){uiBusyDone();return;}
   const{it,b}=r;
   try{
@@ -14287,107 +14016,7 @@ async function dpSaveBundle(i){
   if(mb){mb.textContent='✅ في بطاقة الدرس';}
   toast('📎 انتقل التحضير إلى بطاقة الدرس','ok');
 }
-async function dpDriveExport(i){
-  if(typeof i!=='number')i=window._dpBundleIdx;
-  const it=(typeof i==='number'&&(window._dpItems||[])[i])||dpCurrentItem;
-  if(!it)return;
-  const b=dpBundle(it.lessonId);
-  if(b.status!=='ready'&&b.status!=='saved')return;
-  const prevStatus=b.status;
-  const setSaveProg=t=>{const m=document.getElementById('dpb-drive-btn');if(m)m.textContent='⏳ '+t;};
-  const mbtn=document.getElementById('dpb-drive-btn');
-  if(mbtn){mbtn.disabled=true;mbtn.textContent='⏳ يجهّز الملفات…';}
-  const files=[];
-  if(b.infoBranded)files.push(dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png'));
-  // العرض التقديمي: سلسلة تراجع تضمن ألا يضيع أبداً
-  // PPTX من الصور ← PPTX نصي ← ملف HTML عرض (بلا أي مكتبة خارجية)
-  if((b.slideImgs&&b.slideImgs.some(Boolean))||(b.slides&&b.slides.length)){
-    let pptOk=false;
-    if(b.slideImgs&&b.slideImgs.some(Boolean)){
-      try{files.push(await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs));pptOk=true;}
-      catch(e){console.warn('pptx img build',e);}
-    }
-    if(!pptOk&&b.slides&&b.slides.length){
-      try{files.push(await dpBuildPptxFile(it,b.slides));pptOk=true;}
-      catch(e){console.warn('pptx build',e);}
-    }
-    if(!pptOk){
-      try{
-        const imgs=(b.slideImgs||[]);
-        const slidesHtml=(b.slides&&b.slides.length?b.slides:imgs.map(()=>({}))).map((sl,ix)=>imgs[ix]
-          ?`<div style="page-break-after:always;margin:0 0 20px"><img src="${imgs[ix]}" style="width:100%;border-radius:8px"></div>`
-          :`<div style="page-break-after:always;background:#f8f5ef;border:1px solid #ddd;border-radius:10px;padding:28px;margin:0 0 20px;font-family:Arial"><h2 style="color:#1a5a2a;margin:0 0 14px">${escHtml(sl.title||'')}</h2><ul style="line-height:2.2;font-size:16px">${(sl.bullets||[]).map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul></div>`).join('');
-        const doc='\ufeff<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>'+escHtml(it.lesson)+'</title></head><body style="max-width:900px;margin:20px auto;padding:0 14px">'+slidesHtml+'</body></html>';
-        files.push(new File([new Blob([doc],{type:'text/html'})],'عرض تقديمي — '+it.lesson+'.html',{type:'text/html'}));
-        toast('⚠️ تعذّر بناء ملف PowerPoint — حُفظ العرض كملف HTML بديل',true);
-      }catch(e){console.warn('slides html fallback',e);toast('⚠️ تعذّر حفظ العرض التقديمي — أعد الحفظ لاحقاً',true);}
-    }
-  }
-  if(b.plan){
-    // التحضير الرسمي بصيغة Word (هيكل نور + ترويسة البيانات) — جاهز للنسخ واللصق في منصة نور
-    try{files.push(dpPlanWordFile(it,b.plan));}
-    catch(e){console.warn('plan word fallback',e);
-      files.push(new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'تحضير — '+it.lesson+'.html',{type:'text/html'}));}
-  }
-  if(b.examHtml){
-    try{
-      let paper='';
-      try{paper=egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson);}catch(e){paper='<div class="dp-doc">'+b.examHtml+'</div>';}
-      files.push(await dpHtmlToPdfFile('<div style="background:#fff;padding:6px">'+paper+'</div>','تقييم — '+it.lesson+'.pdf'));
-    }catch(e){console.warn('exam pdf fallback',e);
-      let doc=b.examHtml;
-      try{doc=egBuildDoc(egPaperWrap(b.examHtml,String(it.gradeNum),it.subject,10,it.lesson));}catch(_){}
-      files.push(new File([new Blob([doc],{type:'text/html'})],'تقييم — '+it.lesson+'.html',{type:'text/html'}));}
-  }
-  // عند إعادة الحفظ بعد نجاح جزئي: ارفع الملفات الناقصة فقط (لا تكرار)
-  const existing=lessonFiles[it.lessonId]||[];
-  const pend=files.filter(f=>!existing.some(x=>x.name===f.name&&x.driveId));
-  if(!pend.length&&files.length){
-    b.status='saved';dpPersist(it,b);renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='✅ محفوظ في بطاقة الدرس';}
-    return;
-  }
-  let okCount=0;
-  const newIds=[];
-  for(let fi=0;fi<pend.length;fi++){
-    const f=pend[fi];
-    setSaveProg('يرفع الملفات… '+egToArabic(fi+1)+'/'+egToArabic(pend.length)+' ('+escHtml(f.name)+')');
-    try{
-      const r=await driveUpload(f,'[درس-'+it.lessonId+'] '+f.name);
-      if(r&&r.id){
-        if(!lessonFiles[it.lessonId])lessonFiles[it.lessonId]=[];
-        const entry={id:Date.now().toString()+okCount,name:f.name,size:f.size,type:f.type,driveId:r.id,viewLink:r.viewLink,downloadLink:r.downloadLink,previewLink:r.previewLink};
-        lessonFiles[it.lessonId].push(entry);
-        newIds.push(entry.id);
-        okCount++;
-      }
-    }catch(e){console.warn('bundle upload',e);}
-  }
-  // ✔️ التحقق الفعلي: الملفات موجودة في بطاقة الدرس (بمعرّفات درايف حقيقية) قبل إعلان النجاح
-  setSaveProg('يتأكد من وجود الملفات في البطاقة…');
-  const verified=newIds.filter(id=>(lessonFiles[it.lessonId]||[]).some(f=>f.id===id&&f.driveId)).length;
-  if(verified&&verified===pend.length){
-    scheduleSave();
-    try{refreshLessonFiles(it.lessonId);}catch(e){}
-    b.status=prevStatus;
-    dpPersist(it,b);
-    renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
-    toast('✅ رُفعت نسخ الملفات إلى درايف وبطاقة الدرس','ok');
-  }else if(verified){
-    scheduleSave();
-    try{refreshLessonFiles(it.lessonId);}catch(e){}
-    b.status=prevStatus;
-    renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
-    toast('⚠️ رُفع '+egToArabic(verified)+' من '+egToArabic(pend.length)+' ملفات — أعد المحاولة لرفع الباقي',true);
-  }else{
-    b.status=prevStatus;
-    renderDailyPrep();
-    if(mbtn){mbtn.disabled=false;mbtn.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
-    toast('❌ فشل الرفع — تأكد من ربط Google Drive في الإعدادات',true);
-  }
-}
+
 
 // توليد خطة الحصة (أو جلبها من المخزن)
 async function dpEnsurePrep(it,silent){
@@ -14687,15 +14316,7 @@ let pptSettings={
 };
 // شعار الموقع مضمّن base64 (لا حاجة لجلب شبكي عند التصدير)
 let PPT_LOGO_B64=null;
-async function ensurePptLogo(){
-  if(PPT_LOGO_B64!==null)return PPT_LOGO_B64;
-  try{
-    const res=await fetch('/khottah_icon_120.png');
-    const blob=await res.blob();
-    PPT_LOGO_B64=await new Promise((res2,rej)=>{const r=new FileReader();r.onload=()=>res2(r.result);r.onerror=rej;r.readAsDataURL(blob);});
-  }catch(e){PPT_LOGO_B64='';}
-  return PPT_LOGO_B64;
-}
+
 async function savePptSettings(){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
   const btn=event&&event.target?event.target:null;
@@ -14772,18 +14393,7 @@ function pptRenderPreview(){
 function pptUpdateBullets(i,el){
   pptSlides[i].bullets=[...el.querySelectorAll('li')].map(li=>li.textContent.trim()).filter(Boolean);
 }
-function loadPptxJs(){
-  if(typeof PptxGenJS!=='undefined')return Promise.resolve();
-  if(window._pptxLoading)return window._pptxLoading;
-  window._pptxLoading=new Promise((resolve,reject)=>{
-    const s=document.createElement('script');
-    s.src='/vendor/pptxgen.bundle.js';
-    s.onload=()=>resolve();
-    s.onerror=()=>reject(new Error('فشل تحميل مكتبة PowerPoint'));
-    document.head.appendChild(s);
-  });
-  return window._pptxLoading;
-}
+
 // 🖥️ تنزيل العرض كصفحة HTML فورية (أسهم + لمس + ملء شاشة) — بلا مكتبة PowerPoint الثقيلة
 async function pptDownload(){
   if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
@@ -14795,105 +14405,7 @@ async function pptDownload(){
   }catch(e){toast('❌ تعذّر إنشاء الملف',true);console.warn('ppt html dl',e);}
   finally{uiBusyDone();}
 }
-// النسخة القديمة (ملف PowerPoint) — أبقيناها لمن يطلبها مستقبلاً
-async function pptDownloadPptx(){
-  if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
-  const btn=document.querySelector('#eg-ppt-result-card .eg-export');
-  if(btn){btn.disabled=true;btn.textContent='⏳ جاري التجهيز...';}
-  uiBusy('⬇️ يجهّز ملف PowerPoint…');
-  try{
-    await loadPptxJs();
-    const subject=document.getElementById('eg-subject').value||'الدرس';
-    const grade=document.getElementById('eg-grade').value;
-    // النمط المرسوم: شرائح صور كاملة + ملاحظات المعلم
-    if(pptVisualImages&&pptVisualImages.some(Boolean)){
-      // ضغط الصور قبل الدمج — ملف أصغر وبناء أسرع (بمهلة قصوى لكل صورة)
-      const comp=[];
-      for(let i=0;i<pptVisualImages.length;i++){
-        const im=pptVisualImages[i];
-        if(!im||im.length<400000){comp.push(im);continue;}
-        uiBusyText('🖼️ يضغط صور الشرائح… '+egToArabic(i+1)+'/'+egToArabic(pptVisualImages.length));
-        await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
-        comp.push(await Promise.race([dpShrinkImg(im,1600,.82),new Promise(r=>setTimeout(()=>r(im),8000))]));
-      }
-      uiBusyText('📊 يبني ملف PowerPoint…');
-      await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,25)));
-      const vp=new PptxGenJS();
-      vp.defineLayout({name:'KH169V',width:10,height:5.63});
-      vp.layout='KH169V';
-      pptSlides.forEach((s,i)=>{
-        const sl=vp.addSlide();
-        const img=comp[i];
-        if(img){sl.addImage({data:img,x:0,y:0,w:10,h:5.63});}
-        else{
-          sl.background={color:'F4F0EB'};
-          sl.addText(s.title||'',{x:.5,y:.4,w:9,h:.9,align:'right',fontFace:'Cairo',fontSize:26,bold:true,color:'1A5A2A',rtlMode:true});
-          sl.addText((s.bullets||[]).map(b=>'• '+b).join('\n'),{x:.5,y:1.5,w:9,h:3.6,align:'right',fontFace:'Cairo',fontSize:16,color:'2A1A1A',rtlMode:true});
-        }
-        if(s.notes)sl.addNotes(String(s.notes));
-      });
-      await vp.writeFile({fileName:'عرض-مرسوم-'+subject+'-'+new Date().toISOString().slice(0,10)+'.pptx'});
-      if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}
-      uiBusyDone();
-      toast('✅ تم تنزيل العرض المرسوم','ok');
-      return;
-    }
-    uiBusyText('📊 يبني ملف PowerPoint…');
-    const t=PPT_THEMES[pptTheme]||PPT_THEMES.royal;
-    const pptx=new PptxGenJS();
-    pptx.defineLayout({name:'KH169',width:10,height:5.63});
-    pptx.layout='KH169';
-    const total=pptSlides.length;
-    // إعدادات المشرف
-    const FONT=pptSettings.font||'Cairo';
-    const TSZ=pptSettings.titleSize||26;
-    const BSZ=pptSettings.bodySize||18;
-    const BRAND=pptSettings.brand||'منصة خطتي الفصلية';
-    const SHOW_LOGO=pptSettings.logo!==false;
-    let logoData='';
-    if(SHOW_LOGO){logoData=await ensurePptLogo();}
-    const circle=(sl,x,y,d,color,transp)=>sl.addShape(pptx.ShapeType.ellipse,{x,y,w:d,h:d,fill:{color,transparency:transp}});
-    // ── الغلاف: خلفية داكنة + دوائر زخرفية + عنوان كبير وخط accent ──
-    const cover=pptx.addSlide();
-    cover.background={color:t.dark};
-    circle(cover,-1.7,-1.7,4.4,t.accent,82);
-    circle(cover,8.3,3.9,3.4,t.accent2,80);
-    circle(cover,8.8,-0.8,1.5,t.accent2,45);
-    cover.addText(subject,{x:0.7,y:1.85,w:8.6,h:1.15,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*1.55),bold:true,color:'FFFFFF',rtlMode:true});
-    cover.addShape(pptx.ShapeType.roundRect,{x:4.2,y:3.08,w:1.6,h:0.1,fill:{color:t.accent},rectRadius:0.05});
-    cover.addText('الصف '+libGradeName(Number(grade)),{x:0.7,y:3.28,w:8.6,h:0.5,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*0.78),color:t.accent,rtlMode:true});
-    // شعار + اسم المنصة في تذييل الغلاف (المشرف يتحكم بهما)
-    if(SHOW_LOGO&&logoData){try{cover.addImage({data:logoData,x:4.36,y:4.95,w:0.3,h:0.3});}catch(e){}}
-    cover.addText(BRAND,{x:0.7,y:5.02,w:8.6,h:0.4,align:'center',fontFace:FONT,fontSize:Math.round(TSZ*0.46),color:'CFCFCF',rtlMode:true});
-    // ── شرائح المحتوى ──
-    pptSlides.forEach((s,idx)=>{
-      const sl=pptx.addSlide();
-      sl.background={color:t.dark};
-      circle(sl,-1.35,-1.35,3.6,t.accent,84);
-      circle(sl,8.6,4.2,2.8,t.accent2,84);
-      // شارة الرقم
-      sl.addShape(pptx.ShapeType.ellipse,{x:0.42,y:0.36,w:0.66,h:0.66,fill:{color:t.accent}});
-      sl.addText(String(idx+1),{x:0.42,y:0.36,w:0.66,h:0.66,align:'center',valign:'middle',fontFace:FONT,fontSize:Math.round(TSZ*0.77),bold:true,color:t.dark});
-      // العنوان يمين + خط accent تحته
-      sl.addText(s.title||'',{x:1.25,y:0.42,w:8.3,h:0.72,align:'right',valign:'middle',fontFace:FONT,fontSize:TSZ,bold:true,color:'FFFFFF',rtlMode:true});
-      sl.addShape(pptx.ShapeType.roundRect,{x:6.85,y:1.18,w:2.7,h:0.07,fill:{color:t.accent},rectRadius:0.035});
-      // النقاط
-      const bullets=(s.bullets||[]).map(b=>({text:b,options:{bullet:{code:'25CF',indent:20},align:'right',rtlMode:true,fontSize:BSZ,color:'F2F2F2',breakLine:true,paraSpaceAfter:Math.round(BSZ*0.9)}}));
-      if(bullets.length)sl.addText(bullets,{x:0.7,y:1.55,w:8.6,h:3.5,valign:'top',fontFace:FONT});
-      if(s.notes)try{sl.addNotes(String(s.notes));}catch(e){}
-      // تذييل: شعار + اسم المنصة على اليسار، ترقيم على اليمين
-      sl.addShape(pptx.ShapeType.line,{x:0.6,y:5.3,w:8.8,h:0,line:{color:t.accent,width:1,transparency:40}});
-      let brandX=0.6;
-      if(SHOW_LOGO&&logoData){try{sl.addImage({data:logoData,x:0.6,y:5.32,w:0.28,h:0.28});brandX=0.95;}catch(e){}}
-      sl.addText(BRAND,{x:brandX,y:5.33,w:5,h:0.26,align:'left',fontFace:FONT,fontSize:10,color:t.accent2});
-      sl.addText((idx+1)+' / '+total,{x:6,y:5.33,w:3.4,h:0.26,align:'right',fontFace:FONT,fontSize:10,color:t.accent});
-    });
-    const fname='عرض '+subject+' — '+libGradeName(Number(grade))+'.pptx';
-    await pptx.writeFile({fileName:fname});
-    toast('✅ تم تنزيل العرض التقديمي','ok');
-  }catch(e){toast('❌ فشل إنشاء الملف: '+(e.message||''),true);}
-  finally{uiBusyDone();if(btn){btn.disabled=false;btn.textContent='⬇️ تنزيل PowerPoint (.pptx)';}}
-}
+
 
 // ── أدوات تحرير ورقة الاختبار (شريط شبيه بـ Word) ──
 let _egSavedRange=null;
@@ -15028,44 +14540,7 @@ async function ltRenderPageBlob(pdf,pageNum,maxW,quality){
   await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
   return await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality||0.6));
 }
-// رفع الكتاب: تحويل كل صفحة لصورة وتخزينها + تسجيل المصدر (الخيار ب)
-async function ltPickBook(file){
-  const st=document.getElementById('lt-book-status');
-  document.getElementById('lt-book-result').innerHTML='';
-  if(!file){return;}
-  const grade=document.getElementById('ltb-grade').value;
-  const subject=document.getElementById('ltb-subject').value;
-  const semester=document.getElementById('ltb-semester').value;
-  if(!grade||!subject){if(st)st.textContent='❌ اختر الصف والمادة أولاً';return;}
-  if(!/\.pdf$/i.test(file.name)){if(st)st.textContent='❌ الملف يجب أن يكون PDF';return;}
-  const offset=parseInt(document.getElementById('lt-book-offset').value)||1;
-  let pdf;
-  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
-  catch(e){if(st)st.textContent='❌ فشل فتح الـ PDF';return;}
-  const N=pdf.numPages;
-  if(!await uiConfirm(`سيُرفع الكتاب (${egToArabic(N)} صفحة) كصور لـ${subject} — ${libGradeName(Number(grade))} — ${semester}.\nإزاحة الترقيم: ${egToArabic(offset)}.\nقد يستغرق عدة دقائق. متابعة؟`))return;
-  const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','');
-  for(let p=1;p<=N;p++){
-    let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
-    if(!blob){if(st){st.textContent='';}document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل تجهيز الصفحة ${egToArabic(p)} — أعد المحاولة.</div>`;return;}
-    let ok=false,lastErr='';
-    for(let attempt=1;attempt<=3&&!ok;attempt++){
-      if(st)st.textContent=`⬆️ رفع الصفحة ${egToArabic(p)} من ${egToArabic(N)}${attempt>1?' (محاولة '+egToArabic(attempt)+')':''}...`;
-      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});if(error){lastErr=error.message;}else ok=true;}
-      catch(e){lastErr=String(e&&e.message||e);}
-      if(!ok&&attempt<3)await new Promise(r=>setTimeout(r,1200*attempt));
-    }
-    if(!ok){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">⛔ فشل رفع الصفحة ${egToArabic(p)}: ${escHtml(lastErr||'اتصال')}<br>أُوقفت العملية — أعد المحاولة.</div>`;return;}
-  }
-  // تسجيل المصدر
-  if(st)st.textContent='⏳ جاري تسجيل مصدر الكتاب...';
-  try{
-    const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester'});
-    if(error)throw error;
-  }catch(e){if(st)st.textContent='';document.getElementById('lt-book-result').innerHTML=`<div style="color:var(--red);font-size:13px">فشل تسجيل المصدر: ${escHtml(e.message||'خطأ')}</div>`;return;}
-  if(st)st.textContent='';
-  document.getElementById('lt-book-result').innerHTML=`<div style="color:#2e7d32;font-weight:700;font-size:13px">✅ تم رفع ${egToArabic(N)} صفحة وتسجيل الكتاب.</div><div style="color:var(--muted);font-size:12px;margin-top:4px">الآن يستطيع المعلم توليد أسئلة من صفحات كل درس مباشرةً.</div>`;
-}
+
 function ltInit(){
   const opts='<option value="">الصف</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
   const g=document.getElementById('lt-grade');if(g&&g.options.length<=1)g.innerHTML=opts;
@@ -15331,115 +14806,14 @@ async function segApprove(){
     document.getElementById('seg-review').innerHTML='<div style="color:#2e7d32;font-weight:800;font-size:13.5px;padding:10px;background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.3);border-radius:10px">✅ اعتُمدت الخريطة: '+egToArabic(rows.length)+' درساً مرتبطاً بصفحاته — كل التوليدات ستقرأ الآن من محتوى الكتاب الحقيقي 🔥</div>';
   }catch(e){st.textContent='❌ فشل الاعتماد: '+escHtml(e.message||'خطأ');}
 }
-async function ltOnChange(el){
-  document.getElementById('lt-index-result').innerHTML='';
-  document.getElementById('lt-book-result').innerHTML='';
-  document.getElementById('lt-index-status').textContent='';
-  document.getElementById('lt-book-status').textContent='';
-  if(el&&(el.id==='lt-grade'||el.id==='lt-semester'))await ltReloadSubjects();
-}
-// المواد المعروضة = التي لم يُرفع لها محتوى بعد (لا دروس في المنهج)
-async function ltReloadSubjects(){
-  const grade=parseInt(document.getElementById('lt-grade').value);
-  const semester=document.getElementById('lt-semester').value;
-  const ssel=document.getElementById('lt-subject');
-  ssel.innerHTML='<option value="">المادة</option>';
-  if(!grade)return;
-  let subs=[];
-  if(grade<=4&&typeof FIRST_CYCLE_SUBJECTS!=='undefined'){subs=FIRST_CYCLE_SUBJECTS.slice();}
-  else{try{const{data}=await sb.from('subjects').select('subject,sort').eq('grade',grade).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
-  const withContent=new Set();
-  try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade)).eq('semester',semester);(data||[]).forEach(r=>withContent.add(r.subject));}catch(e){}
-  const empty=subs.filter(s=>!withContent.has(s));
-  if(!empty.length){ssel.innerHTML='<option value="">— كل المواد لديها محتوى —</option>';return;}
-  ssel.innerHTML='<option value="">المادة</option>'+empty.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
-}
-// قسم تقطيع الكتاب: يعرض المواد التي لها محتوى (جاهزة للتقطيع)
-async function ltbOnChange(el){
-  document.getElementById('lt-book-result').innerHTML='';
-  document.getElementById('lt-book-status').textContent='';
-  if(el&&(el.id==='ltb-grade'||el.id==='ltb-semester'))await ltbReloadSubjects();
-}
-async function ltbReloadSubjects(){
-  const grade=parseInt(document.getElementById('ltb-grade').value);
-  const semester=document.getElementById('ltb-semester').value;
-  const ssel=document.getElementById('ltb-subject');
-  ssel.innerHTML='<option value="">المادة</option>';
-  if(!grade)return;
-  let subs=[];
-  try{const{data}=await sb.from('curriculum').select('subject').eq('grade',String(grade)).eq('semester',semester);subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}
-  if(!subs.length){ssel.innerHTML='<option value="">— لا مواد لها محتوى —</option>';return;}
-  ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
-}
-function ltFileToDataUrl(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
-async function ltExtractIndex(input){
-  const files=[...input.files];input.value='';
-  if(!files.length)return;
-  const st=document.getElementById('lt-index-status');
-  st.textContent='⏳ جاري قراءة الفهرس...';
-  try{
-    const images=[];for(const f of files.slice(0,6)){if(f.size>8*1024*1024){st.textContent='❌ حجم صورة كبير (الحد 8MB)';return;}images.push(await ltFileToDataUrl(f));}
-    const{data,error}=await sb.functions.invoke('extract-lessons',{body:{images}});
-    if(error){let r=error.message||'خطأ';try{if(error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)r=j.error;}}catch(_){}st.textContent='❌ '+r;return;}
-    const units=(data&&data.units)||[];
-    if(!units.length){st.textContent='⚠️ لم تُستخرج دروس — جرّب صورة أوضح';return;}
-    const totalL=units.reduce((s,u)=>s+((u.lessons||[]).length),0);
-    st.textContent='✅ استُخرج '+egToArabic(units.length)+' وحدة و'+egToArabic(totalL)+' درساً — راجع الأسماء والأرقام ثم اضغط «رفع المحتوى»';
-    // كل درس: «الاسم | رقم صفحة البداية». الرقم يُخزَّن منفصلاً ولا يظهر للمعلم.
-    const lessonLine=(l)=>{const name=(typeof l==='string')?l:((l&&l.name)||'');const page=(l&&typeof l==='object')?(parseInt(l.page)||0):0;return page>0?(name+' | '+page):name;};
-    const txt=units.map(u=>[(u.unit||'عام'),...(u.lessons||[]).map(lessonLine)].join('\n')).join('\n\n\n');
-    document.getElementById('lt-index-result').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">راجع القائمة: كل سطر «اسم الدرس | رقم الصفحة». عنوان الوحدة في سطر مستقل، وسطران فارغان بين وحدة وأخرى. (الرقم لا يظهر للمعلم — يُستخدم داخلياً للتوليد).</div><textarea id="lt-index-text" rows="14" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:10px;line-height:1.9;box-sizing:border-box">${escHtml(txt)}</textarea><button class="eg-generate" style="margin-top:8px" onclick="ltUploadExtracted()">⬆️ رفع المحتوى للمنهج</button>`;
-  }catch(e){st.textContent='❌ فشل استخراج الفهرس';}
-}
-// محلّل الفهرس: سطران فارغان = وحدة جديدة، وكل درس «الاسم | رقم الصفحة»
-function ltParseIndexText(text){
-  const blocks=(text||'').split(/\n\s*\n\s*\n+/).map(b=>b.trim()).filter(Boolean);
-  const units=[];
-  for(const block of blocks){
-    const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
-    if(!lines.length)continue;
-    const unit=lines[0];const lessons=[];
-    for(let i=1;i<lines.length;i++){
-      let line=lines[i],page=null,name=line;
-      const bar=line.lastIndexOf('|');
-      if(bar>=0){
-        const after=line.slice(bar+1).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-        const num=parseInt(after);
-        if(!isNaN(num)){page=num;name=line.slice(0,bar).trim();}
-      }
-      name=name.replace(/^[\d٠-٩①-⑨\-•*●○◦▪▫\[\(\.:\)]+\s*/,'').trim();
-      if(name)lessons.push({name,page});
-    }
-    if(lessons.length)units.push({unit,lessons});
-  }
-  return units;
-}
-// رفع المحتوى المستخرَج للمنهج (اسم نظيف في lesson، رقم الصفحة منفصل في page)
-async function ltUploadExtracted(){
-  const t=document.getElementById('lt-index-text');if(!t)return;
-  const grade=parseInt(document.getElementById('lt-grade').value);
-  const subject=document.getElementById('lt-subject').value;
-  const semester=document.getElementById('lt-semester').value;
-  if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
-  const units=ltParseIndexText(t.value);
-  if(!units.length){toast('لم يُعثر على وحدات — تأكد من وجود سطرين فارغين بين الوحدات',true);return;}
-  const totalL=units.reduce((s,u)=>s+u.lessons.length,0);
-  const withPage=units.reduce((s,u)=>s+u.lessons.filter(l=>l.page).length,0);
-  if(!await uiConfirm(`رفع ${egToArabic(units.length)} وحدة و${egToArabic(totalL)} درساً (منها ${egToArabic(withPage)} برقم صفحة) لـ${subject} — ${libGradeName(grade)} — ${semester}؟\nسيُستبدل أي محتوى قديم لهذه المادة.`))return;
-  const st=document.getElementById('lt-index-status');st.textContent='⏳ جاري رفع المحتوى...';
-  try{
-    await sb.from('curriculum').delete().eq('semester',semester).eq('subject',subject).eq('grade',grade);
-    const ex=await sb.from('subjects').select('subject').eq('semester',semester).eq('subject',subject).eq('grade',grade);
-    if(!ex.data||!ex.data.length){await sb.from('subjects').insert([{semester,subject,grade,sort:99}]);}
-    const rows=[];let sort=1;
-    units.forEach(u=>u.lessons.forEach(l=>rows.push({semester,subject,grade,unit:u.unit,lesson:l.name,page:l.page||null,sort:sort++})));
-    const{error}=await sb.from('curriculum').insert(rows);
-    if(error)throw error;
-    if(typeof clearCurriculumCache==='function')clearCurriculumCache();
-    st.textContent=`✅ تم رفع ${egToArabic(rows.length)} درساً — الآن ارفع الكتاب من البطاقة بالأسفل.`;
-    document.getElementById('lt-index-result').innerHTML='';
-  }catch(e){st.textContent='❌ فشل الرفع: '+(e.message||'خطأ');}
-}
+
+
+
+
+
+
+
+
 async function loadAiSettings(){
   if(!sb)return;
   try{
