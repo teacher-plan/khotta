@@ -7370,7 +7370,7 @@ async function uploadLessonFile(e,lessonId){
 }
 function lessonFileRowHtml(lessonId,f){
   if(f.prep){
-    return`<div class="lesson-file-item" style="background:linear-gradient(90deg,rgba(109,40,217,.07),transparent)"><span>📦</span><span class="lfi-name">${escHtml(f.name||'تحضير الدرس')}</span><button class="arc-btn" style="padding:3px 10px;font-size:10px;" onclick="dpOpenPrepFromCard('${lessonId}')">👁️ فتح التحضير</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="dpRemovePrepFromCard('${lessonId}')">🗑️</button></div>`;
+    return`<div class="lesson-file-item" style="background:linear-gradient(90deg,rgba(109,40,217,.07),transparent)"><span>📦</span><span class="lfi-name">${escHtml((f.name||'تحضير الدرس').replace(/^📦\s*/,''))}</span><button class="arc-btn" style="padding:3px 10px;font-size:10px;" onclick="dpOpenPrepFromCard('${lessonId}')">👁️ فتح التحضير</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="dpRemovePrepFromCard('${lessonId}')">🗑️</button></div>`;
   }
   const n=(f.name||'').toLowerCase();
   const icon=(f.type&&f.type.startsWith('image/'))?'🖼️':n.endsWith('.pptx')?'📊':n.endsWith('.pdf')?'📄':'📎';
@@ -13952,7 +13952,7 @@ function dpLinkToCard(it,b){
   lessonFiles[lid]=lessonFiles[lid].filter(f=>!f.prep);
   lessonFiles[lid].unshift({
     id:'prep_'+lid,prep:true,type:'khotta/prep',size:0,
-    name:'📦 تحضير الدرس — '+it.lesson,
+    name:'تحضير الدرس — '+it.lesson,
     meta:{grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson}
   });
   try{refreshLessonFiles(lid);}catch(e){}
