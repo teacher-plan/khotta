@@ -1100,6 +1100,39 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 /* 🦉 فهيم — المساعد الذكي */
 @keyframes fhGoldShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @keyframes fhGoldGlow{0%,100%{box-shadow:0 3px 12px rgba(217,151,6,.4)}50%{box-shadow:0 3px 18px rgba(255,215,106,.75)}}
+/* 🚀 وضع لوحة الانطلاق: القسم بكامل الصفحة + تنقل ببطاقات */
+body.lp .nav{display:none!important}
+body.lp .page>.wrap{padding-top:56px}
+#lp-bar{position:fixed;top:12px;inset-inline-start:14px;z-index:210;display:none;gap:8px;align-items:center}
+body.lp #lp-bar{display:flex}
+#lp-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--gold);border-radius:12px;padding:8px 15px;font-family:'Cairo',sans-serif;font-size:13.5px;font-weight:800;color:var(--text);cursor:pointer;box-shadow:0 4px 16px rgba(184,134,11,.25);transition:transform .15s}
+#lp-pill:hover{transform:translateY(-1px)}
+#lp-pill .chev{color:var(--gold);font-size:10px}
+#lp-user{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:16px}
+#lp-user img{width:100%;height:100%;object-fit:cover;position:absolute}
+#lp-user{position:relative}
+#lp-board{position:fixed;inset:0;z-index:400;background:rgba(26,16,8,.55);backdrop-filter:blur(7px);display:none;align-items:flex-start;justify-content:center;padding:26px 18px;overflow:auto}
+#lp-board.open{display:flex;animation:lpIn .2s ease}
+@keyframes lpIn{from{opacity:0}to{opacity:1}}
+.lp-in{width:min(980px,100%)}
+.lp-head{display:flex;justify-content:space-between;align-items:center;color:#fff;margin-bottom:14px}
+.lp-head h2{font-size:18px;font-weight:800;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
+.lp-head button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;padding:8px 16px;font-family:'Cairo',sans-serif;font-size:12.5px;cursor:pointer}
+.lp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px}
+.lp-tile{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:14px 15px 12px;cursor:pointer;text-align:right;font-family:'Cairo',sans-serif;display:flex;flex-direction:column;gap:7px;min-height:106px;transition:transform .15s,box-shadow .15s,border-color .15s;color:var(--text);animation:lpTile .3s ease backwards}
+@keyframes lpTile{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.lp-tile:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(0,0,0,.18);border-color:var(--gold)}
+.lp-tile .ic{font-size:22px;line-height:1;color:var(--gold)}
+.lp-tile .ic svg{width:22px;height:22px}
+.lp-tile .nm{font-size:14px;font-weight:800}
+.lp-tile .lv{font-size:11px;color:var(--muted);line-height:1.8;margin-top:auto}
+.lp-tile.now{border-color:var(--gold);background:linear-gradient(160deg,rgba(184,134,11,.1),transparent 60%),var(--surface)}
+.lp-tile.now .nm::after{content:"● أنت هنا";font-size:9.5px;color:var(--gold);margin-inline-start:6px}
+.lp-tile.fh{background:linear-gradient(135deg,#b8860b,#f0b429 55%,#d99a06);border-color:#9a7010;color:#fff}
+.lp-tile.fh .ic,.lp-tile.fh .nm{color:#fff}
+.lp-tile.fh .lv{color:rgba(255,255,255,.92)}
+@media(max-width:560px){.lp-grid{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){.lp-tile,#lp-board.open{animation:none}}
 /* زر قسم فهيم المميز في الشريط */
 .nav-btn.nav-fh{background:linear-gradient(135deg,#b8860b,#f0b429,#ffd76a,#d99a06);background-size:250% 250%;color:#fff;border-color:#b8860b;animation:fhGoldShift 6s ease-in-out infinite,fhGoldGlow 3s ease-in-out infinite;font-weight:800;}
 .nav-btn.nav-fh.active{color:#3b2506;}
@@ -1736,6 +1769,22 @@ input,textarea,select{font-size:16px !important;}
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
     <img id="ub-img" src="" alt=""/>
     <span class="user-badge-name" id="ub-name">—</span>
+  </div>
+</div>
+
+<!-- 🚀 لوحة الانطلاق: الحبّة + زر الحساب -->
+<div id="lp-bar">
+  <button id="lp-pill" onclick="lpOpen()"><span id="lp-pill-txt">📅 الجدول</span><span class="chev">▾</span></button>
+  <button id="lp-user" onclick="toggleUserMenu(event)" title="حسابي"><img id="lp-user-img" alt="" onerror="this.style.display='none'"><span>👤</span></button>
+</div>
+<!-- 🚀 لوحة الانطلاق: الشبكة -->
+<div id="lp-board" onclick="if(event.target===this)lpClose()">
+  <div class="lp-in">
+    <div class="lp-head">
+      <h2>إلى أين ننطلق؟</h2>
+      <button onclick="lpClose()">✕ إغلاق</button>
+    </div>
+    <div class="lp-grid" id="lp-grid"></div>
   </div>
 </div>
 
@@ -4342,6 +4391,7 @@ const GRADE_COLORS=['#e74c3c','#e8b86d','#f0c060','#27ae60','#3498db','#9b59b6',
 function showSetupScreen(){
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('main-nav').style.display='none';
+  document.body.classList.remove('lp');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // علامة: الإعداد قيد التقدم — لو حدّث الصفحة يعود هنا بدل التطبيق
   if(currentUser){
@@ -5192,8 +5242,11 @@ function applySubjectTheme(cfg){
 
 function showApp(data){
   document.getElementById('main-nav').style.display='flex';
+  document.body.classList.add('lp'); // 🚀 وضع لوحة الانطلاق
   document.querySelectorAll('.page')[0].classList.add('active');
   showUserBadge();
+  try{const u=document.getElementById('ub-img');const l=document.getElementById('lp-user-img');if(u&&l&&u.src)l.src=u.src;}catch(e){}
+  try{const ab=document.querySelector('#main-nav .nav-btn.active');if(ab)lpUpdatePill(ab);}catch(e){}
   loadActiveViolationTypes();
 
   if(data){
@@ -5334,6 +5387,7 @@ function showPage(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active','ripple');
+  try{lpUpdatePill(btn);}catch(e){}
   try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
   if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
@@ -12907,6 +12961,38 @@ function fhInitMascot(){
   };
   img.src=fhMascotUrl();
 }
+// ═ 🚀 لوحة الانطلاق — تنقل بكامل الصفحة ═
+const LP_DESC={timetable:'حصص اليوم وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات شعبك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اختبارات وعروض وإنفوجرافيك وألعاب',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
+function lpLive(pg){
+  try{
+    if(pg==='timetable'&&typeof dpNextLessons==='function'){
+      const nx=dpNextLessons();
+      if(nx&&nx.length)return 'التالي: «'+nx[0].lesson+'» — '+nx[0].subject+' صف '+nx[0].gradeNum;
+    }
+  }catch(e){}
+  return LP_DESC[pg]||'';
+}
+function lpBuild(){
+  const grid=document.getElementById('lp-grid');if(!grid)return;
+  const btns=[...document.querySelectorAll('#main-nav .nav-btn')].filter(b=>getComputedStyle(b).display!=='none');
+  window._lpBtns=btns;
+  grid.innerHTML=btns.map((b,i)=>{
+    const pg=b.dataset.page||'';
+    const iconEl=b.querySelector('span');
+    const icon=pg==='faheem'?'🦊':(iconEl?iconEl.outerHTML:'▫️');
+    const label=escHtml(b.textContent.replace('🦊','').trim());
+    return `<button class="lp-tile ${pg==='faheem'?'fh':''} ${b.classList.contains('active')?'now':''}" style="animation-delay:${i*0.03}s" onclick="lpGo(${i})">
+      <span class="ic">${icon}</span><span class="nm">${label}</span><span class="lv">${escHtml(lpLive(pg))}</span></button>`;
+  }).join('');
+}
+function lpGo(i){const b=(window._lpBtns||[])[i];lpClose();if(b)b.click();}
+function lpOpen(){lpBuild();document.getElementById('lp-board').classList.add('open');}
+function lpClose(){const el=document.getElementById('lp-board');if(el)el.classList.remove('open');}
+function lpUpdatePill(btn){
+  const t=document.getElementById('lp-pill-txt');
+  if(t&&btn)t.textContent=btn.textContent.trim();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lpClose();});
 // تهيئة قسم فهيم عند فتحه
 function fhPageInit(){
   fhInitMascot();
