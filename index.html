@@ -14113,9 +14113,21 @@ async function dpPrepPartDl(lessonId,part){
     }else if(part==='slides'){
       if(b._pptxFile){file=b._pptxFile;} // جاهز من تحميل سابق — فوري
       else{
+        // الرسوم ناقصة محلياً؟ اجلبها من المكتبة الذهبية المشتركة
+        if(!(b.slideImgs&&b.slideImgs.some(Boolean))){
+          try{
+            uiBusyText('☁️ يجلب رسوم العرض من المكتبة…');
+            const{data:sh}=await sb.from('shared_preps').select('slide_imgs,slides').eq('lesson_id',lessonId).maybeSingle();
+            if(sh&&sh.slide_imgs&&sh.slide_imgs.some(Boolean)){
+              b.slideImgs=sh.slide_imgs;
+              if((!b.slides||!b.slides.length)&&sh.slides)b.slides=sh.slides;
+            }
+          }catch(e){}
+        }
         if(b.slideImgs&&b.slideImgs.some(Boolean)){
           uiBusyText('🖼️ يضغط صور الشرائح…');
           try{file=await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs);}catch(e){console.warn('pptx img dl',e);}
+          if(!file)toast('⚠️ تعذّر بناء النسخة المرسومة — سنجهّز نسخة نصية بديلة',true);
         }
         if(!file&&b.slides&&b.slides.length){
           uiBusyText('📊 يبني ملف PowerPoint…');
