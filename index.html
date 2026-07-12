@@ -2658,7 +2658,6 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
       <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
       <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
-      <button class="eg-regen" style="flex:1" id="dpb-drive-btn" onclick="dpDriveExport()">⬆️ رفع نسخ الملفات إلى درايف</button>
     </div>
     <!-- ⭐ تقييم التحضير المشترك (يظهر للمستورد فقط) -->
     <div id="dpb-rating" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center">
@@ -13469,7 +13468,7 @@ async function renderDailyPrep(){
       </div>
       <div class="dp-actions">
         ${actions}
-        ${(b.status==='working'||b.status==='saving')?'':`<button class="dp-btn done-btn" onclick="dpMarkDone(${i})">✅ أنجزت الحصة</button>`}
+        ${(b.status==='ready'||b.status==='saved')?`<button class="dp-btn done-btn" onclick="dpMarkDone(${i})">⏭️ حضّر الدرس التالي</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -13701,7 +13700,8 @@ async function dpPrepareAll(i){
         for(const im of sh.slide_imgs){try{b.slideImgs.push(await brandImage(im));}catch(e){b.slideImgs.push(im);}}
       }
       b.missing=dpMissingParts(b);
-      b.status='ready';b.imported=true;
+      b.imported=true;
+      dpLinkToCard(it,b);   // 📎 المستورد أيضاً ينتقل للبطاقة فوراً
       dpPersist(it,b);
       renderDailyPrep();
       try{
@@ -13721,6 +13721,8 @@ async function dpPrepareAll(i){
     b.status='ready';
     egCreditSet(egCreditGet()-5);
     await dpPublishShared(it,b);
+    dpLinkToCard(it,b);   // 📎 تلقائياً إلى بطاقة الدرس فور الانتهاء
+    toast('📎 التحضير جاهز وانتقل إلى بطاقة الدرس','ok');
   }else{
     b.status='idle';
     toast('⚠️ تعذّر التحضير — أعد المحاولة',true);
@@ -13753,6 +13755,7 @@ async function dpCompleteMissing(i){
   await dpRunSteps(it,b,setProg);
   b.status='ready';
   await dpPublishShared(it,b);
+  dpLinkToCard(it,b);
   dpPersist(it,b);
   renderDailyPrep();
 }
@@ -13769,8 +13772,7 @@ function dpOpenBundleIt(it,b,fromCard){
   dpCurrentItem=it;
   const sv=document.getElementById('dpb-save-btn');
   if(sv)sv.style.display=fromCard?'none':'';
-  const dv=document.getElementById('dpb-drive-btn');
-  if(dv){dv.disabled=false;dv.textContent='⬆️ رفع نسخ الملفات إلى درايف';}
+
   const rb=document.getElementById('dpb-rating');
   if(rb){rb.style.display=b.imported?'':'none';if(b.imported)dpLoadRating(it.lessonId);}
   document.getElementById('dpb-title').textContent='✨ تحضير درس: '+it.lesson;
@@ -13934,13 +13936,8 @@ async function dpRemovePrepFromCard(lessonId){
   try{refreshLessonFiles(lessonId);}catch(e){}
   scheduleSave();
 }
-async function dpSaveBundle(i){
-  if(typeof i!=='number')i=window._dpBundleIdx;
-  const it=(window._dpItems||[])[i];if(!it)return;
-  const b=dpBundle(it.lessonId);
-  if(b.status!=='ready')return;
-  // ⚡ الحفظ فوري: التحضير ينتقل مباشرة إلى بطاقة الدرس (بلا رفع درايف)
-  // المعاينة تفتح داخل المنصة، ورفع نسخ الملفات إلى درايف زر اختياري في المعاينة
+// 📎 نقل التحضير إلى بطاقة الدرس — يحدث تلقائياً فور انتهاء التوليد
+function dpLinkToCard(it,b){
   const lid=it.lessonId;
   if(!lessonFiles[lid])lessonFiles[lid]=[];
   lessonFiles[lid]=lessonFiles[lid].filter(f=>!f.prep);
@@ -13952,6 +13949,13 @@ async function dpSaveBundle(i){
   try{refreshLessonFiles(lid);}catch(e){}
   scheduleSave();
   b.status='saved';
+}
+async function dpSaveBundle(i){
+  if(typeof i!=='number')i=window._dpBundleIdx;
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status!=='ready')return;
+  dpLinkToCard(it,b);
   dpPersist(it,b);
   renderDailyPrep();
   const mb=document.getElementById('dpb-save-btn');
@@ -14304,16 +14308,20 @@ function dpPrintPlan(){
 }
 
 // ✅ أنجزت الحصة: تحديث الخطة + إشعال تجهيز الدرس التالي تلقائياً
+// يعلّم الدرس الحالي منجزاً ويطلق تحضير الدرس التالي كاملاً تلقائياً
 function dpMarkDone(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   const cur=get(it.lessonId);cur.done=true;state[it.lessonId]=cur;
   scheduleSave();
   try{applyFilter();update();buildTracker();}catch(e){}
-  toast('✅ درس منجز — يجهّز درس الغد الآن ☕','ok');
+  toast('✅ أنجزت — أجهّز الدرس التالي الآن ✨','ok');
   setTimeout(async()=>{
     await renderDailyPrep();
-    const next=dpNextLessons().find(n=>n.gi===it.gi);
-    if(next&&!dpPreps.has(next.lessonId))dpEnsurePrep(next,true);
+    const items=window._dpItems||[];
+    const idx=items.findIndex(n=>n.gi===it.gi);
+    if(idx>=0&&dpBundle(items[idx].lessonId).status!=='working'&&dpBundle(items[idx].lessonId).status!=='saved'&&dpBundle(items[idx].lessonId).status!=='ready'){
+      dpPrepareAll(idx);
+    }
   },400);
 }
 
