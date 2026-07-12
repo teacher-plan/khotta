@@ -1127,16 +1127,30 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .lesson-upload-btn:hover{border-color:var(--gold);color:var(--gold);border-style:solid;background:rgba(184,134,11,.06);}
 /* 🚀 وضع لوحة الانطلاق: القسم بكامل الصفحة + تنقل ببطاقات */
 body.lp .nav{display:none!important}
-/* زر التنقل: أعلى البداية (فوق شريط فهيم البنفسجي) — تصميم «رقاقة قيادة» زجاجية */
-#lp-bar{position:fixed;top:12px;inset-inline-start:14px;z-index:210;display:none}
-body.lp #lp-bar{display:flex}
-#lp-pill{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(184,134,11,.35);border-radius:14px;padding:6px 7px;padding-inline-end:16px;font-family:'Cairo',sans-serif;font-size:13.5px;font-weight:800;color:var(--text);cursor:pointer;box-shadow:0 6px 20px rgba(42,26,26,.14),inset 0 1px 0 rgba(255,255,255,.7);transition:transform .15s,box-shadow .15s;max-width:230px}
-#lp-pill::before{content:"";width:30px;height:30px;flex:none;border-radius:9px;background:linear-gradient(135deg,#b8860b,#d99a06),radial-gradient(circle,#fff 0,#fff 0);background-image:radial-gradient(circle,rgba(255,255,255,.95) 1.6px,transparent 2px),linear-gradient(135deg,#c8940d,#a06e08);background-size:9px 9px,100% 100%;background-position:center;box-shadow:0 3px 8px rgba(184,134,11,.4),inset 0 1px 0 rgba(255,255,255,.35)}
-#lp-pill:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(42,26,26,.18),inset 0 1px 0 rgba(255,255,255,.7)}
-#lp-pill:active{transform:scale(.97)}
-#lp-pill .chev{color:var(--gold);font-size:10px;margin-inline-start:2px}
-#lp-pill #lp-pill-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:640px){#lp-pill{max-width:190px;font-size:12.5px}}
+/* زر التنقل: ربع دائرة ذهبية في زاوية البداية العليا — بلا نص، تنبض وتلمع */
+#lp-bar{position:fixed;top:0;inset-inline-start:0;z-index:210;display:none}
+body.lp #lp-bar{display:block}
+#lp-pill{position:relative;width:64px;height:64px;padding:0;border:none;cursor:pointer;overflow:hidden;
+  border-radius:0;border-end-end-radius:100%;
+  background:linear-gradient(135deg,#8a6508,#c8940d 55%,#f0b429);
+  box-shadow:0 4px 18px rgba(184,134,11,.45);
+  transform-origin:top right;transition:transform .2s cubic-bezier(.3,1.5,.5,1);
+  animation:lpBreath 4.5s ease-in-out infinite}
+html[dir="ltr"] #lp-pill{transform-origin:top left}
+#lp-pill:hover{transform:scale(1.12)}
+#lp-pill:active{transform:scale(.94)}
+/* شبكة النقاط البيضاء قرب الزاوية */
+#lp-pill::before{content:"";position:absolute;top:11px;inset-inline-start:11px;width:26px;height:26px;
+  background-image:radial-gradient(circle,rgba(255,255,255,.95) 1.9px,transparent 2.3px);
+  background-size:10px 10px;background-position:0 0}
+/* ومضة ضوء تعبر القوس كل بضع ثوانٍ */
+#lp-pill::after{content:"";position:absolute;inset:-40%;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.5) 50%,transparent 58%);
+  animation:lpSheen 4.5s ease-in-out infinite}
+@keyframes lpBreath{0%,100%{box-shadow:0 4px 18px rgba(184,134,11,.4)}50%{box-shadow:0 6px 30px rgba(240,180,41,.8)}}
+@keyframes lpSheen{0%,55%,100%{transform:translateX(70%)}75%{transform:translateX(-70%)}}
+@media(prefers-reduced-motion:reduce){#lp-pill,#lp-pill::after{animation:none}}
+@media(max-width:640px){#lp-pill{width:54px;height:54px}#lp-pill::before{top:9px;inset-inline-start:9px;width:22px;height:22px;background-size:9px 9px}}
 /* أيقونة الحساب: أعلى يسار الشاشة بعيداً عن يد المعلم (فيها إجراءات حساسة) */
 #lp-user{position:fixed;top:12px;inset-inline-end:14px;z-index:210;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:rgba(255,255,255,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);cursor:pointer;padding:0;overflow:hidden;display:none;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 body.lp #lp-user{display:flex}
@@ -1179,9 +1193,11 @@ body.lp .page.active{animation:lpPage .25s ease}
 /* فهيم: صفحة مستقلة تملأ الشاشة كاملة — لا نافذة فوق خلفية */
 body.lp #page-faheem{padding:0;}
 body.lp #page-faheem .wrap{max-width:none;margin:0;padding-top:0;}
-body.lp .fhp-card{max-width:none;width:100%;height:100dvh;min-height:100dvh;border:0;border-radius:0;box-shadow:none;background:var(--bg);padding-top:56px;}
-body.lp .page>.wrap{padding-top:50px;}
+body.lp .fhp-card{max-width:none;width:100%;height:100dvh;min-height:100dvh;border:0;border-radius:0;box-shadow:none;background:var(--bg);}
+body.lp .page>.wrap{padding-top:52px;}
 body.lp #page-faheem .wrap{padding-top:0;}
+/* رأس فهيم يفسح لربع الدائرة */
+body.lp .fhp-card #fh-head{padding-inline-start:max(80px,calc((100vw - 940px)/2));}
 /* محتوى المحادثة في عمود قراءة مريح وسط الشاشة العريضة */
 body.lp .fhp-card #fh-head,
 body.lp .fhp-card .fh-cards,
@@ -1833,7 +1849,7 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- 🚀 لوحة الانطلاق: الحبّة + زر الحساب -->
 <div id="lp-bar">
-  <button id="lp-pill" onclick="lpOpen()"><span id="lp-pill-txt">📅 الجدول</span><span class="chev">▾</span></button>
+  <button id="lp-pill" onclick="lpOpen()" title="التنقل بين الأقسام" aria-label="التنقل بين الأقسام"></button>
   <button id="lp-user" onclick="toggleUserMenu(event)" title="حسابي"><img id="lp-user-img" alt="" onerror="this.style.display='none'"><span>👤</span></button>
 </div>
 <!-- 🚀 لوحة الانطلاق: الشبكة -->
