@@ -1625,6 +1625,21 @@ input,textarea,select{font-size:16px !important;}
   .modal-box,.modal-inner{width:100% !important;max-width:100% !important;margin:8px 0 !important;border-radius:16px !important;}
   .grade-input{width:32px !important;font-size:12px !important;}
 }
+/* ══ 🦊 تحسينات قسم فهيم ══ */
+/* فهيم على يمين الشاشة، والمعلم على يسارها */
+.fh-brow{align-self:flex-start;flex-direction:row;}
+.fh-msg.user{align-self:flex-end;background:linear-gradient(135deg,#1a7a3a,#27ae60);border-bottom-left-radius:6px;border-bottom-right-radius:16px;}
+.fh-msg.bot{border-bottom-right-radius:6px;border-bottom-left-radius:16px;box-shadow:0 2px 8px rgba(42,26,26,.07);}
+/* شاشة الترحيب: بطل متمركز بشخصية فهيم */
+.fh-hero{align-self:center;text-align:center;margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0;}
+.fh-hero .hero-ava{width:92px;height:92px;border-radius:50%;background:linear-gradient(135deg,#d99a06,#ffd76a) center/cover;background-image:var(--fhAva,linear-gradient(135deg,#d99a06,#ffd76a));box-shadow:0 10px 30px rgba(184,134,11,.35);border:3px solid rgba(255,255,255,.75);}
+.fh-hero h3{font-size:19px;font-weight:800;color:var(--text);margin:0;}
+.fh-hero p{font-size:13px;color:var(--muted);line-height:2;max-width:420px;margin:0;}
+/* حقل الكتابة: تركيز ذهبي يليق بالهوية */
+#fh-input{border-radius:14px;}
+#fh-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,11,.12);}
+/* المحادثة المفتوحة حالياً مميزة في الشريط الجانبي */
+.fh-hist-item.sel{border-color:var(--gold);background:linear-gradient(135deg,rgba(184,134,11,.10),transparent),var(--surface);}
 </style>
 </head>
 <body>
@@ -13128,11 +13143,15 @@ function fhActGame(){
 }
 function fhWelcome(){
   const body=document.getElementById('fh-body');
-  body.innerHTML=`<div class="fh-brow"><span class="fh-bava"></span><div class="fh-msg bot">أهلاً بك! أنا <b>فهيم</b> ✨ مساعدك التربوي الخاص — أعرف صفوفك ودروسك، وجاهز أساعدك في التحضير والاستراتيجيات وإدارة الصف. اسألني ما شئت!</div></div>
-  <div class="fh-suggest">
-    <button onclick="fhAsk('اقترح تهيئة ممتعة لدرس اليوم')">✨ تهيئة لدرس اليوم</button>
-    <button onclick="fhAsk('أعطني استراتيجية نشطة تناسب درس اليوم')">🎯 استراتيجية نشطة</button>
-    <button onclick="fhAsk('كيف أتعامل مع طالب كثير الحركة يشتت الصف؟')">🧒 طالب مشتت</button>
+  body.innerHTML=`<div class="fh-hero">
+    <div class="hero-ava"></div>
+    <h3>أهلاً بك! أنا فهيم 🦊</h3>
+    <p>مساعدك التربوي الخاص — أعرف صفوفك ودروسك، وجاهز أساعدك في التحضير والاستراتيجيات وإدارة الصف. اسألني ما شئت، أو ابدأ من البطاقات في الأعلى.</p>
+    <div class="fh-suggest">
+      <button onclick="fhAsk('اقترح تهيئة ممتعة لدرس اليوم')">✨ تهيئة لدرس اليوم</button>
+      <button onclick="fhAsk('أعطني استراتيجية نشطة تناسب درس اليوم')">🎯 استراتيجية نشطة</button>
+      <button onclick="fhAsk('كيف أتعامل مع طالب كثير الحركة يشتت الصف؟')">🧒 طالب مشتت</button>
+    </div>
   </div>`;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
@@ -13199,7 +13218,7 @@ async function fhHistory(){
   try{
     const{data}=await sb.from('ai_chats').select('id,title,updated_at').order('updated_at',{ascending:false}).limit(25);
     if(!data||!data.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:10px">📭 لا توجد محادثات محفوظة بعد</div>';return;}
-    list.innerHTML=data.map(c=>`<div class="fh-hist-item" onclick="fhOpenChat('${c.id}')">
+    list.innerHTML=data.map(c=>`<div class="fh-hist-item ${c.id===fhChatId?'sel':''}" onclick="fhOpenChat('${c.id}')">
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">💬 ${escHtml(c.title||'محادثة')}</span>
       <span style="font-size:10px;color:var(--muted);flex:none">${new Date(c.updated_at).toLocaleDateString('ar')}</span>
       <button class="fh-hbtn" style="padding:3px 6px" onclick="event.stopPropagation();fhDelChat('${c.id}',this)">🗑️</button>
@@ -13215,6 +13234,8 @@ async function fhOpenChat(id){
     fhRender();
     // على الشاشات الصغيرة: أغلق الشريط الجانبي بعد اختيار المحادثة
     const s=document.getElementById('fhp-side');if(s)s.classList.remove('open');
+    // تمييز المحادثة المفتوحة في القائمة
+    document.querySelectorAll('.fh-hist-item').forEach(el=>el.classList.toggle('sel',el.getAttribute('onclick')?.includes(id)));
   }catch(e){}
 }
 async function fhDelChat(id,btn){
