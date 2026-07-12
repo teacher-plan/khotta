@@ -12464,6 +12464,7 @@ async function gmSave(){
   const subject=document.getElementById('eg-subject').value;
   const themeSel=(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value||null;
   const title=(lessons[0]?lessons[0].name:'لعبة')+' — '+GM_TPL_LBL[gmTpl];
+  uiBusy('💾 يحفظ اللعبة…');
   try{
     const{error}=await sb.from('games').insert({
       grade:String(grade),subject,unit:lessons[0]?lessons[0].unit:'',lesson:lessons.map(l=>l.name).join('، '),
@@ -12471,14 +12472,15 @@ async function gmSave(){
     });
     if(error)throw error;
     gmLoadMyGames();
-  }catch(e){toast('تعذّر حفظ اللعبة',true);console.warn('gmSave',e);return;}
+  }catch(e){uiBusyDone();toast('تعذّر حفظ اللعبة',true);console.warn('gmSave',e);return;}
   // درس واحد؟ تُرفق نسخة اللعبة (ملف يعمل بلا إنترنت) في بطاقة الدرس تلقائياً
   const ids=Object.keys(egSelected);
   if(ids.length===1){
     const lid=ids[0];
     try{
-      toast('💾 حُفظت في ألعابك — يجهّز نسخة بطاقة الدرس...','ok');
+      uiBusyText('📦 يجهّز نسخة بطاقة الدرس…');
       const blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,themeSel);
+      uiBusyText('⬆️ يرفع النسخة إلى بطاقة الدرس…');
       const fname=('لعبة - '+title).replace(/[\\/:*?"<>|]/g,'')+'.html';
       const file=new File([blob],fname,{type:'text/html'});
       const result=await driveUpload(file,`[درس-${lid}] ${fname}`);
@@ -12486,10 +12488,12 @@ async function gmSave(){
         if(!lessonFiles[lid])lessonFiles[lid]=[];
         lessonFiles[lid].push({id:Date.now().toString(),name:fname,size:file.size,type:'text/html',driveId:result.id,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
         refreshLessonFiles(lid);scheduleSave();
+        uiBusyDone();
         toast('✅ حُفظت في ألعابك وفي بطاقة الدرس','ok');
-      }else toast('💾 حُفظت في ألعابك (تعذّر إرفاقها ببطاقة الدرس)',true);
-    }catch(e){console.warn('gmSave attach',e);toast('💾 حُفظت في ألعابك (تعذّر إرفاقها ببطاقة الدرس)',true);}
+      }else{uiBusyDone();toast('💾 حُفظت في ألعابك (تعذّر إرفاقها ببطاقة الدرس)',true);}
+    }catch(e){uiBusyDone();console.warn('gmSave attach',e);toast('💾 حُفظت في ألعابك (تعذّر إرفاقها ببطاقة الدرس)',true);}
   }else{
+    uiBusyDone();
     toast('💾 حُفظت اللعبة في ألعابك','ok');
   }
 }
