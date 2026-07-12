@@ -1170,8 +1170,9 @@ body.lp #lp-user{display:flex}
 .lp-tile .ic svg{width:22px;height:22px}
 .lp-tile .nm{font-size:14px;font-weight:800}
 .lp-tile .lv{font-size:11px;color:var(--muted);line-height:1.8;margin-top:auto}
-.lp-tile.now{border-color:var(--gold);background:linear-gradient(160deg,rgba(184,134,11,.1),transparent 60%),var(--surface)}
-.lp-tile.now .nm::after{content:"● أنت هنا";font-size:9.5px;color:var(--gold);margin-inline-start:6px}
+.lp-tile{position:relative}
+.lp-tile.now{border-color:#27ae60;background:linear-gradient(160deg,rgba(39,174,96,.10),transparent 60%),var(--surface)}
+.lp-tile.now::after{content:"✓";position:absolute;top:9px;inset-inline-end:9px;width:21px;height:21px;border-radius:50%;background:#27ae60;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 7px rgba(39,174,96,.45)}
 .lp-tile.fh{background:linear-gradient(135deg,#b8860b,#f0b429 55%,#d99a06);border-color:#9a7010;color:#fff}
 .lp-tile.fh .ic,.lp-tile.fh .nm{color:#fff}
 .lp-tile.fh .lv{color:rgba(255,255,255,.92)}
@@ -1640,6 +1641,18 @@ input,textarea,select{font-size:16px !important;}
 #fh-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,11,.12);}
 /* المحادثة المفتوحة حالياً مميزة في الشريط الجانبي */
 .fh-hist-item.sel{border-color:var(--gold);background:linear-gradient(135deg,rgba(184,134,11,.10),transparent),var(--surface);}
+/* ══ 📅 جدول الحصص: حدود داخلية وخارجية أوضح ══ */
+.tt-wrap{border:2px solid rgba(122,96,80,.55);}
+#tt-table thead tr th{border-left:1.5px solid rgba(122,96,80,.38);border-bottom:2px solid rgba(122,96,80,.5);}
+#tt-table tbody tr td{border-top:1.5px solid rgba(122,96,80,.32);border-left:1.5px solid rgba(122,96,80,.32);}
+#tt-table thead tr th:first-child,#tt-table tbody tr td:first-child{border-left:none;}
+/* ══ 📊 الدرجات: فاصل أنيق بدل صندوق الأرقام ══ */
+.grades-divider{height:2px;margin:20px auto 18px;max-width:520px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(184,134,11,.55) 50%,transparent);position:relative;}
+.grades-divider::after{content:"✦";position:absolute;top:-9px;left:50%;transform:translateX(-50%);color:var(--gold);font-size:11px;background:var(--bg);padding:0 8px;}
+/* ══ 📈 الإحصائيات: بطاقات أرقى ══ */
+.stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.6),transparent 45%),var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:0 3px 12px rgba(42,26,26,.07);overflow:hidden;}
+.stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,rgba(184,134,11,.15),rgba(184,134,11,.6) 50%,rgba(184,134,11,.15));}
+.stat-card .stat-card-value{font-size:26px;font-weight:800;}
 </style>
 </head>
 <body>
@@ -1861,7 +1874,7 @@ input,textarea,select{font-size:16px !important;}
   <button class="nav-btn teacher-only" data-page="stats" onclick="showPage('stats',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> إحصائيات</button>
   <button class="nav-btn teacher-only" data-page="archive" onclick="showPage('archive',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V4zm0 4h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm5 3v2h8v-2H8z"/></svg></span> الأرشيف</button>
   <button class="nav-btn" data-page="library" onclick="showPage('library',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></span> المكتبة</button>
-  <button class="nav-btn" data-page="examgen" onclick="showPage('examgen',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> مولّد الاختبارات</button>
+  <button class="nav-btn" data-page="examgen" onclick="showPage('examgen',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> الاستوديو</button>
   <button class="nav-btn nav-fh" data-page="faheem" onclick="showPage('faheem',this)">🦊 فهيم</button>
   <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> المراسلات</button>
 
@@ -2118,7 +2131,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
   <div id="grades-empty" class="grades-empty teacher-only"><div class="grades-empty-icon">📋</div><p>اختر شعبة من فوق</p></div>
   <div id="grades-content" class="teacher-only" style="display:none">
-    <div class="grades-summary" id="grades-summary"></div>
+    <div class="grades-divider" id="grades-summary"></div>
     <div id="print-grades-area" style="display:none"></div>
   <div class="grades-search-wrap">
     <svg class="grades-search-ico" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -2236,12 +2249,11 @@ input,textarea,select{font-size:16px !important;}
   <div class="chart-card"><h3>🏫 إحصائية كل شعبة على حدة</h3><div class="class-stats-grid" id="stats-per-class"></div></div>
   <div class="chart-card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>📚 التقدم حسب الوحدات</span><select id="stats-grade-select" onchange="statsGradeIdx=Number(this.value);renderStatsSections()" style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:11.5px;outline:none"></select></h3><div id="stats-sections"></div></div>
   <div class="chart-card"><h3>🏫 توزيع الدروس على الشعب</h3><div id="stats-classes"></div></div>
-  <div class="chart-card"><h3>📅 الحصص الأسبوعية</h3><div class="week-grid" id="stats-week"></div></div>
 </div></div>
 
 <!-- ══ ARCHIVE ══ -->
 <div class="page" id="page-archive"><div class="wrap">
-  <div class="page-header"><div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V4zm0 4h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm5 3v2h8v-2H8z"/></svg></span> الأرشيف</div><h1>أرشيف الفصل الدراسي</h1><p>محفوظ سحابياً ☁️</p></div>
+  <div class="page-header"><div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V4zm0 4h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm5 3v2h8v-2H8z"/></svg></span> الأرشيف</div><h1>أرشيفي الخاص</h1><p>🔒 مساحتك الشخصية — ملفاتك هنا لا يراها أحد سواك. ارفعها مرة، وافتحها من أي جهاز… وداعاً للفلاش</p></div>
   <div class="storage-bar-wrap">
     <span class="storage-label">☁️ التخزين السحابي</span>
     <div class="storage-track"><div class="storage-fill" id="stor-fill" style="width:0%"></div></div>
@@ -2453,9 +2465,9 @@ input,textarea,select{font-size:16px !important;}
 <!-- ══ EXAM GENERATOR ══ -->
 <div class="page" id="page-examgen"><div class="wrap">
   <div class="page-header">
-    <div class="tag">🧪 مولّد الاختبارات</div>
-    <h1>مولّد الاختبارات</h1>
-    <p>ولّد اختباراً من محتوى المكتبة المعتمد — اختر الدروس ثم اضبط الخيارات</p>
+    <div class="tag">🎬 الاستوديو</div>
+    <h1>الاستوديو</h1>
+    <p>هنا تصنع كل شيء من محتوى المنهج المعتمد: اختبارات، عروض، إنفوجرافيك، وألعاب — اختر الدروس ثم اضبط الخيارات</p>
     <button class="eg-regen" style="margin-top:10px;max-width:240px" onclick="egOpenBank()">📚 بنك الأسئلة (<span id="eg-bank-count">٠</span>)</button>
   </div>
 
@@ -7820,7 +7832,7 @@ function renderGradesTable(){
   let sumPts=0,countSt=0;
   sList.forEach(st=>{const sg=(grades[k]||{})[st.id]||{};let pts=0;cols.forEach(c=>{if(sg[c.id]!=null&&!isNaN(sg[c.id]))pts+=Number(sg[c.id]);});if(totalMax>0){sumPts+=pts;countSt++;}});
   const classAvg=countSt&&totalMax?Math.round(sumPts/countSt):0;
-  document.getElementById('grades-summary').innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
+  /* الفاصل الأنيق حلّ محل صندوق الأرقام */
   const wrapEl=document.getElementById('grades-table-wrap');
   const canEditCols=isAdmin();
   const gradeThsArr=cols.map(c=>{const delBtn=canEditCols?`<button class="gch-act-btn" onclick="delGradeCol('${c.id}')">✕</button>`:'';return `<th><div class="grade-col-head"><div class="gch-actions">${delBtn}</div><div class="gch-name">${c.name}</div><div class="gch-max">/${c.max}</div></div></th>`;});
@@ -8204,8 +8216,7 @@ function updateGradeCellUI(studentId,colId){
   let sumPts=0,countSt=0;
   sList.forEach(st=>{const sgx=(grades[k]||{})[st.id]||{};let pts=0;cols.forEach(c=>{if(sgx[c.id]!=null&&!isNaN(sgx[c.id]))pts+=Number(sgx[c.id]);});if(totalMax>0){sumPts+=pts;countSt++;}});
   const classAvg=countSt&&totalMax?Math.round(sumPts/countSt):0;
-  const sumEl=document.getElementById('grades-summary');
-  if(sumEl)sumEl.innerHTML=`<div class="gs-stat"><div class="gs-stat-num">${sList.length}</div><div class="gs-stat-lbl">طالب</div></div><div class="gs-stat"><div class="gs-stat-num">${cols.length}</div><div class="gs-stat-lbl">تقييم</div></div><div class="gs-stat"><div class="gs-stat-num">${classAvg} / ${totalMax}</div><div class="gs-stat-lbl">متوسط الصف</div></div>`;
+
 }
 
 async function delGradeCol(id){if(!await uiConfirm('حذف هذا التقييم؟'))return;gradeTypes=gradeTypes.filter(c=>c.id!==id);Object.keys(grades).forEach(ck=>{Object.keys(grades[ck]).forEach(sid=>{if(grades[ck][sid][id]!=null)delete grades[ck][sid][id];});});renderGradesTable();toast('🗑️ تم الحذف');persistGradeTypesNow();persistGradesNow();scheduleSave();}
@@ -8585,14 +8596,38 @@ function hideTemplateComingSoon(){
 // ══ STATS ══════════════════════════════════════════════
 function renderStats(){
   const all=allLessons(),total=all.length,done=all.filter(l=>get(l.id).done).length,pct=total?Math.round(done/total*100):0;
-  // عدد الحصص الأسبوعية من الجدول الدراسي
-  let weeklyPeriods=0;
-  if(timetableConfig&&timetableConfig.schedule){Object.values(timetableConfig.schedule).forEach(day=>{weeklyPeriods+=Object.values(day).filter(v=>v).length;});}
   const allCls=getAllClasses();
   const classCounts={};allCls.forEach(cls=>classCounts[cls.id]=0);
   all.forEach(l=>{const s=get(l.id);if(s.classes){Object.keys(s.classes).forEach(c=>{if(s.classes[c]&&classCounts[c]!=null)classCounts[c]++;});}});
-  const cards=[{icon:'✅',label:'دروس مكتملة',val:done,sub:`من ${total}`},{icon:'⏳',label:'دروس متبقية',val:total-done,sub:`${100-pct}%`},{icon:'📈',label:'نسبة الإنجاز',val:pct+'%',sub:''},{icon:'🕐',label:'عدد الحصص الأسبوعية',val:weeklyPeriods,sub:'حصة / الأسبوع'},{icon:'🏫',label:'عدد الشعب',val:allCls.length,sub:''},];
-  let totalSt=0;allCls.forEach(cls=>totalSt+=(students[cls.id]||[]).length);if(totalSt>0)cards.push({icon:'👥',label:'إجمالي الطلاب',val:totalSt,sub:''});
+  // ── مؤشرات مُنتقاة: كل رقم يقود لقرار، لا حشو ──
+  let totalSt=0;allCls.forEach(cls=>totalSt+=(students[cls.id]||[]).length);
+  // متوسط الدرجات العام + أفضل شعبة وأدناها (إنجازاً)
+  let gSum=0,gCnt=0,best=null,worst=null;
+  if(teacherConfig&&teacherConfig.grades)teacherConfig.grades.forEach(g=>{
+    const gl=g.units.flatMap(u=>u.lessons);const gt=gl.length;
+    g.classes.forEach(cls=>{
+      const cd=gl.filter(l=>{const s=get(l.id);return s.classes&&s.classes[cls.id];}).length;
+      const cp=gt?Math.round(cd/gt*100):0;
+      if(!best||cp>best.p)best={n:cls.name,p:cp};
+      if(!worst||cp<worst.p)worst={n:cls.name,p:cp};
+      const cols=gradeTypes.filter(c=>c.classKey===cls.id);
+      (students[cls.id]||[]).forEach(st=>{
+        const sg=(grades[cls.id]||{})[st.id]||{};let pts=0,mx=0;
+        cols.forEach(c=>{if(sg[c.id]!=null){pts+=Number(sg[c.id]);mx+=Number(c.max);}});
+        if(mx>0){gSum+=(pts/mx)*100;gCnt++;}
+      });
+    });
+  });
+  const cards=[
+    {icon:'📈',label:'نسبة الإنجاز',val:pct+'%',sub:`${done} من ${total} درساً`},
+    {icon:'⏳',label:'دروس متبقية',val:total-done,sub:'حتى نهاية الفصل'},
+  ];
+  if(gCnt)cards.push({icon:'🎯',label:'متوسط درجات طلابك',val:Math.round(gSum/gCnt)+'%',sub:`من ${gCnt} طالباً مقيّماً`});
+  if(totalSt>0)cards.push({icon:'👥',label:'إجمالي الطلاب',val:totalSt,sub:`في ${allCls.length} شعبة`});
+  if(best&&worst&&best.n!==worst.n){
+    cards.push({icon:'🏆',label:'الشعبة الأسرع تقدماً',val:best.n,sub:best.p+'%'});
+    cards.push({icon:'⚠️',label:'شعبة تحتاج متابعة',val:worst.n,sub:worst.p+'% إنجاز'});
+  }
   document.getElementById('stats-cards').innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-card-top"><span class="stat-card-icon">${c.icon}</span><span class="stat-card-label">${c.label}</span></div><div class="stat-card-value">${c.val}</div>${c.sub?`<div class="stat-card-sub">${c.sub}</div>`:''}</div>`).join('');
   // ── إحصائية كل شعبة على حدة ──
   const perClassEl=document.getElementById('stats-per-class');
@@ -8634,8 +8669,6 @@ function renderStats(){
   buildStatsGradeSelect();renderStatsSections();
   const maxC=Math.max(...allCls.map(cls=>classCounts[cls.id]||0),1);
   document.getElementById('stats-classes').innerHTML=allCls.map(cls=>{const cnt=classCounts[cls.id]||0;const pctW=(cnt/maxC)*100;return`<div class="chart-row"><span class="chart-row-label" style="color:${cls.color}">🏫 ${cls.name}</span><div class="chart-row-bar-wrap"><div class="chart-row-bar" style="width:${pctW}%;background:${cls.color}">${cnt}</div></div></div>`;}).join('');
-  const wdays=[{id:'sun',name:'أحد'},{id:'mon',name:'إثنين'},{id:'tue',name:'ثلاثاء'},{id:'wed',name:'أربعاء'},{id:'thu',name:'خميس'}];
-  document.getElementById('stats-week').innerHTML=wdays.map(d=>{const sch=timetableConfig.schedule[d.id]||{};const count=Object.values(sch).filter(v=>v).length;return`<div class="week-cell"><div class="wc-day">${d.name}</div><div class="wc-count">${count}</div><div style="font-size:9px;color:var(--muted)">حصة</div></div>`;}).join('');
 }
 
 let statsGradeIdx=0;
@@ -13074,7 +13107,7 @@ function fhInitMascot(){
   img.src=fhMascotUrl();
 }
 // ═ 🚀 لوحة الانطلاق — تنقل بكامل الصفحة ═
-const LP_DESC={timetable:'حصص اليوم وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات شعبك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اختبارات وعروض وإنفوجرافيك وألعاب',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
+const LP_DESC={timetable:'حصص اليوم وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات طلابك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اصنع اختباراً أو عرضاً أو إنفوجرافيك أو لعبة',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
 function lpLive(pg){
   try{
     if(pg==='timetable'&&typeof dpNextLessons==='function'){
