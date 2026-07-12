@@ -13833,9 +13833,30 @@ function dpEditPlanFromBundle(){
   if(typeof i==='number')dpOpenPlan(i);
 }
 
+// ضغط صورة شريحة قبل دمجها في العرض — يسرّع البناء ويصغّر الملف دون فرق بصري
+function dpShrinkImg(dataUrl,maxW,q){
+  return new Promise(res=>{
+    try{
+      const im=new Image();
+      im.onload=()=>{
+        try{
+          const sc=Math.min(1,(maxW||1600)/im.width);
+          const c=document.createElement('canvas');
+          c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+          c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+          const out=c.toDataURL('image/jpeg',q||.82);
+          res(out.length<dataUrl.length?out:dataUrl);
+        }catch(e){res(dataUrl);}
+      };
+      im.onerror=()=>res(dataUrl);
+      im.src=dataUrl;
+    }catch(e){res(dataUrl);}
+  });
+}
 // بناء العرض من الشرائح المرسومة بالذكاء (صور كاملة + ملاحظات المعلم)
 async function dpBuildPptxFromImages(it,slides,imgs){
   await loadPptxJs();
+  imgs=await Promise.all(imgs.map(im=>im?dpShrinkImg(im,1600,.82):im));
   const pptx=new PptxGenJS();
   pptx.defineLayout({name:'KHDPI',width:10,height:5.63});pptx.layout='KHDPI';
   imgs.forEach((im,i)=>{
