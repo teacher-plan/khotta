@@ -13590,6 +13590,32 @@ function dpPersist(it,b){
   try{
     dpIdbSet(dpKey(it),{status:b.status==='working'?'ready':(b.status||'ready'),plan:b.plan||null,slides:b.slides||null,examHtml:b.examHtml||null,infoRaw:b.infoRaw||null,infoBranded:b.infoBranded||null,slideImgs:b.slideImgs||null,slideImgsRaw:b.slideImgsRaw||null,missing:b.missing||[]});
   }catch(e){}
+  dpCloudPersist(it,b); // ☁️ نسخة المعلم في القاعدة — يفتح تحضيره من أي جهاز
+}
+// ☁️ حفظ نسخة المعلم من التحضير في قاعدة البيانات (بلا الصور المختومة — تُعاد صناعتها عند الفتح)
+async function dpCloudPersist(it,b){
+  try{
+    if(!currentUser||!b||!b.plan)return;
+    const payload={plan:b.plan||null,slides:b.slides||null,examHtml:b.examHtml||null,infoRaw:b.infoRaw||null,slideImgsRaw:b.slideImgsRaw||null,missing:b.missing||[],imported:!!b.imported};
+    await sb.from('user_preps').upsert(
+      {user_id:currentUser.id,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,data:payload,updated_at:new Date().toISOString()},
+      {onConflict:'user_id,lesson_id'});
+  }catch(e){/* الجدول غير جاهز أو انقطاع — النسخ المحلية والمشتركة تغطي */}
+}
+// ☁️ جلب نسخة المعلم من القاعدة وإعادة بناء الصور المختومة
+async function dpCloudLoad(lessonId){
+  try{
+    if(!currentUser)return null;
+    const{data:r}=await sb.from('user_preps').select('data').eq('user_id',currentUser.id).eq('lesson_id',lessonId).maybeSingle();
+    const d=r&&r.data;if(!d||!d.plan)return null;
+    const b={status:'saved',plan:d.plan,slides:d.slides||null,examHtml:d.examHtml||null,infoRaw:d.infoRaw||null,slideImgsRaw:d.slideImgsRaw||null,missing:d.missing||[],imported:!!d.imported};
+    if(d.infoRaw){try{b.infoBranded=await brandImage(d.infoRaw);}catch(e){b.infoBranded=d.infoRaw;}}
+    if(d.slideImgsRaw&&d.slideImgsRaw.some(Boolean)){
+      b.slideImgs=[];
+      for(const im of d.slideImgsRaw){try{b.slideImgs.push(im?await brandImage(im):im);}catch(e){b.slideImgs.push(im);}}
+    }
+    return b;
+  }catch(e){return null;}
 }
 
 // الأجزاء الناقصة في الحزمة
@@ -14047,10 +14073,15 @@ async function dpOpenPrepFromCard(lessonId){
   const it={lessonId,gradeNum:entry.meta.grade,subject:entry.meta.subject,unit:entry.meta.unit,lesson:entry.meta.lesson};
   let b=dpBundles.get(lessonId);
   if(!b||!b.plan){
-    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);}}catch(e){}
+    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);dpCloudPersist(it,b);}}catch(e){}
   }
   if(!b||!b.plan){
-    // جهاز آخر؟ جرّب نسخة الخطة الذهبية المشتركة
+    // ☁️ جهاز آخر؟ نسخة المعلم في القاعدة أولاً
+    const c=await dpCloudLoad(lessonId);
+    if(c){b=c;dpBundles.set(lessonId,b);}
+  }
+  if(!b||!b.plan){
+    // ثم نسخة الخطة الذهبية المشتركة
     try{
       const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
       if(sh&&sh.plan){
@@ -14076,7 +14107,12 @@ async function dpResolvePrep(lessonId){
   const it={lessonId,gradeNum:entry.meta.grade,subject:entry.meta.subject,unit:entry.meta.unit,lesson:entry.meta.lesson};
   let b=dpBundles.get(lessonId);
   if(!b||!b.plan){
-    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);}}catch(e){}
+    try{const saved=await dpIdbGet(dpKey(it));if(saved&&saved.plan){b=saved;dpBundles.set(lessonId,b);dpCloudPersist(it,b);}}catch(e){}
+  }
+  if(!b||!b.plan){
+    // ☁️ نسخة المعلم في القاعدة أولاً — تفتح من أي جهاز
+    const c=await dpCloudLoad(lessonId);
+    if(c){b=c;dpBundles.set(lessonId,b);}
   }
   if(!b||!b.plan){
     try{
