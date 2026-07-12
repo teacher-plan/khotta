@@ -2475,7 +2475,7 @@ input,textarea,select{font-size:16px !important;}
     <div id="ppt-theme-picker" class="ppt-theme-picker"></div>
     <div id="ppt-slides-preview"></div>
     <div class="eg-result-actions">
-      <button class="eg-export" onclick="pptDownload()">⬇️ تنزيل PowerPoint (.pptx)</button>
+      <button class="eg-export" onclick="pptDownload()">⬇️ تنزيل العرض (يفتح بأي متصفح)</button>
       <button class="eg-regen" onclick="pptGenerate()">🔄 إعادة التوليد</button>
     </div>
   </div>
@@ -13968,6 +13968,47 @@ function dpEditPlanFromBundle(){
   if(typeof i==='number')dpOpenPlan(i);
 }
 
+// 🖥️ عارض شرائح HTML — بديل خفيف وفوري عن ملف PowerPoint:
+// صفحة واحدة تعمل بلا إنترنت، تنقّل بالأسهم واللمس، وملء شاشة للبروجكتر
+function dpSlidesHtmlDoc(title,slides,imgs){
+  const hasImgs=imgs&&imgs.some(Boolean);
+  const textSlide=s=>'<section class="sl txt"><h2>'+escHtml((s&&s.title)||'')+'</h2><ul>'+((s&&s.bullets)||[]).map(x=>'<li>'+escHtml(x)+'</li>').join('')+'</ul></section>';
+  const secs=hasImgs
+    ?imgs.map((im,i)=>im?'<section class="sl"><img src="'+im+'"></section>':textSlide(slides&&slides[i]))
+    :(slides||[]).map(textSlide);
+  const notes=(slides||[]).map(s=>escHtml((s&&s.notes)||''));
+  return '﻿<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<title>'+escHtml(title)+'</title><style>'
+    +'*{margin:0;padding:0;box-sizing:border-box}body{background:#111;color:#fff;font-family:Tajawal,Cairo,Arial,sans-serif;overflow:hidden;height:100vh}'
+    +'.sl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:0 0 54px}'
+    +'.sl.on{display:flex}.sl img{max-width:100%;max-height:100%;object-fit:contain}'
+    +'.sl.txt{flex-direction:column;background:#f4f0eb;color:#2a1a1a;padding:6vh 8vw 60px;align-items:flex-start;justify-content:flex-start}'
+    +'.sl.txt h2{color:#1a5a2a;font-size:5vmin;margin-bottom:4vh}.sl.txt li{font-size:3.4vmin;line-height:2.1;margin-bottom:1vh}'
+    +'#bar{position:fixed;bottom:0;left:0;right:0;height:54px;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;gap:14px;z-index:9}'
+    +'#bar button{background:#b8860b;color:#fff;border:none;border-radius:10px;padding:9px 22px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit}'
+    +'#bar button.sec{background:#333}#cnt{font-size:14px;font-weight:800;min-width:60px;text-align:center}'
+    +'#nt{position:fixed;bottom:64px;left:10px;right:10px;background:rgba(0,0,0,.85);border:1px solid #444;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.9;display:none;max-height:38vh;overflow:auto;z-index:9}'
+    +'</style></head><body>'
+    +secs.join('')
+    +'<div id="nt"></div>'
+    +'<div id="bar"><button onclick="go(1)">التالية ‹</button><span id="cnt"></span><button onclick="go(-1)">› السابقة</button>'
+    +'<button class="sec" onclick="tgN()">📝</button><button class="sec" onclick="fs()">⛶</button></div>'
+    +'<scr'+'ipt>var i=0,N='+secs.length+',NT='+JSON.stringify(notes)+';'
+    +'function sh(){var s=document.querySelectorAll(".sl");for(var k=0;k<s.length;k++)s[k].className=s[k].className.replace(" on","");s[i].className+=" on";'
+    +'document.getElementById("cnt").textContent=(i+1)+" / "+N;var n=document.getElementById("nt");n.textContent=NT[i]||"";if(!NT[i])n.style.display="none";}'
+    +'function go(d){i=Math.min(N-1,Math.max(0,i+d));sh();}'
+    +'function tgN(){var n=document.getElementById("nt");n.style.display=(n.style.display==="block"?"none":"block");sh();}'
+    +'function fs(){var d=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(d.requestFullscreen)d.requestFullscreen();else if(d.webkitRequestFullscreen)d.webkitRequestFullscreen();}'
+    +'document.addEventListener("keydown",function(e){if(e.key==="ArrowLeft"||e.key==="PageDown"||e.key===" ")go(1);if(e.key==="ArrowRight"||e.key==="PageUp")go(-1);});'
+    +'var tx=null;document.addEventListener("touchstart",function(e){tx=e.touches[0].clientX;});'
+    +'document.addEventListener("touchend",function(e){if(tx===null)return;var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(dx>0?1:-1);tx=null;});'
+    +'sh();<'+'/scr'+'ipt></body></html>';
+}
+function dpBuildSlidesHtmlFile(it,slides,imgs){
+  const doc=dpSlidesHtmlDoc('عرض — '+it.lesson,slides||[],imgs||[]);
+  return new File([new Blob([doc],{type:'text/html'})],'عرض — '+it.lesson+'.html',{type:'text/html'});
+}
 // ضغط صورة شريحة قبل دمجها في العرض — يسرّع البناء ويصغّر الملف دون فرق بصري
 function dpShrinkImg(dataUrl,maxW,q){
   return new Promise(res=>{
@@ -14169,29 +14210,21 @@ async function dpPrepPartDl(lessonId,part){
       try{file=dpPlanWordFile(it,b.plan);}
       catch(e){file=new File([new Blob([dpPlanDocHtml(it,b.plan)],{type:'text/html'})],'تحضير — '+it.lesson+'.html',{type:'text/html'});}
     }else if(part==='slides'){
-      if(b._pptxFile){file=b._pptxFile;} // جاهز من تحميل سابق — فوري
-      else{
-        // الرسوم ناقصة محلياً؟ اجلبها من المكتبة الذهبية المشتركة
-        if(!(b.slideImgs&&b.slideImgs.some(Boolean))){
-          try{
-            uiBusyText('☁️ يجلب رسوم العرض من المكتبة…');
-            const{data:sh}=await sb.from('shared_preps').select('slide_imgs,slides').eq('lesson_id',lessonId).maybeSingle();
-            if(sh&&sh.slide_imgs&&sh.slide_imgs.some(Boolean)){
-              b.slideImgs=sh.slide_imgs;
-              if((!b.slides||!b.slides.length)&&sh.slides)b.slides=sh.slides;
-            }
-          }catch(e){}
-        }
-        if(b.slideImgs&&b.slideImgs.some(Boolean)){
-          uiBusyText('🖼️ يضغط صور الشرائح…');
-          try{file=await dpBuildPptxFromImages(it,b.slides||[],b.slideImgs);}catch(e){console.warn('pptx img dl',e);}
-          if(!file)toast('⚠️ تعذّر بناء النسخة المرسومة — سنجهّز نسخة نصية بديلة',true);
-        }
-        if(!file&&b.slides&&b.slides.length){
-          uiBusyText('📊 يبني ملف PowerPoint…');
-          try{file=await dpBuildPptxFile(it,b.slides);}catch(e){console.warn('pptx dl',e);}
-        }
-        if(file)b._pptxFile=file;
+      // الرسوم ناقصة محلياً؟ اجلبها من المكتبة الذهبية المشتركة
+      if(!(b.slideImgs&&b.slideImgs.some(Boolean))){
+        try{
+          uiBusyText('☁️ يجلب رسوم العرض من المكتبة…');
+          const{data:sh}=await sb.from('shared_preps').select('slide_imgs,slides').eq('lesson_id',lessonId).maybeSingle();
+          if(sh&&sh.slide_imgs&&sh.slide_imgs.some(Boolean)){
+            b.slideImgs=sh.slide_imgs;
+            if((!b.slides||!b.slides.length)&&sh.slides)b.slides=sh.slides;
+          }
+        }catch(e){}
+      }
+      // 🖥️ عرض HTML فوري — بلا مكتبة PowerPoint ولا ضغط صور
+      if((b.slideImgs&&b.slideImgs.some(Boolean))||(b.slides&&b.slides.length)){
+        uiBusyText('🖥️ يجهّز صفحة العرض…');
+        try{file=dpBuildSlidesHtmlFile(it,b.slides||[],b.slideImgs||[]);}catch(e){console.warn('slides html dl',e);}
       }
     }else if(part==='info'&&b.infoBranded){
       file=dpDataUrlToFile(b.infoBranded,'إنفوجرافيك — '+it.lesson+'.png');
@@ -14751,7 +14784,19 @@ function loadPptxJs(){
   });
   return window._pptxLoading;
 }
+// 🖥️ تنزيل العرض كصفحة HTML فورية (أسهم + لمس + ملء شاشة) — بلا مكتبة PowerPoint الثقيلة
 async function pptDownload(){
+  if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
+  uiBusy('🖥️ يجهّز صفحة العرض…');
+  try{
+    const subject=document.getElementById('eg-subject').value||'الدرس';
+    dpSaveFileLocal(dpBuildSlidesHtmlFile({lesson:subject},pptSlides,pptVisualImages||[]));
+    toast('✅ نُزّل العرض — يفتح في أي متصفح ويعمل بلا إنترنت','ok');
+  }catch(e){toast('❌ تعذّر إنشاء الملف',true);console.warn('ppt html dl',e);}
+  finally{uiBusyDone();}
+}
+// النسخة القديمة (ملف PowerPoint) — أبقيناها لمن يطلبها مستقبلاً
+async function pptDownloadPptx(){
   if(!pptSlides.length){toast('ولّد العرض أولاً',true);return;}
   const btn=document.querySelector('#eg-ppt-result-card .eg-export');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري التجهيز...';}
