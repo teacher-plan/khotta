@@ -12546,6 +12546,7 @@ async function gmSave(){
   uiBusy('💾 يحفظ اللعبة…');
   try{
     const{error}=await sb.from('games').insert({
+      user_id:currentUser.id,
       grade:String(grade),subject,unit:lessons[0]?lessons[0].unit:'',lesson:lessons.map(l=>l.name).join('، '),
       title,template:gmTpl,theme_id:themeSel,content:{structure:GM_STRUCT[gmTpl],items,groupNames:GM_STRUCT[gmTpl]==='groups'?gmGroupNames:undefined}
     });
@@ -12579,7 +12580,7 @@ async function gmSave(){
 async function gmLoadMyGames(){
   const box=document.getElementById('gm-mylist');
   try{
-    const{data}=await sb.from('games').select('*').order('created_at',{ascending:false}).limit(30);
+    const{data}=await sb.from('games').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
     if(!data||!data.length){box.innerHTML='<div class="lib-empty">📭 لا توجد ألعاب محفوظة بعد</div>';return;}
     box.innerHTML=data.map(g=>`<div class="gm-row" style="cursor:pointer" onclick="gmOpenSaved('${g.id}')">
       <span style="font-size:18px;flex:none">${(GM_TPL_LBL[g.template]||'🎮').split(' ')[0]}</span>
