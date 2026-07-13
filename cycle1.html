@@ -121,6 +121,11 @@ body.inapp #c1-user{display:flex}
 #toast-el{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;opacity:0;transition:.25s;max-width:88vw;text-align:center}
 #toast-el.show{opacity:1;transform:translateX(-50%)}
 #toast-el.err{background:var(--red-d)}
+
+/* شرارات الحياة — نفس روح صفحة المعلم بألوان هوية الحلقة الأولى */
+.bg-spark{position:fixed;pointer-events:none;border-radius:50%;width:var(--sw);height:var(--sw);background:var(--sc);animation:bgSparkFloat var(--sd) ease-in-out infinite var(--sdel) both;filter:blur(var(--sb));z-index:0}
+@keyframes bgSparkFloat{0%{opacity:0;transform:translate(0,0) scale(0)}20%{opacity:1;transform:translate(var(--sx1),var(--sy1)) scale(1)}50%{opacity:.7;transform:translate(var(--sx2),var(--sy2)) scale(.7)}80%{opacity:.3;transform:translate(var(--sx3),var(--sy3)) scale(.4)}100%{opacity:0;transform:translate(var(--sx4),var(--sy4)) scale(0)}}
+@media(prefers-reduced-motion:reduce){.bg-spark{display:none}}
 </style>
 </head>
 <body>
@@ -292,6 +297,27 @@ function renderYawmi(){
     if(event==='SIGNED_IN'&&s&&!currentUser)await afterAuth(s);
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
   });
+})();
+
+// شرارات الحياة المتطايرة — أحمر وزيتوني الهوية
+(function c1Sparks(){
+  const colors=['rgba(216,96,72,OP)','rgba(216,96,72,OP)','rgba(168,48,48,OP)','rgba(72,120,72,OP)'];
+  for(let i=0;i<32;i++){
+    const el=document.createElement('div');
+    el.className='bg-spark';
+    const size=(Math.random()*4+2).toFixed(1);
+    const blur=(Math.random()*1.2+0.4).toFixed(1);
+    const x=(Math.random()*100).toFixed(1);
+    const y=(Math.random()*100).toFixed(1);
+    const dur=(Math.random()*5+4).toFixed(1);
+    const del=(Math.random()*-12).toFixed(1)+'s';
+    const op=(Math.random()*0.3+0.25).toFixed(2);
+    const col=colors[Math.floor(Math.random()*colors.length)].replace('OP',op);
+    const r=()=>(Math.random()*50-25).toFixed(0)+'px';
+    const ry=()=>(Math.random()*-60-10).toFixed(0)+'px';
+    el.style.cssText=`left:${x}%;top:${y}%;--sw:${size}px;--sc:${col};--sb:${blur}px;--sd:${dur}s;--sdel:${del};--sx1:${r()};--sy1:${ry()};--sx2:${r()};--sy2:${ry()};--sx3:${r()};--sy3:${ry()};--sx4:${r()};--sy4:${ry()};`;
+    document.body.appendChild(el);
+  }
 })();
 </script>
 </body>
