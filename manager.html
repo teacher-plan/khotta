@@ -1931,10 +1931,15 @@ input,textarea,select{font-size:16px !important;}
   <div class="mgr-c1-in">
     <h1>إدارة الحلقة الأولى</h1>
     <p>هذا الجناح ينمو مع بناء منصة الحلقة الأولى — كل قسم جديد يُبنى للمعلمات تُضاف أدوات إدارته هنا فوراً</p>
-    <div class="mgr-c1-empty">
-      <div class="big" style="display:flex;justify-content:center"><svg viewBox="0 0 24 24" fill="currentColor" width="46" height="46" style="color:#D86048"><path d="M22 21H2v-2h1V9l7-4v2.2L17 4v5h4v10h1v2zM10 19h2v-2h-2v2zm-4 0h2v-2H6v2zm8 0h2v-2h-2v2zm4 0h1.99v-2H18v2zM10 9H8v2h2V9zm0 4H8v2h2v-2zm5-4h-2v2h2V9zm0 4h-2v2h2v-2z"/></svg></div>
-      <div style="font-size:16px;font-weight:800;margin-bottom:6px">لا أقسام بعد</div>
-      <div style="font-size:12.5px;color:#8A7460;line-height:2">ابدأ ببناء أول قسم في منصة الحلقة الأولى وستظهر إدارته هنا تلقائياً</div>
+    <div style="background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:20px;text-align:right;max-width:560px;margin:0 auto">
+      <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:#301800">إدارة قسم الجدول — الأوقات الافتراضية</div>
+      <div style="font-size:11.5px;color:#8A7460;line-height:1.9;margin-bottom:14px">تظهر هذه الأوقات جاهزة لكل معلمة جديدة (وتستطيع كل معلمة تعديلها لمدرستها)</div>
+      <div id="mc1-times"></div>
+      <div style="font-size:12px;font-weight:800;color:#8A7460;margin:10px 0 6px">الفسحة بعد الحصة</div>
+      <select id="mc1-break" style="width:100%;background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:10px;padding:10px;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:14px">
+        <option value="1">١</option><option value="2">٢</option><option value="3" selected>٣</option><option value="4">٤</option><option value="5">٥</option><option value="6">٦</option><option value="7">٧</option>
+      </select>
+      <button onclick="mc1SaveTT()" style="width:100%;border:none;border-radius:12px;padding:12px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;cursor:pointer">حفظ الافتراضيات</button>
     </div>
   </div>
 </div>
@@ -5439,8 +5444,35 @@ function applySubjectTheme(cfg){
 }
 
 
+
+// ══ إدارة الحلقة الأولى: افتراضيات الجدول ══
+const MC1_FALLBACK={assembly:['07:00','07:20'],periods:[['07:20','08:00'],['08:00','08:40'],['08:40','09:20'],['09:40','10:20'],['10:20','11:00'],['11:00','11:40'],['11:40','12:20'],['12:20','13:00']],breakAfter:3,breakTime:['09:20','09:40']};
+async function mc1LoadTT(){
+  const box=document.getElementById('mc1-times');if(!box||box.dataset.ready)return;
+  let v=MC1_FALLBACK;
+  try{const{data}=await sb.from('ai_settings').select('value').eq('key','c1_tt_defaults').maybeSingle();
+    if(data&&data.value){const p=JSON.parse(data.value);if(p&&p.periods)v=p;}}catch(e){}
+  box.innerHTML='<div style="display:grid;grid-template-columns:70px 1fr 1fr;gap:7px;align-items:center;font-size:12px;font-weight:800;margin-bottom:6px"><span>الطابور</span><input type="time" id="mc1-a0" value="'+v.assembly[0]+'" style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:9px;padding:8px;text-align:center"><input type="time" id="mc1-a1" value="'+v.assembly[1]+'" style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:9px;padding:8px;text-align:center"></div>'
+    +v.periods.map((pt,i)=>'<div style="display:grid;grid-template-columns:70px 1fr 1fr;gap:7px;align-items:center;font-size:12px;font-weight:800;margin-bottom:6px"><span>الحصة '+(i+1)+'</span><input type="time" id="mc1-p'+i+'0" value="'+pt[0]+'" style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:9px;padding:8px;text-align:center"><input type="time" id="mc1-p'+i+'1" value="'+pt[1]+'" style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:9px;padding:8px;text-align:center"></div>').join('');
+  document.getElementById('mc1-break').value=String(v.breakAfter||3);
+  box.dataset.ready='1';
+}
+async function mc1SaveTT(){
+  const v={assembly:[document.getElementById('mc1-a0').value,document.getElementById('mc1-a1').value],
+    periods:[...Array(8)].map((_,i)=>[document.getElementById('mc1-p'+i+'0').value,document.getElementById('mc1-p'+i+'1').value]),
+    breakAfter:Number(document.getElementById('mc1-break').value)||3};
+  const b0=v.periods[v.breakAfter-1],b1=v.periods[v.breakAfter];
+  v.breakTime=[b0?b0[1]:'09:20',b1?b1[0]:'09:40'];
+  try{
+    const{error}=await sb.from('ai_settings').upsert({key:'c1_tt_defaults',value:JSON.stringify(v)});
+    if(error)throw error;
+    toast('حُفظت افتراضيات جدول الحلقة الأولى','ok');
+  }catch(e){toast('تعذّر الحفظ: '+(e.message||''),true);}
+}
+
 // ══ 🚪 منطق بوابة الإدارة الثنائية ══
 function mgrEnter(w){
+  if(w==='c1')setTimeout(mc1LoadTT,50);
   try{sessionStorage.setItem('mgrWing',w);}catch(e){}
   document.getElementById('mgr-gate').classList.remove('open');
   if(w==='c1')document.getElementById('mgr-c1').classList.add('open');
