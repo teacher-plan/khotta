@@ -502,6 +502,15 @@ function c1AllClasses(){
   return out;
 }
 function c1GradeOf(classId){return (profile.grades||[]).find(g=>(g.classes||[]).some(c=>c.id===classId));}
+let ttTickTimer=null;
+function ttRender(){
+  if(!profile.setupDone){ttRenderSetup();return;}
+  document.getElementById('tt-setup').classList.add('hidden');
+  document.getElementById('tt-main').classList.remove('hidden');
+  ttRenderTable();
+  ttRenderNow();
+  clearInterval(ttTick);ttTick=setInterval(ttRenderNow,30000);
+}
 function ttRenderSetup(){
   document.getElementById('tt-main').classList.add('hidden');
   const el=document.getElementById('tt-setup');
