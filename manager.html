@@ -1668,6 +1668,31 @@ input,textarea,select{font-size:16px !important;}
 .stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.6),transparent 45%),var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:0 3px 12px rgba(42,26,26,.07);overflow:hidden;}
 .stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,rgba(184,134,11,.15),rgba(184,134,11,.6) 50%,rgba(184,134,11,.15));}
 .stat-card .stat-card-value{font-size:26px;font-weight:800;}
+
+/* ══ 🚪 بوابة الإدارة الثنائية ══ */
+#mgr-gate{position:fixed;inset:0;z-index:8000;background:var(--bg);display:none;align-items:center;justify-content:center;padding:22px}
+#mgr-gate.open{display:flex}
+.mgr-gate-in{text-align:center;max-width:720px;width:100%}
+.mgr-gate-in h1{font-family:'Tajawal',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px}
+.mgr-gate-in p{color:var(--muted);font-size:13px;margin-bottom:26px}
+.mgr-doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.mgr-door{border:2px solid var(--border);border-radius:20px;padding:30px 20px;background:var(--surface);cursor:pointer;font-family:'Cairo',sans-serif;transition:.18s;text-align:center}
+.mgr-door:hover{transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.12)}
+.mgr-door .ic{font-size:44px;margin-bottom:10px}
+.mgr-door .nm{font-size:17px;font-weight:800;margin-bottom:6px}
+.mgr-door .ds{font-size:12px;color:var(--muted);line-height:1.9}
+.mgr-door.c2:hover{border-color:var(--gold)}
+.mgr-door.c1:hover{border-color:#D86048}
+.mgr-door.c1 .nm{color:#A83030}
+.mgr-door.c2 .nm{color:var(--gold2)}
+#mgr-c1{position:fixed;inset:0;z-index:7900;background:#F7EEE2;display:none;overflow:auto;padding:60px 20px}
+#mgr-c1.open{display:block}
+.mgr-c1-in{max-width:760px;margin:0 auto;text-align:center;color:#301800;font-family:'Cairo',sans-serif}
+.mgr-c1-in h1{font-size:22px;font-weight:800;margin-bottom:8px}
+.mgr-c1-in p{font-size:13px;color:#8A7460;line-height:2;margin-bottom:22px}
+.mgr-c1-empty{background:#FFFDF9;border:2px dashed #E3D2BD;border-radius:20px;padding:44px 24px}
+.mgr-c1-empty .big{font-size:50px;margin-bottom:10px}
+.mgr-c1-back{position:fixed;top:14px;inset-inline-start:14px;background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:12px;padding:9px 18px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#301800;cursor:pointer;z-index:7950}
 </style>
 </head>
 <body>
@@ -1881,6 +1906,38 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </div>
 
+<!-- 🚪 بوابة الإدارة الثنائية -->
+<div id="mgr-gate">
+  <div class="mgr-gate-in">
+    <h1>🛡️ لوحة إدارة منصة خُطّة</h1>
+    <p>اختر الجناح الذي تريد إدارته</p>
+    <div class="mgr-doors">
+      <button class="mgr-door c2" onclick="mgrEnter('c2')">
+        <div class="ic">🏫</div>
+        <div class="nm">إدارة الحلقة الثانية</div>
+        <div class="ds">الصفوف ٥–١٢ — المعلمون، المدارس، الاستوديو، الثيمات، الكتب، الإحصائيات</div>
+      </button>
+      <button class="mgr-door c1" onclick="mgrEnter('c1')">
+        <div class="ic">🌸</div>
+        <div class="nm">إدارة الحلقة الأولى</div>
+        <div class="ds">الصفوف ١–٤ — منصة جديدة تُبنى قسماً قسماً، وإدارة كل قسم تُضاف هنا</div>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- 🌸 جناح إدارة الحلقة الأولى -->
+<div id="mgr-c1">
+  <button class="mgr-c1-back" onclick="mgrBackToGate()">→ رجوع للاختيار</button>
+  <div class="mgr-c1-in">
+    <h1>🌸 إدارة الحلقة الأولى</h1>
+    <p>هذا الجناح ينمو مع بناء منصة الحلقة الأولى — كل قسم جديد يُبنى للمعلمات تُضاف أدوات إدارته هنا فوراً</p>
+    <div class="mgr-c1-empty">
+      <div class="big">🏗️</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px">لا أقسام بعد</div>
+      <div style="font-size:12.5px;color:#8A7460;line-height:2">ابدأ ببناء أول قسم في منصة الحلقة الأولى وستظهر إدارته هنا تلقائياً</div>
+    </div>
+  </div>
+</div>
 <!-- NAV -->
 <div class="nav" id="main-nav" style="display:none">
   <button class="nav-btn active teacher-only" data-page="timetable" onclick="showPage('timetable',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9zm2 3v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zm-8 4v2h2v-2H7zm4 0v2h2v-2h-2z"/></svg></span> الجدول</button>
@@ -5381,7 +5438,24 @@ function applySubjectTheme(cfg){
   root.style.setProperty('--red2',colors.red2);
 }
 
+
+// ══ 🚪 منطق بوابة الإدارة الثنائية ══
+function mgrEnter(w){
+  try{sessionStorage.setItem('mgrWing',w);}catch(e){}
+  document.getElementById('mgr-gate').classList.remove('open');
+  if(w==='c1')document.getElementById('mgr-c1').classList.add('open');
+  else document.getElementById('mgr-c1').classList.remove('open');
+}
+function mgrBackToGate(){
+  try{sessionStorage.removeItem('mgrWing');}catch(e){}
+  document.getElementById('mgr-c1').classList.remove('open');
+  document.getElementById('mgr-gate').classList.add('open');
+}
+try{if(sessionStorage.getItem('mgrWing')==='c1')document.addEventListener('DOMContentLoaded',()=>{});}catch(e){}
+
 function showApp(data){
+  // 🚪 بوابة الجناحين — تظهر مرة كل جلسة
+  try{if(!sessionStorage.getItem('mgrWing'))document.getElementById('mgr-gate').classList.add('open');}catch(e){}
   document.getElementById('main-nav').style.display='flex';
   document.body.classList.add('lp'); // 🚀 وضع لوحة الانطلاق
   document.querySelectorAll('.page')[0].classList.add('active');
