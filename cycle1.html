@@ -1,27 +1,3 @@
-async function suFinish(){
-  const pend=suPendingSec();
-  if(pend){window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
-  const grades=[];let colorIdx=0;
-  for(const g of suGrades){
-    const d=suData[g];
-    const classes=[];
-    for(let n=1;n<=8;n++){
-      const sec=d.secs[n];
-      if(sec&&sec.sel&&sec.subjects.length){
-        classes.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
-      }
-    }
-    if(classes.length)grades.push({num:g,classes});
-  }
-  if(!grades.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
-  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
-  document.getElementById('c1-menu-name').textContent=suName;
-  renderYawmi();
-  toast('اكتمل الإعداد — أهلاً بك');
-  suData={};window._suFocus=null;
-  ttRender();
-}
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -675,6 +651,30 @@ function suNext2(){
 }
 
 
+
+async function suFinish(){
+  const pend=suPendingSec();
+  if(pend){window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
+  const grades=[];let colorIdx=0;
+  for(const g of suGrades){
+    const d=suData[g];
+    const classes=[];
+    for(let n=1;n<=8;n++){
+      const sec=d.secs[n];
+      if(sec&&sec.sel&&sec.subjects.length){
+        classes.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+      }
+    }
+    if(classes.length)grades.push({num:g,classes});
+  }
+  if(!grades.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
+  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
+  document.getElementById('c1-menu-name').textContent=suName;
+  renderYawmi();
+  toast('اكتمل الإعداد — أهلاً بك');
+  suData={};window._suFocus=null;
+  ttRender();
+}
 
 // ── الجدول ──
 function ttCellHtml(d,p,v){
