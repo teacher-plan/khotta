@@ -204,6 +204,37 @@ body.inapp #c1-user{display:flex}
 .su-cls b{flex:1;font-size:13px}
 .su-cls .x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;font-family:inherit}
 .su-subj{margin:4px 0 10px;padding-inline-start:22px}
+
+/* حقول معنونة — لا نصوص افتراضية */
+.fld{text-align:right;margin-bottom:11px}
+.fld label{display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.fld input{margin-bottom:0!important}
+/* معالج الإعداد (مطابق لبنية صفحة المعلم) */
+.su-steps{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
+.su-steps i{width:34px;height:5px;border-radius:4px;background:var(--border)}
+.su-steps i.on{background:linear-gradient(90deg,var(--red),var(--red-d))}
+.su-grade-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.su-gt{border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
+.su-gt.on{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
+.su-gt .ok{color:var(--olive);margin-inline-start:4px}
+.su-gt.on .ok{color:#fff}
+/* بطاقات المواد — متساوية ونابضة */
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
+.subj-card{position:relative;height:76px;border:1.5px solid var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.7),transparent 50%),var(--surface);font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0 13px;transition:transform .15s,box-shadow .15s,border-color .15s;overflow:hidden}
+.subj-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,transparent,var(--sc,#D86048) 50%,transparent);opacity:.55;transition:opacity .15s}
+.subj-card .md{width:40px;height:40px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--sc,#D86048),var(--sc2,#A83030));box-shadow:0 4px 10px rgba(48,24,0,.18)}
+.subj-card .nm{font-size:12.5px;font-weight:800;color:var(--ink);text-align:right;line-height:1.5}
+.subj-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(48,24,0,.13);border-color:var(--sc,#D86048)}
+.subj-card.sel{border-color:var(--sc,#D86048);background:linear-gradient(135deg,color-mix(in srgb,var(--sc,#D86048) 14%,var(--surface)),var(--surface));box-shadow:0 8px 20px rgba(48,24,0,.14)}
+.subj-card.sel::before{opacity:1;height:4px}
+.subj-card .tick{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}
+.subj-card.sel .tick{display:flex}
+/* شعب الصف */
+.su-cls-chip{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:800;margin:0 0 8px 8px}
+.su-cls-chip .dot{width:11px;height:11px;border-radius:4px}
+.su-cls-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px}
+.su-addrow{display:flex;gap:8px;align-items:flex-end}
+.su-addrow .fld{flex:1;margin-bottom:0}
 </style>
 </head>
 <body>
@@ -216,8 +247,8 @@ body.inapp #c1-user{display:flex}
     <div class="sub">لمعلمات ومعلمي الصفوف (١ – ٤)<br/>مساحتك الجديدة تُبنى الآن بحُلّة خاصة بك</div>
     <div id="auth-loading-box"><div class="spin"></div>جارٍ التحقق…</div>
     <div id="cy1-login-form" class="hidden">
-      <input id="cy1-login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="username"/>
-      <input id="cy1-login-password" type="password" placeholder="كلمة المرور" autocomplete="current-password"/>
+      <div class="fld"><label for="cy1-login-email">البريد الإلكتروني</label><input id="cy1-login-email" type="email" autocomplete="username"/></div>
+      <div class="fld"><label for="cy1-login-password">كلمة المرور</label><input id="cy1-login-password" type="password" autocomplete="current-password"/></div>
       <button class="auth-btn" id="cy1-login-btn" onclick="loginWithPassword()">تسجيل الدخول</button>
     </div>
   </div>
@@ -448,72 +479,115 @@ async function ttTimes(){
   return t.times;
 }
 
-// ── الإعداد المصغر (الاسم + الشعب + موادها) ──
-let suCls=[];
-function ttRender(){
-  if(!profile.setupDone){ttRenderSetup();return;}
-  document.getElementById('tt-setup').classList.add('hidden');
-  document.getElementById('tt-main').classList.remove('hidden');
-  ttRenderTable();
-  ttRenderNow();
-  clearInterval(ttTick);ttTick=setInterval(ttRenderNow,30000);
+// ── معالج الإعداد — مطابق لبنية صفحة المعلم: الفصل ← الصفوف ← مواد وشعب كل صف ──
+let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='';
+const SUBJ_COLORS={'اللغة العربية':['#A83030','#7A2020'],'الرياضيات':['#487848','#35603A'],'العلوم':['#2F6B6D','#1F4B4D'],'التربية الإسلامية':['#8A5030','#6B3A1F'],'اللغة الإنجليزية':['#5F8A8B','#44686A'],'المهارات الحياتية':['#C0A848','#A08830'],'التربية الفنية':['#D86048','#A83030'],'التربية الرياضية':['#35603A','#274A2C'],'التربية الموسيقية':['#7A6040','#5C4830'],'تقنية المعلومات':['#4F6D8A','#3A5268']};
+function c1AllClasses(){
+  const out=[];
+  (profile.grades||[]).forEach(g=>(g.classes||[]).forEach(c=>out.push({...c,grade:g.num})));
+  return out;
 }
+function c1GradeOf(classId){return (profile.grades||[]).find(g=>(g.classes||[]).some(c=>c.id===classId));}
 function ttRenderSetup(){
   document.getElementById('tt-main').classList.add('hidden');
   const el=document.getElementById('tt-setup');
   el.classList.remove('hidden');
-  suCls=JSON.parse(JSON.stringify(profile.classes||[]));
-  el.innerHTML=`<div class="su-card">
-    <h2>لنجهّز صفوفك أولاً</h2>
-    <div class="d">ثلاث خطوات صغيرة تخدمك في كل أقسام المنصة — اسمك، شعبك، وموادك.</div>
-    <div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px">اسمك الذي نرحب به</div>
-    <input type="text" id="su-name" placeholder="مثال: مريم البلوشية" value="${escHtml(profile.display_name||'')}"/>
-    <div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin:12px 0 6px">شعبك</div>
-    <div id="su-cls-list"></div>
-    <input type="text" id="su-cls-name" placeholder="اسم الشعبة — مثال: الثاني/١" onkeydown="if(event.key==='Enter')suAddCls()"/>
-    <button class="tt-btn" style="width:100%;justify-content:center" onclick="suAddCls()">إضافة الشعبة</button>
-    <button class="c1-mbtn go" style="width:100%;margin-top:16px;padding:13px" onclick="suFinish()">حفظ وابدئي</button>
-  </div>`;
-  suRenderCls();
+  if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suGrades=[];suData={};}
+  suRender();
 }
-function suRenderCls(){
-  const box=document.getElementById('su-cls-list');if(!box)return;
-  box.innerHTML=suCls.map((c,i)=>`<div class="su-cls">
-      <span class="dot" style="background:${c.color}"></span><b>${escHtml(c.name)}</b>
-      <button class="x" onclick="suCls.splice(${i},1);suRenderCls()">حذف</button>
-    </div>
-    <div class="su-subj chip-row">${C1_SUBJECTS.map(sub=>`<button class="chip olv ${(c.subjects||[]).includes(sub)?'sel':''}" onclick="suToggleSub(${i},'${sub}')">${sub}</button>`).join('')}</div>`).join('')
-    ||'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">لا شعب بعد — أضيفي أول شعبة</div>';
+function suRender(){
+  const el=document.getElementById('tt-setup');
+  const steps='<div class="su-steps">'+[1,2,3].map(n=>'<i class="'+(n<=suStep?'on':'')+'"></i>').join('')+'</div>';
+  if(suStep===1){
+    el.innerHTML='<div class="su-card">'+steps+'<h2>البيانات الأساسية</h2><div class="d">اسمك والفصل الدراسي الحالي</div>'
+      +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" value="'+escHtml(suName)+'"/></div>'
+      +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
+      +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
+      +'</div></div>'
+      +'<button class="c1-mbtn go" style="width:100%;margin-top:14px;padding:13px" onclick="suNext1()">التالي: الصفوف</button></div>';
+  }else if(suStep===2){
+    el.innerHTML='<div class="su-card">'+steps+'<h2>صفوفك</h2><div class="d">اختاري الصفوف التي تدرّسينها</div>'
+      +'<div class="chip-row" style="margin-bottom:14px">'
+      +[1,2,3,4].map(n=>'<button class="chip '+(suGrades.includes(n)?'sel':'')+'" onclick="suToggleGrade('+n+')">الصف '+['الأول','الثاني','الثالث','الرابع'][n-1]+'</button>').join('')
+      +'</div>'
+      +'<div class="c1-mrow"><button class="c1-mbtn no" onclick="suStep=1;suRender()">رجوع</button>'
+      +'<button class="c1-mbtn go" onclick="suNext2()">التالي: المواد والشعب</button></div></div>';
+  }else{
+    if(!suActive||!suGrades.includes(suActive))suActive=suGrades[0];
+    const d=suData[suActive];
+    const gname=['الأول','الثاني','الثالث','الرابع'][suActive-1];
+    el.innerHTML='<div class="su-card" style="max-width:720px">'+steps
+      +'<h2>مواد وشعب كل صف</h2><div class="d">أكملي كل صف اخترتِه — علامة التمام تظهر على الصف المكتمل</div>'
+      +'<div class="su-grade-tabs">'+suGrades.map(g=>{
+        const dd=suData[g];const done=dd&&dd.subjects.length&&dd.classes.length;
+        return '<button class="su-gt '+(g===suActive?'on':'')+'" onclick="suActive='+g+';suRender()">الصف '+['الأول','الثاني','الثالث','الرابع'][g-1]+(done?'<span class="ok">✓</span>':'')+'</button>';
+      }).join('')+'</div>'
+      +'<div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px">مواد الصف '+gname+'</div>'
+      +'<div class="subj-grid">'+C1_SUBJECTS.map(sub=>{
+        const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
+        const sel=d.subjects.includes(sub);
+        return '<button class="subj-card '+(sel?'sel':'')+'" style="--sc:'+cc[0]+';--sc2:'+cc[1]+'" onclick="suToggleSubj(\''+sub+'\')"><span class="md">'+sub.replace('اللغة ','').replace('التربية ','').charAt(0)+'</span><span class="nm">'+sub+'</span><span class="tick">✓</span></button>';
+      }).join('')+'</div>'
+      +'<div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px">شعب الصف '+gname+'</div>'
+      +'<div id="su-cls-wrap">'+d.classes.map((c,i)=>'<span class="su-cls-chip"><span class="dot" style="background:'+c.color+'"></span>'+escHtml(c.name)+'<button onclick="suDelCls('+i+')">حذف</button></span>').join('')+'</div>'
+      +'<div class="su-addrow"><div class="fld"><label for="su-cls-name">اسم الشعبة</label><input type="text" id="su-cls-name" onkeydown="if(event.key===\'Enter\')suAddCls()"/></div>'
+      +'<button class="c1-mbtn go" onclick="suAddCls()">إضافة</button></div>'
+      +'<div class="c1-mrow" style="margin-top:20px"><button class="c1-mbtn no" onclick="suStep=2;suRender()">رجوع</button>'
+      +'<button class="c1-mbtn go" onclick="suFinish()">حفظ وبدء الاستخدام</button></div></div>';
+  }
+}
+function suNext1(){
+  suName=(document.getElementById('su-name').value||'').trim();
+  if(!suName){toast('اكتبي اسمك أولاً',true);return;}
+  if(!suSem){toast('اختاري الفصل الدراسي',true);return;}
+  suStep=2;suRender();
+}
+function suToggleGrade(n){
+  const i=suGrades.indexOf(n);
+  if(i>=0)suGrades.splice(i,1);else{suGrades.push(n);suGrades.sort();}
+  suRender();
+}
+function suNext2(){
+  if(!suGrades.length){toast('اختاري صفاً واحداً على الأقل',true);return;}
+  suGrades.forEach(g=>{if(!suData[g])suData[g]={subjects:[],classes:[]};});
+  Object.keys(suData).forEach(k=>{if(!suGrades.includes(Number(k)))delete suData[k];});
+  suStep=3;suActive=suGrades[0];suRender();
+}
+function suToggleSubj(sub){
+  const arr=suData[suActive].subjects;
+  const i=arr.indexOf(sub);
+  if(i>=0)arr.splice(i,1);else arr.push(sub);
+  suRender();
 }
 function suAddCls(){
   const inp=document.getElementById('su-cls-name');
-  const name=(inp.value||'').trim();if(!name)return;
-  if(suCls.some(c=>c.name===name)){toast('هذه الشعبة مضافة',true);return;}
-  suCls.push({id:'c1_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,color:C1_CLS_COLORS[suCls.length%C1_CLS_COLORS.length],subjects:[]});
-  inp.value='';suRenderCls();
+  const name=(inp.value||'').trim();if(!name){toast('اكتبي اسم الشعبة',true);return;}
+  const d=suData[suActive];
+  if(d.classes.some(c=>c.name===name)){toast('هذه الشعبة مضافة',true);return;}
+  const count=Object.values(suData).reduce((t,x)=>t+x.classes.length,0);
+  d.classes.push({id:'c1g'+suActive+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name,color:C1_CLS_COLORS[count%C1_CLS_COLORS.length]});
+  inp.value='';suRender();
+  setTimeout(()=>{const x=document.getElementById('su-cls-name');if(x)x.focus();},50);
 }
-function suToggleSub(i,sub){
-  const arr=suCls[i].subjects||(suCls[i].subjects=[]);
-  const j=arr.indexOf(sub);
-  if(j>=0)arr.splice(j,1);else arr.push(sub);
-  suRenderCls();
-}
+function suDelCls(i){suData[suActive].classes.splice(i,1);suRender();}
 async function suFinish(){
-  const name=(document.getElementById('su-name').value||'').trim();
-  if(!name){toast('اكتبي اسمك',true);return;}
-  if(!suCls.length){toast('أضيفي شعبة واحدة على الأقل',true);return;}
-  if(suCls.some(c=>!(c.subjects||[]).length)){toast('اختاري مواد كل شعبة',true);return;}
-  await cy1Save({display_name:name,classes:suCls,setupDone:true});
-  document.getElementById('c1-menu-name').textContent=name;
+  for(const g of suGrades){
+    const d=suData[g];
+    if(!d.subjects.length){suActive=g;suRender();toast('اختاري مواد الصف '+['الأول','الثاني','الثالث','الرابع'][g-1],true);return;}
+    if(!d.classes.length){suActive=g;suRender();toast('أضيفي شعب الصف '+['الأول','الثاني','الثالث','الرابع'][g-1],true);return;}
+  }
+  const grades=suGrades.map(g=>({num:g,subjects:suData[g].subjects.slice(),classes:suData[g].classes.slice()}));
+  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
+  document.getElementById('c1-menu-name').textContent=suName;
   renderYawmi();
-  toast('أهلاً بك أستاذة '+name);
+  toast('اكتمل الإعداد — أهلاً بك');
+  suData={};
   ttRender();
 }
-
 // ── الجدول ──
 function ttCellHtml(d,p,v){
   if(!v)return `<div class="tt-cell empty" ${ttEdit?`onclick="ttPickOpen('${d}',${p})"`:''}>${ttEdit?'اضغطي للإضافة':'—'}</div>`;
-  const c=(profile.classes||[]).find(x=>x.id===v.c);
+  const c=c1AllClasses().find(x=>x.id===v.c);
   const col=(c&&c.color)||'#8A7460';
   return `<div class="tt-cell" style="background:${col}1f;border-color:${col};color:${col}" data-d="${d}" data-p="${p}" ${ttEdit?`onclick="ttPickOpen('${d}',${p})"`:''}>
     <span class="cn">${escHtml(c?c.name:'?')}</span><span class="sn">${escHtml(v.s||'')}</span></div>`;
@@ -541,7 +615,7 @@ function ttToggleEdit(){
 function ttPickOpen(d,p){
   ttPickCtx={d,p};
   const cur=(ttData().schedule[d]||{})[p]||null;
-  ttPickCtx.c=cur?cur.c:((profile.classes||[])[0]||{}).id;
+  ttPickCtx.c=cur?cur.c:(c1AllClasses()[0]||{}).id;
   ttPickCtx.s=cur?cur.s:null;
   document.getElementById('tt-pick-title').textContent=TT_DAYS.find(x=>x.id===d).nm+' — الحصة '+(p+1);
   document.getElementById('tt-pick-clear').style.display=cur?'':'none';
@@ -549,9 +623,9 @@ function ttPickOpen(d,p){
   document.getElementById('tt-pick').classList.add('open');
 }
 function ttPickRender(){
-  document.getElementById('tt-pick-cls').innerHTML=(profile.classes||[]).map(c=>`<button class="chip ${c.id===ttPickCtx.c?'sel':''}" style="${c.id===ttPickCtx.c?'':'color:'+c.color}" onclick="ttPickCtx.c='${c.id}';ttPickCtx.s=null;ttPickRender()">${escHtml(c.name)}</button>`).join('');
-  const cls=(profile.classes||[]).find(x=>x.id===ttPickCtx.c);
-  const subs=(cls&&cls.subjects)||[];
+  document.getElementById('tt-pick-cls').innerHTML=c1AllClasses().map(c=>`<button class="chip ${c.id===ttPickCtx.c?'sel':''}" style="${c.id===ttPickCtx.c?'':'color:'+c.color}" onclick="ttPickCtx.c='${c.id}';ttPickCtx.s=null;ttPickRender()">${escHtml(c.name)}</button>`).join('');
+  const g=c1GradeOf(ttPickCtx.c);
+  const subs=(g&&g.subjects)||[];
   document.getElementById('tt-pick-sub').innerHTML=subs.map(sub=>`<button class="chip olv ${sub===ttPickCtx.s?'sel':''}" onclick="ttPickCtx.s='${sub}';ttPickRender()">${sub}</button>`).join('')||'<span style="font-size:12px;color:var(--muted)">لا مواد لهذه الشعبة</span>';
 }
 function ttPickClose(){document.getElementById('tt-pick').classList.remove('open');}
@@ -616,7 +690,7 @@ async function ttNowState(){
 async function ttRenderNow(){
   const el=document.getElementById('tt-now');if(!el)return;
   const st=await ttNowState();
-  const clsName=v=>{const c=(profile.classes||[]).find(x=>x.id===(v&&v.c));return c?c.name:'';};
+  const clsName=v=>{const c=c1AllClasses().find(x=>x.id===(v&&v.c));return c?c.name:'';};
   let nextTxt='';
   if(st.live){
     const pct=Math.round((1-st.rem/st.len)*100);
@@ -687,7 +761,7 @@ async function ttExportImg(){
       const v=row[p];
       const cx0=W-180-(p+1)*cW+cW/2;
       if(v){
-        const c=(profile.classes||[]).find(k=>k.id===v.c);
+        const c=c1AllClasses().find(k=>k.id===v.c);
         x.fillStyle=(c&&c.color)||'#8A7460';
         x.font='800 19px Cairo,Tahoma';
         x.fillText(c?c.name:'?',cx0,y0+rowH/2-8);
