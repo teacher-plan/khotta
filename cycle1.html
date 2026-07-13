@@ -393,7 +393,7 @@ function c1Go(id){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')c1Board(false);});
 document.addEventListener('click',e=>{
   const m=document.getElementById('c1-menu');
-  if(m.classList.contains('open')&&!m.contains(e.target)&&e.target.id!=='c1-user')m.classList.remove('open');
+  if(m.classList.contains('open')&&!m.contains(e.target)&&!e.target.closest('#c1-user'))m.classList.remove('open');
 });
 
 // ══ المصادقة (نفس بوابة الحلقة الأولى) ══
@@ -412,11 +412,13 @@ async function c1ResetData(){
   document.getElementById('c1-menu').classList.remove('open');
   if(!confirm('سيُحذف كل ما أعددتِه: الاسم، الصفوف، الشعب، والجدول. هل أنت متأكدة؟'))return;
   if(!confirm('تأكيد أخير — الحذف نهائي ولا يمكن التراجع عنه. متابعة؟'))return;
+  cyBusy('يحذف بياناتك');
   try{
     await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
+    cyBusyDone();
     toast('حُذفت بياناتك — نبدأ من جديد');
     setTimeout(()=>location.reload(),900);
-  }catch(e){toast('تعذّر الحذف — تحققي من الاتصال',true);}
+  }catch(e){cyBusyDone();toast('تعذّر الحذف — تحققي من الاتصال',true);}
 }
 
 function confirmSignOut(){
@@ -456,12 +458,14 @@ async function afterAuth(session){
   renderYawmi();
   if(!profile.setupDone)c1Go('tt');
 }
-async function cy1Save(partial){
+async function cy1Save(partial,busyText){
   if(!currentUser)return;
   profile={...profile,...partial,updated_at:new Date().toISOString()};
+  cyBusy(busyText||'يحفظ');
   try{
     await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:profile,updated_at:new Date().toISOString()});
   }catch(e){toast('تعذّر الحفظ — تحققي من الاتصال',true);}
+  finally{cyBusyDone();}
 }
 
 // ══ يومي (الهيكل) ══
@@ -559,7 +563,7 @@ function suRender(){
       const n=i+1;
       const sec=d.secs[n];
       const cls=['sec-tile',sec&&sec.sel?'sel':'',sec&&sec.sel&&sec.subjects.length?'hasS':'',focus===suActive+'-'+n?'focus':''].join(' ');
-      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+'١٢٣٤٥٦٧٨'[i]+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':'اختاري المادة'):'اضغطي إن كنت تدرسينها')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
+      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+'١٢٣٤٥٦٧٨'[i]+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':'اختاري المادة'):'')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
     }).join('');
     // صندوق مواد الشعبة قيد التحديد
     let subjBox='';
@@ -668,7 +672,7 @@ async function suFinish(){
     if(classes.length)grades.push({num:g,classes});
   }
   if(!grades.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
-  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
+  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
   document.getElementById('c1-menu-name').textContent=suName;
   renderYawmi();
   toast('اكتمل الإعداد — أهلاً بك');
@@ -721,20 +725,20 @@ function ttPickRender(){
   document.getElementById('tt-pick-sub').innerHTML=subs.map(sub=>`<button class="chip olv ${sub===ttPickCtx.s?'sel':''}" onclick="ttPickCtx.s='${sub}';ttPickRender()">${sub}</button>`).join('')||'<span style="font-size:12px;color:var(--muted)">لا مواد لهذه الشعبة</span>';
 }
 function ttPickClose(){document.getElementById('tt-pick').classList.remove('open');}
-function ttPickClear(){
+async function ttPickClear(){
   const{d,p}=ttPickCtx;
   const sch=ttData().schedule;
   if(sch[d])delete sch[d][p];
-  cy1Save({timetable:profile.timetable});
+  await cy1Save({timetable:profile.timetable},'يحفظ الجدول');
   ttPickClose();ttRenderTable();
 }
-function ttPickSave(){
+async function ttPickSave(){
   if(!ttPickCtx.c||!ttPickCtx.s){toast('اختاري الشعبة والمادة',true);return;}
   const{d,p}=ttPickCtx;
   const sch=ttData().schedule;
   if(!sch[d])sch[d]={};
   sch[d][p]={c:ttPickCtx.c,s:ttPickCtx.s};
-  cy1Save({timetable:profile.timetable});
+  await cy1Save({timetable:profile.timetable},'يحفظ الجدول');
   ttPickClose();ttRenderTable();ttRenderNow();
 }
 // لوحة الأوقات
@@ -755,7 +759,7 @@ async function ttTimesSave(){
   t.breakAfter=window._ttBrk||3;
   const b0=t.periods[t.breakAfter-1],b1=t.periods[t.breakAfter];
   t.breakTime=[b0?b0[1]:'09:20',b1?b1[0]:'09:40'];
-  cy1Save({timetable:profile.timetable});
+  await cy1Save({timetable:profile.timetable},'يحفظ الأوقات');
   ttTimesClose();ttRenderTable();ttRenderNow();
   toast('حُفظت الأوقات');
 }
