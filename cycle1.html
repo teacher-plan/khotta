@@ -259,6 +259,7 @@ body.inapp #c1-user{display:flex}
 <button id="c1-user" onclick="document.getElementById('c1-menu').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-3.6 0-8 1.8-8 5.3V21h16v-1.7c0-3.5-4.4-5.3-8-5.3z"/></svg></button>
 <div id="c1-menu">
   <div class="c1-mi" id="c1-menu-name" style="color:var(--muted);font-size:11.5px;cursor:default">—</div>
+  <div class="c1-mi danger" onclick="c1ResetData()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 3v1H4v2h1l1 14h12l1-14h1V4h-5V3H9zm2 5h2v8h-2V8z"/></svg> حذف كل بياناتي</div>
   <div class="c1-mi danger" onclick="confirmSignOut()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 9V5l-7 7 7 7v-4h8V9h-8zm6 10v2H3V3h13v2H5v14h11z"/></svg> تسجيل الخروج</div>
 </div>
 
@@ -391,6 +392,19 @@ async function loginWithPassword(){
   const{error}=await sb.auth.signInWithPassword({email,password});
   if(error){btn.disabled=false;btn.textContent='تسجيل الدخول';toast('تعذّر الدخول — تحققي من البيانات',true);}
 }
+
+// حذف كل بيانات الحسـاب (بتأكيد مزدوج) — يعيد الحساب لنقطة الصفر
+async function c1ResetData(){
+  document.getElementById('c1-menu').classList.remove('open');
+  if(!confirm('سيُحذف كل ما أعددتِه: الاسم، الصفوف، الشعب، والجدول. هل أنت متأكدة؟'))return;
+  if(!confirm('تأكيد أخير — الحذف نهائي ولا يمكن التراجع عنه. متابعة؟'))return;
+  try{
+    await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
+    toast('حُذفت بياناتك — نبدأ من جديد');
+    setTimeout(()=>location.reload(),900);
+  }catch(e){toast('تعذّر الحذف — تحققي من الاتصال',true);}
+}
+
 function confirmSignOut(){
   if(!confirm('تسجيل الخروج؟'))return;
   sb.auth.signOut().then(()=>location.reload());
