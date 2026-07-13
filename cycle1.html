@@ -1,3 +1,27 @@
+async function suFinish(){
+  const pend=suPendingSec();
+  if(pend){window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
+  const grades=[];let colorIdx=0;
+  for(const g of suGrades){
+    const d=suData[g];
+    const classes=[];
+    for(let n=1;n<=8;n++){
+      const sec=d.secs[n];
+      if(sec&&sec.sel&&sec.subjects.length){
+        classes.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+      }
+    }
+    if(classes.length)grades.push({num:g,classes});
+  }
+  if(!grades.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
+  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
+  document.getElementById('c1-menu-name').textContent=suName;
+  renderYawmi();
+  toast('اكتمل الإعداد — أهلاً بك');
+  suData={};window._suFocus=null;
+  ttRender();
+}
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -220,15 +244,29 @@ body.inapp #c1-user{display:flex}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
-.subj-card{position:relative;height:76px;border:1.5px solid var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.7),transparent 50%),var(--surface);font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0 13px;transition:transform .15s,box-shadow .15s,border-color .15s;overflow:hidden}
-.subj-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,transparent,var(--sc,#D86048) 50%,transparent);opacity:.55;transition:opacity .15s}
-.subj-card .md{width:40px;height:40px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--sc,#D86048),var(--sc2,#A83030));box-shadow:0 4px 10px rgba(48,24,0,.18)}
-.subj-card .nm{font-size:12.5px;font-weight:800;color:var(--ink);text-align:right;line-height:1.5}
+.subj-card{position:relative;height:72px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface);font-family:inherit;cursor:pointer;display:flex;align-items:stretch;padding:0;transition:transform .15s,box-shadow .15s,border-color .15s;overflow:hidden}
+.subj-card .cband{width:30%;min-width:44px;flex:none;background:linear-gradient(160deg,var(--sc,#D86048),var(--sc2,#A83030));transition:width .22s cubic-bezier(.3,.9,.4,1)}
+.subj-card .nm{flex:1;display:flex;align-items:center;padding:0 13px;font-size:12.5px;font-weight:800;color:var(--ink);text-align:right;line-height:1.5;transition:color .2s;position:relative;z-index:1}
 .subj-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(48,24,0,.13);border-color:var(--sc,#D86048)}
-.subj-card.sel{border-color:var(--sc,#D86048);background:linear-gradient(135deg,color-mix(in srgb,var(--sc,#D86048) 14%,var(--surface)),var(--surface));box-shadow:0 8px 20px rgba(48,24,0,.14)}
-.subj-card.sel::before{opacity:1;height:4px}
-.subj-card .tick{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:var(--olive);color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}
+.subj-card.sel{border-color:var(--sc2,#A83030);box-shadow:0 8px 20px rgba(48,24,0,.18)}
+.subj-card.sel .cband{width:100%;position:absolute;inset:0}
+.subj-card.sel .nm{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.25)}
+.subj-card .tick{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:#fff;color:var(--olive);font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .subj-card.sel .tick{display:flex}
+/* مربعات الشعب الجاهزة */
+.sec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:9px;margin-bottom:14px}
+.sec-tile{position:relative;height:64px;border:1.5px solid var(--border);border-radius:13px;background:var(--surface);font-family:inherit;font-size:15px;font-weight:800;color:var(--ink);cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.sec-tile small{font-size:9px;color:var(--muted);font-weight:700}
+.sec-tile:hover{transform:translateY(-2px);border-color:var(--red)}
+.sec-tile.sel{background:linear-gradient(135deg,var(--red),var(--red-d));border-color:var(--red-d);color:#fff}
+.sec-tile.sel small{color:rgba(255,255,255,.8)}
+.sec-tile.sel.hasS{background:linear-gradient(135deg,var(--olive),var(--olive-d));border-color:var(--olive-d)}
+.sec-tile.focus{box-shadow:0 0 0 3px rgba(216,96,72,.35)}
+.sec-tile .cnt{position:absolute;top:-7px;inset-inline-end:-6px;background:#fff;border:1.5px solid var(--olive);color:var(--olive-d);border-radius:9px;font-size:9.5px;font-weight:800;padding:1px 7px;display:none}
+.sec-tile.hasS .cnt{display:block}
+.sec-subj-box{background:var(--card);border:1.5px dashed var(--border);border-radius:16px;padding:14px;margin-bottom:16px}
+.sec-subj-box .t{font-size:12.5px;font-weight:800;margin-bottom:10px}
+.sec-subj-box .t b{color:var(--red-d)}
 /* شعب الصف */
 .su-cls-chip{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:800;margin:0 0 8px 8px}
 .su-cls-chip .dot{width:11px;height:11px;border-radius:4px}
@@ -539,25 +577,84 @@ function suRender(){
     if(!suActive||!suGrades.includes(suActive))suActive=suGrades[0];
     const d=suData[suActive];
     const gname=['الأول','الثاني','الثالث','الرابع'][suActive-1];
-    el.innerHTML='<div class="su-card" style="max-width:720px">'+steps
-      +'<h2>مواد وشعب كل صف</h2><div class="d">أكملي كل صف اخترتِه — علامة التمام تظهر على الصف المكتمل</div>'
+    const focus=window._suFocus;
+    // مربعات الشعب الثماني الجاهزة
+    const tiles=[...Array(8)].map((_,i)=>{
+      const n=i+1;
+      const sec=d.secs[n];
+      const cls=['sec-tile',sec&&sec.sel?'sel':'',sec&&sec.sel&&sec.subjects.length?'hasS':'',focus===suActive+'-'+n?'focus':''].join(' ');
+      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+'١٢٣٤٥٦٧٨'[i]+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':'اختاري المادة'):'اضغطي إن كنت تدرسينها')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
+    }).join('');
+    // صندوق مواد الشعبة قيد التحديد
+    let subjBox='';
+    if(focus&&focus.startsWith(suActive+'-')){
+      const n=Number(focus.split('-')[1]);
+      const sec=d.secs[n];
+      if(sec&&sec.sel){
+        subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي تدرّسينها لشعبة <b>'+gname+'/'+'١٢٣٤٥٦٧٨'[n-1]+'</b>؟</div>'
+          +'<div class="subj-grid">'+C1_SUBJECTS.map(sub=>{
+            const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
+            const sel=sec.subjects.includes(sub);
+            return '<button class="subj-card '+(sel?'sel':'')+'" style="--sc:'+cc[0]+';--sc2:'+cc[1]+'" onclick="suSecSubj('+n+',\''+sub+'\')"><span class="cband"></span><span class="nm">'+sub+'</span><span class="tick">✓</span></button>';
+          }).join('')+'</div></div>';
+      }
+    }
+    el.innerHTML='<div class="su-card" style="max-width:760px">'+steps
+      +'<h2>شعب ومواد كل صف</h2><div class="d">اختاري الشعب التي تدرّسينها في الصف '+gname+'، وحدّدي مادة كل شعبة فور اختيارها</div>'
       +'<div class="su-grade-tabs">'+suGrades.map(g=>{
-        const dd=suData[g];const done=dd&&dd.subjects.length&&dd.classes.length;
-        return '<button class="su-gt '+(g===suActive?'on':'')+'" onclick="suActive='+g+';suRender()">الصف '+['الأول','الثاني','الثالث','الرابع'][g-1]+(done?'<span class="ok">✓</span>':'')+'</button>';
+        const dd=suData[g];
+        const done=dd&&Object.values(dd.secs).some(x=>x.sel)&&Object.values(dd.secs).every(x=>!x.sel||x.subjects.length);
+        return '<button class="su-gt '+(g===suActive?'on':'')+'" onclick="suGradeTab('+g+')">الصف '+['الأول','الثاني','الثالث','الرابع'][g-1]+(done?'<span class="ok">✓</span>':'')+'</button>';
       }).join('')+'</div>'
-      +'<div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px">مواد الصف '+gname+'</div>'
-      +'<div class="subj-grid">'+C1_SUBJECTS.map(sub=>{
-        const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
-        const sel=d.subjects.includes(sub);
-        return '<button class="subj-card '+(sel?'sel':'')+'" style="--sc:'+cc[0]+';--sc2:'+cc[1]+'" onclick="suToggleSubj(\''+sub+'\')"><span class="md">'+sub.replace('اللغة ','').replace('التربية ','').charAt(0)+'</span><span class="nm">'+sub+'</span><span class="tick">✓</span></button>';
-      }).join('')+'</div>'
-      +'<div class="grp" style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px">شعب الصف '+gname+'</div>'
-      +'<div id="su-cls-wrap">'+d.classes.map((c,i)=>'<span class="su-cls-chip"><span class="dot" style="background:'+c.color+'"></span>'+escHtml(c.name)+'<button onclick="suDelCls('+i+')">حذف</button></span>').join('')+'</div>'
-      +'<div class="su-addrow"><div class="fld"><label for="su-cls-name">اسم الشعبة</label><input type="text" id="su-cls-name" onkeydown="if(event.key===\'Enter\')suAddCls()"/></div>'
-      +'<button class="c1-mbtn go" onclick="suAddCls()">إضافة</button></div>'
-      +'<div class="c1-mrow" style="margin-top:20px"><button class="c1-mbtn no" onclick="suStep=2;suRender()">رجوع</button>'
+      +'<div class="sec-grid">'+tiles+'</div>'
+      +subjBox
+      +'<div class="c1-mrow" style="margin-top:8px"><button class="c1-mbtn no" onclick="suStep=2;suRender()">رجوع</button>'
       +'<button class="c1-mbtn go" onclick="suFinish()">حفظ وبدء الاستخدام</button></div></div>';
   }
+}
+// شعبة بلا مادة تحبس الانتقال — «حدّدي المادة قبل الشعبة التالية»
+function suPendingSec(){
+  for(const g of suGrades){
+    const d=suData[g];if(!d)continue;
+    for(const n of Object.keys(d.secs)){
+      const sec=d.secs[n];
+      if(sec.sel&&!sec.subjects.length)return{g:Number(g),n:Number(n)};
+    }
+  }
+  return null;
+}
+function suSecTap(n){
+  const d=suData[suActive];
+  const sec=d.secs[n]||(d.secs[n]={sel:false,subjects:[]});
+  const pend=suPendingSec();
+  if(!sec.sel){
+    if(pend&&!(pend.g===suActive&&pend.n===n)){
+      window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();
+      toast('حدّدي مادة الشعبة المحددة أولاً قبل الانتقال',true);return;
+    }
+    sec.sel=true;window._suFocus=suActive+'-'+n;
+  }else if(window._suFocus===suActive+'-'+n&&!sec.subjects.length){
+    sec.sel=false;window._suFocus=null; // تراجُع عن الاختيار
+  }else{
+    // إعادة فتح شعبة مكتملة للتعديل أو إلغاؤها
+    if(window._suFocus===suActive+'-'+n){sec.sel=false;sec.subjects=[];window._suFocus=null;}
+    else window._suFocus=suActive+'-'+n;
+  }
+  suRender();
+}
+function suSecSubj(n,sub){
+  const sec=suData[suActive].secs[n];if(!sec)return;
+  const i=sec.subjects.indexOf(sub);
+  if(i>=0)sec.subjects.splice(i,1);else sec.subjects.push(sub);
+  suRender();
+}
+function suGradeTab(g){
+  const pend=suPendingSec();
+  if(pend&&pend.g!==g){
+    window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();
+    toast('أكملي مادة الشعبة المحددة أولاً',true);return;
+  }
+  suActive=g;suRender();
 }
 function suNext1(){
   suName=(document.getElementById('su-name').value||'').trim();
@@ -572,41 +669,13 @@ function suToggleGrade(n){
 }
 function suNext2(){
   if(!suGrades.length){toast('اختاري صفاً واحداً على الأقل',true);return;}
-  suGrades.forEach(g=>{if(!suData[g])suData[g]={subjects:[],classes:[]};});
+  suGrades.forEach(g=>{if(!suData[g])suData[g]={secs:{}};if(!suData[g].secs)suData[g].secs={};});
   Object.keys(suData).forEach(k=>{if(!suGrades.includes(Number(k)))delete suData[k];});
-  suStep=3;suActive=suGrades[0];suRender();
+  suStep=3;suActive=suGrades[0];window._suFocus=null;suRender();
 }
-function suToggleSubj(sub){
-  const arr=suData[suActive].subjects;
-  const i=arr.indexOf(sub);
-  if(i>=0)arr.splice(i,1);else arr.push(sub);
-  suRender();
-}
-function suAddCls(){
-  const inp=document.getElementById('su-cls-name');
-  const name=(inp.value||'').trim();if(!name){toast('اكتبي اسم الشعبة',true);return;}
-  const d=suData[suActive];
-  if(d.classes.some(c=>c.name===name)){toast('هذه الشعبة مضافة',true);return;}
-  const count=Object.values(suData).reduce((t,x)=>t+x.classes.length,0);
-  d.classes.push({id:'c1g'+suActive+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name,color:C1_CLS_COLORS[count%C1_CLS_COLORS.length]});
-  inp.value='';suRender();
-  setTimeout(()=>{const x=document.getElementById('su-cls-name');if(x)x.focus();},50);
-}
-function suDelCls(i){suData[suActive].classes.splice(i,1);suRender();}
-async function suFinish(){
-  for(const g of suGrades){
-    const d=suData[g];
-    if(!d.subjects.length){suActive=g;suRender();toast('اختاري مواد الصف '+['الأول','الثاني','الثالث','الرابع'][g-1],true);return;}
-    if(!d.classes.length){suActive=g;suRender();toast('أضيفي شعب الصف '+['الأول','الثاني','الثالث','الرابع'][g-1],true);return;}
-  }
-  const grades=suGrades.map(g=>({num:g,subjects:suData[g].subjects.slice(),classes:suData[g].classes.slice()}));
-  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true});
-  document.getElementById('c1-menu-name').textContent=suName;
-  renderYawmi();
-  toast('اكتمل الإعداد — أهلاً بك');
-  suData={};
-  ttRender();
-}
+
+
+
 // ── الجدول ──
 function ttCellHtml(d,p,v){
   if(!v)return `<div class="tt-cell empty" ${ttEdit?`onclick="ttPickOpen('${d}',${p})"`:''}>${ttEdit?'اضغطي للإضافة':'—'}</div>`;
@@ -647,8 +716,8 @@ function ttPickOpen(d,p){
 }
 function ttPickRender(){
   document.getElementById('tt-pick-cls').innerHTML=c1AllClasses().map(c=>`<button class="chip ${c.id===ttPickCtx.c?'sel':''}" style="${c.id===ttPickCtx.c?'':'color:'+c.color}" onclick="ttPickCtx.c='${c.id}';ttPickCtx.s=null;ttPickRender()">${escHtml(c.name)}</button>`).join('');
-  const g=c1GradeOf(ttPickCtx.c);
-  const subs=(g&&g.subjects)||[];
+  const cc=c1AllClasses().find(x=>x.id===ttPickCtx.c);
+  const subs=(cc&&cc.subjects)||[];
   document.getElementById('tt-pick-sub').innerHTML=subs.map(sub=>`<button class="chip olv ${sub===ttPickCtx.s?'sel':''}" onclick="ttPickCtx.s='${sub}';ttPickRender()">${sub}</button>`).join('')||'<span style="font-size:12px;color:var(--muted)">لا مواد لهذه الشعبة</span>';
 }
 function ttPickClose(){document.getElementById('tt-pick').classList.remove('open');}
