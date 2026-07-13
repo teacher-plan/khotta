@@ -64,9 +64,10 @@ self.addEventListener('fetch', e => {
 
   if (isHTML) {
     e.respondWith((async () => {
+      // التراجع لكاش index مسموح للصفحة الرئيسية فقط — صفحات أخرى (manager/cycle1…) لا تُستبدل بها أبداً
+      const isRoot = url.pathname === '/' || url.pathname === '/index.html';
       const cached = await validCached(req)
-        || await validCached('/index.html')
-        || await validCached('/');
+        || (isRoot ? (await validCached('/index.html') || await validCached('/')) : null);
       // تحديث بالخلفية دائماً (لا ننتظره)
       const refresh = fetch(req).then(fresh => {
         cacheFullHtml(req, fresh);
