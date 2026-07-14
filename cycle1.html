@@ -1416,9 +1416,18 @@ function starRender(){
     return;
   }
   if(!starClass||!classes.some(c=>c.id===starClass))starClass=classes[0].id;
+  starRenderClassTabs();
+  starRenderBoard();
+}
+function starRenderClassTabs(){
+  const classes=starClassesOf(starGrade);
   document.getElementById('star-class-tabs').innerHTML=classes.map(c=>
-    `<button class="plan-subj-tab ${c.id===starClass?'on':''}" style="--sc:${c.color}" onclick="starClass='${c.id}';starRenderBoard()">${escHtml(c.name)}</button>`
+    `<button class="plan-subj-tab ${c.id===starClass?'on':''}" style="--sc:${c.color}" onclick="starSwitchClass('${c.id}')">${escHtml(c.name)}</button>`
   ).join('');
+}
+function starSwitchClass(id){
+  starClass=id;
+  starRenderClassTabs();
   starRenderBoard();
 }
 function starClassObj(classId){
