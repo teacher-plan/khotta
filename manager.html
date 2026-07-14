@@ -1946,6 +1946,7 @@ input,textarea,select{font-size:16px !important;}
         <tbody id="mc1-teachers-b"><tr><td colspan="5" style="padding:14px;text-align:center;color:#8A7460">يجري التحميل</td></tr></tbody>
       </table></div>
     </div>
+    <div id="mgr-c1-bookslot" style="max-width:760px;margin:0 auto 16px"></div>
     <div style="background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:20px;text-align:right;max-width:560px;margin:0 auto">
       <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:#301800">إدارة قسم الجدول — الأوقات الافتراضية</div>
       <div style="font-size:11.5px;color:#8A7460;line-height:1.9;margin-bottom:14px">تظهر هذه الأوقات جاهزة لكل معلمة جديدة (وتستطيع كل معلمة تعديلها لمدرستها)</div>
@@ -3268,8 +3269,9 @@ input,textarea,select{font-size:16px !important;}
 
   <!-- ═ تبويب ١: المحتوى (الفهرس + الكتاب) ═ -->
   <div id="aipanel-content">
-  <!-- 📚 رفع الكتاب وتقطيعه الذكي — تدفق واحد متكامل -->
-  <div class="eg-card">
+  <!-- 📚 رفع الكتاب وتقطيعه الذكي — تدفق واحد متكامل (بطاقة مشتركة تنتقل لجناح الحلقة الأولى أيضاً) -->
+  <div id="seg-card-anchor"></div>
+  <div class="eg-card" id="seg-card">
     <div class="eg-step-title">📚 رفع الكتاب وتقطيعه الذكي</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع كتاب المادة (PDF) → يحوّله المنصة لصور، ثم <b>يقرأه الذكاء ويحدد كل درس وأين يبدأ تلقائياً</b>. راجع الخريطة وصحّح ما يلزم ثم اعتمد — فترتبط الدروس بصفحاتها، ويقرأ منها كل توليد (تحضير، عرض، اختبار، إنفوجرافيك).</p>
     <div class="eg-row">
@@ -5521,11 +5523,30 @@ function mgrEnter(w){
   document.getElementById('mgr-gate').classList.remove('open');
   if(w==='c1')document.getElementById('mgr-c1').classList.add('open');
   else document.getElementById('mgr-c1').classList.remove('open');
+  segMoveCard(w==='c1');
 }
 function mgrBackToGate(){
   try{sessionStorage.removeItem('mgrWing');}catch(e){}
   document.getElementById('mgr-c1').classList.remove('open');
   document.getElementById('mgr-gate').classList.add('open');
+}
+// نقل بطاقة رفع الكتاب وتقطيعه بين جناحي الإدارة (نفس العنصر والدوال — لا تكرار كود)
+function segMoveCard(toC1){
+  const card=document.getElementById('seg-card');
+  const slot=document.getElementById('mgr-c1-bookslot');
+  const anchor=document.getElementById('seg-card-anchor');
+  if(!card||!slot||!anchor)return;
+  if(toC1)slot.appendChild(card);
+  else anchor.parentNode.insertBefore(card,anchor.nextSibling);
+  segSetScope(toC1);
+}
+function segSetScope(c1only){
+  const gs=document.getElementById('seg-grade');if(!gs)return;
+  const nums=c1only?[1,2,3,4]:[1,2,3,4,5,6,7,8,9,10,11,12];
+  const cur=gs.value;
+  gs.innerHTML='<option value="">الصف</option>'+nums.map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
+  gs.value=nums.includes(Number(cur))?cur:'';
+  segReloadSubjects();
 }
 try{if(sessionStorage.getItem('mgrWing')==='c1')document.addEventListener('DOMContentLoaded',()=>{});}catch(e){}
 
