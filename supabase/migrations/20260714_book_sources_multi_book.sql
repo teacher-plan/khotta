@@ -21,7 +21,7 @@ begin
       and tc.table_name = 'book_sources'
       and tc.constraint_type = 'UNIQUE'
       and (
-        select array_agg(kcu.column_name order by kcu.column_name)
+        select array_agg(kcu.column_name::text order by kcu.column_name)
         from information_schema.key_column_usage kcu
         where kcu.constraint_name = tc.constraint_name
           and kcu.table_schema = 'public'
