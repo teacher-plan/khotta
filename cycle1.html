@@ -433,16 +433,29 @@ body.inapp #c1-user{display:flex}
 .games-end-s{font-size:15px;color:var(--muted);margin-bottom:24px}
 
 /* ── قسم المخالفات ── */
-.beh-board{display:flex;flex-direction:column;gap:10px;margin-top:10px}
-.beh-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:12px 16px}
-.beh-nm{flex:1;font-weight:800;font-size:13.5px;color:var(--ink)}
-.beh-counts{display:flex;gap:8px;flex:none}
-.beh-count{display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;border-radius:9px;padding:4px 9px}
-.beh-count.viol{background:rgba(168,48,48,.1);color:var(--red-d)}
+.beh-reg-head{display:flex;align-items:center;gap:14px;margin:14px 0 10px;flex-wrap:wrap}
+.beh-reg-title{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.3px;padding-inline-start:12px;border-inline-start:4px solid var(--red-d)}
+.beh-search{flex:1;min-width:180px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
+.beh-search:focus{border-color:var(--red)}
+.beh-table-wrap{overflow-x:auto;border-radius:14px;border:2px solid var(--ink);box-shadow:0 8px 24px rgba(48,24,0,.14)}
+.beh-table{width:100%;border-collapse:collapse;min-width:620px;background:var(--surface)}
+.beh-table thead th{background:linear-gradient(135deg,var(--red-deep),var(--red-d));color:#fff;font-size:12.5px;font-weight:800;padding:12px 10px;text-align:center;border-inline-end:1px solid rgba(255,255,255,.18);letter-spacing:.4px}
+.beh-table thead th:first-child{width:38px}
+.beh-table tbody td{padding:11px 10px;text-align:center;font-size:13px;border-bottom:1px solid var(--border);border-inline-end:1px solid var(--border)}
+.beh-table tbody tr:last-child td{border-bottom:none}
+.beh-table tbody tr:nth-child(even){background:var(--card)}
+.beh-table tbody tr:hover{background:rgba(168,48,48,.06)}
+.beh-idx{color:var(--muted);font-weight:700}
+.beh-nm{font-weight:800;color:var(--ink);text-align:start!important}
+.beh-count{display:inline-flex;align-items:center;justify-content:center;min-width:26px;font-size:13px;font-weight:800;border-radius:9px;padding:4px 9px}
+.beh-count.viol{background:rgba(168,48,48,.12);color:var(--red-d)}
+.beh-count.viol.hi{background:var(--red-deep);color:#fff}
 .beh-count.part{background:rgba(72,120,72,.12);color:var(--olive-d)}
-.beh-actions{display:flex;gap:8px;flex:none}
-.beh-add-btn{border:none;border-radius:10px;padding:8px 14px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
-.beh-file-btn{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 12px;color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.beh-count.zero{background:none;color:var(--border);font-weight:400}
+.beh-last{font-size:11px;color:var(--muted)}
+.beh-actions{display:flex;gap:7px;justify-content:center}
+.beh-add-btn{border:none;border-radius:9px;padding:7px 13px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.beh-file-btn{border:1.5px solid var(--border);background:var(--card);border-radius:9px;padding:7px 11px;color:var(--ink);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .beh-file-btn:hover{border-color:var(--red)}
 .beh-file-summary{display:flex;gap:10px;margin-bottom:14px}
 .beh-file-summary .s{flex:1;text-align:center;background:var(--card);border-radius:12px;padding:10px}
@@ -633,7 +646,14 @@ body.inapp #c1-user{display:flex}
   <div id="beh-body" class="hidden">
     <div class="plan-tabs" id="beh-grade-tabs"></div>
     <div class="plan-subj-row" id="beh-class-tabs"></div>
-    <div id="beh-board" class="beh-board"></div>
+    <div class="beh-reg-head">
+      <div class="beh-reg-title">السجل الرسمي للشعبة</div>
+      <input type="text" id="beh-search" class="beh-search" placeholder="ابحثي عن اسم..." oninput="behRenderBoard()"/>
+    </div>
+    <div class="beh-table-wrap"><table class="beh-table" id="beh-table">
+      <thead><tr><th>#</th><th>الاسم</th><th>المخالفات</th><th>المشاركات</th><th>آخر تسجيل</th><th></th></tr></thead>
+      <tbody id="beh-board"></tbody>
+    </table></div>
   </div>
 </div></div>
 
@@ -2129,25 +2149,34 @@ function behRenderBoard(){
   const cls=starClassesOf(behGrade).find(c=>c.id===behClass);
   const box=document.getElementById('beh-board');
   if(!cls||!(cls.students||[]).length){
-    box.innerHTML='<div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد — أضيفيها من قسم النجوم.</div>';
+    box.innerHTML='<tr><td colspan="6"><div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد — أضيفيها من قسم النجوم.</div></td></tr>';
     return;
   }
+  const q=(document.getElementById('beh-search').value||'').trim();
   const arr=behArr(behClass);
-  box.innerHTML=cls.students.map((nm,i)=>{
+  const rows=cls.students.map((nm,i)=>({nm,i})).filter(r=>!q||r.nm.includes(q));
+  if(!rows.length){
+    box.innerHTML='<tr><td colspan="6"><div class="plan-empty-card">لا نتائج مطابقة للبحث</div></td></tr>';
+    return;
+  }
+  box.innerHTML=rows.map((r,ri)=>{
+    const i=r.i,nm=r.nm;
     const log=arr[i]||[];
     const vC=log.filter(e=>e.kind==='viol').length;
     const pC=log.filter(e=>e.kind==='part').length;
-    return `<div class="beh-row">
-      <div class="beh-nm">${escHtml(nm)}</div>
-      <div class="beh-counts">
-        ${vC?`<span class="beh-count viol">${vC} مخالفة</span>`:''}
-        ${pC?`<span class="beh-count part">${pC} مشاركة</span>`:''}
-      </div>
-      <div class="beh-actions">
+    const last=log.length?log.slice().sort((a,b)=>new Date(b.date)-new Date(a.date))[0]:null;
+    const lastTxt=last?new Date(last.date).toLocaleDateString('ar'):'—';
+    return `<tr>
+      <td class="beh-idx">${ri+1}</td>
+      <td class="beh-nm">${escHtml(nm)}</td>
+      <td><span class="beh-count viol ${vC?(vC>=3?'hi':''):'zero'}">${vC}</span></td>
+      <td><span class="beh-count part ${pC?'':'zero'}">${pC}</span></td>
+      <td class="beh-last">${lastTxt}</td>
+      <td><div class="beh-actions">
         <button class="beh-file-btn" onclick="behOpenFile('${cls.id}',${i})">الملف</button>
         <button class="beh-add-btn" onclick="behOpenAdd('${cls.id}',${i})">تسجيل</button>
-      </div>
-    </div>`;
+      </div></td>
+    </tr>`;
   }).join('');
 }
 async function behOpenAdd(classId,idx){
