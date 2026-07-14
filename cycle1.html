@@ -313,8 +313,15 @@ body.inapp #c1-user{display:flex}
 .plan-empty-card{text-align:center;padding:44px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:20px;color:var(--muted);font-size:13.5px;line-height:1.9}
 
 /* ── قسم النجوم ── */
-.star-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:6px}
+.star-board{margin-top:6px}
+.star-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+.star-add-row{display:flex;gap:8px}
+.star-add-input{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
+.star-add-input:focus{border-color:var(--red)}
+.star-add-btn{background:linear-gradient(135deg,var(--red),var(--red-d));border:none;border-radius:10px;padding:10px 18px;color:#fff;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;flex:none}
 .star-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:16px 12px 14px;text-align:center;overflow:hidden;transition:transform .12s}
+.star-del{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;line-height:1;z-index:2}
+.star-del:hover{border-color:var(--red);color:var(--red)}
 .star-card::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--mustard,#C0A848),var(--red))}
 .star-card:active{transform:scale(.96)}
 .star-nm{font-weight:800;font-size:13.5px;color:var(--ink);margin-bottom:10px;min-height:34px;display:flex;align-items:center;justify-content:center}
@@ -1414,21 +1421,58 @@ function starRender(){
   ).join('');
   starRenderBoard();
 }
+function starClassObj(classId){
+  for(const g of (profile.grades||[])){
+    const c=(g.classes||[]).find(x=>x.id===classId);
+    if(c)return c;
+  }
+  return null;
+}
+async function starAddStudent(classId){
+  const input=document.getElementById('star-add-input');
+  const name=(input.value||'').trim();
+  if(!name)return;
+  const cls=starClassObj(classId);
+  if(!cls)return;
+  if(!cls.students)cls.students=[];
+  cls.students.push(name);
+  input.value='';
+  await cy1Save({grades:profile.grades},'يحفظ الطالبة');
+  starRenderBoard();
+  input.focus();
+}
+async function starDelStudent(classId,idx){
+  const cls=starClassObj(classId);
+  if(!cls||!cls.students)return;
+  if(!confirm('حذف «'+cls.students[idx]+'» من قائمة الشعبة؟'))return;
+  cls.students.splice(idx,1);
+  const arr=starArr(classId).slice();arr.splice(idx,1);
+  profile.stars={...(profile.stars||{}),[classId]:arr};
+  await cy1Save({grades:profile.grades,stars:profile.stars},'يحذف الطالبة');
+  starRenderBoard();
+}
 function starRenderBoard(){
   const cls=starClassesOf(starGrade).find(c=>c.id===starClass);
   const board=document.getElementById('star-board'),lb=document.getElementById('star-lb');
-  if(!cls||!(cls.students||[]).length){
-    board.innerHTML='<div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد — أضيفيها من معالج الإعداد.</div>';
+  if(!cls){board.innerHTML='';lb.innerHTML='';return;}
+  const students=cls.students||[];
+  const addRow=`<div class="star-add-row">
+      <input type="text" id="star-add-input" class="star-add-input" placeholder="اسم طالبة جديدة" onkeypress="if(event.key==='Enter')starAddStudent('${cls.id}')"/>
+      <button class="star-add-btn" onclick="starAddStudent('${cls.id}')">إضافة</button>
+    </div>`;
+  if(!students.length){
+    board.innerHTML=addRow+'<div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد — أضيفي أول اسم أعلاه.</div>';
     lb.innerHTML='';return;
   }
   const arr=starArr(starClass);
-  board.innerHTML=cls.students.map((nm,i)=>`
+  board.innerHTML=addRow+'<div class="star-grid">'+students.map((nm,i)=>`
     <div class="star-card">
+      <div class="star-del" onclick="starDelStudent('${cls.id}',${i})" title="حذف الطالبة">✕</div>
       ${arr[i]>0?`<div class="star-minus" onclick="starMinus('${cls.id}',${i})">−</div>`:''}
       <div class="star-nm">${escHtml(nm)}</div>
       <button class="star-btn" onclick="starTap('${cls.id}',${i})">${STAR_SVG}<span class="star-cnt">${arr[i]}</span></button>
-    </div>`).join('');
-  const rank=cls.students.map((nm,i)=>({nm,n:arr[i]})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n).slice(0,3);
+    </div>`).join('')+'</div>';
+  const rank=students.map((nm,i)=>({nm,n:arr[i]})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n).slice(0,3);
   lb.innerHTML=rank.length?('<div class="star-lb-title">الأعلى نجوماً في '+escHtml(cls.name)+'</div>'
     +rank.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${i+1}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="star-lb-cnt">${r.n}</span></div>`).join(''))
     :'';
