@@ -141,6 +141,12 @@ body.inapp #c1-user{display:flex}
 @keyframes sqPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.65);opacity:.35}}
 @media(prefers-reduced-motion:reduce){.lsq{animation:none}}
 
+/* شاشة الانتظار أثناء الحفظ */
+#cy-busy{position:fixed;inset:0;z-index:999;background:rgba(48,24,0,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;flex-direction:column}
+#cy-busy.on{display:flex}
+#cy-busy .loader-squares{width:60px;height:60px;margin-bottom:10px}
+#cy-busy-txt{color:#fff;font-weight:800;font-size:13.5px}
+
 /* ══ قسم الجدول — مركز قيادة اليوم ══ */
 .tt-now{background:linear-gradient(120deg,var(--red-d),var(--red) 70%,#E8926E);border-radius:18px;padding:18px 20px;color:#fff;box-shadow:0 12px 30px rgba(168,48,48,.3);margin-bottom:14px;position:relative;overflow:hidden}
 .tt-now .lbl{font-size:11px;opacity:.85;font-weight:700;letter-spacing:.5px}
@@ -327,6 +333,10 @@ body.inapp #c1-user{display:flex}
 </div>
 
 <!-- ══ التطبيق ══ -->
+<div id="cy-busy">
+  <div class="loader-squares" role="img" aria-label="يحفظ"><div class="lsq lsq-1"></div><div class="lsq lsq-2"></div><div class="lsq lsq-3"></div><div class="lsq lsq-4"></div><div class="lsq lsq-5"></div><div class="lsq lsq-6"></div><div class="lsq lsq-7"></div><div class="lsq lsq-8"></div><div class="lsq lsq-9"></div></div>
+  <div id="cy-busy-txt">يحفظ</div>
+</div>
 <button id="c1-corner" onclick="c1Board(true)" title="التنقل بين الأقسام" aria-label="التنقل"></button>
 <button id="c1-user" onclick="document.getElementById('c1-menu').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-3.6 0-8 1.8-8 5.3V21h16v-1.7c0-3.5-4.4-5.3-8-5.3z"/></svg></button>
 <div id="c1-menu">
@@ -542,6 +552,14 @@ async function afterAuth(session){
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   renderYawmi();
   if(!profile.setupDone)c1Go('tt');
+}
+function cyBusy(text){
+  const el=document.getElementById('cy-busy');if(!el)return;
+  document.getElementById('cy-busy-txt').textContent=text||'يحفظ';
+  el.classList.add('on');
+}
+function cyBusyDone(){
+  const el=document.getElementById('cy-busy');if(el)el.classList.remove('on');
 }
 async function cy1Save(partial,busyText){
   if(!currentUser)return;
