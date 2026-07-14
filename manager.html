@@ -3274,7 +3274,11 @@ input,textarea,select{font-size:16px !important;}
     <div class="eg-row">
       <div style="flex:1"><label class="eg-lbl">الصف</label><select id="seg-grade" onchange="segReloadSubjects()"><option value="">الصف</option></select></div>
       <div style="flex:1"><label class="eg-lbl">الفصل</label><select id="seg-semester" onchange="segReloadSubjects()"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select></div>
-      <div style="flex:1"><label class="eg-lbl">المادة</label><select id="seg-subject"><option value="">المادة</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">المادة</label><select id="seg-subject" onchange="segReloadBookNo()"><option value="">المادة</option></select></div>
+    </div>
+    <div class="eg-row" id="seg-bookno-row" style="display:none">
+      <div style="flex:1"><label class="eg-lbl">رقم الكتاب</label><select id="seg-book-no"><option value="1">الكتاب الأول</option><option value="2">الكتاب الثاني</option><option value="3">الكتاب الثالث</option></select></div>
+      <div style="flex:2;display:flex;align-items:flex-end"><span id="seg-bookno-hint" style="font-size:11.5px;color:var(--muted);padding-bottom:9px">مواد الحلقة الأولى: كل مادة لها ٣ كتب — اختر الكتاب قبل الرفع</span></div>
     </div>
     <div style="border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px">
       <input type="file" id="seg-book-file" accept=".pdf" onchange="segUploadAndSegment(this.files[0]);this.value=''" style="display:none">
@@ -15000,6 +15004,7 @@ function ltInit(){
 
 // ═══════════ 📚 رفع الكتاب وتقطيعه الذكي ═══════════
 let segCtx=null;
+let segIsFirstCycle=false,segBooksBySubject={};
 async function segReloadSubjects(){
   const grade=document.getElementById('seg-grade').value;
   const semester=document.getElementById('seg-semester').value;
@@ -15007,15 +15012,34 @@ async function segReloadSubjects(){
   ssel.innerHTML='<option value="">المادة</option>';
   document.getElementById('seg-review').innerHTML='';
   document.getElementById('seg-status').textContent='';
+  document.getElementById('seg-bookno-row').style.display='none';
+  segIsFirstCycle=Number(grade)<=4;
   if(!grade)return;
-  // كل مواد الصف (نرفع الكتاب هنا) — مع تمييز التي لها كتاب مرفوع بـ📗
+  // كل مواد الصف (نرفع الكتاب هنا) — مع تمييز عدد الكتب المرفوعة
   let subs=[];
-  if(Number(grade)<=4&&typeof FIRST_CYCLE_SUBJECTS!=='undefined'){subs=FIRST_CYCLE_SUBJECTS.slice();}
+  if(segIsFirstCycle&&typeof FIRST_CYCLE_SUBJECTS!=='undefined'){subs=FIRST_CYCLE_SUBJECTS.slice();}
   else{try{const{data}=await sb.from('subjects').select('subject,sort').eq('grade',Number(grade)).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
-  const withBook=new Set();
-  try{const{data}=await sb.from('book_sources').select('subject').eq('grade',String(grade)).eq('semester',semester);(data||[]).forEach(r=>withBook.add(r.subject));}catch(e){}
+  segBooksBySubject={};
+  try{
+    const{data}=await sb.from('book_sources').select('subject,book_no').eq('grade',String(grade)).eq('semester',semester);
+    (data||[]).forEach(r=>{(segBooksBySubject[r.subject]=segBooksBySubject[r.subject]||new Set()).add(r.book_no||1);});
+  }catch(e){}
   if(!subs.length){ssel.innerHTML='<option value="">— لا مواد لهذا الصف —</option>';return;}
-  ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}${withBook.has(s)?' 📗':''}</option>`).join('');
+  ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>{
+    const n=(segBooksBySubject[s]||new Set()).size;
+    const mark=segIsFirstCycle?(n?` (${egToArabic(n)}/٣ 📗)`:''):(n?' 📗':'');
+    return `<option value="${escHtml(s)}">${escHtml(s)}${mark}</option>`;
+  }).join('');
+  segReloadBookNo();
+}
+function segReloadBookNo(){
+  const row=document.getElementById('seg-bookno-row');
+  if(!segIsFirstCycle){row.style.display='none';return;}
+  row.style.display='flex';
+  const subject=document.getElementById('seg-subject').value;
+  const have=segBooksBySubject[subject]||new Set();
+  const sel=document.getElementById('seg-book-no');
+  [...sel.options].forEach(o=>{o.textContent=(o.value==='1'?'الكتاب الأول':o.value==='2'?'الكتاب الثاني':'الكتاب الثالث')+(have.has(Number(o.value))?' — مرفوع':'');});
 }
 // استيراد كتاب من رابط PDF خارجي (عبر الخادم لتجاوز قيود CORS) ثم نفس تدفق الرفع والتقطيع
 async function segImportFromUrl(){
@@ -15053,14 +15077,16 @@ async function segUploadAndSegment(file){
   const semester=document.getElementById('seg-semester').value;
   const subject=document.getElementById('seg-subject').value;
   const offset=parseInt(document.getElementById('seg-offset').value)||1;
+  const bookNo=segIsFirstCycle?(parseInt(document.getElementById('seg-book-no').value)||1):1;
   if(!grade||!subject){st.textContent='❌ اختر الصف والمادة أولاً';return;}
   if(!/\.pdf$/i.test(file.name)){st.textContent='❌ الملف يجب أن يكون PDF';return;}
   let pdf;
   try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
   catch(e){st.textContent='❌ فشل فتح الـPDF';return;}
   const N=pdf.numPages;
-  if(!await uiConfirm('سيُرفع الكتاب ('+egToArabic(N)+' صفحة) لـ'+subject+' — '+libGradeName(Number(grade))+' — '+semester+'، ثم يقطّعه الذكاء تلقائياً.\nقد يستغرق عدة دقائق. متابعة؟'))return;
-  const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','');
+  const bookLabel=segIsFirstCycle?(' — الكتاب '+['الأول','الثاني','الثالث'][bookNo-1]):'';
+  if(!await uiConfirm('سيُرفع الكتاب ('+egToArabic(N)+' صفحة) لـ'+subject+bookLabel+' — '+libGradeName(Number(grade))+' — '+semester+'، ثم يقطّعه الذكاء تلقائياً.\nقد يستغرق عدة دقائق. متابعة؟'))return;
+  const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','')+(bookNo>1?'-b'+bookNo:'');
   for(let p=1;p<=N;p++){
     let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
     if(!blob){st.textContent='⛔ فشل تجهيز الصفحة '+egToArabic(p)+' — أعد المحاولة.';return;}
@@ -15075,7 +15101,7 @@ async function segUploadAndSegment(file){
   }
   st.textContent='⏳ تسجيل مصدر الكتاب…';
   try{
-    const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester'});
+    const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,book_no:bookNo,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester,book_no'});
     if(error)throw error;
   }catch(e){st.textContent='فشل تسجيل المصدر: '+(e.message||'خطأ');return;}
   // مباشرةً: التقطيع الذكي (segRun يقرأ نفس المختارات ويجد الكتاب المسجّل)
@@ -15085,14 +15111,15 @@ async function segRun(){
   const grade=document.getElementById('seg-grade').value;
   const semester=document.getElementById('seg-semester').value;
   const subject=document.getElementById('seg-subject').value;
+  const bookNo=segIsFirstCycle?(parseInt(document.getElementById('seg-book-no').value)||1):1;
   const st=document.getElementById('seg-status');
   const rev=document.getElementById('seg-review');
   rev.innerHTML='';
   if(!grade||!subject){st.textContent='❌ اختر الصف والمادة أولاً';return;}
   let bs=null;
-  try{const r=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).maybeSingle();bs=r.data;}catch(e){}
-  if(!bs||!bs.base_path||!bs.page_count){st.textContent='❌ لا يوجد كتاب مرفوع لهذه المادة';return;}
-  segCtx={grade,semester,subject,base:bs.base_path,offset:bs.offset_pages||1,pageCount:bs.page_count};
+  try{const r=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).eq('book_no',bookNo).maybeSingle();bs=r.data;}catch(e){}
+  if(!bs||!bs.base_path||!bs.page_count){st.textContent='❌ لا يوجد كتاب مرفوع لهذه المادة'+(segIsFirstCycle?' — الكتاب '+['الأول','الثاني','الثالث'][bookNo-1]:'');return;}
+  segCtx={grade,semester,subject,bookNo,base:bs.base_path,offset:bs.offset_pages||1,pageCount:bs.page_count};
 
   // ═ المرحلة ١: قراءة الفهرس الرسمي (المصدر الموثوق لأسماء الوحدات والدروس) ═
   st.textContent='📖 يقرأ الفهرس الرسمي لاستخراج الوحدات ودروسها…';
@@ -15242,14 +15269,18 @@ async function segApprove(){
   if(!rows.length){toast('لا توجد دروس للاعتماد',true);return;}
   if(rows.some(r=>!r.unit)){toast('أكمل اسم كل وحدة',true);return;}
   const st=document.getElementById('seg-status');
-  // تحذير الاستبدال إن وُجد منهج سابق
+  const bookNo=segCtx.bookNo||1;
+  const bookLabel=segIsFirstCycle?(' — الكتاب '+['الأول','الثاني','الثالث'][bookNo-1]):'';
+  // تحذير الاستبدال إن وُجد منهج سابق (بنفس رقم الكتاب فقط — كتب أخرى لا تُمس)
   let existing=0;
-  try{const{count}=await sb.from('curriculum').select('*',{count:'exact',head:true}).eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester);existing=count||0;}catch(e){}
-  if(existing&&!await uiConfirm('توجد '+egToArabic(existing)+' دروس مسجلة مسبقاً لهذه المادة — سيتم استبدالها بالخريطة الجديدة. متابعة؟'))return;
+  try{const{count}=await sb.from('curriculum').select('*',{count:'exact',head:true}).eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester).eq('book_no',bookNo);existing=count||0;}catch(e){}
+  if(existing&&!await uiConfirm('توجد '+egToArabic(existing)+' دروس مسجلة مسبقاً لهذه المادة'+bookLabel+' — سيتم استبدالها بالخريطة الجديدة. متابعة؟'))return;
   st.textContent='⏳ يعتمد الخريطة ويربط الدروس…';
   try{
-    if(existing)await sb.from('curriculum').delete().eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester);
-    const ins=rows.map((r,i)=>({grade:String(segCtx.grade),subject:segCtx.subject,semester:segCtx.semester,unit:r.unit,lesson:r.lesson,sort:i+1,page:r.page}));
+    if(existing)await sb.from('curriculum').delete().eq('grade',String(segCtx.grade)).eq('subject',segCtx.subject).eq('semester',segCtx.semester).eq('book_no',bookNo);
+    // إزاحة الترتيب حسب رقم الكتاب حتى لا تتداخل دروس الكتب الثلاثة عند عرضها معاً
+    const sortBase=(bookNo-1)*1000;
+    const ins=rows.map((r,i)=>({grade:String(segCtx.grade),subject:segCtx.subject,semester:segCtx.semester,book_no:bookNo,unit:r.unit,lesson:r.lesson,sort:sortBase+i+1,page:r.page}));
     const{error}=await sb.from('curriculum').insert(ins);
     if(error)throw error;
     st.textContent='';
