@@ -180,6 +180,15 @@ body.inapp #c1-user{display:flex}
 .c1-mbox h3{font-size:15px;font-weight:800;margin-bottom:14px}
 .c1-mbox .grp{font-size:11.5px;color:var(--muted);font-weight:800;margin:12px 0 7px}
 .chip-row{display:flex;gap:7px;flex-wrap:wrap}
+.tt-pick-list{display:flex;flex-direction:column;gap:7px;margin:6px 0 4px;max-height:52vh;overflow-y:auto}
+.tt-pick-opt{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:inherit;cursor:pointer;text-align:start;transition:.15s}
+.tt-pick-opt:hover{border-color:var(--pc,var(--red));transform:translateY(-1px)}
+.tt-pick-opt.sel{background:linear-gradient(135deg,var(--pc,var(--red)),var(--pc,var(--red)));border-color:var(--pc,var(--red))}
+.tt-pick-opt.sel .nm,.tt-pick-opt.sel .sb{color:#fff}
+.tt-pick-opt.sel .dot{background:#fff}
+.tt-pick-opt .dot{width:11px;height:11px;border-radius:50%;background:var(--pc,var(--red));flex-shrink:0}
+.tt-pick-opt .nm{font-weight:800;font-size:13.5px;color:var(--ink);flex-shrink:0}
+.tt-pick-opt .sb{font-size:12.5px;color:var(--muted);flex:1;text-align:end}
 .chip{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 15px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer;transition:.12s}
 .chip:hover{border-color:var(--red)}
 .chip.sel{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
@@ -395,18 +404,14 @@ body.inapp #c1-user{display:flex}
   <button onclick="undoDeleteTask()">تراجع</button>
 </div>
 
-<!-- منتقي خلية الجدول -->
+<!-- منتقي خلية الجدول — كل خيار يمثل شعبة+مادة، ضغطة واحدة تحفظ مباشرة -->
 <div class="c1-modal" id="tt-pick" onclick="if(event.target===this)ttPickClose()">
   <div class="c1-mbox">
     <h3 id="tt-pick-title">اختيار الحصة</h3>
-    <div class="grp">الشعبة</div>
-    <div class="chip-row" id="tt-pick-cls"></div>
-    <div class="grp">المادة</div>
-    <div class="chip-row" id="tt-pick-sub"></div>
+    <div class="tt-pick-list" id="tt-pick-opts"></div>
     <div class="c1-mrow">
       <button class="c1-mbtn del" id="tt-pick-clear" onclick="ttPickClear()">تفريغ الخلية</button>
       <button class="c1-mbtn no" onclick="ttPickClose()">إلغاء</button>
-      <button class="c1-mbtn go" onclick="ttPickSave()">حفظ</button>
     </div>
   </div>
 </div>
@@ -964,22 +969,24 @@ function ttToggleEdit(){
   document.getElementById('tt-edit-btn').classList.toggle('olive',ttEdit);
   ttRenderTable();
 }
-// منتقي الخلية
+// منتقي الخلية — قائمة مباشرة لكل (شعبة × مادة)، ضغطة واحدة تختار وتحفظ
 function ttPickOpen(d,p){
   ttPickCtx={d,p};
   const cur=(ttData().schedule[d]||{})[p]||null;
-  ttPickCtx.c=cur?cur.c:(c1AllClasses()[0]||{}).id;
-  ttPickCtx.s=cur?cur.s:null;
   document.getElementById('tt-pick-title').textContent=TT_DAYS.find(x=>x.id===d).nm+' — الحصة '+(p+1);
   document.getElementById('tt-pick-clear').style.display=cur?'':'none';
-  ttPickRender();
+  const opts=[];
+  c1AllClasses().forEach(c=>{
+    (c.subjects||[]).forEach(sub=>{
+      opts.push({c,sub,sel:cur&&cur.c===c.id&&cur.s===sub});
+    });
+  });
+  document.getElementById('tt-pick-opts').innerHTML=opts.map(o=>
+    `<button class="tt-pick-opt ${o.sel?'sel':''}" style="--pc:${o.c.color}" onclick="ttPickChoose('${o.c.id}','${o.sub}')">
+      <span class="dot"></span><span class="nm">${escHtml(o.c.name)}</span><span class="sb">${escHtml(o.sub)}</span>
+    </button>`
+  ).join('')||'<div style="font-size:12.5px;color:var(--muted);padding:8px 2px">لا شعب أو مواد معدّة بعد — أكملي الإعداد أولاً</div>';
   document.getElementById('tt-pick').classList.add('open');
-}
-function ttPickRender(){
-  document.getElementById('tt-pick-cls').innerHTML=c1AllClasses().map(c=>`<button class="chip ${c.id===ttPickCtx.c?'sel':''}" style="${c.id===ttPickCtx.c?'':'color:'+c.color}" onclick="ttPickCtx.c='${c.id}';ttPickCtx.s=null;ttPickRender()">${escHtml(c.name)}</button>`).join('');
-  const cc=c1AllClasses().find(x=>x.id===ttPickCtx.c);
-  const subs=(cc&&cc.subjects)||[];
-  document.getElementById('tt-pick-sub').innerHTML=subs.map(sub=>`<button class="chip olv ${sub===ttPickCtx.s?'sel':''}" onclick="ttPickCtx.s='${sub}';ttPickRender()">${sub}</button>`).join('')||'<span style="font-size:12px;color:var(--muted)">لا مواد لهذه الشعبة</span>';
 }
 function ttPickClose(){document.getElementById('tt-pick').classList.remove('open');}
 async function ttPickClear(){
@@ -987,14 +994,13 @@ async function ttPickClear(){
   const sch=ttData().schedule;
   if(sch[d])delete sch[d][p];
   await cy1Save({timetable:profile.timetable},'يحفظ الجدول');
-  ttPickClose();ttRenderTable();
+  ttPickClose();ttRenderTable();ttRenderNow();
 }
-async function ttPickSave(){
-  if(!ttPickCtx.c||!ttPickCtx.s){toast('اختاري الشعبة والمادة',true);return;}
+async function ttPickChoose(classId,sub){
   const{d,p}=ttPickCtx;
   const sch=ttData().schedule;
   if(!sch[d])sch[d]={};
-  sch[d][p]={c:ttPickCtx.c,s:ttPickCtx.s};
+  sch[d][p]={c:classId,s:sub};
   await cy1Save({timetable:profile.timetable},'يحفظ الجدول');
   ttPickClose();ttRenderTable();ttRenderNow();
 }
