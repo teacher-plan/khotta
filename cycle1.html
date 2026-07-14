@@ -155,6 +155,8 @@ body.inapp #c1-user{display:flex}
 .tt-now .bar{height:7px;background:rgba(255,255,255,.25);border-radius:6px;margin-top:12px;overflow:hidden}
 .tt-now .bar i{display:block;height:100%;background:#fff;border-radius:6px;transition:width 1s linear}
 .tt-now.idle{background:linear-gradient(120deg,var(--olive-d),var(--olive))}
+.tt-live-go{margin-top:14px;width:100%;border:none;border-radius:12px;padding:13px;background:#fff;color:var(--red-d);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.tt-live-go:active{transform:scale(.98)}
 .tt-next{font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px}
 .tt-next b{color:var(--red-d)}
 .tt-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:10px}
@@ -352,6 +354,41 @@ body.inapp #c1-user{display:flex}
 .star-stage-cnt{font-size:16px;font-weight:700;opacity:.92;margin-bottom:26px}
 .star-stage-hint{font-size:12px;opacity:.75}
 @media(prefers-reduced-motion:reduce){.star-stage-burst svg{animation:none}}
+
+/* ── وضع الحصة الحية ── */
+#live-stage{position:fixed;inset:0;z-index:950;background:var(--bg);display:none;overflow:auto;padding:26px 20px 60px}
+#live-stage.on{display:block}
+.live-in{max-width:900px;margin:0 auto}
+.live-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.live-head-nm{font-size:19px;font-weight:800;color:var(--ink)}
+.live-close{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red-d);cursor:pointer}
+.live-close:hover{border-color:var(--red)}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.live-card{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:18px;text-align:center;transition:box-shadow .3s}
+.live-card-t{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:12px}
+.live-card-d{font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:14px}
+.live-timer-disp{font-size:40px;font-weight:800;color:var(--red-d);letter-spacing:1px;margin-bottom:12px;font-variant-numeric:tabular-nums}
+.live-timer-mins{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.live-timer-mins button{border:1.5px solid var(--border);background:var(--card);border-radius:9px;padding:6px 12px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.live-timer-mins button:hover{border-color:var(--red)}
+.live-timer-actions{display:flex;gap:8px}
+.live-btn{flex:1;border:none;border-radius:11px;padding:11px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.live-btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--border)}
+.live-btn.quiet{background:linear-gradient(135deg,var(--olive),var(--olive-d))}
+.live-btn.star{background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813}
+.live-card#live-timer-card.done-flash{animation:liveDone .45s ease 3}
+@keyframes liveDone{0%,100%{box-shadow:0 0 0 rgba(216,96,72,0)}50%{box-shadow:0 0 0 8px rgba(216,96,72,.25)}}
+.live-pick-disp{font-size:19px;font-weight:800;color:var(--ink);min-height:56px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;padding:10px;background:var(--card);border-radius:12px}
+.live-pick-disp.spin{color:var(--red-d)}
+.live-btn.hidden{display:none}
+.live-qs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.live-qs-chip{display:flex;align-items:center;gap:7px;border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.live-qs-chip:hover{border-color:var(--red)}
+.live-qs-chip span{background:var(--card);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--red-d);font-weight:800}
+#live-quiet-flash{position:fixed;inset:0;z-index:960;background:var(--olive);opacity:0;pointer-events:none;transition:opacity .25s}
+#live-quiet-flash.on{opacity:.94;animation:liveQuietPulse 1.4s ease}
+@keyframes liveQuietPulse{0%,100%{opacity:0}15%,70%{opacity:.94}}
+@media(prefers-reduced-motion:reduce){.live-card#live-timer-card.done-flash,#live-quiet-flash.on{animation:none}}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
@@ -508,6 +545,48 @@ body.inapp #c1-user{display:flex}
   <button onclick="starUndo()">تراجع</button>
 </div>
 
+<!-- وضع الحصة الحية -->
+<div id="live-stage">
+  <div id="live-quiet-flash"></div>
+  <div class="live-in">
+    <div class="live-head">
+      <div class="live-head-nm" id="live-cls-nm"></div>
+      <button class="live-close" onclick="liveClose()">إنهاء الحصة</button>
+    </div>
+    <div class="live-grid">
+      <div class="live-card" id="live-timer-card">
+        <div class="live-card-t">مؤقّت النشاط</div>
+        <div class="live-timer-disp" id="live-timer-disp">05:00</div>
+        <div class="live-timer-mins">
+          <button onclick="liveTimerSetMin(1)">١</button>
+          <button onclick="liveTimerSetMin(3)">٣</button>
+          <button onclick="liveTimerSetMin(5)">٥</button>
+          <button onclick="liveTimerSetMin(10)">١٠</button>
+        </div>
+        <div class="live-timer-actions">
+          <button class="live-btn" id="live-timer-btn" onclick="liveTimerToggle()">ابدئي</button>
+          <button class="live-btn ghost" onclick="liveTimerReset()">إعادة ضبط</button>
+        </div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-t">إشارة الهدوء</div>
+        <div class="live-card-d">تنبيه لوني وصوتي هادئ يلفت انتباه الصف فوراً</div>
+        <button class="live-btn quiet" onclick="liveQuiet()">أطلقي إشارة الهدوء</button>
+      </div>
+      <div class="live-card">
+        <div class="live-card-t">قرعة عشوائية</div>
+        <div class="live-pick-disp" id="live-pick-disp">اضغطي «اسحبي اسماً»</div>
+        <div class="live-timer-actions">
+          <button class="live-btn" onclick="livePick()">اسحبي اسماً</button>
+          <button class="live-btn star hidden" id="live-pick-star" onclick="livePickGiveStar()">امنحيها نجمة</button>
+        </div>
+      </div>
+    </div>
+    <div class="live-card-t" style="margin-top:22px">نجوم سريعة</div>
+    <div class="live-qs" id="live-quickstars"></div>
+  </div>
+</div>
+
 <div class="c1-modal" id="ev-modal-bg" onclick="if(event.target===this)closeEvModal()">
   <div class="c1-mbox">
     <h3 id="ev-date"></h3>
@@ -598,7 +677,7 @@ function c1Go(id){
   if(id==='plan')planRender();
   if(id==='stars')starRender();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')c1Board(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){c1Board(false);if(document.getElementById('live-stage').classList.contains('on'))liveClose();}});
 document.addEventListener('click',e=>{
   const m=document.getElementById('c1-menu');
   if(m.classList.contains('open')&&!m.contains(e.target)&&!e.target.closest('#c1-user'))m.classList.remove('open');
@@ -1189,7 +1268,8 @@ async function ttRenderNow(){
     el.innerHTML=`<div class="lbl">الحصة ${st.p+1} — جارية الآن</div>
       <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'حصة فارغة في جدولك'}</div>
       <div class="sub">تبقّى ${st.rem} دقيقة</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>`;
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      ${st.v?`<button class="tt-live-go" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>`:''}`;
   }else if(st.next){
     el.className='tt-now idle';
     el.innerHTML=`<div class="lbl">القادمة — الحصة ${st.p+1} بعد ${st.inMin} دقيقة</div>
@@ -1391,7 +1471,7 @@ const STAR_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 
 let starGrade=null,starClass=null,_starLast=null,_starUndoTimer=null,_starSaveTimer=null;
 function starClassesOf(g){const gr=(profile.grades||[]).find(x=>x.num===g);return gr?(gr.classes||[]):[];}
 function starArr(classId){
-  const cls=starClassesOf(starGrade).find(c=>c.id===classId)||{};
+  const cls=starClassObj(classId)||{};
   const n=(cls.students||[]).length;
   const arr=(profile.stars&&profile.stars[classId])||[];
   while(arr.length<n)arr.push(0);
@@ -1539,6 +1619,100 @@ function starStageOpen(classId,idx,count){
   starConfetti();
 }
 function starStageClose(){document.getElementById('star-stage').classList.remove('on');}
+
+// ═══════════ وضع الحصة الحية — كل ما تحتاجه المعلمة أثناء الحصة فعلياً ═══════════
+let liveCtx=null,liveTimerSec=300,liveTimerRunning=false,liveTimerHandle=null,_liveShuffleT=null;
+function liveOpenFromBtn(btn){liveOpen(btn.dataset.c,btn.dataset.s);}
+function liveOpen(classId,subject){
+  const cls=starClassObj(classId);
+  if(!cls)return;
+  liveCtx={classId,subject};
+  document.getElementById('live-cls-nm').textContent=cls.name+' · '+subject;
+  liveTimerReset();
+  document.getElementById('live-pick-disp').textContent='اضغطي «اسحبي اسماً»';
+  document.getElementById('live-pick-disp').removeAttribute('data-idx');
+  document.getElementById('live-pick-star').classList.add('hidden');
+  liveRenderQuickStars();
+  document.getElementById('live-stage').classList.add('on');
+}
+function liveClose(){
+  document.getElementById('live-stage').classList.remove('on');
+  liveTimerPause();
+  clearInterval(_liveShuffleT);
+}
+function liveTimerRender(){
+  const m=String(Math.floor(liveTimerSec/60)).padStart(2,'0');
+  const s=String(liveTimerSec%60).padStart(2,'0');
+  const el=document.getElementById('live-timer-disp');if(el)el.textContent=m+':'+s;
+}
+function liveTimerSetMin(mins){liveTimerPause();liveTimerSec=mins*60;liveTimerRender();}
+function liveTimerReset(){liveTimerPause();liveTimerSec=300;liveTimerRender();}
+function liveTimerToggle(){if(liveTimerRunning)liveTimerPause();else liveTimerStart();}
+function liveTimerStart(){
+  if(liveTimerRunning||liveTimerSec<=0)return;
+  liveTimerRunning=true;
+  const btn=document.getElementById('live-timer-btn');if(btn)btn.textContent='إيقاف مؤقت';
+  liveTimerHandle=setInterval(()=>{
+    liveTimerSec--;liveTimerRender();
+    if(liveTimerSec<=0){liveTimerPause();liveTimerDone();}
+  },1000);
+}
+function liveTimerPause(){
+  liveTimerRunning=false;clearInterval(liveTimerHandle);
+  const btn=document.getElementById('live-timer-btn');if(btn)btn.textContent='ابدئي';
+}
+function liveTimerDone(){
+  starBig();
+  const card=document.getElementById('live-timer-card');
+  card.classList.add('done-flash');
+  setTimeout(()=>card.classList.remove('done-flash'),1500);
+}
+function liveQuiet(){
+  const ov=document.getElementById('live-quiet-flash');
+  ov.classList.remove('on');void ov.offsetWidth;ov.classList.add('on');
+  try{zzfx(1.1,.05,660,.02,.3,.6,0,1.8,0,0,0,0,.05,0,0,0,0,.8,.3);}catch(e){}
+  setTimeout(()=>ov.classList.remove('on'),1400);
+}
+function livePick(){
+  if(!liveCtx)return;
+  const cls=starClassObj(liveCtx.classId);
+  const names=(cls&&cls.students)||[];
+  if(!names.length){toast('لا قائمة طالبات لهذه الشعبة',true);return;}
+  const disp=document.getElementById('live-pick-disp');
+  document.getElementById('live-pick-star').classList.add('hidden');
+  let ticks=0;const maxTicks=18+Math.floor(Math.random()*8);
+  clearInterval(_liveShuffleT);
+  disp.classList.add('spin');
+  _liveShuffleT=setInterval(()=>{
+    disp.textContent=names[Math.floor(Math.random()*names.length)];
+    ticks++;
+    if(ticks>=maxTicks){
+      clearInterval(_liveShuffleT);
+      const finalIdx=Math.floor(Math.random()*names.length);
+      disp.textContent=names[finalIdx];
+      disp.dataset.idx=finalIdx;
+      disp.classList.remove('spin');
+      document.getElementById('live-pick-star').classList.remove('hidden');
+      starDing();
+    }
+  },80);
+}
+function livePickGiveStar(){
+  if(!liveCtx)return;
+  const disp=document.getElementById('live-pick-disp');
+  const idx=Number(disp.dataset.idx);
+  if(Number.isNaN(idx))return;
+  starTap(liveCtx.classId,idx);
+  liveRenderQuickStars();
+}
+function liveRenderQuickStars(){
+  if(!liveCtx)return;
+  const cls=starClassObj(liveCtx.classId);
+  const box=document.getElementById('live-quickstars');
+  if(!cls||!(cls.students||[]).length){box.innerHTML='<div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد.</div>';return;}
+  const arr=starArr(liveCtx.classId);
+  box.innerHTML=cls.students.map((nm,i)=>`<button class="live-qs-chip" onclick="starTap('${cls.id}',${i});liveRenderQuickStars()">${escHtml(nm)}<span>${arr[i]}</span></button>`).join('');
+}
 
 // ── تصدير صورة ──
 async function ttExportImg(){
