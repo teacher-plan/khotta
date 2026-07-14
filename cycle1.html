@@ -1450,8 +1450,24 @@ function zzfx(...t){
   const bf=gmAC.createBuffer(1,h,R);bf.getChannelData(0).set(k);
   const src=gmAC.createBufferSource();src.buffer=bf;src.connect(gmAC.destination);src.start();
 }
-function starDing(){try{zzfx(1.2,.1,540,0,.05,.15,1,1.6,0,0,0,0,0,0,0,0,0,.9,.04);}catch(e){}}
-function starBig(){try{zzfx(1.4,.15,392,0,.1,.35,1,2,0,0,120,.1,0,0,0,0,0,.85,.1);}catch(e){}}
+// أصوات مخصصة يرفعها المشرف (game-sfx/c1_<kind>.mp3) — الأولوية لها، وZzFX احتياط دائم
+let _c1SfxAvail={};
+async function c1SfxHas(kind){
+  if(_c1SfxAvail[kind]!==undefined)return _c1SfxAvail[kind];
+  try{
+    const res=await fetch(sb.storage.from('library-files').getPublicUrl('game-sfx/c1_'+kind+'.mp3').data.publicUrl,{method:'HEAD'});
+    _c1SfxAvail[kind]=res.ok;
+  }catch(e){_c1SfxAvail[kind]=false;}
+  return _c1SfxAvail[kind];
+}
+async function c1Sound(kind,fallback){
+  if(await c1SfxHas(kind)){
+    try{new Audio(sb.storage.from('library-files').getPublicUrl('game-sfx/c1_'+kind+'.mp3').data.publicUrl).play();return;}catch(e){}
+  }
+  fallback();
+}
+function starDing(){c1Sound('ding',()=>{try{zzfx(1.2,.1,540,0,.05,.15,1,1.6,0,0,0,0,0,0,0,0,0,.9,.04);}catch(e){}});}
+function starBig(){c1Sound('big',()=>{try{zzfx(1.4,.15,392,0,.1,.35,1,2,0,0,120,.1,0,0,0,0,0,.85,.1);}catch(e){}});}
 function starConfetti(){
   const cv=document.getElementById('star-confetti');
   cv.width=innerWidth;cv.height=innerHeight;cv.classList.add('on');
@@ -1670,7 +1686,7 @@ function liveTimerDone(){
 function liveQuiet(){
   const ov=document.getElementById('live-quiet-flash');
   ov.classList.remove('on');void ov.offsetWidth;ov.classList.add('on');
-  try{zzfx(1.1,.05,660,.02,.3,.6,0,1.8,0,0,0,0,.05,0,0,0,0,.8,.3);}catch(e){}
+  c1Sound('quiet',()=>{try{zzfx(1.1,.05,660,.02,.3,.6,0,1.8,0,0,0,0,.05,0,0,0,0,.8,.3);}catch(e){}});
   setTimeout(()=>ov.classList.remove('on'),1400);
 }
 function livePick(){
