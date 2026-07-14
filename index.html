@@ -5426,6 +5426,8 @@ function showApp(data){
     // تحميل بيانات السلوك من Supabase
     behaviorStudents=data.behavior_students||{};
     behaviorViolations=data.behavior_violations||{};
+    calendarEvents=data.calendar_events||{};
+    tasks=data.user_tasks||[];
     if(data.behavior_teacher_phone){
       localStorage.setItem('behaviorTeacherPhone',data.behavior_teacher_phone);
     }else if(data.teacher_phone){
@@ -5455,6 +5457,8 @@ function showApp(data){
     arcCategories=DEFAULT_CATS;
     timetableConfig={days:DEFAULT_DAYS,periods:DEFAULT_PERIODS,schedule:{}};
     classConfig={};
+    calendarEvents={};
+    tasks=[];
   }
 
   updateTeacherBanner();
@@ -15366,7 +15370,7 @@ async function deleteLibFile(id){
 }
 let currentMonth=new Date().getMonth();
 let currentYear=new Date().getFullYear();
-let calendarEvents=JSON.parse(localStorage.getItem('calendarEvents')||'{}');
+let calendarEvents={};
 let selectedDate=null;
 const monthNames=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const dayNames=['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
@@ -15405,7 +15409,7 @@ function renderWeekPlanner(){
 function wkPick(k){wkSelKey=k;renderWeekPlanner();}
 function wkShift(d){wkOffset+=d;wkSelKey=null;renderWeekPlanner();}
 
-function saveCalendarEvents(){localStorage.setItem('calendarEvents',JSON.stringify(calendarEvents));}
+function saveCalendarEvents(){dbSave({calendar_events:calendarEvents});}
 
 let activeEvKey=null;
 function selectDate(year,month,day){
@@ -15444,9 +15448,9 @@ function deleteEvent(){
 function renderCalendar(){renderWeekPlanner();}
 
 // ══ TASKS ══════════════════════════════════════════════
-let tasks=JSON.parse(localStorage.getItem('userTasks')||'[]');
+let tasks=[];
 
-function saveTasks(){localStorage.setItem('userTasks',JSON.stringify(tasks));}
+function saveTasks(){dbSave({user_tasks:tasks});}
 
 function renderTasks(){
   const list=document.getElementById('tasks-list');
