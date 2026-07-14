@@ -281,6 +281,36 @@ body.inapp #c1-user{display:flex}
 .undo-toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:12.5px;display:flex;align-items:center;gap:12px;transition:transform .25s;z-index:260}
 .undo-toast.show{transform:translateX(-50%) translateY(0)}
 .undo-toast button{background:none;border:none;color:var(--red-d);font-weight:800;font-size:12.5px;cursor:pointer;filter:brightness(1.6)}
+
+/* ── قسم الخطة ── */
+.plan-tabs,.plan-subj-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.plan-tab{border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
+.plan-tab.on{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
+.plan-subj-tab{border:1.5px solid var(--sc,var(--border));background:var(--surface);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--sc,var(--ink));cursor:pointer}
+.plan-subj-tab.on{background:var(--sc,var(--red));color:#fff}
+.plan-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
+.plan-count{font-size:12.5px;color:var(--muted);font-weight:700}
+.plan-unit{margin-bottom:14px}
+.plan-unit-head{display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px}
+.plan-unit-head .nm{flex:1;font-weight:800;font-size:14px;color:var(--ink)}
+.plan-unit-head .prg{font-size:11.5px;color:var(--muted);font-weight:700}
+.plan-unit-bar{height:5px;border-radius:4px;background:var(--border);overflow:hidden;width:70px;flex:none}
+.plan-unit-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--olive),var(--olive-d))}
+.plan-unit-arrow{transition:transform .2s;color:var(--muted);flex:none}
+.plan-unit.open .plan-unit-arrow{transform:rotate(180deg)}
+.plan-lessons{display:none;padding-top:8px}
+.plan-unit.open .plan-lessons{display:block}
+.plan-lesson{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(48,24,0,.05)}
+.plan-lesson::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--red),var(--red-d))}
+.plan-lesson.done::before{background:linear-gradient(90deg,var(--olive),var(--olive-d))}
+.plan-lesson-top{display:flex;align-items:center;gap:12px;cursor:pointer}
+.plan-chk{width:26px;height:26px;border-radius:8px;border:2px solid var(--border);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;transition:.15s}
+.plan-lesson.done .plan-chk{background:var(--olive);border-color:var(--olive)}
+.plan-lesson-nm{font-weight:800;font-size:13.5px;color:var(--ink)}
+.plan-cls-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.plan-cls-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--cc,var(--border));border-radius:9px;padding:6px 11px;font-size:11.5px;font-weight:700;color:var(--cc,var(--ink));cursor:pointer;background:var(--surface)}
+.plan-cls-chip.on{background:var(--cc,var(--red));color:#fff}
+.plan-empty-card{text-align:center;padding:44px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:20px;color:var(--muted);font-size:13.5px;line-height:1.9}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
@@ -398,6 +428,20 @@ body.inapp #c1-user{display:flex}
   </div></div>
 </div>
 
+<!-- قسم الخطة -->
+<div class="page" id="page-plan"><div class="wrap">
+  <div id="plan-empty" class="hidden"></div>
+  <div id="plan-body" class="hidden">
+    <div class="plan-tabs" id="plan-grade-tabs"></div>
+    <div class="plan-subj-row" id="plan-subj-tabs"></div>
+    <div class="plan-toolbar">
+      <div class="plan-count" id="plan-count"></div>
+      <button class="tt-btn" onclick="planRefresh()">تحديث الدروس من قاعدة البيانات</button>
+    </div>
+    <div id="plan-sections"></div>
+  </div>
+</div></div>
+
 <div class="c1-modal" id="ev-modal-bg" onclick="if(event.target===this)closeEvModal()">
   <div class="c1-mbox">
     <h3 id="ev-date"></h3>
@@ -463,6 +507,7 @@ const C1_ICONS={spark:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" h
 const C1_SECTIONS=[
   {id:'yawmi', ic:'spark', nm:'يومي',    lv:'ترحيبك وحصصك وتحضيرك',        built:true},
   {id:'tt',    ic:'cal',   nm:'الجدول',  lv:'مركز قيادة يومك الدراسي',      built:true},
+  {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
   {id:'games', ic:'game',  nm:'الألعاب', lv:'ألعاب صفية يعشقها الأطفال',    built:false},
   {id:'stars', ic:'star',  nm:'النجوم',  lv:'تحفيز ومسرح احتفال',           built:false},
   {id:'fahim', ic:'fox',   nm:'فهيم',    lv:'مساعدتك الذكية',               built:false},
@@ -484,6 +529,7 @@ function c1Go(id){
   if(pg)pg.classList.add('active');
   if(id==='yawmi')renderYawmi();
   if(id==='tt')ttRender();
+  if(id==='plan')planRender();
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')c1Board(false);});
 document.addEventListener('click',e=>{
@@ -1106,6 +1152,137 @@ function ttMarkLive(st){
     if(cell)cell.classList.add('live');
   }
 }
+// ═══════════ قسم الخطة — وحدات ودروس موادك (مبني على نمط صفحة المعلم) ═══════════
+function stableLessonId(semester,subject,grade,unit,lesson){
+  const raw=`${semester}|${subject}|${grade}|${unit}|${lesson}`;
+  let h=5381;
+  for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}
+  return 'L'+h.toString(36);
+}
+function buildUnitsFromRows(rows,semester,subject){
+  const sorted=rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  const unitsMap={};const order=[];
+  sorted.forEach(r=>{
+    if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
+    unitsMap[r.unit].push({id:stableLessonId(semester,subject,r.grade,r.unit,r.lesson),name:r.lesson});
+  });
+  return order.map(u=>({name:u,lessons:unitsMap[u]}));
+}
+let planGrade=null,planSubject=null;
+const PLAN_GNAMES=['الأول','الثاني','الثالث','الرابع'];
+function planGradesList(){return (profile.grades||[]).filter(g=>(g.classes||[]).length).map(g=>g.num).sort((a,b)=>a-b);}
+function planSubjectsFor(g){
+  const gr=(profile.grades||[]).find(x=>x.num===g);if(!gr)return[];
+  const subs=[];
+  (gr.classes||[]).forEach(c=>(c.subjects||[]).forEach(s=>{if(!subs.includes(s))subs.push(s);}));
+  return subs;
+}
+function planClassesFor(g,subject){
+  const gr=(profile.grades||[]).find(x=>x.num===g);if(!gr)return[];
+  return (gr.classes||[]).filter(c=>(c.subjects||[]).includes(subject));
+}
+function planKey(g,subject){return g+'|'+subject;}
+function planRender(){
+  const grades=planGradesList();
+  const empty=document.getElementById('plan-empty'),body=document.getElementById('plan-body');
+  if(!grades.length){
+    empty.classList.remove('hidden');body.classList.add('hidden');
+    empty.innerHTML='<div class="plan-empty-card">أكملي إعداد شعبك ومواد كل شعبة في قسم الجدول أولاً — ستظهر خطتك هنا تلقائياً بعدها.</div>';
+    return;
+  }
+  empty.classList.add('hidden');body.classList.remove('hidden');
+  if(!planGrade||!grades.includes(planGrade))planGrade=grades[0];
+  document.getElementById('plan-grade-tabs').innerHTML=grades.map(g=>
+    `<button class="plan-tab ${g===planGrade?'on':''}" onclick="planSwitchGrade(${g})">الصف ${PLAN_GNAMES[g-1]}</button>`
+  ).join('');
+  const subs=planSubjectsFor(planGrade);
+  if(!subs.length){
+    document.getElementById('plan-subj-tabs').innerHTML='';
+    document.getElementById('plan-sections').innerHTML='<div class="plan-empty-card">لا مواد معدّة لهذا الصف بعد.</div>';
+    document.getElementById('plan-count').textContent='';
+    return;
+  }
+  if(!planSubject||!subs.includes(planSubject))planSubject=subs[0];
+  document.getElementById('plan-subj-tabs').innerHTML=subs.map(s=>{
+    const cc=(SUBJ_COLORS[s]||['#D86048'])[0];
+    return `<button class="plan-subj-tab ${s===planSubject?'on':''}" style="--sc:${cc}" onclick="planSwitchSubject('${s}')">${escHtml(s)}</button>`;
+  }).join('');
+  planRenderUnits();
+}
+function planSwitchGrade(g){planGrade=g;planSubject=null;planRender();}
+function planSwitchSubject(s){planSubject=s;planRenderUnits();}
+function planGet(id){return (profile.plan_state&&profile.plan_state[id])||{done:false,classes:{}};}
+function planRenderUnits(){
+  const key=planKey(planGrade,planSubject);
+  const units=(profile.plan_units&&profile.plan_units[key])||[];
+  const classes=planClassesFor(planGrade,planSubject);
+  const box=document.getElementById('plan-sections');
+  const totalLessons=units.reduce((s,u)=>s+u.lessons.length,0);
+  const doneLessons=units.reduce((s,u)=>s+u.lessons.filter(l=>planGet(l.id).done).length,0);
+  document.getElementById('plan-count').textContent=totalLessons?`${escHtml(String(doneLessons))}/${escHtml(String(totalLessons))} درس منجز`:'';
+  if(!units.length){
+    box.innerHTML='<div class="plan-empty-card">لا دروس مرفوعة لهذه المادة بعد — سيرفعها المشرف قريباً، أو اضغطي «تحديث الدروس» إن رُفعت للتو.</div>';
+    return;
+  }
+  box.innerHTML=units.map((u,ui)=>{
+    const doneCount=u.lessons.filter(l=>planGet(l.id).done).length;
+    const pct=u.lessons.length?Math.round(doneCount/u.lessons.length*100):0;
+    const lessonsHtml=u.lessons.map(l=>{
+      const st=planGet(l.id);
+      const chips=classes.map(c=>{
+        const on=!!st.classes[c.id];
+        return `<div class="plan-cls-chip ${on?'on':''}" style="--cc:${c.color}" onclick="event.stopPropagation();planToggleClass('${l.id}','${c.id}')">${escHtml(c.name)}</div>`;
+      }).join('');
+      return `<div class="plan-lesson ${st.done?'done':''}" data-id="${l.id}">
+        <div class="plan-lesson-top" onclick="planToggleDone('${l.id}')">
+          <div class="plan-chk">${st.done?'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</div>
+          <div class="plan-lesson-nm">${escHtml(l.name)}</div>
+        </div>
+        <div class="plan-cls-row">${chips}</div>
+      </div>`;
+    }).join('');
+    return `<div class="plan-unit" id="plan-u${ui}">
+      <div class="plan-unit-head" onclick="document.getElementById('plan-u${ui}').classList.toggle('open')">
+        <span class="nm">${escHtml(u.name)}</span>
+        <span class="prg">${escHtml(String(doneCount))}/${escHtml(String(u.lessons.length))}</span>
+        <span class="plan-unit-bar"><i style="width:${pct}%"></i></span>
+        <span class="plan-unit-arrow">▾</span>
+      </div>
+      <div class="plan-lessons">${lessonsHtml}</div>
+    </div>`;
+  }).join('');
+}
+async function planToggleDone(id){
+  const st={...planGet(id)};st.done=!st.done;
+  const all={...(profile.plan_state||{}),[id]:st};
+  await cy1Save({plan_state:all},'يحفظ الخطة');
+  planRenderUnits();
+}
+async function planToggleClass(id,classId){
+  const st={...planGet(id),classes:{...planGet(id).classes}};
+  st.classes[classId]=!st.classes[classId];
+  const classes=planClassesFor(planGrade,planSubject);
+  if(classes.length&&classes.every(c=>st.classes[c.id]))st.done=true;
+  const all={...(profile.plan_state||{}),[id]:st};
+  await cy1Save({plan_state:all},'يحفظ الخطة');
+  planRenderUnits();
+}
+async function planRefresh(){
+  if(!planGrade||!planSubject)return;
+  const key=planKey(planGrade,planSubject);
+  cyBusy('يجلب الدروس من قاعدة البيانات');
+  try{
+    const semester=profile.semester||'الفصل الأول';
+    const{data,error}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',planSubject).eq('grade',String(planGrade)).order('sort');
+    if(error)throw error;
+    const units=(data&&data.length)?buildUnitsFromRows(data,semester,planSubject):[];
+    const all={...(profile.plan_units||{}),[key]:units};
+    await cy1Save({plan_units:all});
+    toast(units.length?'تحدّثت الدروس':'لا يوجد كتاب مرفوع لهذه المادة بعد');
+  }catch(e){toast('تعذّر التحديث — تحققي من الاتصال',true);}
+  finally{cyBusyDone();planRenderUnits();}
+}
+
 // ── تصدير صورة ──
 async function ttExportImg(){
   const t=await ttTimes();
