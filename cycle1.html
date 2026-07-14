@@ -311,6 +311,38 @@ body.inapp #c1-user{display:flex}
 .plan-cls-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--cc,var(--border));border-radius:9px;padding:6px 11px;font-size:11.5px;font-weight:700;color:var(--cc,var(--ink));cursor:pointer;background:var(--surface)}
 .plan-cls-chip.on{background:var(--cc,var(--red));color:#fff}
 .plan-empty-card{text-align:center;padding:44px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:20px;color:var(--muted);font-size:13.5px;line-height:1.9}
+
+/* ── قسم النجوم ── */
+.star-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:6px}
+.star-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:16px 12px 14px;text-align:center;overflow:hidden;transition:transform .12s}
+.star-card::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--mustard,#C0A848),var(--red))}
+.star-card:active{transform:scale(.96)}
+.star-nm{font-weight:800;font-size:13.5px;color:var(--ink);margin-bottom:10px;min-height:34px;display:flex;align-items:center;justify-content:center}
+.star-btn{width:100%;border:none;border-radius:14px;padding:14px 8px;background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:inherit;transition:transform .1s}
+.star-btn:active{transform:scale(.92)}
+.star-btn svg{filter:drop-shadow(0 2px 3px rgba(92,72,19,.35))}
+.star-cnt{font-size:17px;font-weight:800}
+.star-minus{position:absolute;top:8px;inset-inline-start:8px;width:22px;height:22px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;z-index:2}
+.star-minus:hover{border-color:var(--red);color:var(--red)}
+.star-lb{margin-top:22px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px}
+.star-lb-title{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px}
+.star-lb-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.star-lb-rank{width:22px;height:22px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex:none}
+.star-lb-row:nth-child(1) .star-lb-rank{background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813;border-color:transparent}
+.star-lb-nm{flex:1;font-weight:700;color:var(--ink)}
+.star-lb-cnt{font-weight:800;color:var(--red-d)}
+#star-confetti{position:fixed;inset:0;z-index:900;pointer-events:none;display:none}
+#star-confetti.on{display:block}
+#star-stage{position:fixed;inset:0;z-index:890;background:radial-gradient(circle at 50% 40%,rgba(216,96,72,.94),rgba(122,32,32,.97));display:none;align-items:center;justify-content:center;cursor:pointer}
+#star-stage.on{display:flex}
+.star-stage-in{text-align:center;color:#fff}
+.star-stage-burst{font-size:0;margin-bottom:6px}
+.star-stage-burst svg{width:64px;height:64px;filter:drop-shadow(0 0 24px rgba(255,255,255,.6));animation:starPop .6s cubic-bezier(.3,1.6,.4,1)}
+@keyframes starPop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+.star-stage-nm{font-size:28px;font-weight:800;margin-bottom:6px;text-shadow:0 3px 14px rgba(0,0,0,.3)}
+.star-stage-cnt{font-size:16px;font-weight:700;opacity:.92;margin-bottom:26px}
+.star-stage-hint{font-size:12px;opacity:.75}
+@media(prefers-reduced-motion:reduce){.star-stage-burst svg{animation:none}}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
@@ -442,6 +474,31 @@ body.inapp #c1-user{display:flex}
   </div>
 </div></div>
 
+<!-- قسم النجوم -->
+<div class="page" id="page-stars"><div class="wrap">
+  <div id="star-empty" class="hidden"></div>
+  <div id="star-body" class="hidden">
+    <div class="plan-tabs" id="star-grade-tabs"></div>
+    <div class="plan-subj-row" id="star-class-tabs"></div>
+    <div class="star-board" id="star-board"></div>
+    <div class="star-lb" id="star-lb"></div>
+  </div>
+</div></div>
+
+<canvas id="star-confetti"></canvas>
+<div id="star-stage" onclick="starStageClose()">
+  <div class="star-stage-in">
+    <div class="star-stage-burst" id="star-stage-burst"></div>
+    <div class="star-stage-nm" id="star-stage-nm"></div>
+    <div class="star-stage-cnt" id="star-stage-cnt"></div>
+    <div class="star-stage-hint">اضغطي في أي مكان للمتابعة</div>
+  </div>
+</div>
+<div class="undo-toast" id="star-undo-toast">
+  <span id="star-undo-msg">تراجع عن آخر نجمة؟</span>
+  <button onclick="starUndo()">تراجع</button>
+</div>
+
 <div class="c1-modal" id="ev-modal-bg" onclick="if(event.target===this)closeEvModal()">
   <div class="c1-mbox">
     <h3 id="ev-date"></h3>
@@ -509,7 +566,7 @@ const C1_SECTIONS=[
   {id:'tt',    ic:'cal',   nm:'الجدول',  lv:'مركز قيادة يومك الدراسي',      built:true},
   {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
   {id:'games', ic:'game',  nm:'الألعاب', lv:'ألعاب صفية يعشقها الأطفال',    built:false},
-  {id:'stars', ic:'star',  nm:'النجوم',  lv:'تحفيز ومسرح احتفال',           built:false},
+  {id:'stars', ic:'star',  nm:'النجوم',  lv:'تحفيز ومسرح احتفال',           built:true},
   {id:'fahim', ic:'fox',   nm:'فهيم',    lv:'مساعدتك الذكية',               built:false},
 ];
 function c1Board(open){
@@ -530,6 +587,7 @@ function c1Go(id){
   if(id==='yawmi')renderYawmi();
   if(id==='tt')ttRender();
   if(id==='plan')planRender();
+  if(id==='stars')starRender();
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')c1Board(false);});
 document.addEventListener('click',e=>{
@@ -1282,6 +1340,149 @@ async function planRefresh(){
   }catch(e){toast('تعذّر التحديث — تحققي من الاتصال',true);}
   finally{cyBusyDone();planRenderUnits();}
 }
+
+// ═══════════ قسم النجوم — تحفيز فوري ومسرح احتفال ═══════════
+let gmAC=null;
+function zzfx(...t){
+  if(!gmAC)gmAC=new(window.AudioContext||window.webkitAudioContext)();
+  if(gmAC.state==='suspended')gmAC.resume();
+  let[p=1,k=.05,b=220,e=0,r=0,tt=.1,q=0,D=1,u=0,y=0,v=0,z=0,l=0,E=0,A=0,F=0,c=0,w=1,m=0,B=0,N=0]=t,
+  M=Math,d=2*M.PI,R=44100,G=u*=500*d/R/R,C=b*=(1-k+2*k*M.random(k=[]))*d/R,
+  g=0,H=0,a=0,n=1,I=0,J=0,f=0,h=N<0?-1:1,x=d*h*N*2/R,L=M.cos(x),Z=M.sin,K=Z(x)/4,O=1+K,
+  X=-2*L/O,Y=(1-K)/O,P=(1+h*L)/2/O,Q=-(h+L)/O,S=P,T=0,U=0,V=0,W=0;
+  e=R*e+9;m*=R;r*=R;tt*=R;c*=R;y*=500*d/R**3;A*=d/R;v*=d/R;z*=R;l=R*l|0;p*=.3;
+  for(h=e+m+r+tt+c|0;a<h;k[a++]=f*p)
+    ++J%(100*F|0)||(f=q?1<q?2<q?3<q?Z(g**3):M.max(M.min(M.tan(g),1),-1):1-(2*g/d%2+2)%2:1-4*M.abs(M.round(g/d)-g/d):Z(g),
+    f=(l?1-B+B*Z(d*a/l):1)*(f<0?-1:1)*M.abs(f)**D*(a<e?a/e:a<e+m?1-(a-e)/m*(1-w):a<e+m+r?w:a<h-c?(h-a-c)/tt*w:0),
+    f=c?f/2+(c>a?0:(a<h-c?1:(h-a)/c)*k[a-c|0]/2/p):f,
+    N?f=W=S*T+Q*(T=U)+P*(U=f)-Y*V-X*(V=W):0),
+    x=(b+=u+=y)*M.cos(A*H++),g+=x+x*E*Z(a**5),
+    n&&++n>z&&(b+=v,C+=v,n=0),!l||++I%l||(b=C,u=G,n=n||1);
+  const bf=gmAC.createBuffer(1,h,R);bf.getChannelData(0).set(k);
+  const src=gmAC.createBufferSource();src.buffer=bf;src.connect(gmAC.destination);src.start();
+}
+function starDing(){try{zzfx(1.2,.1,540,0,.05,.15,1,1.6,0,0,0,0,0,0,0,0,0,.9,.04);}catch(e){}}
+function starBig(){try{zzfx(1.4,.15,392,0,.1,.35,1,2,0,0,120,.1,0,0,0,0,0,.85,.1);}catch(e){}}
+function starConfetti(){
+  const cv=document.getElementById('star-confetti');
+  cv.width=innerWidth;cv.height=innerHeight;cv.classList.add('on');
+  const cx=cv.getContext('2d');
+  const cols=['#D86048','#C0A848','#487848','#A83030','#E8C34A'];
+  const ps=[];
+  for(let i=0;i<130;i++)ps.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.4,vy:2+Math.random()*3.5,vx:(Math.random()-.5)*2,r:4+Math.random()*5,c:cols[i%cols.length],a:Math.random()*7});
+  const t0=performance.now();
+  (function f(t){
+    cx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.1;
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6);cx.restore();});
+    if(t-t0<3200)requestAnimationFrame(f);else{cx.clearRect(0,0,cv.width,cv.height);cv.classList.remove('on');}
+  })(t0);
+}
+const STAR_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg>';
+let starGrade=null,starClass=null,_starLast=null,_starUndoTimer=null,_starSaveTimer=null;
+function starClassesOf(g){const gr=(profile.grades||[]).find(x=>x.num===g);return gr?(gr.classes||[]):[];}
+function starArr(classId){
+  const cls=starClassesOf(starGrade).find(c=>c.id===classId)||{};
+  const n=(cls.students||[]).length;
+  const arr=(profile.stars&&profile.stars[classId])||[];
+  while(arr.length<n)arr.push(0);
+  return arr;
+}
+function starRender(){
+  const grades=planGradesList();
+  const empty=document.getElementById('star-empty'),body=document.getElementById('star-body');
+  if(!grades.length){
+    empty.classList.remove('hidden');body.classList.add('hidden');
+    empty.innerHTML='<div class="plan-empty-card">أكملي إعداد شعبك وقوائم طالباتها في قسم الجدول أولاً — ستظهر لوحة النجوم هنا تلقائياً بعدها.</div>';
+    return;
+  }
+  empty.classList.add('hidden');body.classList.remove('hidden');
+  if(!starGrade||!grades.includes(starGrade))starGrade=grades[0];
+  document.getElementById('star-grade-tabs').innerHTML=grades.map(g=>
+    `<button class="plan-tab ${g===starGrade?'on':''}" onclick="starGrade=${g};starClass=null;starRender()">الصف ${PLAN_GNAMES[g-1]}</button>`
+  ).join('');
+  const classes=starClassesOf(starGrade);
+  if(!classes.length){
+    document.getElementById('star-class-tabs').innerHTML='';
+    document.getElementById('star-board').innerHTML='<div class="plan-empty-card">لا شعب لهذا الصف بعد.</div>';
+    document.getElementById('star-lb').innerHTML='';
+    return;
+  }
+  if(!starClass||!classes.some(c=>c.id===starClass))starClass=classes[0].id;
+  document.getElementById('star-class-tabs').innerHTML=classes.map(c=>
+    `<button class="plan-subj-tab ${c.id===starClass?'on':''}" style="--sc:${c.color}" onclick="starClass='${c.id}';starRenderBoard()">${escHtml(c.name)}</button>`
+  ).join('');
+  starRenderBoard();
+}
+function starRenderBoard(){
+  const cls=starClassesOf(starGrade).find(c=>c.id===starClass);
+  const board=document.getElementById('star-board'),lb=document.getElementById('star-lb');
+  if(!cls||!(cls.students||[]).length){
+    board.innerHTML='<div class="plan-empty-card">لا قائمة طالبات لهذه الشعبة بعد — أضيفيها من معالج الإعداد.</div>';
+    lb.innerHTML='';return;
+  }
+  const arr=starArr(starClass);
+  board.innerHTML=cls.students.map((nm,i)=>`
+    <div class="star-card">
+      ${arr[i]>0?`<div class="star-minus" onclick="starMinus('${cls.id}',${i})">−</div>`:''}
+      <div class="star-nm">${escHtml(nm)}</div>
+      <button class="star-btn" onclick="starTap('${cls.id}',${i})">${STAR_SVG}<span class="star-cnt">${arr[i]}</span></button>
+    </div>`).join('');
+  const rank=cls.students.map((nm,i)=>({nm,n:arr[i]})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n).slice(0,3);
+  lb.innerHTML=rank.length?('<div class="star-lb-title">الأعلى نجوماً في '+escHtml(cls.name)+'</div>'
+    +rank.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${i+1}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="star-lb-cnt">${r.n}</span></div>`).join(''))
+    :'';
+}
+function starSaveDebounced(){
+  clearTimeout(_starSaveTimer);
+  _starSaveTimer=setTimeout(()=>{cy1Save({stars:profile.stars});},900);
+}
+function starTap(classId,idx){
+  const arr=starArr(classId).slice();
+  _starLast={classId,idx,prev:arr[idx]};
+  arr[idx]++;
+  profile.stars={...(profile.stars||{}),[classId]:arr};
+  starSaveDebounced();
+  if(classId===starClass)starRenderBoard();
+  const milestone=arr[idx]>0&&arr[idx]%5===0;
+  if(milestone){starBig();starStageOpen(classId,idx,arr[idx]);}
+  else starDing();
+  starShowUndo();
+}
+function starMinus(classId,idx){
+  const arr=starArr(classId).slice();
+  if(arr[idx]<=0)return;
+  arr[idx]--;
+  profile.stars={...(profile.stars||{}),[classId]:arr};
+  starSaveDebounced();
+  starRenderBoard();
+}
+function starShowUndo(){
+  const t=document.getElementById('star-undo-toast');
+  t.classList.add('show');
+  clearTimeout(_starUndoTimer);
+  _starUndoTimer=setTimeout(()=>t.classList.remove('show'),4000);
+}
+function starUndo(){
+  if(!_starLast)return;
+  const{classId,idx,prev}=_starLast;
+  const arr=starArr(classId).slice();arr[idx]=prev;
+  profile.stars={...(profile.stars||{}),[classId]:arr};
+  starSaveDebounced();
+  if(classId===starClass)starRenderBoard();
+  _starLast=null;
+  document.getElementById('star-undo-toast').classList.remove('show');
+}
+function starStageOpen(classId,idx,count){
+  const cls=starClassesOf(starGrade).find(c=>c.id===classId);
+  const nm=(cls&&cls.students&&cls.students[idx])||'';
+  document.getElementById('star-stage-burst').innerHTML=STAR_SVG;
+  document.getElementById('star-stage-nm').textContent=nm;
+  document.getElementById('star-stage-cnt').textContent=count+' نجوم — أحسنتِ!';
+  document.getElementById('star-stage').classList.add('on');
+  starConfetti();
+}
+function starStageClose(){document.getElementById('star-stage').classList.remove('on');}
 
 // ── تصدير صورة ──
 async function ttExportImg(){
