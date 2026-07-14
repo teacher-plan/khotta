@@ -217,6 +217,17 @@ body.inapp #c1-user{display:flex}
 .su-gt{border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
 .su-gt.on{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
 .su-gt .ok{color:var(--olive);margin-inline-start:4px}
+.su-prev-profile{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:14px}
+.su-prev-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;border-bottom:1px solid var(--border)}
+.su-prev-row:last-child{border-bottom:none}
+.su-prev-row span:first-child{color:var(--muted);font-weight:700}
+.su-prev-row b{color:var(--ink)}
+.su-prev-g{margin-bottom:12px}
+.su-prev-g>b{display:block;font-size:13.5px;color:var(--red-d);margin-bottom:6px}
+.su-prev-c{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:12.5px}
+.su-prev-c span:first-child{font-weight:800;color:var(--ink);min-width:70px}
+.su-prev-subj{color:var(--muted);flex:1;text-align:center}
+.su-prev-n{color:var(--olive);font-weight:800}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
@@ -512,7 +523,7 @@ async function ttTimes(){
 }
 
 // ── معالج الإعداد — مطابق لبنية صفحة المعلم: الفصل ← الصفوف ← مواد وشعب كل صف ──
-let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='';
+let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='',suRosters={},suRActive=null;
 const SUBJ_COLORS={'اللغة العربية':['#A83030','#7A2020'],'الرياضيات':['#487848','#35603A'],'العلوم':['#2F6B6D','#1F4B4D'],'التربية الإسلامية':['#8A5030','#6B3A1F'],'اللغة الإنجليزية':['#5F8A8B','#44686A'],'المهارات الحياتية':['#C0A848','#A08830'],'التربية الفنية':['#D86048','#A83030'],'التربية الرياضية':['#35603A','#274A2C'],'التربية الموسيقية':['#7A6040','#5C4830'],'تقنية المعلومات':['#4F6D8A','#3A5268']};
 function c1AllClasses(){
   const out=[];
@@ -538,7 +549,7 @@ function ttRenderSetup(){
 }
 function suRender(){
   const el=document.getElementById('tt-setup');
-  const steps='<div class="su-steps">'+[1,2,3].map(n=>'<i class="'+(n<=suStep?'on':'')+'"></i>').join('')+'</div>';
+  const steps='<div class="su-steps">'+[1,2,3,4,5].map(n=>'<i class="'+(n<=suStep?'on':'')+'"></i>').join('')+'</div>';
   if(suStep===1){
     el.innerHTML='<div class="su-card">'+steps+'<h2>البيانات الأساسية</h2><div class="d">اسمك والفصل الدراسي الحالي</div>'
       +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" value="'+escHtml(suName)+'"/></div>'
@@ -553,7 +564,7 @@ function suRender(){
       +'</div>'
       +'<div class="c1-mrow"><button class="c1-mbtn no" onclick="suStep=1;suRender()">رجوع</button>'
       +'<button class="c1-mbtn go" onclick="suNext2()">التالي: المواد والشعب</button></div></div>';
-  }else{
+  }else if(suStep===3){
     if(!suActive||!suGrades.includes(suActive))suActive=suGrades[0];
     const d=suData[suActive];
     const gname=['الأول','الثاني','الثالث','الرابع'][suActive-1];
@@ -589,8 +600,80 @@ function suRender(){
       +'<div class="sec-grid">'+tiles+'</div>'
       +subjBox
       +'<div class="c1-mrow" style="margin-top:8px"><button class="c1-mbtn no" onclick="suStep=2;suRender()">رجوع</button>'
-      +'<button class="c1-mbtn go" onclick="suFinish()">حفظ وبدء الاستخدام</button></div></div>';
+      +'<button class="c1-mbtn go" onclick="suGoStep4()">التالي: قوائم الطلاب</button></div></div>';
+  }else if(suStep===4){
+    const classes=suBuildClasses();
+    if(!suRActive||!classes.some(c=>c.id===suRActive))suRActive=classes[0]?classes[0].id:null;
+    const tabs=classes.map(c=>{
+      const n=(suRosters[c.id]||[]).filter(Boolean).length;
+      return '<button class="su-gt '+(c.id===suRActive?'on':'')+'" onclick="suRTab(\''+c.id+'\')">'+c.name+(n?'<span class="ok">'+n+'</span>':'')+'</button>';
+    }).join('');
+    const active=classes.find(c=>c.id===suRActive);
+    const txt=active?(suRosters[active.id]||[]).join('\n'):'';
+    el.innerHTML='<div class="su-card" style="max-width:760px">'+steps
+      +'<h2>قوائم الطالبات</h2><div class="d">أدخلي أسماء طالبات كل شعبة مرة واحدة فقط، مهما كان عدد موادها</div>'
+      +'<div class="su-grade-tabs">'+tabs+'</div>'
+      +(active?('<div class="fld"><label>طالبات شعبة '+active.name+'</label>'
+        +'<textarea id="su-roster-ta" rows="8" placeholder="اسم في كل سطر" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical" oninput="suRSave()">'+escHtml(txt)+'</textarea></div>')
+        :'<div class="d">لا توجد شعب محددة</div>')
+      +'<div class="c1-mrow" style="margin-top:8px"><button class="c1-mbtn no" onclick="suStep=3;suRender()">رجوع</button>'
+      +'<button class="c1-mbtn go" onclick="suGoStep5()">التالي: المعاينة</button></div></div>';
+  }else{
+    const classes=suBuildClasses();
+    const totalStudents=classes.reduce((s,c)=>s+(suRosters[c.id]||[]).filter(Boolean).length,0);
+    const gradesHtml=suGrades.map(g=>{
+      const gname=['الأول','الثاني','الثالث','الرابع'][g-1];
+      const gcls=classes.filter(c=>c.g===g);
+      if(!gcls.length)return '';
+      return '<div class="su-prev-g"><b>الصف '+gname+'</b>'
+        +gcls.map(c=>'<div class="su-prev-c"><span>'+c.name+'</span><span class="su-prev-subj">'+c.subjects.join('، ')+'</span><span class="su-prev-n">'+((suRosters[c.id]||[]).filter(Boolean).length)+' طالبة</span></div>').join('')
+        +'</div>';
+    }).join('');
+    el.innerHTML='<div class="su-card" style="max-width:760px">'+steps
+      +'<h2>المعاينة والملف الشخصي</h2><div class="d">راجعي إعدادك قبل التأكيد</div>'
+      +'<div class="su-prev-profile"><div class="su-prev-row"><span>الاسم</span><b>'+escHtml(suName)+'</b></div>'
+      +'<div class="su-prev-row"><span>الفصل الدراسي</span><b>'+escHtml(suSem)+'</b></div>'
+      +'<div class="su-prev-row"><span>عدد الشعب</span><b>'+classes.length+'</b></div>'
+      +'<div class="su-prev-row"><span>إجمالي الطالبات</span><b>'+totalStudents+'</b></div></div>'
+      +gradesHtml
+      +'<div class="c1-mrow" style="margin-top:14px"><button class="c1-mbtn no" onclick="suStep=4;suRender()">رجوع</button>'
+      +'<button class="c1-mbtn go" onclick="suFinish()">تأكيد وبدء الاستخدام</button></div></div>';
   }
+}
+function suBuildClasses(){
+  const out=[];let colorIdx=0;
+  for(const g of suGrades){
+    const d=suData[g];if(!d)continue;
+    for(let n=1;n<=8;n++){
+      const sec=d.secs[n];
+      if(sec&&sec.sel&&sec.subjects.length){
+        out.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+      }
+    }
+  }
+  return out;
+}
+function suGoStep4(){
+  const pend=suPendingSec();
+  if(pend){window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
+  const classes=suBuildClasses();
+  if(!classes.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
+  suRActive=classes[0].id;
+  suStep=4;suRender();
+}
+function suRTab(id){
+  suRSave();
+  suRActive=id;suRender();
+}
+function suRSave(){
+  if(!suRActive)return;
+  const ta=document.getElementById('su-roster-ta');
+  if(!ta)return;
+  suRosters[suRActive]=ta.value.split('\n').map(x=>x.trim()).filter(Boolean);
+}
+function suGoStep5(){
+  suRSave();
+  suStep=5;suRender();
 }
 // شعبة بلا مادة تحبس الانتقال — «حدّدي المادة قبل الشعبة التالية»
 function suPendingSec(){
@@ -658,25 +741,16 @@ function suNext2(){
 
 async function suFinish(){
   const pend=suPendingSec();
-  if(pend){window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
-  const grades=[];let colorIdx=0;
-  for(const g of suGrades){
-    const d=suData[g];
-    const classes=[];
-    for(let n=1;n<=8;n++){
-      const sec=d.secs[n];
-      if(sec&&sec.sel&&sec.subjects.length){
-        classes.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
-      }
-    }
-    if(classes.length)grades.push({num:g,classes});
-  }
-  if(!grades.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
+  if(pend){suStep=3;window._suFocus=pend.g+'-'+pend.n;suActive=pend.g;suRender();toast('حدّدي مادة كل شعبة اخترتِها',true);return;}
+  suRSave();
+  const flat=suBuildClasses();
+  if(!flat.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
+  const grades=suGrades.map(g=>({num:g,classes:flat.filter(c=>c.g===g).map(c=>({id:c.id,name:c.name,num:c.num,color:c.color,subjects:c.subjects,students:(suRosters[c.id]||[]).filter(Boolean)}))})).filter(g=>g.classes.length);
   await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
   document.getElementById('c1-menu-name').textContent=suName;
   renderYawmi();
   toast('اكتمل الإعداد — أهلاً بك');
-  suData={};window._suFocus=null;
+  suData={};suRosters={};window._suFocus=null;suRActive=null;
   ttRender();
 }
 
