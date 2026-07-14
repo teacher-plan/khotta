@@ -286,8 +286,8 @@ body.inapp #c1-user{display:flex}
 .plan-tabs,.plan-subj-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .plan-tab{border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
 .plan-tab.on{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
-.plan-subj-tab{border:1.5px solid var(--sc,var(--border));background:var(--surface);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--sc,var(--ink));cursor:pointer}
-.plan-subj-tab.on{background:var(--sc,var(--red));color:#fff}
+.plan-subj-tab{border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s}
+.plan-subj-tab.on{background:var(--sc,var(--red));border-color:var(--sc,var(--red));color:#fff;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:translateY(-1px)}
 .plan-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
 .plan-count{font-size:12.5px;color:var(--muted);font-weight:700}
 .plan-unit{margin-bottom:14px}
@@ -315,6 +315,8 @@ body.inapp #c1-user{display:flex}
 /* ── قسم النجوم ── */
 .star-board{margin-top:6px}
 .star-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+.star-current{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:10px;padding-inline-start:11px;border-inline-start:3px solid var(--sc,var(--red));line-height:1.7}
+.star-current b{color:var(--sc,var(--red-d))}
 .star-add-row{display:flex;gap:8px}
 .star-add-input{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
 .star-add-input:focus{border-color:var(--red)}
@@ -1270,7 +1272,7 @@ function planRender(){
   if(!planSubject||!subs.includes(planSubject))planSubject=subs[0];
   document.getElementById('plan-subj-tabs').innerHTML=subs.map(s=>{
     const cc=(SUBJ_COLORS[s]||['#D86048'])[0];
-    return `<button class="plan-subj-tab ${s===planSubject?'on':''}" style="--sc:${cc}" onclick="planSwitchSubject('${s}')">${escHtml(s)}</button>`;
+    return `<button class="plan-subj-tab ${s===planSubject?'on':''}" style="--sc:${cc}" onclick="planSwitchSubject('${s}')">${s===planSubject?'✓ ':''}${escHtml(s)}</button>`;
   }).join('');
   planRenderUnits();
 }
@@ -1422,7 +1424,7 @@ function starRender(){
 function starRenderClassTabs(){
   const classes=starClassesOf(starGrade);
   document.getElementById('star-class-tabs').innerHTML=classes.map(c=>
-    `<button class="plan-subj-tab ${c.id===starClass?'on':''}" style="--sc:${c.color}" onclick="starSwitchClass('${c.id}')">${escHtml(c.name)}</button>`
+    `<button class="plan-subj-tab ${c.id===starClass?'on':''}" style="--sc:${c.color}" onclick="starSwitchClass('${c.id}')">${c.id===starClass?'✓ ':''}${escHtml(c.name)}</button>`
   ).join('');
 }
 function starSwitchClass(id){
@@ -1465,7 +1467,8 @@ function starRenderBoard(){
   const board=document.getElementById('star-board'),lb=document.getElementById('star-lb');
   if(!cls){board.innerHTML='';lb.innerHTML='';return;}
   const students=cls.students||[];
-  const addRow=`<div class="star-add-row">
+  const addRow=`<div class="star-current" style="--sc:${cls.color}">أنتِ الآن في شعبة <b>${escHtml(cls.name)}</b></div>
+    <div class="star-add-row">
       <input type="text" id="star-add-input" class="star-add-input" placeholder="اسم طالبة جديدة" onkeypress="if(event.key==='Enter')starAddStudent('${cls.id}')"/>
       <button class="star-add-btn" onclick="starAddStudent('${cls.id}')">إضافة</button>
     </div>`;
