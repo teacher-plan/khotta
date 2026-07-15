@@ -117,6 +117,23 @@ body.inapp #c1-user{display:flex}
 .c1-build p{font-size:13px;color:var(--muted);line-height:2.1;max-width:440px;margin:0 auto}
 .c1-build .olv{display:inline-flex;align-items:center;gap:7px;margin-top:16px;background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border-radius:12px;padding:9px 20px;font-size:12.5px;font-weight:800}
 
+/* ── يومي: لوحة الصباح ── */
+.yw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.yw-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px}
+.yw-card-t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--ink);margin-bottom:12px}
+.yw-card-t svg{color:var(--red);flex:none}
+.yw-link{margin-inline-start:auto;background:none;border:none;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline}
+.yw-link:hover{color:var(--red)}
+.yw-empty{font-size:12.5px;color:var(--muted);line-height:1.9;padding:8px 2px}
+.yw-row{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12.5px;border-bottom:1px solid var(--border)}
+.yw-row:last-child{border-bottom:none}
+.yw-time{color:var(--muted);font-size:11px;flex:none;min-width:42px}
+.yw-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.yw-nm{font-weight:800;color:var(--ink)}
+.yw-sub{color:var(--muted);margin-inline-start:auto;font-size:11.5px}
+.yw-note-ev{font-size:13px;color:var(--ink);line-height:1.9;background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.yw-note-tasks{font-size:11.5px;color:var(--red-d);font-weight:700}
+
 #toast-el{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;opacity:0;transition:.25s;max-width:88vw;text-align:center}
 #toast-el.show{opacity:1;transform:translateX(-50%)}
 #toast-el.err{background:var(--red-d)}
@@ -593,17 +610,29 @@ body:has(#page-fahim.active){overflow:hidden}
 </div>
 
 <div id="main-app" class="hidden">
-  <!-- يومي (الهيكل — يُبنى أولاً) -->
+  <!-- يومي — لوحة الصباح: كل يومك في شاشة واحدة -->
   <div class="page active" id="page-yawmi"><div class="wrap">
     <div class="c1-hero">
       <div class="hi" id="c1-greet">أهلاً بك</div>
       <div class="dt" id="c1-date"></div>
     </div>
-    <div class="c1-build">
-      <div class="big"><svg viewBox="0 0 24 24" fill="currentColor" width="52" height="52" style="color:var(--red)"><path d="M13 2v2.1a7 7 0 0 1 5.9 5.9H21v4h-2.1a7 7 0 0 1-5.9 5.9V22h-4v-2.1A7 7 0 0 1 3.1 14H1v-4h2.1A7 7 0 0 1 9 4.1V2h4zm-2 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" opacity=".25"/><path d="M12 6.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg></div>
-      <h2>نبني لكِ منصتك الجديدة</h2>
-      <p>هذه المساحة تُبنى من الصفر بهوية خاصة بالحلقة الأولى — قسماً بعد قسم، وكل قسم يصلكِ مكتملاً ومصقولاً.<br/>الأقسام القادمة تجدينها في زر التنقل الأحمر أعلى الصفحة.</p>
-      <div class="olv"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 22V12m0 0C12 7 8 4 3 4c0 5 3 8 9 8zm0-3c.5-4 4-6 9-6-.5 5-4 7-9 7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg> أول الأقسام قريباً جداً</div>
+    <div id="yw-setup-cta" class="hidden"></div>
+    <div id="yw-main" class="hidden">
+      <div class="tt-now" id="yw-now"></div>
+      <div class="yw-grid">
+        <div class="yw-card">
+          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> حصص اليوم <button class="yw-link" onclick="c1Go('tt')">الجدول كاملاً</button></div>
+          <div id="yw-today"></div>
+        </div>
+        <div class="yw-card">
+          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> نجوم الصدارة <button class="yw-link" onclick="c1Go('stars')">قسم النجوم</button></div>
+          <div id="yw-stars"></div>
+        </div>
+        <div class="yw-card">
+          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm4 3v2h10V8H7zm0 4v2h10v-2H7zm0 4v2h6v-2H7z"/></svg> مفكرة اليوم <button class="yw-link" onclick="c1Go('tt')">المفكرة كاملة</button></div>
+          <div id="yw-note"></div>
+        </div>
+      </div>
     </div>
   </div></div>
 
@@ -1003,11 +1032,89 @@ async function cy1Save(partial,busyText){
   finally{cyBusyDone();}
 }
 
-// ══ يومي (الهيكل) ══
+// ══ يومي — لوحة الصباح ══
+let ywTick=null;
 function renderYawmi(){
   const h=new Date().getHours();
-  document.getElementById('c1-greet').textContent=(h<12?'صباح النور':'مساء الورد')+(profile.display_name?' أ. '+profile.display_name:'')+'';
+  document.getElementById('c1-greet').textContent=(h<12?'صباح النور':'مساء الورد')+(profile.display_name?' أ. '+profile.display_name:'');
   document.getElementById('c1-date').textContent=new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const cta=document.getElementById('yw-setup-cta'),main=document.getElementById('yw-main');
+  clearInterval(ywTick);
+  if(!profile.setupDone){
+    cta.classList.remove('hidden');main.classList.add('hidden');
+    cta.innerHTML=`<div class="c1-build">
+      <div class="big"><svg viewBox="0 0 24 24" fill="currentColor" width="52" height="52" style="color:var(--red)"><path d="M13 2v2.1a7 7 0 0 1 5.9 5.9H21v4h-2.1a7 7 0 0 1-5.9 5.9V22h-4v-2.1A7 7 0 0 1 3.1 14H1v-4h2.1A7 7 0 0 1 9 4.1V2h4zm-2 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" opacity=".25"/><path d="M12 6.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg></div>
+      <h2>أكملي إعدادك أولاً</h2>
+      <p>حدّدي صفوفك وشعبك ومواد كل شعبة من قسم الجدول — بعدها تظهر لوحة يومك هنا تلقائياً بكل ما تحتاجينه كل صباح.</p>
+      <button class="olv" style="border:none;cursor:pointer;font-family:inherit" onclick="c1Go('tt')">إكمال الإعداد الآن</button>
+    </div>`;
+    return;
+  }
+  cta.classList.add('hidden');main.classList.remove('hidden');
+  ywRenderNow();
+  ywRenderToday();
+  ywRenderStars();
+  ywRenderNote();
+  ywTick=setInterval(ywRenderNow,30000);
+}
+async function ywRenderNow(){
+  const el=document.getElementById('yw-now');if(!el)return;
+  const st=await ttNowState();
+  const clsName=v=>{const c=c1AllClasses().find(x=>x.id===(v&&v.c));return c?c.name:'';};
+  if(st.live){
+    const pct=Math.round((1-st.rem/st.len)*100);
+    el.className='tt-now';
+    el.innerHTML=`<div class="lbl">الحصة ${st.p+1} — جارية الآن</div>
+      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'حصة فارغة في جدولك'}</div>
+      <div class="sub">تبقّى ${st.rem} دقيقة</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      ${st.v?`<button class="tt-live-go" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>`:''}`;
+  }else if(st.next){
+    el.className='tt-now idle';
+    el.innerHTML=`<div class="lbl">القادمة — الحصة ${st.p+1} بعد ${st.inMin} دقيقة</div>
+      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'لم تُسجَّل بعد'}</div>
+      <div class="sub">استعدّي على مهل، كل شيء تحت السيطرة</div>`;
+  }else if(st.done){
+    el.className='tt-now idle';
+    el.innerHTML=`<div class="lbl">انتهى اليوم الدراسي</div><div class="big">أحسنتِ اليوم</div><div class="sub">استريحي — غداً يوم جديد جميل</div>`;
+  }else{
+    el.className='tt-now idle';
+    el.innerHTML=`<div class="lbl">عطلة نهاية الأسبوع</div><div class="big">يوم راحة</div><div class="sub">نلقاك الأحد بنشاط</div>`;
+  }
+}
+async function ywRenderToday(){
+  const box=document.getElementById('yw-today');if(!box)return;
+  const t=await ttTimes();
+  const dayId=(TT_DAYS[new Date().getDay()]||{}).id;
+  if(!dayId){box.innerHTML='<div class="yw-empty">عطلة نهاية الأسبوع — لا حصص اليوم</div>';return;}
+  const row=ttData().schedule[dayId]||{};
+  const items=t.periods.map((pt,i)=>({i,pt,v:row[i]})).filter(x=>x.v);
+  if(!items.length){box.innerHTML='<div class="yw-empty">لا حصص مسجّلة اليوم بعد — أضيفيها من قسم الجدول</div>';return;}
+  box.innerHTML=items.map(it=>{
+    const c=c1AllClasses().find(x=>x.id===it.v.c);
+    return `<div class="yw-row"><span class="yw-time">${it.pt[0]}</span><span class="yw-dot" style="background:${(c&&c.color)||'#8A7460'}"></span><span class="yw-nm">${escHtml(c?c.name:'?')}</span><span class="yw-sub">${escHtml(it.v.s||'')}</span></div>`;
+  }).join('');
+}
+function ywRenderStars(){
+  const box=document.getElementById('yw-stars');if(!box)return;
+  const rows=[];
+  (profile.grades||[]).forEach(g=>(g.classes||[]).forEach(c=>{
+    const arr=starArr(c.id);
+    (c.students||[]).forEach((nm,i)=>{if(arr[i])rows.push({nm,n:arr[i],cls:c.name});});
+  }));
+  rows.sort((a,b)=>b.n-a.n);
+  const top=rows.slice(0,3);
+  if(!top.length){box.innerHTML='<div class="yw-empty">امنحي أول نجمة من قسم النجوم لتظهر الصدارة هنا</div>';return;}
+  box.innerHTML=top.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${i+1}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="beh-last" style="margin-inline-end:6px">${escHtml(r.cls)}</span><span class="star-lb-cnt">${r.n}</span></div>`).join('');
+}
+function ywRenderNote(){
+  const box=document.getElementById('yw-note');if(!box)return;
+  const d=new Date();
+  const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const ev=(profile.calendar_events||{})[k];
+  const tasks=(profile.user_tasks||[]).filter(t=>!t.done);
+  box.innerHTML=(ev?`<div class="yw-note-ev">${escHtml(ev)}</div>`:'<div class="yw-empty">لا حدث مسجّل اليوم</div>')
+    +(tasks.length?`<div class="yw-note-tasks">${tasks.length} مهمة غير منجزة</div>`:'');
 }
 
 // ══ الإقلاع ══
