@@ -80,6 +80,19 @@ body.inapp #c1-user{display:flex}
 .c1-mi:hover{background:var(--card)}
 .c1-mi.danger{color:var(--red-d)}
 
+/* ── الإشعارات ── */
+#c1-notif-btn{position:fixed;top:12px;inset-inline-end:60px;z-index:210;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(48,24,0,.14);color:var(--ink)}
+body.inapp #c1-notif-btn{display:flex}
+#c1-notif-badge{position:absolute;top:-3px;inset-inline-end:-3px;background:var(--red-d);color:#fff;font-size:9.5px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+#c1-notif-panel{position:fixed;top:58px;inset-inline-end:60px;z-index:220;background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(320px,88vw);max-height:70vh;overflow-y:auto;box-shadow:0 10px 30px rgba(48,24,0,.2);display:none}
+#c1-notif-panel.open{display:block}
+.c1-notif-head{font-weight:800;font-size:13px;padding:12px 14px;border-bottom:1px solid var(--border);color:var(--ink)}
+.c1-notif-item{padding:11px 14px;font-size:12.5px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.8;cursor:default}
+.c1-notif-item:last-child{border-bottom:none}
+.c1-notif-item.unread{background:rgba(216,96,72,.06)}
+.c1-notif-item .dt{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+.c1-notif-empty{padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px}
+
 /* ── لوحة الانطلاق ── */
 #c1-board{position:fixed;inset:0;z-index:400;background:rgba(48,24,0,.55);backdrop-filter:blur(7px);display:none;align-items:flex-start;justify-content:center;padding:26px 18px;overflow:auto}
 #c1-board.open{display:flex}
@@ -697,6 +710,14 @@ body:has(#page-fahim.active){overflow:hidden}
   <div id="cy-busy-txt">يحفظ</div>
 </div>
 <button id="c1-corner" onclick="c1Board(true)" title="التنقل بين الأقسام" aria-label="التنقل"></button>
+<button id="c1-notif-btn" onclick="c1NotifToggle()" title="الإشعارات" aria-label="الإشعارات">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .8-.3 1.6-.8 2.2L4 15.5V17h16v-1.5l-1.2-1.7c-.5-.6-.8-1.4-.8-2.2V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/></svg>
+  <span id="c1-notif-badge" class="hidden">0</span>
+</button>
+<div id="c1-notif-panel">
+  <div class="c1-notif-head">الإشعارات</div>
+  <div id="c1-notif-list"></div>
+</div>
 <button id="c1-user" onclick="document.getElementById('c1-menu').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-3.6 0-8 1.8-8 5.3V21h16v-1.7c0-3.5-4.4-5.3-8-5.3z"/></svg></button>
 <div id="c1-menu">
   <div class="c1-mi" id="c1-menu-name" style="color:var(--muted);font-size:11.5px;cursor:default">—</div>
@@ -1256,6 +1277,7 @@ async function afterAuth(session){
   document.body.classList.add('inapp');
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   renderYawmi();
+  c1NotifLoad();
   if(!profile.setupDone)c1Go('tt');
 }
 function cyBusy(text){
@@ -3043,7 +3065,53 @@ async function libRateSet(n){
     const nb=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
     if(nb)nb.addEventListener('click',e=>{e.stopPropagation();libRateOpen(libRateItemId);});
     toast('شكراً لتقييمك!','ok');
+    const item=libItemsCache[idx];
+    if(item&&item.user_id&&item.user_id!==currentUser.id){
+      const raterName=(profile&&profile.display_name)||'معلمة';
+      sb.from('c1_notifications').insert({
+        user_id:item.user_id,
+        item_id:item.id,
+        message:`قامت ${raterName} بتقييم ملفك «${item.title}» بـ ${n} نجوم`
+      }).then(()=>{}).catch(()=>{});
+    }
   }catch(e){toast('تعذّر حفظ التقييم',true);}
+}
+
+let c1Notifs=[];
+async function c1NotifLoad(){
+  if(!currentUser)return;
+  try{
+    const{data}=await sb.from('c1_notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+    c1Notifs=data||[];
+  }catch(e){c1Notifs=[];}
+  c1NotifRender();
+}
+function c1NotifRender(){
+  const list=document.getElementById('c1-notif-list');
+  const badge=document.getElementById('c1-notif-badge');
+  if(!list||!badge)return;
+  const unread=c1Notifs.filter(n=>!n.read).length;
+  if(unread>0){badge.textContent=unread>9?'9+':String(unread);badge.classList.remove('hidden');}
+  else badge.classList.add('hidden');
+  if(!c1Notifs.length){list.innerHTML='<div class="c1-notif-empty">لا توجد إشعارات بعد</div>';return;}
+  list.innerHTML=c1Notifs.map(n=>`<div class="c1-notif-item${n.read?'':' unread'}">${escHtml(n.message)}<span class="dt">${new Date(n.created_at).toLocaleString('ar')}</span></div>`).join('');
+}
+function c1NotifToggle(){
+  const panel=document.getElementById('c1-notif-panel');
+  if(!panel)return;
+  const opening=!panel.classList.contains('open');
+  panel.classList.toggle('open',opening);
+  if(opening){
+    c1NotifLoad().then(()=>{
+      const unreadIds=c1Notifs.filter(n=>!n.read).map(n=>n.id);
+      if(unreadIds.length&&currentUser){
+        sb.from('c1_notifications').update({read:true}).eq('user_id',currentUser.id).eq('read',false).then(()=>{
+          c1Notifs=c1Notifs.map(n=>({...n,read:true}));
+          c1NotifRender();
+        }).catch(()=>{});
+      }
+    });
+  }
 }
 // نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
 // خاطئ قد يعيده المخزن، ويحل مشكلة ظهورها كنص خام بدل صفحة مُنفَّذة (لوحظ في فايرفوكس تحديداً)
