@@ -943,7 +943,7 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="lib-hero-s">كل ما تشاركينه هنا يصل فوراً لكل معلمات مادتك في الحلقة الأولى، بغض النظر عن الصف — ومحتوى زميلاتك يصلك بنفس الطريقة.</div>
   </div>
   <div class="plan-subj-row" id="lib-subj-tabs"></div>
-  <button class="lib-share-cta" onclick="libOpenAdd()">
+  <button class="lib-share-cta" id="lib-share-btn" onclick="libOpenAdd()">
     <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18 16.1c-.8 0-1.5.3-2 .9l-7.1-4.1c.1-.3.1-.6.1-.9s0-.6-.1-.9L15.9 7c.6.5 1.3.9 2.1.9 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .3 0 .6.1.9L7.9 9.9C7.3 9.3 6.6 9 5.8 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.9l7.1 4.2c-.1.3-.1.5-.1.8 0 1.6 1.3 3 3 3s3-1.3 3-3-1.3-3-3-3z"/></svg>
     شاركي إبداعك مع زميلاتك
   </button>
@@ -2872,14 +2872,17 @@ function libRenderTabs(){
 }
 function libRender(){
   const mine=libMySubjects();
-  const empty=document.getElementById('lib-empty'),box=document.getElementById('lib-items');
+  const empty=document.getElementById('lib-empty'),box=document.getElementById('lib-items'),shareBtn=document.getElementById('lib-share-btn');
   if(!mine.length){
     document.getElementById('lib-subj-tabs').innerHTML='';
     box.innerHTML='';
+    shareBtn.classList.add('hidden');
+    libSubject=null;
     empty.classList.remove('hidden');
     empty.innerHTML='<div class="plan-empty-card">أكملي إعداد موادك في قسم الجدول أولاً — ستظهر مكتبة مادتك هنا تلقائياً بعدها.</div>';
     return;
   }
+  shareBtn.classList.remove('hidden');
   empty.classList.add('hidden');
   if(!libSubject||!mine.includes(libSubject))libSubject=mine[0];
   libRenderTabs();
@@ -2913,6 +2916,7 @@ async function libLoadItems(){
   }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';}
 }
 function libOpenAdd(){
+  if(!libSubject){toast('أكملي إعداد موادك في قسم الجدول أولاً',true);return;}
   document.getElementById('lib-modal-subj').textContent=libSubject;
   document.getElementById('lib-title').value='';
   document.getElementById('lib-desc').value='';
@@ -2931,6 +2935,7 @@ function libFilePicked(){
   document.getElementById('lib-file-btn').textContent=f.name;
 }
 async function libSave(){
+  if(!libSubject){toast('حدث خطأ — أعيدي فتح المكتبة وحاولي مجدداً',true);return;}
   const title=(document.getElementById('lib-title').value||'').trim();
   if(!title){toast('اكتبي عنواناً للمشاركة',true);return;}
   const desc=(document.getElementById('lib-desc').value||'').trim();
