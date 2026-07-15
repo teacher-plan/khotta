@@ -618,7 +618,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .lib-preview-ph span{font-size:12px;font-weight:800}
 .lib-card-title{font-weight:800;font-size:14px;color:var(--ink);margin-bottom:6px}
 .lib-card-desc{font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:10px}
-.lib-card-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--red-d);text-decoration:none;background:var(--card);border-radius:9px;padding:6px 11px;margin-bottom:10px}
+.lib-card-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--red-d);text-decoration:none;background:var(--card);border-radius:9px;padding:6px 11px;margin-bottom:10px;border:none;cursor:pointer;font-family:inherit}
 .lib-card-meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:9px}
 .lib-card-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px}
 .lib-card-del:hover{color:var(--red)}
@@ -2920,17 +2920,35 @@ async function libLoadItems(){
       return;
     }
     const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
-    box.innerHTML=libItemsCache.map(it=>`<div class="lib-card">
+    box.innerHTML=libItemsCache.map((it,idx)=>`<div class="lib-card">
       ${libPreviewHtml(it)}
       <div class="lib-card-title">${escHtml(it.title)}</div>
       ${it.description?`<div class="lib-card-desc">${escHtml(it.description)}</div>`:''}
-      ${it.file_url?`<a class="lib-card-file" href="${it.file_url}" target="_blank" rel="noopener">${escHtml((typeLbl[it.file_type]||'ملف')+' — '+(it.file_name||'تحميل'))}</a>`:''}
+      ${it.file_url?`<button type="button" class="lib-card-file lib-open-btn" data-idx="${idx}">${escHtml((typeLbl[it.file_type]||'ملف')+' — '+(it.file_name||'تحميل'))}</button>`:''}
       <div class="lib-card-meta">
         <span>${escHtml(it.uploader_name||'معلمة')} · ${new Date(it.created_at).toLocaleDateString('ar')}</span>
         ${currentUser&&it.user_id===currentUser.id?`<button class="lib-card-del" onclick="libDelete('${it.id}')">حذف</button>`:''}
       </div>
     </div>`).join('');
+    box.querySelectorAll('.lib-open-btn').forEach(b=>b.addEventListener('click',()=>{
+      const it=libItemsCache[Number(b.dataset.idx)];
+      if(it)libOpenFile(it.file_url,it.file_name);
+    }));
   }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';}
+}
+// نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
+// خاطئ قد يعيده المخزن، ويحل مشكلة ظهورها كنص خام بدل صفحة مُنفَّذة (لوحظ في فايرفوكس تحديداً)
+function libOpenFile(url,fileName){
+  const ext=((fileName||'').split('.').pop()||'').toLowerCase();
+  if(ext==='html'||ext==='htm'){
+    fetch(url).then(r=>r.blob()).then(b=>{
+      const blob=new Blob([b],{type:'text/html'});
+      const objUrl=URL.createObjectURL(blob);
+      window.open(objUrl,'_blank');
+    }).catch(()=>window.open(url,'_blank'));
+    return;
+  }
+  window.open(url,'_blank');
 }
 function libOpenAdd(){
   if(!libSubject){toast('أكملي إعداد موادك في قسم الجدول أولاً',true);return;}
