@@ -2024,6 +2024,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="c1msg-tab sel" data-t="broadcast" onclick="c1msgTab('broadcast')">جماعية</button>
       <button class="c1msg-tab" data-t="private" onclick="c1msgTab('private')">خاصة</button>
       <button class="c1msg-tab" data-t="surveys" onclick="c1msgTab('surveys')">استبيانات</button>
+      <button class="c1msg-tab" data-t="suggestions" onclick="c1msgTab('suggestions')">اقتراحات المعلمات</button>
     </div>
 
     <div class="c1msg-sub sel" id="c1msg-sub-broadcast">
@@ -2060,6 +2061,11 @@ input,textarea,select{font-size:16px !important;}
         <button class="c1msg-send" onclick="c1srvPublish()">نشر الاستبيان</button>
       </div>
       <div class="c1msg-list" id="c1srv-list"><div style="text-align:center;color:#8A7460;font-size:12.5px">يجري التحميل</div></div>
+    </div>
+
+    <div class="c1msg-sub" id="c1msg-sub-suggestions">
+      <p style="font-size:12px;color:#8A7460;margin-bottom:16px;max-width:560px;text-align:center;margin-inline:auto">اقتراحات المعلمات لتطوير المنصة نفسها — مقروءة للمشرف فقط</p>
+      <div class="c1msg-list" id="c1sug-list"><div style="text-align:center;color:#8A7460;font-size:12.5px">يجري التحميل</div></div>
     </div>
   </div></div>
 
@@ -5610,6 +5616,7 @@ function c1msgInit(){
   c1msgLoadPrivate();
   if(!c1msgInited){c1srvResetForm();c1msgInited=true;}
   c1srvLoad();
+  c1sugLoad();
 }
 function c1msgTab(t){
   document.querySelectorAll('.c1msg-tab').forEach(b=>b.classList.toggle('sel',b.dataset.t===t));
@@ -5779,6 +5786,32 @@ async function c1srvDelete(id){
     if(error)throw error;
     toast('✅ تم الحذف');
     c1srvLoad();
+  }catch(e){toast('❌ تعذّر الحذف',true);}
+}
+
+// ── اقتراحات المعلمات لتطوير المنصة ──
+async function c1sugLoad(){
+  const box=document.getElementById('c1sug-list');if(!box)return;
+  try{
+    const{data,error}=await sb.from('c1_suggestions').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    box.innerHTML=(data||[]).map(s=>`<div class="c1msg-row">
+      <div class="t">${escHtml(s.user_label||'معلمة')}</div>
+      <div class="b">${escHtml(s.message)}</div>
+      <div class="meta">
+        <span>${new Date(s.created_at).toLocaleDateString('ar')}</span>
+        <button class="del" onclick="c1sugDelete('${s.id}')">حذف</button>
+      </div>
+    </div>`).join('')||'<div style="text-align:center;color:#8A7460;font-size:12.5px">لا اقتراحات بعد</div>';
+  }catch(e){box.innerHTML='<div style="text-align:center;color:#A83030;font-size:12.5px">تعذّر التحميل</div>';}
+}
+async function c1sugDelete(id){
+  if(!await uiConfirm('هل تريدين حذف هذا الاقتراح؟'))return;
+  try{
+    const{error}=await sb.from('c1_suggestions').delete().eq('id',id);
+    if(error)throw error;
+    toast('✅ تم الحذف');
+    c1sugLoad();
   }catch(e){toast('❌ تعذّر الحذف',true);}
 }
 

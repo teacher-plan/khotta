@@ -679,6 +679,23 @@ body:has(#page-fahim.active){overflow:hidden}
 .srv-bar.mine{background:linear-gradient(90deg,var(--red),var(--red-d))}
 .srv-bar-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12.5px;font-weight:800;color:var(--ink)}
 .srv-foot{font-size:11px;color:var(--muted);margin-top:10px}
+/* صندوق اقتراحات المعلمة لإدارة المنصة — أسلوب راقٍ منفصل عن بطاقات الرسائل */
+.sug-box{position:relative;margin-top:26px;padding:26px 24px 22px;border-radius:20px;text-align:center;
+  background:linear-gradient(155deg,#2A1608,#301800 55%,#241205);color:#F3E6D2;
+  box-shadow:0 14px 34px rgba(48,24,0,.28);overflow:hidden}
+.sug-box::before{content:'';position:absolute;inset:9px;border:1px solid rgba(243,230,210,.22);border-radius:14px;pointer-events:none}
+.sug-orn{font-size:20px;color:#C0A848;margin-bottom:6px;opacity:.9}
+.sug-title{font-size:15.5px;font-weight:800;letter-spacing:.3px;margin-bottom:6px}
+.sug-sub{font-size:12px;color:#D8C7A8;line-height:1.9;max-width:440px;margin:0 auto 16px}
+.sug-box textarea{width:100%;min-height:88px;background:rgba(255,255,255,.06);border:1px solid rgba(243,230,210,.28);
+  border-radius:12px;padding:12px 14px;font-family:inherit;font-size:13px;color:#F3E6D2;resize:vertical;margin-bottom:14px}
+.sug-box textarea::placeholder{color:#B39A78}
+.sug-box textarea:focus{outline:none;border-color:#C0A848}
+.sug-send{border:1.5px solid #C0A848;background:linear-gradient(135deg,#E8C34A,#C0A848);color:#3D2E0A;
+  font-family:inherit;font-weight:800;font-size:13px;border-radius:12px;padding:11px 26px;cursor:pointer;
+  min-height:44px;transition:transform .15s}
+.sug-send:hover{transform:translateY(-1px)}
+.sug-send:disabled{opacity:.55;cursor:default}
 /* بطاقة مصغّرة أفقية — أيقونة/صورة + عنوان + زر تحميل دائري (تصميم A) */
 .lib-card{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px;box-shadow:0 3px 10px rgba(48,24,0,.08);cursor:pointer;transition:border-color .15s}
 .lib-card:hover{border-color:var(--red)}
@@ -1070,6 +1087,13 @@ body:has(#page-fahim.active){overflow:hidden}
   </div>
   <div class="msgs-sub" id="msgs-sub-surveys">
     <div id="msgs-surveys"></div>
+  </div>
+  <div class="sug-box">
+    <div class="sug-orn"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14.7 3.3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L9.4 20.6a1 1 0 0 1-.5.27l-5 1.1a1 1 0 0 1-1.2-1.2l1.1-5a1 1 0 0 1 .27-.5L14.7 3.3zm.7 2.1L5.6 15.2l-.7 3.2 3.2-.7L18 7.9l-2.6-2.5z"/></svg></div>
+    <div class="sug-title">صندوق اقتراحاتك</div>
+    <div class="sug-sub">لديك فكرة لتطوير منصة «خطتي»؟ رأيك يصل مباشرة إلى إدارة المنصة</div>
+    <textarea id="sug-text" placeholder="اكتبي اقتراحك هنا..."></textarea>
+    <button class="sug-send" id="sug-send-btn" onclick="sugSend()">إرسال الاقتراح</button>
   </div>
 </div></div>
 
@@ -3307,6 +3331,20 @@ async function msgsVote(surveyId,idx){
     toast('شكراً لمشاركتك برأيك!','ok');
     msgsLoadSurveys();
   }catch(e){toast('تعذّر إرسال إجابتك',true);}
+}
+async function sugSend(){
+  if(!currentUser)return;
+  const ta=document.getElementById('sug-text');
+  const msg=ta.value.trim();
+  if(!msg){toast('اكتبي اقتراحك أولاً',true);return;}
+  const btn=document.getElementById('sug-send-btn');
+  btn.disabled=true;
+  try{
+    await sb.from('c1_suggestions').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    ta.value='';
+    toast('شكراً لك، وصل اقتراحك لإدارة المنصة','ok');
+  }catch(e){toast('تعذّر إرسال الاقتراح',true);}
+  finally{btn.disabled=false;}
 }
 
 // نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
