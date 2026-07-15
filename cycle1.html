@@ -1091,15 +1091,11 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="lib-hero-s">رسائل الإدارة إليك، استبياناتها، ومساحة حديث مشتركة مع كل معلمات الحلقة الأولى.</div>
   </div>
   <div class="plan-subj-row">
-    <button class="chip msgs-tab sel" data-t="msgs" onclick="msgsTab('msgs')">الرسائل</button>
-    <button class="chip msgs-tab" data-t="surveys" onclick="msgsTab('surveys')">الاستبيانات</button>
+    <button class="chip msgs-tab sel" data-t="feed" onclick="msgsTab('feed')">الرسائل والاستبيانات</button>
     <button class="chip msgs-tab" data-t="community" onclick="msgsTab('community')">مجتمع المعلمات</button>
   </div>
-  <div class="msgs-sub sel" id="msgs-sub-msgs">
-    <div id="msgs-list"></div>
-  </div>
-  <div class="msgs-sub" id="msgs-sub-surveys">
-    <div id="msgs-surveys"></div>
+  <div class="msgs-sub sel" id="msgs-sub-feed">
+    <div id="msgs-feed"></div>
   </div>
   <div class="msgs-sub" id="msgs-sub-community">
     <div class="comm-feed" id="comm-feed"></div>
@@ -3297,58 +3293,60 @@ function msgsTab(t){
   document.querySelectorAll('.msgs-sub').forEach(s=>s.classList.toggle('sel',s.id==='msgs-sub-'+t));
 }
 async function msgsRender(){
-  msgsLoadMessages();
-  msgsLoadSurveys();
+  msgsLoadFeed();
   commRender();
 }
-async function msgsLoadMessages(){
-  const box=document.getElementById('msgs-list');if(!box||!currentUser)return;
-  box.innerHTML='<div class="msg-empty">يجري التحميل...</div>';
-  try{
-    const{data,error}=await sb.from('c1_messages').select('*').order('created_at',{ascending:false});
-    if(error)throw error;
-    if(!data||!data.length){box.innerHTML='<div class="msg-empty">لا رسائل من الإدارة بعد</div>';return;}
-    box.innerHTML=data.map(m=>`<div class="msg-row${m.target_user_id?' private':''}">
-      <div class="mt">${escHtml(m.title)}<span class="mtag">${m.target_user_id?'خاصة لك':'للجميع'}</span></div>
-      <div class="mb">${escHtml(m.body)}</div>
-      <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}</div>
-    </div>`).join('');
-  }catch(e){box.innerHTML='<div class="msg-empty">تعذّر تحميل الرسائل</div>';}
+function msgsMsgHtml(m){
+  return `<div class="msg-row${m.target_user_id?' private':''}">
+    <div class="mt">${escHtml(m.title)}<span class="mtag">${m.target_user_id?'خاصة لك':'رسالة جماعية'}</span></div>
+    <div class="mb">${escHtml(m.body)}</div>
+    <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}</div>
+  </div>`;
 }
-async function msgsLoadSurveys(){
-  const box=document.getElementById('msgs-surveys');if(!box||!currentUser)return;
+function msgsSrvHtml(s,resp){
+  const all=(resp||[]).filter(r=>r.survey_id===s.id);
+  const mine=all.find(r=>r.user_id===currentUser.id);
+  const total=all.length;
+  const showResults=!!mine||s.closed;
+  let body;
+  if(showResults){
+    body=(s.options||[]).map((opt,i)=>{
+      const cnt=all.filter(r=>r.option_index===i).length;
+      const pct=total?Math.round(cnt/total*100):0;
+      const isMine=mine&&mine.option_index===i;
+      return `<div class="srv-bar-wrap"><div class="srv-bar${isMine?' mine':''}" style="width:${pct}%"></div><div class="srv-bar-lbl"><span>${escHtml(opt)}${isMine?' ✓':''}</span><span>${pct}%</span></div></div>`;
+    }).join('<div style="height:7px"></div>');
+  }else{
+    body=`<div class="srv-opts">`+(s.options||[]).map((opt,i)=>
+      `<button type="button" class="srv-opt-btn" onclick="msgsVote('${s.id}',${i})">${escHtml(opt)}</button>`
+    ).join('')+`</div>`;
+  }
+  return `<div class="srv-card">
+    <div class="srv-q">${escHtml(s.question)}<span class="mtag">استبيان</span>${s.closed?'<span class="srv-closed-tag">مغلق</span>':''}</div>
+    ${body}
+    <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''} · ${new Date(s.created_at).toLocaleDateString('ar')}</div>
+  </div>`;
+}
+async function msgsLoadFeed(){
+  const box=document.getElementById('msgs-feed');if(!box||!currentUser)return;
   box.innerHTML='<div class="msg-empty">يجري التحميل...</div>';
   try{
-    const{data:surveys,error}=await sb.from('c1_surveys').select('*').order('created_at',{ascending:false});
-    if(error)throw error;
-    if(!surveys||!surveys.length){box.innerHTML='<div class="msg-empty">لا استبيانات بعد</div>';return;}
-    const ids=surveys.map(s=>s.id);
-    const{data:resp}=await sb.from('c1_survey_responses').select('survey_id,user_id,option_index').in('survey_id',ids);
-    box.innerHTML=surveys.map(s=>{
-      const all=(resp||[]).filter(r=>r.survey_id===s.id);
-      const mine=all.find(r=>r.user_id===currentUser.id);
-      const total=all.length;
-      const showResults=!!mine||s.closed;
-      let body;
-      if(showResults){
-        body=(s.options||[]).map((opt,i)=>{
-          const cnt=all.filter(r=>r.option_index===i).length;
-          const pct=total?Math.round(cnt/total*100):0;
-          const isMine=mine&&mine.option_index===i;
-          return `<div class="srv-bar-wrap"><div class="srv-bar${isMine?' mine':''}" style="width:${pct}%"></div><div class="srv-bar-lbl"><span>${escHtml(opt)}${isMine?' ✓':''}</span><span>${pct}%</span></div></div>`;
-        }).join('<div style="height:7px"></div>');
-      }else{
-        body=`<div class="srv-opts">`+(s.options||[]).map((opt,i)=>
-          `<button type="button" class="srv-opt-btn" onclick="msgsVote('${s.id}',${i})">${escHtml(opt)}</button>`
-        ).join('')+`</div>`;
-      }
-      return `<div class="srv-card">
-        <div class="srv-q">${escHtml(s.question)}${s.closed?'<span class="srv-closed-tag">مغلق</span>':''}</div>
-        ${body}
-        <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''}</div>
-      </div>`;
-    }).join('');
-  }catch(e){box.innerHTML='<div class="msg-empty">تعذّر تحميل الاستبيانات</div>';}
+    const[{data:msgs,error:mErr},{data:surveys,error:sErr}]=await Promise.all([
+      sb.from('c1_messages').select('*').order('created_at',{ascending:false}),
+      sb.from('c1_surveys').select('*').order('created_at',{ascending:false})
+    ]);
+    if(mErr)throw mErr;if(sErr)throw sErr;
+    let resp=[];
+    if(surveys&&surveys.length){
+      const{data}=await sb.from('c1_survey_responses').select('survey_id,user_id,option_index').in('survey_id',surveys.map(s=>s.id));
+      resp=data||[];
+    }
+    const items=[
+      ...(msgs||[]).map(m=>({t:m.created_at,html:msgsMsgHtml(m)})),
+      ...(surveys||[]).map(s=>({t:s.created_at,html:msgsSrvHtml(s,resp)}))
+    ].sort((a,b)=>new Date(b.t)-new Date(a.t));
+    box.innerHTML=items.length?items.map(i=>i.html).join(''):'<div class="msg-empty">لا رسائل أو استبيانات من الإدارة بعد</div>';
+  }catch(e){box.innerHTML='<div class="msg-empty">تعذّر تحميل الرسائل والاستبيانات</div>';}
 }
 async function msgsVote(surveyId,idx){
   if(!currentUser)return;
@@ -3356,7 +3354,7 @@ async function msgsVote(surveyId,idx){
     const{error:voteErr}=await sb.from('c1_survey_responses').upsert({survey_id:surveyId,user_id:currentUser.id,option_index:idx},{onConflict:'survey_id,user_id'});
     if(voteErr)throw voteErr;
     toast('شكراً لمشاركتك برأيك!','ok');
-    msgsLoadSurveys();
+    msgsLoadFeed();
   }catch(e){toast('تعذّر إرسال إجابتك',true);}
 }
 async function sugSend(){
