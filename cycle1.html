@@ -630,6 +630,16 @@ body:has(#page-fahim.active){overflow:hidden}
 .lib-dl-btn svg{width:15px;height:15px}
 .lib-card-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;flex:none;line-height:1;padding:4px}
 .lib-card-del:hover{color:var(--red)}
+.lib-rate-badge{display:flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:#96812F;background:rgba(192,168,72,.16);border:none;border-radius:7px;padding:2px 7px;cursor:pointer;flex:none;font-family:inherit}
+.lib-rate-badge:hover{background:rgba(192,168,72,.3)}
+.lib-rate-badge svg{width:10px;height:10px}
+.lib-rate-badge.empty{color:var(--muted);background:var(--card)}
+.lib-rate-stars{display:flex;gap:6px;justify-content:center;margin:14px 0}
+.lib-rate-star{background:none;border:none;cursor:pointer;padding:2px;color:var(--border);transition:transform .1s}
+.lib-rate-star svg{width:32px;height:32px}
+.lib-rate-star.on{color:#C0A848}
+.lib-rate-star:hover{transform:scale(1.15)}
+.lib-rate-sub{text-align:center;font-size:12px;color:var(--muted);margin-bottom:4px}
 .su-gt.on .ok{color:#fff}
 /* بطاقات المواد — متساوية ونابضة */
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
@@ -985,6 +995,17 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="c1-mrow" style="margin-top:12px">
       <button class="c1-mbtn no" onclick="libAddClose()">إلغاء</button>
       <button class="c1-mbtn go" id="lib-save-btn" onclick="libSave()">نشر</button>
+    </div>
+  </div>
+</div>
+
+<div class="c1-modal" id="lib-rate-modal" onclick="if(event.target===this)libRateClose()">
+  <div class="c1-mbox" style="max-width:340px;text-align:center">
+    <h3 id="lib-rate-title">قيّمي هذا الملف</h3>
+    <div class="lib-rate-sub" id="lib-rate-sub"></div>
+    <div class="lib-rate-stars" id="lib-rate-stars"></div>
+    <div class="c1-mrow">
+      <button class="c1-mbtn no" onclick="libRateClose()">إغلاق</button>
     </div>
   </div>
 </div>
@@ -2869,7 +2890,7 @@ async function achDelete(id){
 }
 
 // ═══════════ المكتبة — تشاركية موحّدة حسب المادة لا الصف ═══════════
-let libSubject=null,libPendingFile=null,libItemsCache=[];
+let libSubject=null,libPendingFile=null,libItemsCache=[],libRatings={};
 function libMySubjects(){
   const set=new Set();
   (profile.grades||[]).forEach(g=>(g.classes||[]).forEach(c=>(c.subjects||[]).forEach(s=>set.add(s))));
@@ -2934,6 +2955,7 @@ async function libLoadItems(){
       empty.innerHTML='<div class="plan-empty-card">لا مشاركات بعد لمادة '+escHtml(libSubject)+' — كوني أول من يشارك!</div>';
       return;
     }
+    await libLoadRatings(libItemsCache.map(it=>it.id));
     const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
     box.innerHTML=libItemsCache.map((it,idx)=>`<div class="lib-card" data-idx="${idx}">
       <div class="lib-thumb">${libThumbHtml(it)}</div>
@@ -2944,11 +2966,12 @@ async function libLoadItems(){
           <span>${escHtml(it.uploader_name||'معلمة')} · ${new Date(it.created_at).toLocaleDateString('ar')}</span>
         </div>
       </div>
+      ${libRateBadgeHtml(it.id,idx)}
       ${it.file_url?`<button type="button" class="lib-dl-btn lib-dl" data-idx="${idx}" title="تحميل">${LIB_DL_ICON}</button>`:''}
       ${currentUser&&it.user_id===currentUser.id?`<button type="button" class="lib-card-del" data-idx="${idx}" title="حذف">✕</button>`:''}
     </div>`).join('');
     box.querySelectorAll('.lib-card').forEach(card=>card.addEventListener('click',e=>{
-      if(e.target.closest('.lib-dl')||e.target.closest('.lib-card-del'))return;
+      if(e.target.closest('.lib-dl')||e.target.closest('.lib-card-del')||e.target.closest('.lib-rate-badge'))return;
       const it=libItemsCache[Number(card.dataset.idx)];
       if(it&&it.file_url)libOpenFile(it.file_url,it.file_name);
     }));
@@ -2962,7 +2985,65 @@ async function libLoadItems(){
       const it=libItemsCache[Number(b.dataset.idx)];
       if(it)libDelete(it.id);
     }));
+    box.querySelectorAll('.lib-rate-badge').forEach(b=>b.addEventListener('click',e=>{
+      e.stopPropagation();
+      const it=libItemsCache[Number(b.dataset.idx)];
+      if(it)libRateOpen(it.id);
+    }));
   }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';}
+}
+const LIB_STAR_ICON=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg>`;
+async function libLoadRatings(ids){
+  libRatings={};
+  if(!ids.length)return;
+  try{
+    const{data,error}=await sb.from('c1_library_ratings').select('item_id,user_id,rating').in('item_id',ids);
+    if(error)throw error;
+    (data||[]).forEach(r=>{
+      if(!libRatings[r.item_id])libRatings[r.item_id]={sum:0,count:0,mine:null};
+      libRatings[r.item_id].sum+=r.rating;
+      libRatings[r.item_id].count++;
+      if(currentUser&&r.user_id===currentUser.id)libRatings[r.item_id].mine=r.rating;
+    });
+  }catch(e){}
+}
+function libRateBadgeHtml(itemId,idx){
+  const r=libRatings[itemId];
+  if(!r||!r.count)return `<button type="button" class="lib-rate-badge empty lib-rate-badge-btn" data-idx="${idx}">${LIB_STAR_ICON}قيّمي</button>`;
+  const avg=(r.sum/r.count).toFixed(1);
+  return `<button type="button" class="lib-rate-badge lib-rate-badge-btn" data-idx="${idx}">${LIB_STAR_ICON}${avg} (${r.count})</button>`;
+}
+let libRateItemId=null;
+function libRateOpen(itemId){
+  libRateItemId=itemId;
+  const r=libRatings[itemId];
+  const mine=r?r.mine:null;
+  document.getElementById('lib-rate-sub').textContent=(r&&r.count)?('متوسط التقييم: '+(r.sum/r.count).toFixed(1)+' من '+r.count+' معلمة'):'كوني أول من يقيّم';
+  libRateRenderStars(mine||0);
+  document.getElementById('lib-rate-modal').classList.add('open');
+}
+function libRateRenderStars(active){
+  document.getElementById('lib-rate-stars').innerHTML=[1,2,3,4,5].map(n=>
+    `<button type="button" class="lib-rate-star ${n<=active?'on':''}" data-n="${n}">${LIB_STAR_ICON}</button>`
+  ).join('');
+  document.querySelectorAll('#lib-rate-stars .lib-rate-star').forEach(b=>b.addEventListener('click',()=>libRateSet(Number(b.dataset.n))));
+}
+function libRateClose(){document.getElementById('lib-rate-modal').classList.remove('open');libRateItemId=null;}
+async function libRateSet(n){
+  if(!libRateItemId||!currentUser)return;
+  libRateRenderStars(n);
+  try{
+    await sb.from('c1_library_ratings').upsert({item_id:libRateItemId,user_id:currentUser.id,rating:n},{onConflict:'item_id,user_id'});
+    await libLoadRatings(libItemsCache.map(it=>it.id));
+    const r=libRatings[libRateItemId];
+    document.getElementById('lib-rate-sub').textContent=(r&&r.count)?('متوسط التقييم: '+(r.sum/r.count).toFixed(1)+' من '+r.count+' معلمة'):'';
+    const idx=libItemsCache.findIndex(it=>it.id===libRateItemId);
+    const btn=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
+    if(btn)btn.outerHTML=libRateBadgeHtml(libRateItemId,idx);
+    const nb=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
+    if(nb)nb.addEventListener('click',e=>{e.stopPropagation();libRateOpen(libRateItemId);});
+    toast('شكراً لتقييمك!','ok');
+  }catch(e){toast('تعذّر حفظ التقييم',true);}
 }
 // نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
 // خاطئ قد يعيده المخزن، ويحل مشكلة ظهورها كنص خام بدل صفحة مُنفَّذة (لوحظ في فايرفوكس تحديداً)
