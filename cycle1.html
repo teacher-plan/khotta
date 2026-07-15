@@ -106,6 +106,10 @@ body.inapp #c1-user{display:flex}
 .wrap{max-width:1100px;margin:0 auto;padding-top:52px}
 
 /* ترويسة الصباح */
+.yw-dhikr-box{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--card);border:1.5px solid var(--olive);border-radius:14px;padding:12px 18px;margin-bottom:14px;color:var(--olive-d);text-align:center}
+.yw-dhikr-box svg{flex:none;opacity:.85}
+#yw-dhikr-txt{font-size:13.5px;font-weight:800;transition:opacity .5s ease;line-height:1.8}
+#yw-dhikr-txt.fade{opacity:0}
 .c1-hero{background:linear-gradient(120deg,var(--red-d),var(--red) 65%,#E8926E);border-radius:18px;padding:20px 22px;color:#fff;box-shadow:0 12px 30px rgba(168,48,48,.28);margin-bottom:16px}
 .c1-hero .hi{font-size:20px;font-weight:800}
 .c1-hero .dt{font-size:12px;opacity:.92;margin-top:4px}
@@ -626,6 +630,10 @@ body:has(#page-fahim.active){overflow:hidden}
 <div id="main-app" class="hidden">
   <!-- يومي — لوحة الصباح: كل يومك في شاشة واحدة -->
   <div class="page active" id="page-yawmi"><div class="wrap">
+    <div class="yw-dhikr-box">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg>
+      <span id="yw-dhikr-txt">سبحان الله وبحمده، سبحان الله العظيم</span>
+    </div>
     <div class="c1-hero">
       <div class="hi" id="c1-greet">أهلاً بك</div>
       <div class="dt" id="c1-date"></div>
@@ -1062,7 +1070,36 @@ async function cy1Save(partial,busyText){
 
 // ══ يومي — لوحة الصباح ══
 let ywTick=null;
+const YW_DHIKR=[
+  'سبحان الله وبحمده، سبحان الله العظيم',
+  'الحمد لله رب العالمين',
+  'لا إله إلا الله وحده لا شريك له',
+  'أستغفر الله العظيم وأتوب إليه',
+  'لا حول ولا قوة إلا بالله',
+  'سبحان الله والحمد لله ولا إله إلا الله والله أكبر',
+  'اللهم صلِّ وسلم على نبينا محمد',
+  'حسبنا الله ونعم الوكيل',
+  'رب اشرح لي صدري ويسر لي أمري',
+  'اللهم إني أسألك العلم النافع والعمل الصالح',
+  'اللهم أعنّي على ذكرك وشكرك وحسن عبادتك',
+  'يا حي يا قيوم برحمتك أستغيث',
+];
+let ywDhikrTimer=null,ywDhikrIdx=0;
+function ywDhikrStart(){
+  const el=document.getElementById('yw-dhikr-txt');if(!el)return;
+  el.textContent=YW_DHIKR[ywDhikrIdx];
+  clearInterval(ywDhikrTimer);
+  ywDhikrTimer=setInterval(()=>{
+    el.classList.add('fade');
+    setTimeout(()=>{
+      ywDhikrIdx=(ywDhikrIdx+1)%YW_DHIKR.length;
+      el.textContent=YW_DHIKR[ywDhikrIdx];
+      el.classList.remove('fade');
+    },500);
+  },5000);
+}
 function renderYawmi(){
+  ywDhikrStart();
   const h=new Date().getHours();
   document.getElementById('c1-greet').textContent=(h<12?'صباح النور':'مساء الورد')+(profile.display_name?' أ. '+profile.display_name:'');
   document.getElementById('c1-date').textContent=new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
