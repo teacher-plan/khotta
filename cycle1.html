@@ -694,6 +694,20 @@ body:has(#page-fahim.active){overflow:hidden}
   min-height:38px;transition:transform .15s}
 .sug-send:hover{transform:translateY(-1px)}
 .sug-send:disabled{opacity:.55;cursor:default}
+/* ── مجتمع المعلمات ── */
+.comm-feed{display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:58vh;overflow-y:auto;padding:6px 2px 14px}
+.comm-msg{max-width:78%;padding:10px 13px;border-radius:16px;font-size:13px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}
+.comm-msg.mine{align-self:flex-end;background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border-bottom-left-radius:6px}
+.comm-msg.other{align-self:flex-start;background:var(--surface);border:1px solid var(--border);color:var(--ink);border-bottom-right-radius:6px}
+.comm-msg .nm{font-size:11px;font-weight:800;margin-bottom:4px;opacity:.85}
+.comm-msg .dt{display:block;font-size:9.5px;opacity:.65;margin-top:5px}
+.comm-msg .del{background:none;border:none;color:inherit;opacity:.6;font-size:10px;cursor:pointer;font-family:inherit;font-weight:800;margin-inline-start:8px}
+.comm-empty{text-align:center;color:var(--muted);font-size:13px;padding:36px 12px}
+.comm-inputrow{display:flex;gap:9px;align-items:flex-end;position:sticky;bottom:0;background:var(--bg);padding-top:8px}
+.comm-inputrow textarea{flex:1;resize:none;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:11px 16px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;max-height:90px}
+.comm-inputrow textarea:focus{border-color:var(--olive)}
+.comm-send{width:44px;height:44px;flex:none;border:none;border-radius:50%;background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(72,120,72,.35)}
+.comm-send:disabled{opacity:.5;cursor:default}
 /* بطاقة مصغّرة أفقية — أيقونة/صورة + عنوان + زر تحميل دائري (تصميم A) */
 .lib-card{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px;box-shadow:0 3px 10px rgba(48,24,0,.08);cursor:pointer;transition:border-color .15s}
 .lib-card:hover{border-color:var(--red)}
@@ -1097,6 +1111,21 @@ body:has(#page-fahim.active){overflow:hidden}
   </div>
 </div></div>
 
+<!-- قسم مجتمع المعلمات -->
+<div class="page" id="page-community"><div class="wrap">
+  <div class="lib-hero" style="background:linear-gradient(120deg,var(--olive-d),var(--olive) 65%,#6FA36F)">
+    <div class="lib-hero-t">مجتمع معلمات الحلقة الأولى</div>
+    <div class="lib-hero-s">مساحة رسائل مشتركة بين كل معلمات الحلقة الأولى — لتبادل الخبرات والأفكار مباشرة مع بعضكن.</div>
+  </div>
+  <div class="comm-feed" id="comm-feed"></div>
+  <div class="comm-inputrow">
+    <textarea id="comm-text" placeholder="اكتبي رسالتك لمعلمات الحلقة الأولى..." rows="2"></textarea>
+    <button class="comm-send" id="comm-send-btn" onclick="commSend()">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 20V14L11 12L3 10V4L21 12L3 20Z"/></svg>
+    </button>
+  </div>
+</div></div>
+
 <div class="c1-modal" id="lib-modal" onclick="if(event.target===this)libAddClose()">
   <div class="c1-mbox">
     <h3>مشاركة في مكتبة <span id="lib-modal-subj"></span></h3>
@@ -1279,7 +1308,8 @@ const C1_ICONS={spark:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" h
 shield:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25zM11 8v5h2V8h-2zm0 6.5v2h2v-2h-2z"/></svg>`,
 trophy:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M5 3h14v2h2v3a4 4 0 0 1-4 4 5.5 5.5 0 0 1-3.9 3.86V19H16v2H8v-2h2.9v-3.14A5.5 5.5 0 0 1 7 12a4 4 0 0 1-4-4V5h2V3zm0 4H4.9c.15 1.1.95 2 2.1 2v-2zm14 0v2c1.15 0 1.95-.9 2.1-2H19z"/></svg>`,
 book:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 14H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>`,
-mail:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.3l8 5.2 8-5.2V6H4zm16 2.2-7.4 4.8a1 1 0 0 1-1.2 0L4 8.2V18h16V8.2z"/></svg>`};
+mail:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.3l8 5.2 8-5.2V6H4zm16 2.2-7.4 4.8a1 1 0 0 1-1.2 0L4 8.2V18h16V8.2z"/></svg>`,
+people:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5zm7.8-6.7a4 4 0 0 1 0 5.4c1.9.5 3.2 1.6 3.9 2.6.8-.4 1.3-1.2 1.3-2.3v-1c0-2-2.2-3.4-4.8-4-.2.5-.3.9-.4 1.3zM15 11.9a3.9 3.9 0 0 0 1.4-3A4 4 0 0 0 12.6 5c1.4.9 2.4 2.5 2.4 4.3 0 1-.4 2-1 2.6z"/></svg>`};
 const C1_SECTIONS=[
   {id:'yawmi', ic:'spark', nm:'يومي',    lv:'ترحيبك وحصصك وتحضيرك',        built:true},
   {id:'tt',    ic:'cal',   nm:'الجدول',  lv:'مركز قيادة يومك الدراسي',      built:true},
@@ -1291,6 +1321,7 @@ const C1_SECTIONS=[
   {id:'ach',   ic:'trophy',nm:'إنجازاتك', lv:'إنجازاتك ومبادراتك المهنية',   built:true},
   {id:'lib',   ic:'book',  nm:'المكتبة', lv:'شاركي إبداعك مع معلمات مادتك', built:true},
   {id:'msgs',  ic:'mail',  nm:'المراسلات', lv:'رسائل الإدارة واستبياناتك', built:true},
+  {id:'community', ic:'people', nm:'مجتمع المعلمات', lv:'رسائل مشتركة بين كل معلمات الحلقة الأولى', built:true},
 ];
 function c1Board(open){
   const b=document.getElementById('c1-board');
@@ -1317,6 +1348,7 @@ function c1Go(id){
   if(id==='ach')achRender();
   if(id==='lib')libRender();
   if(id==='msgs')msgsRender();
+  if(id==='community')commRender();
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){c1Board(false);if(document.getElementById('live-stage').classList.contains('on'))liveClose();if(document.getElementById('games-stage').classList.contains('on'))gamesStageClose();behAddClose();behFileClose();}});
 document.addEventListener('click',e=>{
@@ -3345,6 +3377,51 @@ async function sugSend(){
     toast('شكراً لك، وصل اقتراحك لإدارة المنصة','ok');
   }catch(e){toast('تعذّر إرسال الاقتراح',true);}
   finally{btn.disabled=false;}
+}
+
+// ══ مجتمع المعلمات — رسائل مشتركة بين كل معلمات الحلقة الأولى ══
+async function commRender(){
+  await commLoad();
+  const feed=document.getElementById('comm-feed');
+  if(feed)feed.scrollTop=feed.scrollHeight;
+}
+async function commLoad(){
+  const box=document.getElementById('comm-feed');if(!box||!currentUser)return;
+  try{
+    const{data,error}=await sb.from('c1_community_messages').select('*').order('created_at',{ascending:true}).limit(200);
+    if(error)throw error;
+    if(!data||!data.length){box.innerHTML='<div class="comm-empty">لا رسائل بعد — كوني أول من يبدأ الحديث!</div>';return;}
+    box.innerHTML=data.map(m=>{
+      const mine=m.user_id===currentUser.id;
+      return `<div class="comm-msg ${mine?'mine':'other'}">
+        ${mine?'':`<div class="nm">${escHtml(m.user_label||'معلمة')}</div>`}
+        ${escHtml(m.message)}
+        <span class="dt">${new Date(m.created_at).toLocaleString('ar')}${mine?`<button class="del" onclick="commDelete('${m.id}')">حذف</button>`:''}</span>
+      </div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div class="comm-empty">تعذّر تحميل الرسائل</div>';}
+}
+async function commSend(){
+  if(!currentUser)return;
+  const ta=document.getElementById('comm-text');
+  const msg=ta.value.trim();
+  if(!msg)return;
+  const btn=document.getElementById('comm-send-btn');
+  btn.disabled=true;
+  try{
+    await sb.from('c1_community_messages').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    ta.value='';
+    await commLoad();
+    const feed=document.getElementById('comm-feed');
+    if(feed)feed.scrollTop=feed.scrollHeight;
+  }catch(e){toast('تعذّر إرسال الرسالة',true);}
+  finally{btn.disabled=false;}
+}
+async function commDelete(id){
+  try{
+    await sb.from('c1_community_messages').delete().eq('id',id);
+    commLoad();
+  }catch(e){toast('تعذّر الحذف',true);}
 }
 
 // نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
