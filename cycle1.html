@@ -93,6 +93,7 @@ body.inapp #c1-notif-btn{display:flex}
 .c1-notif-item{padding:11px 14px;font-size:12.5px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.8;cursor:default}
 .c1-notif-item:last-child{border-bottom:none}
 .c1-notif-item.unread{background:rgba(216,96,72,.06)}
+.c1-notif-go{display:block;margin-top:6px;background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border:none;border-radius:8px;padding:6px 13px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer}
 .c1-notif-item .dt{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
 .c1-notif-empty{padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px}
 
@@ -3275,20 +3276,37 @@ let c1Notifs=[];
 async function c1NotifLoad(){
   if(!currentUser)return;
   try{
-    const{data}=await sb.from('c1_notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
-    c1Notifs=data||[];
+    const{data}=await sb.from('c1_notifications').select('*').or(`user_id.eq.${currentUser.id},user_id.is.null`).order('created_at',{ascending:false}).limit(30);
+    const mySubjects=libMySubjects();
+    c1Notifs=(data||[]).filter(n=>!n.subject||mySubjects.includes(n.subject));
   }catch(e){c1Notifs=[];}
   c1NotifRender();
+}
+function c1NotifIsUnread(n){
+  return n.user_id?!n.read:(new Date(n.created_at)>new Date(profile.notifSeenAt||0));
 }
 function c1NotifRender(){
   const list=document.getElementById('c1-notif-list');
   const badge=document.getElementById('c1-notif-badge');
   if(!list||!badge)return;
-  const unread=c1Notifs.filter(n=>!n.read).length;
+  const unread=c1Notifs.filter(c1NotifIsUnread).length;
   if(unread>0){badge.textContent=unread>9?'9+':String(unread);badge.classList.remove('hidden');}
   else badge.classList.add('hidden');
   if(!c1Notifs.length){list.innerHTML='<div class="c1-notif-empty">لا توجد إشعارات بعد</div>';return;}
-  list.innerHTML=c1Notifs.map(n=>`<div class="c1-notif-item${n.read?'':' unread'}">${escHtml(n.message)}<span class="dt">${new Date(n.created_at).toLocaleString('ar')}</span></div>`).join('');
+  list.innerHTML=c1Notifs.map(n=>{
+    let actionBtn='';
+    if(n.kind==='survey')actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoSurvey()">فتح الاستبيان</button>`;
+    else if(n.kind==='library_share'&&n.item_id)actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoLibrary('${n.subject}','${n.item_id}')">فتح الملف</button>`;
+    return `<div class="c1-notif-item${c1NotifIsUnread(n)?' unread':''}">${escHtml(n.message)}<span class="dt">${new Date(n.created_at).toLocaleString('ar')}</span>${actionBtn}</div>`;
+  }).join('');
+}
+function c1NotifGoSurvey(){
+  document.getElementById('c1-notif-panel').classList.remove('open');
+  c1Go('msgs');
+}
+function c1NotifGoLibrary(subject,itemId){
+  document.getElementById('c1-notif-panel').classList.remove('open');
+  msgsOpenLibraryItem(subject,itemId);
 }
 function c1NotifToggle(){
   const panel=document.getElementById('c1-notif-panel');
@@ -3297,13 +3315,14 @@ function c1NotifToggle(){
   panel.classList.toggle('open',opening);
   if(opening){
     c1NotifLoad().then(()=>{
-      const unreadIds=c1Notifs.filter(n=>!n.read).map(n=>n.id);
+      const unreadIds=c1Notifs.filter(n=>n.user_id&&!n.read).map(n=>n.id);
       if(unreadIds.length&&currentUser){
         sb.from('c1_notifications').update({read:true}).eq('user_id',currentUser.id).eq('read',false).then(()=>{
-          c1Notifs=c1Notifs.map(n=>({...n,read:true}));
+          c1Notifs=c1Notifs.map(n=>n.user_id?{...n,read:true}:n);
           c1NotifRender();
         }).catch(()=>{});
       }
+      if(c1Notifs.some(n=>!n.user_id))cy1Save({notifSeenAt:new Date().toISOString()});
     });
   }
 }
@@ -3549,6 +3568,10 @@ async function libSave(){
         kind:'library_share',title:'ملف جديد في مكتبة مادة '+libSubject,
         body:`شاركت ${uploaderName} ملفاً جديداً بعنوان «${title}» (${tLbl}) في مكتبة مادة ${libSubject} — اطّلعي عليه وقيّميه بلطف!`,
         target_subject:libSubject,item_id:newItem.id,created_by:currentUser.email
+      }).then(()=>{}).catch(()=>{});
+      sb.from('c1_notifications').insert({
+        user_id:null,kind:'library_share',subject:libSubject,item_id:newItem.id,
+        message:`ملف جديد في مكتبة مادة ${libSubject}: «${title}»`
       }).then(()=>{}).catch(()=>{});
     }
   }catch(e){
