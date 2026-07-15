@@ -2941,11 +2941,13 @@ async function libLoadItems(){
 function libOpenFile(url,fileName){
   const ext=((fileName||'').split('.').pop()||'').toLowerCase();
   if(ext==='html'||ext==='htm'){
+    // نفتح النافذة فوراً ضمن نفس نقرة المستخدم (وإلا يحجبها المتصفح كنافذة منبثقة بعد الانتظار غير المتزامن)
+    const win=window.open('','_blank');
     fetch(url).then(r=>r.blob()).then(b=>{
       const blob=new Blob([b],{type:'text/html'});
       const objUrl=URL.createObjectURL(blob);
-      window.open(objUrl,'_blank');
-    }).catch(()=>window.open(url,'_blank'));
+      if(win&&!win.closed)win.location.href=objUrl;else window.open(objUrl,'_blank');
+    }).catch(()=>{if(win&&!win.closed)win.location.href=url;else window.open(url,'_blank');});
     return;
   }
   window.open(url,'_blank');
