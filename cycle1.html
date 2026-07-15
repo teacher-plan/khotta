@@ -460,6 +460,11 @@ body.inapp #c1-user{display:flex}
 
 /* ── قسم فهيم ── */
 .fhp-card{max-width:1100px;margin:0 auto;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;height:calc(100dvh - 110px);min-height:480px;box-shadow:0 10px 34px rgba(48,24,0,.12)}
+/* فهيم: صفحة مستقلة تملأ الشاشة كاملة — لا تمرير ولا خلفية خلفها (نفس مبدأ صفحة المعلم) */
+body:has(#page-fahim.active){overflow:hidden}
+#page-fahim.active{position:fixed;inset:0;z-index:6;overflow:hidden;background:var(--bg);padding:0}
+#page-fahim.active .wrap{max-width:none;margin:0;padding-top:0;height:100dvh}
+#page-fahim.active .fhp-card{max-width:none;height:100%;border-radius:0;border:none;box-shadow:none}
 #fh-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:linear-gradient(135deg,var(--red-deep),var(--red-d) 60%,var(--red));color:#fff}
 #fh-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#E8C34A,#C0A848);display:flex;align-items:center;justify-content:center;color:#5C4813;flex:none;border:2px solid rgba(255,255,255,.6);box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .fh-name{font-size:14.5px;font-weight:800;color:#fff}
@@ -907,7 +912,7 @@ function c1Go(id){
   if(id==='stars')starRender();
   if(id==='games')gamesRender();
   if(id==='behavior')behRender();
-  if(id==='fahim'){fhRender();fhHistory();}
+  if(id==='fahim'){fhRender();fhHistory();fhInitMascot();}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){c1Board(false);if(document.getElementById('live-stage').classList.contains('on'))liveClose();if(document.getElementById('games-stage').classList.contains('on'))gamesStageClose();behAddClose();behFileClose();}});
 document.addEventListener('click',e=>{
@@ -2313,8 +2318,25 @@ function behFileClose(){document.getElementById('beh-file-modal').classList.remo
 
 // ═══════════ فهيم — مساعد تربوي بسياق معلمة الحلقة الأولى ═══════════
 const FH_AVA=`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 3c2 2.2 3.6 3 5.2 3h5.6C16.4 6 18 5.2 20 3c.6 2.8.3 5.2-.8 7 .5 1 .8 2.1.8 3.3C20 17.6 16.4 21 12 21s-8-3.4-8-7.7c0-1.2.3-2.3.8-3.3C3.7 8.2 3.4 5.8 4 3zm5 9.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm6 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM12 16l-1.5 1.8c.9.6 2.1.6 3 0L12 16z"/></svg>`;
-let fhMsgs=[],fhChatId=null,fhBusy=false;
+let fhMsgs=[],fhChatId=null,fhBusy=false,_fhMascotOk=null;
 function fhSideToggle(){document.getElementById('fhp-side').classList.toggle('open');}
+// شخصية فهيم (الصورة) تُدار من صفحة المشرف — نفس المسار المستخدم في صفحة المعلم، فرفعة واحدة تخدم الصفحتين
+function fhMascotUrl(){return sb.storage.from('library-files').getPublicUrl('assistant/mascot.png').data.publicUrl+'?v='+(localStorage.getItem('fhMascotV')||'1');}
+function fhAvaHtml(){
+  return _fhMascotOk?`<span class="fh-bava" style="background-image:url('${fhMascotUrl()}')"></span>`:`<span class="fh-bava">${FH_AVA}</span>`;
+}
+function fhInitMascot(){
+  if(_fhMascotOk!==null)return;
+  const img=new Image();
+  img.onload=()=>{_fhMascotOk=true;fhApplyMascot();};
+  img.onerror=()=>{_fhMascotOk=false;};
+  img.src=fhMascotUrl();
+}
+function fhApplyMascot(){
+  const av=document.getElementById('fh-avatar');
+  if(av){av.style.backgroundImage='url("'+fhMascotUrl()+'")';av.style.backgroundSize='cover';av.style.backgroundPosition='center';av.innerHTML='';}
+  fhRender();
+}
 function fhContext(){
   try{
     const parts=['معلمة حلقة أولى (الصفوف ١-٤) في سلطنة عُمان.'];
@@ -2336,7 +2358,7 @@ function fhRender(){
   }
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
     ?`<div class="fh-msg user">${escHtml(m.content)}</div>`
-    :`<div class="fh-brow"><span class="fh-bava">${FH_AVA}</span><div class="fh-msg bot">${escHtml(m.content)}</div></div>`).join('');
+    :`<div class="fh-brow">${fhAvaHtml()}<div class="fh-msg bot">${escHtml(m.content)}</div></div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
@@ -2349,7 +2371,7 @@ async function fhSend(){
   fhMsgs.push({role:'user',content:msg});
   fhRender();
   const body=document.getElementById('fh-body');
-  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing"><span class="fh-bava">'+FH_AVA+'</span><div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
+  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+fhAvaHtml()+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
   body.scrollTop=body.scrollHeight;
   fhBusy=true;document.getElementById('fh-send').disabled=true;
   try{
