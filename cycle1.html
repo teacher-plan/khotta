@@ -2944,12 +2944,34 @@ function libOpenAdd(){
   document.getElementById('lib-modal').classList.add('open');
 }
 function libAddClose(){document.getElementById('lib-modal').classList.remove('open');}
+// نستنتج نوع الملف الحقيقي من امتداده — القائمة المنسدلة كانت تُترك كما هي أحياناً فتُخزَّن نوعاً خاطئاً
+// (مثال: صورة تُحفظ بنوع PDF) فتفشل المعاينة والفتح لاحقاً
+function libGuessType(f){
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  if(['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext))return'image';
+  if(ext==='pdf')return'pdf';
+  if(['doc','docx'].includes(ext))return'word';
+  if(['xls','xlsx','csv'].includes(ext))return'excel';
+  if(['ppt','pptx'].includes(ext))return'ppt';
+  return'other';
+}
+function libGuessMime(f){
+  if(f.type)return f.type;
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  const map={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',
+    pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    html:'text/html',htm:'text/html',txt:'text/plain'};
+  return map[ext]||'application/octet-stream';
+}
 function libFilePicked(){
   const f=document.getElementById('lib-file').files[0];
   if(!f)return;
   if(f.size>20*1024*1024){toast('الملف كبير — الحد الأقصى ٢٠ ميجا',true);document.getElementById('lib-file').value='';return;}
   libPendingFile=f;
   document.getElementById('lib-file-btn').textContent=f.name;
+  document.getElementById('lib-filetype').value=libGuessType(f);
 }
 async function libSave(){
   if(!libSubject){toast('حدث خطأ — أعيدي فتح المكتبة وحاولي مجدداً',true);return;}
@@ -2960,12 +2982,12 @@ async function libSave(){
   btn.disabled=true;
   cyBusy('ينشر مشاركتك');
   try{
-    let fileUrl=null,fileName=null;
-    const fileType=document.getElementById('lib-filetype').value;
+    let fileUrl=null,fileName=null,fileType=null;
     if(libPendingFile){
+      fileType=libGuessType(libPendingFile);
       const safe=libPendingFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
       const path='c1-library/'+libSubjSlug(libSubject)+'/'+Date.now()+'_'+safe;
-      const{error:upErr}=await sb.storage.from('library-files').upload(path,libPendingFile,{upsert:false});
+      const{error:upErr}=await sb.storage.from('library-files').upload(path,libPendingFile,{upsert:false,contentType:libGuessMime(libPendingFile)});
       if(upErr)throw upErr;
       fileUrl=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
       fileName=libPendingFile.name;
