@@ -274,6 +274,8 @@ body.inapp #c1-user{display:flex}
 .fld{text-align:right;margin-bottom:11px}
 .fld label{display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
 .fld input{margin-bottom:0!important}
+.c1-mbox .fld input[type=text],.c1-mbox .fld input[type=date],.c1-mbox .fld select{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;font-family:inherit;font-size:13.5px;color:var(--ink);outline:none;box-sizing:border-box}
+.c1-mbox .fld input[type=text]:focus,.c1-mbox .fld input[type=date]:focus,.c1-mbox .fld select:focus{border-color:var(--red)}
 /* معالج الإعداد (مطابق لبنية صفحة المعلم) */
 .su-steps{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
 .su-steps i{width:34px;height:5px;border-radius:4px;background:var(--border)}
@@ -952,8 +954,18 @@ body:has(#page-fahim.active){overflow:hidden}
 <div class="c1-modal" id="lib-modal" onclick="if(event.target===this)libAddClose()">
   <div class="c1-mbox">
     <h3>مشاركة في مكتبة <span id="lib-modal-subj"></span></h3>
-    <div class="fld"><label>العنوان</label><input type="text" id="lib-title"/></div>
+    <div class="fld"><label>عنوان الملف</label><input type="text" id="lib-title"/></div>
     <div class="fld"><label>وصف مختصر (اختياري)</label><textarea id="lib-desc" rows="3" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical"></textarea></div>
+    <div class="fld"><label>نوع الملف</label>
+      <select id="lib-filetype">
+        <option value="pdf">PDF</option>
+        <option value="word">Word</option>
+        <option value="ppt">PowerPoint</option>
+        <option value="excel">Excel</option>
+        <option value="image">صورة</option>
+        <option value="other">أخرى</option>
+      </select>
+    </div>
     <div class="fld"><label>ملف مرفق (اختياري)</label>
       <input type="file" id="lib-file" style="display:none" onchange="libFilePicked()"/>
       <button class="lib-file-btn" id="lib-file-btn" onclick="document.getElementById('lib-file').click()">اختاري ملفاً</button>
@@ -2885,10 +2897,11 @@ async function libLoadItems(){
       empty.innerHTML='<div class="plan-empty-card">لا مشاركات بعد لمادة '+escHtml(libSubject)+' — كوني أول من يشارك!</div>';
       return;
     }
+    const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
     box.innerHTML=libItemsCache.map(it=>`<div class="lib-card">
       <div class="lib-card-title">${escHtml(it.title)}</div>
       ${it.description?`<div class="lib-card-desc">${escHtml(it.description)}</div>`:''}
-      ${it.file_url?`<a class="lib-card-file" href="${it.file_url}" target="_blank" rel="noopener">${escHtml(it.file_name||'تحميل الملف')}</a>`:''}
+      ${it.file_url?`<a class="lib-card-file" href="${it.file_url}" target="_blank" rel="noopener">${escHtml((typeLbl[it.file_type]||'ملف')+' — '+(it.file_name||'تحميل'))}</a>`:''}
       <div class="lib-card-meta">
         <span>${escHtml(it.uploader_name||'معلمة')} · ${new Date(it.created_at).toLocaleDateString('ar')}</span>
         ${currentUser&&it.user_id===currentUser.id?`<button class="lib-card-del" onclick="libDelete('${it.id}')">حذف</button>`:''}
@@ -2902,6 +2915,7 @@ function libOpenAdd(){
   document.getElementById('lib-desc').value='';
   document.getElementById('lib-file').value='';
   document.getElementById('lib-file-btn').textContent='اختاري ملفاً';
+  document.getElementById('lib-filetype').value='pdf';
   libPendingFile=null;
   document.getElementById('lib-modal').classList.add('open');
 }
@@ -2922,9 +2936,10 @@ async function libSave(){
   cyBusy('ينشر مشاركتك');
   try{
     let fileUrl=null,fileName=null;
+    const fileType=document.getElementById('lib-filetype').value;
     if(libPendingFile){
       const safe=libPendingFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const path='c1-library/'+libSubject+'/'+Date.now()+'_'+safe;
+      const path='c1-library/'+encodeURIComponent(libSubject)+'/'+Date.now()+'_'+safe;
       const{error:upErr}=await sb.storage.from('library-files').upload(path,libPendingFile,{upsert:false});
       if(upErr)throw upErr;
       fileUrl=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
@@ -2932,13 +2947,13 @@ async function libSave(){
     }
     const{error}=await sb.from('c1_library_items').insert({
       user_id:currentUser.id,subject:libSubject,title,description:desc||null,
-      file_url:fileUrl,file_name:fileName,uploader_name:profile.display_name||''
+      file_url:fileUrl,file_name:fileName,file_type:libPendingFile?fileType:null,uploader_name:profile.display_name||''
     });
     if(error)throw error;
     libAddClose();
     toast('نُشرت مشاركتك — شكراً لعطائك!','ok');
     libLoadItems();
-  }catch(e){toast('تعذّر النشر — تحققي من الاتصال',true);}
+  }catch(e){console.warn('libSave',e);toast('تعذّر النشر — تحققي من الاتصال',true);}
   finally{btn.disabled=false;cyBusyDone();}
 }
 async function libDelete(id){
