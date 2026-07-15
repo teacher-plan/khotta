@@ -133,6 +133,12 @@ body.inapp #c1-user{display:flex}
 .yw-sub{color:var(--muted);margin-inline-start:auto;font-size:11.5px}
 .yw-note-ev{font-size:13px;color:var(--ink);line-height:1.9;background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .yw-note-tasks{font-size:11.5px;color:var(--red-d);font-weight:700}
+.yw-card.fh{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--red-deep),var(--red-d) 60%,var(--red));cursor:pointer;transition:transform .15s}
+.yw-card.fh:hover{transform:translateY(-2px)}
+#yw-fh-ava{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#E8C34A,#C0A848);display:flex;align-items:center;justify-content:center;color:#5C4813;flex:none;border:2px solid rgba(255,255,255,.7);box-shadow:0 4px 12px rgba(0,0,0,.25)}
+#yw-fh-ava svg{width:28px;height:28px}
+.yw-fh-nm{font-size:14px;font-weight:800;color:#fff}
+.yw-fh-sub{font-size:11.5px;color:rgba(255,255,255,.85);margin-top:3px}
 
 #toast-el{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;border-radius:12px;padding:11px 20px;font-size:13px;z-index:999;opacity:0;transition:.25s;max-width:88vw;text-align:center}
 #toast-el.show{opacity:1;transform:translateX(-50%)}
@@ -632,6 +638,13 @@ body:has(#page-fahim.active){overflow:hidden}
           <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm4 3v2h10V8H7zm0 4v2h10v-2H7zm0 4v2h6v-2H7z"/></svg> مفكرة اليوم <button class="yw-link" onclick="c1Go('tt')">المفكرة كاملة</button></div>
           <div id="yw-note"></div>
         </div>
+        <div class="yw-card fh" onclick="c1Go('fahim')">
+          <div id="yw-fh-ava"></div>
+          <div class="yw-fh-txt">
+            <div class="yw-fh-nm">فهيم — مساعدك التربوي</div>
+            <div class="yw-fh-sub">اسأليه عن أي شيء يخص صفك اليوم</div>
+          </div>
+        </div>
       </div>
     </div>
   </div></div>
@@ -1055,6 +1068,7 @@ function renderYawmi(){
   ywRenderToday();
   ywRenderStars();
   ywRenderNote();
+  ywRenderFahim();
   ywTick=setInterval(ywRenderNow,30000);
 }
 async function ywRenderNow(){
@@ -1115,6 +1129,13 @@ function ywRenderNote(){
   const tasks=(profile.user_tasks||[]).filter(t=>!t.done);
   box.innerHTML=(ev?`<div class="yw-note-ev">${escHtml(ev)}</div>`:'<div class="yw-empty">لا حدث مسجّل اليوم</div>')
     +(tasks.length?`<div class="yw-note-tasks">${tasks.length} مهمة غير منجزة</div>`:'');
+}
+function ywRenderFahim(){
+  const box=document.getElementById('yw-fh-ava');if(!box)return;
+  box.innerHTML=(typeof _fhMascotOk!=='undefined'&&_fhMascotOk)
+    ?`<img src="${fhMascotUrl()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>`
+    :FH_AVA;
+  if(typeof fhInitMascot==='function')fhInitMascot();
 }
 
 // ══ الإقلاع ══
@@ -2446,6 +2467,7 @@ function fhApplyMascot(){
   const av=document.getElementById('fh-avatar');
   if(av){av.style.backgroundImage='url("'+fhMascotUrl()+'")';av.style.backgroundSize='cover';av.style.backgroundPosition='center';av.innerHTML='';}
   fhRender();
+  if(typeof ywRenderFahim==='function')ywRenderFahim();
 }
 function fhContext(){
   try{
