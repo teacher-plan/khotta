@@ -3232,7 +3232,8 @@ async function libRateSubmit(){
   const n=libRateSelected;
   if(!libRateItemId||!currentUser||!n)return;
   try{
-    await sb.from('c1_library_ratings').upsert({item_id:libRateItemId,user_id:currentUser.id,rating:n},{onConflict:'item_id,user_id'});
+    const{error:rateErr}=await sb.from('c1_library_ratings').upsert({item_id:libRateItemId,user_id:currentUser.id,rating:n},{onConflict:'item_id,user_id'});
+    if(rateErr)throw rateErr;
     await libLoadRatings(libItemsCache.map(it=>it.id));
     const idx=libItemsCache.findIndex(it=>it.id===libRateItemId);
     const btn=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
@@ -3352,7 +3353,8 @@ async function msgsLoadSurveys(){
 async function msgsVote(surveyId,idx){
   if(!currentUser)return;
   try{
-    await sb.from('c1_survey_responses').upsert({survey_id:surveyId,user_id:currentUser.id,option_index:idx},{onConflict:'survey_id,user_id'});
+    const{error:voteErr}=await sb.from('c1_survey_responses').upsert({survey_id:surveyId,user_id:currentUser.id,option_index:idx},{onConflict:'survey_id,user_id'});
+    if(voteErr)throw voteErr;
     toast('شكراً لمشاركتك برأيك!','ok');
     msgsLoadSurveys();
   }catch(e){toast('تعذّر إرسال إجابتك',true);}
@@ -3365,10 +3367,11 @@ async function sugSend(){
   const btn=document.getElementById('sug-send-btn');
   btn.disabled=true;
   try{
-    await sb.from('c1_suggestions').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    const{error:sugErr}=await sb.from('c1_suggestions').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    if(sugErr)throw sugErr;
     ta.value='';
     toast('شكراً لك، وصل اقتراحك لإدارة المنصة','ok');
-  }catch(e){toast('تعذّر إرسال الاقتراح',true);}
+  }catch(e){toast('تعذّر إرسال الاقتراح — تحققي من الاتصال',true);}
   finally{btn.disabled=false;}
 }
 
@@ -3402,7 +3405,8 @@ async function commSend(){
   const btn=document.getElementById('comm-send-btn');
   btn.disabled=true;
   try{
-    await sb.from('c1_community_messages').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    const{error:commErr}=await sb.from('c1_community_messages').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
+    if(commErr)throw commErr;
     ta.value='';
     await commLoad();
     const feed=document.getElementById('comm-feed');
