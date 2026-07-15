@@ -265,6 +265,7 @@ body.inapp #c1-notif-btn{display:flex}
 .c1-mrow{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .c1-mbtn{border:none;border-radius:10px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
 .c1-mbtn.go{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff}
+.c1-mbtn.go:disabled{opacity:.45;cursor:not-allowed}
 .c1-mbtn.no{background:var(--card);color:var(--muted);border:1.5px solid var(--border)}
 .c1-mbtn.del{background:var(--card);color:var(--red-d);border:1.5px solid var(--border)}
 /* لوحة الأوقات */
@@ -1027,6 +1028,7 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="lib-rate-stars" id="lib-rate-stars"></div>
     <div class="c1-mrow">
       <button class="c1-mbtn no" onclick="libRateClose()">إغلاق</button>
+      <button class="c1-mbtn go" id="lib-rate-submit-btn" onclick="libRateSubmit()" disabled>إرسال</button>
     </div>
   </div>
 </div>
@@ -3036,35 +3038,41 @@ function libRateBadgeHtml(itemId,idx){
   return `<button type="button" class="lib-rate-badge lib-rate-badge-btn" data-idx="${idx}">${LIB_STAR_ICON}${avg} (${r.count})</button>`;
 }
 let libRateItemId=null;
+let libRateSelected=0;
 function libRateOpen(itemId){
   libRateItemId=itemId;
   const r=libRatings[itemId];
   const mine=r?r.mine:null;
+  libRateSelected=mine||0;
   document.getElementById('lib-rate-sub').textContent=(r&&r.count)?('متوسط التقييم: '+(r.sum/r.count).toFixed(1)+' من '+r.count+' معلمة'):'كوني أول من يقيّم';
-  libRateRenderStars(mine||0);
+  libRateRenderStars(libRateSelected);
+  const sb2=document.getElementById('lib-rate-submit-btn');
+  if(sb2)sb2.disabled=!libRateSelected;
   document.getElementById('lib-rate-modal').classList.add('open');
 }
 function libRateRenderStars(active){
   document.getElementById('lib-rate-stars').innerHTML=[1,2,3,4,5].map(n=>
     `<button type="button" class="lib-rate-star ${n<=active?'on':''}" data-n="${n}">${LIB_STAR_ICON}</button>`
   ).join('');
-  document.querySelectorAll('#lib-rate-stars .lib-rate-star').forEach(b=>b.addEventListener('click',()=>libRateSet(Number(b.dataset.n))));
+  document.querySelectorAll('#lib-rate-stars .lib-rate-star').forEach(b=>b.addEventListener('click',()=>{
+    libRateSelected=Number(b.dataset.n);
+    libRateRenderStars(libRateSelected);
+    const sb2=document.getElementById('lib-rate-submit-btn');
+    if(sb2)sb2.disabled=false;
+  }));
 }
-function libRateClose(){document.getElementById('lib-rate-modal').classList.remove('open');libRateItemId=null;}
-async function libRateSet(n){
-  if(!libRateItemId||!currentUser)return;
-  libRateRenderStars(n);
+function libRateClose(){document.getElementById('lib-rate-modal').classList.remove('open');libRateItemId=null;libRateSelected=0;}
+async function libRateSubmit(){
+  const n=libRateSelected;
+  if(!libRateItemId||!currentUser||!n)return;
   try{
     await sb.from('c1_library_ratings').upsert({item_id:libRateItemId,user_id:currentUser.id,rating:n},{onConflict:'item_id,user_id'});
     await libLoadRatings(libItemsCache.map(it=>it.id));
-    const r=libRatings[libRateItemId];
-    document.getElementById('lib-rate-sub').textContent=(r&&r.count)?('متوسط التقييم: '+(r.sum/r.count).toFixed(1)+' من '+r.count+' معلمة'):'';
     const idx=libItemsCache.findIndex(it=>it.id===libRateItemId);
     const btn=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
     if(btn)btn.outerHTML=libRateBadgeHtml(libRateItemId,idx);
     const nb=document.querySelector(`.lib-rate-badge-btn[data-idx="${idx}"]`);
     if(nb)nb.addEventListener('click',e=>{e.stopPropagation();libRateOpen(libRateItemId);});
-    toast('شكراً لتقييمك!','ok');
     const item=libItemsCache[idx];
     if(item&&item.user_id&&item.user_id!==currentUser.id){
       const raterName=(profile&&profile.display_name)||'معلمة';
@@ -3074,6 +3082,8 @@ async function libRateSet(n){
         message:`قامت ${raterName} بتقييم ملفك «${item.title}» بـ ${n} نجوم`
       }).then(()=>{}).catch(()=>{});
     }
+    libRateClose();
+    toast('شكراً لتقييمك الثمين!','ok');
   }catch(e){toast('تعذّر حفظ التقييم',true);}
 }
 
