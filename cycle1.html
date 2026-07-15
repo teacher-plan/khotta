@@ -2953,7 +2953,11 @@ async function libSave(){
     libAddClose();
     toast('نُشرت مشاركتك — شكراً لعطائك!','ok');
     libLoadItems();
-  }catch(e){console.warn('libSave',e);toast('تعذّر النشر — تحققي من الاتصال',true);}
+  }catch(e){
+    console.warn('libSave',e);
+    const reason=(e&&e.message)||(e&&e.error_description)||(e&&e.statusText)||String(e);
+    toast('تعذّر النشر: '+reason,true);
+  }
   finally{btn.disabled=false;cyBusyDone();}
 }
 async function libDelete(id){
