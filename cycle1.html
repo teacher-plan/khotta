@@ -614,6 +614,8 @@ body:has(#page-fahim.active){overflow:hidden}
 .lib-preview-wrap{position:relative;width:100%;height:220px;border-radius:12px;margin-bottom:11px;overflow:hidden;background:var(--card)}
 .lib-preview-frame{display:block;width:100%;height:100%;border:1px solid var(--border);border-radius:12px;pointer-events:none}
 .lib-preview-wrap::after{content:'';position:absolute;inset:0}
+.lib-preview-ph{height:170px;background:#fff;border:1.5px dashed var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:var(--muted);margin-bottom:11px}
+.lib-preview-ph span{font-size:12px;font-weight:800}
 .lib-card-title{font-weight:800;font-size:14px;color:var(--ink);margin-bottom:6px}
 .lib-card-desc{font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:10px}
 .lib-card-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--red-d);text-decoration:none;background:var(--card);border-radius:9px;padding:6px 11px;margin-bottom:10px}
@@ -2868,13 +2870,14 @@ function libMySubjects(){
   return[...set];
 }
 // معاينة داخل بطاقة المكتبة — صورة تُعرض مباشرة، PDF بعارض المتصفح المدمج، Word/Excel/PowerPoint عبر عارض جوجل
+const LIB_FILE_ICON=`<svg viewBox="0 0 24 24" fill="currentColor" width="34" height="34"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 2.5L18.5 9H14V4.5zM8 13h8v1.5H8V13zm0 3h8v1.5H8V16z"/></svg>`;
+const LIB_TYPE_LBL={word:'Word',excel:'Excel',ppt:'PowerPoint',other:'ملف'};
 function libPreviewHtml(it){
   if(!it.file_url)return'';
   if(it.file_type==='image')return `<img class="lib-preview-img" src="${it.file_url}" alt="" loading="lazy"/>`;
   if(it.file_type==='pdf')return `<div class="lib-preview-wrap"><iframe class="lib-preview-frame" src="${it.file_url}#toolbar=0&view=FitH" loading="lazy" scrolling="no" tabindex="-1"></iframe></div>`;
-  if(it.file_type==='word'||it.file_type==='excel'||it.file_type==='ppt')
-    return `<div class="lib-preview-wrap"><iframe class="lib-preview-frame" src="https://docs.google.com/gview?url=${encodeURIComponent(it.file_url)}&embedded=true" loading="lazy" scrolling="no" tabindex="-1"></iframe></div>`;
-  return'';
+  // Word/Excel/PowerPoint: لا يوجد عارض موثوق للمعاينة الحية — بطاقة نظيفة بخلفية بيضاء بدل معاينة قد تتعذر
+  return `<div class="lib-preview-ph">${LIB_FILE_ICON}<span>${LIB_TYPE_LBL[it.file_type]||'ملف'}</span></div>`;
 }
 function libRenderTabs(){
   const mine=libMySubjects();
