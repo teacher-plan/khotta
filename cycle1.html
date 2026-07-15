@@ -1492,6 +1492,9 @@ async function undoDeleteTask(){
 // ═══════════ قسم الجدول — مركز قيادة اليوم ═══════════
 // يجب أن تطابق حرفياً FIRST_CYCLE_SUBJECTS في index.html/manager.html — الربط مع رفع الكتب يتم بمطابقة نص المادة
 const C1_SUBJECTS=['الهوية والمواطنة','ديني حياتي','أحب لغتي','اللغة الإنجليزية','الرياضيات','العلوم','عالمي الرقمي'];
+// مسارات تخزين آمنة (ASCII) لكل مادة — مخزن Supabase Storage يرفض المفاتيح العربية المُرمَّزة (%XX)
+const C1_SUBJECT_SLUG={'الهوية والمواطنة':'identity','ديني حياتي':'religion','أحب لغتي':'arabic','اللغة الإنجليزية':'english','الرياضيات':'math','العلوم':'science','عالمي الرقمي':'digital'};
+function libSubjSlug(s){return C1_SUBJECT_SLUG[s]||'subject';}
 const C1_CLS_COLORS=['#D86048','#487848','#C0A848','#8A5030','#A83030','#5F8A8B'];
 const TT_DAYS=[{id:'sun',nm:'الأحد'},{id:'mon',nm:'الاثنين'},{id:'tue',nm:'الثلاثاء'},{id:'wed',nm:'الأربعاء'},{id:'thu',nm:'الخميس'}];
 const TT_FALLBACK={assembly:['07:00','07:20'],periods:[['07:20','08:00'],['08:00','08:40'],['08:40','09:20'],['09:40','10:20'],['10:20','11:00'],['11:00','11:40'],['11:40','12:20'],['12:20','13:00']],breakAfter:3,breakTime:['09:20','09:40']};
@@ -2939,7 +2942,7 @@ async function libSave(){
     const fileType=document.getElementById('lib-filetype').value;
     if(libPendingFile){
       const safe=libPendingFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const path='c1-library/'+encodeURIComponent(libSubject)+'/'+Date.now()+'_'+safe;
+      const path='c1-library/'+libSubjSlug(libSubject)+'/'+Date.now()+'_'+safe;
       const{error:upErr}=await sb.storage.from('library-files').upload(path,libPendingFile,{upsert:false});
       if(upErr)throw upErr;
       fileUrl=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
