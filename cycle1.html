@@ -661,6 +661,8 @@ body:has(#page-fahim.active){overflow:hidden}
 .msgs-sub{display:none}
 .msgs-sub.sel{display:block}
 .msg-row{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:15px 17px;margin-bottom:11px;position:relative;overflow:hidden}
+.msg-row.clickable{cursor:pointer;transition:transform .12s}
+.msg-row.clickable:hover{transform:translateY(-2px);border-color:var(--olive)}
 .msg-row::before{content:'';position:absolute;top:0;inset-inline:0;height:3px;background:linear-gradient(90deg,var(--red),var(--red-d))}
 .msg-row.private::before{background:linear-gradient(90deg,var(--olive),var(--olive-d))}
 .msg-row .mt{font-weight:800;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -3313,10 +3315,12 @@ async function msgsRender(){
   commRender();
 }
 function msgsMsgHtml(m){
-  return `<div class="msg-row${m.target_user_id?' private':''}">
-    <div class="mt">${escHtml(m.title)}<span class="mtag">${m.target_user_id?'خاصة لك':'رسالة جماعية'}</span></div>
+  const clickable=m.kind==='library_share'&&m.item_id;
+  const tag=m.target_user_id?'خاصة لك':(m.kind==='library_share'?'لمعلمات '+escHtml(m.target_subject||''):'رسالة جماعية');
+  return `<div class="msg-row${m.target_user_id?' private':''}${clickable?' clickable':''}" ${clickable?`onclick="msgsOpenLibraryItem('${m.target_subject}','${m.item_id}')"`:''}>
+    <div class="mt">${escHtml(m.title)}<span class="mtag">${tag}</span></div>
     <div class="mb">${escHtml(m.body)}</div>
-    <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}</div>
+    <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}${clickable?' · اضغطي لفتح الملف':''}</div>
   </div>`;
 }
 function msgsSrvHtml(s,resp){
@@ -3357,12 +3361,24 @@ async function msgsLoadFeed(){
       const{data}=await sb.from('c1_survey_responses').select('survey_id,user_id,option_index').in('survey_id',surveys.map(s=>s.id));
       resp=data||[];
     }
+    const mySubjects=libMySubjects();
+    const visibleMsgs=(msgs||[]).filter(m=>!m.target_subject||mySubjects.includes(m.target_subject));
     const items=[
-      ...(msgs||[]).map(m=>({t:m.created_at,html:msgsMsgHtml(m)})),
+      ...visibleMsgs.map(m=>({t:m.created_at,html:msgsMsgHtml(m)})),
       ...(surveys||[]).map(s=>({t:s.created_at,html:msgsSrvHtml(s,resp)}))
     ].sort((a,b)=>new Date(b.t)-new Date(a.t));
     box.innerHTML=items.length?items.map(i=>i.html).join(''):'<div class="msg-empty">لا رسائل أو استبيانات من الإدارة بعد</div>';
   }catch(e){box.innerHTML='<div class="msg-empty">تعذّر تحميل الرسائل والاستبيانات</div>';}
+}
+async function msgsOpenLibraryItem(subject,itemId){
+  if(!libMySubjects().includes(subject)){toast('هذه المادة ليست ضمن موادك',true);return;}
+  c1Go('lib');
+  libSubject=subject;
+  libRenderTabs();
+  await libLoadItems();
+  const idx=libItemsCache.findIndex(it=>it.id===itemId);
+  if(idx>=0)libRateOpen(itemId);
+  else toast('تعذّر العثور على الملف — قد يكون حُذف',true);
 }
 async function msgsVote(surveyId,idx){
   if(!currentUser)return;
@@ -3514,14 +3530,24 @@ async function libSave(){
       fileUrl=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
       fileName=libPendingFile.name;
     }
-    const{error}=await sb.from('c1_library_items').insert({
+    const{data:newItem,error}=await sb.from('c1_library_items').insert({
       user_id:currentUser.id,subject:libSubject,title,description:desc||null,
       file_url:fileUrl,file_name:fileName,file_type:libPendingFile?fileType:null,uploader_name:profile.display_name||''
-    });
+    }).select().single();
     if(error)throw error;
     libAddClose();
     toast('نُشرت مشاركتك — شكراً لعطائك!','ok');
     libLoadItems();
+    if(newItem){
+      const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
+      const tLbl=libPendingFile?(typeLbl[fileType]||'ملف'):'دون ملف مرفق';
+      const uploaderName=profile.display_name||currentUser.email;
+      sb.from('c1_messages').insert({
+        kind:'library_share',title:'ملف جديد في مكتبة مادة '+libSubject,
+        body:`شاركت ${uploaderName} ملفاً جديداً بعنوان «${title}» (${tLbl}) في مكتبة مادة ${libSubject} — اطّلعي عليه وقيّميه بلطف!`,
+        target_subject:libSubject,item_id:newItem.id,created_by:currentUser.email
+      }).then(()=>{}).catch(()=>{});
+    }
   }catch(e){
     console.warn('libSave',e);
     const reason=(e&&e.message)||(e&&e.error_description)||(e&&e.statusText)||String(e);
