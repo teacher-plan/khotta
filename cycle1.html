@@ -106,6 +106,7 @@ body.inapp #c1-notif-btn{display:flex}
 .c1b-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
 .c1b-tile{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:14px 15px 12px;cursor:pointer;text-align:right;font-family:inherit;display:flex;flex-direction:column;gap:7px;min-height:100px;transition:.15s;color:var(--ink);position:relative}
 .c1b-tile:hover{transform:translateY(-3px);border-color:var(--red)}
+.c1b-dot{position:absolute;top:9px;inset-inline-end:9px;width:11px;height:11px;border-radius:50%;background:var(--red-d);box-shadow:0 0 0 2.5px var(--surface)}
 .c1b-tile .ic{color:var(--red);display:inline-flex}
 .c1b-tile .nm{font-size:14px;font-weight:800}
 .c1b-tile .lv{font-size:11px;color:var(--muted);margin-top:auto;line-height:1.8}
@@ -1334,9 +1335,11 @@ function c1Board(open){
   const b=document.getElementById('c1-board');
   if(!open){b.classList.remove('open');return;}
   const cur=(document.querySelector('.page.active')||{}).id;
+  const hasUnreadMsgs=c1Notifs.some(n=>!n.read);
   document.getElementById('c1b-grid').innerHTML=C1_SECTIONS.map(s=>{
     if(!s.built)return `<div class="c1b-tile soon"><span class="soon-b">قريباً</span><span class="ic">${C1_ICONS[s.ic]||""}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></div>`;
-    return `<button class="c1b-tile ${('page-'+s.id)===cur?'now':''}" onclick="c1Go('${s.id}')"><span class="ic">${C1_ICONS[s.ic]||""}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></button>`;
+    const dot=(s.id==='msgs'&&hasUnreadMsgs)?'<span class="c1b-dot"></span>':'';
+    return `<button class="c1b-tile ${('page-'+s.id)===cur?'now':''}" onclick="c1Go('${s.id}')">${dot}<span class="ic">${C1_ICONS[s.ic]||""}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></button>`;
   }).join('');
   b.classList.add('open');
 }
