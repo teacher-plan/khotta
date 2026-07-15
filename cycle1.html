@@ -611,7 +611,9 @@ body:has(#page-fahim.active){overflow:hidden}
 .lib-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
 .lib-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px}
 .lib-preview-img{display:block;width:100%;height:170px;object-fit:cover;border-radius:12px;margin-bottom:11px;background:var(--card)}
-.lib-preview-frame{display:block;width:100%;height:220px;border:1px solid var(--border);border-radius:12px;margin-bottom:11px;background:var(--card)}
+.lib-preview-wrap{position:relative;width:100%;height:220px;border-radius:12px;margin-bottom:11px;overflow:hidden;background:var(--card)}
+.lib-preview-frame{display:block;width:100%;height:100%;border:1px solid var(--border);border-radius:12px;pointer-events:none}
+.lib-preview-wrap::after{content:'';position:absolute;inset:0}
 .lib-card-title{font-weight:800;font-size:14px;color:var(--ink);margin-bottom:6px}
 .lib-card-desc{font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:10px}
 .lib-card-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--red-d);text-decoration:none;background:var(--card);border-radius:9px;padding:6px 11px;margin-bottom:10px}
@@ -2869,9 +2871,9 @@ function libMySubjects(){
 function libPreviewHtml(it){
   if(!it.file_url)return'';
   if(it.file_type==='image')return `<img class="lib-preview-img" src="${it.file_url}" alt="" loading="lazy"/>`;
-  if(it.file_type==='pdf')return `<iframe class="lib-preview-frame" src="${it.file_url}#toolbar=0&view=FitH" loading="lazy"></iframe>`;
+  if(it.file_type==='pdf')return `<div class="lib-preview-wrap"><iframe class="lib-preview-frame" src="${it.file_url}#toolbar=0&view=FitH" loading="lazy" scrolling="no" tabindex="-1"></iframe></div>`;
   if(it.file_type==='word'||it.file_type==='excel'||it.file_type==='ppt')
-    return `<iframe class="lib-preview-frame" src="https://docs.google.com/gview?url=${encodeURIComponent(it.file_url)}&embedded=true" loading="lazy"></iframe>`;
+    return `<div class="lib-preview-wrap"><iframe class="lib-preview-frame" src="https://docs.google.com/gview?url=${encodeURIComponent(it.file_url)}&embedded=true" loading="lazy" scrolling="no" tabindex="-1"></iframe></div>`;
   return'';
 }
 function libRenderTabs(){
