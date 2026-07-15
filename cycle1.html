@@ -245,6 +245,28 @@ body.inapp #c1-notif-btn{display:flex}
 .tt-cell.empty{color:var(--muted);border:1.5px dashed var(--border);font-weight:700;font-size:10px;opacity:.7}
 .tt-cell.live{box-shadow:0 0 0 2.5px var(--red),0 4px 12px rgba(216,96,72,.35)}
 #c1-tt tr.spec td{height:34px;background:linear-gradient(90deg,rgba(192,168,72,.10),rgba(192,168,72,.04));font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.4px}
+/* نسخة الهاتف من الجدول — تبويب أيام + قائمة حصص عمودية بدل جدول أفقي */
+.tt-mobile{display:none}
+.tt-day-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-top:12px;-webkit-overflow-scrolling:touch}
+.tt-day-tab{flex:none;background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:8px 15px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;transition:.15s}
+.tt-day-tab.sel{background:linear-gradient(135deg,var(--red),var(--red-d));border-color:var(--red-d);color:#fff}
+.tt-day-tab.today:not(.sel){color:var(--red-d);border-color:var(--red)}
+.tt-day-spec{margin-top:10px;background:linear-gradient(90deg,rgba(192,168,72,.12),rgba(192,168,72,.05));border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--muted);font-weight:800}
+.tt-day-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.tt-row-cell{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.12s;min-height:44px}
+.tt-row-cell:active{transform:scale(.98)}
+.tt-row-cell.live{box-shadow:0 0 0 2.5px var(--red),0 4px 12px rgba(216,96,72,.3)}
+.tt-row-p{flex:none;width:52px;text-align:center}
+.tt-row-p b{display:block;font-size:15px;font-weight:800;color:var(--ink)}
+.tt-row-p span{display:block;font-size:9.5px;color:var(--muted);font-weight:700}
+.tt-row-body{flex:1;min-width:0}
+.tt-row-body .cn{display:block;font-size:14px;font-weight:800}
+.tt-row-body .sn{display:block;font-size:11.5px;opacity:.85;margin-top:2px}
+.tt-row-cell.empty .tt-row-body{color:var(--muted);font-weight:700;font-size:12px}
+@media(max-width:560px){
+  .tt-shell{display:none}
+  .tt-mobile{display:block}
+}
 /* منتقي الخلية */
 .c1-modal{position:fixed;inset:0;z-index:500;background:rgba(48,24,0,.5);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
 .c1-modal.open{display:flex}
@@ -815,6 +837,11 @@ body:has(#page-fahim.active){overflow:hidden}
         <button class="tt-btn solid" id="tt-edit-btn" onclick="ttToggleEdit()">تعديل الجدول</button>
       </div>
       <div class="tt-shell"><div class="tt-scroll"><table id="c1-tt"><thead id="c1-tt-h"></thead><tbody id="c1-tt-b"></tbody></table></div></div>
+      <div class="tt-mobile" id="tt-mobile">
+        <div class="tt-day-tabs" id="tt-day-tabs"></div>
+        <div class="tt-day-spec" id="tt-day-spec"></div>
+        <div class="tt-day-list" id="tt-day-list"></div>
+      </div>
 
       <div class="wk-card">
         <div class="wk-head">
@@ -1842,6 +1869,35 @@ async function ttRenderTable(){
       return `<tr class="${day.id===todayId?'today':''}"><td>${day.nm}</td>`+t.periods.map((_,p)=>`<td>${ttCellHtml(day.id,p,row[p])}</td>`).join('')+'</tr>';
     }).join('');
   ttMarkLive();
+  ttRenderMobile(t,sch,todayId);
+}
+let ttMobileDay=null;
+function ttRenderMobile(t,sch,todayId){
+  if(!ttMobileDay||!TT_DAYS.find(d=>d.id===ttMobileDay))ttMobileDay=todayId||TT_DAYS[0].id;
+  document.getElementById('tt-day-tabs').innerHTML=TT_DAYS.map(day=>
+    `<button type="button" class="tt-day-tab ${day.id===ttMobileDay?'sel':''} ${day.id===todayId?'today':''}" onclick="ttMobileSwitch('${day.id}')">${day.nm}</button>`
+  ).join('');
+  document.getElementById('tt-day-spec').textContent=
+    `اصطفاف الصباح ${t.assembly[0]} – ${t.assembly[1]} · الفسحة بعد الحصة ${t.breakAfter} (${t.breakTime[0]} – ${t.breakTime[1]})`;
+  const row=sch[ttMobileDay]||{};
+  document.getElementById('tt-day-list').innerHTML=t.periods.map((pt,p)=>{
+    const v=row[p];
+    const c=v?c1AllClasses().find(x=>x.id===v.c):null;
+    const col=(c&&c.color)||'#8A7460';
+    const live=(ttMobileDay===todayId)&&ttIsPeriodLive(pt);
+    return `<div class="tt-row-cell${v?'':' empty'}${live?' live':''}" style="${v?`border-color:${col};background:${col}12`:'cursor:default'}" ${ttEdit?`onclick="ttPickOpen('${ttMobileDay}',${p})"`:''}>
+      <div class="tt-row-p"><b>${p+1}</b><span>${pt[0]}</span></div>
+      <div class="tt-row-body" style="${v?`color:${col}`:''}">
+        ${v?`<span class="cn">${escHtml(c?c.name:'?')}</span><span class="sn">${escHtml(v.s||'')}</span>`:(ttEdit?'اضغطي للإضافة':'—')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function ttMobileSwitch(d){ttMobileDay=d;ttRenderTable();}
+function ttIsPeriodLive(pt){
+  const now=new Date();const cur=now.getHours()*60+now.getMinutes();
+  const toMin=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
+  return cur>=toMin(pt[0])&&cur<toMin(pt[1]);
 }
 function ttToggleEdit(){
   ttEdit=!ttEdit;
