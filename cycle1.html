@@ -89,7 +89,8 @@ body.inapp #c1-notif-btn{display:flex}
 #c1-notif-panel{position:fixed;top:62px;inset-inline-end:14px;z-index:220;background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(320px,88vw);max-height:70vh;overflow-y:auto;box-shadow:0 10px 30px rgba(48,24,0,.2);display:none}
 @media(max-width:400px){#c1-notif-panel{inset-inline-end:8px;width:min(300px,92vw)}}
 #c1-notif-panel.open{display:block}
-.c1-notif-head{font-weight:800;font-size:13px;padding:12px 14px;border-bottom:1px solid var(--border);color:var(--ink)}
+.c1-notif-head{font-weight:800;font-size:13px;padding:12px 14px;border-bottom:1px solid var(--border);color:var(--ink);display:flex;align-items:center;justify-content:space-between}
+.c1-notif-clear{background:none;border:none;color:var(--red-d);font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;padding:4px 6px}
 .c1-notif-item{padding:11px 14px;font-size:12.5px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.8;cursor:default}
 .c1-notif-item:last-child{border-bottom:none}
 .c1-notif-item.unread{background:rgba(216,96,72,.06)}
@@ -710,6 +711,9 @@ body:has(#page-fahim.active){overflow:hidden}
 .srv-bar.mine{background:linear-gradient(90deg,var(--red),var(--red-d))}
 .srv-bar-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12.5px;font-weight:800;color:var(--ink)}
 .srv-foot{font-size:11px;color:var(--muted);margin-top:10px}
+.srv-voted-flash{animation:srvFlash 1.2s ease 2}
+@keyframes srvFlash{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px var(--olive)}}
+@media(prefers-reduced-motion:reduce){.srv-voted-flash{animation:none}}
 /* صندوق اقتراحات المعلمة لإدارة المنصة — أسلوب راقٍ منفصل عن بطاقات الرسائل */
 .sug-fab{position:fixed;top:66px;left:14px;z-index:3;width:64px;height:64px;border-radius:14px;
   background:var(--surface);border:1.5px solid var(--border);box-shadow:0 4px 14px rgba(48,24,0,.1);
@@ -834,7 +838,7 @@ body:has(#page-fahim.active){overflow:hidden}
   <span id="c1-notif-badge" class="hidden">0</span>
 </button>
 <div id="c1-notif-panel">
-  <div class="c1-notif-head">الإشعارات</div>
+  <div class="c1-notif-head">الإشعارات<button type="button" class="c1-notif-clear" onclick="c1NotifClearAll()">مسح الكل</button></div>
   <div id="c1-notif-list"></div>
 </div>
 <button id="c1-user" onclick="document.getElementById('c1-menu').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-3.6 0-8 1.8-8 5.3V21h16v-1.7c0-3.5-4.4-5.3-8-5.3z"/></svg></button>
@@ -1150,6 +1154,16 @@ body:has(#page-fahim.active){overflow:hidden}
   </div>
 </div></div>
 
+<div class="c1-modal" id="c1-confirm-modal" onclick="if(event.target===this)c1ConfirmAnswer(false)">
+  <div class="c1-mbox" style="max-width:340px;text-align:center">
+    <div id="c1-confirm-msg" style="font-size:13.5px;font-weight:700;line-height:2;margin-bottom:16px;color:var(--ink)"></div>
+    <div class="c1-mrow">
+      <button class="c1-mbtn no" onclick="c1ConfirmAnswer(false)">إلغاء</button>
+      <button class="c1-mbtn go" style="background:linear-gradient(135deg,var(--red),var(--red-d))" onclick="c1ConfirmAnswer(true)">تأكيد</button>
+    </div>
+  </div>
+</div>
+
 <div class="c1-modal" id="sug-modal" onclick="if(event.target===this)sugClose()">
   <div class="c1-mbox" style="max-width:380px;text-align:center">
     <div class="sug-head" style="justify-content:center">
@@ -1429,8 +1443,8 @@ async function loginWithPassword(){
 // حذف كل بيانات الحسـاب (بتأكيد مزدوج) — يعيد الحساب لنقطة الصفر
 async function c1ResetData(){
   document.getElementById('c1-menu').classList.remove('open');
-  if(!confirm('سيُحذف كل ما أعددتِه: الاسم، الصفوف، الشعب، والجدول. هل أنت متأكدة؟'))return;
-  if(!confirm('تأكيد أخير — الحذف نهائي ولا يمكن التراجع عنه. متابعة؟'))return;
+  if(!await c1Confirm('سيُحذف كل ما أعددتِه: الاسم، الصفوف، الشعب، والجدول. هل أنت متأكدة؟'))return;
+  if(!await c1Confirm('تأكيد أخير — الحذف نهائي ولا يمكن التراجع عنه. متابعة؟'))return;
   cyBusy('يحذف بياناتك');
   try{
     await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
@@ -1440,8 +1454,8 @@ async function c1ResetData(){
   }catch(e){cyBusyDone();toast('تعذّر الحذف — تحققي من الاتصال',true);}
 }
 
-function confirmSignOut(){
-  if(!confirm('تسجيل الخروج؟'))return;
+async function confirmSignOut(){
+  if(!await c1Confirm('تسجيل الخروج؟'))return;
   sb.auth.signOut().then(()=>location.reload());
 }
 function showLogin(msg){
@@ -2484,6 +2498,8 @@ function starRender(){
     return;
   }
   empty.classList.add('hidden');body.classList.remove('hidden');
+  if(!starGrade)starGrade=Number(localStorage.getItem('c1_star_g'))||null;
+  if(!starClass)starClass=localStorage.getItem('c1_star_c')||null;
   if(!starGrade||!grades.includes(starGrade))starGrade=grades[0];
   document.getElementById('star-grade-tabs').innerHTML=grades.map(g=>
     `<button class="plan-tab ${g===starGrade?'on':''}" onclick="starGrade=${g};starClass=null;starRender()">الصف ${PLAN_GNAMES[g-1]}</button>`
@@ -2496,6 +2512,8 @@ function starRender(){
     return;
   }
   if(!starClass||!classes.some(c=>c.id===starClass))starClass=classes[0].id;
+  localStorage.setItem('c1_star_g',String(starGrade));
+  localStorage.setItem('c1_star_c',starClass);
   starRenderClassTabs();
   starRenderBoard();
 }
@@ -2507,6 +2525,7 @@ function starRenderClassTabs(){
 }
 function starSwitchClass(id){
   starClass=id;
+  localStorage.setItem('c1_star_c',id);
   starRenderClassTabs();
   starRenderBoard();
 }
@@ -2533,7 +2552,7 @@ async function starAddStudent(classId){
 async function starDelStudent(classId,idx){
   const cls=starClassObj(classId);
   if(!cls||!cls.students)return;
-  if(!confirm('حذف «'+cls.students[idx]+'» من قائمة الشعبة؟'))return;
+  if(!await c1Confirm('حذف «'+cls.students[idx]+'» من قائمة الشعبة؟'))return;
   cls.students.splice(idx,1);
   const arr=starArr(classId).slice();arr.splice(idx,1);
   profile.stars={...(profile.stars||{}),[classId]:arr};
@@ -2841,7 +2860,7 @@ async function gamesLoadMine(){
   }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل ألعابك.</div>';}
 }
 async function gamesDelete(id){
-  if(!confirm('حذف هذه اللعبة نهائياً؟'))return;
+  if(!await c1Confirm('حذف هذه اللعبة نهائياً؟'))return;
   try{await sb.from('games').delete().eq('id',id);gamesLoadMine();}catch(e){toast('تعذّر الحذف',true);}
 }
 function gamesPlay(id){
@@ -2953,6 +2972,8 @@ function behRender(){
     return;
   }
   empty.classList.add('hidden');body.classList.remove('hidden');
+  if(!behGrade)behGrade=Number(localStorage.getItem('c1_beh_g'))||null;
+  if(!behClass)behClass=localStorage.getItem('c1_beh_c')||null;
   if(!behGrade||!grades.includes(behGrade))behGrade=grades[0];
   document.getElementById('beh-grade-tabs').innerHTML=grades.map(g=>
     `<button class="plan-tab ${g===behGrade?'on':''}" onclick="behGrade=${g};behClass=null;behRender()">الصف ${PLAN_GNAMES[g-1]}</button>`
@@ -2964,6 +2985,8 @@ function behRender(){
     return;
   }
   if(!behClass||!classes.some(c=>c.id===behClass))behClass=classes[0].id;
+  localStorage.setItem('c1_beh_g',String(behGrade));
+  localStorage.setItem('c1_beh_c',behClass);
   behRenderClassTabs();
   behRenderBoard();
 }
@@ -2973,7 +2996,7 @@ function behRenderClassTabs(){
     `<button class="plan-subj-tab ${c.id===behClass?'on':''}" style="--sc:${c.color}" onclick="behSwitchClass('${c.id}')">${c.id===behClass?'✓ ':''}${escHtml(c.name)}</button>`
   ).join('');
 }
-function behSwitchClass(id){behClass=id;behRenderClassTabs();behRenderBoard();}
+function behSwitchClass(id){behClass=id;localStorage.setItem('c1_beh_c',id);behRenderClassTabs();behRenderBoard();}
 function behRenderBoard(){
   const cls=starClassesOf(behGrade).find(c=>c.id===behClass);
   const box=document.getElementById('beh-board');
@@ -3234,7 +3257,7 @@ async function achSave(){
   else toast('حُفظ في سجلّكِ المهني','ok');
 }
 async function achDelete(id){
-  if(!confirm('حذف هذا العنصر من سجلّك؟'))return;
+  if(!await c1Confirm('حذف هذا العنصر من سجلّك؟'))return;
   const items=achList().filter(i=>i.id!==id);
   await cy1Save({achievements:items},'يحذف العنصر');
   achRender();
@@ -3450,7 +3473,10 @@ async function c1NotifLoad(){
     const{data}=await sb.from('c1_notifications').select('*').or(`user_id.eq.${currentUser.id},user_id.is.null`).order('created_at',{ascending:false}).limit(30);
     const mySubjects=libMySubjects();
     const myEmail=(currentUser.email||'').toLowerCase();
-    c1Notifs=(data||[]).filter(n=>(!n.subject||mySubjects.includes(n.subject))&&!(n.created_by&&n.created_by.toLowerCase()===myEmail));
+    const clearedAt=new Date(profile.notifClearedAt||0);
+    c1Notifs=(data||[]).filter(n=>(!n.subject||mySubjects.includes(n.subject))
+      &&!(n.created_by&&n.created_by.toLowerCase()===myEmail)
+      &&new Date(n.created_at)>clearedAt);
   }catch(e){c1Notifs=[];}
   c1NotifRender();
 }
@@ -3471,6 +3497,11 @@ function c1NotifRender(){
     else if(n.kind==='library_share'&&n.item_id)actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoLibrary('${n.subject}','${n.item_id}')">فتح الملف</button>`;
     return `<div class="c1-notif-item${c1NotifIsUnread(n)?' unread':''}">${escHtml(n.message)}<span class="dt">${new Date(n.created_at).toLocaleString('ar')}</span>${actionBtn}</div>`;
   }).join('');
+}
+function c1NotifClearAll(){
+  cy1Save({notifClearedAt:new Date().toISOString()});
+  c1Notifs=[];
+  c1NotifRender();
 }
 function c1NotifGoSurvey(){
   document.getElementById('c1-notif-panel').classList.remove('open');
@@ -3535,7 +3566,7 @@ function msgsSrvHtml(s,resp){
       `<button type="button" class="srv-opt-btn" onclick="msgsVote('${s.id}',${i})">${escHtml(opt)}</button>`
     ).join('')+`</div>`;
   }
-  return `<div class="srv-card">
+  return `<div class="srv-card" data-sid="${s.id}">
     <div class="srv-q">${escHtml(s.question)}<span class="mtag">استبيان</span>${s.closed?'<span class="srv-closed-tag">مغلق</span>':''}</div>
     ${body}
     <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''} · ${new Date(s.created_at).toLocaleDateString('ar')}</div>
@@ -3580,8 +3611,23 @@ async function msgsVote(surveyId,idx){
     const{error:voteErr}=await sb.from('c1_survey_responses').upsert({survey_id:surveyId,user_id:currentUser.id,option_index:idx},{onConflict:'survey_id,user_id'});
     if(voteErr)throw voteErr;
     toast('شكراً لمشاركتك برأيك!','ok');
-    msgsLoadFeed();
+    await msgsLoadFeed();
+    const mineBar=document.querySelector(`.srv-card[data-sid="${surveyId}"] .srv-bar-wrap:has(.srv-bar.mine)`)
+      ||document.querySelector(`.srv-card[data-sid="${surveyId}"]`);
+    if(mineBar)mineBar.classList.add('srv-voted-flash');
   }catch(e){toast('تعذّر إرسال إجابتك',true);}
+}
+let _c1ConfirmResolve=null;
+function c1Confirm(msg){
+  return new Promise(res=>{
+    _c1ConfirmResolve=res;
+    document.getElementById('c1-confirm-msg').textContent=msg;
+    document.getElementById('c1-confirm-modal').classList.add('open');
+  });
+}
+function c1ConfirmAnswer(ok){
+  document.getElementById('c1-confirm-modal').classList.remove('open');
+  if(_c1ConfirmResolve){const r=_c1ConfirmResolve;_c1ConfirmResolve=null;r(ok);}
 }
 function sugOpen(){document.getElementById('sug-modal').classList.add('open');}
 function sugClose(){document.getElementById('sug-modal').classList.remove('open');document.getElementById('sug-text').value='';}
@@ -3755,7 +3801,7 @@ async function libSave(){
   finally{btn.disabled=false;cyBusyDone();}
 }
 async function libDelete(id){
-  if(!confirm('حذف هذه المشاركة نهائياً؟'))return;
+  if(!await c1Confirm('حذف هذه المشاركة نهائياً؟'))return;
   try{await sb.from('c1_library_items').delete().eq('id',id);libLoadItems();}catch(e){toast('تعذّر الحذف',true);}
 }
 
