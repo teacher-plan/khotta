@@ -3416,6 +3416,10 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:8px">📗 المادة التي بجانبها كتاب مرفوع مسبقاً — يمكنك <button type="button" onclick="segRun()" style="background:none;border:none;color:var(--gold);font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;font-size:11.5px;padding:0;text-decoration:underline">إعادة تقطيعها فقط</button> دون رفع من جديد.</div>
     </div>
+    <div id="seg-manual-row" style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+      <p style="font-size:11.5px;color:var(--muted);line-height:1.8;margin-bottom:8px">مواد الحلقة الأولى سطحية ولا تحتاج قراءة الكتاب فعلياً — يكفي كتابة أسماء الوحدات والدروس يدوياً، ويعتمد التوليد على سياق العمر والمنهج بدل نص الكتاب.</p>
+      <button type="button" class="eg-regen" style="width:100%" onclick="segManualStart()">✏️ إدخال أسماء الوحدات والدروس يدوياً (بلا رفع كتاب)</button>
+    </div>
     <div id="seg-status" style="font-size:12.5px;color:var(--gold);font-weight:700;margin-top:12px"></div>
     <div id="seg-review" style="margin-top:10px"></div>
   </div>
@@ -15432,6 +15436,8 @@ async function segReloadSubjects(){
 }
 function segReloadBookNo(){
   const row=document.getElementById('seg-bookno-row');
+  const manualRow=document.getElementById('seg-manual-row');
+  if(manualRow)manualRow.style.display=segIsFirstCycle?'block':'none';
   if(!segIsFirstCycle){row.style.display='none';return;}
   row.style.display='flex';
   const subject=document.getElementById('seg-subject').value;
@@ -15586,6 +15592,17 @@ function segShiftPage(btn,delta){
     inp.value=v>0?v:'';
     segThumbUpdate(inp);
   }
+}
+function segManualStart(){
+  const grade=document.getElementById('seg-grade').value;
+  const semester=document.getElementById('seg-semester').value;
+  const subject=document.getElementById('seg-subject').value;
+  const bookNo=segIsFirstCycle?(parseInt(document.getElementById('seg-book-no').value)||1):1;
+  if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
+  segCtx={grade,semester,subject,bookNo,base:null,offset:1,pageCount:0};
+  document.getElementById('seg-status').textContent='✏️ اكتبي أسماء الوحدات والدروس ثم اعتمدي — بلا كتاب ولا صفحات';
+  segRenderReview([]);
+  segAddUnit();
 }
 function segRenderReview(lessons){
   const rev=document.getElementById('seg-review');
