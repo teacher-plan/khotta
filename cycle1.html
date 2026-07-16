@@ -683,18 +683,6 @@ body:has(#page-fahim.active){overflow:hidden}
 .lib-chal-item .rank{width:18px;height:18px;border-radius:50%;background:#E8C34A;color:#5C4813;font-weight:800;font-size:10.5px;display:flex;align-items:center;justify-content:center}
 .lib-chal-item .nm{font-weight:800}
 .lib-chal-item .n{opacity:.8;font-size:11px}
-/* ── إحصائياتك ── */
-.ms-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 18px}
-.ms-ring{width:132px;height:132px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--olive) 0%,var(--card) 0);position:relative}
-.ms-ring::before{content:'';position:absolute;inset:11px;border-radius:50%;background:var(--bg)}
-.ms-ring-num{position:relative;font-size:26px;font-weight:800;color:var(--olive-d);font-variant-numeric:tabular-nums}
-.ms-ring-lbl{font-size:12.5px;font-weight:800;color:var(--muted)}
-.ms-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
-.ms-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px 12px;text-align:center;position:relative;overflow:hidden}
-.ms-card::before{content:'';position:absolute;top:0;inset-inline:0;height:3px;background:var(--mc,var(--red))}
-.ms-ic{width:38px;height:38px;border-radius:11px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;color:#fff;background:var(--mc,var(--red))}
-.ms-num{font-size:26px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3}
-.ms-lbl{font-size:11.5px;font-weight:800;color:var(--muted);margin-top:2px}
 .lib-share-cta:hover{transform:translateY(-2px)}
 .lib-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px}
 /* ── المراسلات ── */
@@ -1162,23 +1150,6 @@ body:has(#page-fahim.active){overflow:hidden}
   </div>
 </div></div>
 
-<!-- قسم إحصائياتك — رحلة المعلمة بالأرقام -->
-<div class="page" id="page-mystats"><div class="wrap">
-  <div class="lib-hero" style="background:linear-gradient(120deg,#5C4813,#8A6E20 60%,#C0A848)">
-    <div class="lib-hero-t">رحلتك مع خطتي</div>
-    <div class="lib-hero-s">كل ما صنعتِه بيديك هذا الفصل — أرقام تستحقين الفخر بها.</div>
-  </div>
-  <div class="ms-ring-wrap">
-    <div class="ms-ring" id="ms-ring"><span class="ms-ring-num" id="ms-ring-num">0%</span></div>
-    <div class="ms-ring-lbl">إنجاز خطة الدروس</div>
-  </div>
-  <div class="ms-grid" id="ms-grid"></div>
-  <button class="lib-share-cta" style="background:linear-gradient(135deg,#E8C34A,#C0A848);color:#5C4813" onclick="statsExport()">
-    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 3v10.5l3.5-3.5L17 11.5 12 16.5 7 11.5l1.5-1.5L12 13.5V3zM5 19h14v2H5z"/></svg>
-    حمّلي بصمتك كصورة للمشاركة
-  </button>
-</div></div>
-
 <div class="c1-modal" id="sug-modal" onclick="if(event.target===this)sugClose()">
   <div class="c1-mbox" style="max-width:380px;text-align:center">
     <div class="sug-head" style="justify-content:center">
@@ -1409,7 +1380,6 @@ const C1_SECTIONS=[
   {id:'ach',   ic:'trophy',nm:'إنجازاتك', lv:'إنجازاتك ومبادراتك المهنية',   built:true},
   {id:'lib',   ic:'book',  nm:'المكتبة', lv:'شاركي إبداعك مع معلمات مادتك', built:true},
   {id:'msgs',  ic:'mail',  nm:'المراسلات', lv:'رسائل الإدارة واستبياناتك', built:true},
-  {id:'mystats', ic:'chart', nm:'إحصائياتك', lv:'رحلتك مع خطتي بالأرقام', built:true},
 ];
 function c1Board(open){
   const b=document.getElementById('c1-board');
@@ -1438,7 +1408,6 @@ function c1Go(id){
   if(id==='ach')achRender();
   if(id==='lib')libRender();
   if(id==='msgs')msgsRender();
-  if(id==='mystats')statsRender();
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){c1Board(false);if(document.getElementById('live-stage').classList.contains('on'))liveClose();if(document.getElementById('games-stage').classList.contains('on'))gamesStageClose();behAddClose();behFileClose();}});
 document.addEventListener('click',e=>{
@@ -1736,122 +1705,6 @@ async function prepOpen(classId,subject){
   }catch(e){libBox.textContent='تعذّر البحث في المكتبة';}
 }
 function prepClose(){document.getElementById('prep-modal').classList.remove('open');}
-
-// ══ إحصائياتك — رحلة المعلمة بالأرقام ══
-let msLast={};
-function statsCompute(){
-  let stars=0;Object.values(profile.stars||{}).forEach(a=>(a||[]).forEach(n=>stars+=n||0));
-  let students=0;(profile.grades||[]).forEach(g=>(g.classes||[]).forEach(c=>students+=(c.students||[]).length));
-  let lessonsDone=0,lessonsTotal=0;
-  Object.values(profile.plan_units||{}).forEach(units=>(units||[]).forEach(u=>(u.lessons||[]).forEach(l=>{
-    lessonsTotal++;if(planGet(l.id).done)lessonsDone++;
-  })));
-  let part=0,viol=0;
-  Object.values(profile.beh_log||{}).forEach(cls=>(cls||[]).forEach(st=>(st||[]).forEach(e=>{
-    if(e.kind==='violation')viol++;else part++;
-  })));
-  return{stars,students,lessonsDone,lessonsTotal,ach:achList().length,part,viol};
-}
-function msCountUp(el,target){
-  const dur=900,t0=performance.now();
-  function tick(t){
-    const p=Math.min(1,(t-t0)/dur);
-    el.textContent=String(Math.round(target*(1-Math.pow(1-p,3))));
-    if(p<1)requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-}
-async function statsRender(){
-  const s=statsCompute();
-  msLast=s;
-  const pct=s.lessonsTotal?Math.round(s.lessonsDone/s.lessonsTotal*100):0;
-  const ring=document.getElementById('ms-ring');
-  const ringNum=document.getElementById('ms-ring-num');
-  let rp=0;
-  const ri=setInterval(()=>{
-    rp=Math.min(pct,rp+2);
-    ring.style.background=`conic-gradient(var(--olive) ${rp}%,var(--card) 0)`;
-    ringNum.textContent=rp+'%';
-    if(rp>=pct)clearInterval(ri);
-  },18);
-  const IC={
-    star:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg>',
-    kids:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5zm8-2a3 3 0 1 0-2.4-4.8A5 5 0 0 1 15 9.9c.5.6 1.2 1.4 2 2.1zm1 2.2c1.8.7 3 1.9 3 3.8v2h-3v-2c0-1.5-.6-2.8-1.6-3.8h1.6z"/></svg>',
-    book:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 14H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>',
-    trophy:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M5 3h14v2h2v3a4 4 0 0 1-4 4 5.5 5.5 0 0 1-3.9 3.86V19H16v2H8v-2h2.9v-3.14A5.5 5.5 0 0 1 7 12a4 4 0 0 1-4-4V5h2V3z"/></svg>',
-    heart:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M12 21s-7.5-4.9-9.5-9.2C1 8.4 3 5 6.5 5c2 0 3.4 1.1 4.2 2.4h2.6C14.1 6.1 15.5 5 17.5 5 21 5 23 8.4 21.5 11.8 19.5 16.1 12 21 12 21z"/></svg>',
-    shield:'<svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/></svg>'
-  };
-  const cards=[
-    {ic:IC.star,c:'#C0A848',n:s.stars,lbl:'نجمة منحتِها لطلابك'},
-    {ic:IC.kids,c:'var(--red)',n:s.students,lbl:'طالباً ترعينهم'},
-    {ic:IC.book,c:'var(--olive)',n:s.lessonsDone,lbl:'درساً أنجزتِه'},
-    {ic:IC.trophy,c:'#8A6E20',n:s.ach,lbl:'إنجازاً ومبادرة'},
-    {ic:IC.heart,c:'var(--olive-d)',n:s.part,lbl:'مشاركة إيجابية وثّقتِها'},
-    {ic:IC.shield,c:'var(--red-d)',n:s.viol,lbl:'مخالفة تابعتِها بحزم'},
-    {ic:IC.book,c:'#7A6018',n:'…',lbl:'ملفاً شاركتِه في المكتبة',id:'ms-lib'},
-    {ic:IC.star,c:'#A83030',n:'…',lbl:'لعبة صنعتِها لطلابك',id:'ms-games'}
-  ];
-  document.getElementById('ms-grid').innerHTML=cards.map((c,i)=>
-    `<div class="ms-card" style="--mc:${c.c}"><div class="ms-ic">${c.ic}</div><div class="ms-num" ${c.id?`id="${c.id}"`:`data-n="${c.n}"`}>0</div><div class="ms-lbl">${c.lbl}</div></div>`
-  ).join('');
-  document.querySelectorAll('#ms-grid .ms-num[data-n]').forEach(el=>msCountUp(el,Number(el.dataset.n)||0));
-  try{
-    const[libR,gamesR]=await Promise.all([
-      sb.from('c1_library_items').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id),
-      sb.from('games').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id)
-    ]);
-    msLast.lib=libR.count||0;msLast.games=gamesR.count||0;
-    const le=document.getElementById('ms-lib'),ge=document.getElementById('ms-games');
-    if(le)msCountUp(le,msLast.lib);
-    if(ge)msCountUp(ge,msLast.games);
-  }catch(e){
-    const le=document.getElementById('ms-lib'),ge=document.getElementById('ms-games');
-    if(le)le.textContent='0';if(ge)ge.textContent='0';
-  }
-}
-function statsExport(){
-  const s=msLast.stars!==undefined?msLast:statsCompute();
-  const W=1080,H=1080;
-  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
-  const x=cv.getContext('2d');
-  x.fillStyle='#F7EEE2';x.fillRect(0,0,W,H);
-  x.fillStyle='#7A2020';x.fillRect(0,0,W,190);
-  x.textAlign='center';x.direction='rtl';
-  x.fillStyle='#fff';x.font='800 52px Tahoma,Arial';
-  x.fillText('بصمتي مع خُطّة',W/2,90);
-  x.font='700 32px Tahoma,Arial';
-  x.fillText('أ. '+(profile.display_name||''),W/2,150);
-  const pct=s.lessonsTotal?Math.round(s.lessonsDone/s.lessonsTotal*100):0;
-  const rows=[
-    [s.stars+' نجمة','منحتها لطلابي'],
-    [s.students+' طالباً','أرعاهم كل يوم'],
-    [s.lessonsDone+' درساً','أنجزتها ('+pct+'% من الخطة)'],
-    [s.ach+' إنجازاً','ومبادرة وثّقتها'],
-    [(msLast.lib||0)+' ملفاً','شاركتها مع زميلاتي'],
-    [(msLast.games||0)+' لعبة','صنعتها لطلابي']
-  ];
-  rows.forEach((r,i)=>{
-    const col=i%2,row=Math.floor(i/2);
-    const cx=col===0?W*0.28:W*0.72, cy=280+row*230;
-    x.fillStyle='#FFFDF9';
-    x.beginPath();x.roundRect(cx-210,cy-60,420,180,24);x.fill();
-    x.strokeStyle='#E3D2BD';x.lineWidth=3;x.stroke();
-    x.fillStyle='#A83030';x.font='800 56px Tahoma,Arial';
-    x.fillText(r[0],cx,cy+14);
-    x.fillStyle='#7A6350';x.font='700 30px Tahoma,Arial';
-    x.fillText(r[1],cx,cy+76);
-  });
-  x.fillStyle='#7A6350';x.font='700 28px Tahoma,Arial';
-  x.fillText('منصة خُطّة — الحلقة الأولى · '+new Date().toLocaleDateString('ar'),W/2,H-46);
-  cv.toBlob(b=>{
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(b);
-    a.download='بصمتي-مع-خطة.png';
-    document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  });
-}
 
 // ══ الإقلاع ══
 (async function boot(){
