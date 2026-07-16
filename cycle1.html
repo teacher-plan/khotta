@@ -1141,7 +1141,7 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="comm-feed" id="comm-feed"></div>
     <div class="comm-inputrow">
       <div class="comm-inputrow-in">
-        <textarea id="comm-text" placeholder="اكتبي رسالتك لمعلمات الحلقة الأولى..." rows="2"></textarea>
+        <textarea id="comm-text" placeholder="اكتبي رسالتك لمعلمات الحلقة الأولى..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();commSend();}"></textarea>
         <button class="comm-send" id="comm-send-btn" onclick="commSend()">
           <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 20V14L11 12L3 10V4L21 12L3 20Z"/></svg>
         </button>
@@ -1641,7 +1641,7 @@ function ywRenderInsights(){
     const avg=total/n;
     (c.students||[]).forEach((nm,i)=>{
       const st=stars[i]||0;
-      const violCount=(beh[i]||[]).filter(e=>e.kind==='violation').length;
+      const violCount=(beh[i]||[]).filter(e=>e.kind==='viol').length;
       if(violCount>=2&&st<avg*0.5){
         list.push({text:`${nm} في شعبة ${c.name} لديه ${violCount} مخالفات ونجومه أقل من متوسط الشعبة — هل تريدين استشارة فهيم؟`,btn:'استشيري فهيم',act:{t:'fahim',q:`لدي طالب اسمه ${nm} في شعبة ${c.name}، لديه ${violCount} مخالفات مسجّلة ونجومه منخفضة مقارنة بزملائه. ما نصيحتك للتعامل معه؟`}});
       }
@@ -1669,9 +1669,22 @@ async function prepOpen(classId,subject){
   // الدرس القادم: أول درس غير منجز لهذه الشعبة في هذه المادة
   const g=c1GradeOf(classId);
   let lessonName='أكملي إعداد موادك في قسم الجدول أولاً لتظهر دروس هذه المادة';
+  const lessonEl=document.getElementById('prep-lesson');
+  lessonEl.textContent='يجري تحميل الدروس...';
   if(g){
     const key=planKey(g.num,subject);
-    const units=(profile.plan_units&&profile.plan_units[key])||[];
+    let units=(profile.plan_units&&profile.plan_units[key])||[];
+    // إن لم تُفتح الخطة لهذه المادة من قبل، نجلب الدروس من قاعدة البيانات مباشرة (نفس نمط قسم الألعاب)
+    if(!units.length){
+      try{
+        const semester=profile.semester||'الفصل الأول';
+        const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',subject).eq('grade',String(g.num)).order('sort');
+        if(data&&data.length){
+          units=buildUnitsFromRows(data,semester,subject);
+          profile.plan_units={...(profile.plan_units||{}),[key]:units};
+        }
+      }catch(e){}
+    }
     lessonName=units.length?'أُنجزت كل الدروس المرفوعة لهذه الشعبة — أحسنتِ!':'لا دروس مرفوعة لهذه المادة بعد';
     outer:
     for(const u of units){
@@ -1681,7 +1694,7 @@ async function prepOpen(classId,subject){
       }
     }
   }
-  document.getElementById('prep-lesson').innerHTML=lessonName;
+  lessonEl.innerHTML=lessonName;
   // نجوم الشعبة
   const stars=starArr(classId);
   const names=c.students||[];
@@ -3436,7 +3449,8 @@ async function c1NotifLoad(){
   try{
     const{data}=await sb.from('c1_notifications').select('*').or(`user_id.eq.${currentUser.id},user_id.is.null`).order('created_at',{ascending:false}).limit(30);
     const mySubjects=libMySubjects();
-    c1Notifs=(data||[]).filter(n=>!n.subject||mySubjects.includes(n.subject));
+    const myEmail=(currentUser.email||'').toLowerCase();
+    c1Notifs=(data||[]).filter(n=>(!n.subject||mySubjects.includes(n.subject))&&!(n.created_by&&n.created_by.toLowerCase()===myEmail));
   }catch(e){c1Notifs=[];}
   c1NotifRender();
 }
@@ -3552,9 +3566,9 @@ async function msgsLoadFeed(){
 }
 async function msgsOpenLibraryItem(subject,itemId){
   if(!libMySubjects().includes(subject)){toast('هذه المادة ليست ضمن موادك',true);return;}
-  c1Go('lib');
+  // نحدد المادة قبل فتح القسم كي لا يبدأ libRender تحميلاً لمادة أخرى يسبق تحميلنا (سباق يعرض ملفات خاطئة)
   libSubject=subject;
-  libRenderTabs();
+  c1Go('lib');
   await libLoadItems();
   const idx=libItemsCache.findIndex(it=>it.id===itemId);
   if(idx>=0)libRateOpen(itemId);
@@ -3729,7 +3743,7 @@ async function libSave(){
         target_subject:libSubject,item_id:newItem.id,created_by:currentUser.email
       }).then(()=>{}).catch(()=>{});
       sb.from('c1_notifications').insert({
-        user_id:null,kind:'library_share',subject:libSubject,item_id:newItem.id,
+        user_id:null,kind:'library_share',subject:libSubject,item_id:newItem.id,created_by:currentUser.email,
         message:`ملف جديد في مكتبة مادة ${libSubject}: «${title}»`
       }).then(()=>{}).catch(()=>{});
     }
