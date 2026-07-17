@@ -488,6 +488,14 @@ body.inapp #c1-notif-btn{display:flex}
 
 /* ── بطاقة اليوم — تحضير مباشر بضغطة زر ── */
 .today-card{position:relative;background:linear-gradient(160deg,var(--red-d),var(--red));border-radius:20px;padding:20px;margin-bottom:18px;color:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(48,24,0,.14)}
+.today-fahim{position:absolute;bottom:0;inset-inline-end:16px;display:none;flex-direction:column;align-items:center;pointer-events:none;z-index:2}
+.today-fahim img{width:62px;height:96px;object-fit:cover;object-position:top;filter:drop-shadow(0 3px 7px rgba(0,0,0,.3));animation:tdFahimPeek .8s cubic-bezier(.2,.8,.3,1.2)}
+.today-fahim-bubble{background:#fff;color:var(--red-d);border-radius:12px;border-bottom-right-radius:3px;padding:5px 11px;font-size:10.5px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap;margin-bottom:8px;animation:tdFahimBubble .5s .5s both}
+@keyframes tdFahimPeek{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes tdFahimBubble{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.today-card.has-fahim .today-card-body{padding-inline-end:88px}
+@media(max-width:560px){.today-fahim img{width:52px;height:80px}.today-fahim-bubble{font-size:9.5px;padding:4px 8px}.today-card.has-fahim .today-card-body{padding-inline-end:70px}}
+@media(prefers-reduced-motion:reduce){.today-fahim img,.today-fahim-bubble{animation:none}}
 .today-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 90% -10%,rgba(255,255,255,.16),transparent 60%);pointer-events:none}
 .today-card-tag{font-size:11px;font-weight:800;letter-spacing:.5px;opacity:.85;text-transform:uppercase}
 .today-card-sub{font-size:14.5px;font-weight:800;margin-top:4px;min-height:18px}
@@ -557,9 +565,17 @@ body.inapp #c1-notif-btn{display:flex}
 .live-head-nm{font-size:16px;font-weight:800;color:var(--ink)}
 .live-close{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red-d);cursor:pointer}
 .live-close:hover{border-color:var(--red)}
-.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.live-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px;text-align:center;transition:box-shadow .3s}
-.live-card-t{font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:9px}
+.live-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px;text-align:center;transition:transform .15s,box-shadow .3s;overflow:hidden}
+.live-card::before{content:'';position:absolute;top:0;inset-inline:0;height:3px;background:linear-gradient(90deg,var(--red),var(--red-d))}
+.live-card.quiet::before{background:linear-gradient(90deg,var(--olive),var(--olive-d))}
+.live-card.pick::before{background:linear-gradient(90deg,#E8C34A,#C0A848)}
+.live-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(48,24,0,.08)}
+.live-card.timer .live-card-t svg{color:var(--red-d)}
+.live-card.quiet .live-card-t svg{color:var(--olive-d)}
+.live-card.pick .live-card-t svg{color:#C0A848}
+.live-card-t{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.live-card-t svg{flex:none}
 .live-card-d{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:9px}
 .live-timer-disp{font-size:28px;font-weight:800;color:var(--red-d);letter-spacing:1px;margin-bottom:8px;font-variant-numeric:tabular-nums}
 .live-timer-mins{display:flex;gap:5px;justify-content:center;margin-bottom:8px}
@@ -576,7 +592,8 @@ body.inapp #c1-notif-btn{display:flex}
 .live-pick-disp.spin{color:var(--red-d)}
 .live-btn.hidden{display:none}
 .live-qs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.live-qs-chip{display:flex;align-items:center;gap:7px;border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.live-qs-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;transition:.15s}
+.live-qs-chip:active{transform:scale(.96)}
 .live-qs-chip:hover{border-color:var(--red)}
 .live-qs-chip span{background:var(--card);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--red-d);font-weight:800}
 #live-quiet-flash{position:fixed;inset:0;z-index:960;background:var(--olive);opacity:0;pointer-events:none;transition:opacity .25s}
@@ -1168,10 +1185,14 @@ body:has(#page-fahim.active){overflow:hidden}
 <!-- قسم الخطة -->
 <div class="page" id="page-plan"><div class="wrap">
   <div class="c1-pagehead"><div class="tag">الخطة</div><h1>وحدات ودروس موادك</h1></div>
-  <div class="today-card">
+  <div class="today-card" id="today-card">
     <div class="today-card-tag">بطاقة اليوم</div>
     <div class="today-card-sub" id="today-card-sub"></div>
     <div class="today-card-body" id="today-card-body"></div>
+    <div class="today-fahim" id="today-fahim">
+      <div class="today-fahim-bubble" id="today-fahim-bubble"></div>
+      <img id="today-fahim-img" alt="فهيم"/>
+    </div>
   </div>
   <div id="plan-empty" class="hidden"></div>
   <div id="plan-body" class="hidden">
@@ -1653,8 +1674,8 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
     <div id="live-att" class="hidden"></div>
     <div class="live-grid">
-      <div class="live-card" id="live-timer-card">
-        <div class="live-card-t">مؤقّت النشاط</div>
+      <div class="live-card timer" id="live-timer-card">
+        <div class="live-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 22a9 9 0 1 1 0-18 9 9 0 0 1 0 18zm1-9.4V8h-2v5.4l3.8 2.3 1-1.7L13 12.6zM9 2h6v2H9z"/></svg>مؤقّت النشاط</div>
         <div class="live-timer-disp" id="live-timer-disp">05:00</div>
         <div class="live-timer-mins">
           <button onclick="liveTimerSetMin(1)">١</button>
@@ -1667,13 +1688,13 @@ body:has(#page-fahim.active){overflow:hidden}
           <button class="live-btn ghost" onclick="liveTimerReset()">إعادة ضبط</button>
         </div>
       </div>
-      <div class="live-card">
-        <div class="live-card-t">إشارة الهدوء</div>
+      <div class="live-card quiet">
+        <div class="live-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M7 4a3 3 0 0 1 6 0v6.2l5.1 1.5c1.2.35 1.9 1.6 1.55 2.8l-1.3 4.4A4 4 0 0 1 14.5 22h-3.2a6 6 0 0 1-4.24-1.76L2.3 15.5a1.7 1.7 0 0 1 2.4-2.4L7 15.4V4z"/></svg>إشارة الهدوء</div>
         <div class="live-card-d">تنبيه لوني وصوتي هادئ يلفت انتباه الصف فوراً</div>
         <button class="live-btn quiet" onclick="liveQuiet()">أطلقي إشارة الهدوء</button>
       </div>
-      <div class="live-card">
-        <div class="live-card-t">قرعة عشوائية</div>
+      <div class="live-card pick">
+        <div class="live-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 3.5A1.5 1.5 0 1 0 8 9.5a1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-8 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4-4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>قرعة عشوائية</div>
         <div class="live-pick-disp" id="live-pick-disp">اضغطي «اسحبي اسماً»</div>
         <div class="live-timer-actions">
           <button class="live-btn" onclick="livePick()">اسحبي اسماً</button>
@@ -3141,27 +3162,43 @@ function clsPickGo(classId,lessonId){clsPickClose();liveOpen(classId,planSubject
 // ═══════════ بطاقة اليوم — تحضير مباشر بضغطة زر: خطة نصية + إنفوجرافيك + إنشاء لعبة ═══════════
 async function todayCtx(){
   const st=await ttNowState();
-  if(st.off||st.done||!st.v)return null;
-  const classId=st.v.c,subject=st.v.s;
-  const g=c1GradeOf(classId);
-  if(!g)return null;
-  const className=(c1AllClasses().find(c=>c.id===classId)||{}).name||'';
-  const key=planKey(g.num,subject);
-  let units=(profile.plan_units&&profile.plan_units[key])||[];
-  if(!units.length){
-    try{
-      const semester=profile.semester||'الفصل الأول';
-      const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',subject).eq('grade',String(g.num)).order('sort');
-      if(data&&data.length){units=buildUnitsFromRows(data,semester,subject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
-    }catch(e){}
-  }
-  let lessonId=null,lessonName=null,unitName=null;
-  outer: for(const u of units){
-    for(const l of u.lessons){
-      if(!planGet(l.id).classes[classId]){lessonId=l.id;lessonName=l.name;unitName=u.name;break outer;}
+  if(!st.off&&!st.done&&st.v){
+    const classId=st.v.c,subject=st.v.s;
+    const g=c1GradeOf(classId);
+    if(g){
+      const className=(c1AllClasses().find(c=>c.id===classId)||{}).name||'';
+      const key=planKey(g.num,subject);
+      let units=(profile.plan_units&&profile.plan_units[key])||[];
+      if(!units.length){
+        try{
+          const semester=profile.semester||'الفصل الأول';
+          const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',subject).eq('grade',String(g.num)).order('sort');
+          if(data&&data.length){units=buildUnitsFromRows(data,semester,subject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
+        }catch(e){}
+      }
+      let lessonId=null,lessonName=null,unitName=null;
+      outer: for(const u of units){
+        for(const l of u.lessons){
+          if(!planGet(l.id).classes[classId]){lessonId=l.id;lessonName=l.name;unitName=u.name;break outer;}
+        }
+      }
+      return{classId,subject,grade:g.num,className,lessonId,lessonName,unitName,live:!!st.live,hasUnits:!!units.length};
     }
   }
-  return{classId,subject,grade:g.num,className,lessonId,lessonName,unitName,live:!!st.live,hasUnits:!!units.length};
+  // لا حصة الآن (يوم عطلة أو انتهى الدوام): البطاقة تعرض الدرس القادم من الخطة
+  for(const gnum of planGradesList()){
+    for(const subj of planSubjectsFor(gnum)){
+      const units=(profile.plan_units&&profile.plan_units[planKey(gnum,subj)])||[];
+      for(const u of units){
+        for(const l of u.lessons){
+          if(!planGet(l.id).done){
+            return{classId:null,subject:subj,grade:gnum,className:'',lessonId:l.id,lessonName:l.name,unitName:u.name,live:false,hasUnits:true,upcoming:true};
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 function renderPrepHtml(plan){
   if(!plan)return'<div class="plan-empty-card">لا تحضير بعد</div>';
@@ -3187,10 +3224,13 @@ async function todayCardRender(){
   const ctx=await todayCtx();
   todayCache=ctx;
   const emptyBox=t=>`<div class="plan-empty-card" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.85)">${t}</div>`;
-  if(!ctx){box.innerHTML=emptyBox('أعدّي جدولك أولاً في قسم الجدول لتظهر بطاقة اليوم هنا.');return;}
-  sub.textContent=(ctx.live?'الحصة الجارية الآن — ':'الحصة القادمة — ')+ctx.subject+' · '+ctx.className;
+  if(!ctx){box.innerHTML=emptyBox('أعدّي جدولك أولاً في قسم الجدول لتظهر بطاقة اليوم هنا.');todayFahim('أكملي إعداد جدولك أولاً');return;}
+  sub.textContent=ctx.upcoming
+    ?('الدرس القادم — '+ctx.subject+' · الصف '+PLAN_GNAMES[ctx.grade-1])
+    :((ctx.live?'الحصة الجارية الآن — ':'الحصة القادمة — ')+ctx.subject+' · '+ctx.className);
   if(!ctx.lessonName){
     box.innerHTML=emptyBox(ctx.hasUnits?'أُنجزت كل دروس هذه الشعبة — أحسنتِ!':'لا دروس مرفوعة لهذه المادة بعد.');
+    todayFahim('أحسنتِ! كل دروسك منجزة');
     return;
   }
   const st=planGet(ctx.lessonId);
@@ -3208,6 +3248,18 @@ async function todayCardRender(){
       </div>`
     :`<div class="today-actions"><button class="today-btn primary" id="today-gen-btn" onclick="todayGenerate()">ولّدي التحضير الآن</button></div>`;
   box.innerHTML=`<div class="today-lesson-nm">${escHtml(ctx.unitName)} — ${escHtml(ctx.lessonName)}</div>${badges}${actions}`;
+  todayFahim(st.prep?'كل شيء جاهز لدرسك!':'اضغطي التوليد وأجهّز لك الدرس');
+}
+// فهيم يقف داخل بطاقة اليوم (يظهر فقط إن كانت شخصيته مرفوعة من المشرف)
+function todayFahim(msg){
+  const wrap=document.getElementById('today-fahim'),img=document.getElementById('today-fahim-img'),card=document.getElementById('today-card');
+  if(!wrap||!img)return;
+  document.getElementById('today-fahim-bubble').textContent=msg||'';
+  if(img.dataset.tried){if(img.dataset.ok){wrap.style.display='flex';card.classList.add('has-fahim');}return;}
+  img.dataset.tried='1';
+  img.onload=()=>{img.dataset.ok='1';wrap.style.display='flex';card.classList.add('has-fahim');};
+  img.onerror=()=>{wrap.style.display='none';};
+  img.src=fhMascotUrl();
 }
 async function todayGenerate(){
   const ctx=todayCache;
@@ -4957,17 +5009,67 @@ function fhApplyMascot(){
   if(typeof ywRenderFahim==='function')ywRenderFahim();
   if(document.getElementById('c1-board').classList.contains('open'))c1Board(true);
 }
+// سياق فهيم: صورة كاملة عن حال المعلمة وطلابها — صفوف، خطة، نجوم، سلوك، جدول اليوم، إنجازات
 function fhContext(){
   try{
-    const parts=['معلمة حلقة أولى (الصفوف ١-٤) في سلطنة عُمان.'];
+    const parts=['معلمة حلقة أولى (الصفوف ١-٤) في سلطنة عُمان، منهج كامبردج.'];
     if(profile.display_name)parts.push('اسمها: '+profile.display_name);
+    if(profile.semester)parts.push('الفصل الدراسي: '+profile.semester);
     if(profile.grades&&profile.grades.length){
       parts.push('صفوفها وشعبها ومواد كل شعبة: '+profile.grades.map(g=>
-        'الصف '+PLAN_GNAMES[g.num-1]+': '+(g.classes||[]).map(c=>c.name+' ('+(c.subjects||[]).join('، ')+')').join('، ')
+        'الصف '+PLAN_GNAMES[g.num-1]+': '+(g.classes||[]).map(c=>c.name+' ('+(c.subjects||[]).join('، ')+' — '+(c.students||[]).length+' طالباً)').join('، ')
       ).join(' | '));
     }
-    if(profile.semester)parts.push('الفصل الدراسي: '+profile.semester);
-    return parts.join('\n').slice(0,1400);
+    // جدول اليوم
+    try{
+      const dayId=(TT_DAYS[new Date().getDay()]||{}).id;
+      const row=dayId?((ttData().schedule||{})[dayId]||{}):null;
+      if(row){
+        const clsName=cid=>{const c=c1AllClasses().find(x=>x.id===cid);return c?c.name:'';};
+        const today=Object.keys(row).map(p=>{const v=row[p];return v?('الحصة '+(Number(p)+1)+': '+clsName(v.c)+' '+v.s):null;}).filter(Boolean);
+        if(today.length)parts.push('جدول حصصها اليوم: '+today.join('، '));
+      }
+    }catch(e){}
+    // تقدم الخطة لكل مادة
+    try{
+      const prog=[];
+      Object.keys(profile.plan_units||{}).forEach(key=>{
+        const[g,subj]=key.split('|');
+        const units=profile.plan_units[key]||[];
+        let total=0,done=0;
+        units.forEach(u=>(u.lessons||[]).forEach(l=>{total++;if(planGet(l.id).done)done++;}));
+        if(total)prog.push('الصف '+PLAN_GNAMES[Number(g)-1]+' '+subj+': أنجزت '+done+' من '+total+' درساً');
+      });
+      if(prog.length)parts.push('تقدم خطتها الدراسية: '+prog.join(' | '));
+    }catch(e){}
+    // نجوم الطلاب: إجمالي كل شعبة وأبرز طلابها وأقلهم تفاعلاً
+    try{
+      const starsInfo=[];
+      c1AllClasses().forEach(c=>{
+        const names=c.students||[];if(!names.length)return;
+        const arr=starArr(c.id);
+        const total=arr.reduce((a,b)=>a+b,0);
+        const ranked=names.map((nm,i)=>({nm,n:arr[i]||0})).sort((a,b)=>b.n-a.n);
+        const top=ranked.slice(0,3).filter(x=>x.n>0).map(x=>x.nm+' ('+x.n+')').join('، ');
+        const low=ranked.slice(-2).filter(x=>x.n===0).map(x=>x.nm).join('، ');
+        starsInfo.push(c.name+': إجمالي النجوم '+total+(top?'، الأبرز: '+top:'')+(low?'، بلا نجوم بعد: '+low:''));
+      });
+      if(starsInfo.length)parts.push('نجوم التحفيز لطلابها: '+starsInfo.join(' | '));
+    }catch(e){}
+    // سجل السلوك والمشاركات
+    try{
+      const behInfo=[];
+      Object.keys(profile.beh_log||{}).forEach(cid=>{
+        const c=c1AllClasses().find(x=>x.id===cid);if(!c)return;
+        const arr=profile.beh_log[cid]||[];
+        const n=arr.reduce((s,a)=>s+(a||[]).length,0);
+        if(n)behInfo.push(c.name+': '+n+' ملاحظة مسجلة');
+      });
+      if(behInfo.length)parts.push('سجل السلوك والمشاركات: '+behInfo.join('، '));
+    }catch(e){}
+    if((profile.achievements||[]).length)parts.push('وثّقت '+(profile.achievements||[]).length+' إنجازاً/مبادرة مهنية في سجلها.');
+    parts.push('استخدم هذه المعلومات لتجيب من واقع صفوفها الفعلي بأسماء شعبها وطلابها، لا بإجابات عامة.');
+    return parts.join('\n').slice(0,2800);
   }catch(e){return'';}
 }
 function fhRender(){
