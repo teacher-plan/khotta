@@ -848,6 +848,7 @@ body:has(#page-fahim.active){overflow:hidden}
 #gm-stage-actions{display:flex;gap:6px;align-items:center;flex:none}
 #gm-stage-hud{display:flex;gap:5px;font-weight:800;font-size:12.5px}
 #gm-stage-hud span{background:rgba(255,255,255,.14);border-radius:8px;padding:4px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#gm-stage-count{position:fixed;bottom:16px;left:16px;z-index:10;background:rgba(0,0,0,.35);color:#fff;font-size:12px;font-weight:800;padding:6px 13px;border-radius:20px;backdrop-filter:blur(4px);font-variant-numeric:tabular-nums}
 .gm-x{background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:8px;padding:6px 11px;font-size:14px;cursor:pointer;font-family:inherit;flex:none;line-height:1;display:inline-flex;align-items:center;justify-content:center;min-height:30px}
 .gm-x svg{display:block}
 @media(max-width:520px){#gm-stage-brand b{display:none}#gm-stage-title{font-size:13px}}
@@ -1224,6 +1225,7 @@ body:has(#page-fahim.active){overflow:hidden}
 <div id="gm-stage-bg" style="display:none">
   <div id="gm-stage-veil"></div>
   <canvas id="gm-confetti"></canvas>
+  <div id="gm-stage-count" style="display:none"></div>
   <div id="gm-stage-head">
     <div id="gm-stage-brand"><b>خطتي</b></div>
     <div id="gm-stage-title"></div>
@@ -1841,7 +1843,6 @@ function renderYawmi(){
   ywRenderNote();
   ywRenderFahim();
   ywRenderInsights();
-  fhPoseInjectIdea();
   ywTick=setInterval(ywRenderNow,30000);
 }
 async function ywRenderNow(){
@@ -3657,7 +3658,7 @@ function gmPlay(){
   if(items.length<2){toast('أكملي المحتوى أولاً (عنصران على الأقل)',true);return;}
   gmItems=items;
   const lessons=studioSelectedLessons();
-  gmPlayWith(items,(lessons[0]?lessons[0].name+' — ':'')+GM_TPL_LBL[gmTpl]);
+  gmPlayWith(items,lessons[0]?lessons[0].name:'لعبة');
 }
 function gmPlayWith(items,title){
   const stage=document.getElementById('gm-stage-bg');
@@ -3688,12 +3689,15 @@ function gmPlayWith(items,title){
   const accent=tc.accent||'#8b5cf6';
   const instr=GM_TPL_INSTR[gmTpl]||'';
   document.getElementById('gm-stage-body').innerHTML=`<div class="gm-panel gm-end" style="max-width:420px">
-    <h2 style="margin:6px 0">${escHtml(title)}</h2>
-    <p style="color:#8a7c68;margin:0 0 12px;font-size:13px">${egToArabic(items.length)} ${GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً'}</p>
-    ${instr?`<div class="gm-instr" style="background:${gmHexA(accent,.14)};border-color:${gmHexA(accent,.55)}"><div class="gm-instr-t" style="color:${accent}"><span id="gm-instr-ic"></span>تعليمات اللعبة!</div><div class="gm-instr-b">${escHtml(instr)}</div></div>`:''}
+    <h2 style="margin:6px 0">درس ${escHtml(title)}</h2>
+    ${instr?`<div class="gm-instr" style="background:${gmHexA(accent,.14)};border-color:${gmHexA(accent,.55)}"><div class="gm-instr-t" style="color:${accent}">تعليمات اللعبة!</div><div class="gm-instr-b">${escHtml(instr)}</div></div>`:''}
     <button class="gm-btn" style="font-size:18px;padding:14px 44px" onclick="gmStart()">ابدئي اللعب</button>
   </div>`;
-  if(instr)fhPoseUrl('instructions').then(u=>{const ic=document.getElementById('gm-instr-ic');if(u&&ic)ic.outerHTML=`<img src="${u}" alt="" style="width:24px;height:24px;border-radius:7px;vertical-align:middle;margin-inline-end:6px;object-fit:cover">`;});
+  const countEl=document.getElementById('gm-stage-count');
+  if(countEl){
+    countEl.textContent=egToArabic(items.length)+' '+(GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً');
+    countEl.style.display='block';
+  }
 }
 let gmRunCurrent=null;
 function gmStart(){gmSound('pop');gmMusicApply();if(gmRunCurrent)gmRunCurrent();}
@@ -3703,6 +3707,7 @@ function gmClose(){
   document.getElementById('gm-stage-bg').style.display='none';
   document.getElementById('gm-stage-body').innerHTML='';
   document.getElementById('gm-stage-hud').innerHTML='';
+  const countEl=document.getElementById('gm-stage-count');if(countEl){countEl.style.display='none';countEl.textContent='';}
   document.body.style.overflow='';
 }
 async function gmFetchB64(url){
@@ -4452,10 +4457,6 @@ async function fhPoseUrl(key){
   }
   return _fhPosesCache[key]||null;
 }
-function fhPoseInjectIdea(){
-  const ic=document.getElementById('yw-idea-ic');if(!ic||ic.dataset.done)return;
-  fhPoseUrl('idea').then(u=>{if(u&&document.getElementById('yw-idea-ic')){ic.dataset.done='1';ic.innerHTML=`<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;}});
-}
 function fhInitMascot(){
   if(_fhMascotOk!==null)return;
   const img=new Image();
@@ -4504,9 +4505,7 @@ async function fhSend(){
   fhMsgs.push({role:'user',content:msg});
   fhRender();
   const body=document.getElementById('fh-body');
-  const thinkUrl=await fhPoseUrl('thinking');
-  const thinkAva=thinkUrl?`<span class="fh-bava" style="background-image:url('${thinkUrl}')"></span>`:fhAvaHtml();
-  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+thinkAva+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
+  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+fhAvaHtml()+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
   body.scrollTop=body.scrollHeight;
   fhBusy=true;document.getElementById('fh-send').disabled=true;
   try{
