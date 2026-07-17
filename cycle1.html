@@ -553,26 +553,26 @@ body.inapp #c1-notif-btn{display:flex}
 #live-stage{position:fixed;inset:0;z-index:950;background:var(--bg);display:none;overflow:auto;padding:26px 20px 60px}
 #live-stage.on{display:block}
 .live-in{max-width:900px;margin:0 auto}
-.live-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.live-head-nm{font-size:19px;font-weight:800;color:var(--ink)}
+.live-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.live-head-nm{font-size:16px;font-weight:800;color:var(--ink)}
 .live-close{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red-d);cursor:pointer}
 .live-close:hover{border-color:var(--red)}
-.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-.live-card{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:18px;text-align:center;transition:box-shadow .3s}
-.live-card-t{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:12px}
-.live-card-d{font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:14px}
-.live-timer-disp{font-size:40px;font-weight:800;color:var(--red-d);letter-spacing:1px;margin-bottom:12px;font-variant-numeric:tabular-nums}
-.live-timer-mins{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
-.live-timer-mins button{border:1.5px solid var(--border);background:var(--card);border-radius:9px;padding:6px 12px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.live-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px;text-align:center;transition:box-shadow .3s}
+.live-card-t{font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.live-card-d{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:9px}
+.live-timer-disp{font-size:28px;font-weight:800;color:var(--red-d);letter-spacing:1px;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.live-timer-mins{display:flex;gap:5px;justify-content:center;margin-bottom:8px}
+.live-timer-mins button{border:1.5px solid var(--border);background:var(--card);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink);cursor:pointer}
 .live-timer-mins button:hover{border-color:var(--red)}
 .live-timer-actions{display:flex;gap:8px}
-.live-btn{flex:1;border:none;border-radius:11px;padding:11px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.live-btn{flex:1;border:none;border-radius:10px;padding:8px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .live-btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--border)}
 .live-btn.quiet{background:linear-gradient(135deg,var(--olive),var(--olive-d))}
 .live-btn.star{background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813}
 .live-card#live-timer-card.done-flash{animation:liveDone .45s ease 3}
 @keyframes liveDone{0%,100%{box-shadow:0 0 0 rgba(216,96,72,0)}50%{box-shadow:0 0 0 8px rgba(216,96,72,.25)}}
-.live-pick-disp{font-size:19px;font-weight:800;color:var(--ink);min-height:56px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;padding:10px;background:var(--card);border-radius:12px}
+.live-pick-disp{font-size:16px;font-weight:800;color:var(--ink);min-height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;padding:7px;background:var(--card);border-radius:10px}
 .live-pick-disp.spin{color:var(--red-d)}
 .live-btn.hidden{display:none}
 .live-qs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -1279,6 +1279,7 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
     <div class="eg-result-actions">
       <button class="eg-export" onclick="infoDownload()">تنزيل الصورة (PNG)</button>
+      <button class="eg-regen" onclick="infoSaveToLesson()">حفظ في بطاقة الدرس</button>
       <button class="eg-regen" onclick="infoGenerate()">إعادة التوليد</button>
     </div>
   </div>
@@ -3759,12 +3760,44 @@ async function infoGenerate(){
   document.getElementById('eg-info-result-card').scrollIntoView({behavior:'smooth'});
   toast('✅ تم توليد الإنفوجرافيك','ok');
 }
-function infoDownload(){
+async function infoDownload(){
   if(!infoImage){toast('ولّدي الإنفوجرافيك أولاً',true);return;}
-  const a=document.createElement('a');
-  a.href=infoImage;
-  a.download='إنفوجرافيك-'+(studioSubject||'درس')+'-'+new Date().toISOString().slice(0,10)+'.png';
-  document.body.appendChild(a);a.click();a.remove();
+  // روابط data: الكبيرة يتجاهلها بعض المتصفحات (خاصة على الأجهزة اللوحية) —
+  // نحوّل لصورة Blob برابط مؤقت، ومع الفشل نفتحها بتبويب جديد ليحفظها المستخدم يدوياً
+  try{
+    const blob=await(await fetch(infoImage)).blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='إنفوجرافيك-'+(studioSubject||'درس')+'-'+new Date().toISOString().slice(0,10)+'.png';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }catch(e){
+    try{window.open(infoImage,'_blank');}catch(e2){toast('تعذّر التنزيل',true);}
+  }
+}
+// حفظ الإنفوجرافيك الحالي مباشرة داخل بطاقة الدرس المحدد في الاستوديو
+async function infoSaveToLesson(){
+  if(!infoImageRaw&&!infoImage){toast('ولّدي الإنفوجرافيك أولاً',true);return;}
+  if(!studioLessonName){toast('اختاري درساً أولاً',true);return;}
+  const key=planKey(studioGrade,studioSubject);
+  const units=(profile.plan_units&&profile.plan_units[key])||[];
+  let lessonId=null;
+  outer: for(const u of units)for(const li of u.lessons)if(li.name===studioLessonName){lessonId=li.id;break outer;}
+  if(!lessonId){toast('لم أجد هذا الدرس في خطتك',true);return;}
+  cyBusy('يحفظ الملخص في بطاقة الدرس');
+  try{
+    const blob=await(await fetch(infoImage||infoImageRaw)).blob();
+    const path=`c1-preps/${currentUser.id}/${lessonId}.png`;
+    const{error}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/png',cacheControl:'3600'});
+    if(error)throw error;
+    const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+    const st={...planGet(lessonId),info_url:url,info_at:new Date().toISOString()};
+    const all={...(profile.plan_state||{}),[lessonId]:st};
+    await cy1Save({plan_state:all});
+    toast('حُفظ الملخص في بطاقة الدرس','ok');
+  }catch(e){toast('تعذّر الحفظ في بطاقة الدرس',true);}
+  finally{cyBusyDone();}
 }
 
 // ═══════════ 🎮 الألعاب التفاعلية المتقدمة ═══════════
