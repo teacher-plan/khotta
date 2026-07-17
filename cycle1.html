@@ -1035,7 +1035,7 @@ body:has(#page-fahim.active){overflow:hidden}
           </div>
         </div>
         <div class="yw-card game" onclick="c1Go('studio')">
-          <div class="yw-game-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5zm1 3v2H6v2h2v2h2v-2h2v-2h-2V9H8zm8.5 1a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-2.5 3a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg></div>
+          <div class="yw-game-ic" id="yw-idea-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5zm1 3v2H6v2h2v2h2v-2h2v-2h-2V9H8zm8.5 1a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-2.5 3a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg></div>
           <div class="yw-fh-txt">
             <div class="yw-fh-nm">قم بإنشاء لعبة للدرس!</div>
             <div class="yw-fh-sub">حوّلي درس اليوم إلى لعبة ممتعة في ثوانٍ — جرّبي الآن!</div>
@@ -1841,6 +1841,7 @@ function renderYawmi(){
   ywRenderNote();
   ywRenderFahim();
   ywRenderInsights();
+  fhPoseInjectIdea();
   ywTick=setInterval(ywRenderNow,30000);
 }
 async function ywRenderNow(){
@@ -3689,9 +3690,10 @@ function gmPlayWith(items,title){
   document.getElementById('gm-stage-body').innerHTML=`<div class="gm-panel gm-end" style="max-width:420px">
     <h2 style="margin:6px 0">${escHtml(title)}</h2>
     <p style="color:#8a7c68;margin:0 0 12px;font-size:13px">${egToArabic(items.length)} ${GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً'}</p>
-    ${instr?`<div class="gm-instr" style="background:${gmHexA(accent,.14)};border-color:${gmHexA(accent,.55)}"><div class="gm-instr-t" style="color:${accent}">تعليمات اللعبة!</div><div class="gm-instr-b">${escHtml(instr)}</div></div>`:''}
+    ${instr?`<div class="gm-instr" style="background:${gmHexA(accent,.14)};border-color:${gmHexA(accent,.55)}"><div class="gm-instr-t" style="color:${accent}"><span id="gm-instr-ic"></span>تعليمات اللعبة!</div><div class="gm-instr-b">${escHtml(instr)}</div></div>`:''}
     <button class="gm-btn" style="font-size:18px;padding:14px 44px" onclick="gmStart()">ابدئي اللعب</button>
   </div>`;
+  if(instr)fhPoseUrl('instructions').then(u=>{const ic=document.getElementById('gm-instr-ic');if(u&&ic)ic.outerHTML=`<img src="${u}" alt="" style="width:24px;height:24px;border-radius:7px;vertical-align:middle;margin-inline-end:6px;object-fit:cover">`;});
 }
 let gmRunCurrent=null;
 function gmStart(){gmSound('pop');gmMusicApply();if(gmRunCurrent)gmRunCurrent();}
@@ -4439,6 +4441,21 @@ function fhMascotUrl(){return sb.storage.from('library-files').getPublicUrl('ass
 function fhAvaHtml(){
   return _fhMascotOk?`<span class="fh-bava" style="background-image:url('${fhMascotUrl()}')"></span>`:`<span class="fh-bava">${FH_AVA}</span>`;
 }
+// وضعيات فهيم المولّدة (تفكير، تعليمات، فكرة...) — تُدار من لوحة المشرف، مخزَّنة في ai_settings.fahim_poses
+let _fhPosesCache=null;
+async function fhPoseUrl(key){
+  if(_fhPosesCache===null){
+    try{
+      const{data}=await sb.from('ai_settings').select('value').eq('key','fahim_poses').maybeSingle();
+      _fhPosesCache=(data&&data.value)?JSON.parse(data.value):{};
+    }catch(e){_fhPosesCache={};}
+  }
+  return _fhPosesCache[key]||null;
+}
+function fhPoseInjectIdea(){
+  const ic=document.getElementById('yw-idea-ic');if(!ic||ic.dataset.done)return;
+  fhPoseUrl('idea').then(u=>{if(u&&document.getElementById('yw-idea-ic')){ic.dataset.done='1';ic.innerHTML=`<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;}});
+}
 function fhInitMascot(){
   if(_fhMascotOk!==null)return;
   const img=new Image();
@@ -4487,7 +4504,9 @@ async function fhSend(){
   fhMsgs.push({role:'user',content:msg});
   fhRender();
   const body=document.getElementById('fh-body');
-  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+fhAvaHtml()+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
+  const thinkUrl=await fhPoseUrl('thinking');
+  const thinkAva=thinkUrl?`<span class="fh-bava" style="background-image:url('${thinkUrl}')"></span>`:fhAvaHtml();
+  body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+thinkAva+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
   body.scrollTop=body.scrollHeight;
   fhBusy=true;document.getElementById('fh-send').disabled=true;
   try{
