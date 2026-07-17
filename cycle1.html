@@ -3037,6 +3037,10 @@ async function planPlayGame(id){
     gmItems=(g.content&&g.content.items)||[];
     if(g.content&&g.content.groupNames)gmGroupNames=g.content.groupNames;
     const sel=document.getElementById('gm-theme');if(sel&&g.theme_id)sel.value=g.theme_id;
+    // القارعة داخل اللعبة: شعبة الحصة الحية إن كنا فيها، وإلا شعب صف/مادة الدرس فقط
+    if(liveCtx&&document.getElementById('live-stage').classList.contains('on'))gmPickScope=[liveCtx.classId];
+    else if(planGrade&&planSubject)gmPickScope=planClassesFor(planGrade,planSubject).map(c=>c.id);
+    else gmPickScope=null;
     gmPlayWith(gmItems,g.lesson||g.title||'لعبة');
   }catch(e){toast('تعذّر فتح اللعبة',true);}
   finally{cyBusyDone();}
@@ -4135,6 +4139,7 @@ function gmPlay(){
   if(items.length<2){toast('أكملي المحتوى أولاً (عنصران على الأقل)',true);return;}
   gmItems=items;
   const lessons=studioSelectedLessons();
+  gmPickScope=(studioGrade&&studioSubject)?planClassesFor(studioGrade,studioSubject).map(c=>c.id):null;
   gmPlayWith(items,lessons[0]?lessons[0].name:'لعبة');
 }
 function gmPlayWith(items,title){
@@ -4289,8 +4294,12 @@ async function gmDownloadSaved(id){
   }catch(e){toast('تعذّر تجهيز الملف',true);}
 }
 // ─ قرعة الطلاب داخل اللعبة ─
+// نطاق القارعة: شعب الصف/المادة الحاليين فقط (يُضبط عند كل تشغيل) — null = الكل
+let gmPickScope=null;
 function gmPickClasses(){
-  return c1AllClasses().filter(c=>(c.students||[]).length).map(c=>({id:c.id,label:c.name,n:(c.students||[]).length}));
+  let all=c1AllClasses();
+  if(gmPickScope&&gmPickScope.length)all=all.filter(c=>gmPickScope.includes(c.id));
+  return all.filter(c=>(c.students||[]).length).map(c=>({id:c.id,label:c.name,n:(c.students||[]).length}));
 }
 function gmPickSetup(){
   const btn=document.getElementById('gm-pick-btn');
