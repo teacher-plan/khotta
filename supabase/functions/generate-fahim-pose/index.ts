@@ -54,10 +54,9 @@ Deno.serve(async (req) => {
     const { data: pub } = admin.storage.from("library-files").getPublicUrl("assistant/mascot.png");
     const mascotUrl = pub?.publicUrl;
     if (!mascotUrl) return json({ error: "no_mascot" }, 500);
-    const mascotResp = await fetch(mascotUrl + "?v=" + Date.now());
-    if (!mascotResp.ok) return json({ error: "mascot_fetch_failed" }, 500);
-    const mascotBuf = await mascotResp.arrayBuffer();
-    const mascotB64 = "data:image/png;base64," + btoa(String.fromCharCode(...new Uint8Array(mascotBuf)));
+    // نمرّر رابط الصورة العام مباشرة للنموذج (كما تفعل بقية الدوال مع صفحات الكتاب) —
+    // لا حاجة لجلبها وتحويلها base64 يدوياً هنا (يفشل مع الصور الكبيرة بسبب حد المكدّس)
+    const mascotHttpUrl = mascotUrl + "?v=" + Date.now();
 
     let model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
     if (!model.startsWith("google/")) model = "google/gemini-3.1-flash-image-preview";
@@ -82,7 +81,7 @@ Deno.serve(async (req) => {
         model,
         messages: [{ role: "user", content: [
           { type: "text", text: editInstr },
-          { type: "image_url", image_url: { url: mascotB64 } },
+          { type: "image_url", image_url: { url: mascotHttpUrl } },
         ] }],
         modalities: ["image", "text"],
       }),

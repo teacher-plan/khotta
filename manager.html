@@ -7090,12 +7090,15 @@ async function fhPoseGrid(){
 async function fhPoseGen(key){
   const pose=FH_POSES.find(p=>p.key===key);if(!pose)return;
   const btn=document.getElementById('fh-pose-btn-'+key);
+  const origText=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='يرسم…';}
   uiBusy('يرسم وضعية «'+pose.nm+'»… قد يستغرق دقيقة');
   try{
     const{data,error}=await sb.functions.invoke('generate-fahim-pose',{body:{poseDesc:pose.desc}});
     if(error||!data||!data.image){
+      console.warn('fhPoseGen failed:',error,data);
       toast(data&&data.error==='quota_exceeded'?'وصلتِ حد التوليد الشهري':'تعذّر توليد الوضعية، حاولي مجدداً',true);
+      if(btn)btn.textContent=origText;
       return;
     }
     const blob=await(await fetch(data.image)).blob();
@@ -7108,7 +7111,7 @@ async function fhPoseGen(key){
     await sb.from('ai_settings').upsert({key:'fahim_poses',value:JSON.stringify(map),updated_at:new Date().toISOString()},{onConflict:'key'});
     toast('تم توليد وضعية «'+pose.nm+'»','ok');
     fhPoseGrid();
-  }catch(e){toast('تعذّر توليد الوضعية',true);}
+  }catch(e){console.warn('fhPoseGen error:',e);toast('تعذّر توليد الوضعية',true);if(btn)btn.textContent=origText;}
   finally{uiBusyDone();if(btn){btn.disabled=false;}}
 }
 async function gmThemeDelete(id){
