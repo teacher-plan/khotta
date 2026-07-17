@@ -1399,9 +1399,9 @@ body:has(#page-fahim.active){overflow:hidden}
     <div class="fld"><label>التاريخ</label><input type="date" id="ach-date"/></div>
     <div class="fld"><label>وصف مختصر (اختياري)</label><textarea id="ach-desc" rows="3" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical"></textarea></div>
     <div class="fld">
-      <label>إرفاق صور أو ملفات (اختياري، حتى ٢٠ ميجا للملف)</label>
+      <label>إرفاق صور أو ملفات أو فيديو (اختياري، حتى ٥٠٠ ميجا للملف — تُحفظ في درايف حسابك)</label>
       <div class="ach-drop">
-        <input type="file" accept="image/*,application/pdf" multiple id="ach-files-input" onchange="achFilesChange(event)"/>
+        <input type="file" accept="image/*,application/pdf,video/*" multiple id="ach-files-input" onchange="achFilesChange(event)"/>
         <div class="ach-drop-t">اضغطي لاختيار صورة أو ملف — يمكن اختيار أكثر من واحد</div>
       </div>
       <div id="ach-files-preview"></div>
@@ -1688,6 +1688,106 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{pers
 const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
 let currentUser=null,profile={};
 
+// ══ تخزين الملفات على Google Drive الخاص بالمعلمة (نفس آلية صفحة المعلم) ══
+const GOOGLE_DRIVE_FOLDER_NAME='خطتي الفصلية';
+const ACH_MAX_FILE_SIZE=500*1024*1024;
+let googleAccessToken=null,driveTokenExpiry=0,driveFolderId=null;
+async function storeDriveRefreshToken(session){
+  try{
+    const rt=session&&session.provider_refresh_token;
+    if(!rt||!currentUser)return;
+    await sb.from('drive_tokens').upsert({user_id:currentUser.id,refresh_token:rt,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  }catch(e){}
+}
+async function getFreshDriveToken(){
+  try{
+    const{data,error}=await sb.functions.invoke('drive-token');
+    if(error||!data||!data.access_token)return null;
+    googleAccessToken=data.access_token;
+    driveTokenExpiry=Date.now()+((data.expires_in||3600)*1000)-60000;
+    return googleAccessToken;
+  }catch(e){return null;}
+}
+async function ensureDriveToken(){
+  if(googleAccessToken&&(driveTokenExpiry===0||Date.now()<driveTokenExpiry))return true;
+  return !!(await getFreshDriveToken());
+}
+async function linkGoogleDrive(){
+  try{
+    const{error}=await sb.auth.linkIdentity({
+      provider:'google',
+      options:{redirectTo:window.location.href.split('#')[0],scopes:'https://www.googleapis.com/auth/drive.file',queryParams:{access_type:'offline',prompt:'consent'}}
+    });
+    if(error)toast('تعذّر ربط Google: '+error.message,true);
+  }catch(e){toast('تعذّر ربط Google',true);}
+}
+async function promptLinkDrive(){
+  if(await c1Confirm('لتخزين الملفات تحتاج لربط حساب Google مرة واحدة.\nسيُفتح جوجل لمنح إذن التخزين فقط، ثم تعودين للموقع.\nربط الآن؟')){
+    await linkGoogleDrive();
+  }
+}
+async function ensureDriveFolder(){
+  if(driveFolderId)return driveFolderId;
+  if(!await ensureDriveToken())throw new Error('no-google-token');
+  const q=encodeURIComponent(`name='${GOOGLE_DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{headers:{Authorization:'Bearer '+googleAccessToken}});
+  const j=await res.json();
+  if(j.files&&j.files.length){driveFolderId=j.files[0].id;return driveFolderId;}
+  const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
+    method:'POST',headers:{Authorization:'Bearer '+googleAccessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({name:GOOGLE_DRIVE_FOLDER_NAME,mimeType:'application/vnd.google-apps.folder'})
+  });
+  const cj=await cr.json();
+  driveFolderId=cj.id;
+  return driveFolderId;
+}
+async function driveUpload(file,fileName){
+  if(!await ensureDriveToken()){await promptLinkDrive();return null;}
+  if(file.size>ACH_MAX_FILE_SIZE){toast('الملف أكبر من الحد المسموح',true);return null;}
+  try{
+    const folderId=await ensureDriveFolder();
+    const form=new FormData();
+    form.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId]})],{type:'application/json'}));
+    form.append('file',file);
+    let res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
+      method:'POST',headers:{Authorization:'Bearer '+googleAccessToken},body:form
+    });
+    if(res.status===401){
+      googleAccessToken=null;driveTokenExpiry=1;driveFolderId=null;
+      if(await ensureDriveToken()){
+        const folderId2=await ensureDriveFolder();
+        const form2=new FormData();
+        form2.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId2]})],{type:'application/json'}));
+        form2.append('file',file);
+        res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
+          method:'POST',headers:{Authorization:'Bearer '+googleAccessToken},body:form2
+        });
+      }
+    }
+    if(!res.ok){
+      toast(res.status===401?'انتهت صلاحية ربط Google — أعيدي الربط من إعدادات الحساب':'تعذّر رفع الملف',true);
+      return null;
+    }
+    const j=await res.json();
+    try{
+      await fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions',{
+        method:'POST',headers:{Authorization:'Bearer '+googleAccessToken,'Content-Type':'application/json'},
+        body:JSON.stringify({role:'reader',type:'anyone'})
+      });
+    }catch(e){}
+    const view='https://drive.google.com/file/d/'+j.id+'/view';
+    return{id:j.id,name:j.name||fileName,size:file.size,viewLink:view,previewLink:view,downloadLink:'https://drive.google.com/uc?export=download&id='+j.id};
+  }catch(e){toast('تعذّر رفع الملف',true);return null;}
+}
+async function driveDelete(fileId){
+  if(!fileId)return false;
+  if(!await ensureDriveToken())return false;
+  try{
+    const res=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId,{method:'DELETE',headers:{Authorization:'Bearer '+googleAccessToken}});
+    return res.ok||res.status===404;
+  }catch(e){return false;}
+}
+
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(msg,isErr){
   const el=document.getElementById('toast-el');
@@ -1796,6 +1896,8 @@ function showLogin(msg){
 }
 async function afterAuth(session){
   currentUser=session.user;
+  if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
+  storeDriveRefreshToken(session);
   document.getElementById('auth-loading-box').classList.remove('hidden');
   document.getElementById('cy1-login-form').classList.add('hidden');
   const userEmail=(currentUser.email||'').toLowerCase();
@@ -2117,12 +2219,30 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 c1SelectEnhanceAll();
 
 (async function boot(){
+  try{
+    const qp=new URLSearchParams(location.search+'&'+location.hash.replace(/^#/,''));
+    const ec=qp.get('error_code');
+    if(ec){
+      const msgs={identity_already_exists:'حساب Google هذا مربوط بمستخدمة أخرى في المنصة — اختاري حساب Google مختلفاً'};
+      toast(msgs[ec]||('فشل ربط Google: '+(qp.get('error_description')||ec)),true);
+      history.replaceState(null,'',location.pathname);
+    }
+  }catch(e){}
   const{data:{session}}=await sb.auth.getSession();
   if(session)await afterAuth(session);
   else showLogin();
   sb.auth.onAuthStateChange(async(event,s)=>{
     if(event==='SIGNED_IN'&&s&&!currentUser)await afterAuth(s);
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
+    if(event==='SIGNED_IN'&&s&&currentUser){
+      if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
+      storeDriveRefreshToken(s);
+    }
+    if(event==='USER_UPDATED'&&s){
+      if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
+      await storeDriveRefreshToken(s);
+      if(s.provider_refresh_token)toast('تم ربط حساب Google — يمكنك الآن رفع الملفات','ok');
+    }
   });
 })();
 
@@ -4699,14 +4819,15 @@ async function achSaveProfile(){
 async function achPhotoChange(e){
   const f=e.target.files[0];if(!f)return;
   if(f.size>5*1024*1024){toast('الصورة كبيرة — الحد الأقصى ٥ ميجا',true);e.target.value='';return;}
-  cyBusy('يرفع الصورة');
+  cyBusy('يرفع الصورة على Drive');
   try{
-    const path='ach-photos/'+currentUser.id+'.png';
-    const{error}=await sb.storage.from('library-files').upload(path,f,{upsert:true,contentType:f.type||'image/png',cacheControl:'3600'});
-    if(error)throw error;
-    const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
-    const p={...achProfile(),photo_url:url};
+    const prevId=(achProfile().photo_drive_id)||null;
+    const result=await driveUpload(f,'صورة الملف الشخصي.png');
+    if(!result)return;
+    const url='https://drive.google.com/uc?export=view&id='+result.id;
+    const p={...achProfile(),photo_url:url,photo_drive_id:result.id};
     await cy1Save({ach_profile:p});
+    if(prevId&&prevId!==result.id)driveDelete(prevId);
     const img=document.getElementById('ach-photo-img'),ph=document.getElementById('ach-photo-ph');
     img.src=url;img.style.display='block';ph.style.display='none';
     toast('تم حفظ الصورة','ok');
@@ -4730,7 +4851,7 @@ function achRender(){
     const ds=it.date?new Date(it.date).toLocaleDateString('ar',{year:'numeric',month:'long',day:'numeric'}):'';
     const files=it.attachments||[];
     const filesHtml=files.length?`<div class="ach-files"><div class="ach-files-lbl">المرفقات (${egArNum(files.length)})</div>${
-      files.map(a=>`<div class="ach-file-row"><span class="ach-file-nm">${escHtml(a.name)}</span><span class="ach-file-sz">${achFmtSize(a.size)}</span><button class="ach-file-open" onclick="window.open('${a.url}','_blank')">${ACH_PAPERCLIP}</button></div>`).join('')
+      files.map(a=>`<div class="ach-file-row"><span class="ach-file-nm">${escHtml(a.name)}</span><span class="ach-file-sz">${achFmtSize(a.size)}</span><button class="ach-file-open" onclick="window.open('${a.viewLink||a.previewLink}','_blank')">${ACH_PAPERCLIP}</button></div>`).join('')
     }</div>`:'';
     return `<div class="ach-item ${it.type}">
       <div class="ach-item-head">
@@ -4766,7 +4887,7 @@ function achSetType(t){
 }
 function achFilesChange(e){
   [...e.target.files].forEach(f=>{
-    if(f.size>20*1024*1024){toast('«'+f.name+'» كبير — الحد الأقصى ٢٠ ميجا',true);return;}
+    if(f.size>ACH_MAX_FILE_SIZE){toast('«'+f.name+'» كبير جداً',true);return;}
     achPendingFiles.push(f);
   });
   e.target.value='';
@@ -4788,14 +4909,9 @@ async function achSave(){
   btn.disabled=true;btn.textContent='يحفظ…';
   const attachments=[];
   for(const f of achPendingFiles){
-    try{
-      const safe=f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const path='ach-files/'+currentUser.id+'/'+id+'/'+safe;
-      const{error}=await sb.storage.from('library-files').upload(path,f,{upsert:true,contentType:libGuessMime(f)});
-      if(error)throw error;
-      const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
-      attachments.push({name:f.name,type:f.type,size:f.size,url});
-    }catch(e){}
+    const fileName='[إنجاز-'+id+'] '+f.name;
+    const result=await driveUpload(f,fileName);
+    if(result)attachments.push({name:f.name,type:f.type,size:f.size,driveId:result.id,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
   }
   const items=[...achList(),{id,type:achType,title,date,desc,attachments}];
   achAddClose();
@@ -4806,6 +4922,8 @@ async function achSave(){
 }
 async function achDelete(id){
   if(!await c1Confirm('حذف هذا العنصر من سجلّك؟'))return;
+  const item=achList().find(i=>i.id===id);
+  if(item&&item.attachments)for(const a of item.attachments)if(a.driveId)await driveDelete(a.driveId);
   const items=achList().filter(i=>i.id!==id);
   await cy1Save({achievements:items},'يحذف العنصر');
   achRender();
