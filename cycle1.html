@@ -875,6 +875,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-choice.bad{border-color:#b91c1c;background:#fee2e2;color:#b91c1c}
 .gm-end{text-align:center;padding:16px 0}
 .gm-end .big{font-size:52px;margin:0;animation:gmPop .5s}
+.gm-instr{border:1.5px solid;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.8;margin:0 0 16px;text-align:center;color:#3d3428}
 #gm-pick-bg{position:absolute;top:58px;inset-inline-start:10px;z-index:8;width:240px;max-width:calc(100vw - 20px)}
 .gm-pick-panel{background:rgba(255,252,245,.96);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.4);font-family:inherit;border:1px solid rgba(109,40,217,.25)}
 .gm-pick-slot{height:52px;border-radius:11px;background:#fff;overflow:hidden;position:relative;box-shadow:inset 0 8px 12px rgba(0,0,0,.16),inset 0 -8px 12px rgba(0,0,0,.16);border:2px solid rgba(109,40,217,.35)}
@@ -3343,6 +3344,24 @@ function gmApplyForcedTheme(){
   else{sel.disabled=false;sel.title='';}
 }
 const GM_TPL_LBL={wheel:'العجلة',match:'المطابقة',quiz:'اختبار السرعة',balloon:'فرقع البالون',box:'افتح الصندوق',memory:'بطاقات الذاكرة',groups:'فرز المجموعات',millionaire:'من سيربح المليون',race:'سباق الفريقين',boxes:'كنوز وقنابل'};
+const GM_TPL_INSTR={
+  wheel:'أداري العجلة، وأجيبي عن السؤال الذي تتوقف عنده — إجابة صحيحة تمنحك نقطة.',
+  match:'اضغطي على بطاقتين: مفهوم من عمود ومعناه من العمود الآخر، لتحصل مطابقة صحيحة.',
+  quiz:'أجيبي بأسرع وقت ممكن عن كل سؤال قبل نفاد الوقت — كل إجابة صحيحة تمنحك نقاطاً أعلى.',
+  balloon:'فرقعي البالون الذي يحمل الإجابة الصحيحة قبل أن يطير بعيداً.',
+  box:'افتحي الصندوق لتظهر السؤال المخبأ خلفه، ثم أجيبي عنه.',
+  memory:'اقلبي بطاقتين في كل مرة — إن تطابقتا بقيتا مكشوفتين، وإلا انقلبتا من جديد.',
+  groups:'اسحبي كل عنصر إلى المجموعة الصحيحة التي ينتمي إليها.',
+  millionaire:'تسلّقي سلّم الأسئلة إجابة صحيحة تلو الأخرى، واستخدمي وسائل المساعدة عند الحاجة.',
+  race:'كل إجابة صحيحة تقدّم سيارة فريقك خطوة — أول فريق يصل للنهاية يفوز.',
+  boxes:'افتحي صندوقاً بعد كل إجابة صحيحة — بعضها كنز وبعضها قنبلة، فاختاري بحكمة.',
+};
+function gmHexA(hex,a){
+  const h=String(hex||'').replace('#','');
+  if(h.length!==6)return`rgba(139,92,246,${a})`;
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return`rgba(${r},${g},${b},${a})`;
+}
 
 let gmMuted=localStorage.getItem('gmMuted')==='1';
 const GM_SFX_KINDS=['ok','bad','pop','win','spin'];
@@ -3662,9 +3681,13 @@ function gmPlayWith(items,title){
     else gmRunQuiz(items);
   };
   document.getElementById('gm-stage-hud').innerHTML='';
+  const tc=(theme&&theme.colors)||{};
+  const accent=tc.accent||'#8b5cf6';
+  const instr=GM_TPL_INSTR[gmTpl]||'';
   document.getElementById('gm-stage-body').innerHTML=`<div class="gm-panel gm-end" style="max-width:420px">
     <h2 style="margin:6px 0">${escHtml(title)}</h2>
-    <p style="color:#8a7c68;margin:0 0 16px;font-size:13px">${egToArabic(items.length)} ${GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً'}</p>
+    <p style="color:#8a7c68;margin:0 0 12px;font-size:13px">${egToArabic(items.length)} ${GM_STRUCT[gmTpl]==='pairs'?'زوجاً':GM_STRUCT[gmTpl]==='quiz'?'سؤالاً':'عنصراً'}</p>
+    ${instr?`<div class="gm-instr" style="background:${gmHexA(accent,.14)};border-color:${gmHexA(accent,.55)}">${escHtml(instr)}</div>`:''}
     <button class="gm-btn" style="font-size:18px;padding:14px 44px" onclick="gmStart()">ابدئي اللعب</button>
   </div>`;
 }
