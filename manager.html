@@ -3574,6 +3574,13 @@ input,textarea,select{font-size:16px !important;}
       <button class="arc-btn del" onclick="fhMascotDelete()">🗑️ إزالة (يعود للافتراضي)</button>
     </div>
   </div>
+
+  <!-- 🦉 وضعيات فهيم -->
+  <div class="eg-card">
+    <div class="eg-step-title">🦉 وضعيات فهيم — للاستخدام في الموقع</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">وضعية مرسومة بالذكاء الاصطناعي اعتماداً على صورة الشخصية أعلاه (نفس الشكل والألوان)، تُستخدم في مواضع مختلفة بالموقع (التفكير، التعليمات، الترحيب...). التوليد يتطلب رفع صورة شخصية أساسية أولاً.</p>
+    <div id="fh-pose-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+  </div>
   </div>
 
   <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
@@ -6781,7 +6788,7 @@ function switchAiTab(tab){
     b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
   });
   if(tab==='budget'){loadOrBalance();gpAdminList();}
-  if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();gmLoadThemes().then(()=>gcfgLoad());}
+  if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();fhPoseGrid();gmLoadThemes().then(()=>gcfgLoad());}
 }
 
 // ═ 🎮 إدارة ثيمات الألعاب (مشرف) ═
@@ -7043,6 +7050,66 @@ async function fhMascotDelete(){
     document.documentElement.style.removeProperty('--fhAva');
     document.getElementById('fh-mascot-prev').style.backgroundImage='';
   }catch(e){toast('تعذّر الحذف',true);}
+}
+
+// ═ 🦉 وضعيات فهيم — مولّدة اعتماداً على صورة الشخصية الأساسية ═
+const FH_POSES=[
+  {key:'instructions',nm:'يلقي التعليمات',desc:'يقف منتصباً بثقة ويشير بإصبعه للأعلى وكأنه يشرح تعليمات، بابتسامة ودودة'},
+  {key:'thinking',nm:'يفكر',desc:'يضع يده على ذقنه وعيناه تنظران للأعلى في وضعية تفكير عميق'},
+  {key:'idea',nm:'لديه فكرة',desc:'عيناه لامعتان ويرفع إصبعه للأعلى وفوق رأسه مصباح فكرة مضيء صغير، متحمس'},
+  {key:'cheer',nm:'المحفز',desc:'يرفع يديه للأعلى بحماس وابتسامة كبيرة كأنه يشجع ويحفّز، وحوله نجوم صغيرة'},
+  {key:'welcome',nm:'يرحّب',desc:'يلوّح بيده مرحّباً بابتسامة كبيرة دافئة، جسده مائل قليلاً للأمام بترحاب'},
+  {key:'celebrate',nm:'يحتفل بالنجاح',desc:'يقفز فرحاً بيدين مرفوعتين وعلامة نصر، وحوله قصاصات احتفال ملونة'},
+  {key:'loading',nm:'ينتظر',desc:'جالس بهدوء وصبر، ينظر لساعة صغيرة بجانبه، تعبير مطمئن هادئ'},
+  {key:'sorry',nm:'يعتذر',desc:'يحك رأسه بحرج وابتسامة خجولة معتذرة، كتفاه مرفوعان قليلاً'},
+  {key:'empty',nm:'لا يوجد شيء بعد',desc:'مستلقٍ باسترخاء أو نائم بهدوء، تعبير هادئ مريح، لا يوجد حوله شيء'},
+  {key:'search',nm:'يبحث',desc:'يحمل عدسة مكبرة كبيرة أمام عينه وينظر من خلالها بفضول وتركيز'},
+];
+let fhPosesCache=null;
+async function fhPosesLoad(force){
+  if(fhPosesCache&&!force)return fhPosesCache;
+  try{
+    const{data}=await sb.from('ai_settings').select('value').eq('key','fahim_poses').maybeSingle();
+    fhPosesCache=data&&data.value?JSON.parse(data.value):{};
+  }catch(e){fhPosesCache={};}
+  return fhPosesCache;
+}
+function fhPoseUrl(url){return url+(url.includes('?')?'&':'?')+'v='+Date.now();}
+async function fhPoseGrid(){
+  const box=document.getElementById('fh-pose-grid');if(!box)return;
+  const map=await fhPosesLoad(true);
+  box.innerHTML=FH_POSES.map(p=>{
+    const url=map[p.key];
+    return`<div class="fh-pose-card" style="border:1.5px solid var(--border);border-radius:14px;padding:10px;text-align:center;background:var(--card)">
+      <div class="fh-pose-prev" id="fh-pose-prev-${p.key}" style="width:100%;aspect-ratio:1;border-radius:10px;background:${url?`url('${fhPoseUrl(url)}') center/cover`:'linear-gradient(145deg,#e9e4d8,#d8cfc0)'};margin-bottom:8px"></div>
+      <div style="font-size:12px;font-weight:800;margin-bottom:8px">${p.nm}</div>
+      <button class="arc-btn" style="width:100%;font-size:11.5px;padding:6px" onclick="fhPoseGen('${p.key}')" id="fh-pose-btn-${p.key}">${url?'إعادة التوليد':'⚡ توليد'}</button>
+    </div>`;
+  }).join('');
+}
+async function fhPoseGen(key){
+  const pose=FH_POSES.find(p=>p.key===key);if(!pose)return;
+  const btn=document.getElementById('fh-pose-btn-'+key);
+  if(btn){btn.disabled=true;btn.textContent='يرسم…';}
+  uiBusy('يرسم وضعية «'+pose.nm+'»… قد يستغرق دقيقة');
+  try{
+    const{data,error}=await sb.functions.invoke('generate-fahim-pose',{body:{poseDesc:pose.desc}});
+    if(error||!data||!data.image){
+      toast(data&&data.error==='quota_exceeded'?'وصلتِ حد التوليد الشهري':'تعذّر توليد الوضعية، حاولي مجدداً',true);
+      return;
+    }
+    const blob=await(await fetch(data.image)).blob();
+    const path='assistant/poses/'+key+'.png';
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/png',cacheControl:'3600'});
+    if(upErr)throw upErr;
+    const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
+    const map=await fhPosesLoad();
+    map[key]=url;
+    await sb.from('ai_settings').upsert({key:'fahim_poses',value:JSON.stringify(map),updated_at:new Date().toISOString()},{onConflict:'key'});
+    toast('تم توليد وضعية «'+pose.nm+'»','ok');
+    fhPoseGrid();
+  }catch(e){toast('تعذّر توليد الوضعية',true);}
+  finally{uiBusyDone();if(btn){btn.disabled=false;}}
 }
 async function gmThemeDelete(id){
   if(!(await uiConfirm('حذف الثيم','سيختفي من قوائم كل المعلمين — الألعاب المحفوظة به ستعود للخلفية الكلاسيكية. متابعة؟')))return;
