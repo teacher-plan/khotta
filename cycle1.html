@@ -461,24 +461,13 @@ body.inapp #c1-notif-btn{display:flex}
 .pl-unit{font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:1px}
 .pl-ready{display:inline-flex;gap:5px;margin-inline-start:6px;vertical-align:middle}
 .pl-rdot{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:8px;background:rgba(92,112,56,.14);color:var(--olive-d)}
-.pl-arrow{color:var(--muted);flex:none;transition:transform .2s;font-size:12px}
-.plan-lesson.open .pl-arrow{transform:rotate(180deg)}
-.pl-panel{border-top:1.5px dashed var(--border);margin-top:13px;padding-top:14px;cursor:default}
-.pl-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.pl-act{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;border:1.5px solid var(--border);background:var(--card);border-radius:14px;padding:14px 10px 12px;cursor:pointer;font-family:inherit;transition:.15s;text-align:center}
-.pl-act:hover{transform:translateY(-2px);border-color:var(--red)}
-.pl-act .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff}
-.pl-act .lb{font-size:12px;font-weight:800;color:var(--ink)}
-.pl-act .st{font-size:9.5px;font-weight:800;color:var(--muted)}
-.pl-act.game .ic{background:linear-gradient(135deg,#6d28d9,#8b5cf6)}
-.pl-act.info .ic{background:linear-gradient(135deg,var(--gold,#C8A03C),#a07c20)}
-.pl-act.file .ic{background:linear-gradient(135deg,var(--olive),var(--olive-d))}
-.pl-act.ready{border-color:var(--olive);background:linear-gradient(180deg,rgba(138,154,80,.1),var(--card))}
-.pl-act.ready .st{color:var(--olive-d)}
-.pl-act .okb{position:absolute;top:-7px;inset-inline-start:-7px;width:22px;height:22px;border-radius:50%;background:var(--olive);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(92,112,56,.4)}
-.pl-act.ready .okb{display:flex}
-.pl-live{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:11px;border:none;border-radius:13px;padding:14px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 7px 18px rgba(216,96,72,.35);transition:transform .15s}
-.pl-live:hover{transform:translateY(-2px)}
+.pl-btnrow{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap;align-items:center}
+.pl-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink);cursor:pointer;transition:all .15s}
+.pl-btn:hover{border-color:var(--red);transform:translateY(-1px)}
+.pl-btn .d{width:9px;height:9px;border-radius:3px;flex:none}
+.pl-btn.ready{border-color:var(--olive);background:rgba(138,154,80,.12);color:var(--olive-d)}
+.pl-btn.live{margin-inline-start:auto;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(216,96,72,.3)}
+@media(max-width:560px){.pl-btn.live{margin-inline-start:0;width:100%;justify-content:center}}
 .pl-files-t{font-size:11px;font-weight:800;color:var(--muted);margin:14px 0 7px}
 .pl-file{display:flex;align-items:center;gap:9px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:8px 11px;margin-bottom:6px}
 .pl-file .fic{width:26px;height:26px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800}
@@ -2874,7 +2863,7 @@ function buildUnitsFromRows(rows,semester,subject){
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
-let planGrade=null,planSubject=null,todayCache=null,todayAttachLessonId=null,planOpenLesson=null;
+let planGrade=null,planSubject=null,todayCache=null,todayAttachLessonId=null;
 const PLAN_GNAMES=['الأول','الثاني','الثالث','الرابع'];
 function planGradesList(){return (profile.grades||[]).filter(g=>(g.classes||[]).length).map(g=>g.num).sort((a,b)=>a-b);}
 function planSubjectsFor(g){
@@ -2952,50 +2941,25 @@ async function planRenderUnits(){
       }).join('');
       const files=st.files||[];
       const ready=`<span class="pl-ready">${st.game_id?'<span class="pl-rdot">✓ لعبة</span>':''}${st.info_url?'<span class="pl-rdot">✓ ملخص</span>':''}${files.length?'<span class="pl-rdot">✓ ملفات</span>':''}</span>`;
-      const isOpen=planOpenLesson===l.id;
-      const attRows=[];
-      if(st.game_id)attRows.push(`<div class="pl-file"><span class="fic g">ل</span><span class="fnm">لعبة الدرس المحفوظة</span><span class="fmeta">لعبة</span><button onclick="event.stopPropagation();planPlayGame('${l.id}')">تشغيل</button></div>`);
-      if(st.info_url)attRows.push(`<div class="pl-file"><span class="fic i">ص</span><span class="fnm">ملخص الدرس — إنفوجرافيك</span><span class="fmeta">صورة</span><button onclick="event.stopPropagation();planShowInfo('${l.id}')">معاينة</button></div>`);
-      files.forEach((f,fi)=>{
-        attRows.push(`<div class="pl-file"><span class="fic p">م</span><span class="fnm">${escHtml(f.name)}</span><span class="fmeta">Drive · ${achFmtSize(f.size)}</span><button onclick="event.stopPropagation();planFileOpen('${l.id}',${fi})">معاينة</button><button onclick="event.stopPropagation();planFileDel('${l.id}',${fi})">✕</button></div>`);
-      });
-      const panel=isOpen?`<div class="pl-panel" onclick="event.stopPropagation()">
-        <div class="pl-actions">
-          <button class="pl-act game ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')">
-            <span class="okb"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
-            <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5zm1 3v2H6v2h2v2h2v-2h2v-2h-2V9H8z"/></svg></span>
-            <span class="lb">لعبة الدرس</span>
-            <span class="st">${st.game_id?'جاهزة · اضغطي للتشغيل':'لم تُنشأ بعد · اضغطي للإنشاء'}</span>
-          </button>
-          <button class="pl-act info ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')">
-            <span class="okb"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
-            <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 4v2h12V7H6zm0 4v2h7v-2H6zm0 4v2h9v-2H6z"/></svg></span>
-            <span class="lb">ملخص الدرس</span>
-            <span class="st">${st.info_url?'جاهز · اضغطي للمعاينة':'لم يُنشأ بعد · اضغطي للتوليد'}</span>
-          </button>
-          <button class="pl-act file" onclick="planAttach('${l.id}')">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M16.5 6.5a4 4 0 0 1 0 5.66l-6.34 6.34a2.5 2.5 0 0 1-3.54-3.54l6.34-6.34 1.42 1.42-6.34 6.34a.5.5 0 0 0 .7.7l6.35-6.33a2 2 0 0 0-2.83-2.83L6.6 13.9 5.17 12.5l5.66-5.66a4 4 0 0 1 5.66 0z"/></svg></span>
-            <span class="lb">إرفاق ملف</span>
-            <span class="st">يُرفع إلى Drive حسابك</span>
-          </button>
-        </div>
-        <button class="pl-live" onclick="planStartLive('${l.id}')">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M8 5v14l11-7L8 5z"/></svg>
-          ابدئي الحصة
-        </button>
-        ${attRows.length?`<div class="pl-files-t">مرفقات الدرس (${egArNum(attRows.length)})</div>${attRows.join('')}`:''}
-      </div>`:'';
-      return `<div class="plan-lesson ${st.done?'done':''} ${isOpen?'open':''}" data-id="${l.id}" onclick="planToggleOpen('${l.id}')">
+      const fileRows=files.map((f,fi)=>
+        `<div class="pl-file"><span class="fic p">م</span><span class="fnm">${escHtml(f.name)}</span><span class="fmeta">Drive · ${achFmtSize(f.size)}</span><button onclick="planFileOpen('${l.id}',${fi})">معاينة</button><button onclick="planFileDel('${l.id}',${fi})">✕</button></div>`
+      ).join('');
+      return `<div class="plan-lesson ${st.done?'done':''}" data-id="${l.id}">
         <div class="plan-lesson-top">
-          <div class="plan-chk" onclick="event.stopPropagation();planToggleDone('${l.id}')">${st.done?'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</div>
+          <div class="plan-chk" onclick="planToggleDone('${l.id}')">${st.done?'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</div>
           <div class="pl-tt">
             <div class="pl-unit">${escHtml(u.name)}</div>
             <div class="plan-lesson-nm">${escHtml(l.name)}${ready}</div>
           </div>
-          <span class="pl-arrow">▾</span>
         </div>
         <div class="plan-cls-row">${chips}</div>
-        ${panel}
+        <div class="pl-btnrow">
+          <button class="pl-btn ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')"><span class="d" style="background:#8b5cf6"></span>${st.game_id?'تشغيل اللعبة':'إنشاء لعبة'}</button>
+          <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
+          <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
+          <button class="pl-btn live" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>ابدئي الحصة</button>
+        </div>
+        ${fileRows?`<div class="pl-files-t">مرفقات الدرس (${egArNum(files.length)})</div>${fileRows}`:''}
       </div>`;
     }).join('');
     return `<div class="plan-unit" id="plan-u${ui}">
@@ -3041,7 +3005,6 @@ async function planRefresh(){
 }
 
 // ═══════════ بطاقة الدرس الموسّعة — لعبة/ملخص/إرفاق/ابدئي الحصة ═══════════
-function planToggleOpen(id){planOpenLesson=planOpenLesson===id?null:id;planRenderUnits();}
 function planFindLesson(id){
   const key=planKey(planGrade,planSubject);
   const units=(profile.plan_units&&profile.plan_units[key])||[];
@@ -4086,14 +4049,22 @@ async function gmSave(){
       title,template:gmTpl,theme_id:themeSel,content:{structure:GM_STRUCT[gmTpl],items,groupNames:GM_STRUCT[gmTpl]==='groups'?gmGroupNames:undefined}
     }).select().single();
     if(error)throw error;
-    if(todayAttachLessonId){
-      const prevSt=planGet(todayAttachLessonId);
-      const all={...(profile.plan_state||{}),[todayAttachLessonId]:{...prevSt,game:true,game_id:(data&&data.id)||null,game_at:new Date().toISOString()}};
+    // ربط اللعبة ببطاقة الدرس دائماً: من الرابط المحفوظ إن جئنا من البطاقة،
+    // وإلا بالبحث عن الدرس المحدد في الاستوديو داخل خطة المعلمة
+    let linkId=todayAttachLessonId;
+    if(!linkId&&lessons[0]){
+      const key=planKey(studioGrade,studioSubject);
+      const units=(profile.plan_units&&profile.plan_units[key])||[];
+      outer: for(const u of units)for(const li of u.lessons)if(li.name===lessons[0].name){linkId=li.id;break outer;}
+    }
+    if(linkId){
+      const prevSt=planGet(linkId);
+      const all={...(profile.plan_state||{}),[linkId]:{...prevSt,game:true,game_id:(data&&data.id)||null,game_at:new Date().toISOString()}};
       await cy1Save({plan_state:all});
       todayAttachLessonId=null;
     }
     gmLoadMyGames();
-    toast('حُفظت اللعبة في ألعابك','ok');
+    toast(linkId?'حُفظت اللعبة في ألعابك وعلى بطاقة الدرس':'حُفظت اللعبة في ألعابك','ok');
   }catch(e){toast('تعذّر حفظ اللعبة',true);}
   finally{uiBusyDone();}
 }
