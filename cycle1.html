@@ -2158,17 +2158,33 @@ function cyBusyDone(){
   const el=document.getElementById('cy-busy');if(el)el.classList.remove('on');
 }
 let cy1SaveQueue=Promise.resolve();
-function cy1Save(partial,busyText){
-  if(!currentUser)return cy1SaveQueue;
-  profile={...profile,...partial,updated_at:new Date().toISOString()};
-  cyBusy(busyText||'يحفظ');
+// ⚡ حفظ مدموج: التعديل يُطبَّق محلياً فوراً، والرفع للخادم يتجمّع في دفعة واحدة
+// بعد سكون قصير (٩٠٠م.ث) — ٣٠ نجمة متتالية في حصة نشطة = رفعة واحدة بدل ٣٠.
+// عند مغادرة/إخفاء الصفحة يُدفع ما تبقى فوراً حتى لا يضيع شيء.
+let _cy1FlushTimer=null,_cy1Dirty=false,_cy1Waiters=[];
+function cy1Flush(){
+  clearTimeout(_cy1FlushTimer);_cy1FlushTimer=null;
+  if(!_cy1Dirty||!currentUser){const w=_cy1Waiters;_cy1Waiters=[];w.forEach(r=>r());return cy1SaveQueue;}
+  _cy1Dirty=false;
   const snapshot=profile;
+  const waiters=_cy1Waiters;_cy1Waiters=[];
   // نسلسل عمليات الحفظ (لا نرسلها بالتوازي) حتى لا تُفقَد آخر تعديل إذا وصلت استجابة أبطأ متأخرة بعد استجابة أحدث
   cy1SaveQueue=cy1SaveQueue.then(()=>
     sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:snapshot,updated_at:new Date().toISOString()})
-  ).catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);}).finally(()=>{cyBusyDone();});
+  ).catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);}).finally(()=>{cyBusyDone();waiters.forEach(r=>r());});
   return cy1SaveQueue;
 }
+function cy1Save(partial,busyText){
+  if(!currentUser)return Promise.resolve();
+  profile={...profile,...partial,updated_at:new Date().toISOString()};
+  _cy1Dirty=true;
+  cyBusy(busyText||'يحفظ');
+  clearTimeout(_cy1FlushTimer);
+  _cy1FlushTimer=setTimeout(cy1Flush,900);
+  return new Promise(res=>_cy1Waiters.push(res));
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')cy1Flush();});
+window.addEventListener('pagehide',()=>{cy1Flush();});
 
 // ══ يومي — لوحة الصباح ══
 let ywTick=null;
@@ -4851,13 +4867,17 @@ async function gmSave(){
       await cy1Save({plan_state:all});
       todayAttachLessonId=null;
     }
-    gmLoadMyGames();
+    gmLoadMyGames(true);
     toast(linkId?'حُفظت اللعبة في ألعابك وعلى بطاقة الدرس':'حُفظت اللعبة في ألعابك','ok');
   }catch(e){toast('تعذّر حفظ اللعبة',true);}
   finally{uiBusyDone();}
 }
-async function gmLoadMyGames(){
+let _gmMyGamesAt=0;
+async function gmLoadMyGames(force){
   const box=document.getElementById('gm-mylist');if(!box)return;
+  // تخفيف الضغط: القائمة لا تتغير إلا بحفظ/حذف منّا — لا نعيد جلبها قبل دقيقة إلا عند التغيير
+  if(!force&&box.dataset.loaded&&Date.now()-_gmMyGamesAt<60000)return;
+  _gmMyGamesAt=Date.now();box.dataset.loaded='1';
   try{
     const{data}=await sb.from('games').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
     if(!data||!data.length){box.innerHTML='<div class="plan-empty-card">لا توجد ألعاب محفوظة بعد</div>';return;}
@@ -6066,14 +6086,25 @@ async function libLoadChallenge(){
       <div class="lib-chal-row">${top.map((t,i)=>`<div class="lib-chal-item"><span class="rank">${i+1}</span><span class="nm">${escHtml(t.name)}</span><span class="n">${t.n} ملف</span></div>`).join('')}</div>`;
   }catch(e){box.innerHTML='';}
 }
-async function libLoadItems(){
+let _libCacheMap={};
+async function libLoadItems(force){
   const box=document.getElementById('lib-items'),empty=document.getElementById('lib-empty');
   empty.classList.add('hidden');
+  // مكتبة المادة نفسها لا تُعاد من الخادم قبل دقيقة (إلا بعد إضافة/حذف/تقييم)
+  const cached=_libCacheMap[libSubject];
+  if(!force&&cached&&Date.now()-cached.at<60000){libItemsCache=cached.items;libRenderItems();return;}
   box.innerHTML='<div class="plan-empty-card">يحمّل مكتبة '+escHtml(libSubject)+'…</div>';
   try{
     const{data,error}=await sb.from('c1_library_items').select('*').eq('subject',libSubject).order('created_at',{ascending:false});
     if(error)throw error;
     libItemsCache=data||[];
+    _libCacheMap[libSubject]={at:Date.now(),items:libItemsCache};
+    await libRenderItems();
+  }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';}
+}
+async function libRenderItems(){
+  const box=document.getElementById('lib-items'),empty=document.getElementById('lib-empty');
+  try{
     if(!libItemsCache.length){
       box.innerHTML='';
       empty.classList.remove('hidden');
@@ -6190,8 +6221,12 @@ async function libRateSubmit(){
 }
 
 let c1Notifs=[];
-async function c1NotifLoad(){
+let _c1NotifAt=0;
+async function c1NotifLoad(force){
   if(!currentUser)return;
+  // فتح/إغلاق الجرس المتكرر لا يعيد الجلب قبل ٤٥ ثانية
+  if(!force&&_c1NotifAt&&Date.now()-_c1NotifAt<45000){c1NotifRender();return;}
+  _c1NotifAt=Date.now();
   try{
     const{data}=await sb.from('c1_notifications').select('*').or(`user_id.eq.${currentUser.id},user_id.is.null`).order('created_at',{ascending:false}).limit(30);
     const mySubjects=libMySubjects();
@@ -6295,8 +6330,12 @@ function msgsSrvHtml(s,resp){
     <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''} · ${new Date(s.created_at).toLocaleDateString('ar')}</div>
   </div>`;
 }
-async function msgsLoadFeed(){
+let _msgsFeedAt=0;
+async function msgsLoadFeed(force){
   const box=document.getElementById('msgs-feed');if(!box||!currentUser)return;
+  // التنقل المتكرر للقسم لا يعيد الجلب قبل دقيقة
+  if(!force&&_msgsFeedAt&&Date.now()-_msgsFeedAt<60000&&box.dataset.loaded)return;
+  _msgsFeedAt=Date.now();box.dataset.loaded='1';
   box.innerHTML='<div class="msg-empty">يجري التحميل...</div>';
   try{
     const[{data:msgs,error:mErr},{data:surveys,error:sErr}]=await Promise.all([
@@ -6334,7 +6373,7 @@ async function msgsVote(surveyId,idx){
     const{error:voteErr}=await sb.from('c1_survey_responses').upsert({survey_id:surveyId,user_id:currentUser.id,option_index:idx},{onConflict:'survey_id,user_id'});
     if(voteErr)throw voteErr;
     toast('شكراً لمشاركتك برأيك!','ok');
-    await msgsLoadFeed();
+    await msgsLoadFeed(true);
     const mineBar=document.querySelector(`.srv-card[data-sid="${surveyId}"] .srv-bar-wrap:has(.srv-bar.mine)`)
       ||document.querySelector(`.srv-card[data-sid="${surveyId}"]`);
     if(mineBar)mineBar.classList.add('srv-voted-flash');
@@ -6377,8 +6416,11 @@ async function commRender(){
   const feed=document.getElementById('comm-feed');
   if(feed)feed.scrollTop=feed.scrollHeight;
 }
-async function commLoad(){
+let _commAt=0;
+async function commLoad(force){
   const box=document.getElementById('comm-feed');if(!box||!currentUser)return;
+  if(!force&&_commAt&&Date.now()-_commAt<60000&&box.dataset.loaded)return;
+  _commAt=Date.now();box.dataset.loaded='1';
   try{
     const{data,error}=await sb.from('c1_community_messages').select('*').order('created_at',{ascending:true}).limit(200);
     if(error)throw error;
@@ -6404,7 +6446,7 @@ async function commSend(){
     const{error:commErr}=await sb.from('c1_community_messages').insert({user_id:currentUser.id,user_label:profile.display_name||currentUser.email,message:msg});
     if(commErr)throw commErr;
     ta.value='';
-    await commLoad();
+    await commLoad(true);
     const feed=document.getElementById('comm-feed');
     if(feed)feed.scrollTop=feed.scrollHeight;
   }catch(e){toast('تعذّر إرسال الرسالة',true);}
@@ -6413,7 +6455,7 @@ async function commSend(){
 async function commDelete(id){
   try{
     await sb.from('c1_community_messages').delete().eq('id',id);
-    commLoad();
+    commLoad(true);
   }catch(e){toast('تعذّر الحذف',true);}
 }
 
@@ -6500,7 +6542,7 @@ async function libSave(){
     if(error)throw error;
     libAddClose();
     toast('نُشرت مشاركتك — شكراً لعطائك!','ok');
-    libLoadItems();
+    libLoadItems(true);
     libLoadChallenge();
     if(newItem){
       const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
@@ -6525,7 +6567,7 @@ async function libSave(){
 }
 async function libDelete(id){
   if(!await c1Confirm('حذف هذه المشاركة نهائياً؟'))return;
-  try{await sb.from('c1_library_items').delete().eq('id',id);libLoadItems();}catch(e){toast('تعذّر الحذف',true);}
+  try{await sb.from('c1_library_items').delete().eq('id',id);libLoadItems(true);}catch(e){toast('تعذّر الحذف',true);}
 }
 
 // ── تصدير صورة ──
