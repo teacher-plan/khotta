@@ -3265,6 +3265,22 @@ async function planSetState(id,partial){
   const all={...(profile.plan_state||{}),[id]:st};
   await cy1Save({plan_state:all});
 }
+// ⚡ ضغط صور الملخصات قبل الرفع: النموذج يعيد PNG بحجم ٢-٥ ميجا للصورة —
+// نحوّلها JPEG (~٩٠٪ أصغر بجودة بصرية شبه مطابقة) توفيراً لمساحة التخزين
+async function c1CompressInfo(dataUrlOrUrl){
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=dataUrlOrUrl;});
+  const maxW=1400;
+  const scale=Math.min(1,maxW/img.naturalWidth);
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.round(img.naturalWidth*scale);
+  canvas.height=Math.round(img.naturalHeight*scale);
+  const g=canvas.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,canvas.width,canvas.height);
+  g.drawImage(img,0,0,canvas.width,canvas.height);
+  return await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.82));
+}
 // ═ أصول الدروس الثقيلة (عروض، ملخصات كتاب) — جدول مستقل لا يثقل ملف المعلمة ═
 // كل حفظ في cy1Save يرفع ملف المعلمة كاملاً؛ عزل هذه الأصول يبقيه صغيراً وسريعاً
 let c1Assets=null,_c1AssetsLoading=null;
@@ -3786,9 +3802,9 @@ async function planInfoBtn(id){
       toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد الملخص، حاولي مجدداً',true);
       return;
     }
-    const blob=await(await fetch(data.image)).blob();
-    const path=`c1-preps/${currentUser.id}/${id}.png`;
-    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/png',cacheControl:'3600'});
+    const blob=await c1CompressInfo(data.image);
+    const path=`c1-preps/${currentUser.id}/${id}.jpg`;
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
     if(upErr)throw upErr;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
     await planSetState(id,{info_url:url,info_at:new Date().toISOString()});
@@ -3989,9 +4005,9 @@ async function todayGenerate(){
         body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:'2K',aspect:'9:16',bookContext:bookContext||''}
       });
       if(infoData&&infoData.image){
-        const blob=await(await fetch(infoData.image)).blob();
-        const path=`c1-preps/${currentUser.id}/${ctx.lessonId}.png`;
-        const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/png',cacheControl:'3600'});
+        const blob=await c1CompressInfo(infoData.image);
+        const path=`c1-preps/${currentUser.id}/${ctx.lessonId}.jpg`;
+        const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
         if(!upErr)infoUrl=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
       }
     }catch(e){}
@@ -4552,9 +4568,9 @@ async function infoSaveToLesson(){
   if(!lessonId){toast('لم أجد هذا الدرس في خطتك',true);return;}
   cyBusy('يحفظ الملخص في بطاقة الدرس');
   try{
-    const blob=await(await fetch(infoImage||infoImageRaw)).blob();
-    const path=`c1-preps/${currentUser.id}/${lessonId}.png`;
-    const{error}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/png',cacheControl:'3600'});
+    const blob=await c1CompressInfo(infoImage||infoImageRaw);
+    const path=`c1-preps/${currentUser.id}/${lessonId}.jpg`;
+    const{error}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
     if(error)throw error;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
     const st={...planGet(lessonId),info_url:url,info_at:new Date().toISOString()};
