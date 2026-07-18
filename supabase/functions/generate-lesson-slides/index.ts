@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const unit = String(b.unit || "");
     const lesson = String(b.lesson || "");
     const bookContext = String(b.bookContext || "").slice(0, 4000);
-    const slideCount = Math.max(5, Math.min(10, parseInt(b.slideCount) || 5));
+    const slideCount = Math.max(5, Math.min(12, parseInt(b.slideCount) || 10));
     if (!lesson) return json({ error: "no_lesson" }, 400);
 
     const model = st.ai_model || "google/gemini-2.5-flash";
@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
           title: "عنوان الشريحة",
           points: ["نقطة قصيرة إن لزم", "..."],
           widget: { kind: "من القائمة أعلاه أو none", params: "حسب نوع الودجة" },
+          notes: "ملاحظة إلقاء قصيرة للمعلمة (١-٢ جملة): ماذا تقول أو تسأل الصف عند هذه الشريحة بالضبط",
+          narration: "جملة أو جملتان قصيرتان بلسان معلم ودود تُقرآن للطلاب بصوت عالٍ تلخصان فكرة الشريحة بلغة طفل",
         },
       ],
       homework: "واجب منزلي قصير مناسب (للشريحة الأخيرة فقط)",
@@ -103,6 +105,8 @@ Deno.serve(async (req) => {
       "قائمة الودجات المتاحة وشكل كل منها بالضبط:",
       widgetSchema,
       "الأرقام في الودجات يجب أن تكون منطقية ومتناسقة (مثلاً numberline.delta لا يتجاوز 9، counters.total بين 5-20).",
+      "حقل notes: ملاحظة إلقاء عملية للمعلمة لكل شريحة (ماذا تقول/تسأل بالضبط) — لا تظهر للطلاب.",
+      "حقل narration: تعليق صوتي قصير بلسان معلم ودود يُقرأ للطلاب آلياً — جمل بسيطة مشكولة جزئياً حيث يلزم، بلا أرقام لاتينية.",
       "صُغ كل نص بالعربية الفصحى السليمة، بلا أي رموز تعبيرية (إيموجي).",
       `أعد الناتج JSON فقط بهذا الشكل حصراً: ${schema}`,
     ].filter(Boolean).join("\n");

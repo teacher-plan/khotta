@@ -525,6 +525,12 @@ body.inapp #c1-notif-btn{display:flex}
 .sl-starbar svg{width:13px;height:13px;color:#D8CDBB;transition:.3s}
 .sl-starbar svg.on{color:var(--sl-a2,#C8A03C);filter:drop-shadow(0 0 4px rgba(200,160,60,.6));transform:scale(1.2)}
 .sl-close{border:1.5px solid #E8DCC4;background:rgba(255,253,248,.85);border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--sl-a1,#D86048);cursor:pointer}
+.sl-tool{border:1.5px solid #E8DCC4;background:rgba(255,253,248,.85);border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#8A7460;cursor:pointer;transition:.15s}
+.sl-tool:hover{color:var(--sl-a1,#D86048);border-color:var(--sl-a1,#D86048)}
+.sl-tool.on{background:var(--sl-a1,#D86048);border-color:var(--sl-a1,#D86048);color:#fff}
+.sl-notes{position:absolute;bottom:58px;inset-inline-end:18px;z-index:30;max-width:300px;background:rgba(255,253,248,.98);border:2px solid var(--sl-a2,#C8A03C);border-radius:14px;border-end-end-radius:3px;padding:11px 14px;font-size:12px;font-weight:700;color:#41300E;line-height:1.9;box-shadow:0 10px 26px rgba(0,0,0,.2);display:none}
+.sl-notes.on{display:block;animation:slRise .3s ease}
+.sl-notes b{color:var(--sl-a1,#D86048);display:block;font-size:10.5px;margin-bottom:3px}
 .sl-slide{flex:1;display:none;flex-direction:column;justify-content:center;padding:8px 46px 16px;position:relative;z-index:4;min-height:0;overflow-y:auto}
 .sl-slide.on{display:flex}
 .sl-slide.on .rise{animation:slRise .5s cubic-bezier(.2,.8,.3,1.1) both}
@@ -1722,10 +1728,13 @@ body:has(#page-fahim.active){overflow:hidden}
       <div class="sl-hud">
         <div class="sl-starbar" id="sl-starbar"></div>
         <div class="sl-counter"><span id="sl-cur">١</span> / <span id="sl-total">٥</span></div>
+        <button class="sl-tool" id="sl-speak-btn" style="display:none" onclick="slSpeak()" title="فهيم يقرأ الشريحة بصوت عالٍ"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>
+        <button class="sl-tool" id="sl-notes-btn" style="display:none" onclick="slNotesToggle()" title="ملاحظات الإلقاء (للمعلمة فقط)"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M14.7 3.3a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L9.4 20.6a1 1 0 0 1-.5.27l-5 1.1a1 1 0 0 1-1.2-1.2l1.1-5a1 1 0 0 1 .27-.5L14.7 3.3z"/></svg></button>
         <button class="sl-close" onclick="slClose()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4z"/></svg></button>
       </div>
     </div>
     <div id="sl-slides"></div>
+    <div class="sl-notes" id="sl-notes"></div>
     <div class="sl-foot">
       <div class="sl-dots" id="sl-dots"></div>
       <div class="sl-navs">
@@ -3292,6 +3301,54 @@ function slRenderScene(kind){
   }
   return '';
 }
+// ═ فهيم يقرأ الشريحة بصوت عالٍ — Web Speech API المدمج بالمتصفح، صفر تكلفة ═
+let _slVoice=null,_slVoiceTried=false;
+function slPickVoice(){
+  if(_slVoiceTried)return _slVoice;
+  _slVoiceTried=true;
+  try{
+    const vs=window.speechSynthesis?window.speechSynthesis.getVoices():[];
+    _slVoice=vs.find(v=>/^ar/i.test(v.lang))||null;
+  }catch(e){_slVoice=null;}
+  return _slVoice;
+}
+if(window.speechSynthesis)try{window.speechSynthesis.onvoiceschanged=()=>{_slVoiceTried=false;slPickVoice();};}catch(e){}
+function slSpeakStop(){
+  try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
+  const b=document.getElementById('sl-speak-btn');if(b)b.classList.remove('on');
+}
+function slSpeak(){
+  if(!window.speechSynthesis){toast('القراءة الصوتية غير مدعومة في هذا المتصفح',true);return;}
+  const btn=document.getElementById('sl-speak-btn');
+  if(window.speechSynthesis.speaking){slSpeakStop();return;}
+  const slide=slState.slides[slState.cur];if(!slide)return;
+  const text=String(slide.narration||[slide.title,...(slide.points||[])].join('. ')||'').trim();
+  if(!text)return;
+  try{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ar';
+    const v=slPickVoice();if(v)u.voice=v;
+    u.rate=.92;u.pitch=1.15;
+    u.onend=()=>{if(btn)btn.classList.remove('on');};
+    u.onerror=()=>{if(btn)btn.classList.remove('on');};
+    if(btn)btn.classList.add('on');
+    window.speechSynthesis.speak(u);
+  }catch(e){if(btn)btn.classList.remove('on');}
+}
+// ملاحظات الإلقاء الخاصة بالمعلمة (لا تظهر للطلاب إلا إن فتحتها)
+function slNotesToggle(){
+  const p=document.getElementById('sl-notes'),b=document.getElementById('sl-notes-btn');
+  if(p.classList.contains('on')){p.classList.remove('on');if(b)b.classList.remove('on');return;}
+  const slide=slState.slides[slState.cur];
+  const n=slide&&slide.notes?String(slide.notes):'';
+  if(!n){toast('لا ملاحظات لهذه الشريحة',true);return;}
+  p.innerHTML='<b>ملاحظة الإلقاء</b>'+escHtml(n);
+  p.classList.add('on');if(b)b.classList.add('on');
+}
+function slNotesHide(){
+  const p=document.getElementById('sl-notes'),b=document.getElementById('sl-notes-btn');
+  if(p)p.classList.remove('on');if(b)b.classList.remove('on');
+}
 // ═ فهيم يعلّق على كل شريحة — تعليق يُختار تلقائياً حسب نوع الشريحة/الودجة (بلا أي تكلفة توليد) ═
 function slFoxComment(slide,i,total){
   if(!slide)return'';
@@ -3576,9 +3633,15 @@ function slShow(i){
   document.getElementById('sl-prog').style.width=((slState.cur+1)/els.length*100)+'%';
   const bub=document.getElementById('sl-fox-bub');
   if(bub)bub.textContent=slFoxComment(slState.slides[slState.cur],slState.cur,els.length);
+  slSpeakStop();slNotesHide();
+  const curSlide=slState.slides[slState.cur];
+  const sBtn=document.getElementById('sl-speak-btn');
+  if(sBtn)sBtn.style.display=(window.speechSynthesis&&curSlide&&(curSlide.narration||curSlide.title))?'flex':'none';
+  const nBtn=document.getElementById('sl-notes-btn');
+  if(nBtn)nBtn.style.display=(curSlide&&curSlide.notes)?'flex':'none';
 }
 function slGo(dir){slShow(slState.cur+dir);}
-function slClose(){document.getElementById('sl-stage-bg').classList.remove('on');}
+function slClose(){slSpeakStop();slNotesHide();document.getElementById('sl-stage-bg').classList.remove('on');}
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('sl-stage-bg').classList.contains('on'))return;
   if(e.key==='ArrowLeft')slGo(1);
@@ -3595,7 +3658,7 @@ async function planSlidesBtn(id){
   try{
     const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name);
     const{data,error}=await sb.functions.invoke('generate-lesson-slides',{
-      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,bookContext:bookContext||'',slideCount:5}
+      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,bookContext:bookContext||'',slideCount:10}
     });
     if(error||!data||!data.slides){
       const reason=(data&&data.error)||error?.message||'';
