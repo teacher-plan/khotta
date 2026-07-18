@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
     const structure = ["pairs", "quiz", "items", "groups"].includes(b.structure) ? b.structure : "quiz";
     const count = Math.max(3, Math.min(15, parseInt(b.count) || 6));
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 12) : [];
+    const bookContext = String(b.bookContext || "").slice(0, 4000);
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
 
     // مع صفحات الكتاب: نموذج رؤية مضمون دائماً (ai_model قد يكون نصياً فيُسقط الصور بصمت)
@@ -81,7 +82,9 @@ Deno.serve(async (req) => {
     const system = [
       "أنت معلم خبير في سلطنة عُمان (منهج كامبردج) تعدّ محتوى لعبة صفية تعليمية ممتعة.",
       age ? `أعمار الطلاب: ${age} سنوات تقريباً (الصف ${grade}) — لغة وأمثلة تناسب هذا العمر تماماً.` : "",
-      images.length
+      bookContext
+        ? `ملخص فعلي لمحتوى هذا الدرس من كتاب الطالب المعتمد — ابنِ المحتوى منه حصراً (لا من معرفة عامة):\n${bookContext}`
+        : images.length
         ? "الصور المرفقة صفحات هذا الدرس من كتاب الطالب المعتمد — ابنِ المحتوى من مفاهيمها وأمثلتها الفعلية حصراً."
         : "لا صور مرفقة من الكتاب — بناءً على خبرتك بمنهج كامبردج المعتمد في سلطنة عُمان لهذا الصف والمادة، توقّع المحتوى الفعلي المرجّح لهذا الدرس تحديداً (لا محتوى عام) واستخدمه مباشرة بثقة.",
       structureNotes[structure],
