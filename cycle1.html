@@ -3086,6 +3086,7 @@ function planSwitchGrade(g){planGrade=g;planSubject=null;planRender();}
 function planSwitchSubject(s){planSubject=s;planRenderUnits();}
 function planGet(id){return (profile.plan_state&&profile.plan_state[id])||{done:false,classes:{}};}
 async function planRenderUnits(){
+  await c1AssetsLoad();
   const key=planKey(planGrade,planSubject);
   let units=(profile.plan_units&&profile.plan_units[key])||[];
   const classes=planClassesFor(planGrade,planSubject);
@@ -3118,7 +3119,8 @@ async function planRenderUnits(){
         return `<div class="plan-cls-chip ${on?'on':''}" style="--cc:${c.color}" onclick="event.stopPropagation();planToggleClass('${l.id}','${c.id}')">${escHtml(c.name)}</div>`;
       }).join('');
       const files=st.files||[];
-      const ready=`<span class="pl-ready">${st.game_id?'<span class="pl-rdot">✓ لعبة</span>':''}${st.info_url?'<span class="pl-rdot">✓ ملخص</span>':''}${st.slides_data?'<span class="pl-rdot">✓ عرض</span>':''}${files.length?'<span class="pl-rdot">✓ ملفات</span>':''}</span>`;
+      const hasSlides=!!c1Asset(l.id).slides;
+      const ready=`<span class="pl-ready">${st.game_id?'<span class="pl-rdot">✓ لعبة</span>':''}${st.info_url?'<span class="pl-rdot">✓ ملخص</span>':''}${hasSlides?'<span class="pl-rdot">✓ عرض</span>':''}${files.length?'<span class="pl-rdot">✓ ملفات</span>':''}</span>`;
       const fileRows=files.map((f,fi)=>
         `<div class="pl-file"><span class="fic p">م</span><span class="fnm">${escHtml(f.name)}</span><span class="fmeta">Drive · ${achFmtSize(f.size)}</span><button onclick="planFileOpen('${l.id}',${fi})">معاينة</button><button onclick="planFileDel('${l.id}',${fi})">✕</button></div>`
       ).join('');
@@ -3134,7 +3136,7 @@ async function planRenderUnits(){
         <div class="pl-btnrow">
           <button class="pl-btn ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')"><span class="d" style="background:#8b5cf6"></span>${st.game_id?'تشغيل اللعبة':'إنشاء لعبة'}</button>
           <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
-          <button class="pl-btn ${st.slides_data?'ready':''}" onclick="planSlidesBtn('${l.id}')"><span class="d" style="background:#3E8E7E"></span>${st.slides_data?'عرض تقديمي':'إنشاء عرض تقديمي'}</button>
+          <button class="pl-btn ${hasSlides?'ready':''}" onclick="planSlidesBtn('${l.id}')"><span class="d" style="background:#3E8E7E"></span>${hasSlides?'عرض تقديمي':'إنشاء عرض تقديمي'}</button>
           <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
           <button class="pl-btn live" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>ابدئي الحصة</button>
         </div>
@@ -3223,14 +3225,15 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
 // ثم يُعاد استخدامه في كل توليدات هذا الدرس (تحضير/لعبة/ملخص/عرض) بدل إرسال الصور كل مرة
 async function c1BookSummary(lessonId,grade,subject,unitName,lessonName){
   if(!lessonId)return null;
-  const st=planGet(lessonId);
-  if(st.book_summary)return st.book_summary;
+  await c1AssetsLoad();
+  const cached=c1Asset(lessonId).book_summary;
+  if(cached)return cached;
   const images=await c1LessonBookImages(grade,subject,unitName,lessonName);
   if(!images||!images.length)return null;
   try{
     const{data,error}=await sb.functions.invoke('summarize-lesson-pages',{body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,images}});
     if(error||!data||!data.summary)return null;
-    await planSetState(lessonId,{book_summary:data.summary,book_summary_at:new Date().toISOString()});
+    await c1AssetSet(lessonId,{book_summary:data.summary});
     return data.summary;
   }catch(e){return null;}
 }
@@ -3245,6 +3248,54 @@ async function planSetState(id,partial){
   const st={...planGet(id),...partial};
   const all={...(profile.plan_state||{}),[id]:st};
   await cy1Save({plan_state:all});
+}
+// ═ أصول الدروس الثقيلة (عروض، ملخصات كتاب) — جدول مستقل لا يثقل ملف المعلمة ═
+// كل حفظ في cy1Save يرفع ملف المعلمة كاملاً؛ عزل هذه الأصول يبقيه صغيراً وسريعاً
+let c1Assets=null,_c1AssetsLoading=null;
+async function c1AssetsLoad(){
+  if(c1Assets)return c1Assets;
+  if(_c1AssetsLoading)return _c1AssetsLoading;
+  _c1AssetsLoading=(async()=>{
+    c1Assets={};
+    try{
+      const{data}=await sb.from('c1_lesson_assets').select('lesson_id,slides,book_summary').eq('user_id',currentUser.id);
+      (data||[]).forEach(r=>{c1Assets[r.lesson_id]={slides:r.slides||null,book_summary:r.book_summary||null};});
+    }catch(e){}
+    c1MigrateHeavyState();
+    return c1Assets;
+  })();
+  return _c1AssetsLoading;
+}
+function c1Asset(id){return (c1Assets&&c1Assets[id])||{};}
+async function c1AssetSet(id,partial){
+  await c1AssetsLoad();
+  const next={...(c1Assets[id]||{}),...partial};
+  c1Assets[id]=next;
+  try{
+    await sb.from('c1_lesson_assets').upsert(
+      {user_id:currentUser.id,lesson_id:id,slides:next.slides||null,book_summary:next.book_summary||null,updated_at:new Date().toISOString()},
+      {onConflict:'user_id,lesson_id'}
+    );
+  }catch(e){}
+}
+// ترحيل صامت لمرة واحدة: نقل ما خُزّن سابقاً داخل ملف المعلمة إلى الجدول الجديد
+async function c1MigrateHeavyState(){
+  try{
+    const ps=profile.plan_state||{};
+    const all={...ps};let moved=false;
+    for(const id of Object.keys(ps)){
+      const st=ps[id];
+      if(st&&(st.slides_data||st.book_summary)){
+        await c1AssetSet(id,{
+          slides:st.slides_data||c1Asset(id).slides||null,
+          book_summary:st.book_summary||c1Asset(id).book_summary||null
+        });
+        const{slides_data,book_summary,...rest}=st;
+        all[id]=rest;moved=true;
+      }
+    }
+    if(moved)await cy1Save({plan_state:all});
+  }catch(e){}
 }
 
 // ═══════════ العروض التقديمية التفاعلية — ثيم لكل مادة + مكتبة ودجات ═══════════
@@ -3651,8 +3702,9 @@ document.addEventListener('keydown',e=>{
 
 // زر العرض التقديمي: عرض إن كان جاهزاً، وإلا توليد من الدرس الآن
 async function planSlidesBtn(id){
-  const st=planGet(id);
-  if(st.slides_data){slOpenWith(st.slides_data,(planFindLesson(id)||{}).name,planSubject);return;}
+  await c1AssetsLoad();
+  const existing=c1Asset(id).slides;
+  if(existing){slOpenWith(existing,(planFindLesson(id)||{}).name,planSubject);return;}
   const l=planFindLesson(id);if(!l)return;
   cyBusy('يقرأ الدرس ويصمم العرض... قد يستغرق دقيقة');
   try{
@@ -3666,7 +3718,7 @@ async function planSlidesBtn(id){
       return;
     }
     const slidesData={slides:data.slides,homework:data.homework||''};
-    await planSetState(id,{slides_data:slidesData,slides_at:new Date().toISOString()});
+    await c1AssetSet(id,{slides:slidesData});
     planRenderUnits();
     toast('جهز العرض التقديمي','ok');
     slOpenWith(slidesData,l.name,planSubject);
@@ -4197,12 +4249,13 @@ function liveRenderAtt(){
   const box=document.getElementById('live-att');if(!box)return;
   const id=liveCtx&&liveCtx.lessonId;
   if(!id){box.classList.add('hidden');box.innerHTML='';return;}
+  if(!c1Assets){c1AssetsLoad().then(()=>liveRenderAtt());}
   const st=planGet(id);
   const l=planFindLesson(id);
   const btns=[];
   if(st.game_id)btns.push(`<button class="live-att-btn" onclick="planPlayGame('${id}')"><span class="d" style="background:#8b5cf6"></span>تشغيل اللعبة</button>`);
   if(st.info_url)btns.push(`<button class="live-att-btn" onclick="planShowInfo('${id}')"><span class="d" style="background:#C8A03C"></span>عرض الملخص</button>`);
-  if(st.slides_data)btns.push(`<button class="live-att-btn" onclick="slOpenWith(planGet('${id}').slides_data,'${escHtml((l&&l.name)||'').replace(/'/g,"\\'")}','${escHtml(liveCtx.subject||'').replace(/'/g,"\\'")}')"><span class="d" style="background:#3E8E7E"></span>عرض تقديمي</button>`);
+  if(c1Asset(id).slides)btns.push(`<button class="live-att-btn" onclick="slOpenWith(c1Asset('${id}').slides,'${escHtml((l&&l.name)||'').replace(/'/g,"\\'")}','${escHtml(liveCtx.subject||'').replace(/'/g,"\\'")}')"><span class="d" style="background:#3E8E7E"></span>عرض تقديمي</button>`);
   (st.files||[]).forEach((f,fi)=>{
     btns.push(`<button class="live-att-btn" onclick="planFileOpen('${id}',${fi})"><span class="d" style="background:#5C7038"></span>${escHtml(f.name)}</button>`);
   });
@@ -4615,7 +4668,11 @@ function gmToggleMusic(){
 function gmMusicStop(){if(gmMusicAudio){gmMusicAudio.pause();gmMusicAudio.currentTime=0;}}
 
 let gmGameCfg={},gmThemeTouched=false;
+let _gmThemesAt=0;
 async function gmLoadThemes(){
+  // تخفيف الضغط: الثيمات والإعدادات شبه ثابتة — لا نعيد جلبها قبل مرور ٥ دقائق
+  if(gmThemes.length&&Date.now()-_gmThemesAt<300000)return;
+  _gmThemesAt=Date.now();
   try{
     const{data:cfgRow}=await sb.from('ai_settings').select('value').eq('key','game_cfg').maybeSingle();
     gmGameCfg=cfgRow&&cfgRow.value?JSON.parse(cfgRow.value):{};
