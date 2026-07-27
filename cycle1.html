@@ -2294,10 +2294,19 @@ async function afterAuth(session){
       if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — ادخلي من الموقع الرئيسي');return;}
     }
   }catch(e){await sb.auth.signOut();showLogin('تعذّر التحقق، حاولي مجدداً');return;}
+  // ⚠️ لا ندخل التطبيق بملف مجهول الحال. supabase-js لا يرمي استثناءً عند فشل
+  // الشبكة بل يُرجع {data:null,error} — ولو عاملناه كـ«معلمة جديدة» لظهر معالج
+  // الإعداد، وأول حفظ بعده يستبدل صفوفها ونجومها وجدولها بملف شبه فارغ.
+  // الغياب الحقيقي للملف يأتي بـ data=null بلا error، وذلك يفتح المعالج بحق.
   try{
-    const{data}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
+    const{data,error}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
+    if(error)throw error;
     profile=(data&&data.data)||{};
-  }catch(e){profile={};}
+  }catch(e){
+    await sb.auth.signOut();
+    showLogin('تعذّر تحميل بياناتك — تحققي من الاتصال ثم أعيدي الدخول');
+    return;
+  }
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
