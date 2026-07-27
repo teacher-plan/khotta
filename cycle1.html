@@ -25,7 +25,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:2.5px solid var(--red);outline-offset:2px}
-.wk-nav:focus-visible,.star-del:focus-visible,.star-minus:focus-visible,.plan-chk:focus-visible{outline-offset:1px}
+.stu-x:focus-visible,.stu-minus:focus-visible,.plan-chk:focus-visible{outline-offset:1px}
 html{-webkit-text-size-adjust:100%}
 body{direction:rtl;font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;position:relative}
 /* خلفية «الشفق الحي»: بقع لونية ضبابية من لوني الهوية تسبح ببطء خلف كل شيء */
@@ -150,6 +150,63 @@ body.inapp #c1-notif-btn{display:flex}
 
 /* ── يومي: لوحة الصباح ── */
 .yw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+
+/* ── مسار اليوم: الجدول كشريط زمني حيّ بدل جدول ٥×٨ ── */
+.rail-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:14px 16px 16px;margin-top:14px}
+.rail-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.rail-days{display:flex;gap:5px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:3px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.rail-days::-webkit-scrollbar{display:none}
+.rail-days button{flex:1;min-width:52px;border:none;background:none;border-radius:9px;padding:8px 6px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;position:relative}
+.rail-days button.sel{background:var(--surface);color:var(--red-d);box-shadow:0 1px 4px rgba(48,24,0,.1)}
+.rail-days button.today::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--olive)}
+.rail-week-btn{flex:none;border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:9px 14px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rail-week-btn:hover{border-color:var(--red);color:var(--red-d)}
+/* القضيب: كل محطة صفّ، والخط الرأسي يمرّ بالنقاط */
+.rail{position:relative;padding-inline-start:6px}
+.rail-stop{position:relative;display:flex;gap:12px;padding:0 0 2px}
+.rail-gut{position:relative;flex:none;width:26px;display:flex;flex-direction:column;align-items:center}
+.rail-gut::before{content:'';position:absolute;top:0;bottom:0;width:2px;background:var(--border)}
+.rail-stop:first-child .rail-gut::before{top:13px}
+.rail-stop:last-child .rail-gut::before{bottom:auto;height:13px}
+.rail-pt{position:relative;z-index:2;width:11px;height:11px;border-radius:50%;background:var(--border);margin-top:8px;box-shadow:0 0 0 3px var(--surface)}
+.rail-stop.past .rail-pt{background:var(--olive)}
+.rail-stop.now .rail-pt{background:var(--red);width:15px;height:15px;margin-top:6px;box-shadow:0 0 0 3px var(--surface),0 0 0 6px rgba(216,96,72,.22);animation:railPulse 2s ease-out infinite}
+@keyframes railPulse{70%{box-shadow:0 0 0 3px var(--surface),0 0 0 13px rgba(216,96,72,0)}100%{box-shadow:0 0 0 3px var(--surface),0 0 0 0 rgba(216,96,72,0)}}
+@media(prefers-reduced-motion:reduce){.rail-stop.now .rail-pt{animation:none}}
+.rail-body{flex:1;min-width:0;padding-bottom:12px}
+.rail-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
+.rail-time{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;min-width:40px;font-weight:700}
+.rail-cls{font-size:13.5px;font-weight:800;color:var(--ink)}
+.rail-sub{font-size:12px;color:var(--muted)}
+/* الوسم يُدفع لطرف السطر ليقرأ الصفّ كخطّ زمني لا ككتلة ملتصقة */
+.rail-chip{font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 9px;background:var(--card);color:var(--muted);flex:none;margin-inline-start:auto}
+/* المدى الزمني يُكتب من اليسار لليمين وإلا عكسه محرك الاتجاه (١٧:٠٦ – ١٧:٢٦ لا العكس) */
+.rail-chip.range,.tt-day-spec .rng,#c1-tt .tm{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.rail-stop.past{opacity:.52}
+.rail-stop.spec .rail-cls{font-weight:700;color:var(--muted);font-size:12.5px}
+.rail-stop.empty .rail-cls{color:var(--muted);font-weight:700;font-size:12px;opacity:.65}
+.rail-stop.empty .rail-pt{background:var(--bg);box-shadow:0 0 0 2px var(--border),0 0 0 5px var(--surface)}
+/* المحطة الجارية: تتوسّع تلقائياً بكل ما تحتاجه المعلمة الآن */
+.rail-now-card{margin-top:9px;background:linear-gradient(150deg,var(--red-deep),var(--red-d) 60%,var(--red));color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 22px rgba(122,32,32,.24)}
+.rail-now-card .t{font-size:11px;font-weight:800;opacity:.85;letter-spacing:.4px;margin-bottom:4px}
+.rail-now-card .b{font-size:17px;font-weight:800;line-height:1.4}
+.rail-now-card .r{font-size:12px;opacity:.9;margin-top:3px}
+.rail-bar{height:5px;background:rgba(255,255,255,.24);border-radius:4px;overflow:hidden;margin-top:10px}
+.rail-bar i{display:block;height:100%;background:#fff;border-radius:4px;transition:width .6s linear}
+.rail-now-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.rail-now-btns button{border:1.5px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;border-radius:11px;padding:9px 15px;cursor:pointer}
+.rail-now-btns button.solid{background:#fff;color:var(--red-deep);border-color:#fff}
+.rail-now-btns button:hover{background:rgba(255,255,255,.22)}
+.rail-now-btns button.solid:hover{background:rgba(255,255,255,.9)}
+.rail-empty{font-size:12.5px;color:var(--muted);line-height:1.9;padding:14px 2px;text-align:center}
+/* لوحة الأسبوع المنزلقة — تحتضن الجدول الكامل وأدوات التعديل */
+#wk-sheet{position:fixed;inset:0;z-index:940;background:rgba(48,24,0,.5);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:18px 12px;overflow:auto}
+#wk-sheet.open{display:flex}
+.wks-in{width:min(1100px,100%);background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:16px;box-shadow:0 20px 60px rgba(48,24,0,.35)}
+.wks-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.wks-head h2{flex:1;font-size:16px;font-weight:800;color:var(--ink)}
+.wks-x{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--red-d);font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.wks-x:hover{border-color:var(--red)}
 .yw-insights:not(:empty){margin-top:14px;display:flex;flex-direction:column;gap:9px}
 .yw-insight{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--border);border-inline-start:4px solid var(--red);border-radius:14px;padding:12px 15px}
 .yw-insight-ic{flex:none;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;display:flex;align-items:center;justify-content:center}
@@ -365,24 +422,8 @@ body.inapp #c1-notif-btn{display:flex}
 .su-prev-subj{color:var(--muted);flex:1;text-align:center}
 .su-prev-n{color:var(--olive);font-weight:800}
 
-/* ── مفكرة الأسبوع (تقويم + مهام) ── */
-.wk-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px;margin-top:16px}
-.wk-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.wk-title{font-size:14px;font-weight:800;color:var(--ink)}
-.wk-nav{position:relative;background:var(--card);border:1.5px solid var(--border);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:15px;font-family:inherit}
-.wk-nav:hover{border-color:var(--red);color:var(--red)}
-#wk-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:10px}
-.wk-day{position:relative;border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:7px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;font-family:inherit;transition:.15s}
-.wk-day .wd-n{font-size:9.5px;color:var(--muted);font-weight:700}
-.wk-day .wd-d{font-size:15px;font-weight:800;color:var(--ink)}
-.wk-day.today{border-color:var(--red)}
-.wk-day.today .wd-d{color:var(--red)}
-.wk-day.sel{background:linear-gradient(135deg,rgba(216,96,72,.14),transparent),var(--card);border-color:var(--red);box-shadow:0 3px 9px rgba(216,96,72,.2)}
-.wk-day:hover{transform:translateY(-1px)}
-.wk-day .wd-dot{position:absolute;top:4px;inset-inline-end:4px;width:5px;height:5px;border-radius:50%;background:var(--olive)}
-#wk-event{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:4px}
-.wk-ev-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
-.wk-ev-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer;flex:none}
+/* ── مفكرة اليوم (حدث اليوم + مهام) ── */
+.wk-ev-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer;flex:none;margin-top:8px}
 .wk-ev-btn:hover{border-color:var(--red);color:var(--red)}
 .wk-tasks-title{font-weight:800;font-size:13px;display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px;color:var(--ink)}
 .wk-add-btn{background:linear-gradient(135deg,var(--red),var(--red-d));border:none;border-radius:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff}
@@ -646,28 +687,14 @@ body.inapp #c1-notif-btn{display:flex}
 #today-modal-body .prep-sec-t{font-size:11.5px;font-weight:800;color:var(--red-d);margin-bottom:5px}
 #today-modal-body .prep-sec-b{font-size:13px;color:var(--ink);line-height:1.8}
 
-/* ── قسم النجوم ── */
-.star-board{margin-top:6px}
-.star-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+/* ── قسم طلابي: إضافة الطلاب والاحتفال والصدارة ── */
 .star-current{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:10px;padding-inline-start:11px;border-inline-start:3px solid var(--sc,var(--red));line-height:1.7}
 .star-current b{color:var(--sc,var(--red-d))}
 .star-add-row{display:flex;gap:8px}
 .star-add-input{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
 .star-add-input:focus{border-color:var(--red)}
 .star-add-btn{background:linear-gradient(135deg,var(--red),var(--red-d));border:none;border-radius:10px;padding:10px 18px;color:#fff;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;flex:none}
-.star-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:16px 12px 14px;text-align:center;overflow:hidden;transition:transform .12s}
-.star-del{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;line-height:1;z-index:2}
-.star-del::after,.star-minus::after,.wk-nav::after,.plan-chk::after{content:'';position:absolute;inset:-12px}
-.star-del:hover{border-color:var(--red);color:var(--red)}
-.star-card::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--mustard,#C0A848),var(--red))}
-.star-card:active{transform:scale(.96)}
-.star-nm{font-weight:800;font-size:13.5px;color:var(--ink);margin-bottom:10px;min-height:34px;display:flex;align-items:center;justify-content:center}
-.star-btn{width:100%;border:none;border-radius:14px;padding:14px 8px;background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:inherit;transition:transform .1s}
-.star-btn:active{transform:scale(.92)}
-.star-btn svg{filter:drop-shadow(0 2px 3px rgba(92,72,19,.35))}
-.star-cnt{font-size:17px;font-weight:800}
-.star-minus{position:absolute;top:8px;inset-inline-start:8px;width:22px;height:22px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;z-index:2}
-.star-minus:hover{border-color:var(--red);color:var(--red)}
+.star-cls-lbl{font-size:11px;color:var(--muted);margin-inline-end:6px}
 .star-lb{margin-top:22px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px}
 .star-lb-title{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px}
 .star-lb-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
@@ -798,8 +825,35 @@ body.inapp #c1-notif-btn{display:flex}
 #sl-stage-bg.live-embed .sl-stage{width:100%;height:100%;max-height:none;aspect-ratio:auto;border-radius:14px}
 
 
-/* ── قسم السلوك — بطاقة لكل طالب: المشاركة بضغطة، والملاحظة بضغطتين ──
-   المبدأ: المعلمة تسجّل وهي واقفة أمام الصف، فكل شيء بلمسة كبيرة بلا بحث في جدول */
+/* ── قسم طلابي — التحفيز والسلوك في بطاقة واحدة لكل طالب ──
+   المبدأ: المعلمة تسجّل وهي واقفة أمام الصف، فكل شيء بلمسة كبيرة بلا بحث في جدول.
+   النجمة هي الإشارة الإيجابية الوحيدة، والملاحظة هي السلبية — بلا ازدواج. */
+.stu-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:13px 12px 11px;transition:.15s;overflow:hidden;text-align:center}
+.stu-card::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,#E8C34A,#C0A848)}
+.stu-card.warn::before{background:linear-gradient(90deg,#C0A848,#A08830)}
+.stu-card.alert::before{background:linear-gradient(90deg,var(--red),var(--red-deep))}
+.stu-card:hover{border-color:var(--red);box-shadow:0 6px 18px rgba(48,24,0,.09)}
+.stu-x{position:absolute;top:7px;inset-inline-end:7px;width:20px;height:20px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);
+  color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;line-height:1;z-index:2}
+.stu-x:hover{border-color:var(--red);color:var(--red)}
+.stu-minus{position:absolute;top:7px;inset-inline-start:7px;width:22px;height:22px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);
+  color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;z-index:2}
+.stu-minus:hover{border-color:var(--red);color:var(--red)}
+.stu-x::after,.stu-minus::after{content:'';position:absolute;inset:-10px}
+.stu-nm{font-weight:800;font-size:13.5px;color:var(--ink);margin:4px 0 9px;min-height:34px;display:flex;align-items:center;justify-content:center;
+  line-height:1.5;cursor:pointer;padding:0 18px}
+.stu-nm:hover{color:var(--red-d)}
+.stu-star{width:100%;border:none;border-radius:14px;padding:13px 8px;background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;transition:transform .1s}
+.stu-star:active{transform:scale(.92)}
+.stu-star svg{filter:drop-shadow(0 2px 3px rgba(92,72,19,.35));width:26px;height:26px}
+.stu-star .n{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.stu-note{width:100%;margin-top:7px;border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:8px;
+  font-family:inherit;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+.stu-note:hover{border-color:var(--red);color:var(--red-d)}
+.stu-note.has{border-color:rgba(168,48,48,.45);color:var(--red-d)}
+.stu-note .c{background:rgba(168,48,48,.14);border-radius:7px;padding:1px 7px;font-size:11px;font-variant-numeric:tabular-nums}
+/* ── شريط الملخّص وأدوات الفرز (مشتركة) ── */
 .beh-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin:2px 0 14px}
 .beh-sum-c{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:11px 13px;position:relative;overflow:hidden}
 .beh-sum-c::before{content:'';position:absolute;top:0;inset-inline:0;height:3px;background:var(--sc,var(--border))}
@@ -811,31 +865,7 @@ body.inapp #c1-notif-btn{display:flex}
 .beh-sort{display:flex;gap:5px;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:3px}
 .beh-sort button{border:none;background:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap}
 .beh-sort button.on{background:var(--surface);color:var(--red-d);box-shadow:0 1px 4px rgba(48,24,0,.1)}
-/* شبكة بطاقات الطلاب */
-.beh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px}
-.beh-card{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:17px;padding:13px 13px 11px;transition:.15s;overflow:hidden}
-.beh-card::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:var(--olive);opacity:.5}
-.beh-card.warn::before{background:linear-gradient(90deg,#C0A848,#A08830);opacity:1}
-.beh-card.alert::before{background:linear-gradient(90deg,var(--red),var(--red-deep));opacity:1}
-.beh-card:hover{border-color:var(--red);box-shadow:0 6px 18px rgba(48,24,0,.09)}
-.beh-c-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:11px}
-.beh-c-nm{flex:1;min-width:0;font-size:13.5px;font-weight:800;color:var(--ink);line-height:1.55;cursor:pointer}
-.beh-c-nm:hover{color:var(--red-d)}
-.beh-c-stats{display:flex;gap:5px;flex:none}
-.beh-pill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
-.beh-pill.part{background:rgba(72,120,72,.14);color:var(--olive-d)}
-.beh-pill.viol{background:rgba(168,48,48,.13);color:var(--red-d)}
-.beh-pill.zero{background:var(--card);color:var(--border)}
-.beh-c-row{display:flex;gap:7px}
-.beh-b{flex:1;border:none;border-radius:12px;padding:11px 8px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:transform .1s}
-.beh-b:active{transform:scale(.94)}
-.beh-b.part{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff}
-.beh-b.note{background:var(--card);color:var(--ink);border:1.5px solid var(--border)}
-.beh-b.note:hover{border-color:var(--red);color:var(--red-d)}
-.beh-c-last{font-size:10.5px;color:var(--muted);margin-top:8px;text-align:center;min-height:14px}
-/* شريط التراجع — نفس مبدأ قسم النجوم: خطأ التسجيل يُصحَّح فوراً */
-.beh-file-btn{border:1.5px solid var(--border);background:var(--card);border-radius:9px;padding:7px 11px;color:var(--ink);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.beh-file-btn:hover{border-color:var(--red)}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;margin-top:14px}
 .beh-del-e{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 6px;font-family:inherit;flex:none}
 .beh-del-e:hover{color:var(--red-d)}
 
@@ -905,6 +935,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .beh-file-item .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .beh-file-item.viol .dot{background:var(--red)}
 .beh-file-item.part .dot{background:var(--olive)}
+.beh-file-item.star .dot{background:#C0A848}
 .beh-file-item .tp{flex:1;font-weight:700;color:var(--ink)}
 .beh-file-item .dt{font-size:11px;color:var(--muted);flex:none}
 .beh-file-item .rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;flex:none;line-height:1}
@@ -1309,22 +1340,31 @@ body:has(#page-fahim.active){overflow:hidden}
       <h1 id="c1-greet">أهلاً بك</h1>
       <p id="c1-date"></p>
     </div>
-    <div id="yw-setup-cta" class="hidden"></div>
+    <div id="tt-setup" class="hidden"></div>
     <div id="yw-main" class="hidden">
-      <div class="tt-now" id="yw-now"></div>
+      <!-- مسار اليوم: الجدول كشريط زمني حيّ — حلّ محلّ قسم الجدول بالكامل -->
+      <div class="rail-wrap">
+        <div class="rail-head">
+          <div class="rail-days" id="rail-days"></div>
+          <button class="rail-week-btn" onclick="wksOpen()">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>الأسبوع</button>
+        </div>
+        <div class="rail" id="yw-rail"></div>
+      </div>
       <div class="yw-insights" id="yw-insights"></div>
       <div class="yw-grid">
         <div class="yw-card">
-          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> حصص اليوم <button class="yw-link" onclick="c1Go('tt')">الجدول كاملاً</button></div>
-          <div id="yw-today"></div>
-        </div>
-        <div class="yw-card">
-          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> نجوم الصدارة <button class="yw-link" onclick="c1Go('stars')">قسم النجوم</button></div>
+          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> نجوم الصدارة <button class="yw-link" onclick="c1Go('students')">قسم طلابي</button></div>
           <div id="yw-stars"></div>
         </div>
         <div class="yw-card">
-          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm4 3v2h10V8H7zm0 4v2h10v-2H7zm0 4v2h6v-2H7z"/></svg> مفكرة اليوم <button class="yw-link" onclick="c1Go('tt')">المفكرة كاملة</button></div>
+          <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm4 3v2h10V8H7zm0 4v2h10v-2H7zm0 4v2h6v-2H7z"/></svg> مفكرة اليوم</div>
           <div id="yw-note"></div>
+          <div class="wk-tasks-title"><span>مهامي</span><button class="wk-add-btn" onclick="addTask()">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button></div>
+          <div class="tasks-list" id="tasks-list"></div>
+          <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة" onkeypress="if(event.key==='Enter')addTask()"/>
         </div>
         <div class="yw-card fh" onclick="c1Go('fahim')">
           <div id="yw-fh-ava"></div>
@@ -1358,40 +1398,24 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
   </div></div>
 
-  <!-- قسم الجدول -->
-  <div class="page" id="page-tt"><div class="wrap">
-    <div class="c1-pagehead"><div class="tag">الجدول</div><h1>مركز قيادة يومك الدراسي</h1></div>
-    <div id="tt-setup" class="hidden"></div>
-    <div id="tt-main" class="hidden">
-      <div class="tt-now" id="tt-now"></div>
-      <div class="tt-next" id="tt-next"></div>
-      <div class="tt-tools">
-        <button class="tt-btn hidden" id="tt-times-btn" onclick="ttOpenTimes()">تعديل أوقات الحصص</button>
-        <button class="tt-btn solid" id="tt-edit-btn" onclick="ttToggleEdit()">تعديل الجدول</button>
-      </div>
-      <div class="tt-shell"><div class="tt-scroll"><table id="c1-tt"><thead id="c1-tt-h"></thead><tbody id="c1-tt-b"></tbody></table></div></div>
-      <div class="tt-mobile" id="tt-mobile">
-        <div class="tt-day-tabs" id="tt-day-tabs"></div>
-        <div class="tt-day-spec" id="tt-day-spec"></div>
-        <div class="tt-day-list" id="tt-day-list"></div>
-      </div>
+</div>
 
-      <div class="wk-card">
-        <div class="wk-head">
-          <button class="wk-nav" onclick="wkShift(-1)">‹</button>
-          <div class="wk-title" id="wk-title">مفكرة الأسبوع</div>
-          <button class="wk-nav" onclick="wkShift(1)">›</button>
-        </div>
-        <div id="wk-strip"></div>
-        <div id="wk-event"></div>
-        <div class="wk-tasks-title"><span>مهامي</span><button class="wk-add-btn" onclick="addTask()">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        </button></div>
-        <div class="tasks-list" id="tasks-list"></div>
-        <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة" onkeypress="if(event.key==='Enter')addTask()"/>
-      </div>
+<!-- لوحة الأسبوع: الجدول الكامل وأدوات تعديله -->
+<div id="wk-sheet" onclick="if(event.target===this)wksClose()">
+  <div class="wks-in">
+    <div class="wks-head">
+      <h2>جدول الأسبوع</h2>
+      <button class="tt-btn hidden" id="tt-times-btn" onclick="ttOpenTimes()">أوقات الحصص</button>
+      <button class="tt-btn solid" id="tt-edit-btn" onclick="ttToggleEdit()">تعديل الجدول</button>
+      <button class="wks-x" onclick="wksClose()" aria-label="إغلاق">✕</button>
     </div>
-  </div></div>
+    <div class="tt-shell"><div class="tt-scroll"><table id="c1-tt"><thead id="c1-tt-h"></thead><tbody id="c1-tt-b"></tbody></table></div></div>
+    <div class="tt-mobile" id="tt-mobile">
+      <div class="tt-day-tabs" id="tt-day-tabs"></div>
+      <div class="tt-day-spec" id="tt-day-spec"></div>
+      <div class="tt-day-list" id="tt-day-list"></div>
+    </div>
+  </div>
 </div>
 
 <!-- قسم الخطة -->
@@ -1419,16 +1443,27 @@ body:has(#page-fahim.active){overflow:hidden}
 </div></div>
 
 <!-- قسم النجوم -->
-<div class="page" id="page-stars"><div class="wrap">
-  <div class="c1-pagehead"><div class="tag">النجوم</div><h1>شجّعي طلابك واحتفلي بتميّزهم</h1></div>
-  <div id="star-empty" class="hidden"></div>
-  <div id="star-body" class="hidden">
+<!-- قسم طلابي — التحفيز والسلوك موحّدين -->
+<div class="page" id="page-students"><div class="wrap">
+  <div class="c1-pagehead"><div class="tag">طلابي</div><h1>حفّزي طلابك وتابعي سلوكهم</h1>
+    <p>النجمة للتميّز والمشاركة، والملاحظة للسلوك — واضغطي على الاسم لفتح ملف الطالب كاملاً.</p></div>
+  <div id="stu-empty" class="hidden"></div>
+  <div id="stu-body" class="hidden">
     <div class="c1-sel-row">
-      <select class="c1-select" id="star-grade-sel" onchange="starGrade=Number(this.value);starClass=null;starRender()"></select>
-      <select class="c1-select" id="star-class-sel" onchange="starSwitchClass(this.value)"></select>
+      <select class="c1-select" id="stu-grade-sel" onchange="stuSwitchGrade(Number(this.value))"></select>
+      <select class="c1-select" id="stu-class-sel" onchange="stuSwitchClass(this.value)"></select>
     </div>
-    <div class="star-board" id="star-board"></div>
-    <div class="star-lb" id="star-lb"></div>
+    <div class="beh-sum" id="stu-sum"></div>
+    <div class="beh-tools">
+      <input type="text" id="stu-search" class="beh-search" placeholder="ابحثي عن اسم..." oninput="starRenderBoard()"/>
+      <div class="beh-sort">
+        <button data-s="name" class="on" onclick="stuSort('name')">بالاسم</button>
+        <button data-s="star" onclick="stuSort('star')">الأعلى نجوماً</button>
+        <button data-s="note" onclick="stuSort('note')">الأكثر ملاحظات</button>
+      </div>
+    </div>
+    <div id="stu-board"></div>
+    <div class="star-lb" id="stu-lb"></div>
   </div>
 </div></div>
 
@@ -1547,28 +1582,6 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
   </div>
 </div>
-
-<!-- قسم السلوك -->
-<div class="page" id="page-behavior"><div class="wrap">
-  <div class="c1-pagehead"><div class="tag">السلوك</div><h1>سجّلي مشاركة أو ملاحظة بضغطة واحدة</h1>
-    <p>كل تسجيل يُحفظ في ملف الطالب مع تاريخه — اضغطي على الاسم لفتح ملفه الكامل.</p></div>
-  <div id="beh-empty" class="hidden"></div>
-  <div id="beh-body" class="hidden">
-    <div class="c1-sel-row">
-      <select class="c1-select" id="beh-class-sel" onchange="behSwitchClass(this.value)"></select>
-    </div>
-    <div class="beh-sum" id="beh-sum"></div>
-    <div class="beh-tools">
-      <input type="text" id="beh-search" class="beh-search" placeholder="ابحثي عن اسم..." oninput="behRenderBoard()"/>
-      <div class="beh-sort">
-        <button data-s="name" class="on" onclick="behSort('name')">بالاسم</button>
-        <button data-s="part" onclick="behSort('part')">الأكثر مشاركة</button>
-        <button data-s="viol" onclick="behSort('viol')">الأكثر ملاحظات</button>
-      </div>
-    </div>
-    <div class="beh-grid" id="beh-board"></div>
-  </div>
-</div></div>
 
 <!-- قسم فهيم -->
 <div class="page" id="page-fahim"><div class="wrap">
@@ -2151,12 +2164,10 @@ book:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path 
 mail:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.3l8 5.2 8-5.2V6H4zm16 2.2-7.4 4.8a1 1 0 0 1-1.2 0L4 8.2V18h16V8.2z"/></svg>`
 };
 const C1_SECTIONS=[
-  {id:'yawmi', ic:'spark', nm:'يومي',    lv:'ترحيبك وحصصك وتحضيرك',        built:true},
-  {id:'tt',    ic:'cal',   nm:'الجدول',  lv:'مركز قيادة يومك الدراسي',      built:true},
+  {id:'yawmi', ic:'cal', nm:'يومي',    lv:'مسار يومك وحصصك ومفكرتك',      built:true},
   {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
   {id:'studio',ic:'game',nm:'الاستوديو', lv:'ألعاب متقدمة وإنفوجرافيك بالذكاء الاصطناعي', built:true},
-  {id:'stars', ic:'star',  nm:'النجوم',  lv:'شجّعي طلابك واحتفلي بتميّزهم',           built:true},
-  {id:'behavior', ic:'shield', nm:'المخالفات', lv:'هنا يمكنك تتبّع مشاركات الطلاب والمخالفات', built:true},
+  {id:'students', ic:'star', nm:'طلابي', lv:'نجوم التميّز وملاحظات السلوك', built:true},
   {id:'fahim', ic:'fox',   nm:'فهيم',    lv:'مساعدتك الذكية',               built:true},
   {id:'ach',   ic:'trophy',nm:'إنجازاتك', lv:'إنجازاتك ومبادراتك المهنية',   built:true},
   {id:'lib',   ic:'book',  nm:'المكتبة', lv:'شاركي إبداعك مع معلمات مادتك', built:true},
@@ -2188,10 +2199,8 @@ function c1Go(id){
   const pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
   if(id==='yawmi')renderYawmi();
-  if(id==='tt')ttRender();
   if(id==='plan')planRender();
-  if(id==='stars')starRender();
-  if(id==='behavior')behRender();
+  if(id==='students')starRender();
   if(id==='fahim'){fhRender();fhHistory();fhInitMascot();}
   if(id==='ach')achRender();
   if(id==='lib')libRender();
@@ -2277,9 +2286,8 @@ async function afterAuth(session){
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
-  renderYawmi();
+  renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
-  if(!profile.setupDone)c1Go('tt');
 }
 function cyBusy(text){
   const el=document.getElementById('cy-busy');if(!el)return;
@@ -2353,65 +2361,101 @@ function renderYawmi(){
   const h=new Date().getHours();
   document.getElementById('c1-greet').textContent=(h<12?'صباح النور':'مساء الورد')+(profile.display_name?' أ. '+profile.display_name:'');
   document.getElementById('c1-date').textContent=new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const cta=document.getElementById('yw-setup-cta'),main=document.getElementById('yw-main');
+  // معالج الإعداد يعيش هنا الآن (كان في قسم الجدول): يملأ الصفحة حتى يكتمل
+  const setupBox=document.getElementById('tt-setup'),main=document.getElementById('yw-main');
   clearInterval(ywTick);
   if(!profile.setupDone){
-    cta.classList.remove('hidden');main.classList.add('hidden');
-    cta.innerHTML=`<div class="c1-build">
-      <div class="big"><svg viewBox="0 0 24 24" fill="currentColor" width="52" height="52" style="color:var(--red)"><path d="M13 2v2.1a7 7 0 0 1 5.9 5.9H21v4h-2.1a7 7 0 0 1-5.9 5.9V22h-4v-2.1A7 7 0 0 1 3.1 14H1v-4h2.1A7 7 0 0 1 9 4.1V2h4zm-2 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" opacity=".25"/><path d="M12 6.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg></div>
-      <h2>أكملي إعدادك أولاً</h2>
-      <p>حدّدي صفوفك وشعبك ومواد كل شعبة من قسم الجدول — بعدها تظهر لوحة يومك هنا تلقائياً بكل ما تحتاجينه كل صباح.</p>
-      <button class="olv" style="border:none;cursor:pointer;font-family:inherit" onclick="c1Go('tt')">إكمال الإعداد الآن</button>
-    </div>`;
+    main.classList.add('hidden');
+    setupBox.classList.remove('hidden');
+    ttRenderSetup();
     return;
   }
-  cta.classList.add('hidden');main.classList.remove('hidden');
-  ywRenderNow();
-  ywRenderToday();
+  setupBox.classList.add('hidden');main.classList.remove('hidden');
+  ywRenderRail();
   ywRenderStars();
   ywRenderNote();
+  renderTasks();
   ywRenderFahim();
   ywRenderInsights();
-  ywTick=setInterval(ywRenderNow,30000);
+  ywTick=setInterval(()=>{ywRenderRail();},30000);
 }
-async function ywRenderNow(){
-  const el=document.getElementById('yw-now');if(!el)return;
-  const st=await ttNowState();
-  const clsName=v=>{const c=c1AllClasses().find(x=>x.id===(v&&v.c));return c?c.name:'';};
-  if(st.live){
-    const pct=Math.round((1-st.rem/st.len)*100);
-    el.className='tt-now';
-    el.innerHTML=`<div class="lbl">الحصة ${st.p+1} — جارية الآن</div>
-      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'حصة فارغة في جدولك'}</div>
-      <div class="sub">تبقّى ${st.rem} دقيقة</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="tt-now-btns">${st.v?`<button class="tt-live-go" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>`:''}${st.v?`<button class="tt-prep-go" onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>`:''}</div>`;
-  }else if(st.next){
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">القادمة — الحصة ${st.p+1} بعد ${st.inMin} دقيقة</div>
-      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'لم تُسجَّل بعد'}</div>
-      <div class="sub">استعدّي على مهل، كل شيء تحت السيطرة</div>
-      ${st.v?`<button class="tt-prep-go" onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>`:''}`;
-  }else if(st.done){
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">انتهى اليوم الدراسي</div><div class="big">أحسنتِ اليوم</div><div class="sub">استريحي — غداً يوم جديد جميل</div>`;
-  }else{
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">عطلة نهاية الأسبوع</div><div class="big">يوم راحة</div><div class="sub">نلقاك الأحد بنشاط</div>`;
-  }
-}
-async function ywRenderToday(){
-  const box=document.getElementById('yw-today');if(!box)return;
+// ═ مسار اليوم — الجدول كشريط زمني حيّ داخل يومي (بديل قسم الجدول) ═
+let railDay=null;
+function railSwitch(d){railDay=d;ywRenderRail();}
+async function ywRenderRail(){
+  const box=document.getElementById('yw-rail');if(!box)return;
   const t=await ttTimes();
-  const dayId=(TT_DAYS[new Date().getDay()]||{}).id;
-  if(!dayId){box.innerHTML='<div class="yw-empty">عطلة نهاية الأسبوع — لا حصص اليوم</div>';return;}
-  const row=ttData().schedule[dayId]||{};
-  const items=t.periods.map((pt,i)=>({i,pt,v:row[i]})).filter(x=>x.v);
-  if(!items.length){box.innerHTML='<div class="yw-empty">لا حصص مسجّلة اليوم بعد — أضيفيها من قسم الجدول</div>';return;}
-  box.innerHTML=items.map(it=>{
-    const c=c1AllClasses().find(x=>x.id===it.v.c);
-    return `<div class="yw-row"><span class="yw-time">${it.pt[0]}</span><span class="yw-dot" style="background:${(c&&c.color)||'#8A7460'}"></span><span class="yw-nm">${escHtml(c?c.name:'?')}</span><span class="yw-sub">${escHtml(it.v.s||'')}</span></div>`;
+  const todayId=(TT_DAYS[new Date().getDay()]||{}).id;
+  if(!railDay||!TT_DAYS.some(d=>d.id===railDay))railDay=todayId||TT_DAYS[0].id;
+  const tabs=document.getElementById('rail-days');
+  if(tabs)tabs.innerHTML=TT_DAYS.map(d=>
+    `<button class="${d.id===railDay?'sel':''} ${d.id===todayId?'today':''}" onclick="railSwitch('${d.id}')">${d.nm}</button>`
+  ).join('');
+  const isToday=railDay===todayId;
+  const row=ttData().schedule[railDay]||{};
+  const nowMin=(()=>{const n=new Date();return n.getHours()*60+n.getMinutes();})();
+  // محطات اليوم بالترتيب: الطابور ← الحصص مع إقحام الفسحة في موضعها
+  const stops=[{kind:'spec',time:t.assembly[0],label:'الطابور',end:t.assembly[1]}];
+  t.periods.forEach((pt,i)=>{
+    stops.push({kind:'period',p:i,time:pt[0],end:pt[1],v:row[i]});
+    if(i+1===t.breakAfter)stops.push({kind:'spec',time:t.breakTime[0],label:'الفسحة',end:t.breakTime[1]});
+  });
+  const filled=t.periods.some((_,i)=>row[i]);
+  if(!filled){
+    box.innerHTML=`<div class="rail-empty">لا حصص مسجّلة ليوم ${TT_DAYS.find(d=>d.id===railDay).nm} بعد.<br>
+      <button class="rail-week-btn" style="margin-top:11px" onclick="wksOpen(true)">أضيفي حصص هذا اليوم</button></div>`;
+    return;
+  }
+  box.innerHTML=stops.map(s=>{
+    const stMin=ttMins(s.time),enMin=ttMins(s.end);
+    let state='';
+    if(isToday){
+      if(nowMin>=enMin)state='past';
+      else if(nowMin>=stMin)state='now';
+    }
+    if(s.kind==='spec'){
+      return `<div class="rail-stop spec ${state}"><div class="rail-gut"><span class="rail-pt"></span></div>
+        <div class="rail-body"><div class="rail-line"><span class="rail-time">${s.time}</span>
+        <span class="rail-cls">${s.label}</span><span class="rail-chip range">${s.time} – ${s.end}</span></div></div></div>`;
+    }
+    const c=s.v?c1AllClasses().find(x=>x.id===s.v.c):null;
+    const col=(c&&c.color)||'var(--border)';
+    const body=s.v
+      ?`<span class="yw-dot" style="background:${col}"></span><span class="rail-cls">${escHtml(c?c.name:'?')}</span><span class="rail-sub">${escHtml(s.v.s||'')}</span>`
+      :`<span class="rail-cls">حصة فارغة</span>`;
+    // المحطة الجارية تتوسّع ببطاقة فيها المتبقي وزرّا البدء والتحضير
+    let card='';
+    if(state==='now'&&isToday){
+      const rem=Math.max(0,enMin-nowMin),len=Math.max(1,enMin-stMin);
+      const pct=Math.round((1-rem/len)*100);
+      card=`<div class="rail-now-card">
+        <div class="t">الحصة ${egArNum(s.p+1)} — جارية الآن</div>
+        <div class="b">${s.v?escHtml((c?c.name:'?')+' · '+(s.v.s||'')):'حصة فارغة في جدولك'}</div>
+        <div class="r">تبقّى ${egArNum(rem)} دقيقة</div>
+        <div class="rail-bar"><i style="width:${pct}%"></i></div>
+        ${s.v?`<div class="rail-now-btns">
+          <button class="solid" data-c="${escHtml(s.v.c)}" data-s="${escHtml(s.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>
+          <button onclick="prepOpen('${s.v.c}','${escHtml(s.v.s)}')">تحضير الحصة</button>
+        </div>`:''}
+      </div>`;
+    }
+    return `<div class="rail-stop ${state} ${s.v?'':'empty'}"><div class="rail-gut"><span class="rail-pt"></span></div>
+      <div class="rail-body"><div class="rail-line"><span class="rail-time">${s.time}</span>${body}
+      ${state==='past'&&s.v?'<span class="rail-chip">انتهت</span>':''}</div>${card}</div></div>`;
   }).join('');
+}
+// لوحة الأسبوع
+function wksOpen(edit){
+  document.getElementById('wk-sheet').classList.add('open');
+  document.body.style.overflow='hidden';
+  ttRenderTable();
+  if(edit&&!ttEdit)ttToggleEdit();
+}
+function wksClose(){
+  document.getElementById('wk-sheet').classList.remove('open');
+  document.body.style.overflow='';
+  if(ttEdit)ttToggleEdit();
+  ywRenderRail();
 }
 function ywRenderStars(){
   const box=document.getElementById('yw-stars');if(!box)return;
@@ -2423,16 +2467,17 @@ function ywRenderStars(){
   rows.sort((a,b)=>b.n-a.n);
   const top=rows.slice(0,3);
   if(!top.length){box.innerHTML='<div class="yw-empty">امنحي أول نجمة من قسم النجوم لتظهر الصدارة هنا</div>';return;}
-  box.innerHTML=top.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${i+1}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="beh-last" style="margin-inline-end:6px">${escHtml(r.cls)}</span><span class="star-lb-cnt">${r.n}</span></div>`).join('');
+  box.innerHTML=top.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${egArNum(i+1)}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="star-cls-lbl">${escHtml(r.cls)}</span><span class="star-lb-cnt">${egArNum(r.n)}</span></div>`).join('');
 }
+// مفكرة اليوم: حدث اليوم قابل للتحرير مباشرة هنا (حلّت محلّ مفكرة الأسبوع)
 function ywRenderNote(){
   const box=document.getElementById('yw-note');if(!box)return;
   const d=new Date();
-  const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  const ev=(profile.calendar_events||{})[k];
-  const tasks=(profile.user_tasks||[]).filter(t=>!t.done);
-  box.innerHTML=(ev?`<div class="yw-note-ev">${escHtml(ev)}</div>`:'<div class="yw-empty">لا حدث مسجّل اليوم</div>')
-    +(tasks.length?`<div class="yw-note-tasks">${tasks.length} مهمة غير منجزة</div>`:'');
+  const y=d.getFullYear(),m=d.getMonth(),dd=d.getDate();
+  const ev=(profile.calendar_events||{})[`${y}-${m}-${dd}`];
+  box.innerHTML=ev
+    ?`<div class="yw-note-ev">${escHtml(ev)}</div><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">تعديل حدث اليوم</button>`
+    :`<div class="yw-empty">لا حدث مسجّل اليوم</div><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">إضافة حدث لليوم</button>`;
 }
 function ywRenderFahim(){
   const box=document.getElementById('yw-fh-ava');if(!box)return;
@@ -2454,7 +2499,7 @@ function ywRenderInsights(){
     const beh=behArr(c.id);
     const total=stars.reduce((a,b)=>a+b,0);
     if(!total){
-      list.push({text:`لم تُمنح أي نجوم بعد لشعبة ${c.name} — امنحي أول نجمة اليوم لتحفيز الحماس`,btn:'قسم النجوم',act:{t:'go',page:'stars'}});
+      list.push({text:`لم تُمنح أي نجوم بعد لشعبة ${c.name} — امنحي أول نجمة اليوم لتحفيز الحماس`,btn:'قسم طلابي',act:{t:'go',page:'students'}});
       return;
     }
     const avg=total/n;
@@ -2462,7 +2507,7 @@ function ywRenderInsights(){
       const st=stars[i]||0;
       const violCount=(beh[i]||[]).filter(e=>e.kind==='viol').length;
       if(violCount>=2&&st<avg*0.5){
-        list.push({text:`${nm} في شعبة ${c.name} لديه ${violCount} مخالفات ونجومه أقل من متوسط الشعبة — هل تريدين استشارة فهيم؟`,btn:'استشيري فهيم',act:{t:'fahim',q:`لدي طالب اسمه ${nm} في شعبة ${c.name}، لديه ${violCount} مخالفات مسجّلة ونجومه منخفضة مقارنة بزملائه. ما نصيحتك للتعامل معه؟`}});
+        list.push({text:`${nm} في شعبة ${c.name} لديه ${violCount} ملاحظات ونجومه أقل من متوسط الشعبة — هل تريدين استشارة فهيم؟`,btn:'استشيري فهيم',act:{t:'fahim',q:`لدي طالب اسمه ${nm} في شعبة ${c.name}، لديه ${violCount} ملاحظات سلوكية مسجّلة ونجومه منخفضة مقارنة بزملائه. ما نصيحتك للتعامل معه؟`}});
       }
     });
   }));
@@ -2624,40 +2669,7 @@ c1SelectEnhanceAll();
 
 // ═══════════ مفكرة الأسبوع (تقويم + مهام) — متزامنة سحابياً مع بيانات المعلمة ═══════════
 const WK_MONTHS=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-const WK_DAYS_NM=['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
-let wkOffset=0,wkSelKey=null,activeEvKey=null;
-function wkDaysArr(){
-  const now=new Date();
-  const start=new Date(now);start.setDate(now.getDate()-now.getDay()+wkOffset*7);start.setHours(0,0,0,0);
-  return [...Array(7)].map((_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d;});
-}
-function renderWeekPlanner(){
-  const strip=document.getElementById('wk-strip');if(!strip)return;
-  const ev=profile.calendar_events||{};
-  const days=wkDaysArr();
-  const today=new Date();today.setHours(0,0,0,0);
-  const f=days[0],l=days[6];
-  const t=document.getElementById('wk-title');
-  if(t)t.textContent=wkOffset===0?'مفكرة الأسبوع':(f.getDate()+' '+WK_MONTHS[f.getMonth()]+' — '+l.getDate()+' '+WK_MONTHS[l.getMonth()]);
-  if(!wkSelKey){
-    const td=days.find(d=>d.getTime()===today.getTime())||days[0];
-    wkSelKey=`${td.getFullYear()}-${td.getMonth()}-${td.getDate()}`;
-  }
-  strip.innerHTML=days.map(d=>{
-    const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    const isT=d.getTime()===today.getTime();
-    return `<button class="wk-day ${k===wkSelKey?'sel':''} ${isT?'today':''}" onclick="wkPick('${k}')">
-      <span class="wd-n">${WK_DAYS_NM[d.getDay()]}</span><span class="wd-d">${d.getDate()}</span>${ev[k]?'<span class="wd-dot"></span>':''}</button>`;
-  }).join('');
-  const cur=ev[wkSelKey];
-  const[y,m,dd]=wkSelKey.split('-').map(Number);
-  const box=document.getElementById('wk-event');
-  if(box)box.innerHTML=cur
-    ?`<span class="wk-ev-txt">${escHtml(cur)}</span><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">تعديل</button>`
-    :`<span style="color:var(--muted)">لا حدث في هذا اليوم</span><button class="wk-ev-btn" onclick="selectDate(${y},${m},${dd})">إضافة حدث</button>`;
-}
-function wkPick(k){wkSelKey=k;renderWeekPlanner();}
-function wkShift(d){wkOffset+=d;wkSelKey=null;renderWeekPlanner();}
+let activeEvKey=null;
 function selectDate(year,month,day){
   activeEvKey=`${year}-${month}-${day}`;
   const cur=(profile.calendar_events||{})[activeEvKey]||'';
@@ -2675,7 +2687,7 @@ async function saveEvent(){
   if(val)ev[activeEvKey]=val;else delete ev[activeEvKey];
   closeEvModal();
   await cy1Save({calendar_events:ev},'يحفظ الحدث');
-  renderWeekPlanner();
+  ywRenderNote();
 }
 async function deleteEvent(){
   if(!activeEvKey)return;
@@ -2683,7 +2695,7 @@ async function deleteEvent(){
   delete ev[activeEvKey];
   closeEvModal();
   await cy1Save({calendar_events:ev},'يحذف الحدث');
-  renderWeekPlanner();
+  ywRenderNote();
 }
 function renderTasks(){
   const list=document.getElementById('tasks-list');if(!list)return;
@@ -2753,9 +2765,13 @@ function ttData(){
 async function ttTimes(){
   const t=ttData();
   if(t.times)return t.times;
-  // افتراضيات المشرف من ai_settings ثم الافتراضي المدمج
+  // افتراضيات المشرف من ai_settings ثم الافتراضي المدمج.
+  // مسار اليوم يعتمد على هذه الأوقات، فلا نُبقيه فارغاً إن تعثّر الاتصال —
+  // نُمهل الطلب ثانيتين ثم نمضي بالافتراضي المدمج.
   try{
-    const{data}=await sb.from('ai_settings').select('value').eq('key','c1_tt_defaults').maybeSingle();
+    const q=sb.from('ai_settings').select('value').eq('key','c1_tt_defaults').maybeSingle();
+    const res=await Promise.race([q,new Promise(r=>setTimeout(()=>r(null),2000))]);
+    const data=res&&res.data;
     if(data&&data.value){const v=JSON.parse(data.value);if(v&&v.periods){t.times=v;return v;}}
   }catch(e){}
   t.times=JSON.parse(JSON.stringify(TT_FALLBACK));
@@ -2772,18 +2788,8 @@ function c1AllClasses(){
 }
 function c1GradeOf(classId){return (profile.grades||[]).find(g=>(g.classes||[]).some(c=>c.id===classId));}
 let ttTickTimer=null;
-function ttRender(){
-  if(!profile.setupDone){ttRenderSetup();return;}
-  document.getElementById('tt-setup').classList.add('hidden');
-  document.getElementById('tt-main').classList.remove('hidden');
-  ttRenderTable();
-  ttRenderNow();
-  clearInterval(ttTick);ttTick=setInterval(ttRenderNow,30000);
-  renderWeekPlanner();
-  renderTasks();
-}
+// معالج الإعداد يُعرض داخل يومي (لا قسم مستقل) — renderYawmi هو من يستدعيه
 function ttRenderSetup(){
-  document.getElementById('tt-main').classList.add('hidden');
   const el=document.getElementById('tt-setup');
   el.classList.remove('hidden');
   if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suGrades=[];suData={};}
@@ -2990,10 +2996,9 @@ async function suFinish(){
   const grades=suGrades.map(g=>({num:g,classes:flat.filter(c=>c.g===g).map(c=>({id:c.id,name:c.name,num:c.num,color:c.color,subjects:c.subjects,students:(suRosters[c.id]||[]).filter(Boolean)}))})).filter(g=>g.classes.length);
   await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
   document.getElementById('c1-menu-name').textContent=suName;
+  suData={};suRosters={};window._suFocus=null;suRActive=null;
   renderYawmi();
   toast('اكتمل الإعداد — أهلاً بك');
-  suData={};suRosters={};window._suFocus=null;suRActive=null;
-  ttRender();
 }
 
 // ── الجدول ──
@@ -3007,10 +3012,10 @@ function ttCellHtml(d,p,v){
 async function ttRenderTable(){
   const t=await ttTimes();
   const todayId=TT_DAYS[new Date().getDay()]?TT_DAYS[new Date().getDay()].id:null;
-  document.getElementById('c1-tt-h').innerHTML='<tr><th>اليوم</th>'+t.periods.map((pt,i)=>`<th>الحصة ${i+1}<span class="tm">${pt[0]} – ${pt[1]}</span></th>`).join('')+'</tr>';
+  document.getElementById('c1-tt-h').innerHTML='<tr><th>اليوم</th>'+t.periods.map((pt,i)=>`<th>الحصة ${egArNum(i+1)}<span class="tm">${pt[0]} – ${pt[1]}</span></th>`).join('')+'</tr>';
   const sch=ttData().schedule;
   document.getElementById('c1-tt-b').innerHTML=
-    `<tr class="spec"><td>الطابور</td><td colspan="${t.periods.length}">اصطفاف الصباح ${t.assembly[0]} – ${t.assembly[1]} &nbsp;·&nbsp; الفسحة بعد الحصة ${t.breakAfter} (${t.breakTime[0]} – ${t.breakTime[1]})</td></tr>`
+    `<tr class="spec"><td>الطابور</td><td colspan="${t.periods.length}">اصطفاف الصباح <span class="tm">${t.assembly[0]} – ${t.assembly[1]}</span> &nbsp;·&nbsp; الفسحة بعد الحصة ${egArNum(t.breakAfter)} (<span class="tm">${t.breakTime[0]} – ${t.breakTime[1]}</span>)</td></tr>`
     +TT_DAYS.map(day=>{
       const row=sch[day.id]||{};
       return `<tr class="${day.id===todayId?'today':''}"><td>${day.nm}</td>`+t.periods.map((_,p)=>`<td>${ttCellHtml(day.id,p,row[p])}</td>`).join('')+'</tr>';
@@ -3024,8 +3029,8 @@ function ttRenderMobile(t,sch,todayId){
   document.getElementById('tt-day-tabs').innerHTML=TT_DAYS.map(day=>
     `<button type="button" class="tt-day-tab ${day.id===ttMobileDay?'sel':''} ${day.id===todayId?'today':''}" onclick="ttMobileSwitch('${day.id}')">${day.nm}</button>`
   ).join('');
-  document.getElementById('tt-day-spec').textContent=
-    `اصطفاف الصباح ${t.assembly[0]} – ${t.assembly[1]} · الفسحة بعد الحصة ${t.breakAfter} (${t.breakTime[0]} – ${t.breakTime[1]})`;
+  document.getElementById('tt-day-spec').innerHTML=
+    `اصطفاف الصباح <span class="rng">${t.assembly[0]} – ${t.assembly[1]}</span> · الفسحة بعد الحصة ${egArNum(t.breakAfter)} (<span class="rng">${t.breakTime[0]} – ${t.breakTime[1]}</span>)`;
   const row=sch[ttMobileDay]||{};
   document.getElementById('tt-day-list').innerHTML=t.periods.map((pt,p)=>{
     const v=row[p];
@@ -3057,7 +3062,7 @@ function ttToggleEdit(){
 function ttPickOpen(d,p){
   ttPickCtx={d,p};
   const cur=(ttData().schedule[d]||{})[p]||null;
-  document.getElementById('tt-pick-title').textContent=TT_DAYS.find(x=>x.id===d).nm+' — الحصة '+(p+1);
+  document.getElementById('tt-pick-title').textContent=TT_DAYS.find(x=>x.id===d).nm+' — الحصة '+egArNum(p+1);
   document.getElementById('tt-pick-clear').style.display=cur?'':'none';
   const opts=[];
   c1AllClasses().forEach(c=>{
@@ -3093,7 +3098,7 @@ async function ttOpenTimes(){
   const t=await ttTimes();
   document.getElementById('tt-times-rows').innerHTML=
     `<div class="time-row"><span>الطابور</span><input type="time" id="tta-0" value="${t.assembly[0]}"/><input type="time" id="tta-1" value="${t.assembly[1]}"/></div>`
-    +t.periods.map((pt,i)=>`<div class="time-row"><span>الحصة ${i+1}</span><input type="time" id="ttp-${i}-0" value="${pt[0]}"/><input type="time" id="ttp-${i}-1" value="${pt[1]}"/></div>`).join('');
+    +t.periods.map((pt,i)=>`<div class="time-row"><span>الحصة ${egArNum(i+1)}</span><input type="time" id="ttp-${i}-0" value="${pt[0]}"/><input type="time" id="ttp-${i}-1" value="${pt[1]}"/></div>`).join('');
   document.getElementById('tt-break-row').innerHTML=[1,2,3,4,5,6,7].map(n=>`<button class="chip ${n===t.breakAfter?'sel':''}" onclick="window._ttBrk=${n};document.querySelectorAll('#tt-break-row .chip').forEach(c=>c.classList.remove('sel'));this.classList.add('sel')">${n}</button>`).join('');
   window._ttBrk=t.breakAfter;
   document.getElementById('tt-times').classList.add('open');
@@ -3130,41 +3135,11 @@ async function ttNowState(){
   }
   return{done:true,dayId};
 }
+// أُبقيت لتمييز الخلية الجارية داخل لوحة الأسبوع وتحديث مسار اليوم بعد أي تعديل
+// بعد أي تعديل على الجدول أو الأوقات: يُحدَّث مسار اليوم وتُميَّز الخلية الجارية
 async function ttRenderNow(){
-  const el=document.getElementById('tt-now');if(!el)return;
-  const st=await ttNowState();
-  const clsName=v=>{const c=c1AllClasses().find(x=>x.id===(v&&v.c));return c?c.name:'';};
-  let nextTxt='';
-  if(st.live){
-    const pct=Math.round((1-st.rem/st.len)*100);
-    el.className='tt-now';
-    el.innerHTML=`<div class="lbl">الحصة ${st.p+1} — جارية الآن</div>
-      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'حصة فارغة في جدولك'}</div>
-      <div class="sub">تبقّى ${st.rem} دقيقة</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="tt-now-btns">${st.v?`<button class="tt-live-go" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>`:''}${st.v?`<button class="tt-prep-go" onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>`:''}</div>`;
-  }else if(st.next){
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">القادمة — الحصة ${st.p+1} بعد ${st.inMin} دقيقة</div>
-      <div class="big">${st.v?escHtml(clsName(st.v))+' · '+escHtml(st.v.s):'لم تُسجَّل بعد'}</div>
-      <div class="sub">استعدّي على مهل، كل شيء تحت السيطرة</div>
-      ${st.v?`<button class="tt-prep-go" onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>`:''}`;
-  }else if(st.done){
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">انتهى اليوم الدراسي</div><div class="big">أحسنتِ اليوم</div><div class="sub">استريحي — غداً يوم جديد جميل</div>`;
-  }else{
-    el.className='tt-now idle';
-    el.innerHTML=`<div class="lbl">عطلة نهاية الأسبوع</div><div class="big">يوم راحة</div><div class="sub">نلقاك الأحد بنشاط</div>`;
-  }
-  // سطر «التالية» أسفل البطاقة عندما تكون حصة جارية
-  const nx=document.getElementById('tt-next');
-  if(st.live){
-    const t=await ttTimes();
-    const row=ttData().schedule[st.dayId]||{};
-    const n=st.p+1<t.periods.length?row[st.p+1]:null;
-    nx.innerHTML=n?`التالية: <b>${escHtml(clsName(n))} · ${escHtml(n.s)}</b> — الحصة ${st.p+2}`:(st.p+1<t.periods.length?`التالية: الحصة ${st.p+2} (فارغة)`:'هذه آخر حصص اليوم');
-  }else nx.innerHTML='';
-  ttMarkLive(st);
+  ywRenderRail();
+  ttMarkLive(await ttNowState());
 }
 function ttMarkLive(st){
   document.querySelectorAll('.tt-cell.live').forEach(c=>c.classList.remove('live'));
@@ -4268,37 +4243,41 @@ function starArr(classId){
   while(arr.length<n)arr.push(0);
   return arr;
 }
+let stuSortBy='name';
 function starRender(){
   const grades=planGradesList();
-  const empty=document.getElementById('star-empty'),body=document.getElementById('star-body');
+  const empty=document.getElementById('stu-empty'),body=document.getElementById('stu-body');
   if(!grades.length){
     empty.classList.remove('hidden');body.classList.add('hidden');
-    empty.innerHTML='<div class="plan-empty-card">أكملي إعداد شعبك وقوائم طلابها في قسم الجدول أولاً — ستظهر لوحة النجوم هنا تلقائياً بعدها.</div>';
+    empty.innerHTML='<div class="plan-empty-card">أكملي إعداد شعبك وقوائم طلابها من قسم يومي أولاً — ستظهر لوحة طلابك هنا تلقائياً بعدها.</div>';
     return;
   }
   empty.classList.add('hidden');body.classList.remove('hidden');
   if(!starGrade)starGrade=Number(localStorage.getItem('c1_star_g'))||null;
   if(!starClass)starClass=localStorage.getItem('c1_star_c')||null;
   if(!starGrade||!grades.includes(starGrade))starGrade=grades[0];
-  document.getElementById('star-grade-sel').innerHTML=grades.map(g=>
+  document.getElementById('stu-grade-sel').innerHTML=grades.map(g=>
     `<option value="${g}" ${g===starGrade?'selected':''}>الصف ${PLAN_GNAMES[g-1]}</option>`
   ).join('');
   const classes=starClassesOf(starGrade);
   if(!classes.length){
-    document.getElementById('star-class-sel').innerHTML='';
-    document.getElementById('star-board').innerHTML='<div class="plan-empty-card">لا شعب لهذا الصف بعد.</div>';
-    document.getElementById('star-lb').innerHTML='';
+    document.getElementById('stu-class-sel').innerHTML='';
+    document.getElementById('stu-board').innerHTML='<div class="plan-empty-card">لا شعب لهذا الصف بعد.</div>';
+    document.getElementById('stu-lb').innerHTML='';
+    document.getElementById('stu-sum').innerHTML='';
     return;
   }
   if(!starClass||!classes.some(c=>c.id===starClass))starClass=classes[0].id;
   localStorage.setItem('c1_star_g',String(starGrade));
   localStorage.setItem('c1_star_c',starClass);
+  behLoadTypes();
   starRenderClassTabs();
   starRenderBoard();
 }
+function stuSwitchGrade(g){starGrade=g;starClass=null;starRender();}
 function starRenderClassTabs(){
   const classes=starClassesOf(starGrade);
-  document.getElementById('star-class-sel').innerHTML=classes.map(c=>
+  document.getElementById('stu-class-sel').innerHTML=classes.map(c=>
     `<option value="${c.id}" ${c.id===starClass?'selected':''}>${escHtml(c.name)}</option>`
   ).join('');
 }
@@ -4306,6 +4285,12 @@ function starSwitchClass(id){
   starClass=id;
   localStorage.setItem('c1_star_c',id);
   starRenderClassTabs();
+  starRenderBoard();
+}
+const stuSwitchClass=starSwitchClass;
+function stuSort(s){
+  stuSortBy=s;
+  document.querySelectorAll('.beh-sort button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
   starRenderBoard();
 }
 function starClassObj(classId){
@@ -4331,17 +4316,20 @@ async function starAddStudent(classId){
 async function starDelStudent(classId,idx){
   const cls=starClassObj(classId);
   if(!cls||!cls.students)return;
-  if(!await c1Confirm('حذف «'+cls.students[idx]+'» من قائمة الشعبة؟'))return;
+  if(!await c1Confirm('حذف «'+cls.students[idx]+'» من قائمة الشعبة؟ سيُحذف سجلّه كاملاً.'))return;
   cls.students.splice(idx,1);
   const arr=starArr(classId).slice();arr.splice(idx,1);
   profile.stars={...(profile.stars||{}),[classId]:arr};
-  await cy1Save({grades:profile.grades,stars:profile.stars},'يحذف الطالب');
+  const log=behArr(classId).map(a=>a.slice());log.splice(idx,1);
+  profile.beh_log={...(profile.beh_log||{}),[classId]:log};
+  await cy1Save({grades:profile.grades,stars:profile.stars,beh_log:profile.beh_log},'يحذف الطالب');
   starRenderBoard();
 }
+// البطاقة الموحّدة: نجمة (إيجابي) + ملاحظة (سلبي) + ملف الطالب — كلها في مكان واحد
 function starRenderBoard(){
   const cls=starClassesOf(starGrade).find(c=>c.id===starClass);
-  const board=document.getElementById('star-board'),lb=document.getElementById('star-lb');
-  if(!cls){board.innerHTML='';lb.innerHTML='';return;}
+  const board=document.getElementById('stu-board'),lb=document.getElementById('stu-lb'),sum=document.getElementById('stu-sum');
+  if(!cls){board.innerHTML='';lb.innerHTML='';sum.innerHTML='';return;}
   const students=cls.students||[];
   const addRow=`<div class="star-current" style="--sc:${cls.color}">أنتِ الآن في شعبة <b>${escHtml(cls.name)}</b></div>
     <div class="star-add-row">
@@ -4349,31 +4337,88 @@ function starRenderBoard(){
       <button class="star-add-btn" onclick="starAddStudent('${cls.id}')">إضافة</button>
     </div>`;
   if(!students.length){
+    sum.innerHTML='';
     board.innerHTML=addRow+'<div class="plan-empty-card">لا قائمة طلاب لهذه الشعبة بعد — أضيفي أول اسم أعلاه.</div>';
     lb.innerHTML='';return;
   }
-  const arr=starArr(starClass);
-  board.innerHTML=addRow+'<div class="star-grid">'+students.map((nm,i)=>`
-    <div class="star-card">
-      <div class="star-del" onclick="starDelStudent('${cls.id}',${i})" title="حذف الطالب">✕</div>
-      ${arr[i]>0?`<div class="star-minus" onclick="starMinus('${cls.id}',${i})">−</div>`:''}
-      <div class="star-nm">${escHtml(nm)}</div>
-      <button class="star-btn" onclick="starTap('${cls.id}',${i})">${STAR_SVG}<span class="star-cnt">${arr[i]}</span></button>
+  const arr=starArr(starClass),log=behArr(starClass);
+  // ملخّص الشعبة: حركة اليوم ومن يحتاج متابعة
+  let todayS=0,todayN=0,needFollow=0;
+  students.forEach((_,i)=>{
+    (log[i]||[]).forEach(e=>{if(behIsToday(e.date)){if(e.kind==='star')todayS++;else if(e.kind==='viol')todayN++;}});
+    if((log[i]||[]).filter(e=>e.kind==='viol').length>=3)needFollow++;
+  });
+  sum.innerHTML=`
+    <div class="beh-sum-c" style="--sc:#C0A848"><b>${egArNum(todayS)}</b><span>نجمة اليوم</span></div>
+    <div class="beh-sum-c" style="--sc:var(--red-d)"><b>${egArNum(todayN)}</b><span>ملاحظة اليوم</span></div>
+    <div class="beh-sum-c" style="--sc:${needFollow?'var(--red-deep)':'var(--border)'}"><b>${egArNum(needFollow)}</b><span>تحتاج متابعة (٣+)</span></div>
+    <div class="beh-sum-c" style="--sc:var(--border)"><b>${egArNum(students.length)}</b><span>طلاب الشعبة</span></div>`;
+  const q=(document.getElementById('stu-search').value||'').trim();
+  let rows=students.map((nm,i)=>({nm,i,s:arr[i]||0,n:(log[i]||[]).filter(e=>e.kind==='viol').length}))
+    .filter(r=>!q||r.nm.includes(q));
+  if(stuSortBy==='star')rows.sort((a,b)=>b.s-a.s);
+  else if(stuSortBy==='note')rows.sort((a,b)=>b.n-a.n);
+  if(!rows.length){board.innerHTML=addRow+'<div class="plan-empty-card">لا نتائج مطابقة للبحث</div>';lb.innerHTML='';return;}
+  board.innerHTML=addRow+'<div class="stu-grid">'+rows.map(r=>`
+    <div class="stu-card ${r.n>=3?'alert':(r.n?'warn':'')}">
+      <div class="stu-x" onclick="starDelStudent('${cls.id}',${r.i})" title="حذف الطالب">✕</div>
+      ${r.s>0?`<div class="stu-minus" onclick="starMinus('${cls.id}',${r.i})" title="إنقاص نجمة">−</div>`:''}
+      <div class="stu-nm" onclick="stuOpenFile('${cls.id}',${r.i})" title="ملف الطالب">${escHtml(r.nm)}</div>
+      <button class="stu-star" onclick="starTap('${cls.id}',${r.i})">${STAR_SVG}<span class="n">${egArNum(r.s)}</span></button>
+      <button class="stu-note ${r.n?'has':''}" onclick="behOpenAdd('${cls.id}',${r.i})">ملاحظة${r.n?`<span class="c">${egArNum(r.n)}</span>`:''}</button>
     </div>`).join('')+'</div>';
-  const rank=students.map((nm,i)=>({nm,n:arr[i]})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n).slice(0,3);
+  const rank=students.map((nm,i)=>({nm,n:arr[i]||0})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n).slice(0,3);
   lb.innerHTML=rank.length?('<div class="star-lb-title">الأعلى نجوماً في '+escHtml(cls.name)+'</div>'
-    +rank.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${i+1}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="star-lb-cnt">${r.n}</span></div>`).join(''))
+    +rank.map((r,i)=>`<div class="star-lb-row"><span class="star-lb-rank">${egArNum(i+1)}</span><span class="star-lb-nm">${escHtml(r.nm)}</span><span class="star-lb-cnt">${egArNum(r.n)}</span></div>`).join(''))
     :'';
 }
+// ملف الطالب الموحّد: النجوم والملاحظات في سجل زمني واحد
+function stuOpenFile(classId,idx){
+  const cls=starClassObj(classId);
+  const nm=(cls&&cls.students&&cls.students[idx])||'';
+  const log=(behArr(classId)[idx]||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  _behCtx={classId,idx};
+  document.getElementById('beh-file-title').textContent='ملف '+nm;
+  const sC=starArr(classId)[idx]||0,vC=log.filter(e=>e.kind==='viol').length;
+  document.getElementById('beh-file-summary').innerHTML=
+    `<div class="s"><b style="color:#A08830">${egArNum(sC)}</b><span>نجوم</span></div>
+     <div class="s"><b style="color:var(--red-d)">${egArNum(vC)}</b><span>ملاحظات</span></div>`;
+  const list=document.getElementById('beh-file-list');
+  if(!log.length){list.innerHTML='<div class="plan-empty-card">لا سجل بعد لهذا الطالب</div>';}
+  else list.innerHTML=log.map(e=>{
+    const d=new Date(e.date);
+    const dt=d.toLocaleDateString('ar')+' '+d.toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
+    const kind=e.kind==='star'?'star':(e.kind==='part'?'part':'viol');
+    const label=e.kind==='star'?'نجمة':(e.kind==='part'?'مشاركة إيجابية':escHtml(e.type||'ملاحظة'));
+    return `<div class="beh-file-item ${kind}"><span class="dot"></span><span class="tp">${label}</span><span class="dt">${dt}</span>
+      <button class="beh-del-e" onclick="behDelEntry('${e.date}')" title="حذف هذا التسجيل">✕</button></div>`;
+  }).join('');
+  document.getElementById('beh-file-modal').classList.add('open');
+}
+// النجوم والسجل يُحفظان معاً — العدّاد يخدم الصدارة والاحتفال، والسجل يخدم ملف الطالب
 function starSaveDebounced(){
   clearTimeout(_starSaveTimer);
-  _starSaveTimer=setTimeout(()=>{cy1Save({stars:profile.stars});},900);
+  _starSaveTimer=setTimeout(()=>{cy1Save({stars:profile.stars,beh_log:profile.beh_log});},900);
+}
+function stuLogPush(classId,idx,entry){
+  const log=behArr(classId).map(a=>a.slice());
+  log[idx]=[...(log[idx]||[]),entry];
+  profile.beh_log={...(profile.beh_log||{}),[classId]:log};
+}
+// حذف آخر نجمة من السجل (عند الإنقاص أو التراجع) حتى يبقى السجل مطابقاً للعدّاد
+function stuLogPopStar(classId,idx){
+  const log=behArr(classId).map(a=>a.slice());
+  const arr=log[idx]||[];
+  for(let i=arr.length-1;i>=0;i--){if(arr[i].kind==='star'){arr.splice(i,1);break;}}
+  log[idx]=arr;
+  profile.beh_log={...(profile.beh_log||{}),[classId]:log};
 }
 function starTap(classId,idx){
   const arr=starArr(classId).slice();
   _starLast={classId,idx,prev:arr[idx]};
   arr[idx]++;
   profile.stars={...(profile.stars||{}),[classId]:arr};
+  stuLogPush(classId,idx,{kind:'star',date:new Date().toISOString()});
   starSaveDebounced();
   if(classId===starClass)starRenderBoard();
   const milestone=arr[idx]>0&&arr[idx]%5===0;
@@ -4386,6 +4431,7 @@ function starMinus(classId,idx){
   if(arr[idx]<=0)return;
   arr[idx]--;
   profile.stars={...(profile.stars||{}),[classId]:arr};
+  stuLogPopStar(classId,idx);
   starSaveDebounced();
   starRenderBoard();
 }
@@ -4400,6 +4446,7 @@ function starUndo(){
   const{classId,idx,prev}=_starLast;
   const arr=starArr(classId).slice();arr[idx]=prev;
   profile.stars={...(profile.stars||{}),[classId]:arr};
+  stuLogPopStar(classId,idx);
   starSaveDebounced();
   if(classId===starClass)starRenderBoard();
   _starLast=null;
@@ -5899,10 +5946,10 @@ function gmRunGroups(items){
 }
 
 
-// ═══════════ قسم السلوك — مشاركات وملاحظات لكل طالب (بلا أرقام هواتف) ═══════════
-// مبدأ التصميم: التسجيل أثناء الحصة لا بعدها — المشاركة بضغطة واحدة فورية،
-// والملاحظة بضغطة تفتح الأنواع فتُسجَّل بالضغطة الثانية. وكل تسجيل قابل للتراجع.
-let behClass=null,behTypes=[],behTypesLoaded=false,_behCtx=null,behSortBy='name',_behLast=null,_behUndoT=null;
+// ═══════════ سجل السلوك — ملاحظات الطلاب (يُعرض داخل قسم طلابي) ═══════════
+// الملاحظة بضغطة تفتح الأنواع فتُسجَّل بالضغطة الثانية، وكل تسجيل قابل للتراجع.
+// السجل نفسه يحمل النجوم أيضاً (kind:'star') ليكون ملف الطالب موحّداً.
+let behTypes=[],behTypesLoaded=false,_behCtx=null,_behLast=null,_behUndoT=null;
 function behArr(classId){
   const cls=starClassObj(classId)||{};
   const n=(cls.students||[]).length;
@@ -5918,95 +5965,16 @@ async function behLoadTypes(){
     behTypes=(data||[]).map(r=>r.name);
   }catch(e){behTypes=[];}
 }
-function behRender(){
-  behLoadTypes();
-  const classes=c1AllClasses();
-  const empty=document.getElementById('beh-empty'),body=document.getElementById('beh-body');
-  if(!classes.length){
-    empty.classList.remove('hidden');body.classList.add('hidden');
-    empty.innerHTML='<div class="plan-empty-card">أكملي إعداد شعبك وقوائم طلابها في قسم الجدول أولاً.</div>';
-    return;
-  }
-  empty.classList.add('hidden');body.classList.remove('hidden');
-  if(!behClass)behClass=localStorage.getItem('c1_beh_c')||null;
-  if(!behClass||!classes.some(c=>c.id===behClass))behClass=classes[0].id;
-  localStorage.setItem('c1_beh_c',behClass);
-  behRenderClassTabs();
-  behRenderBoard();
-}
-function behRenderClassTabs(){
-  const classes=c1AllClasses();
-  document.getElementById('beh-class-sel').innerHTML=classes.map(c=>
-    `<option value="${c.id}" ${c.id===behClass?'selected':''}>${escHtml(c.name)}</option>`
-  ).join('');
-}
-function behSwitchClass(id){behClass=id;localStorage.setItem('c1_beh_c',id);behRenderBoard();}
-function behSort(s){
-  behSortBy=s;
-  document.querySelectorAll('.beh-sort button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
-  behRenderBoard();
-}
 function behIsToday(iso){
   const d=new Date(iso),n=new Date();
   return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
 }
-function behRenderBoard(){
-  const cls=c1AllClasses().find(c=>c.id===behClass);
-  const box=document.getElementById('beh-board'),sum=document.getElementById('beh-sum');
-  if(!cls||!(cls.students||[]).length){
-    sum.innerHTML='';
-    box.innerHTML='<div class="plan-empty-card">لا قائمة طلاب لهذه الشعبة بعد — أضيفيها من قسم النجوم.</div>';
-    return;
-  }
-  const arr=behArr(behClass);
-  // ملخّص الشعبة: ما يهم المعلمة فعلاً هو حركة اليوم ومن يحتاج متابعة
-  let todayP=0,todayV=0,needFollow=0;
-  cls.students.forEach((_,i)=>{
-    const log=arr[i]||[];
-    log.forEach(e=>{if(behIsToday(e.date)){if(e.kind==='part')todayP++;else todayV++;}});
-    if(log.filter(e=>e.kind==='viol').length>=3)needFollow++;
-  });
-  sum.innerHTML=`
-    <div class="beh-sum-c" style="--sc:var(--olive-d)"><b>${egArNum(todayP)}</b><span>مشاركة اليوم</span></div>
-    <div class="beh-sum-c" style="--sc:var(--red-d)"><b>${egArNum(todayV)}</b><span>ملاحظة اليوم</span></div>
-    <div class="beh-sum-c" style="--sc:${needFollow?'var(--red-deep)':'var(--border)'}"><b>${egArNum(needFollow)}</b><span>تحتاج متابعة (٣+)</span></div>
-    <div class="beh-sum-c" style="--sc:var(--border)"><b>${egArNum(cls.students.length)}</b><span>طلاب الشعبة</span></div>`;
-  const q=(document.getElementById('beh-search').value||'').trim();
-  let rows=cls.students.map((nm,i)=>{
-    const log=arr[i]||[];
-    return{nm,i,p:log.filter(e=>e.kind==='part').length,v:log.filter(e=>e.kind==='viol').length,
-      last:log.length?log.reduce((a,b)=>new Date(b.date)>new Date(a.date)?b:a):null};
-  }).filter(r=>!q||r.nm.includes(q));
-  if(behSortBy==='part')rows.sort((a,b)=>b.p-a.p);
-  else if(behSortBy==='viol')rows.sort((a,b)=>b.v-a.v);
-  if(!rows.length){box.innerHTML='<div class="plan-empty-card">لا نتائج مطابقة للبحث</div>';return;}
-  box.innerHTML=rows.map(r=>{
-    const cardCls=r.v>=3?'alert':(r.v>0?'warn':'');
-    const lastTxt=r.last?(behIsToday(r.last.date)?'آخر تسجيل: اليوم':'آخر تسجيل: '+new Date(r.last.date).toLocaleDateString('ar')):'لا تسجيلات بعد';
-    return `<div class="beh-card ${cardCls}">
-      <div class="beh-c-top">
-        <div class="beh-c-nm" onclick="behOpenFile('${cls.id}',${r.i})" title="افتحي ملف الطالب">${escHtml(r.nm)}</div>
-        <div class="beh-c-stats">
-          <span class="beh-pill part ${r.p?'':'zero'}" title="مشاركات">${egArNum(r.p)}</span>
-          <span class="beh-pill viol ${r.v?'':'zero'}" title="ملاحظات">${egArNum(r.v)}</span>
-        </div>
-      </div>
-      <div class="beh-c-row">
-        <button class="beh-b part" onclick="behQuickPart('${cls.id}',${r.i})">+ مشاركة</button>
-        <button class="beh-b note" onclick="behOpenAdd('${cls.id}',${r.i})">ملاحظة</button>
-      </div>
-      <div class="beh-c-last">${lastTxt}</div>
-    </div>`;
-  }).join('');
-}
-// تسجيل موحّد + تمكين التراجع الفوري
+// تسجيل ملاحظة + تمكين التراجع الفوري
 async function behPush(classId,idx,entry,busyMsg){
-  const arr=behArr(classId).map(a=>a.slice());
-  arr[idx]=[...arr[idx],entry];
-  profile.beh_log={...(profile.beh_log||{}),[classId]:arr};
+  stuLogPush(classId,idx,entry);
   _behLast={classId,idx,at:entry.date};
-  if(classId===behClass)behRenderBoard();
-  behShowUndo(entry.kind==='part'?'سُجّلت مشاركة':'سُجّلت ملاحظة');
+  if(classId===starClass)starRenderBoard();
+  behShowUndo('سُجّلت ملاحظة');
   await cy1Save({beh_log:profile.beh_log},busyMsg);
 }
 function behShowUndo(msg){
@@ -6024,13 +5992,8 @@ async function behUndo(){
   profile.beh_log={...(profile.beh_log||{}),[classId]:arr};
   _behLast=null;
   document.getElementById('beh-undo-toast').classList.remove('show');
-  if(classId===behClass)behRenderBoard();
+  if(classId===starClass)starRenderBoard();
   await cy1Save({beh_log:profile.beh_log},'يتراجع');
-}
-// المشاركة الإيجابية: بضغطة واحدة بلا نافذة — أكثر فعل تكراراً في الحصة
-async function behQuickPart(classId,idx){
-  starDing();
-  await behPush(classId,idx,{kind:'part',date:new Date().toISOString()},'يسجّل المشاركة');
 }
 async function behOpenAdd(classId,idx){
   await behLoadTypes();
@@ -6050,37 +6013,25 @@ async function behLogViolation(type){
   behAddClose();
   await behPush(classId,idx,{kind:'viol',type,date:new Date().toISOString()},'يسجّل الملاحظة');
 }
-function behOpenFile(classId,idx){
-  const cls=starClassObj(classId);
-  const nm=(cls&&cls.students&&cls.students[idx])||'';
-  const log=(behArr(classId)[idx]||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
-  _behCtx={classId,idx};
-  document.getElementById('beh-file-title').textContent='ملف '+nm;
-  const vC=log.filter(e=>e.kind==='viol').length,pC=log.filter(e=>e.kind==='part').length;
-  document.getElementById('beh-file-summary').innerHTML=
-    `<div class="s"><b style="color:var(--olive-d)">${egArNum(pC)}</b><span>مشاركات</span></div>
-     <div class="s"><b style="color:var(--red-d)">${egArNum(vC)}</b><span>ملاحظات</span></div>`;
-  const list=document.getElementById('beh-file-list');
-  if(!log.length){list.innerHTML='<div class="plan-empty-card">لا سجل بعد لهذا الطالب</div>';}
-  else list.innerHTML=log.map(e=>{
-    const d=new Date(e.date);
-    const dt=d.toLocaleDateString('ar')+' '+d.toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="beh-file-item ${e.kind}"><span class="dot"></span><span class="tp">${e.kind==='viol'?escHtml(e.type||'ملاحظة'):'مشاركة إيجابية'}</span><span class="dt">${dt}</span>
-      <button class="beh-del-e" onclick="behDelEntry('${e.date}')" title="حذف هذا التسجيل">✕</button></div>`;
-  }).join('');
-  document.getElementById('beh-file-modal').classList.add('open');
-}
-// حذف تسجيل خاطئ من داخل ملف الطالب
+// حذف تسجيل خاطئ من داخل ملف الطالب — النجمة تُنقص العدّاد أيضاً ليبقى مطابقاً
 async function behDelEntry(at){
   if(!_behCtx)return;
   const{classId,idx}=_behCtx;
   if(!await c1Confirm('حذف هذا التسجيل من ملف الطالب؟'))return;
   const arr=behArr(classId).map(a=>a.slice());
+  const gone=(arr[idx]||[]).find(e=>e.date===at);
   arr[idx]=(arr[idx]||[]).filter(e=>e.date!==at);
   profile.beh_log={...(profile.beh_log||{}),[classId]:arr};
-  behOpenFile(classId,idx);
-  if(classId===behClass)behRenderBoard();
-  await cy1Save({beh_log:profile.beh_log},'يحذف التسجيل');
+  const save={beh_log:profile.beh_log};
+  if(gone&&gone.kind==='star'){
+    const s=starArr(classId).slice();
+    s[idx]=Math.max(0,(s[idx]||0)-1);
+    profile.stars={...(profile.stars||{}),[classId]:s};
+    save.stars=profile.stars;
+  }
+  stuOpenFile(classId,idx);
+  if(classId===starClass)starRenderBoard();
+  await cy1Save(save,'يحذف التسجيل');
 }
 function behFileClose(){document.getElementById('beh-file-modal').classList.remove('open');_behCtx=null;}
 
