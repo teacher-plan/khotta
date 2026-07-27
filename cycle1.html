@@ -151,43 +151,22 @@ body.inapp #c1-notif-btn{display:flex}
 /* ── يومي: لوحة الصباح ── */
 .yw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
 
-/* ── مسار اليوم: الجدول كشريط زمني حيّ بدل جدول ٥×٨ ── */
-.rail-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:14px 16px 16px;margin-top:14px}
-.rail-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap}
-.rail-days{display:flex;gap:5px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:3px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-.rail-days::-webkit-scrollbar{display:none}
-.rail-days button{flex:1;min-width:52px;border:none;background:none;border-radius:9px;padding:8px 6px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;position:relative}
-.rail-days button.sel{background:var(--surface);color:var(--red-d);box-shadow:0 1px 4px rgba(48,24,0,.1)}
-.rail-days button.today::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--olive)}
-.rail-week-btn{flex:none;border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:9px 14px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.rail-week-btn:hover{border-color:var(--red);color:var(--red-d)}
-/* القضيب: كل محطة صفّ، والخط الرأسي يمرّ بالنقاط */
-.rail{position:relative;padding-inline-start:6px}
-.rail-stop{position:relative;display:flex;gap:12px;padding:0 0 2px}
-.rail-gut{position:relative;flex:none;width:26px;display:flex;flex-direction:column;align-items:center}
-.rail-gut::before{content:'';position:absolute;top:0;bottom:0;width:2px;background:var(--border)}
-.rail-stop:first-child .rail-gut::before{top:13px}
-.rail-stop:last-child .rail-gut::before{bottom:auto;height:13px}
-.rail-pt{position:relative;z-index:2;width:11px;height:11px;border-radius:50%;background:var(--border);margin-top:8px;box-shadow:0 0 0 3px var(--surface)}
-.rail-stop.past .rail-pt{background:var(--olive)}
-.rail-stop.now .rail-pt{background:var(--red);width:15px;height:15px;margin-top:6px;box-shadow:0 0 0 3px var(--surface),0 0 0 6px rgba(216,96,72,.22);animation:railPulse 2s ease-out infinite}
-@keyframes railPulse{70%{box-shadow:0 0 0 3px var(--surface),0 0 0 13px rgba(216,96,72,0)}100%{box-shadow:0 0 0 3px var(--surface),0 0 0 0 rgba(216,96,72,0)}}
-@media(prefers-reduced-motion:reduce){.rail-stop.now .rail-pt{animation:none}}
-.rail-body{flex:1;min-width:0;padding-bottom:12px}
-.rail-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
-.rail-time{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;min-width:40px;font-weight:700}
-.rail-cls{font-size:13.5px;font-weight:800;color:var(--ink)}
-.rail-sub{font-size:12px;color:var(--muted)}
-/* الوسم يُدفع لطرف السطر ليقرأ الصفّ كخطّ زمني لا ككتلة ملتصقة */
-.rail-chip{font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 9px;background:var(--card);color:var(--muted);flex:none;margin-inline-start:auto}
+/* ── جدول اليوم وغد: صفّان فقط بتنسيق الجدول الكامل نفسه ── */
+.tt2-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(48,24,0,.07);margin-top:14px}
+.tt2-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.tt2-t{flex:1;min-width:0;font-size:12.5px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt2-btn{flex:none;border:1.5px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 11px;font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+.tt2-btn:hover{border-color:var(--red);color:var(--red-d)}
+.tt2-btn svg{flex:none}
+@media(max-width:480px){.tt2-btn .lbl{display:none}.tt2-btn{padding:6px 9px}}
+/* وسم اليوم/غداً داخل خانة اسم اليوم */
+.tt2-tag{display:block;font-size:9.5px;font-weight:800;color:var(--muted);margin-top:2px}
+#yw-tt tr.today .tt2-tag{color:var(--red-d)}
+.tt2-empty{padding:22px 16px;text-align:center;font-size:12.5px;color:var(--muted);line-height:1.9}
 /* المدى الزمني يُكتب من اليسار لليمين وإلا عكسه محرك الاتجاه (١٧:٠٦ – ١٧:٢٦ لا العكس) */
-.rail-chip.range,.tt-day-spec .rng,#c1-tt .tm{direction:ltr;unicode-bidi:isolate;display:inline-block}
-.rail-stop.past{opacity:.52}
-.rail-stop.spec .rail-cls{font-weight:700;color:var(--muted);font-size:12.5px}
-.rail-stop.empty .rail-cls{color:var(--muted);font-weight:700;font-size:12px;opacity:.65}
-.rail-stop.empty .rail-pt{background:var(--bg);box-shadow:0 0 0 2px var(--border),0 0 0 5px var(--surface)}
-/* المحطة الجارية: تتوسّع تلقائياً بكل ما تحتاجه المعلمة الآن */
-.rail-now-card{margin-top:9px;background:linear-gradient(150deg,var(--red-deep),var(--red-d) 60%,var(--red));color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 22px rgba(122,32,32,.24)}
+.tt-day-spec .rng,#c1-tt .tm,#yw-tt .tm{direction:ltr;unicode-bidi:isolate;display:inline-block}
+/* بطاقة الحصة الجارية — تبقى فوق الجدول لأنها الفعل الأهم في اليوم */
+.rail-now-card{margin:14px 0 0;background:linear-gradient(150deg,var(--red-deep),var(--red-d) 60%,var(--red));color:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 22px rgba(122,32,32,.24)}
 .rail-now-card .t{font-size:11px;font-weight:800;opacity:.85;letter-spacing:.4px;margin-bottom:4px}
 .rail-now-card .b{font-size:17px;font-weight:800;line-height:1.4}
 .rail-now-card .r{font-size:12px;opacity:.9;margin-top:3px}
@@ -198,7 +177,6 @@ body.inapp #c1-notif-btn{display:flex}
 .rail-now-btns button.solid{background:#fff;color:var(--red-deep);border-color:#fff}
 .rail-now-btns button:hover{background:rgba(255,255,255,.22)}
 .rail-now-btns button.solid:hover{background:rgba(255,255,255,.9)}
-.rail-empty{font-size:12.5px;color:var(--muted);line-height:1.9;padding:14px 2px;text-align:center}
 /* لوحة الأسبوع المنزلقة — تحتضن الجدول الكامل وأدوات التعديل */
 #wk-sheet{position:fixed;inset:0;z-index:940;background:rgba(48,24,0,.5);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:18px 12px;overflow:auto}
 #wk-sheet.open{display:flex}
@@ -310,21 +288,21 @@ body.inapp #c1-notif-btn{display:flex}
 .tt-btn.olive{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border-color:var(--olive-d)}
 .tt-shell{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(48,24,0,.07)}
 .tt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-#c1-tt{width:100%;border-collapse:collapse;min-width:680px}
-#c1-tt th{background:var(--card);padding:9px 6px;font-size:12px;font-weight:800;border-bottom:2px solid var(--border);border-inline-start:1px solid var(--border)}
-#c1-tt th:first-child{border-inline-start:none;position:sticky;right:0;background:var(--card);z-index:2}
-#c1-tt th .tm{display:block;font-size:9.5px;color:var(--muted);font-weight:700;margin-top:2px}
-#c1-tt td{border-top:1px solid var(--border);border-inline-start:1px solid var(--border);padding:5px;text-align:center;height:56px;vertical-align:middle}
-#c1-tt td:first-child{border-inline-start:none;background:var(--card);font-weight:800;font-size:12.5px;position:sticky;right:0;z-index:1;white-space:nowrap;padding:5px 12px}
-#c1-tt tr.today td:first-child{color:var(--red-d)}
-#c1-tt tr.today{background:rgba(216,96,72,.05)}
+#c1-tt,#yw-tt{width:100%;border-collapse:collapse;min-width:680px}
+#c1-tt th,#yw-tt th{background:var(--card);padding:9px 6px;font-size:12px;font-weight:800;border-bottom:2px solid var(--border);border-inline-start:1px solid var(--border)}
+#c1-tt th:first-child,#yw-tt th:first-child{border-inline-start:none;position:sticky;right:0;background:var(--card);z-index:2}
+#c1-tt th .tm,#yw-tt th .tm{display:block;font-size:9.5px;color:var(--muted);font-weight:700;margin-top:2px}
+#c1-tt td,#yw-tt td{border-top:1px solid var(--border);border-inline-start:1px solid var(--border);padding:5px;text-align:center;height:56px;vertical-align:middle}
+#c1-tt td:first-child,#yw-tt td:first-child{border-inline-start:none;background:var(--card);font-weight:800;font-size:12.5px;position:sticky;right:0;z-index:1;white-space:nowrap;padding:5px 12px}
+#c1-tt tr.today td:first-child,#yw-tt tr.today td:first-child{color:var(--red-d)}
+#c1-tt tr.today,#yw-tt tr.today{background:rgba(216,96,72,.05)}
 .tt-cell{border-radius:10px;padding:6px 5px;font-size:11.5px;font-weight:800;line-height:1.5;cursor:pointer;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.12s;border:1.5px solid transparent}
 .tt-cell:hover{transform:scale(1.04)}
 .tt-cell .cn{font-size:13px}
 .tt-cell .sn{font-size:9.5px;opacity:.8}
 .tt-cell.empty{color:var(--muted);border:1.5px dashed var(--border);font-weight:700;font-size:10px;opacity:.7}
 .tt-cell.live{box-shadow:0 0 0 2.5px var(--red),0 4px 12px rgba(216,96,72,.35)}
-#c1-tt tr.spec td{height:34px;background:linear-gradient(90deg,rgba(192,168,72,.10),rgba(192,168,72,.04));font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.4px}
+#c1-tt tr.spec td,#yw-tt tr.spec td{height:34px;background:linear-gradient(90deg,rgba(192,168,72,.10),rgba(192,168,72,.04));font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.4px}
 /* نسخة الهاتف من الجدول — تبويب أيام + قائمة حصص عمودية بدل جدول أفقي */
 .tt-mobile{display:none}
 .tt-day-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-top:12px;-webkit-overflow-scrolling:touch}
@@ -344,8 +322,8 @@ body.inapp #c1-notif-btn{display:flex}
 .tt-row-body .sn{display:block;font-size:11.5px;opacity:.85;margin-top:2px}
 .tt-row-cell.empty .tt-row-body{color:var(--muted);font-weight:700;font-size:12px}
 @media(max-width:560px){
-  .tt-shell{display:none}
-  .tt-mobile{display:block}
+  #wk-sheet .tt-shell{display:none}
+  #wk-sheet .tt-mobile{display:block}
 }
 /* منتقي الخلية */
 .c1-modal{position:fixed;inset:0;z-index:500;background:rgba(48,24,0,.5);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
@@ -1342,14 +1320,17 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
     <div id="tt-setup" class="hidden"></div>
     <div id="yw-main" class="hidden">
-      <!-- مسار اليوم: الجدول كشريط زمني حيّ — حلّ محلّ قسم الجدول بالكامل -->
-      <div class="rail-wrap">
-        <div class="rail-head">
-          <div class="rail-days" id="rail-days"></div>
-          <button class="rail-week-btn" onclick="wksOpen()">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>الأسبوع</button>
+      <!-- بطاقة الحصة الجارية + جدول اليوم وغد (صفّان بتنسيق الجدول الكامل) -->
+      <div id="yw-now-card"></div>
+      <div class="tt2-wrap">
+        <div class="tt2-head">
+          <div class="tt2-t" id="tt2-title">جدول اليوم وغد</div>
+          <button class="tt2-btn" onclick="wksOpen(true)" title="تعديل الجدول كاملاً">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg><span class="lbl">تعديل</span></button>
+          <button class="tt2-btn" onclick="wksOpen()" title="إظهار الجدول كاملاً">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg><span class="lbl">الجدول كامل</span></button>
         </div>
-        <div class="rail" id="yw-rail"></div>
+        <div class="tt-scroll"><table id="yw-tt"><thead id="yw-tt-h"></thead><tbody id="yw-tt-b"></tbody></table></div>
       </div>
       <div class="yw-insights" id="yw-insights"></div>
       <div class="yw-grid">
@@ -2371,78 +2352,62 @@ function renderYawmi(){
     return;
   }
   setupBox.classList.add('hidden');main.classList.remove('hidden');
-  ywRenderRail();
+  ywRenderTT();
   ywRenderStars();
   ywRenderNote();
   renderTasks();
   ywRenderFahim();
   ywRenderInsights();
-  ywTick=setInterval(()=>{ywRenderRail();},30000);
+  // التحديث الدوري يمسّ البطاقة الجارية والخلية المميّزة فقط — لا إعادة بناء الجدول
+  ywTick=setInterval(async()=>{ywRenderNowCard();ttMarkLive(await ttNowState());},30000);
 }
-// ═ مسار اليوم — الجدول كشريط زمني حيّ داخل يومي (بديل قسم الجدول) ═
-let railDay=null;
-function railSwitch(d){railDay=d;ywRenderRail();}
-async function ywRenderRail(){
-  const box=document.getElementById('yw-rail');if(!box)return;
+// ═ جدول اليوم وغد — صفّان بتنسيق الجدول الكامل نفسه، داخل يومي ═
+// اليوم وما يليه من أيام الدراسة؛ وفي العطلة يُعرض الأحد والاثنين
+function tt2Days(){
+  const map=['sun','mon','tue','wed','thu','fri','sat'];
+  const todayId=map[new Date().getDay()];
+  const pos=TT_DAYS.findIndex(d=>d.id===todayId);
+  if(pos<0)return{days:[TT_DAYS[0],TT_DAYS[1]],todayId:null};
+  return{days:[TT_DAYS[pos],TT_DAYS[(pos+1)%TT_DAYS.length]],todayId};
+}
+async function ywRenderTT(){
+  const head=document.getElementById('yw-tt-h'),body=document.getElementById('yw-tt-b');
+  if(!head||!body)return;
   const t=await ttTimes();
-  const todayId=(TT_DAYS[new Date().getDay()]||{}).id;
-  if(!railDay||!TT_DAYS.some(d=>d.id===railDay))railDay=todayId||TT_DAYS[0].id;
-  const tabs=document.getElementById('rail-days');
-  if(tabs)tabs.innerHTML=TT_DAYS.map(d=>
-    `<button class="${d.id===railDay?'sel':''} ${d.id===todayId?'today':''}" onclick="railSwitch('${d.id}')">${d.nm}</button>`
-  ).join('');
-  const isToday=railDay===todayId;
-  const row=ttData().schedule[railDay]||{};
-  const nowMin=(()=>{const n=new Date();return n.getHours()*60+n.getMinutes();})();
-  // محطات اليوم بالترتيب: الطابور ← الحصص مع إقحام الفسحة في موضعها
-  const stops=[{kind:'spec',time:t.assembly[0],label:'الطابور',end:t.assembly[1]}];
-  t.periods.forEach((pt,i)=>{
-    stops.push({kind:'period',p:i,time:pt[0],end:pt[1],v:row[i]});
-    if(i+1===t.breakAfter)stops.push({kind:'spec',time:t.breakTime[0],label:'الفسحة',end:t.breakTime[1]});
-  });
-  const filled=t.periods.some((_,i)=>row[i]);
-  if(!filled){
-    box.innerHTML=`<div class="rail-empty">لا حصص مسجّلة ليوم ${TT_DAYS.find(d=>d.id===railDay).nm} بعد.<br>
-      <button class="rail-week-btn" style="margin-top:11px" onclick="wksOpen(true)">أضيفي حصص هذا اليوم</button></div>`;
-    return;
-  }
-  box.innerHTML=stops.map(s=>{
-    const stMin=ttMins(s.time),enMin=ttMins(s.end);
-    let state='';
-    if(isToday){
-      if(nowMin>=enMin)state='past';
-      else if(nowMin>=stMin)state='now';
-    }
-    if(s.kind==='spec'){
-      return `<div class="rail-stop spec ${state}"><div class="rail-gut"><span class="rail-pt"></span></div>
-        <div class="rail-body"><div class="rail-line"><span class="rail-time">${s.time}</span>
-        <span class="rail-cls">${s.label}</span><span class="rail-chip range">${s.time} – ${s.end}</span></div></div></div>`;
-    }
-    const c=s.v?c1AllClasses().find(x=>x.id===s.v.c):null;
-    const col=(c&&c.color)||'var(--border)';
-    const body=s.v
-      ?`<span class="yw-dot" style="background:${col}"></span><span class="rail-cls">${escHtml(c?c.name:'?')}</span><span class="rail-sub">${escHtml(s.v.s||'')}</span>`
-      :`<span class="rail-cls">حصة فارغة</span>`;
-    // المحطة الجارية تتوسّع ببطاقة فيها المتبقي وزرّا البدء والتحضير
-    let card='';
-    if(state==='now'&&isToday){
-      const rem=Math.max(0,enMin-nowMin),len=Math.max(1,enMin-stMin);
-      const pct=Math.round((1-rem/len)*100);
-      card=`<div class="rail-now-card">
-        <div class="t">الحصة ${egArNum(s.p+1)} — جارية الآن</div>
-        <div class="b">${s.v?escHtml((c?c.name:'?')+' · '+(s.v.s||'')):'حصة فارغة في جدولك'}</div>
-        <div class="r">تبقّى ${egArNum(rem)} دقيقة</div>
-        <div class="rail-bar"><i style="width:${pct}%"></i></div>
-        ${s.v?`<div class="rail-now-btns">
-          <button class="solid" data-c="${escHtml(s.v.c)}" data-s="${escHtml(s.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>
-          <button onclick="prepOpen('${s.v.c}','${escHtml(s.v.s)}')">تحضير الحصة</button>
-        </div>`:''}
-      </div>`;
-    }
-    return `<div class="rail-stop ${state} ${s.v?'':'empty'}"><div class="rail-gut"><span class="rail-pt"></span></div>
-      <div class="rail-body"><div class="rail-line"><span class="rail-time">${s.time}</span>${body}
-      ${state==='past'&&s.v?'<span class="rail-chip">انتهت</span>':''}</div>${card}</div></div>`;
-  }).join('');
+  const{days,todayId}=tt2Days();
+  const sch=ttData().schedule;
+  const ttl=document.getElementById('tt2-title');
+  if(ttl)ttl.textContent=todayId?`جدول ${days[0].nm} و${days[1].nm}`:'جدول الأحد والاثنين';
+  head.innerHTML='<tr><th>اليوم</th>'+t.periods.map((pt,i)=>
+    `<th>الحصة ${egArNum(i+1)}<span class="tm">${pt[0]} – ${pt[1]}</span></th>`).join('')+'</tr>';
+  body.innerHTML=
+    `<tr class="spec"><td>الطابور</td><td colspan="${t.periods.length}">اصطفاف الصباح <span class="tm">${t.assembly[0]} – ${t.assembly[1]}</span> &nbsp;·&nbsp; الفسحة بعد الحصة ${egArNum(t.breakAfter)} (<span class="tm">${t.breakTime[0]} – ${t.breakTime[1]}</span>)</td></tr>`
+    +days.map((day,di)=>{
+      const row=sch[day.id]||{};
+      const tag=todayId?(di===0?'اليوم':'غداً'):'';
+      return `<tr class="${day.id===todayId?'today':''}"><td>${day.nm}${tag?`<span class="tt2-tag">${tag}</span>`:''}</td>`
+        +t.periods.map((_,p)=>`<td>${ttCellHtml(day.id,p,row[p])}</td>`).join('')+'</tr>';
+    }).join('');
+  ywRenderNowCard();
+  ttMarkLive(await ttNowState());
+}
+// بطاقة الحصة الجارية فوق الجدول — الفعل الأهم في اليوم
+async function ywRenderNowCard(){
+  const box=document.getElementById('yw-now-card');if(!box)return;
+  const st=await ttNowState();
+  if(!st.live||!st.v){box.innerHTML='';return;}
+  const c=c1AllClasses().find(x=>x.id===st.v.c);
+  const pct=Math.round((1-st.rem/st.len)*100);
+  box.innerHTML=`<div class="rail-now-card">
+    <div class="t">الحصة ${egArNum(st.p+1)} — جارية الآن</div>
+    <div class="b">${escHtml((c?c.name:'?')+' · '+(st.v.s||''))}</div>
+    <div class="r">تبقّى ${egArNum(st.rem)} دقيقة</div>
+    <div class="rail-bar"><i style="width:${pct}%"></i></div>
+    <div class="rail-now-btns">
+      <button class="solid" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>
+      <button onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>
+    </div>
+  </div>`;
 }
 // لوحة الأسبوع
 function wksOpen(edit){
@@ -2455,7 +2420,7 @@ function wksClose(){
   document.getElementById('wk-sheet').classList.remove('open');
   document.body.style.overflow='';
   if(ttEdit)ttToggleEdit();
-  ywRenderRail();
+  ywRenderTT();
 }
 function ywRenderStars(){
   const box=document.getElementById('yw-stars');if(!box)return;
@@ -3138,14 +3103,14 @@ async function ttNowState(){
 // أُبقيت لتمييز الخلية الجارية داخل لوحة الأسبوع وتحديث مسار اليوم بعد أي تعديل
 // بعد أي تعديل على الجدول أو الأوقات: يُحدَّث مسار اليوم وتُميَّز الخلية الجارية
 async function ttRenderNow(){
-  ywRenderRail();
+  ywRenderTT();
   ttMarkLive(await ttNowState());
 }
+// الخلية الجارية تُميَّز في الجدولين معاً (جدول يومي ولوحة الأسبوع)
 function ttMarkLive(st){
   document.querySelectorAll('.tt-cell.live').forEach(c=>c.classList.remove('live'));
   if(st&&st.live&&st.dayId){
-    const cell=document.querySelector(`.tt-cell[data-d="${st.dayId}"][data-p="${st.p}"]`);
-    if(cell)cell.classList.add('live');
+    document.querySelectorAll(`.tt-cell[data-d="${st.dayId}"][data-p="${st.p}"]`).forEach(c=>c.classList.add('live'));
   }
 }
 // ═══════════ قسم الخطة — وحدات ودروس موادك (مبني على نمط صفحة المعلم) ═══════════
