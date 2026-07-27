@@ -2257,6 +2257,7 @@ async function c1ResetData(){
   cyBusy('يحذف بياناتك');
   try{
     await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
+    c1CacheClear();
     cyBusyDone();
     toast('حُذفت بياناتك — نبدأ من جديد');
     setTimeout(()=>location.reload(),900);
@@ -2265,6 +2266,8 @@ async function c1ResetData(){
 
 async function confirmSignOut(){
   if(!await c1Confirm('تسجيل الخروج؟'))return;
+  await cy1Flush();                    // لا نترك تعديلاً غير مرفوع
+  c1CacheClear();                      // لا نُبقي بيانات على جهاز قد تشاركه معلمة أخرى
   sb.auth.signOut().then(()=>location.reload());
 }
 function showLogin(msg){
@@ -2338,6 +2341,54 @@ function cy1Save(partial,busyText){
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')cy1Flush();});
 window.addEventListener('pagehide',()=>{cy1Flush();});
+
+// ══ ذاكرة البيانات المرجعية ══
+// جداول يديرها المشرف ولا تخص معلمة بعينها (المناهج، الأوقات، الثيمات، أنواع المخالفات).
+// تُخزَّن في الذاكرة + localStorage بمدة صلاحية، فلا تُطلب من الخادم في كل انتقال.
+// ⚠️ لا تُخزَّن هنا أي بيانات معلمة (النجوم، المخالفات، المهام، الرسائل) — تلك تُرفع وتُقرأ حيّة دائماً.
+const C1_CACHE_V=1;                    // ارفعي الرقم لإبطال كل المخزون بعد تغيير بنية البيانات
+const C1_TTL={curriculum:864e5,book_sources:864e5,violation_types:432e5,ai_settings:216e5,game_themes:216e5};
+const _c1Mem=new Map();
+function _c1Key(table,tag){return `c1c${C1_CACHE_V}:${table}:${tag}`;}
+function _c1Purge(){try{Object.keys(localStorage).forEach(k=>{if(k.startsWith('c1c'))localStorage.removeItem(k);});}catch(e){}}
+function c1CacheClear(){_c1Mem.clear();_c1Purge();}
+// جلب مُخزَّن: fetcher يُستدعى فقط عند غياب النسخة أو انتهاء صلاحيتها.
+// fresh=true يتجاوز المخزون ويُحدّثه (لزر «تحديث الدروس» مثلاً).
+async function c1Ref(table,tag,fetcher,fresh){
+  const key=_c1Key(table,tag),ttl=C1_TTL[table]||216e5,now=Date.now();
+  if(!fresh){
+    const m=_c1Mem.get(key);
+    if(m&&now-m.t<ttl)return m.d;
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw){
+        const p=JSON.parse(raw);
+        if(p&&now-p.t<ttl){_c1Mem.set(key,p);return p.d;}
+        localStorage.removeItem(key);
+      }
+    }catch(e){}
+  }
+  const d=await fetcher();
+  if(d==null)return d;                 // فشل الطلب: لا نُخزّن الفراغ
+  const rec={t:now,d};
+  _c1Mem.set(key,rec);
+  try{localStorage.setItem(key,JSON.stringify(rec));}
+  catch(e){_c1Purge();try{localStorage.setItem(key,JSON.stringify(rec));}catch(e2){}}
+  return d;
+}
+// المناهج: أكثر جدول يُطلب في التطبيق (٦ مواضع) — مفتاحه فصل|مادة|صف
+function c1Curriculum(semester,subject,grade,cols,fresh){
+  return c1Ref('curriculum',`${semester}|${subject}|${grade}|${cols||'*'}`,async()=>{
+    const{data,error}=await sb.from('curriculum').select(cols||'*').eq('semester',semester).eq('subject',subject).eq('grade',String(grade)).order('sort');
+    return error?null:(data||[]);
+  },fresh);
+}
+function c1Setting(key){
+  return c1Ref('ai_settings',key,async()=>{
+    const{data,error}=await sb.from('ai_settings').select('value').eq('key',key).maybeSingle();
+    return error?null:(data&&data.value!=null?data.value:'');
+  });
+}
 
 // ══ يومي — لوحة الصباح ══
 let ywTick=null;
@@ -2556,7 +2607,7 @@ async function prepOpen(classId,subject){
     if(!units.length){
       try{
         const semester=profile.semester||'الفصل الأول';
-        const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',subject).eq('grade',String(g.num)).order('sort');
+        const data=await c1Curriculum(semester,subject,g.num);
         if(data&&data.length){
           units=buildUnitsFromRows(data,semester,subject);
           profile.plan_units={...(profile.plan_units||{}),[key]:units};
@@ -2783,10 +2834,9 @@ async function ttTimes(){
   // مسار اليوم يعتمد على هذه الأوقات، فلا نُبقيه فارغاً إن تعثّر الاتصال —
   // نُمهل الطلب ثانيتين ثم نمضي بالافتراضي المدمج.
   try{
-    const q=sb.from('ai_settings').select('value').eq('key','c1_tt_defaults').maybeSingle();
-    const res=await Promise.race([q,new Promise(r=>setTimeout(()=>r(null),2000))]);
-    const data=res&&res.data;
-    if(data&&data.value){const v=JSON.parse(data.value);if(v&&v.periods){t.times=v;return v;}}
+    const q=c1Setting('c1_tt_defaults');
+    const val=await Promise.race([q,new Promise(r=>setTimeout(()=>r(null),2000))]);
+    if(val){const v=JSON.parse(val);if(v&&v.periods){t.times=v;return v;}}
   }catch(e){}
   t.times=JSON.parse(JSON.stringify(TT_FALLBACK));
   return t.times;
@@ -3235,7 +3285,7 @@ async function planRenderUnits(){
     box.innerHTML='<div class="plan-empty-card">يجري البحث عن دروس هذه المادة...</div>';
     try{
       const semester=profile.semester||'الفصل الأول';
-      const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',planSubject).eq('grade',String(planGrade)).order('sort');
+      const data=await c1Curriculum(semester,planSubject,planGrade);
       if(data&&data.length){
         units=buildUnitsFromRows(data,semester,planSubject);
         profile.plan_units={...(profile.plan_units||{}),[key]:units};
@@ -3328,9 +3378,10 @@ async function planRefresh(){
   cyBusy('يجلب الدروس من قاعدة البيانات');
   try{
     const semester=profile.semester||'الفصل الأول';
-    const{data,error}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',planSubject).eq('grade',String(planGrade)).order('sort');
-    if(error)throw error;
-    const units=(data&&data.length)?buildUnitsFromRows(data,semester,planSubject):[];
+    // زر يدوي: نتجاوز المخزون ونُحدّثه بأحدث نسخة من الخادم
+    const data=await c1Curriculum(semester,planSubject,planGrade,null,true);
+    if(!data)throw new Error('fetch failed');
+    const units=data.length?buildUnitsFromRows(data,semester,planSubject):[];
     const all={...(profile.plan_units||{}),[key]:units};
     await cy1Save({plan_units:all});
     toast(units.length?'تحدّثت الدروس':'لا يوجد كتاب مرفوع لهذه المادة بعد');
@@ -3349,7 +3400,7 @@ function planFindLesson(id){
 async function c1LessonBookImages(grade,subject,unitName,lessonName){
   try{
     const semester=profile.semester||'الفصل الأول';
-    const{data:curRows}=await sb.from('curriculum').select('unit,lesson,sort,page,book_no').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester);
+    const curRows=await c1Curriculum(semester,subject,grade,'unit,lesson,sort,page,book_no');
     if(!curRows||!curRows.length)return null;
     const bookNos=[...new Set(curRows.map(r=>r.book_no||1))];
     for(const bookNo of bookNos){
@@ -3357,7 +3408,10 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
       const idx=sorted.findIndex(r=>r.unit===unitName&&r.lesson===lessonName);
       if(idx<0)continue;
       const start=parseInt(sorted[idx].page);if(!start)continue;
-      const{data:bs}=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).eq('book_no',bookNo).maybeSingle();
+      const bs=await c1Ref('book_sources',`${semester}|${subject}|${grade}|${bookNo}`,async()=>{
+        const{data,error}=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).eq('book_no',bookNo).maybeSingle();
+        return error?null:(data||false);   // false = «لا مصدر» وهي نتيجة صالحة تُخزَّن
+      });
       if(!bs||!bs.base_path||!bs.page_count)continue;
       const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
       let end=pageCount;
@@ -4059,7 +4113,7 @@ async function todayCtx(){
   if(!units.length){
     try{
       const semester=profile.semester||'الفصل الأول';
-      const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',subject).eq('grade',String(grade)).order('sort');
+      const data=await c1Curriculum(semester,subject,grade);
       if(data&&data.length){units=buildUnitsFromRows(data,semester,subject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
     }catch(e){}
   }
@@ -4761,7 +4815,7 @@ async function studioRenderLessons(){
   if(!units.length){
     try{
       const semester=profile.semester||'الفصل الأول';
-      const{data}=await sb.from('curriculum').select('*').eq('semester',semester).eq('subject',studioSubject).eq('grade',String(studioGrade)).order('sort');
+      const data=await c1Curriculum(semester,studioSubject,studioGrade);
       if(data&&data.length){units=buildUnitsFromRows(data,semester,studioSubject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
     }catch(e){}
   }
@@ -5056,11 +5110,14 @@ async function gmLoadThemes(){
   if(gmThemes.length&&Date.now()-_gmThemesAt<300000)return;
   _gmThemesAt=Date.now();
   try{
-    const{data:cfgRow}=await sb.from('ai_settings').select('value').eq('key','game_cfg').maybeSingle();
-    gmGameCfg=cfgRow&&cfgRow.value?JSON.parse(cfgRow.value):{};
+    const cfgVal=await c1Setting('game_cfg');
+    gmGameCfg=cfgVal?JSON.parse(cfgVal):{};
   }catch(e){gmGameCfg={};}
   try{
-    const{data}=await sb.from('game_themes').select('*').order('created_at');
+    const data=await c1Ref('game_themes','all',async()=>{
+      const{data,error}=await sb.from('game_themes').select('*').order('created_at');
+      return error?null:(data||[]);
+    });
     gmThemes=data||[];
     const sel=document.getElementById('gm-theme');
     const cur=sel.value;
@@ -5971,7 +6028,10 @@ async function behLoadTypes(){
   if(behTypesLoaded)return;
   behTypesLoaded=true;
   try{
-    const{data}=await sb.from('violation_types').select('name').eq('cycle','cycle1').eq('active',true).order('sort_order');
+    const data=await c1Ref('violation_types','cycle1',async()=>{
+      const{data,error}=await sb.from('violation_types').select('name').eq('cycle','cycle1').eq('active',true).order('sort_order');
+      return error?null:(data||[]);
+    });
     behTypes=(data||[]).map(r=>r.name);
   }catch(e){behTypes=[];}
 }
@@ -6059,8 +6119,8 @@ let _fhPosesCache=null;
 async function fhPoseUrl(key){
   if(_fhPosesCache===null){
     try{
-      const{data}=await sb.from('ai_settings').select('value').eq('key','fahim_poses').maybeSingle();
-      _fhPosesCache=(data&&data.value)?JSON.parse(data.value):{};
+      const val=await c1Setting('fahim_poses');
+      _fhPosesCache=val?JSON.parse(val):{};
     }catch(e){_fhPosesCache={};}
   }
   return _fhPosesCache[key]||null;
