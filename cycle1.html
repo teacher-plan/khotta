@@ -203,21 +203,23 @@ body.inapp #c1-notif-btn{display:flex}
 .yw-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .yw-nm{font-weight:800;color:var(--ink)}
 .yw-sub{color:var(--muted);margin-inline-start:auto;font-size:11.5px}
-/* تبويبات الشعب داخل بطاقة الصدارة — ترتيب كل شعبة على حدة */
-.yw-cls-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:10px;padding-bottom:2px}
-.yw-cls-tabs::-webkit-scrollbar{display:none}
-.yw-cls-tabs button{flex:none;border:1.5px solid var(--border);background:var(--card);border-radius:20px;padding:5px 13px;font-family:inherit;
-  font-size:11.5px;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.15s}
-.yw-cls-tabs button:hover{border-color:var(--red)}
-.yw-cls-tabs button.sel{background:linear-gradient(135deg,var(--red),var(--red-d));border-color:var(--red-d);color:#fff}
+/* نطاق الصدارة: زر «كل الشعب» + قائمة منسدلة لشعبة واحدة */
+.yw-cls-row{display:flex;gap:7px;align-items:center;margin-bottom:11px}
+.yw-cls-all{flex:none;border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:8px 14px;font-family:inherit;
+  font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.15s}
+.yw-cls-all:hover{border-color:var(--red);color:var(--red-d)}
+.yw-cls-all.sel{background:linear-gradient(135deg,var(--red),var(--red-d));border-color:var(--red-d);color:#fff}
+.yw-cls-row .c1-select{flex:1;min-width:0;max-width:none;padding:8px 34px 8px 12px;font-size:12.5px;background-size:16px;background-position:left 9px center}
 .yw-note-ev{font-size:13px;color:var(--ink);line-height:1.9;background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .yw-note-tasks{font-size:11.5px;color:var(--red-d);font-weight:700}
 /* بطاقات الإجراءات الأربع (فهيم/لعبة/مبادرة/المكتبة) — قياس واحد موحّد
    بينما تحتفظ بطاقتا الصدارة والمفكرة بارتفاعهما حسب محتواهما */
-/* align-self:start يمنع تمدّدها لارتفاع صفّ الشبكة، فتبقى الأربع بقياس واحد
-   مهما جاورت بطاقتَي الصدارة والمفكرة الطويلتين */
+/* البطاقات الأربع في عمود واحد فوق بعضها — تملأ ارتفاع الصفّ بجانب
+   بطاقتَي الصدارة والمفكرة بدل ترك فراغ رأسي تحتهما */
+.yw-acts{display:flex;flex-direction:column;gap:14px}
+.yw-grid>*{align-self:start}
 .yw-card.act{display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;
-  align-self:start;height:118px;box-shadow:0 6px 18px rgba(48,24,0,.2)}
+  height:118px;box-shadow:0 6px 18px rgba(48,24,0,.2)}
 .yw-card.act:hover{transform:translateY(-3px) scale(1.01)}
 .yw-card.act:active{transform:scale(.98)}
 .yw-game-ic{width:58px;height:58px;border-radius:16px;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;color:#fff;
@@ -1359,7 +1361,10 @@ body:has(#page-fahim.active){overflow:hidden}
       <div class="yw-grid">
         <div class="yw-card">
           <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> نجوم الصدارة <button class="yw-link" onclick="c1Go('students')">قسم طلابي</button></div>
-          <div class="yw-cls-tabs" id="yw-stars-tabs"></div>
+          <div class="yw-cls-row" id="yw-stars-scope">
+            <button class="yw-cls-all" id="yw-stars-all" onclick="ywStarsPick('all')">كل الشعب</button>
+            <select class="c1-select" id="yw-stars-sel" onchange="ywStarsPick(this.value)"></select>
+          </div>
           <div id="yw-stars"></div>
         </div>
         <div class="yw-card">
@@ -1371,6 +1376,7 @@ body:has(#page-fahim.active){overflow:hidden}
           <div class="tasks-list" id="tasks-list"></div>
           <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة" onkeypress="if(event.key==='Enter')addTask()"/>
         </div>
+        <div class="yw-acts">
         <div class="yw-card act fh" onclick="c1Go('fahim')">
           <div class="yw-game-ic" id="yw-fh-ava"></div>
           <div class="yw-fh-txt">
@@ -1398,6 +1404,7 @@ body:has(#page-fahim.active){overflow:hidden}
             <div class="yw-fh-nm">المكتبة</div>
             <div class="yw-fh-sub">شاركي إبداعك لجميع معلمات المادة — جرّبي الآن!</div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -2452,14 +2459,17 @@ function ywStarsPick(id){ywStarsCls=id;ywRenderStars();}
 function ywRenderStars(){
   const box=document.getElementById('yw-stars');if(!box)return;
   const classes=c1AllClasses();
-  const tabs=document.getElementById('yw-stars-tabs');
-  if(tabs){
-    if(!classes.some(c=>c.id===ywStarsCls))ywStarsCls='all';
-    tabs.innerHTML=classes.length>1
-      ?[{id:'all',name:'كل الشعب'},...classes].map(c=>
-          `<button class="${c.id===ywStarsCls?'sel':''}" onclick="ywStarsPick('${c.id}')">${escHtml(c.name)}</button>`).join('')
-      :'';
+  const scopeRow=document.getElementById('yw-stars-scope');
+  const sel=document.getElementById('yw-stars-sel');
+  const allBtn=document.getElementById('yw-stars-all');
+  if(!classes.some(c=>c.id===ywStarsCls))ywStarsCls='all';
+  if(scopeRow)scopeRow.style.display=classes.length>1?'':'none';
+  if(sel){
+    sel.innerHTML='<option value="all">اختاري شعبة…</option>'
+      +classes.map(c=>`<option value="${c.id}" ${c.id===ywStarsCls?'selected':''}>${escHtml(c.name)}</option>`).join('');
+    sel.value=ywStarsCls;
   }
+  if(allBtn)allBtn.classList.toggle('sel',ywStarsCls==='all');
   const scope=classes.length>1?ywStarsCls:'all';
   const rows=[];
   classes.forEach(c=>{
