@@ -6781,7 +6781,21 @@ async function shSave(id,btn){
   shBusy=true;if(btn){btn.disabled=true;btn.textContent='يحفظ...';}
   try{
     if(it.kind==='info'){
-      await planSetState(target.id,{info_url:it.image_url,info_at:new Date().toISOString()});
+      // ننسخ الصورة نفسها لا رابطها. مسار الملخصات c1-preps/{مالكته}/{الدرس}.jpg
+      // يُكتب فوقه عند إعادة التوليد (upsert)، فلو خزّنّا رابط المالكة لتغيّر
+      // ملخص هذه المعلمة تحتها متى أعادت تلك توليده، ولانكسر إن حذفت بياناتها.
+      // النسخ يجعل الملخص كاللعبة: مستقلاً عن مصدره.
+      let url=it.image_url;
+      try{
+        const res=await fetch(it.image_url);
+        if(res.ok){
+          const path=`c1-preps/${currentUser.id}/${target.id}.jpg`;
+          const{error:upErr}=await sb.storage.from('library-files')
+            .upload(path,await res.blob(),{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
+          if(!upErr)url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+        }
+      }catch(e){}   // تعذّر النسخ: نحفظ الرابط الأصلي — حفظٌ ناقص خير من فشل الحفظ
+      await planSetState(target.id,{info_url:url,info_at:new Date().toISOString()});
     }else{
       const{data:g,error}=await sb.from('games').insert({
         user_id:currentUser.id,grade:it.grade,subject:it.subject,unit:it.unit||'',lesson:it.lesson,
