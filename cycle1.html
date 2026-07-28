@@ -3592,6 +3592,12 @@ async function planSetState(id,partial){
 const C1_INFO_ASPECT='16:9',C1_INFO_SIZE='2K';
 // ⚡ ضغط صور الملخصات قبل الرفع: النموذج يعيد PNG بحجم ٢-٥ ميجا للصورة —
 // نحوّلها JPEG (~٩٠٪ أصغر بجودة بصرية شبه مطابقة) توفيراً لمساحة التخزين
+// مسار الملخص: طابع زمني يجعل كل توليد ملفاً مستقلاً لا يُكتب فوق سابقه.
+// كان المسار ثابتاً بـupsert، فإعادة توليد المعلمة تُغيّر الصورة تحت كل زميلة
+// حفظت ملخصها. وبالثبات يصير الحفظ إشارةً بلا نسخ — فلا تنمو المساحة بعدد
+// الحافظات مهما كثرن، وتقتصر الزيادة على إعادات التوليد وحدها.
+// الملف القديم لا يُحذف: هو بعينه نسخة من حفظته.
+function c1InfoPath(lessonId){return `c1-preps/${currentUser.id}/${lessonId}-${Date.now().toString(36)}.jpg`;}
 async function c1CompressInfo(dataUrlOrUrl){
   const img=new Image();
   img.crossOrigin='anonymous';
@@ -4137,7 +4143,7 @@ async function planInfoBtn(id){
       return;
     }
     const blob=await c1CompressInfo(data.image);
-    const path=`c1-preps/${currentUser.id}/${id}.jpg`;
+    const path=c1InfoPath(id);
     const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
     if(upErr)throw upErr;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
@@ -4386,7 +4392,7 @@ async function todayGenerate(){
           if(_todayQuota(data,error))quota=true;
           else if(data&&data.image){
             const blob=await c1CompressInfo(data.image);
-            const path=`c1-preps/${currentUser.id}/${id}.jpg`;
+            const path=c1InfoPath(id);
             const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
             if(!upErr){
               const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
@@ -5166,7 +5172,7 @@ async function infoSaveToLesson(){
   cyBusy('يحفظ الملخص في بطاقة الدرس');
   try{
     const blob=await c1CompressInfo(infoImage||infoImageRaw);
-    const path=`c1-preps/${currentUser.id}/${lessonId}.jpg`;
+    const path=c1InfoPath(lessonId);
     const{error}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
     if(error)throw error;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
@@ -6781,21 +6787,10 @@ async function shSave(id,btn){
   shBusy=true;if(btn){btn.disabled=true;btn.textContent='يحفظ...';}
   try{
     if(it.kind==='info'){
-      // ننسخ الصورة نفسها لا رابطها. مسار الملخصات c1-preps/{مالكته}/{الدرس}.jpg
-      // يُكتب فوقه عند إعادة التوليد (upsert)، فلو خزّنّا رابط المالكة لتغيّر
-      // ملخص هذه المعلمة تحتها متى أعادت تلك توليده، ولانكسر إن حذفت بياناتها.
-      // النسخ يجعل الملخص كاللعبة: مستقلاً عن مصدره.
-      let url=it.image_url;
-      try{
-        const res=await fetch(it.image_url);
-        if(res.ok){
-          const path=`c1-preps/${currentUser.id}/${target.id}.jpg`;
-          const{error:upErr}=await sb.storage.from('library-files')
-            .upload(path,await res.blob(),{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
-          if(!upErr)url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
-        }
-      }catch(e){}   // تعذّر النسخ: نحفظ الرابط الأصلي — حفظٌ ناقص خير من فشل الحفظ
-      await planSetState(target.id,{info_url:url,info_at:new Date().toISOString()});
+      // إشارة لا نسخة: مسار الملخص صار ثابتاً لا يُكتب فوقه (c1InfoPath)، فإعادة
+      // توليد صاحبته تُنشئ ملفاً جديداً ولا تمسّ هذا. والنسخ هنا كان سيُضاعف
+      // المساحة بعدد الحافظات بلا فائدة — الصورة نفسها لكل من حفظتها.
+      await planSetState(target.id,{info_url:it.image_url,info_at:new Date().toISOString()});
     }else{
       const{data:g,error}=await sb.from('games').insert({
         user_id:currentUser.id,grade:it.grade,subject:it.subject,unit:it.unit||'',lesson:it.lesson,
