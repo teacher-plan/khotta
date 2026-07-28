@@ -46,8 +46,10 @@ create table if not exists c1_shared_assets (
 
 create index if not exists c1sa_lookup on c1_shared_assets (subject, grade, lesson_id);
 create index if not exists c1sa_recent on c1_shared_assets (created_at desc);
--- لا تُشارك المعلمة العنصر ذاته مرتين
-create unique index if not exists c1sa_once on c1_shared_assets (user_id, kind, lesson_id, coalesce(title,''));
+-- مشاركة واحدة لكل (معلمة، نوع، درس): إعادة المشاركة تُحدّث النسخة ولا تُكرّرها.
+-- الأعمدة الثلاثة هنا يجب أن تطابق onConflict في shShare بالواجهة تماماً،
+-- وإلا رفض ON CONFLICT العملية.
+create unique index if not exists c1sa_once on c1_shared_assets (user_id, kind, lesson_id);
 
 alter table c1_shared_assets enable row level security;
 
