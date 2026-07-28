@@ -97,14 +97,16 @@ alter table public.book_sources
 
 alter table public.book_sources enable row level security;
 
--- ③ مكرّرتان: booksrc_read = "read book_sources"، وbooksrc_admin_write =
---    "admin write book_sources". لا ضرر أمني، لكنها فوضى تُربك القراءة.
-drop policy if exists booksrc_read on public.book_sources;
-create policy booksrc_read on public.book_sources
+-- ③ في الإنتاج زوجان متطابقان: هذان، ومعهما booksrc_read وbooksrc_admin_write
+--    اللذان أنشأتُهما في النسخة التقديرية من هذا الملف قبل أن أستخرج البنية.
+--    نُبقي الاسمين الأصليين هنا لأن هذا ملف توثيق لا ابتكار،
+--    والمكرّران يُسقَطان في cleanup_duplicates.sql
+drop policy if exists "read book_sources" on public.book_sources;
+create policy "read book_sources" on public.book_sources
   for select to authenticated using (true);
 
-drop policy if exists booksrc_admin_write on public.book_sources;
-create policy booksrc_admin_write on public.book_sources
+drop policy if exists "admin write book_sources" on public.book_sources;
+create policy "admin write book_sources" on public.book_sources
   for all to authenticated using (is_app_admin()) with check (is_app_admin());
 
 
