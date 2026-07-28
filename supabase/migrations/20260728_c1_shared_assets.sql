@@ -1,0 +1,70 @@
+-- 🎲 مساحة مشتركة للألعاب والملخصات البصرية — الحلقة الأولى
+--
+-- تشترك معلمات الحلقة الأولى في ما يُجهّزنه، مفهرساً بالصف والمادة والدرس.
+-- المعلمة تُعاين ثم تضغط «حفظ» فتنتقل النسخة إلى بطاقة الدرس عندها.
+--
+-- لماذا نُخزّن نسخة (content/image_url) بدل الإشارة إلى صف في games؟
+-- لأن games محكومة بسياسة games_own (كل معلمة ترى ألعابها وحدها). لو أشرنا
+-- إليها لاضطررنا لثقب تلك السياسة، فينكشف كل ما لم تختر المعلمة مشاركته.
+-- النسخة تُبقي العزل كما هو: لا يخرج إلى المشترك إلا ما شاركته صراحةً.
+-- وهي كذلك أمتن: حذف المالكة للعبتها الأصلية لا يُعطب نسخ الأخريات.
+--
+-- lesson_id ثابت عبر المعلمات لأنه مشتق من صفوف المنهج نفسها
+-- (stableLessonId في الواجهة)، فالربط ببطاقة الدرس دقيق لا بالاسم.
+
+create table if not exists c1_shared_assets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  uploader_name text,
+  kind text not null check (kind in ('game','info')),
+
+  -- الفهرسة: صف + مادة + درس
+  grade text not null,
+  subject text not null,
+  unit text,
+  lesson text not null,
+  lesson_id text not null,
+
+  title text,
+
+  -- عند kind='game': نسخة اللعبة وقت المشاركة
+  template text,
+  theme_id uuid references game_themes(id) on delete set null,
+  content jsonb,
+
+  -- عند kind='info': رابط الصورة داخل مخزن library-files العام
+  image_url text,
+
+  created_at timestamptz default now(),
+
+  -- كل نوع يحمل حمولته: لا لعبة بلا محتوى ولا ملخص بلا صورة
+  constraint c1sa_payload check (
+    (kind = 'game' and content is not null and template is not null)
+    or (kind = 'info' and image_url is not null)
+  )
+);
+
+create index if not exists c1sa_lookup on c1_shared_assets (subject, grade, lesson_id);
+create index if not exists c1sa_recent on c1_shared_assets (created_at desc);
+-- لا تُشارك المعلمة العنصر ذاته مرتين
+create unique index if not exists c1sa_once on c1_shared_assets (user_id, kind, lesson_id, coalesce(title,''));
+
+alter table c1_shared_assets enable row level security;
+
+-- القراءة للجميع: هذا هو معنى «مشترك»
+drop policy if exists "c1sa_read_all" on c1_shared_assets;
+create policy "c1sa_read_all" on c1_shared_assets
+  for select to authenticated using (true);
+
+-- الكتابة والحذف للمالكة وحدها
+drop policy if exists "c1sa_insert_own" on c1_shared_assets;
+create policy "c1sa_insert_own" on c1_shared_assets
+  for insert to authenticated with check (user_id = auth.uid());
+
+drop policy if exists "c1sa_update_own" on c1_shared_assets;
+create policy "c1sa_update_own" on c1_shared_assets
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "c1sa_delete_own" on c1_shared_assets;
+create policy "c1sa_delete_own" on c1_shared_assets
+  for delete to authenticated using (user_id = auth.uid());
