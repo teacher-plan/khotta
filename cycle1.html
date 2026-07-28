@@ -1762,7 +1762,7 @@ body:has(#page-fahim.active){overflow:hidden}
   <div class="c1-pagehead">
     <div class="tag">المحفوظات</div>
     <h1>ألعاب وملخصات جاهزة</h1>
-    <p>ما تشاركه معلمات الحلقة الأولى من ألعاب وملخصات بصرية، مرتّباً حسب الصف والمادة والدرس. عايني ما يناسبك، واضغطي «حفظ» لينتقل إلى بطاقة الدرس عندك.</p>
+    <p>ما تُجهّزه معلمات الحلقة الأولى من ألعاب وملخصات بصرية، مرتّباً حسب الصف والمادة والدرس. عايني ما يناسبك، واضغطي «حفظ» لينتقل إلى بطاقة الدرس عندك. وما تُنشئينه أنتِ يظهر هنا تلقائياً لزميلاتك.</p>
   </div>
   <div class="c1-sel-row">
     <select class="c1-select" id="sh-grade-sel" onchange="shSwitch('grade',this.value)"></select>
@@ -3398,7 +3398,14 @@ function planRender(){
 }
 function planSwitchGrade(g){planGrade=g;planSubject=null;planUnitIdx=null;planRender();}
 function planSwitchSubject(s){planSubject=s;planUnitIdx=null;planRenderUnits();}
-function planGet(id){return (profile.plan_state&&profile.plan_state[id])||{done:false,classes:{}};}
+// الشكل مضمون دائماً لا عند غياب المدخل وحده: ملف قديم كُتب قبل وجود classes
+// كان يمر بلا هذا الحارس فينهار planRenderUnits على st.classes ويختفي قسم الخطة.
+function planGet(id){
+  const st=(profile.plan_state&&profile.plan_state[id])||null;
+  if(!st)return{done:false,classes:{}};
+  if(!st.classes)st.classes={};
+  return st;
+}
 async function planRenderUnits(){
   await c1AssetsLoad();
   todayCardRender(); // البطاقة تتبع الصف/المادة المحدّدين — تُحدَّث مع كل تبديل
@@ -3472,8 +3479,6 @@ async function planRenderUnits(){
         <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
         <button class="pl-btn ${hasSlides?'ready':''}" onclick="planSlidesBtn('${l.id}')"><span class="d" style="background:#3E8E7E"></span>${hasSlides?'عرض تقديمي':'إنشاء عرض تقديمي'}</button>
         <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
-        ${st.game_id?`<button class="pl-btn" onclick="shShare('${l.id}','game')" title="تظهر لزميلاتك في قسم المحفوظات"><span class="d" style="background:#8b5cf6"></span>شاركي اللعبة</button>`:''}
-        ${st.info_url?`<button class="pl-btn" onclick="shShare('${l.id}','info')" title="يظهر لزميلاتك في قسم المحفوظات"><span class="d" style="background:var(--gold,#C8A03C)"></span>شاركي الملخص</button>`:''}
         <button class="pl-btn live" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>ابدئي الحصة</button>
       </div>
       ${fileRows?`<div class="pl-files-t">مرفقات الدرس (${egArNum(files.length)})</div>${fileRows}`:''}
@@ -4137,6 +4142,7 @@ async function planInfoBtn(id){
     if(upErr)throw upErr;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
     await planSetState(id,{info_url:url,info_at:new Date().toISOString()});
+    shPublishInfo(id,planGrade,planSubject,url);
     planRenderUnits();
     toast('جهز ملخص الدرس','ok');
   }catch(e){toast('تعذّر توليد الملخص',true);}
@@ -4386,6 +4392,7 @@ async function todayGenerate(){
               const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
               const all={...(profile.plan_state||{}),[id]:{...planGet(id),info_url:url,info_at:new Date().toISOString()}};
               await cy1Save({plan_state:all},'يحفظ الملخص');
+              shAutoPublish({kind:'info',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,imageUrl:url});
               need.delete('info');done.add('info');
             }
           }
@@ -5166,6 +5173,7 @@ async function infoSaveToLesson(){
     const st={...planGet(lessonId),info_url:url,info_at:new Date().toISOString()};
     const all={...(profile.plan_state||{}),[lessonId]:st};
     await cy1Save({plan_state:all});
+    shPublishInfo(lessonId,studioGrade,studioSubject,url);
     toast('حُفظ الملخص في بطاقة الدرس','ok');
   }catch(e){toast('تعذّر الحفظ في بطاقة الدرس',true);}
   finally{cyBusyDone();}
@@ -5481,6 +5489,11 @@ async function gmSave(){
       const all={...(profile.plan_state||{}),[linkId]:{...prevSt,game:true,game_id:(data&&data.id)||null,game_at:new Date().toISOString()}};
       await cy1Save({plan_state:all});
       todayAttachLessonId=null;
+      // النشر يحتاج درساً بعينه؛ لعبة تجمع عدة دروس لا تُنشر إلا وقد ارتبطت بواحد
+      shAutoPublish({kind:'game',lessonId:linkId,grade,subject,
+        unit:lessons[0]?lessons[0].unit:'',lesson:lessons[0]?lessons[0].name:'',
+        title,template:gmTpl,themeId:themeSel,
+        content:{structure:GM_STRUCT[gmTpl],items,groupNames:GM_STRUCT[gmTpl]==='groups'?gmGroupNames:undefined}});
     }
     gmLoadMyGames(true);
     toast(linkId?'حُفظت اللعبة في ألعابك وعلى بطاقة الدرس':'حُفظت اللعبة في ألعابك','ok');
@@ -6622,8 +6635,8 @@ const C1_GUIDE={
     tip:'ما تُنشئينه هنا يرتبط ببطاقة درسه في الخطة تلقائياً.'},
   students:{ds:'التحفيز والسلوك في مكان واحد. نجمة بضغطة لكل مشاركة مميزة، ومخالفة بضغطة عند الحاجة. البطاقة تتلوّن تنبيهاً عند تكرار المخالفات، وملف كل طالبة يجمع نجومها وملاحظاتها.',
     tip:'كل تسجيل قابل للتراجع فوراً، فلا تخشي ضغطة خاطئة.'},
-  shared:{ds:'ما تشاركه معلمات الحلقة من ألعاب وملخصات، مرتّباً حسب الصف والمادة والدرس. تُعاينين قبل الأخذ، و«حفظ» ينسخ العنصر إلى بطاقة الدرس عندك.',
-    tip:'لا يظهر شيء هنا إلا ما شاركته صاحبته صراحةً من بطاقة الدرس — وما تشاركينه يبقى لك أن تُلغيه متى شئتِ.'},
+  shared:{ds:'ما تُجهّزه معلمات الحلقة من ألعاب وملخصات، مرتّباً حسب الصف والمادة والدرس. تُعاينين قبل الأخذ، و«حفظ» ينسخ العنصر إلى بطاقة الدرس عندك.',
+    tip:'كل لعبة أو ملخص تُنشئينه يظهر هنا لزميلاتك تلقائياً باسمك — ولك أن تُلغي مشاركة أيٍّ منها من زر ✕ على بطاقته.'},
   fahim:{ds:'مساعدك التربوي. اسأليه عن أنشطة صفية، أو صياغة أهداف، أو معالجة موقف في الفصل — يجيبك بما يناسب مرحلة الحلقة الأولى.'},
   ach:{ds:'سجلّ إنجازاتك ومبادراتك المهنية عبر الفصل، لتكون جاهزة عند الحاجة إليها.'},
   lib:{ds:'مكتبة مادتك المشتركة. ما ترفعينه يصل كل معلمات مادتك في الحلقة الأولى مهما اختلفت صفوفهن، وما يرفعنه يصلك.'},
@@ -6793,33 +6806,33 @@ async function shUnshare(id){
     toast('أُلغيت المشاركة','ok');
   }catch(e){toast('تعذّر الإلغاء',true);}
 }
-// المشاركة من بطاقة الدرس: تُستدعى من قسم الخطة
-async function shShare(lessonId,kind){
-  const st=planGet(lessonId),l=planFindLesson(lessonId);
-  if(!l){toast('تعذّر تحديد الدرس',true);return;}
+// النشر التلقائي: كل لعبة أو ملخص تُولّده المعلمة يظهر لزميلاتها فوراً.
+// صامت تماماً — لا رسالة نجاح ولا فشل: النشر ثانوي، والمهم أن يكتمل توليدها هي.
+// ولا ينتظره الاستدعاء (fire-and-forget) فلا يبطئ عملها.
+// ⚠️ لا يُستدعى من shSave: حفظ نسخة من عمل زميلة ليس إنشاءً، ونشره يملأ
+// القسم بنسخ مكررة للمحتوى نفسه بأسماء مختلفة.
+// upsert على (user_id,kind,lesson_id) فإعادة التوليد تُحدّث النسخة لا تُكرّرها.
+function shAutoPublish(o){
+  if(!currentUser||!o||!o.lessonId||!o.grade||!o.subject||!o.lesson)return;
   const row={
-    user_id:currentUser.id,uploader_name:profile.display_name||'معلمة',kind,
-    grade:String(planGrade),subject:planSubject,unit:l.unit||'',lesson:l.name,lesson_id:lessonId,
-    title:l.name,
+    user_id:currentUser.id,uploader_name:profile.display_name||'معلمة',kind:o.kind,
+    grade:String(o.grade),subject:o.subject,unit:o.unit||'',lesson:o.lesson,
+    lesson_id:o.lessonId,title:o.title||o.lesson,
   };
-  if(kind==='info'){
-    if(!st.info_url){toast('لا ملخص لهذا الدرس بعد',true);return;}
-    row.image_url=st.info_url;
+  if(o.kind==='info'){
+    if(!o.imageUrl)return;
+    row.image_url=o.imageUrl;
   }else{
-    if(!st.game_id){toast('لا لعبة لهذا الدرس بعد',true);return;}
-    cyBusy('يجهّز المشاركة');
-    try{
-      const{data:g}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();
-      if(!g){cyBusyDone();toast('اللعبة لم تعد موجودة',true);return;}
-      row.template=g.template;row.theme_id=g.theme_id||null;row.content=g.content;row.title=g.title||l.name;
-    }catch(e){cyBusyDone();toast('تعذّر قراءة اللعبة',true);return;}
+    if(!o.content||!o.template)return;     // قيد c1sa_payload يرفضها بلا هذين
+    row.template=o.template;row.theme_id=o.themeId||null;row.content=o.content;
   }
-  try{
-    const{error}=await sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'});
-    if(error)throw error;
-    toast(kind==='game'?'شاركتِ اللعبة مع زميلاتك':'شاركتِ الملخص مع زميلاتك','ok');
-  }catch(e){toast('تعذّر المشاركة — تحققي من الاتصال',true);}
-  finally{cyBusyDone();}
+  sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'}).then(()=>{},()=>{});
+}
+// نشر ملخص: نلتقط اسم الدرس ووحدته من خطة المعلمة عبر المعرّف الثابت
+function shPublishInfo(lessonId,grade,subject,imageUrl){
+  const units=(profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[];
+  for(const u of units)for(const l of u.lessons)if(l.id===lessonId)
+    return shAutoPublish({kind:'info',lessonId,grade,subject,unit:u.name,lesson:l.name,imageUrl});
 }
 
 // ═══════════ المكتبة — تشاركية موحّدة حسب المادة لا الصف ═══════════
