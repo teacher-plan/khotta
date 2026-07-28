@@ -4144,7 +4144,7 @@ async function planInfoBtn(id){
     }
     const blob=await c1CompressInfo(data.image);
     const path=c1InfoPath(id);
-    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
     if(upErr)throw upErr;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
     await planSetState(id,{info_url:url,info_at:new Date().toISOString()});
@@ -4471,7 +4471,7 @@ async function todayGenerate(){
           else if(data&&data.image){
             const blob=await c1CompressInfo(data.image);
             const path=c1InfoPath(id);
-            const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'});
+            const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
             if(!upErr){
               const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
               const all={...(profile.plan_state||{}),[id]:{...planGet(id),info_url:url,info_at:new Date().toISOString()}};

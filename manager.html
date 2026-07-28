@@ -15567,7 +15567,7 @@ async function segUploadAndSegment(file){
     let ok=false,lastErr='';
     for(let a=1;a<=3&&!ok;a++){
       st.textContent='⬆️ رفع الصفحة '+egToArabic(p)+' من '+egToArabic(N)+(a>1?' (محاولة '+egToArabic(a)+')':'')+'...';
-      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});if(error)lastErr=error.message;else ok=true;}
+      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});if(error)lastErr=error.message;else ok=true;}
       catch(e){lastErr=String(e&&e.message||e);}
       if(!ok&&a<3)await new Promise(r=>setTimeout(r,1200*a));
     }
