@@ -4315,8 +4315,12 @@ async function todayCardRender(){
     <span class="today-badge ${st.game_id?'on':''}">لعبة</span>
     <span class="today-badge ${hasSlides?'on':''}">عرض</span>
   </div>`;
+  // «نسخة خاصة» يظهر فقط لما تُبنّي من زميلة: بلا مخرج يحبسها اجتهاد غيرها
   const actions=st.prep
-    ?`<div class="today-actions"><button class="today-btn primary" onclick="todayPreview()">معاينة</button></div>`
+    ?`<div class="today-actions">
+        <button class="today-btn primary" onclick="todayPreview()">معاينة</button>
+        ${st.prep_from?`<button class="today-btn" id="today-own-btn" onclick="todayGenerateOwn()" title="تجاهلي الجاهز وولّدي تحضيراً من عندك">نسخة خاصة</button>`:''}
+      </div>`
     :`<div class="today-actions"><button class="today-btn primary" id="today-gen-btn" onclick="todayGenerate()">إنشاء التحضير</button></div>`;
   box.innerHTML=`<div class="today-main">
     <div class="today-info"><div class="today-unit">${escHtml(ctx.unitName||'')}</div><div class="today-lesson-nm">${escHtml(ctx.lessonName)}</div>${badges}</div>
@@ -4335,12 +4339,55 @@ function todayFahim(msg){
   img.onerror=()=>{wrap.style.display='none';};
   img.src=fhMascotUrl();
 }
+// ══ المخزن المشترك: نستدعي الجاهز قبل أن نولّد ══
+// معلمات الصف والمادة الواحدة يُدرّسن الدروس نفسها. فقبل أي استدعاء ذكاء
+// اصطناعي نسأل: هل جهّزت زميلة هذا الدرس؟ إن نعم تبنّيناه فوراً — بلا
+// انتظار، وبلا خصم من الحصة الشهرية، وبلا ملف تخزين جديد.
+// التبنّي ينسخ الحمولة إلى ملف المعلمة (عدا الصورة فإشارة إلى مسار ثابت)،
+// فتعديلها لا يمسّ أحداً وحذفها من حسابها لا يحذف الأصل من المخزن.
+async function shPoolFetch(lessonId,kinds){
+  if(!lessonId||!kinds.length)return{};
+  try{
+    const{data,error}=await sb.from('c1_shared_assets').select('*')
+      .eq('lesson_id',lessonId).in('kind',kinds).order('created_at',{ascending:false});
+    if(error||!data)return{};
+    const out={};
+    for(const r of data)if(!out[r.kind])out[r.kind]=r;   // الأحدث لكل نوع
+    return out;
+  }catch(e){return{};}
+}
+// يتبنّى ما وجده ويُعيد أسماء ما تبنّاه
+async function shAdopt(lessonId,found){
+  const took=[];
+  const stPatch={};
+  if(found.prep&&found.prep.content){
+    stPatch.prep=found.prep.content;stPatch.prep_at=new Date().toISOString();
+    stPatch.prep_from=found.prep.uploader_name||'زميلة';   // أثر التبنّي: يُظهر زر «نسخة خاصة»
+    took.push('prep');
+  }
+  if(found.info&&found.info.image_url){stPatch.info_url=found.info.image_url;stPatch.info_at=new Date().toISOString();took.push('info');}
+  if(Object.keys(stPatch).length)await planSetState(lessonId,stPatch);
+  if(found.slides&&found.slides.content){await c1AssetSet(lessonId,{slides:found.slides.content});took.push('slides');}
+  return took;
+}
+
 // ══ التحضير الشامل ══
 // زر واحد يُجهّز أجزاء الدرس الثلاثة دفعة واحدة: الخطة، الملخص البصري، العرض
 // التقديمي. اللعبة مستثناة عمداً — تُصمَّم يدوياً في الاستوديو.
 // ما يفشل يُعاد وحده في جولة تالية، فلا نُعيد توليد ما نجح ولا نُهدر حصة الشهر.
 // نتوقف عند نفاد الحصة الشهرية لأن الإعادة لا تُجدي، ونستسلم بعد ٣ جولات.
 const TODAY_TRIES=3;
+let todayForceOwn=false;
+// تجاهل الجاهز وتوليد تحضير خاص: نمسح ما تُبنّي أولاً كي يُعاد توليده كاملاً
+async function todayGenerateOwn(){
+  if(!todayCache||!todayCache.lessonId)return;
+  if(!(await uiConfirm('سنولّد تحضيراً جديداً من عندك يحلّ محلّ ما تبنّيتِه. متابعة؟')))return;
+  const id=todayCache.lessonId;
+  await planSetState(id,{prep:null,prep_from:null,info_url:null});
+  await c1AssetSet(id,{slides:null});
+  todayForceOwn=true;
+  try{await todayGenerate();}finally{todayForceOwn=false;}
+}
 function _todayQuota(d,e){
   const s=((d&&d.error)||'')+' '+((e&&e.message)||'');
   return s.includes('quota_exceeded');
@@ -4360,8 +4407,25 @@ async function todayGenerate(){
   if(!need.size){toast('كل أجزاء الدرس جاهزة','ok');if(btn)btn.disabled=false;return;}
 
   const done=new Set(),labels={prep:'الخطة',info:'الملخص',slides:'العرض'};
+  const adopted=new Set();
   let quota=false,bookContext='';
   try{
+    // ① الجاهز من زميلة أولاً — أسرع وأرخص من التوليد، ولا يمسّ الحصة الشهرية
+    if(!todayForceOwn){
+      cyBusy('يبحث عمّا جهّزته زميلاتك...');
+      const found=await shPoolFetch(id,[...need]);
+      for(const k of await shAdopt(id,found)){need.delete(k);adopted.add(k);}
+      if(!need.size){
+        cyBusyDone();
+        toast(`جهّزت زميلتك ${[...adopted].map(k=>labels[k]).join(' و')} لهذا الدرس — تبنّيناه فوراً`,'ok');
+        todayCardRender();
+        if(planGrade===ctx.grade&&planSubject===ctx.subject)planRenderUnits();
+        if(btn)btn.disabled=false;
+        return;
+      }
+    }
+
+    // ② ما بقي ناقصاً نولّده
     cyBusy('يقرأ الدرس من الكتاب...');
     try{bookContext=await c1BookSummary(id,ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName)||'';}catch(e){}
 
@@ -4378,6 +4442,7 @@ async function todayGenerate(){
           else if(data&&data.plan){
             const all={...(profile.plan_state||{}),[id]:{...planGet(id),prep:data.plan,prep_at:new Date().toISOString()}};
             await cy1Save({plan_state:all},'يحفظ الخطة');
+            shAutoPublish({kind:'prep',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,content:data.plan});
             need.delete('prep');done.add('prep');
           }
         }catch(e){}
@@ -4413,7 +4478,9 @@ async function todayGenerate(){
           });
           if(_todayQuota(data,error))quota=true;
           else if(data&&data.slides){
-            await c1AssetSet(id,{slides:{slides:data.slides,homework:data.homework||''}});
+            const sl={slides:data.slides,homework:data.homework||''};
+            await c1AssetSet(id,{slides:sl});
+            shAutoPublish({kind:'slides',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,content:sl});
             need.delete('slides');done.add('slides');
           }
         }catch(e){}
@@ -4427,9 +4494,10 @@ async function todayGenerate(){
     }
 
     const nm=s=>[...s].map(k=>labels[k]).join(' و');
-    if(quota)toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم'+(done.size?`. جهزنا ${nm(done)}`:''),true);
-    else if(!need.size)toast('جهزت كل أجزاء الدرس — تبقّت اللعبة تصمّمينها في الاستوديو','ok');
-    else if(done.size)toast(`جهزنا ${nm(done)}، وتعذّر ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات`,true);
+    const from=adopted.size?` (${nm(adopted)} من زميلتك)`:'';
+    if(quota)toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم'+(done.size||adopted.size?`. جهزنا ${nm(new Set([...done,...adopted]))}`:''),true);
+    else if(!need.size)toast('جهزت كل أجزاء الدرس'+from+' — تبقّت اللعبة تصمّمينها في الاستوديو','ok');
+    else if(done.size||adopted.size)toast(`جهزنا ${nm(new Set([...done,...adopted]))}، وتعذّر ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات`,true);
     else toast(`تعذّر تجهيز ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات — تحققي من الاتصال`,true);
   }catch(e){toast('تعذّر الاتصال، حاولي مجدداً',true);}
   finally{
@@ -6634,14 +6702,14 @@ async function achDelete(id){
 // الدليل عن الواجهة. النص يشرح الفكرة والفائدة، لا أسماء الأزرار.
 const C1_GUIDE={
   yawmi:{ds:'نقطة انطلاقك كل صباح. تعرض حصص اليوم والغد من جدولك، وبطاقة الدرس القادم بأجزائه الأربعة: الخطة، الملخص البصري، اللعبة، العرض التقديمي. وتحتها مفكرتك ونجوم الصدارة.',
-    tip:'زر «إنشاء التحضير» يُجهّز الخطة والملخص والعرض دفعة واحدة، ويعيد المحاولة تلقائياً لما يتعثّر. اللعبة وحدها تصمّمينها في الاستوديو.'},
+    tip:'زر «إنشاء التحضير» يبحث أولاً فيما جهّزته زميلاتك لنفس الدرس فيتبنّاه فوراً، وما لم يجده يولّده ويعيد المحاولة لما يتعثّر. ولو لم يعجبك ما تبنّيتِه فزر «نسخة خاصة» يولّد تحضيراً من عندك.'},
   plan:{ds:'وحدات مادتك ودروسها كما رُفعت من المنهج. من بطاقة كل درس تُنشئين لعبته وملخصه وعرضه، وتُرفقين ملفاتك، وتُعلّمين ما أنجزتِه لكل شعبة.',
     tip:'«ابدئي الحصة» تفتح شاشة الحصة الحية بكل مرفقات الدرس وأدوات الصف في مكان واحد.'},
   studio:{ds:'مصنع الألعاب والملخصات البصرية. تختارين الدرس والقالب فتُبنى اللعبة من محتوى الكتاب، ولك أن تعدّلي أسئلتها وتُبدّلي شكلها.',
     tip:'ما تُنشئينه هنا يرتبط ببطاقة درسه في الخطة تلقائياً.'},
   students:{ds:'التحفيز والسلوك في مكان واحد. نجمة بضغطة لكل مشاركة مميزة، ومخالفة بضغطة عند الحاجة. البطاقة تتلوّن تنبيهاً عند تكرار المخالفات، وملف كل طالبة يجمع نجومها وملاحظاتها.',
     tip:'كل تسجيل قابل للتراجع فوراً، فلا تخشي ضغطة خاطئة.'},
-  shared:{ds:'ما تُجهّزه معلمات الحلقة من ألعاب وملخصات، مرتّباً حسب الصف والمادة والدرس. تُعاينين قبل الأخذ، و«حفظ» ينسخ العنصر إلى بطاقة الدرس عندك.',
+  shared:{ds:'مخزن الحلقة المشترك: ما جهّزته زميلاتك من خطط وملخصات وعروض وألعاب. أنتِ تستفيدين منه دون أن تفتحيه — فزر «إنشاء التحضير» يسحب منه تلقائياً. وتفتحينه هنا لتصفّحي الألعاب والملخصات وتأخذي ما يعجبك من صفوف أخرى.',
     tip:'كل لعبة أو ملخص تُنشئينه يظهر هنا لزميلاتك تلقائياً باسمك — ولك أن تُلغي مشاركة أيٍّ منها من زر ✕ على بطاقته.'},
   fahim:{ds:'مساعدك التربوي. اسأليه عن أنشطة صفية، أو صياغة أهداف، أو معالجة موقف في الفصل — يجيبك بما يناسب مرحلة الحلقة الأولى.'},
   ach:{ds:'سجلّ إنجازاتك ومبادراتك المهنية عبر الفصل، لتكون جاهزة عند الحاجة إليها.'},
@@ -6828,12 +6896,16 @@ function shAutoPublish(o){
     grade:String(o.grade),subject:o.subject,unit:o.unit||'',lesson:o.lesson,
     lesson_id:o.lessonId,title:o.title||o.lesson,
   };
+  // الحمولة بحسب النوع — مطابقة لقيد c1sa_payload، ولا نرسل ما يرفضه الجدول
   if(o.kind==='info'){
     if(!o.imageUrl)return;
     row.image_url=o.imageUrl;
-  }else{
-    if(!o.content||!o.template)return;     // قيد c1sa_payload يرفضها بلا هذين
+  }else if(o.kind==='game'){
+    if(!o.content||!o.template)return;
     row.template=o.template;row.theme_id=o.themeId||null;row.content=o.content;
+  }else{                                   // prep | slides
+    if(!o.content)return;
+    row.content=o.content;
   }
   sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'}).then(()=>{},()=>{});
 }

@@ -1,24 +1,35 @@
--- 🎲 مساحة مشتركة للألعاب والملخصات البصرية — الحلقة الأولى
+-- 🎓 مخزن الدروس المشترك — الحلقة الأولى
 --
--- تشترك معلمات الحلقة الأولى في ما يُجهّزنه، مفهرساً بالصف والمادة والدرس.
--- كل لعبة أو ملخص تُولّده معلمة يُنشر هنا تلقائياً باسمها (shAutoPublish)،
--- ولها إلغاؤه متى شاءت. والأخرى تُعاين ثم تضغط «حفظ» فتنتقل نسخة إلى
--- بطاقة الدرس عندها — والحفظ لا يُعيد النشر، وإلا امتلأ الجدول بمكررات.
+-- معلمات الصف والمادة الواحدة يُدرّسن الدروس نفسها، فلا معنى لأن تُولّد كل
+-- واحدة خطة الدرس وملخصه وعرضه من جديد. يُخزَّن ما تُولّده أولاهنّ هنا،
+-- وتتبنّاه البقية فوراً بلا استدعاء ذكاء اصطناعي ولا ملف تخزين جديد.
+--
+-- المكسب على ٥٠ معلمة × ٢٠ درساً، بخمس معلمات للدرس الواحد:
+--   التخزين      ١٠٠٠ ملف (١٦٩ ميجا) ←  ٢٠٠ ملف (٣٤ ميجا)      توفير ٨٠٪
+--   استدعاءات AI ٣٠٠٠ استدعاء        ←  ٦٠٠ استدعاء            توفير ٨٠٪
+-- والتوفير يتّسع بعدد معلمات الصف الواحد: ٩٠٪ عند عشر، ٩٥٪ عند عشرين.
+--
+-- أربعة أنواع:
+--   prep   خطة الدرس (jsonb)
+--   info   الملخص البصري (رابط صورة ثابت لا يُكتب فوقه)
+--   slides العرض التقديمي (jsonb)
+--   game   اللعبة (jsonb + قالب)
+--
+-- التبنّي ينسخ الحمولة إلى ملف المعلمة (عدا الصورة فتُشار إشارةً)، فتعديلها
+-- على نسختها لا يمسّ أحداً، وحذفها من حسابها لا يحذف الأصل من المخزن.
 --
 -- لماذا نُخزّن نسخة (content/image_url) بدل الإشارة إلى صف في games؟
 -- لأن games محكومة بسياسة games_own (كل معلمة ترى ألعابها وحدها). لو أشرنا
 -- إليها لاضطررنا لثقب تلك السياسة، فينكشف ما وراء المنشور من ألعاب خاصة.
--- النسخة تُبقي ذلك العزل قائماً، وهي أمتن كذلك: حذف المالكة للعبتها
--- الأصلية لا يُعطب نسخ الأخريات.
 --
 -- lesson_id ثابت عبر المعلمات لأنه مشتق من صفوف المنهج نفسها
--- (stableLessonId في الواجهة)، فالربط ببطاقة الدرس دقيق لا بالاسم.
+-- (stableLessonId في الواجهة)، فمطابقة الدرس دقيقة لا بالاسم.
 
 create table if not exists c1_shared_assets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid(),
   uploader_name text,
-  kind text not null check (kind in ('game','info')),
+  kind text not null constraint c1sa_kind check (kind in ('prep','info','slides','game')),
 
   -- الفهرسة: صف + مادة + درس
   grade text not null,
@@ -29,23 +40,25 @@ create table if not exists c1_shared_assets (
 
   title text,
 
-  -- عند kind='game': نسخة اللعبة وقت المشاركة
-  template text,
+  -- الحمولة: jsonb لـ prep/slides/game، ورابط صورة لـ info
+  template text,                                    -- قالب اللعبة
   theme_id uuid references game_themes(id) on delete set null,
   content jsonb,
-
-  -- عند kind='info': رابط الصورة داخل مخزن library-files العام
-  image_url text,
+  image_url text,                                   -- داخل مخزن library-files العام
 
   created_at timestamptz default now(),
 
-  -- كل نوع يحمل حمولته: لا لعبة بلا محتوى ولا ملخص بلا صورة
+  -- كل نوع يحمل حمولته: لا خطة ولا عرض بلا محتوى، ولا ملخص بلا صورة،
+  -- ولا لعبة بلا محتوى وقالب معاً
   constraint c1sa_payload check (
-    (kind = 'game' and content is not null and template is not null)
+    (kind in ('prep','slides') and content is not null)
     or (kind = 'info' and image_url is not null)
+    or (kind = 'game' and content is not null and template is not null)
   )
 );
 
+-- الاستعلام الحارّ: «هل جهّزت زميلة هذا الدرس؟» يُنفَّذ قبل كل توليد
+create index if not exists c1sa_pool on c1_shared_assets (lesson_id, kind, created_at desc);
 create index if not exists c1sa_lookup on c1_shared_assets (subject, grade, lesson_id);
 create index if not exists c1sa_recent on c1_shared_assets (created_at desc);
 -- مشاركة واحدة لكل (معلمة، نوع، درس): إعادة التوليد تُحدّث النسخة لا تُكرّرها.
