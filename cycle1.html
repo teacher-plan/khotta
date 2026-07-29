@@ -1027,6 +1027,146 @@ body.inapp #c1-notif-btn{display:flex}
 .rs-fact-nav button:disabled{opacity:.32;cursor:default}
 .rs-fact-nav span{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
 
+/* ═══ الساحة المشتركة: القصة والنشاط والمعلومات ═══
+   المبدأ نفسه الذي بُني عليه التحدّي: المعلمة واقفةٌ أمام الصفّ لا جالسةٌ
+   تقرأ. فكل نوعٍ يصير شاشةً ملء الشاشة، خطوةً واحدة في المرة، بخطٍّ يُقرأ
+   من آخر الفصل وأزرارٍ تُضغط بالإبهام.
+
+   ولكل نوعٍ أرضيّته: القصة أرجوانيةٌ مسرحية، والمعلومات نيليّةٌ للدهشة،
+   والنشاط فاتحٌ لأنه ورقة تعليمات تقرؤها هي في غرفةٍ مضيئة. */
+#rs-stage{position:fixed;inset:0;z-index:4500;display:none;flex-direction:column;color:#fff}
+#rs-stage.on{display:flex}
+#rs-stage.t-story{background:radial-gradient(1100px 650px at 15% -10%,#5B1F52,transparent),
+  radial-gradient(900px 600px at 100% 100%,#7A2418,transparent),linear-gradient(155deg,#2A0F28,#3A1230 55%,#1E0A1C)}
+#rs-stage.t-fact{background:radial-gradient(1100px 650px at 20% -10%,#123E6B,transparent),
+  radial-gradient(900px 600px at 100% 100%,#0E5A55,transparent),linear-gradient(155deg,#0C1A2E,#10263F 55%,#081420)}
+#rs-stage.t-activity{background:linear-gradient(160deg,#FBF4EA,#F3E7D6);color:var(--ink)}
+#rs-stage-cf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9}
+/* الرأس */
+.rss-top{display:flex;align-items:center;gap:10px;padding:11px 15px;flex:none;
+  background:rgba(0,0,0,.26);border-bottom:1px solid rgba(255,255,255,.12)}
+#rs-stage.t-activity .rss-top{background:rgba(255,255,255,.6);border-bottom:1.5px solid var(--border)}
+.rss-top .nm{flex:1;min-width:0;font-size:14.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rss-x{background:rgba(255,255,255,.14);border:none;color:inherit;border-radius:10px;padding:8px 13px;
+  font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;flex:none}
+#rs-stage.t-activity .rss-x{background:var(--card);border:1.5px solid var(--border)}
+.rss-x:hover{background:rgba(255,255,255,.26)}
+#rs-stage.t-activity .rss-x:hover{background:var(--surface);border-color:var(--red)}
+/* شريط التقدّم بالنقاط — تعرف المعلمة أين هي وكم بقي بنظرة */
+.rss-dots{display:flex;gap:6px;flex:none;align-items:center}
+.rss-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.26);transition:.25s}
+#rs-stage.t-activity .rss-dot{background:rgba(48,24,0,.18)}
+.rss-dot.on{background:var(--ac);transform:scale(1.35);box-shadow:0 0 10px var(--ac)}
+.rss-dot.past{background:rgba(255,255,255,.55)}
+#rs-stage.t-activity .rss-dot.past{background:rgba(48,24,0,.4)}
+@media(max-width:520px){.rss-dots{display:none}}
+.rss-step-n{font-size:12px;font-weight:800;background:rgba(255,255,255,.16);border-radius:9px;padding:5px 12px;
+  flex:none;font-variant-numeric:tabular-nums}
+#rs-stage.t-activity .rss-step-n{background:var(--card);border:1.5px solid var(--border)}
+/* الجسم */
+.rss-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px 22px 26px;text-align:center;gap:16px}
+.rss-in{width:100%;max-width:820px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.rss-eyebrow{font-size:11.5px;font-weight:800;letter-spacing:1.2px;color:var(--ac);
+  background:color-mix(in srgb,var(--ac) 14%,transparent);border:1px solid color-mix(in srgb,var(--ac) 34%,transparent);
+  border-radius:999px;padding:5px 17px}
+@supports not (color:color-mix(in srgb,red,blue)){
+  .rss-eyebrow{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+}
+.rss-lede{font-size:clamp(19px,2.8vw,30px);font-weight:700;line-height:1.95;text-wrap:balance;
+  animation:rssIn .42s cubic-bezier(.16,1,.3,1) both}
+.rss-ask{font-size:clamp(20px,3vw,34px);font-weight:800;color:var(--ac);line-height:1.6;text-wrap:balance;
+  animation:rssIn .42s cubic-bezier(.16,1,.3,1) .08s both}
+@keyframes rssIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.rss-acts{display:flex;gap:11px;flex-wrap:wrap;justify-content:center;align-items:center}
+.rss-btn{border:none;border-radius:14px;padding:14px 30px;font-family:inherit;font-size:15px;font-weight:800;
+  cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:8px}
+.rss-btn.main{background:var(--ac);color:#1A1008;box-shadow:0 6px 22px color-mix(in srgb,var(--ac) 45%,transparent)}
+@supports not (color:color-mix(in srgb,red,blue)){.rss-btn.main{box-shadow:0 6px 22px rgba(0,0,0,.35)}}
+.rss-btn.main:hover{transform:translateY(-2px)}
+.rss-btn.ghost{background:rgba(255,255,255,.12);color:inherit;border:1.5px solid rgba(255,255,255,.26)}
+#rs-stage.t-activity .rss-btn.ghost{background:var(--surface);border-color:var(--border)}
+.rss-btn.ghost:hover{background:rgba(255,255,255,.22)}
+#rs-stage.t-activity .rss-btn.ghost:hover{border-color:var(--red);color:var(--red-d)}
+.rss-btn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none}
+.rss-btn.icon{padding:14px 18px;font-size:19px;line-height:1}
+
+/* ── القصة ── */
+.st-choices{display:flex;flex-direction:column;gap:12px;width:100%;max-width:660px}
+.st-choice{background:rgba(255,255,255,.09);border:2px solid rgba(255,255,255,.22);border-radius:17px;
+  padding:17px 20px;font-family:inherit;font-size:clamp(15px,2vw,19px);font-weight:700;color:#fff;cursor:pointer;
+  text-align:start;transition:.16s;line-height:1.75;display:flex;align-items:center;gap:14px;
+  animation:rssIn .4s cubic-bezier(.16,1,.3,1) both}
+.st-choice:nth-child(1){animation-delay:.1s}
+.st-choice:nth-child(2){animation-delay:.18s}
+.st-choice:nth-child(3){animation-delay:.26s}
+.st-choice:nth-child(4){animation-delay:.34s}
+.st-choice:hover{background:rgba(255,255,255,.17);border-color:var(--ac);transform:translateX(-4px)}
+.st-choice .k{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14);flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--ac)}
+.st-choice.tried{opacity:.5}
+.st-choice.tried .k::after{content:'✓';font-size:14px}
+.st-choice.tried .k{font-size:0}
+/* شاشة الأثر */
+.st-out{width:100%;max-width:700px;display:flex;flex-direction:column;gap:16px;align-items:center;
+  animation:rssIn .45s cubic-bezier(.16,1,.3,1) both}
+.st-verdict{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:#fff;
+  background:var(--oc);border-radius:999px;padding:7px 20px;box-shadow:0 5px 20px color-mix(in srgb,var(--oc) 45%,transparent)}
+@supports not (color:color-mix(in srgb,red,blue)){.st-verdict{box-shadow:0 5px 20px rgba(0,0,0,.35)}}
+.st-out-t{font-size:clamp(17px,2.4vw,25px);line-height:2;font-weight:600}
+.st-lesson{background:rgba(255,255,255,.08);border:2px solid var(--oc);border-radius:18px;padding:20px 24px;width:100%}
+.st-lesson b{display:block;font-size:11.5px;font-weight:800;letter-spacing:1px;color:var(--oc);margin-bottom:8px}
+.st-lesson span{font-size:clamp(16px,2.2vw,23px);font-weight:800;line-height:1.85}
+
+/* ── المعلومات ── */
+.fc-num{font-size:12px;font-weight:800;letter-spacing:1px;color:var(--ac);opacity:.85}
+.fc-text{font-size:clamp(20px,3.1vw,34px);font-weight:700;line-height:2;text-wrap:balance;
+  animation:rssIn .42s cubic-bezier(.16,1,.3,1) both}
+.fc-q{width:100%;max-width:680px;background:rgba(255,255,255,.08);border:2px solid var(--ac);border-radius:18px;
+  padding:20px 24px;animation:rssIn .4s cubic-bezier(.16,1,.3,1) both}
+.fc-q b{display:block;font-size:11.5px;font-weight:800;letter-spacing:1px;color:var(--ac);margin-bottom:8px}
+.fc-q span{font-size:clamp(16px,2.3vw,25px);font-weight:800;line-height:1.85}
+
+/* ── النشاط ── */
+.ac-step{font-size:clamp(21px,3.2vw,36px);font-weight:700;line-height:1.95;text-wrap:balance;color:var(--ink);
+  animation:rssIn .42s cubic-bezier(.16,1,.3,1) both}
+.ac-badge{width:56px;height:56px;border-radius:18px;background:linear-gradient(140deg,var(--olive),var(--olive-d));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:800;
+  box-shadow:0 6px 20px rgba(53,96,58,.32);flex:none}
+.ac-timer{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:16px;padding:10px 16px}
+.ac-clock{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink);min-width:96px}
+.ac-clock.warn{color:#B8860B}
+.ac-clock.zero{color:var(--red-d);animation:chPulse .6s ease infinite}
+.ac-talk{width:100%;max-width:700px;background:rgba(72,120,72,.1);border:2px solid rgba(72,120,72,.4);
+  border-radius:18px;padding:20px 24px;color:var(--olive-d)}
+.ac-talk b{display:block;font-size:11.5px;font-weight:800;letter-spacing:1px;margin-bottom:8px;opacity:.85}
+.ac-talk span{font-size:clamp(16px,2.2vw,23px);font-weight:800;line-height:1.85}
+.ac-done{font-size:clamp(26px,4.5vw,44px);font-weight:800;color:var(--olive-d);line-height:1.45}
+
+/* ── بطاقة التعريف قبل الدخول ── */
+.rsb-hero{display:flex;align-items:center;gap:14px;background:var(--surface);border:1.5px solid var(--border);
+  border-inline-start:5px solid var(--vc,var(--red));border-radius:18px;padding:16px 18px;margin-bottom:16px}
+.rsb-hero-ic{width:48px;height:48px;border-radius:15px;background:var(--vc,var(--red));color:#fff;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:23px}
+.rsb-hero-t{flex:1;min-width:0}
+.rsb-hero-t b{display:block;font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.5px;margin-bottom:3px}
+.rsb-hero-t span{font-size:14px;line-height:1.8;color:var(--ink);font-weight:700}
+.rsb-sec{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.5px;margin:16px 0 9px}
+.rsb-start{width:100%;border:none;border-radius:16px;padding:17px;font-family:inherit;font-size:16px;font-weight:800;
+  cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--vc,var(--red)),color-mix(in srgb,var(--vc,var(--red)) 62%,#000));
+  box-shadow:0 6px 22px color-mix(in srgb,var(--vc,var(--red)) 38%,transparent);transition:.16s;margin-top:18px;
+  display:flex;align-items:center;justify-content:center;gap:10px}
+@supports not (color:color-mix(in srgb,red,blue)){
+  .rsb-start{background:var(--vc,var(--red));box-shadow:0 6px 22px rgba(48,24,0,.3)}
+}
+.rsb-start:hover{transform:translateY(-2px)}
+@media(prefers-reduced-motion:reduce){
+  .rss-lede,.rss-ask,.st-choice,.st-out,.fc-text,.fc-q,.ac-step{animation:none}
+  .ac-clock.zero{animation:none}
+  .rss-btn.main:hover,.rsb-start:hover,.st-choice:hover{transform:none}
+}
+
 /* ── ساحة التحدّي ──
    الموقع كلّه هادئ قشديّ، وهذه عمداً على النقيض: خلفية داكنة وألوان مشتعلة
    ونقاط كبيرة. لأن التحدّي حدثٌ أمام الصفّ لا صفحةٌ تُقرأ — والطالب في آخر
@@ -1958,6 +2098,17 @@ body:has(#page-fahim.active){overflow:hidden}
   <!-- حاوية عادية لا شبكة: بداخلها أقسامٌ متتابعة، ولكل قسمٍ شبكة بطاقاته -->
   <div id="rs-grid"></div>
 </div></div>
+
+<div id="rs-stage">
+  <canvas id="rs-stage-cf"></canvas>
+  <div class="rss-top">
+    <span class="nm" id="rss-nm"></span>
+    <span class="rss-dots" id="rss-dots"></span>
+    <span class="rss-step-n" id="rss-step-n"></span>
+    <button class="rss-x" onclick="rsStageClose()">إنهاء</button>
+  </div>
+  <div class="rss-body"><div class="rss-in" id="rss-body"></div></div>
+</div>
 
 <div id="ch-stage">
   <canvas id="ch-confetti"></canvas>
@@ -5712,91 +5863,84 @@ function rsRenderPlay(){
   else                     box.innerHTML=goal+rsStepsHtml(a);
 }
 
+/* ── بطاقات التعريف ──
+   نمطٌ واحد لكل الأنواع: ما يخرج به الطالب، ثم كيف يُدار، ثم زرّ البدء.
+   فالمعلمة تعرف ما ستفعله قبل أن تفتح الشاشة على الصفّ. */
+
+function rsBrief(icon,label,text,steps,btn,fn,color){
+  return `<div class="rsb-hero" style="--vc:${color}">
+      <span class="rsb-hero-ic">${icon}</span>
+      <span class="rsb-hero-t"><b>${escHtml(label)}</b><span>${escHtml(text)}</span></span>
+    </div>
+    <div class="rsb-sec">كيف تُديرينه</div>
+    ${steps.map((x,i)=>`<div class="rs-step"><span class="n">${egArNum(i+1)}</span><span class="x">${x}</span></div>`).join('')}
+    <button class="rsb-start" style="--vc:${color}" onclick="${fn}">${btn}</button>`;
+}
+
 // بطاقة التحدّي: تشرح الاستراتيجية قبل الدخول، فتعرف المعلمة ما ستُدير
 function rsChallengeHtml(a){
   const r=a.run||{};
   const st=(window.RESERVE_STRATEGY||{})[r.strategy]||{};
   const n=(r.rounds||[]).length;
   const teams=r.strategy==='corners'?'بلا فرق — كل طالب يختار موقفه':'من فريقين إلى أربعة، تختارينها عند البدء';
-  // المواد التي يمرّ بها التحدّي — تعرفها المعلمة قبل أن تدخل به على الصفّ
   const SB=window.RESERVE_SUBJECTS||{};
   const subs=[...new Set((r.rounds||[]).map(x=>x.subj).filter(Boolean))];
-  const subsHtml=subs.length?`<div class="rs-card-meta" style="margin:0 0 10px">${
+  const subsHtml=subs.length?`<div class="rs-card-meta" style="margin:0 0 14px">${
     subs.map(k=>`<span class="rs-tag" style="background:${SB[k].c};border-color:${SB[k].c};color:#fff">${escHtml(SB[k].nm)}</span>`).join('')}</div>`:'';
-  return subsHtml
-    +`<div class="rs-step"><span class="n">${egArNum(1)}</span><span class="x"><b>الاستراتيجية: ${escHtml(st.nm||'')}</b><br>${escHtml(st.how||'')}</span></div>
-    <div class="rs-step"><span class="n">${egArNum(2)}</span><span class="x">الفرق: ${escHtml(teams)}.</span></div>
-    <div class="rs-step"><span class="n">${egArNum(3)}</span><span class="x">${rsCountAr(n,'جولة','جولات')}، ولكل جولة مؤقّت ${rsCountAr(r.secs||30,'ثانية','ثوانٍ')} — تستطيعين إيقافه أو إعادته.</span></div>
-    <div class="rs-step"><span class="n">${egArNum(4)}</span><span class="x">النقاط بلمسة على بطاقة الفريق، والفائز يظهر في النهاية.</span></div>
-    <div class="rs-again"><button onclick="rsPlayChallenge()" style="background:linear-gradient(135deg,#F2A03D,#D8741A);color:#fff;border:none;padding:14px 30px;font-size:15px">🏆 ابدئي التحدّي</button></div>`;
+  return subsHtml+rsBrief('🏆','الاستراتيجية — '+(st.nm||''),st.how||'',[
+    'الفرق: '+escHtml(teams)+'.',
+    rsCountAr(n,'جولة','جولات')+'، ولكل جولة مؤقّت '+rsCountAr(r.secs||30,'ثانية','ثوانٍ')+' — تستطيعين إيقافه أو إعادته.',
+    'النقاط بلمسة على بطاقة الفريق، والفائز يظهر في النهاية.',
+  ],'ابدئي التحدّي','rsPlayChallenge()','#C05A2A');
 }
 function rsPlayChallenge(){
   const a=_rsCur;if(!a||a.fmt!=='challenge')return;
   chOpen(a);
 }
 
+// ── النشاط ──
+function rsStepText(s){return typeof s==='string'?s:(s.t||'');}
+function rsStepSecs(s){return (s&&typeof s==='object'&&s.secs)||0;}
 function rsStepsHtml(a){
   const r=a.run||{};
-  return (r.steps||[]).map((s,i)=>
-    `<div class="rs-step"><span class="n">${egArNum(i+1)}</span><span class="x">${escHtml(s)}</span></div>`).join('')
-    +(r.talk?`<div class="rs-talk"><b>ختام الحوار</b>${escHtml(r.talk)}</div>`:'');
+  const n=(r.steps||[]).length;
+  const timed=(r.steps||[]).filter(rsStepSecs).length;
+  return rsBrief('✋','نشاط صفّي',
+    'حركةٌ ومشاركة بلا شاشة ولا ورق — صوتُكِ والسبورة تكفيان.',[
+    rsCountAr(n,'خطوة','خطوات')+' تظهر واحدةً في المرة، بخطٍّ كبير تقرئينه وأنتِ واقفة.',
+    timed?('في '+rsCountAr(timed,'خطوة','خطوات')+' مؤقّتٌ جاهز يبدأ بضغطة.'):'انتقلي بين الخطوات بزرّ «التالي».',
+    'يختم النشاط بسؤال حوارٍ تطرحينه على الصفّ.',
+  ],'ابدئي النشاط','rsPlaySteps()','#487848');
 }
+function rsPlaySteps(){const a=_rsCur;if(a&&a.fmt==='activity')acOpen(a);}
 
-// القصة: الصفّ يصوّت برفع الأيدي، والمعلمة تضغط الخيار فيظهر أثره.
-// كل خيار له نتيجة — حتى الخاطئ — لأن رؤية الأثر أبلغ من التحذير منه.
+// ── القصة ──
 function rsStoryHtml(a){
   const r=a.run||{};
-  return `<div class="rs-story-t">${escHtml(r.intro)}</div>
-    <div class="rs-ask">${escHtml(r.ask)}</div>
-    <div class="rs-choices">${(r.choices||[]).map((c,i)=>
-      `<button class="rs-choice" onclick="rsChoose(${i})">${escHtml(c.t)}</button>`).join('')}</div>
-    <div id="rs-out"></div>`;
+  const n=(r.choices||[]).length;
+  return rsBrief('📖','قصة تفاعلية',
+    'تتوقّف عند موقف، فيصوّت الصفّ برفع الأيدي، ثم يظهر أثر اختيارهم.',[
+    'اقرئي القصة على الصفّ من الشاشة.',
+    'اعرضي '+rsCountAr(n,'خيار','خيارات')+' وصوّتوا برفع الأيدي، ثم اضغطي ما اختاروه.',
+    'لكل خيارٍ أثرٌ — حتى الخاطئ — فجرّبوا غيره بعدها ليروا الفرق.',
+  ],'ابدئي القصة','rsPlayStory()','#A83030');
 }
-function rsChoose(i){
-  const r=(_rsCur||{}).run||{};
-  const c=(r.choices||[])[i];if(!c)return;
-  const col=c.good?'var(--olive-d)':'var(--red-d)';
-  document.getElementById('rs-out').innerHTML=
-    `<div class="rs-out" style="--oc:${col}">
-      <span class="rs-out-b">${c.good?'وهذا ما حدث':'وهذا ما حدث'}</span>
-      <div class="rs-out-t">${escHtml(c.out)}</div>
-      <div class="rs-lesson">${escHtml(c.lesson)}</div>
-      ${r.after?`<div class="rs-talk" style="margin-top:14px"><b>ختام الحوار</b>${escHtml(r.after)}</div>`:''}
-      <div class="rs-again">
-        <button onclick="rsStoryReset()">جرّبوا خياراً آخر</button>
-      </div>
-    </div>`;
-  document.getElementById('rs-out').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-function rsStoryReset(){rsRenderPlay();}
+function rsPlayStory(){const a=_rsCur;if(a&&a.fmt==='story')stOpen(a);}
 
+// ── المعلومات ──
 function rsFactHtml(a){
-  const facts=(a.run||{}).facts||[];
-  const f=facts[_rsFact]||{};
-  return `<div class="rs-fact">
-      <div class="rs-fact-n">معلومة ${egArNum(_rsFact+1)} من ${egArNum(facts.length)}</div>
-      <div class="rs-fact-t">${escHtml(f.t)}</div>
-      ${f.q?`<div class="rs-fact-q">${escHtml(f.q)}</div>`:''}
-    </div>
-    <div class="rs-fact-nav">
-      <button onclick="rsFactGo(1)" ${_rsFact>=facts.length-1?'disabled':''}>‹</button>
-      <span>${egArNum(_rsFact+1)} / ${egArNum(facts.length)}</span>
-      <button onclick="rsFactGo(-1)" ${_rsFact<=0?'disabled':''}>›</button>
-    </div>`;
+  const r=a.run||{};
+  const n=(r.facts||[]).length;
+  return rsBrief('💡','معلومات ودهشة',
+    'كل معلومةٍ يتبعها سؤالٌ يُشغّل التفكير لا الحفظ.',[
+    rsCountAr(n,'معلومة','معلومات')+' تظهر واحدةً في المرة بخطٍّ كبير.',
+    'اقرئيها، ثم اضغطي «اسألي الصفّ» فيظهر السؤال — ولا يظهر قبله عمداً.',
+    'اسمعي إجاباتهم قبل أن تنتقلي، فالسؤال هو المقصود لا المعلومة.',
+  ],'ابدئي العرض','rsPlayFacts()','#356070');
 }
-function rsFactGo(d){
-  const n=((_rsCur||{}).run||{}).facts||[];
-  _rsFact=Math.min(n.length-1,Math.max(0,_rsFact+d));
-  rsRenderPlay();
-}
+function rsPlayFacts(){const a=_rsCur;if(a&&a.fmt==='fact')fcOpen(a);}
 
-// اللعبة تُشغَّل بمحرّك الألعاب القائم — لا محرّك جديد.
-// بلا إنترنت تظهر بخلفية متدرّجة بلا صوت (الثيمات والأصوات من Supabase).
-// الأشكال مأخوذة من gmReadEditor وGM_STRUCT — لا من التخمين:
-//   pairs  → {a,b}          (match, memory)
-//   quiz   → {q, c:[…], a}  (quiz, balloon, millionaire, race, boxes)
-//   groups → {t, g}
-//   items  → نصّ مجرّد       (wheel, box)
+// ── اللعبة ──
 const RS_TPL_ITEMS={
   match:  r=>(r.items||[]).map(x=>({a:x.a,b:x.b})),
   memory: r=>(r.items||[]).map(x=>({a:x.a,b:x.b})),
@@ -5806,13 +5950,21 @@ const RS_TPL_ITEMS={
   wheel:  r=>(r.items||[]).map(x=>String(x.t||x)),
   box:    r=>(r.items||[]).map(x=>String(x.t||x)),
 };
+const RS_TPL_NM={match:'المطابقة',memory:'بطاقات الذاكرة',quiz:'اختبار السرعة',balloon:'فرقع البالون',
+  groups:'فرز المجموعات',wheel:'العجلة',box:'افتح الصندوق'};
 function rsGameHtml(a){
   const r=a.run||{};
   const n=(r.items||[]).length;
-  return `<div class="rs-step"><span class="n">${egArNum(1)}</span><span class="x">اعرضي الشاشة على الطلاب، وقسّميهم فريقين إن أحببتِ.</span></div>
-    <div class="rs-step"><span class="n">${egArNum(2)}</span><span class="x">اضغطي «شغّلي اللعبة» — فيها ${egArNum(n)} عنصراً.</span></div>
-    <div class="rs-step"><span class="n">${egArNum(3)}</span><span class="x">استعملي القرعة والمؤقّت من شريط الحصة إن كنتِ داخل حصة.</span></div>
-    <div class="rs-again"><button onclick="rsPlayGame()" style="background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border:none;padding:13px 26px;font-size:14px">▶ شغّلي اللعبة</button></div>`;
+  const sample=(r.items||[]).slice(0,3).map(x=>x.t||x.q||x.a||String(x)).filter(Boolean);
+  const peek=sample.length?`<div class="rsb-sec">من محتواها</div>
+    <div class="rs-card-meta" style="margin:0 0 4px">${sample.map(x=>
+      `<span class="rs-tag">${escHtml(String(x).slice(0,34))}${String(x).length>34?'…':''}</span>`).join('')}</div>`:'';
+  return rsBrief('🎲','لعبة — '+(RS_TPL_NM[r.tpl]||''),
+    'تعمل بمحرّك ألعاب الموقع نفسه، بمحتوىً جاهز لا تكتبين منه حرفاً.',[
+    'اعرضي الشاشة على الطلاب، وقسّميهم فريقين إن أحببتِ.',
+    'فيها '+rsCountAr(n,'عنصر','عناصر')+' جاهزة.',
+    'بلا إنترنت تعمل بخلفيةٍ متدرّجة بلا صوت — واللعب كما هو.',
+  ],'شغّلي اللعبة','rsPlayGame()','#7A4FB0')+peek;
 }
 async function rsPlayGame(){
   const a=_rsCur;if(!a||a.fmt!=='game')return;
@@ -5822,8 +5974,201 @@ async function rsPlayGame(){
   if(typeof gmLoadThemes==='function'&&!(window.gmThemes||[]).length){try{await gmLoadThemes();}catch(e){}}
   if(r.groups&&typeof gmGroupNames!=='undefined')gmGroupNames=r.groups.slice();
   gmTpl=r.tpl;
-  gmPickScope=null;               // نشاط احتياط: لا شعبة معلومة فلا قرعة من قائمة
+  gmPickScope=null;
   gmPlayWith(conv(r),a.nm);
+}
+
+/* ═══════════════ الساحة المشتركة ═══════════════
+   القصة والنشاط والمعلومات تُدار كما يُدار التحدّي: شاشةٌ ملء الشاشة، خطوةٌ
+   واحدة في المرة، وزرٌّ كبير. المعلمة واقفةٌ أمام الصفّ لا جالسةٌ تقرأ. */
+
+let rssCtx=null,_acTimer=null,_acLeft=0;
+
+function rsStageOpen(type,a,total){
+  rssCtx={type,a,i:0,total,tried:[]};
+  const st=document.getElementById('rs-stage');
+  st.className='on t-'+type;
+  document.getElementById('rss-nm').textContent=a.nm;
+  document.body.style.overflow='hidden';
+  rsStageHead();
+}
+function rsStageClose(){
+  acStopTimer();
+  const st=document.getElementById('rs-stage');
+  st.className='';
+  document.body.style.overflow=_rsCur?'hidden':'';
+  rssCtx=null;
+}
+function rsStageHead(){
+  if(!rssCtx)return;
+  const {i,total}=rssCtx;
+  document.getElementById('rss-step-n').textContent=total>1?(egArNum(i+1)+' / '+egArNum(total)):'';
+  document.getElementById('rss-dots').innerHTML=total>1&&total<=14
+    ? Array.from({length:total},(_,k)=>`<span class="rss-dot ${k===i?'on':(k<i?'past':'')}"></span>`).join('')
+    : '';
+}
+function rsStageBody(html){document.getElementById('rss-body').innerHTML=html;}
+
+/* ── القصة ── */
+function stOpen(a){
+  rsStageOpen('story',a,1);
+  document.getElementById('rs-stage').style.setProperty('--ac','#FFC46B');
+  stScene();
+}
+function stScene(){
+  const r=rssCtx.a.run||{};
+  rssCtx.total=1;rsStageHead();
+  rsStageBody(`<span class="rss-eyebrow">القصة</span>
+    <div class="rss-lede">${escHtml(r.intro)}</div>
+    <div class="rss-acts"><button class="rss-btn main" onclick="stAsk()">اعرضي السؤال</button></div>`);
+}
+function stAsk(){
+  const r=rssCtx.a.run||{};
+  const keys=['أ','ب','ج','د'];
+  rsStageBody(`<span class="rss-eyebrow">صوّتوا برفع الأيدي</span>
+    <div class="rss-ask">${escHtml(r.ask)}</div>
+    <div class="st-choices">${(r.choices||[]).map((c,i)=>
+      `<button class="st-choice ${rssCtx.tried.includes(i)?'tried':''}" onclick="stChoose(${i})">
+        <span class="k">${keys[i]||''}</span><span>${escHtml(c.t)}</span></button>`).join('')}</div>`);
+}
+function stChoose(i){
+  const r=rssCtx.a.run||{};
+  const c=(r.choices||[])[i];if(!c)return;
+  if(!rssCtx.tried.includes(i))rssCtx.tried.push(i);
+  const oc=c.good?'#3FA96B':'#E0603F';
+  try{zzfx.apply(null,c.good?[1.1,.05,539,0,.05,.3,1,1.9,0,0,470,.03]:[1.2,.05,180,.02,.06,.28,1,1.5,-3,0,0,0,0,0,0,.08]);}catch(e){}
+  const left=(r.choices||[]).length-rssCtx.tried.length;
+  rsStageBody(`<div class="st-out" style="--oc:${oc}">
+      <span class="st-verdict">${c.good?'✔ وهذا ما حدث':'✕ وهذا ما حدث'}</span>
+      <div class="st-out-t">${escHtml(c.out)}</div>
+      <div class="st-lesson"><b>العبرة</b><span>${escHtml(c.lesson)}</span></div>
+      <div class="rss-acts">
+        ${left>0?`<button class="rss-btn ghost" onclick="stAsk()">جرّبوا خياراً آخر (${egArNum(left)})</button>`:''}
+        <button class="rss-btn main" onclick="stEnd()">${left>0?'اختمي القصة':'إلى ختام الحوار'}</button>
+      </div>
+    </div>`);
+  if(c.good&&typeof chConfetti==='function')stConfetti();
+}
+function stConfetti(){
+  const cv=document.getElementById('rs-stage-cf');
+  if(!cv)return;
+  cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
+  const cx=cv.getContext('2d'),cols=['#FFC46B','#8DF0C0','#FF9BB5','#C9A6F5'],ps=[];
+  for(let i=0;i<110;i++)ps.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,
+    vy:2+Math.random()*3.4,vx:(Math.random()-.5)*2,r:4+Math.random()*5,c:cols[i%cols.length],a:Math.random()*7});
+  const t0=performance.now();
+  (function f(t){
+    cx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.11;
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.5);cx.restore();});
+    if(t-t0<2600)requestAnimationFrame(f);else cx.clearRect(0,0,cv.width,cv.height);
+  })(t0);
+}
+function stEnd(){
+  const r=rssCtx.a.run||{};
+  rsStageBody(`<span class="rss-eyebrow">ختام الحوار</span>
+    <div class="rss-ask">${escHtml(r.after||'ماذا تعلّمنا من هذه القصة؟')}</div>
+    <div class="rss-acts">
+      <button class="rss-btn ghost" onclick="stScene()">أعيدي القصة</button>
+      <button class="rss-btn main" onclick="rsStageClose()">إنهاء</button>
+    </div>`);
+}
+
+/* ── المعلومات ── */
+function fcOpen(a){
+  const n=((a.run||{}).facts||[]).length;
+  rsStageOpen('fact',a,n);
+  document.getElementById('rs-stage').style.setProperty('--ac','#5BD3D0');
+  fcShow(false);
+}
+function fcShow(withQ){
+  const facts=(rssCtx.a.run||{}).facts||[];
+  const f=facts[rssCtx.i]||{};
+  rsStageHead();
+  rsStageBody(`<span class="rss-eyebrow">هل تعلم؟</span>
+    <div class="fc-text">${escHtml(f.t)}</div>
+    ${withQ&&f.q?`<div class="fc-q"><b>اسألي الصفّ</b><span>${escHtml(f.q)}</span></div>`:''}
+    <div class="rss-acts">
+      <button class="rss-btn ghost icon" onclick="fcGo(-1)" ${rssCtx.i<=0?'disabled':''}>›</button>
+      ${(!withQ&&f.q)?`<button class="rss-btn main" onclick="fcShow(true)">اسألي الصفّ</button>`
+        :`<button class="rss-btn main" onclick="fcGo(1)" ${rssCtx.i>=facts.length-1?'disabled':''}>${rssCtx.i>=facts.length-1?'انتهى':'المعلومة التالية'}</button>`}
+      <button class="rss-btn ghost icon" onclick="fcGo(1)" ${rssCtx.i>=facts.length-1?'disabled':''}>‹</button>
+    </div>`);
+}
+function fcGo(d){
+  const facts=(rssCtx.a.run||{}).facts||[];
+  const n=Math.min(facts.length-1,Math.max(0,rssCtx.i+d));
+  if(n===rssCtx.i)return;
+  rssCtx.i=n;
+  try{zzfx(1,.05,880,0,.03,.14,1,1.6,0,0,180,.03);}catch(e){}
+  fcShow(false);
+}
+
+/* ── النشاط ── */
+function acOpen(a){
+  const n=((a.run||{}).steps||[]).length;
+  rsStageOpen('activity',a,n);
+  document.getElementById('rs-stage').style.setProperty('--ac','#35603A');
+  acShow();
+}
+function acShow(){
+  acStopTimer();
+  const r=rssCtx.a.run||{};
+  const steps=r.steps||[];
+  const s=steps[rssCtx.i];
+  const secs=rsStepSecs(s);
+  rsStageHead();
+  rsStageBody(`<span class="ac-badge">${egArNum(rssCtx.i+1)}</span>
+    <div class="ac-step">${escHtml(rsStepText(s))}</div>
+    ${secs?`<div class="ac-timer">
+        <span class="ac-clock" id="ac-clock">${acFmt(secs)}</span>
+        <button class="rss-btn ghost" id="ac-tbtn" onclick="acToggle(${secs})">ابدئي المؤقّت</button>
+      </div>`:''}
+    <div class="rss-acts">
+      <button class="rss-btn ghost icon" onclick="acGo(-1)" ${rssCtx.i<=0?'disabled':''}>›</button>
+      <button class="rss-btn main" onclick="acGo(1)">${rssCtx.i>=steps.length-1?'أنهيتُ الخطوات':'الخطوة التالية'}</button>
+    </div>`);
+}
+function acGo(d){
+  const steps=(rssCtx.a.run||{}).steps||[];
+  const n=rssCtx.i+d;
+  if(n<0)return;
+  if(n>=steps.length){acEnd();return;}
+  rssCtx.i=n;acShow();
+}
+function acEnd(){
+  acStopTimer();
+  const r=rssCtx.a.run||{};
+  rssCtx.i=(r.steps||[]).length;rsStageHead();
+  document.getElementById('rss-step-n').textContent='';
+  rsStageBody(`<div class="ac-done">أحسنتِ — انتهى النشاط</div>
+    ${r.talk?`<div class="ac-talk"><b>ختام الحوار</b><span>${escHtml(r.talk)}</span></div>`:''}
+    <div class="rss-acts">
+      <button class="rss-btn ghost" onclick="rssCtx.i=0;acShow()">أعيدي من البداية</button>
+      <button class="rss-btn main" onclick="rsStageClose()">إنهاء</button>
+    </div>`);
+}
+function acFmt(s){const m=Math.floor(s/60),x=s%60;
+  return egArNum(String(m).padStart(2,'0'))+':'+egArNum(String(x).padStart(2,'0'));}
+function acStopTimer(){clearInterval(_acTimer);_acTimer=null;}
+function acToggle(secs){
+  const b=document.getElementById('ac-tbtn');
+  if(_acTimer){acStopTimer();if(b)b.textContent='استئناف';return;}
+  if(_acLeft<=0)_acLeft=secs;
+  if(b)b.textContent='إيقاف';
+  acPaint();
+  _acTimer=setInterval(()=>{
+    _acLeft--;acPaint();
+    if(_acLeft<=0){acStopTimer();_acLeft=0;
+      try{zzfx(1.3,.05,180,.02,.1,.4,1,1.4,-3,0,0,0,0,0,0,.1,0,.7,.08);}catch(e){}
+      const bb=document.getElementById('ac-tbtn');if(bb)bb.textContent='أعيدي';
+    }
+  },1000);
+}
+function acPaint(){
+  const c=document.getElementById('ac-clock');if(!c)return;
+  c.textContent=acFmt(Math.max(0,_acLeft));
+  c.className='ac-clock'+(_acLeft<=0?' zero':(_acLeft<=10?' warn':''));
 }
 
 /* ═══════════════ ساحة التحدّي ═══════════════
