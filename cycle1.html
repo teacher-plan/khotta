@@ -2310,10 +2310,10 @@ body:has(#page-fahim.active){overflow:hidden}
     </div>
     <div class="grp">صيغة المخاطبة</div>
     <div class="chip-row" id="cert-gender"></div>
-    <div class="cert-hint">تُطبع على ورق A4 عرضياً. من نافذة الطباعة اختاري «حفظ كـ PDF» لحفظها ملفاً.</div>
+    <div class="cert-hint">«تنزيل صورة» يحفظ لكل طالب صورةً باسمه. و«طباعة» تُخرجها على ورق A4 عرضياً.</div>
     <div class="c1-mrow">
       <button class="c1-mbtn no" onclick="certClose()">إغلاق</button>
-      <button class="c1-mbtn gold" onclick="certDownload()">تنزيل</button>
+      <button class="c1-mbtn gold" onclick="certDownload()">تنزيل صورة</button>
       <button class="c1-mbtn go" onclick="certPrint()">طباعة</button>
     </div>
   </div>
@@ -2558,8 +2558,12 @@ async function driveDelete(fileId){
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function toast(msg,isErr){
+/* الوسيط الثاني يقبل true للخطأ و'ok' للنجاح.
+   كان يُختبر بالصدق وحده، و'ok' نصٌّ صادق — فكانت ٢٣ رسالة نجاح في الصفحة
+   تظهر بلون الخطأ الأحمر: «تم حفظ النبذة» و«جهز ملخص الدرس» وغيرهما. */
+function toast(msg,kind){
   const el=document.getElementById('toast-el');
+  const isErr=(kind===true||kind==='err'||kind==='error');
   el.textContent=msg;el.className='show'+(isErr?' err':'');
   clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='',2600);
 }
@@ -5401,13 +5405,88 @@ function certPrint(){
   toast('تُجهَّز '+egArNum(items.length)+' شهادة للطباعة…','ok');
 }
 
-function certDownload(){
+/* ── التنزيل صورةً باسم الطالب ──
+   الشهادة تُرسم في إطار مخفيّ بمقاسها الحقيقي ثم تُصوَّر بـhtml2canvas.
+   ولا تُصوَّر من إطار المعاينة: ذاك مُصغَّر بـtransform فتخرج الصورة بحجمه.
+
+   كل شهادة ملفٌّ باسم صاحبها، فتُرتَّب في مجلّد التنزيلات وحدها. */
+
+function certSafeName(s){
+  // ما يمنعه ويندوز ولينكس وماك في أسماء الملفات
+  return String(s||'').replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim().slice(0,80);
+}
+
+function certLoadH2C(){
+  if(window.html2canvas)return Promise.resolve(true);
+  return new Promise(res=>{
+    const s=document.createElement('script');
+    s.src='/vendor/html2canvas.min.js';
+    s.onload=()=>res(!!window.html2canvas);
+    s.onerror=()=>res(false);
+    document.head.appendChild(s);
+  });
+}
+
+// إطارٌ واحد يُعاد استعماله لكل الشهادات — أسرع من بناء إطار لكل واحدة
+let _certFrame=null;
+function certHiddenFrame(){
+  if(_certFrame&&_certFrame.isConnected)return _certFrame;
+  const f=document.createElement('iframe');
+  // خارج الشاشة لا display:none — المخفيّ لا يُرسَم فيخرج فارغاً
+  f.style.cssText='position:fixed;top:0;left:-20000px;width:1123px;height:794px;border:none;opacity:0;pointer-events:none';
+  document.body.appendChild(f);
+  _certFrame=f;
+  return f;
+}
+
+async function certToPng(item){
+  const f=certHiddenFrame();
+  const d=f.contentDocument;
+  d.open();d.write(certDocHtml([item]));d.close();
+  try{await d.fonts.ready;}catch(e){}
+  await new Promise(r=>setTimeout(r,450));
+  const el=d.querySelector('.cert');
+  if(!el)throw new Error('cert element missing');
+  const cv=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,
+    backgroundColor:'#FDF8F0',width:el.offsetWidth,height:el.offsetHeight,foreignObjectRendering:true});
+  return cv.toDataURL('image/png');
+}
+
+function certSaveDataUrl(url,name){
+  const a=document.createElement('a');
+  a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+}
+
+async function certDownload(){
   const items=certItems();
   if(!items.length){toast('اختاري طالباً واحداً على الأقل',true);return;}
-  const blob=new Blob(['﻿'+certDocHtml(items)],{type:'text/html;charset=utf-8'});
-  const base=certCtx.mode==='one'?('شهادة - '+items[0].name):('شهادات - '+((starClassObj(certCtx.classId)||{}).name||'شعبة'));
-  gmDownloadBlob(blob,base.replace(/[\\/:*?"<>|]/g,'')+'.html');
-  toast('⬇ حُمّلت — افتحيها بأي متصفح واطبعيها','ok');
+  const ok=await certLoadH2C();
+  if(!ok){
+    // تراجعٌ صريح لا صامت: تعرف المعلمة لماذا لم تحصل على صورة وماذا تفعل
+    const blob=new Blob(['﻿'+certDocHtml(items)],{type:'text/html;charset=utf-8'});
+    gmDownloadBlob(blob,certSafeName(items.length===1?('شهادة '+items[0].name):'شهادات')+'.html');
+    toast('تعذّر تجهيز الصورة — نُزّلت نسخة تُطبع بدلاً منها',true);
+    return;
+  }
+  const many=items.length>1;
+  uiBusy(many?('يجهّز '+rsCountAr(items.length,'شهادة','شهادات')+'…'):'يجهّز الشهادة…');
+  let done=0,failed=0;
+  try{
+    for(const it of items){
+      try{
+        const png=await certToPng(it);
+        const t=(CERT_TYPES[it.type]||CERT_TYPES.thanks).ttl;
+        certSaveDataUrl(png,certSafeName(it.name+' - '+t)+'.png');
+        done++;
+        // فاصلٌ بين التنزيلات: المتصفحات تحجب الدفعات المتلاحقة
+        if(many)await new Promise(r=>setTimeout(r,350));
+      }catch(e){failed++;}
+    }
+  }finally{uiBusyDone();}
+  if(!done)toast('تعذّر تجهيز الصور — جرّبي الطباعة',true);
+  else if(failed)toast('حُفظت '+rsCountAr(done,'صورة','صور')+'، وتعذّرت '+egArNum(failed),true);
+  else toast('⬇ حُفظت '+rsCountAr(done,'صورة','صور')+' باسم كل طالب','ok');
 }
 
 /* ═══════════════ حصص الاحتياط ═══════════════
