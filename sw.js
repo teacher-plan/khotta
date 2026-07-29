@@ -6,7 +6,10 @@ self.addEventListener('install', e => {
   e.waitUntil((async () => {
     try {
       const cache = await caches.open(CACHE_NAME);
-      await cache.addAll(['/', '/index.html']);
+      // reserve.js: بنك أنشطة حصص الاحتياط. يُخزَّن مسبقاً لا عند أول فتح —
+      // معلمة الاحتياط قد تفتح القسم أول مرة في فصل بلا إنترنت، ولو انتظرنا
+      // الجلب لوجدته فارغاً. حجمه صغير فلا يُثقل التثبيت.
+      await cache.addAll(['/', '/index.html', '/reserve.js']);
     } catch (_) { /* اجتهادي */ }
     self.skipWaiting();
   })());

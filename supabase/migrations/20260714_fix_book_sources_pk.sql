@@ -1,0 +1,65 @@
+-- ══════════════════════════════════════════════════════════════════════
+-- إصلاح: تمكين تعدّد الكتب للمادة الواحدة
+-- ══════════════════════════════════════════════════════════════════════
+--
+-- 🔴 MANUAL EXECUTION REQUIRED — لا يُطبق تلقائياً
+-- نفّذ هذا يدوياً في لوحة Supabase ← SQL Editor بعد أخذ نسخة احتياطية
+--
+-- المشكلة
+-- الحلقة الأولى تحتاج ثلاثة كتب للمادة الواحدة في الفصل. وترحيل 20260714
+-- أضاف عمود book_no وقيداً فريداً رباعياً لتمكين ذلك، لكنه بحث عن
+-- constraint_type = 'UNIQUE' وحده، فنجا المفتاح الأساسي الثلاثي الذي
+-- يمنع الكتاب الثاني.
+--
+-- الأثر: إدراج كتاب ثانٍ لنفس المادة يُرفض بـ unique_violation.
+-- ميزة الكتب الثلاثة لا تعمل اليوم رغم وجود كل ما يلزمها في الكود.
+--
+-- الحل
+-- نستبدل المفتاح الأساسي بآخر يشمل book_no.
+-- القيد الفريد الرباعي يصير مكرّراً فيُسقط.
+--
+-- ⚠️ قبل التنفيذ
+-- 1) خُذ نسخة احتياطية من قاعدة الإنتاج أولاً (Supabase ← Database ← Backups)
+-- 2) نفّذه كاملاً دفعة واحدة في معاملة واحدة (begin/commit)
+-- 3) الصفوف الحالية لن تتأثر: كلها book_no = 1
+-- 4) تحقّق بعدها: جرّب رفع كتاب ثانٍ من لوحة المشرف
+-- ══════════════════════════════════════════════════════════════════════
+
+begin;
+
+-- ① تحقّق أن البيانات الحالية تحتمل المفتاح الجديد
+do $$
+declare dup integer;
+begin
+  select count(*) into dup from (
+    select grade, subject, semester, book_no
+    from public.book_sources
+    group by grade, subject, semester, book_no
+    having count(*) > 1
+  ) x;
+  if dup > 0 then
+    raise exception 'يوجد % تكرار في (grade, subject, semester, book_no) — أوقفنا العملية', dup;
+  end if;
+  raise notice '✅ البيانات الحالية تحتمل المفتاح الجديد';
+end $$;
+
+-- ② أسقط المفتاح الأساسي الثلاثي (هو المانع)
+alter table public.book_sources
+  drop constraint if exists book_sources_pkey;
+
+-- ③ ضع المفتاح الرباعي مكانه
+alter table public.book_sources
+  add constraint book_sources_pkey
+  primary key (grade, subject, semester, book_no);
+
+-- ④ القيد الفريد الرباعي صار مكرّراً للمفتاح — نُسقطه
+alter table public.book_sources
+  drop constraint if exists book_sources_grade_subject_semester_book_no_key;
+
+commit;
+
+-- ══════════════════════════════════════════════════════════════════════
+-- بعد التنفيذ، تأكّد أن الميزة عملت:
+-- جرّب رفع كتاب ثانٍ لمادة من لوحة المشرف (manager.html)
+-- المفروض يُقبل الآن بدل أن يُرفض بـ unique_violation
+-- ══════════════════════════════════════════════════════════════════════
