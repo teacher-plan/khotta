@@ -1011,6 +1011,93 @@ body.inapp #c1-notif-btn{display:flex}
 .rs-fact-nav button:disabled{opacity:.32;cursor:default}
 .rs-fact-nav span{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
 
+/* ── ساحة التحدّي ──
+   الموقع كلّه هادئ قشديّ، وهذه عمداً على النقيض: خلفية داكنة وألوان مشتعلة
+   ونقاط كبيرة. لأن التحدّي حدثٌ أمام الصفّ لا صفحةٌ تُقرأ — والطالب في آخر
+   الفصل يجب أن يقرأ النقاط من مكانه. */
+#ch-stage{position:fixed;inset:0;z-index:4500;display:none;flex-direction:column;color:#fff;
+  background:radial-gradient(1200px 700px at 20% -10%,#3B1E6E,transparent),
+             radial-gradient(900px 600px at 100% 100%,#7A1030,transparent),
+             linear-gradient(150deg,#1A1030,#2A1240 55%,#1A0C22)}
+#ch-stage.on{display:flex}
+/* width/height صريحان: canvas عنصر مُستبدَل، فـ inset:0 وحده لا يُمدّده —
+   يبقى بمقاسه الأصلي ٣٠٠×١٥٠ فتتكدّس القصاصات في زاوية. */
+#ch-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9}
+.ch-top{display:flex;align-items:center;gap:10px;padding:11px 15px;flex:none;
+  background:rgba(0,0,0,.28);border-bottom:1px solid rgba(255,255,255,.12)}
+.ch-top .nm{flex:1;min-width:0;font-size:14.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-top .rd{font-size:12px;font-weight:800;background:rgba(255,255,255,.16);border-radius:9px;padding:5px 12px;flex:none;font-variant-numeric:tabular-nums}
+.ch-x{background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:10px;padding:8px 13px;
+  font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;flex:none}
+.ch-x:hover{background:rgba(255,255,255,.26)}
+/* لوحة النقاط */
+.ch-score{display:flex;gap:10px;padding:12px 15px;flex:none;justify-content:center;flex-wrap:wrap}
+.ch-team{background:rgba(255,255,255,.09);border:2px solid var(--tc);border-radius:16px;padding:9px 16px;min-width:120px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:.15s;font-family:inherit;position:relative}
+.ch-team:hover{background:rgba(255,255,255,.16);transform:translateY(-2px)}
+.ch-team.lead{box-shadow:0 0 0 3px var(--tc),0 6px 22px rgba(0,0,0,.4)}
+.ch-team .tn{font-size:12px;font-weight:800;color:var(--tc)}
+.ch-team .tp{font-size:30px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;color:#fff}
+.ch-team .th{font-size:9.5px;opacity:.6}
+.ch-bump{position:absolute;top:-8px;inset-inline-end:-6px;background:var(--tc);color:#fff;border-radius:50%;
+  width:26px;height:26px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  animation:chBump .6s ease both;pointer-events:none}
+@keyframes chBump{0%{opacity:0;transform:translateY(6px) scale(.6)}30%{opacity:1;transform:translateY(-4px) scale(1.1)}100%{opacity:0;transform:translateY(-22px) scale(1)}}
+/* جسم التحدّي */
+.ch-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:16px 20px 24px;text-align:center;gap:14px}
+.ch-strat{font-size:11.5px;font-weight:800;letter-spacing:.5px;color:#FFD98A;background:rgba(255,217,138,.13);
+  border:1px solid rgba(255,217,138,.32);border-radius:999px;padding:5px 16px}
+.ch-q{font-size:clamp(22px,3.6vw,40px);font-weight:800;line-height:1.65;max-width:20ch;margin:0 auto;
+  text-wrap:balance;animation:chIn .4s cubic-bezier(.16,1,.3,1) both}
+@keyframes chIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.ch-word{font-size:clamp(34px,7vw,74px);font-weight:800;line-height:1.4;color:#FFD98A;
+  text-shadow:0 4px 26px rgba(255,193,74,.4);animation:chIn .4s cubic-bezier(.16,1,.3,1) both}
+.ch-a{background:rgba(52,211,153,.14);border:2px solid rgba(52,211,153,.55);border-radius:16px;padding:14px 24px;
+  font-size:clamp(17px,2.6vw,26px);font-weight:800;color:#8DF0C0;max-width:26ch;animation:chIn .35s both;line-height:1.7}
+.ch-note{font-size:13.5px;line-height:1.9;color:rgba(255,255,255,.75);max-width:52ch;
+  background:rgba(255,255,255,.07);border-radius:13px;padding:11px 16px}
+.ch-opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:640px;width:100%}
+.ch-opt{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:14px;padding:14px 12px;
+  font-family:inherit;font-size:15px;font-weight:800;color:#fff;line-height:1.6;display:flex;flex-direction:column;gap:5px;align-items:center}
+.ch-opt .cn{font-size:10.5px;font-weight:800;color:#FFD98A;letter-spacing:1px}
+/* المؤقّت */
+.ch-timer{display:flex;align-items:center;gap:12px}
+.ch-clock{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;min-width:110px}
+.ch-clock.warn{color:#FFC14A}
+.ch-clock.zero{color:#FF8A7A;animation:chPulse .6s ease infinite}
+@keyframes chPulse{0%,100%{opacity:1}50%{opacity:.45}}
+.ch-btn{border:none;border-radius:13px;padding:13px 26px;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;transition:.15s}
+.ch-btn.main{background:linear-gradient(135deg,#FFD166,#F2A03D);color:#3A2408;box-shadow:0 5px 20px rgba(242,160,61,.36)}
+.ch-btn.main:hover{transform:translateY(-2px);box-shadow:0 9px 26px rgba(242,160,61,.46)}
+.ch-btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.26)}
+.ch-btn.ghost:hover{background:rgba(255,255,255,.22)}
+.ch-btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
+.ch-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ch-hint{font-size:12px;color:rgba(255,255,255,.6);line-height:1.8;max-width:46ch}
+/* الإعداد والنهاية */
+.ch-setup{max-width:520px;width:100%;display:flex;flex-direction:column;gap:16px;align-items:center}
+.ch-setup h2{font-size:26px;font-weight:800;line-height:1.5;text-wrap:balance}
+.ch-pickteams{display:flex;gap:10px}
+.ch-pickteams button{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.22);border-radius:14px;
+  width:66px;height:66px;font-family:inherit;font-size:24px;font-weight:800;color:#fff;cursor:pointer;transition:.15s}
+.ch-pickteams button.on{background:linear-gradient(135deg,#FFD166,#F2A03D);color:#3A2408;border-color:#FFD166}
+.ch-win{font-size:clamp(30px,6vw,58px);font-weight:800;color:#FFD98A;text-shadow:0 6px 30px rgba(255,193,74,.5);line-height:1.4}
+.ch-final{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.ch-fin-t{background:rgba(255,255,255,.09);border:2px solid var(--tc);border-radius:15px;padding:12px 22px;min-width:110px}
+.ch-fin-t .tn{font-size:12.5px;font-weight:800;color:var(--tc)}
+.ch-fin-t .tp{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}
+@media(max-width:640px){
+  .ch-opts{grid-template-columns:1fr}
+  .ch-team{min-width:96px;padding:7px 12px}
+  .ch-team .tp{font-size:24px}
+  .ch-clock{font-size:32px;min-width:90px}
+}
+@media(prefers-reduced-motion:reduce){
+  .ch-q,.ch-word,.ch-a{animation:none}
+  .ch-clock.zero{animation:none}
+}
+
 /* ── قسم فهيم ── */
 .fhp-card{max-width:1100px;margin:0 auto;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;height:calc(100dvh - 110px);min-height:480px;box-shadow:0 10px 34px rgba(48,24,0,.12)}
 /* فهيم: صفحة مستقلة تملأ الشاشة كاملة — لا تمرير ولا خلفية خلفها (نفس مبدأ صفحة المعلم) */
@@ -1849,6 +1936,17 @@ body:has(#page-fahim.active){overflow:hidden}
   <div class="rs-count" id="rs-count"></div>
   <div class="rs-grid" id="rs-grid"></div>
 </div></div>
+
+<div id="ch-stage">
+  <canvas id="ch-confetti"></canvas>
+  <div class="ch-top">
+    <span class="nm" id="ch-nm"></span>
+    <span class="rd" id="ch-rd"></span>
+    <button class="ch-x" onclick="chClose()">إنهاء</button>
+  </div>
+  <div class="ch-score" id="ch-score"></div>
+  <div class="ch-body" id="ch-body"></div>
+</div>
 
 <div class="rs-play" id="rs-play">
   <div class="rs-play-head" id="rs-play-head">
@@ -5323,13 +5421,15 @@ function certDownload(){
 
 let rsLoaded=false,rsMins=0,rsGrade=0,rsScreen='any',rsVal='',_rsCur=null,_rsFact=0;
 
-// تمييز العدد في العربية: ٣–١٠ جمعٌ، وما فوقها مفرد. «١٠ دقيقة» خطأ شائع.
-function rsMinsAr(n){
-  if(n===1)return 'دقيقة';
-  if(n===2)return 'دقيقتان';
-  if(n<=10)return egArNum(n)+' دقائق';
-  return egArNum(n)+' دقيقة';
+/* تمييز العدد في العربية: الواحد والاثنان لهما صيغتهما، و٣–١٠ جمعٌ،
+   وما فوق العشرة مفرد منصوب. «١٠ دقيقة» و«٦ جولة» خطأ شائع. */
+function rsCountAr(n,one,few,two){
+  if(n===1)return one;
+  if(n===2)return two||(one+'ان');
+  if(n<=10)return egArNum(n)+' '+few;
+  return egArNum(n)+' '+one;
 }
+function rsMinsAr(n){return rsCountAr(n,'دقيقة','دقائق','دقيقتان');}
 const RS_MINS=[{v:0,t:'الكل'},{v:10,t:'حتى ١٠'},{v:15,t:'حتى ١٥'},{v:99,t:'حصة كاملة'}];
 
 // سجلّ ما استُعمل — محليّ لأن القسم يجب أن يعمل بلا إنترنت
@@ -5475,10 +5575,28 @@ function rsRenderPlay(){
   const a=_rsCur;if(!a)return;
   const box=document.getElementById('rs-play-body');
   const goal=`<div class="rs-goal"><b>ما يخرج به الطالب</b>${escHtml(a.goal)}</div>`;
-  if(a.fmt==='story')      box.innerHTML=goal+rsStoryHtml(a);
+  if(a.fmt==='challenge')  box.innerHTML=goal+rsChallengeHtml(a);
+  else if(a.fmt==='story') box.innerHTML=goal+rsStoryHtml(a);
   else if(a.fmt==='fact')  box.innerHTML=goal+rsFactHtml(a);
   else if(a.fmt==='game')  box.innerHTML=goal+rsGameHtml(a);
   else                     box.innerHTML=goal+rsStepsHtml(a);
+}
+
+// بطاقة التحدّي: تشرح الاستراتيجية قبل الدخول، فتعرف المعلمة ما ستُدير
+function rsChallengeHtml(a){
+  const r=a.run||{};
+  const st=(window.RESERVE_STRATEGY||{})[r.strategy]||{};
+  const n=(r.rounds||[]).length;
+  const teams=r.strategy==='corners'?'بلا فرق — كل طالب يختار موقفه':'من فريقين إلى أربعة، تختارينها عند البدء';
+  return `<div class="rs-step"><span class="n">${egArNum(1)}</span><span class="x"><b>الاستراتيجية: ${escHtml(st.nm||'')}</b><br>${escHtml(st.how||'')}</span></div>
+    <div class="rs-step"><span class="n">${egArNum(2)}</span><span class="x">الفرق: ${escHtml(teams)}.</span></div>
+    <div class="rs-step"><span class="n">${egArNum(3)}</span><span class="x">${rsCountAr(n,'جولة','جولات')}، ولكل جولة مؤقّت ${rsCountAr(r.secs||30,'ثانية','ثوانٍ')} — تستطيعين إيقافه أو إعادته.</span></div>
+    <div class="rs-step"><span class="n">${egArNum(4)}</span><span class="x">النقاط بلمسة على بطاقة الفريق، والفائز يظهر في النهاية.</span></div>
+    <div class="rs-again"><button onclick="rsPlayChallenge()" style="background:linear-gradient(135deg,#F2A03D,#D8741A);color:#fff;border:none;padding:14px 30px;font-size:15px">🏆 ابدئي التحدّي</button></div>`;
+}
+function rsPlayChallenge(){
+  const a=_rsCur;if(!a||a.fmt!=='challenge')return;
+  chOpen(a);
 }
 
 function rsStepsHtml(a){
@@ -5570,6 +5688,254 @@ async function rsPlayGame(){
   gmTpl=r.tpl;
   gmPickScope=null;               // نشاط احتياط: لا شعبة معلومة فلا قرعة من قائمة
   gmPlayWith(conv(r),a.nm);
+}
+
+/* ═══════════════ ساحة التحدّي ═══════════════
+   التحدّي حدثٌ أمام الصفّ لا صفحةٌ تُقرأ: فرقٌ ونقاطٌ ومؤقّت، والمعلمة تُدير
+   بضغطات كبيرة وهي واقفة. النقاط تُمنح بلمسة على بطاقة الفريق.
+
+   كل تحدٍّ يطبّق استراتيجية تربوية مشهورة، واسمها وطريقتها معروضتان على
+   الشاشة — فالمعلمة تتعلّمها وهي تستعملها، لا في دورة منفصلة.
+
+   الأصوات بـ zzfx المركّبة في الصفحة نفسها، فتعمل بلا إنترنت. */
+
+const CH_COLORS=['#FFD166','#4ECDC4','#FF6B9D','#A78BFA'];
+const CH_NAMES=['الفريق الأول','الفريق الثاني','الفريق الثالث','الفريق الرابع'];
+let chCtx=null,_chTimer=null,_chLeft=0;
+
+function chSound(k){
+  try{
+    if(k==='point')zzfx(1.1,.05,540,0,.05,.18,1,1.7,0,0,320,.05,0,0,0,0,0,.9,.04);
+    else if(k==='reveal')zzfx(1,.05,880,0,.04,.2,1,1.6,0,0,180,.04);
+    else if(k==='tick')zzfx(.5,.05,320,0,.02,.05,1,1.2,0,0,0,0,0,0,0,0,0,.6,.01);
+    else if(k==='end')zzfx(1.3,.05,180,.02,.1,.4,1,1.4,-3,0,0,0,0,0,0,.1,0,.7,.08);
+    else if(k==='win')zzfx(1.2,.05,539,0,.06,.34,1,1.9,0,0,567,.02,.03,0,0,0,.04);
+  }catch(e){}
+}
+
+function chConfetti(){
+  const cv=document.getElementById('ch-confetti');
+  cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
+  const cx=cv.getContext('2d');
+  const cols=['#FFD166','#4ECDC4','#FF6B9D','#A78BFA','#8DF0C0','#FF8A7A'];
+  const ps=[];
+  for(let i=0;i<160;i++)ps.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.6,
+    vy:2+Math.random()*4,vx:(Math.random()-.5)*2.4,r:4+Math.random()*6,c:cols[i%cols.length],a:Math.random()*7});
+  const t0=performance.now();
+  (function f(t){
+    cx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.11;
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6);cx.restore();});
+    if(t-t0<3400)requestAnimationFrame(f);else cx.clearRect(0,0,cv.width,cv.height);
+  })(t0);
+}
+
+// «أربع زوايا» لا فرق فيه: الطالب ينتقل لموقفه ثم يُبرّر، ولا غالب ولا مغلوب.
+function chNeedsTeams(a){return (a.run||{}).strategy!=='corners';}
+
+function chOpen(a){
+  const r=a.run||{};
+  chCtx={a,teams:[],round:-1,revealed:false,nTeams:r.teams||2};
+  document.getElementById('ch-nm').textContent=a.nm;
+  document.getElementById('ch-stage').classList.add('on');
+  document.body.style.overflow='hidden';
+  if(chNeedsTeams(a))chSetup();
+  else{chMakeTeams(0);chNext();}
+}
+
+function chSetup(){
+  const st=(window.RESERVE_STRATEGY||{})[(chCtx.a.run||{}).strategy]||{};
+  document.getElementById('ch-score').innerHTML='';
+  document.getElementById('ch-rd').textContent='';
+  document.getElementById('ch-body').innerHTML=`
+    <div class="ch-setup">
+      <span class="ch-strat">استراتيجية: ${escHtml(st.nm||'')}</span>
+      <h2>${escHtml(chCtx.a.nm)}</h2>
+      <div class="ch-note">${escHtml(st.how||'')}</div>
+      <div class="ch-hint">كم فريقاً في الصف؟</div>
+      <div class="ch-pickteams" id="ch-pick">
+        ${[2,3,4].map(n=>`<button class="${n===chCtx.nTeams?'on':''}" onclick="chPickTeams(${n})">${egArNum(n)}</button>`).join('')}
+      </div>
+      <button class="ch-btn main" onclick="chStart()">ابدئي التحدّي</button>
+    </div>`;
+}
+function chPickTeams(n){
+  chCtx.nTeams=n;
+  document.querySelectorAll('#ch-pick button').forEach((b,i)=>b.classList.toggle('on',[2,3,4][i]===n));
+}
+function chMakeTeams(n){
+  chCtx.teams=Array.from({length:n},(_,i)=>({nm:CH_NAMES[i],c:CH_COLORS[i],p:0}));
+}
+function chStart(){chMakeTeams(chCtx.nTeams);chNext();}
+
+function chRenderScore(){
+  const box=document.getElementById('ch-score');
+  if(!chCtx.teams.length){box.innerHTML='';return;}
+  const max=Math.max(...chCtx.teams.map(t=>t.p));
+  box.innerHTML=chCtx.teams.map((t,i)=>
+    `<button class="ch-team ${t.p>0&&t.p===max?'lead':''}" style="--tc:${t.c}" onclick="chPoint(${i})">
+       <span class="tn">${escHtml(t.nm)}</span>
+       <span class="tp">${egArNum(t.p)}</span>
+       <span class="th">اضغطي لمنح نقطة</span>
+     </button>`).join('');
+}
+function chPoint(i){
+  const t=chCtx.teams[i];if(!t)return;
+  t.p++;chSound('point');
+  chRenderScore();
+  // فقاعة «+١» فوق الفريق — تأكيدٌ بصري تراه المعلمة من بعيد وهي واقفة
+  const card=document.querySelectorAll('.ch-team')[i];
+  if(card){const b=document.createElement('span');b.className='ch-bump';b.textContent='+١';card.appendChild(b);setTimeout(()=>b.remove(),620);}
+}
+
+function chNext(){
+  chStopTimer();
+  chCtx.round++;chCtx.revealed=false;
+  const rounds=(chCtx.a.run||{}).rounds||[];
+  if(chCtx.round>=rounds.length){chFinish();return;}
+  chRenderScore();
+  document.getElementById('ch-rd').textContent=egArNum(chCtx.round+1)+' من '+egArNum(rounds.length);
+  chRenderRound();
+}
+
+function chRenderRound(){
+  const a=chCtx.a,r=a.run||{},strat=r.strategy;
+  const rd=(r.rounds||[])[chCtx.round]||{};
+  const st=(window.RESERVE_STRATEGY||{})[strat]||{};
+  const body=document.getElementById('ch-body');
+  const head=`<span class="ch-strat">${escHtml(st.nm||'')}</span>`;
+
+  if(strat==='hotseat'){
+    body.innerHTML=head
+      +`<div class="ch-hint">طالبٌ ظهرُه للشاشة، وفريقه يصف الكلمة بلا ذكرها.</div>
+        <div class="ch-word">${escHtml(rd.q)}</div>
+        ${rd.note?`<div class="ch-note">تلميح للمعلمة: ${escHtml(rd.note)}</div>`:''}
+        ${chTimerHtml(r.secs||60)}
+        <div class="ch-acts">
+          ${chCtx.teams.map((t,i)=>`<button class="ch-btn ghost" onclick="chPoint(${i})" style="border-color:${t.c};color:${t.c}">+١ ${escHtml(t.nm)}</button>`).join('')}
+          <button class="ch-btn main" onclick="chNext()">الكلمة التالية</button>
+        </div>`;
+  }
+  else if(strat==='relay'){
+    body.innerHTML=head
+      +`<div class="ch-q">${escHtml(rd.q)}</div>
+        ${chTimerHtml(r.secs||60)}
+        <div class="ch-hint">امنحي نقطةً عن كل إجابة صحيحة — اضغطي بطاقة الفريق.</div>
+        <div class="ch-acts">
+          <button class="ch-btn ghost" onclick="chReveal()">أفكارٌ للمعلمة</button>
+          <button class="ch-btn main" onclick="chNext()">الجولة التالية</button>
+        </div>
+        <div id="ch-slot"></div>`;
+  }
+  else if(strat==='corners'){
+    body.innerHTML=head
+      +`<div class="ch-q">${escHtml(rd.q)}</div>
+        <div class="ch-opts">${(rd.opts||[]).map((o,i)=>
+          `<div class="ch-opt"><span class="cn">الزاوية ${['الأولى','الثانية','الثالثة','الرابعة'][i]}</span>${escHtml(o)}</div>`).join('')}</div>
+        ${chTimerHtml(r.secs||45)}
+        <div class="ch-acts">
+          <button class="ch-btn ghost" onclick="chReveal()">أسئلة النقاش</button>
+          <button class="ch-btn main" onclick="chNext()">الموقف التالي</button>
+        </div>
+        <div id="ch-slot"></div>`;
+  }
+  else{ // buzzer
+    body.innerHTML=head
+      +`<div class="ch-q">${escHtml(rd.q)}</div>
+        ${chTimerHtml(r.secs||25)}
+        <div class="ch-acts">
+          <button class="ch-btn main" onclick="chReveal()" id="ch-rev">اكشفي الإجابة</button>
+          <button class="ch-btn ghost" onclick="chNext()">السؤال التالي</button>
+        </div>
+        <div id="ch-slot"></div>`;
+  }
+  chStartTimer(r.secs||30);
+}
+
+function chReveal(){
+  if(chCtx.revealed)return;
+  chCtx.revealed=true;chSound('reveal');
+  const r=chCtx.a.run||{},rd=(r.rounds||[])[chCtx.round]||{};
+  const slot=document.getElementById('ch-slot');
+  if(!slot)return;
+  slot.innerHTML=(rd.a?`<div class="ch-a">${escHtml(rd.a)}</div>`:'')
+    +(rd.note?`<div class="ch-note" style="margin-top:12px">${escHtml(rd.note)}</div>`:'');
+  const b=document.getElementById('ch-rev');if(b)b.disabled=true;
+  slot.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function chTimerHtml(s){
+  return `<div class="ch-timer">
+      <span class="ch-clock" id="ch-clock">${chFmt(s)}</span>
+      <button class="ch-btn ghost" id="ch-tbtn" onclick="chToggleTimer()">إيقاف</button>
+      <button class="ch-btn ghost" onclick="chStartTimer(${s})">إعادة</button>
+    </div>`;
+}
+function chFmt(s){
+  const m=Math.floor(s/60),x=s%60;
+  return egArNum(String(m).padStart(2,'0'))+':'+egArNum(String(x).padStart(2,'0'));
+}
+function chStartTimer(s){
+  chStopTimer();
+  _chLeft=s;chPaintClock();
+  _chTimer=setInterval(()=>{
+    _chLeft--;chPaintClock();
+    if(_chLeft<=5&&_chLeft>0)chSound('tick');
+    if(_chLeft<=0){chStopTimer();chSound('end');}
+  },1000);
+  const b=document.getElementById('ch-tbtn');if(b)b.textContent='إيقاف';
+}
+function chStopTimer(){clearInterval(_chTimer);_chTimer=null;}
+function chToggleTimer(){
+  const b=document.getElementById('ch-tbtn');
+  if(_chTimer){chStopTimer();if(b)b.textContent='استئناف';}
+  else if(_chLeft>0){chStartTimer(_chLeft);}
+}
+function chPaintClock(){
+  const c=document.getElementById('ch-clock');if(!c)return;
+  c.textContent=chFmt(Math.max(0,_chLeft));
+  c.className='ch-clock'+(_chLeft<=0?' zero':(_chLeft<=10?' warn':''));
+}
+
+function chFinish(){
+  chStopTimer();
+  document.getElementById('ch-rd').textContent='';
+  document.getElementById('ch-score').innerHTML='';
+  const body=document.getElementById('ch-body');
+  if(!chCtx.teams.length){
+    body.innerHTML=`<div class="ch-setup">
+      <div class="ch-win">انتهى التحدّي</div>
+      <div class="ch-hint">لا غالب ولا مغلوب هنا — المكسب أن كل طالب برّر موقفه أمام زملائه.</div>
+      <div class="ch-acts"><button class="ch-btn main" onclick="chClose()">إنهاء</button></div>
+    </div>`;
+    chSound('win');chConfetti();return;
+  }
+  const max=Math.max(...chCtx.teams.map(t=>t.p));
+  const winners=chCtx.teams.filter(t=>t.p===max);
+  const title=max===0?'انتهى التحدّي'
+    :(winners.length>1?'تعادلٌ رائع!':'فاز '+winners[0].nm+'!');
+  body.innerHTML=`<div class="ch-setup">
+      <div class="ch-win">${escHtml(title)}</div>
+      <div class="ch-final">${chCtx.teams.map(t=>
+        `<div class="ch-fin-t" style="--tc:${t.c}"><div class="tn">${escHtml(t.nm)}</div><div class="tp">${egArNum(t.p)}</div></div>`).join('')}</div>
+      <div class="ch-hint">اختمي بكلمة: ما الذي تعلّمناه اليوم غير النقاط؟</div>
+      <div class="ch-acts">
+        <button class="ch-btn ghost" onclick="chRestart()">أعيدي التحدّي</button>
+        <button class="ch-btn main" onclick="chClose()">إنهاء</button>
+      </div>
+    </div>`;
+  chSound('win');chConfetti();
+}
+function chRestart(){
+  chCtx.round=-1;
+  chCtx.teams.forEach(t=>t.p=0);
+  chNext();
+}
+function chClose(){
+  chStopTimer();
+  document.getElementById('ch-stage').classList.remove('on');
+  document.body.style.overflow=_rsCur?'hidden':'';
+  chCtx=null;
 }
 
 // النجوم والسجل يُحفظان معاً — العدّاد يخدم الصدارة والاحتفال، والسجل يخدم ملف الطالب
