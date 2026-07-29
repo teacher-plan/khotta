@@ -942,6 +942,22 @@ body.inapp #c1-notif-btn{display:flex}
 .rs-surprise svg{width:19px;height:19px;flex:none}
 .rs-count{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:10px}
 .rs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px}
+/* ترويسة المجموعة: تقول ما تفعله بالفصل لا ما هي — فتصير أداة قرار لا فهرساً */
+.rs-group{margin-bottom:22px}
+.rs-group-h{display:flex;align-items:center;gap:11px;margin-bottom:11px;padding-bottom:9px;
+  border-bottom:1.5px solid var(--border)}
+.rs-group-ic{width:34px;height:34px;border-radius:11px;background:var(--gc);flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px color-mix(in srgb,var(--gc) 40%,transparent)}
+@supports not (color:color-mix(in srgb,red,blue)){.rs-group-ic{box-shadow:0 3px 10px rgba(48,24,0,.2)}}
+.rs-group-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs-group-t b{font-size:14.5px;font-weight:800;color:var(--ink);line-height:1.4}
+.rs-group-t span{font-size:11.5px;color:var(--muted);line-height:1.6}
+.rs-group-n{flex:none;font-size:13px;font-weight:800;color:var(--muted);background:var(--card);
+  border:1.5px solid var(--border);border-radius:10px;padding:5px 12px;font-variant-numeric:tabular-nums}
+@media(max-width:520px){
+  .rs-group-t span{display:none}
+  .rs-group-ic{width:28px;height:28px;font-size:14px}
+}
 .rs-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:0;overflow:hidden;cursor:pointer;
   text-align:start;font-family:inherit;transition:.15s;display:flex;flex-direction:column;position:relative}
 .rs-card:hover{border-color:var(--vc,var(--red));transform:translateY(-2px);box-shadow:0 8px 22px rgba(48,24,0,.11)}
@@ -1939,7 +1955,8 @@ body:has(#page-fahim.active){overflow:hidden}
   </div>
 
   <div class="rs-count" id="rs-count"></div>
-  <div class="rs-grid" id="rs-grid"></div>
+  <!-- حاوية عادية لا شبكة: بداخلها أقسامٌ متتابعة، ولكل قسمٍ شبكة بطاقاته -->
+  <div id="rs-grid"></div>
 </div></div>
 
 <div id="ch-stage">
@@ -5516,6 +5533,17 @@ function rsCountAr(n,one,few,two){
 function rsMinsAr(n){return rsCountAr(n,'دقيقة','دقائق','دقيقتان');}
 const RS_MINS=[{v:0,t:'الكل'},{v:10,t:'حتى ١٠'},{v:15,t:'حتى ١٥'},{v:99,t:'حصة كاملة'}];
 
+/* ترتيب المجموعات بأثرها في الغرفة لا بتصنيفها: من الأصخب إلى الأهدأ.
+   فالمعلمة التي دخلت على فصلٍ متوتّر تنزل للأسفل، والتي وجدته خامداً تبدأ
+   من الأعلى — وهذا قرارها الحقيقي، لا «أيّ نوعٍ هذا؟». */
+const RS_GROUPS=[
+  {id:'challenge',c:'#C05A2A',does:'فرقٌ ونقاطٌ ومؤقّت — أعلى حماسٍ وأكثر صخباً'},
+  {id:'game',     c:'#7A4FB0',does:'على الشاشة، مرحٌ أقلّ صخباً من التحدّي'},
+  {id:'activity', c:'#487848',does:'حركةٌ ومشاركة بلا شاشة — تُفرّغ الطاقة بانضباط'},
+  {id:'story',    c:'#A83030',does:'جلوسٌ وإنصاتٌ وحوار — تُهدّئ الفصل وتُعمّق القيمة'},
+  {id:'fact',     c:'#356070',does:'دهشةٌ وأسئلةٌ تفتح التفكير — أهدأ ما في البنك'},
+];
+
 // سجلّ ما استُعمل — محليّ لأن القسم يجب أن يعمل بلا إنترنت
 function rsUsed(){try{return JSON.parse(localStorage.getItem('c1_rs_used')||'{}');}catch(e){return {};}}
 function rsMarkUsed(id){
@@ -5600,10 +5628,29 @@ function rsRenderList(){
   const shortAll=rsMins>15&&longest<=12;
   cnt.innerHTML=escHtml(egArNum(list.length)+' نشاطاً مناسباً لصفّ '+PLAN_GNAMES[rsGrade-1])
     +(shortAll?'<br><span style="font-weight:400">أنشطة هذا الصف قصيرة عمداً — انتباه الطفل في هذا العمر لا يحتمل نشاطاً طويلاً. اجمعي نشاطين أو ثلاثة لتملأ الحصة.</span>':'');
-  grid.innerHTML=list.map(a=>{
-    const v=vals[a.val]||{nm:'',c:'#A83030'},f=fmts[a.fmt]||{nm:'',ic:''};
-    const ago=rsUsedAgo(a.id);
-    return `<button class="rs-card" style="--vc:${v.c}" onclick="rsOpen('${a.id}')">
+  // مجموعاتٌ مرتّبة بالطاقة في الغرفة من الأصخب إلى الأهدأ، لا ترتيباً تصنيفياً.
+  // المعلمة لا تسأل «أين المعلومات؟» بل «ماذا يحتاج فصلي الآن؟» — متوتّرٌ
+  // فيُهدَّأ، أو خامدٌ فيُوقَظ. فالعنوان يصف أثر المجموعة لا نوعها.
+  grid.innerHTML=RS_GROUPS.map(g=>{
+    const items=list.filter(a=>a.fmt===g.id);
+    if(!items.length)return '';   // المجموعات الفارغة تُطوى، فلا تُوهم بنقصٍ
+    const f=fmts[g.id]||{nm:'',ic:''};
+    return `<section class="rs-group">
+      <div class="rs-group-h">
+        <span class="rs-group-ic" style="--gc:${g.c}">${f.ic}</span>
+        <span class="rs-group-t"><b>${escHtml(f.nm)}</b><span>${escHtml(g.does)}</span></span>
+        <span class="rs-group-n">${egArNum(items.length)}</span>
+      </div>
+      <div class="rs-grid">${items.map(rsCardHtml).join('')}</div>
+    </section>`;
+  }).join('');
+}
+
+function rsCardHtml(a){
+  const vals=window.RESERVE_VALUES||{},fmts=window.RESERVE_FMT||{};
+  const v=vals[a.val]||{nm:'',c:'#A83030'},f=fmts[a.fmt]||{nm:'',ic:''};
+  const ago=rsUsedAgo(a.id);
+  return `<button class="rs-card" style="--vc:${v.c}" onclick="rsOpen('${a.id}')">
       <div class="rs-card-top"><span class="v">${escHtml(v.nm)}</span><span class="f">${f.ic} ${escHtml(f.nm)}</span></div>
       <div class="rs-card-b">
         <div class="rs-card-nm">${escHtml(a.nm)}</div>
@@ -5615,7 +5662,6 @@ function rsRenderList(){
         </div>
       </div>
     </button>`;
-  }).join('');
 }
 
 // «فاجئيني»: أسرع طريق — ضغطة واحدة تعطيها نشاطاً مناسباً،
