@@ -2731,6 +2731,26 @@ async function driveDelete(fileId){
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* تهريب قيمةٍ ستوضَع داخل نصّ JavaScript داخل خاصية HTML — مثل:
+     onclick="fn('${escJs(x)}')"
+   escHtml وحدها لا تكفي هنا: لا تمسّ علامة الاقتباس المفردة، فتكسر القيمةُ
+   نصَّ الـJS ويصير ما بعدها شيفرةً تُنفَّذ. وهذا مسلكُ حقنٍ حقيقي حين تأتي
+   القيمة من صفٍّ في قاعدة البيانات يستطيع مستخدمٌ آخر إدراجه.
+   والقيمة تمرّ بطبقتين، والترتيب بينهما مقصود:
+     ① طبقة JS   — الشرطة المائلة والاقتباس المفرد وفواصل الأسطر
+     ② طبقة HTML — كل ما قد يُنهي الخاصية أو يفتح وسماً، ومنها «"» تحديداً.
+   وescHtml وحدها لا تكفي طبقةً ثانية: لا تُهرّب «"» فتستطيع الحمولة إنهاء
+   الخاصية وفتح وسمٍ جديد. ولاحظ أن «'» في ② تصير &#39; فيُعيدها المحلّل
+   إلى «'» بعد أن سبقتها الشرطة من ① — فيراها الـJS اقتباساً مُهرَّباً. */
+function escJs(s){
+  return String(s==null?'':s)
+    .replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+    .replace(/\r/g,'\\r').replace(/\n/g,'\\n')
+    .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 /* الوسيط الثاني يقبل true للخطأ و'ok' للنجاح.
    كان يُختبر بالصدق وحده، و'ok' نصٌّ صادق — فكانت ٢٣ رسالة نجاح في الصفحة
    تظهر بلون الخطأ الأحمر: «تم حفظ النبذة» و«جهز ملخص الدرس» وغيرهما. */
@@ -3230,7 +3250,7 @@ async function prepOpen(classId,subject){
     if(error)throw error;
     const it=data&&data[0];
     if(it){
-      libBox.innerHTML=`<div class="prep-lib-item"><b>${escHtml(it.title)}</b><span>بواسطة ${escHtml(it.uploader_name||'معلمة')}</span>${it.file_url?`<button onclick="libOpenFile('${it.file_url}','${escHtml(it.file_name||'')}')">فتح الملف</button>`:''}</div>`;
+      libBox.innerHTML=`<div class="prep-lib-item"><b>${escHtml(it.title)}</b><span>بواسطة ${escHtml(it.uploader_name||'معلمة')}</span>${it.file_url?`<button onclick="libOpenFile('${escJs(it.file_url)}','${escJs(it.file_name||'')}')">فتح الملف</button>`:''}</div>`;
     }else{
       libBox.textContent='لا يوجد بعد ملف في مكتبة هذه المادة — كوني أول من يشارك!';
     }
@@ -5899,7 +5919,9 @@ function rsPlayChallenge(){
 }
 
 // ── النشاط ──
-function rsStepText(s){return typeof s==='string'?s:(s.t||'');}
+// الحماية من undefined لازمة: نشاطٌ بلا خطوات يجعل steps[i] معدوماً، وقراءة
+// s.t منه ترمي استثناءً يُجمّد الشاشة أمام الصفّ.
+function rsStepText(s){return typeof s==='string'?s:((s&&s.t)||'');}
 function rsStepSecs(s){return (s&&typeof s==='object'&&s.secs)||0;}
 function rsStepsHtml(a){
   const r=a.run||{};
@@ -8845,7 +8867,7 @@ function c1NotifRender(){
   list.innerHTML=c1Notifs.map(n=>{
     let actionBtn='';
     if(n.kind==='survey')actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoSurvey()">فتح الاستبيان</button>`;
-    else if(n.kind==='library_share'&&n.item_id)actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoLibrary('${n.subject}','${n.item_id}')">فتح الملف</button>`;
+    else if(n.kind==='library_share'&&n.item_id)actionBtn=`<button type="button" class="c1-notif-go" onclick="c1NotifGoLibrary('${escJs(n.subject)}','${escJs(n.item_id)}')">فتح الملف</button>`;
     return `<div class="c1-notif-item${c1NotifIsUnread(n)?' unread':''}">${escHtml(n.message)}<span class="dt">${new Date(n.created_at).toLocaleString('ar')}</span>${actionBtn}</div>`;
   }).join('');
 }
@@ -8893,7 +8915,7 @@ async function msgsRender(){
 function msgsMsgHtml(m){
   const clickable=m.kind==='library_share'&&m.item_id;
   const tag=m.target_user_id?'خاصة لك':(m.kind==='library_share'?'لمعلمات '+escHtml(m.target_subject||''):'رسالة جماعية');
-  return `<div class="msg-row${m.target_user_id?' private':''}${clickable?' clickable':''}" ${clickable?`onclick="msgsOpenLibraryItem('${m.target_subject}','${m.item_id}')"`:''}>
+  return `<div class="msg-row${m.target_user_id?' private':''}${clickable?' clickable':''}" ${clickable?`onclick="msgsOpenLibraryItem('${escJs(m.target_subject)}','${escJs(m.item_id)}')"`:''}>
     <div class="mt">${escHtml(m.title)}<span class="mtag">${tag}</span></div>
     <div class="mb">${escHtml(m.body)}</div>
     <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}${clickable?' · اضغطي لفتح الملف':''}</div>
