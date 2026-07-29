@@ -2899,6 +2899,8 @@ async function afterAuth(session){
     const{data,error}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
     if(error)throw error;
     profile=(data&&data.data)||{};
+    // أساس المقارنة ضدّ الكتابة من جهاز آخر — انظر cy1Flush
+    _cy1Base=(data&&data.updated_at)||null;
   }catch(e){
     await sb.auth.signOut();
     showLogin('تعذّر تحميل بياناتك — تحققي من الاتصال ثم أعيدي الدخول');
@@ -2924,17 +2926,82 @@ let cy1SaveQueue=Promise.resolve();
 // بعد سكون قصير (٩٠٠م.ث) — ٣٠ نجمة متتالية في حصة نشطة = رفعة واحدة بدل ٣٠.
 // عند مغادرة/إخفاء الصفحة يُدفع ما تبقى فوراً حتى لا يضيع شيء.
 let _cy1FlushTimer=null,_cy1Dirty=false,_cy1Waiters=[];
+
+/* ══ حاجز الكتابة من جهازين ══
+   الحفظ يكتب ملف المعلمة كاملاً. فلو فتحت الموقع على الجوال واللابتوب، ومنحت
+   نجوماً من الجوال ثم أضافت مهمة من اللابتوب، لكتب اللابتوب نسخته المحمَّلة
+   قبل النجوم فوق كل شيء — وتُمحى النجوم بلا أن تدري.
+
+   الحاجز: نحتفظ بـ updated_at كما رأته القاعدة عند التحميل (_cy1Base)، ونكتب
+   بشرطه. فإن كان جهازٌ آخر قد كتب، اختلف الشرط فلم يُطابق أي صفّ، فنعرف أن
+   ثمّة تعارضاً قبل أن نمحو شيئاً.
+
+   ولماذا الشرط في الكتابة لا قراءةٌ ثم كتابة: القراءة ثم الكتابة فيها فُرجة —
+   قد يكتب الجهاز الآخر بينهما فنمحوه ونحن نظنّ أننا تحقّقنا. أمّا الشرط
+   فيُنفّذه الخادم في العملية نفسها، فلا فُرجة فيه.
+
+   وعند التعارض نُعيد تحميل الملف الأحدث ونُخبر المعلمة صريحاً. تفقد ما كتبته
+   في تلك اللحظة وحدها — وهذا أهون بكثير من أن تفقد عمل يومٍ كامل صامتاً. */
+let _cy1Base=null;
+
 function cy1Flush(){
   clearTimeout(_cy1FlushTimer);_cy1FlushTimer=null;
   if(!_cy1Dirty||!currentUser){const w=_cy1Waiters;_cy1Waiters=[];w.forEach(r=>r());return cy1SaveQueue;}
   _cy1Dirty=false;
   const snapshot=profile;
   const waiters=_cy1Waiters;_cy1Waiters=[];
+  const uid=currentUser.id,mail=currentUser.email||'';
   // نسلسل عمليات الحفظ (لا نرسلها بالتوازي) حتى لا تُفقَد آخر تعديل إذا وصلت استجابة أبطأ متأخرة بعد استجابة أحدث
-  cy1SaveQueue=cy1SaveQueue.then(()=>
-    sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:snapshot,updated_at:new Date().toISOString()})
-  ).catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);}).finally(()=>{cyBusyDone();waiters.forEach(r=>r());});
+  cy1SaveQueue=cy1SaveQueue.then(async()=>{
+    const now=new Date().toISOString();
+    // لا أساس بعد (أول حفظ، أو صفّ لم يوجد) → إنشاء بلا شرط
+    if(!_cy1Base){
+      const{data,error}=await sb.from('cycle1_profiles')
+        .upsert({id:uid,email:mail,data:snapshot,updated_at:now})
+        .select('updated_at').maybeSingle();
+      if(error)throw error;
+      _cy1Base=(data&&data.updated_at)||now;
+      return;
+    }
+    const{data,error}=await sb.from('cycle1_profiles')
+      .update({email:mail,data:snapshot,updated_at:now})
+      .eq('id',uid).eq('updated_at',_cy1Base)   // ← الشرط: لم يكتب أحد بعدي
+      .select('updated_at');
+    if(error)throw error;
+    if(!data||!data.length){await cy1Conflict();return;}
+    _cy1Base=data[0].updated_at;
+  }).catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);})
+    .finally(()=>{cyBusyDone();waiters.forEach(r=>r());});
   return cy1SaveQueue;
+}
+
+// كتب جهازٌ آخر بعد تحميلنا: نأخذ الأحدث ولا نمحوه، ونُخبرها بما جرى
+async function cy1Conflict(){
+  let got=false;
+  try{
+    const{data,error}=await sb.from('cycle1_profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
+    if(!error&&data){profile=data.data||{};_cy1Base=data.updated_at||null;got=true;}
+  }catch(e){}
+  _cy1Dirty=false;
+  cyBusyDone();
+  // إن أخفقت إعادة التحميل بقي الأساس قديماً، فيُرفض كل حفظ بعده وتظلّ تعمل
+  // على ملفٍ لا يُحفَظ. لا نُخاطر بذلك: نُحدّث الصفحة لتبدأ من حالة موثوقة.
+  if(!got){
+    toast('حُفظ عملكِ من جهاز آخر — نُحدّث الصفحة',true);
+    setTimeout(()=>location.reload(),2500);
+    return;
+  }
+  toast('حُفظ عملكِ من جهاز آخر — هذه أحدث نسخة، أعيدي ما كتبتِه الآن',true);
+  // إعادة رسم القسم المفتوح ببيانات الملف الأحدث
+  try{
+    const cur=(document.querySelector('.page.active')||{}).id||'';
+    const id=cur.replace(/^page-/,'');
+    if(id==='yawmi'&&typeof renderYawmi==='function')renderYawmi();
+    else if(id==='plan'&&typeof planRender==='function')planRender();
+    else if(id==='students'&&typeof starRender==='function')starRender();
+    else if(id==='ach'&&typeof achRender==='function')achRender();
+    else if(typeof renderYawmi==='function')renderYawmi();
+  }catch(e){}
 }
 function cy1Save(partial,busyText){
   if(!currentUser)return Promise.resolve();
