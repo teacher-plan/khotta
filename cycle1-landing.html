@@ -53,6 +53,10 @@ body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1
   background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:40px 40px;background-attachment:fixed;font-weight:400}
 img{max-width:100%;display:block}
+/* ── الأيقونات: مجموعةٌ خطّية واحدة بدل الإيموجي، لأن الإيموجي يختلف شكله
+   بين الأجهزة ولا يأخذ لون النصّ. الحجم يتبع font-size الحاوي. ── */
+.i{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
 .wrap{width:min(1180px,100% - 36px);margin-inline:auto}
 h1,h2,h3,h4,.disp{font-family:var(--disp);font-weight:700;letter-spacing:-.2px;line-height:1.4}
 section{padding:78px 0}
@@ -136,14 +140,14 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 .pr h3{font-size:17.5px;line-height:1.55}
 .pr p{font-size:14px;color:var(--muted);line-height:1.95}
 .pr .arrow{display:flex;align-items:center;justify-content:center;padding:0 6px;background:var(--card);
-  border-inline:1.5px solid var(--border);color:var(--muted);font-size:19px}
+  border-inline:1.5px solid var(--border);color:var(--muted);font-size:21px}
 @media(max-width:840px){
   .pr{grid-template-columns:minmax(0,1fr)}
-  /* لا نُدير الصندوق نفسه: في عمودٍ واحد يصير عرضه كامل البطاقة وارتفاعه صغير،
-     فتدويرُه ربعَ دورة يقلبه شريطاً رأسياً معتماً يمرّ فوق نصّ البطاقتين
-     ويقطعهما. نستبدل الرمزَ نفسه بدلاً من تدوير ما يحويه. */
-  .pr .arrow{padding:8px;border-inline:none;border-block:1.5px solid var(--border);font-size:0}
-  .pr .arrow::before{content:'↓';font-size:19px;line-height:1}
+  /* نُدير الأيقونة وحدها لا الصندوق: في عمودٍ واحد يصير الصندوق بعرض البطاقة
+     وارتفاعه صغير، فتدويره ربعَ دورة يقلبه شريطاً رأسياً معتماً يمرّ فوق نصّ
+     البطاقتين. أما الأيقونة فمربّعة، فتدويرها لا يغيّر الحيّز الذي تشغله. */
+  .pr .arrow{padding:8px;border-inline:none;border-block:1.5px solid var(--border)}
+  .pr .arrow .i{transform:rotate(-90deg)}
 }
 
 /* ══ عرض الأقسام التفاعلي ══ */
@@ -262,7 +266,10 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 .perk{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:25px 22px;
   box-shadow:var(--sh-sm);transition:.18s}
 .perk:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:var(--red)}
-.perk .ic{font-size:26px;margin-bottom:12px}
+.perk .ic{width:44px;height:44px;border-radius:14px;margin-bottom:14px;font-size:23px;
+  display:flex;align-items:center;justify-content:center;color:var(--pc);
+  background:color-mix(in srgb,var(--pc) 13%,transparent)}
+@supports not (color:color-mix(in srgb,red,blue)){.perk .ic{background:var(--card)}}
 .perk h4{font-size:16px;margin-bottom:7px;line-height:1.55}
 .perk p{font-size:13.5px;color:var(--muted);line-height:1.95}
 @media(max-width:940px){.perks{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -342,6 +349,34 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4.6 12.6l4.9 4.9L19.4 6.9"/></symbol>
+<symbol id="i-q" viewBox="0 0 24 24"><path d="M8.9 9.1a3.1 3.1 0 1 1 4.3 2.86c-.75.33-1.2 1.06-1.2 1.88v.56"/><path d="M12 17.7h.01"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 3.2l2.72 5.51 6.08.88-4.4 4.29 1.04 6.06L12 17.08l-5.44 2.86 1.04-6.06-4.4-4.29 6.08-.88z"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M11 2.4l1.72 5.16L17.9 9.3l-5.18 1.74L11 16.2 9.28 11.04 4.1 9.3l5.18-1.74z"/><path fill="currentColor" stroke="none" d="M17.6 14.2l.86 2.54 2.54.86-2.54.86-.86 2.54-.86-2.54-2.54-.86 2.54-.86z"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M19.4 12H4.6"/><path d="M10.8 5.6L4.4 12l6.4 6.4"/></symbol>
+<symbol id="i-plan" viewBox="0 0 24 24"><path d="M13.4 3H6.8A1.8 1.8 0 0 0 5 4.8v14.4A1.8 1.8 0 0 0 6.8 21h10.4a1.8 1.8 0 0 0 1.8-1.8V8.6z"/><path d="M13.4 3v5.6H19"/><path d="M8.6 13.2h6.2M8.6 16.6h4"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3.2" y="4.6" width="17.6" height="14.8" rx="2.4"/><circle cx="8.6" cy="9.8" r="1.5"/><path d="M3.6 16.8l4.7-4.3 3.4 3 3-2.4 5.7 4.9"/></symbol>
+<symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-slides" viewBox="0 0 24 24"><rect x="3.2" y="4" width="17.6" height="11.8" rx="2.2"/><path d="M12 15.8V19"/><path d="M8.4 21.2L12 19l3.6 2.2"/><path d="M7.4 12.4l2.7-2.9 2.4 2.1 4.1-4.2"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.6C10.4 5.1 8.3 4.4 5.4 4.4A1.4 1.4 0 0 0 4 5.8v11.4a1.4 1.4 0 0 0 1.4 1.4c2.9 0 5 .7 6.6 2.2 1.6-1.5 3.7-2.2 6.6-2.2a1.4 1.4 0 0 0 1.4-1.4V5.8a1.4 1.4 0 0 0-1.4-1.4c-2.9 0-5 .7-6.6 2.2z"/><path d="M12 6.6v14.2"/></symbol>
+<symbol id="i-fox" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M4 3c2 2.2 3.6 3 5.2 3h5.6C16.4 6 18 5.2 20 3c.6 2.8.3 5.2-.8 7 .5 1 .8 2.1.8 3.3C20 17.6 16.4 21 12 21s-8-3.4-8-7.7c0-1.2.3-2.3.8-3.3C3.7 8.2 3.4 5.8 4 3zm5 9.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm6 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM12 16l-1.5 1.8c.9.6 2.1.6 3 0L12 16z"/></symbol>
+<symbol id="i-offline" viewBox="0 0 24 24"><path d="M2.4 8.9a14.2 14.2 0 0 1 4.9-3.16M16.7 5.74a14.2 14.2 0 0 1 4.9 3.16"/><path d="M5.6 12.5a9.7 9.7 0 0 1 3.5-2.13M14.9 10.37a9.7 9.7 0 0 1 3.5 2.13"/><path d="M8.6 16a5.1 5.1 0 0 1 6.8 0"/><path d="M12 19.6h.01"/><path d="M3.4 3.4l17.2 17.2"/></symbol>
+<symbol id="i-fort" viewBox="0 0 24 24"><path d="M3.8 20.6V9.4h3.2V6.2h3.4v3.2h3.2V6.2h3.4v3.2h3.2v11.2z"/><path d="M10.3 20.6v-4.8h3.4v4.8"/><path d="M2.4 20.6h19.2"/></symbol>
+<symbol id="i-child" viewBox="0 0 24 24"><circle cx="12" cy="5.8" r="2.7"/><path d="M12 8.5v6.2"/><path d="M8.3 11.4h7.4"/><path d="M9.2 21l2.8-6.3 2.8 6.3"/></symbol>
+<symbol id="i-nopaper" viewBox="0 0 24 24"><path d="M6.4 3.4h7l5.2 5.2v10.8a1.6 1.6 0 0 1-1.6 1.6H6.4a1.6 1.6 0 0 1-1.6-1.6V5a1.6 1.6 0 0 1 1.6-1.6z"/><path d="M13.4 3.4v5.2h5.2"/><path d="M3.4 3.4l17.2 17.2"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.6 18.6a4.1 4.1 0 0 1-.5-8.17 5.5 5.5 0 0 1 10.55 1.32A3.42 3.42 0 0 1 17 18.6z"/><path d="M9.9 14.3l1.7 1.7 3.1-3.3"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.6 12.2a7.7 7.7 0 0 1-11.06 6.93L4.2 20.6l1.48-5.16A7.7 7.7 0 1 1 20.6 12.2z"/><path d="M8.8 11h6.4M8.8 14.2h4.2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.6" y="10.2" width="14.8" height="10.2" rx="2.4"/><path d="M8.2 10.2V7.4a3.8 3.8 0 0 1 7.6 0v2.8"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.2" y="5" width="17.6" height="14" rx="2.4"/><path d="M3.9 7.4l7 5.2a1.9 1.9 0 0 0 2.2 0l7-5.2"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.6" r="7.6"/><path d="M12 9.8v3.8l2.5 1.9"/><path d="M9.4 2.6h5.2"/><path d="M12 2.6v3.4"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7.8 4.2h8.4v5.2a4.2 4.2 0 0 1-8.4 0z"/><path d="M7.8 5.8H5.4a2.6 2.6 0 0 0 2.4 2.6M16.2 5.8h2.4a2.6 2.6 0 0 1-2.4 2.6"/><path d="M12 13.6v3.4"/><path d="M8.6 20.6h6.8l-.7-3.6H9.3z"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24"><path d="M12 3.2a6 6 0 0 0-3.4 10.94c.62.43.98 1.13.98 1.88v.38h4.84v-.38c0-.75.36-1.45.98-1.88A6 6 0 0 0 12 3.2z"/><path d="M9.6 18.6h4.8"/><path d="M10.4 21h3.2"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M9.4 11.2V5.6a1.6 1.6 0 0 1 3.2 0v5.2"/><path d="M12.6 10.8V6.8a1.6 1.6 0 0 1 3.2 0v4.4"/><path d="M6.2 13.8V8.6a1.6 1.6 0 0 1 3.2 0"/><path d="M15.8 11.6V9a1.6 1.6 0 0 1 3.2 0v5.6a6.4 6.4 0 0 1-6.4 6.4h-1a5.6 5.6 0 0 1-3.96-1.64L4.6 16.2a1.7 1.7 0 0 1 2.4-2.4l1.6 1.6"/></symbol>
+<symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5.6"/><path fill="currentColor" stroke="none" d="M12 12.3l.86 1.78 1.96.28-1.42 1.38.34 1.95L12 16.77l-1.74.92.34-1.95-1.42-1.38 1.96-.28z"/><path d="M8.7 9.9L6.2 3.4h11.6l-2.5 6.5"/></symbol>
+<symbol id="i-done" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M7.9 12.4l2.9 2.9 5.3-6"/></symbol>
+</defs></svg>
+
 
 <nav class="nav">
   <div class="wrap nav-in">
@@ -366,21 +401,20 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
       <h1>خمسُ مشكلاتٍ تواجهكِ كل يوم — <span class="hl">وحلُّها في مكانٍ واحد</span></h1>
       <p class="lede">
         لستِ معلّمةَ مادةٍ واحدة، بل معلّمةُ صفٍّ كامل بكلّ موادّه وكلّ أطفاله.
-        بنينا «خُطّة» على يومكِ أنتِ: ما يُتعبكِ فيه، وما يُضيّع وقتكِ، وما يجعلكِ
-        تقفين أمام الصفّ وأنتِ غير مستعدّة رغم تعبكِ.
+        بنينا «خُطّة» على يومكِ أنتِ.
       </p>
       <div class="cta-row">
         <button class="btn btn-1" onclick="goReg()">احجزي مقعدكِ الآن</button>
         <a class="btn btn-2" href="#problems">اعرفي كيف</a>
       </div>
-      <div class="note"><span style="color:var(--olive-d);font-weight:700">✓</span>
+      <div class="note"><span style="color:var(--olive-d)"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></span>
         الحجز المسبق مجّانيّ ولا يُلزمكِ بشيء — نتواصل معكِ عند الإطلاق</div>
     </div>
     <div class="hero-shot">
       <div class="shot"><img src="/promo/students.webp" width="1440" height="1098" fetchpriority="high"
         alt="لوحة طلابي: نجوم التميّز ومتابعة السلوك لكل شعبة"/></div>
-      <div class="tag-f tf1"><span class="ic">★</span> نجمةٌ بلمسة واحدة</div>
-      <div class="tag-f tf2"><span class="ic">✦</span> مدعومة بالذكاء الاصطناعي</div>
+      <div class="tag-f tf1"><span class="ic"><svg class="i" aria-hidden="true"><use href="#i-star"/></svg></span> نجمةٌ بلمسة واحدة</div>
+      <div class="tag-f tf2"><span class="ic"><svg class="i" aria-hidden="true"><use href="#i-spark"/></svg></span> مدعومة بالذكاء الاصطناعي</div>
     </div>
   </div>
 </header>
@@ -390,20 +424,20 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
   <div class="wrap">
     <div class="head rise">
       <span class="tagline">نبدأ من يومكِ</span>
-      <h2>خمسُ مشكلاتٍ تعرفينها جيّداً</h2>
-      <p>لكلّ واحدةٍ منها حلٌّ داخل المنصّة — لا وعداً، بل قسماً تفتحينه وتستعملينه.</p>
+      <h2>ما الذي يُتعبكِ في يومكِ؟</h2>
+      <p>لكلّ واحدةٍ منها قسمٌ في المنصّة تفتحينه وتستعملينه.</p>
     </div>
     <div class="ps">
 
       <div class="pr rise">
         <div class="side prob">
-          <span class="lbl"><i>؟</i> المشكلة</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-q"/></svg></i> المشكلة</span>
           <h3>حصةُ احتياطٍ تأتيكِ فجأة</h3>
           <p>يُقال لكِ صباحاً: عندكِ حصة في صفٍّ ليس صفّكِ ومادةٍ ليست مادتكِ. وأمامكِ دقائق، فتدخلين بلا شيء.</p>
         </div>
-        <div class="arrow">←</div>
+        <div class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></div>
         <div class="side sol">
-          <span class="lbl"><i>✓</i> الحلّ في «خُطّة»</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i> الحلّ في «خُطّة»</span>
           <h3>ثلاثون نشاطاً جاهزاً، وأوّل سؤالٍ: كم بقي من الوقت؟</h3>
           <p>تختارين الوقت والصفّ، أو تضغطين «فاجئيني» فيأتيكِ نشاطٌ مناسب. بلا تحضيرٍ ولا ورق، ويعمل بلا إنترنت.</p>
         </div>
@@ -411,13 +445,13 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 
       <div class="pr rise">
         <div class="side prob">
-          <span class="lbl"><i>؟</i> المشكلة</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-q"/></svg></i> المشكلة</span>
           <h3>التحضيرُ يأكل مساءكِ كلّه</h3>
           <p>موادُّ متعدّدة وصفوفٌ متعدّدة، ولكلّ درسٍ تحضيرٌ وملخّصٌ ونشاط. فتنامين متأخّرةً وتبدأين يومكِ متعبة.</p>
         </div>
-        <div class="arrow">←</div>
+        <div class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></div>
         <div class="side sol">
-          <span class="lbl"><i>✓</i> الحلّ في «خُطّة»</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i> الحلّ في «خُطّة»</span>
           <h3>الذكاء الاصطناعي يُحضّر من منهجكِ أنتِ</h3>
           <p>تحضيرُ الدرس وملخّصُه وعرضُه وألعابُه تُولَّد من صفحات كتابكِ نفسه — وتُراجعينها وتُعدّلينها كما تشائين.</p>
         </div>
@@ -425,13 +459,13 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 
       <div class="pr rise">
         <div class="side prob">
-          <span class="lbl"><i>؟</i> المشكلة</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-q"/></svg></i> المشكلة</span>
           <h3>متابعةُ سلوك الأطفال ورقياً لا تصمد</h3>
           <p>النجمةُ تُغيّر حصةً كاملة في هذا العمر، لكنّ دفتراً فيه أربعون اسماً يُنسي أكثر ممّا يُذكّر — ويضيع.</p>
         </div>
-        <div class="arrow">←</div>
+        <div class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></div>
         <div class="side sol">
-          <span class="lbl"><i>✓</i> الحلّ في «خُطّة»</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i> الحلّ في «خُطّة»</span>
           <h3>نجمةٌ بلمسة، ولكلّ طفلٍ ملفُّه</h3>
           <p>تمنحين وأنتِ واقفة، ويُجمع لكلّ طالبٍ سجلٌّ زمنيّ لنجومه وسلوكه. والصدارةُ تظهر وحدها فتُحمّس الصفّ.</p>
         </div>
@@ -439,13 +473,13 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 
       <div class="pr rise">
         <div class="side prob">
-          <span class="lbl"><i>؟</i> المشكلة</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-q"/></svg></i> المشكلة</span>
           <h3>موقفٌ صعبٌ ولا أحد تسألينه الآن</h3>
           <p>طفلٌ يبكي ولا يخبركِ لماذا، أو صفٌّ يعلو صوته، أو رسالةٌ لوليّ أمرٍ تحتارين في صياغتها.</p>
         </div>
-        <div class="arrow">←</div>
+        <div class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></div>
         <div class="side sol">
-          <span class="lbl"><i>✓</i> الحلّ في «خُطّة»</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i> الحلّ في «خُطّة»</span>
           <h3>«فهيم» مساعدُكِ التربوي — في جيبكِ</h3>
           <p>تسألينه فيُجيبكِ بخبرةٍ تربوية تخصّ الحلقة الأولى، ويعرف صفوفكِ وطلابكِ فيُجيب عن حالتكِ لا عن حالةٍ عامة.</p>
         </div>
@@ -453,13 +487,13 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 
       <div class="pr rise">
         <div class="side prob">
-          <span class="lbl"><i>؟</i> المشكلة</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-q"/></svg></i> المشكلة</span>
           <h3>شهاداتُ التكريم تُؤجَّل حتى تُنسى</h3>
           <p>تريدين تكريم المتميّزين، لكنّ تصميم شهادةٍ لكلّ طفلٍ وكتابةَ سببها يأخذ وقتاً لا تملكينه.</p>
         </div>
-        <div class="arrow">←</div>
+        <div class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></div>
         <div class="side sol">
-          <span class="lbl"><i>✓</i> الحلّ في «خُطّة»</span>
+          <span class="lbl"><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i> الحلّ في «خُطّة»</span>
           <h3>شهادةٌ تُكتب من عمل الطالب نفسه</h3>
           <p>المنصّة تعرف نجومه وترتيبه وسلوكه، فتختار نوع الشهادة ونصّ سببها. وشهاداتُ الشعبة كاملةً بضغطة.</p>
         </div>
@@ -475,7 +509,7 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
     <div class="head rise">
       <span class="tagline">جولةٌ في المنصّة</span>
       <h2>اضغطي على أيّ قسمٍ لتريه</h2>
-      <p>هذه لقطاتٌ حقيقية من داخل المنصّة — لا رسوماً تخيّلية.</p>
+      <p>لقطاتٌ حقيقية من داخل المنصّة.</p>
     </div>
     <div class="showcase rise">
       <div class="tabs" id="tabs"></div>
@@ -493,27 +527,26 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
     <div class="ai rise">
       <div class="ai-in">
         <div class="head">
-          <span class="tagline">✦ مدعومة بالذكاء الاصطناعي</span>
+          <span class="tagline"><svg class="i" aria-hidden="true"><use href="#i-spark"/></svg> مدعومة بالذكاء الاصطناعي</span>
           <h2>ستُّ مهامّ كانت تأخذ مساءكِ — صارت دقائق</h2>
-          <p>الذكاء الاصطناعي هنا ليس زينة: يقرأ صفحات كتابكِ نفسه، ويُخرج لكِ ما تستعملينه غداً في الحصة.</p>
+          <p>يقرأ صفحات كتابكِ المدرسيّ، ويُخرج لكِ ما تستعملينه غداً في الحصة.</p>
         </div>
         <div class="ai-grid">
-          <div class="ai-c" style="--cc:#6D4AB8"><div class="ic">📝</div>
+          <div class="ai-c" style="--cc:#6D4AB8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg></div>
             <h4>تحضير الدرس</h4><p>خطّةُ درسٍ كاملة من وحدتكِ ودرسكِ: الأهداف والتمهيد والأنشطة والتقويم.</p></div>
-          <div class="ai-c" style="--cc:#2F6FB0"><div class="ic">🖼️</div>
+          <div class="ai-c" style="--cc:#2F6FB0"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg></div>
             <h4>ملخّص مرسوم</h4><p>إنفوجرافيك للدرس يُعرض على الطلاب أو يُطبع — مرسومٌ بالكامل لا قالباً جاهزاً.</p></div>
-          <div class="ai-c" style="--cc:#39B8A8"><div class="ic">🎲</div>
+          <div class="ai-c" style="--cc:#39B8A8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-dice"/></svg></div>
             <h4>ألعاب من الدرس</h4><p>محتوى عشرة قوالب لعبٍ يُولَّد من درسكِ: مطابقة وعجلة واختبار وفرز.</p></div>
-          <div class="ai-c" style="--cc:#C05A2A"><div class="ic">📊</div>
+          <div class="ai-c" style="--cc:#C05A2A"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-slides"/></svg></div>
             <h4>عرضٌ تقديمي</h4><p>شرائحُ الدرس جاهزةً للعرض، تُراجعينها وتُعدّلين ما تشائين قبل الحصة.</p></div>
-          <div class="ai-c" style="--cc:#A83030"><div class="ic">📖</div>
+          <div class="ai-c" style="--cc:#A83030"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg></div>
             <h4>يقرأ كتابكِ</h4><p>يُلخّص صفحات الدرس من الكتاب المدرسيّ نفسه، فيبني على منهجكِ لا على منهجٍ آخر.</p></div>
-          <div class="ai-c" style="--cc:#D8741A"><div class="ic">🦊</div>
+          <div class="ai-c" style="--cc:#D8741A"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-fox"/></svg></div>
             <h4>فهيم مساعدُكِ</h4><p>مستشارٌ تربويّ يعرف صفوفكِ وطلابكِ، تسألينه في أي موقفٍ فيُجيب.</p></div>
         </div>
         <div class="ai-foot">
           وكلُّ ما يُولَّد <b>يُعرض عليكِ لتُراجعيه وتُعدّليه</b> قبل أن تستعمليه.
-          المنصّة تُعينكِ ولا تُقرّر عنكِ.
         </div>
       </div>
     </div>
@@ -526,7 +559,7 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
     <div class="head rise">
       <span class="tagline">مساعدتُكِ الذكية</span>
       <h2>تعرّفي على «فهيم»</h2>
-      <p>ليس محرّك بحث، بل مستشارٌ تربويٌّ يعرف صفوفكِ وطلابكِ — تسألينه بلغتكِ فيُجيبكِ عن حالتكِ أنتِ.</p>
+      <p>مستشارٌ تربويّ يعرف صفوفكِ وطلابكِ — تسألينه بلغتكِ فيُجيبكِ عن حالتكِ أنتِ.</p>
     </div>
     <div class="fh">
       <div class="fh-art rise">
@@ -544,7 +577,7 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
             <div class="msg me">كيف أهدّئ صفاً مشاغباً خلال دقيقة واحدة دون رفع صوتي؟</div>
           </div>
           <div style="align-self:flex-end;max-width:88%">
-            <div class="msg-who" style="justify-content:flex-end">🦊 فهيم</div>
+            <div class="msg-who" style="justify-content:flex-end"><svg class="i" aria-hidden="true"><use href="#i-fox"/></svg> فهيم</div>
             <div class="msg bot">جرّبي <b>إشارة الهدوء</b>: ارفعي يدكِ وابدئي عدّاً تنازلياً صامتاً بأصابعكِ من خمسة.
               مَن يراكِ يرفع يده ويصمت، فينتقل الصمت بينهم بلا صوتٍ منكِ… <span style="color:var(--muted)">اضغطي لترَي البقية</span></div>
           </div>
@@ -553,14 +586,14 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
             <div class="msg me">طالبٌ يبكي في الحصة ولا يخبرني بالسبب — كيف أتعامل معه بهدوء؟</div>
           </div>
           <div style="align-self:flex-end;max-width:88%">
-            <div class="msg-who" style="justify-content:flex-end">🦊 فهيم</div>
+            <div class="msg-who" style="justify-content:flex-end"><svg class="i" aria-hidden="true"><use href="#i-fox"/></svg> فهيم</div>
             <div class="msg bot typing" aria-label="فهيم يكتب"><i></i><i></i><i></i></div>
           </div>
         </div>
         <div class="chat-note">
-          هذه أسئلةٌ حقيقية من داخل المنصّة — تظهر لكِ بطاقاتٌ جاهزة تضغطينها مباشرةً:
+          بطاقاتٌ جاهزة تضغطينها مباشرةً:
           <b>نشاط ترحيب صباحي</b> · <b>تهدئة صف مشاغب</b> · <b>التعامل مع طفل يبكي</b> · <b>رسالة لوليّ أمر</b>.
-          أو اكتبي سؤالكِ أنتِ بأي صياغة.
+          أو اكتبي سؤالكِ بأي صياغة.
         </div>
       </div>
     </div>
@@ -572,21 +605,21 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
   <div class="wrap">
     <div class="head rise">
       <span class="tagline">ما يميّزها</span>
-      <h2>بُنيت لفصلٍ حقيقيّ، لا لعرضٍ تقديميّ</h2>
+      <h2>بُنيت لفصلٍ حقيقيّ</h2>
     </div>
     <div class="perks">
-      <div class="perk rise"><div class="ic">📶</div><h4>تعمل بلا إنترنت</h4>
+      <div class="perk rise" style="--pc:#2F6FB0"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-offline"/></svg></div><h4>تعمل بلا إنترنت</h4>
         <p>بنك الأنشطة والأصوات مُخزَّنةٌ على جهازكِ. فالحصةُ في فصلٍ لا شبكة فيه تمضي كما هي.</p></div>
-      <div class="perk rise"><div class="ic">🇴🇲</div><h4>محتوىً عُمانيّ</h4>
-        <p>الأفلاج واللبان والخنجر والقلاع والرزحة والمها والمحافظات — لا محتوىً مستورداً لا يعرفه طلابُكِ.</p></div>
-      <div class="perk rise"><div class="ic">🧒</div><h4>مُدرَّجٌ بالعمر</h4>
-        <p>لابن السابعة كلمةٌ واحدة كبيرة، ولابن العاشرة محيطُ المربّع. لكلّ صفٍّ ما يناسبه فعلاً.</p></div>
-      <div class="perk rise"><div class="ic">📄</div><h4>بلا ورق</h4>
-        <p>كلّ نشاطٍ شفهيّ أو سبورة أو حركة. قيدٌ جعل الأنشطة أصلح لفصلٍ لا تعرفين ما فيه.</p></div>
-      <div class="perk rise"><div class="ic">💾</div><h4>حفظٌ لا تفكّرين فيه</h4>
+      <div class="perk rise" style="--pc:#A83030"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-fort"/></svg></div><h4>محتوىً عُمانيّ</h4>
+        <p>الأفلاج واللبان والخنجر والقلاع والرزحة والمها والمحافظات — محتوىً يعرفه طلابُكِ.</p></div>
+      <div class="perk rise" style="--pc:#35603A"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-child"/></svg></div><h4>مُدرَّجٌ بالعمر</h4>
+        <p>لابن السابعة كلمةٌ واحدة كبيرة، ولابن العاشرة محيطُ المربّع.</p></div>
+      <div class="perk rise" style="--pc:#8A6508"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-nopaper"/></svg></div><h4>بلا ورق</h4>
+        <p>كلّ نشاطٍ شفهيّ أو على السبورة أو حركة — بلا طابعةٍ ولا تجهيز.</p></div>
+      <div class="perk rise" style="--pc:#39808A"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg></div><h4>حفظٌ لا تفكّرين فيه</h4>
         <p>عملُكِ يُحفظ وحده، ويندمج بين جوّالكِ وحاسوبكِ في الخلفية بلا رسائل ولا خطوات.</p></div>
-      <div class="perk rise"><div class="ic">👩‍🏫</div><h4>لغةٌ تُخاطبكِ أنتِ</h4>
-        <p>كلُّ كلمةٍ في المنصّة مكتوبةٌ لمعلّمةٍ واقفةٍ أمام صفّها — لا لمهندسٍ أمام شاشته.</p></div>
+      <div class="perk rise" style="--pc:#6D4AB8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg></div><h4>لغةٌ تُخاطبكِ أنتِ</h4>
+        <p>كلُّ كلمةٍ في المنصّة مكتوبةٌ لمعلّمةٍ واقفةٍ أمام صفّها.</p></div>
     </div>
   </div>
 </section>
@@ -616,8 +649,7 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
       <div class="reg-in">
         <div style="text-align:center"><span class="tagline">الحجز المسبق</span></div>
         <h2>احجزي مقعدكِ قبل بداية العام</h2>
-        <p class="reg-sub">املئي بياناتكِ ونتواصل معكِ فور الإطلاق لتفعيل حسابكِ.
-          <b style="color:#FFD98A">الحجز مجّانيّ ولا يُلزمكِ بشيء.</b></p>
+        <p class="reg-sub">املئي بياناتكِ ونتواصل معكِ فور الإطلاق لتفعيل حسابكِ.</p>
         <div id="form-card">
           <div class="field">
             <label for="r-name">الاسم الكامل <span style="color:#FFB3A3">*</span></label>
@@ -637,11 +669,11 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
           </div>
           <button class="submit" id="r-btn" onclick="submitReg()" disabled>احجزي مقعدي</button>
           <div class="reg-msg" id="r-msg"></div>
-          <div class="reg-trust"><span>🔒 بياناتكِ لا تُشارَك</span><span>✓ بلا التزام</span><span>✉ نتواصل عند الإطلاق</span></div>
+          <div class="reg-trust"><span><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg> بياناتكِ لا تُشارَك</span><span><svg class="i" aria-hidden="true"><use href="#i-check"/></svg> بلا التزام</span><span><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg> نتواصل عند الإطلاق</span></div>
         </div>
         <div class="done" id="done">
-          <div class="ic">🎉</div><h3>حُجز مقعدُكِ بنجاح</h3>
-          <p>سنتواصل معكِ على رقمكِ وبريدكِ فور الإطلاق لتفعيل حسابكِ.<br/>شكراً لثقتكِ 🌟</p>
+          <div class="ic"><svg class="i" aria-hidden="true"><use href="#i-done"/></svg></div><h3>حُجز مقعدُكِ بنجاح</h3>
+          <p>سنتواصل معكِ على رقمكِ وبريدكِ فور الإطلاق لتفعيل حسابكِ.</p>
         </div>
       </div>
     </div>
@@ -694,31 +726,31 @@ try{const r=new URLSearchParams(location.search).get('ref');if(r)sessionStorage.
 /* ══ جولة الأقسام: بطاقاتٌ تُبدّل اللقطة بدل صفٍّ طويل من الصور ══
    تتقدّم وحدها كلّ ٦ ثوانٍ حتى تلمس المعلمة شيئاً، فتتوقّف ويصير التحكّم لها. */
 const TOUR=[
- {id:'students', ic:'★', c:'#B8860B', t:'طلابي',        s:'النجوم والسلوك',
+ {id:'students', ic:'<svg class="i" aria-hidden="true"><use href="#i-star"/></svg>', c:'#B8860B', t:'طلابي',        s:'النجوم والسلوك',
   h:'نجمةٌ بلمسة، ومخالفةٌ بلمستين — وأنتِ واقفةٌ أمام الصفّ',
   p:'لوحةٌ واحدة فيها طلابُ الشعبة، بلا بحثٍ في جدول. ولكلّ طالبٍ ملفٌّ يجمع نجومَه وسلوكَه في سجلٍّ زمنيّ واحد.',
   b:['ملخّص الشعبة: نجومُ اليوم ومخالفاتُه ومَن يحتاج متابعة','قائمةُ الصدارة تظهر وحدها فتُحمّس الصفّ','تراجعٌ فوريّ إن ضغطتِ خطأً']},
- {id:'reserve', ic:'⏱', c:'#A83030', t:'حصص الاحتياط', s:'ثلاثون نشاطاً جاهزاً',
+ {id:'reserve', ic:'<svg class="i" aria-hidden="true"><use href="#i-timer"/></svg>', c:'#A83030', t:'حصص الاحتياط', s:'ثلاثون نشاطاً جاهزاً',
   h:'حصةٌ جاءتكِ فجأة؟ نشاطٌ جاهزٌ بضغطة',
-  p:'أوّل سؤالٍ تراه الشاشة ليس «أيّ تصنيف؟» بل «كم بقي من الوقت؟» — لأنّ هذا قيدُكِ الحقيقيّ حين تدخلين.',
-  b:['مصنّفةٌ بالقيمة التربوية لا بالشكل','زرّ «فاجئيني» يختصر التصفّح ويتجنّب ما استعملتِه','بلا ورقٍ ولا تحضير، وتعمل بلا إنترنت']},
- {id:'challenge', ic:'🏆', c:'#C05A2A', t:'التحدّيات', s:'فرقٌ ونقاطٌ ومؤقّت',
+  p:'أوّل سؤالٍ تراه الشاشة ليس «أيّ تصنيف؟» بل «كم بقي من الوقت؟»',
+  b:['مصنّفةٌ بالقيمة التربوية','زرّ «فاجئيني» يختصر التصفّح ويتجنّب ما استعملتِه','بلا ورقٍ ولا تحضير، وتعمل بلا إنترنت']},
+ {id:'challenge', ic:'<svg class="i" aria-hidden="true"><use href="#i-trophy"/></svg>', c:'#C05A2A', t:'التحدّيات', s:'فرقٌ ونقاطٌ ومؤقّت',
   h:'الصفُّ كلّه على حافة كرسيّه',
   p:'شاشةٌ يقرؤها الطالب من آخر الفصل. تُقسّمين الصفّ فرقاً، وتمنحين النقاط بلمسةٍ على بطاقة الفريق.',
   b:['المواد تتناوب: رياضيات ثم تربية إسلامية ثم عربية ثم علوم ثم فنون','أربع استراتيجيات تربوية مشهورة — تتعلّمينها وأنتِ تستعملينها','محتوىً عُمانيّ: الأفلاج واللبان والقلاع والرزحة']},
- {id:'story', ic:'📖', c:'#8A2E52', t:'القصص التفاعلية', s:'الصفّ يُقرّر',
+ {id:'story', ic:'<svg class="i" aria-hidden="true"><use href="#i-book"/></svg>', c:'#8A2E52', t:'القصص التفاعلية', s:'الصفّ يُقرّر',
   h:'القصةُ تقف عند الموقف، والصفُّ يُصوّت',
   p:'تُعرض القصة ثم يُطرح السؤال فيصوّت الطلاب برفع الأيدي. ولكلّ اختيارٍ أثرٌ يظهر — حتى الخاطئ.',
-  b:['رؤية الأثر أبلغُ من التحذير منه','يجرّبون الخيارات الأخرى ليروا الفرق','تُختم بسؤال حوارٍ تطرحينه']},
- {id:'fact', ic:'💡', c:'#356070', t:'المعلومات', s:'دهشةٌ ثم سؤال',
+  b:['يجرّبون الخيارات الأخرى ليروا الفرق','تُختم بسؤال حوارٍ تطرحينه']},
+ {id:'fact', ic:'<svg class="i" aria-hidden="true"><use href="#i-bulb"/></svg>', c:'#356070', t:'المعلومات', s:'دهشةٌ ثم سؤال',
   h:'معلومةٌ تُدهش، وسؤالٌ لا يظهر إلا بعدها',
-  p:'السؤال يبقى مخفيّاً حتى تضغطي «اسألي الصفّ» — لأنّ السؤال هو المقصود لا المعلومة.',
-  b:['ظهورهما معاً يجعل الطالب يقرأ الجواب قبل أن يفكّر','نقاطُ تقدّمٍ تعرفين بها أين وصلتِ']},
- {id:'activity', ic:'✋', c:'#487848', t:'الأنشطة الصفّية', s:'حركةٌ بلا شاشة',
+  p:'السؤال يبقى مخفيّاً حتى تضغطي «اسألي الصفّ».',
+  b:['نقاطُ تقدّمٍ تعرفين بها أين وصلتِ']},
+ {id:'activity', ic:'<svg class="i" aria-hidden="true"><use href="#i-hand"/></svg>', c:'#487848', t:'الأنشطة الصفّية', s:'حركةٌ بلا شاشة',
   h:'خطوةٌ واحدة في المرة، بخطٍّ تقرئينه واقفة',
-  p:'بدل جدارٍ من التعليمات، تظهر خطوةٌ واحدة كبيرة ومعها رقمها — وتنتقلين بزرّ.',
+  p:'تظهر خطوةٌ واحدة كبيرة ومعها رقمها، وتنتقلين بزرّ.',
   b:['مؤقّتٌ مدمجٌ في الخطوات التي تحتاجه','تُختم بسؤال حوارٍ للصفّ']},
- {id:'cert', ic:'🎖', c:'#8A6508', t:'شهادات التقدير', s:'صورةٌ باسم كلّ طالب',
+ {id:'cert', ic:'<svg class="i" aria-hidden="true"><use href="#i-medal"/></svg>', c:'#8A6508', t:'شهادات التقدير', s:'صورةٌ باسم كلّ طالب',
   h:'شهادةٌ تُكتب من عمل الطالب لا من كتابتكِ',
   p:'المنصّة تعرف نجومَه وترتيبَه وسلوكَه، فتختار نوع الشهادة ونصّ سببها. الحالةُ المعتادة ضغطتان.',
   b:['خمسة أنواع تُختار تلقائياً — ولا يُترك طالبٌ بلا شهادة','تُحفظ صورةً باسم كلّ طالب أو تُطبع على A4','شهاداتُ الشعبة كاملةً دفعةً واحدة']},
@@ -745,7 +777,7 @@ function tourGo(i,manual){
   nx.src='/promo/'+x.id+'.webp';
   const cap=document.getElementById('stage-cap');
   cap.style.setProperty('--tc',x.c);
-  cap.innerHTML=`<h3>${x.h}</h3><p>${x.p}</p><div class="bl">${x.b.map(b=>`<div><i>✓</i>${b}</div>`).join('')}</div>`;
+  cap.innerHTML=`<h3>${x.h}</h3><p>${x.p}</p><div class="bl">${x.b.map(b=>`<div><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i>${b}</div>`).join('')}</div>`;
   if(manual){tourAuto=false;clearInterval(tourTimer);tourTimer=null;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('timing'));}
 }
