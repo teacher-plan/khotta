@@ -181,6 +181,18 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 .stage-shot{position:relative;border-radius:20px;overflow:hidden;border:1.5px solid var(--border);
   box-shadow:var(--sh-lg);background:var(--surface);min-height:240px}
 .stage-shot img{display:block;width:100%;max-width:100%;height:auto;transition:opacity .38s ease}
+.stage-shot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;background:var(--surface)}
+.stage-shot .play{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:10px;z-index:3;cursor:pointer;font-family:var(--disp);
+  font-size:13.5px;font-weight:600;color:var(--ink);background:rgba(255,253,249,.94);
+  backdrop-filter:blur(8px);border:1.5px solid var(--border);border-radius:999px;
+  padding:9px 18px 9px 12px;box-shadow:var(--sh);transition:.18s}
+.stage-shot .play[hidden]{display:none}
+.stage-shot .play:hover{border-color:var(--red);color:var(--red-d);transform:translateX(-50%) translateY(-2px)}
+.stage-shot .play .pi{width:26px;height:26px;border-radius:50%;flex:none;display:flex;
+  align-items:center;justify-content:center;background:var(--red);color:#fff}
+.stage-shot .play .pi svg{width:15px;height:15px}
+@media(max-width:640px){.stage-shot .play{font-size:12.5px;padding:8px 14px 8px 9px}}
 /* الصورة عنصرٌ مُستبدَل، فـ inset:0 وحده لا يمطّطها — تبقى بعرضها الأصليّ */
 .stage-shot img.out{opacity:0;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
 .stage-cap{margin-top:16px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px}
@@ -530,7 +542,13 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
         <div class="body"><p class="ans">سبعةُ أقسام. اضغطي أيّها شئتِ لتري لقطةً حقيقيةً من داخله.</p><div class="showcase rise">
       <div class="tabs" id="tabs"></div>
       <div class="stage">
-        <div class="stage-shot"><img id="stage-img" src="/promo/students.webp" alt=""/></div>
+        <div class="stage-shot" id="stage-shot">
+          <img id="stage-img" src="/promo/students.webp" alt=""/>
+          <button class="play" id="stage-play" onclick="tourPlay()" hidden>
+            <span class="pi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span>
+            <span>شاهدي القسم وهو يعمل</span>
+          </button>
+        </div>
         <div class="stage-cap" id="stage-cap"></div>
       </div>
     </div></div>
@@ -682,7 +700,7 @@ try{const r=new URLSearchParams(location.search).get('ref');if(r)sessionStorage.
 /* ══ جولة الأقسام: بطاقاتٌ تُبدّل اللقطة بدل صفٍّ طويل من الصور ══
    تتقدّم وحدها كلّ ٦ ثوانٍ حتى تلمس المعلمة شيئاً، فتتوقّف ويصير التحكّم لها. */
 const TOUR=[
- {id:'students', ic:'<svg class="i" aria-hidden="true"><use href="#i-star"/></svg>', c:'#B8860B', t:'طلابي',        s:'النجوم والسلوك',
+ {id:'students', v:'stars', ic:'<svg class="i" aria-hidden="true"><use href="#i-star"/></svg>', c:'#B8860B', t:'طلابي',        s:'النجوم والسلوك',
   h:'نجمةٌ بلمسة، ومخالفةٌ بلمستين — وأنتِ واقفةٌ أمام الصفّ',
   p:'لوحةٌ واحدة فيها طلابُ الشعبة، بلا بحثٍ في جدول. ولكلّ طالبٍ ملفٌّ يجمع نجومَه وسلوكَه في سجلٍّ زمنيّ واحد.',
   b:['ملخّص الشعبة: نجومُ اليوم ومخالفاتُه ومَن يحتاج متابعة','قائمةُ الصدارة تظهر وحدها فتُحمّس الصفّ','تراجعٌ فوريّ إن ضغطتِ خطأً']},
@@ -690,7 +708,7 @@ const TOUR=[
   h:'حصةٌ جاءتكِ فجأة؟ نشاطٌ جاهزٌ بضغطة',
   p:'أوّل سؤالٍ تراه الشاشة ليس «أيّ تصنيف؟» بل «كم بقي من الوقت؟»',
   b:['مصنّفةٌ بالقيمة التربوية','زرّ «فاجئيني» يختصر التصفّح ويتجنّب ما استعملتِه','بلا ورقٍ ولا تحضير، وتعمل بلا إنترنت']},
- {id:'challenge', ic:'<svg class="i" aria-hidden="true"><use href="#i-trophy"/></svg>', c:'#C05A2A', t:'التحدّيات', s:'فرقٌ ونقاطٌ ومؤقّت',
+ {id:'challenge', v:'challenge', ic:'<svg class="i" aria-hidden="true"><use href="#i-trophy"/></svg>', c:'#C05A2A', t:'التحدّيات', s:'فرقٌ ونقاطٌ ومؤقّت',
   h:'الصفُّ كلّه على حافة كرسيّه',
   p:'شاشةٌ يقرؤها الطالب من آخر الفصل. تُقسّمين الصفّ فرقاً، وتمنحين النقاط بلمسةٍ على بطاقة الفريق.',
   b:['المواد تتناوب: رياضيات ثم تربية إسلامية ثم عربية ثم علوم ثم فنون','أربع استراتيجيات تربوية مشهورة — تتعلّمينها وأنتِ تستعملينها','محتوىً عُمانيّ: الأفلاج واللبان والقلاع والرزحة']},
@@ -706,7 +724,7 @@ const TOUR=[
   h:'خطوةٌ واحدة في المرة، بخطٍّ تقرئينه واقفة',
   p:'تظهر خطوةٌ واحدة كبيرة ومعها رقمها، وتنتقلين بزرّ.',
   b:['مؤقّتٌ مدمجٌ في الخطوات التي تحتاجه','تُختم بسؤال حوارٍ للصفّ']},
- {id:'cert', ic:'<svg class="i" aria-hidden="true"><use href="#i-medal"/></svg>', c:'#8A6508', t:'شهادات التقدير', s:'صورةٌ باسم كلّ طالب',
+ {id:'cert', v:'cert', ic:'<svg class="i" aria-hidden="true"><use href="#i-medal"/></svg>', c:'#8A6508', t:'شهادات التقدير', s:'صورةٌ باسم كلّ طالب',
   h:'شهادةٌ تُكتب من عمل الطالب لا من كتابتكِ',
   p:'المنصّة تعرف نجومَه وترتيبَه وسلوكَه، فتختار نوع الشهادة ونصّ سببها. الحالةُ المعتادة ضغطتان.',
   b:['خمسة أنواع تُختار تلقائياً — ولا يُترك طالبٌ بلا شهادة','تُحفظ صورةً باسم كلّ طالب أو تُطبع على A4','شهاداتُ الشعبة كاملةً دفعةً واحدة']},
@@ -726,6 +744,9 @@ function tourGo(i,manual){
     t.classList.remove('timing');
     if(k===i&&tourAuto&&!manual)void t.offsetWidth,t.classList.add('timing');
   });
+  tourStopVideo();
+  const play=document.getElementById('stage-play');
+  play.hidden=!x.v;
   const img=document.getElementById('stage-img');
   // تبديلٌ متلاشٍ: نُحمّل الجديدة ثم نُظهرها، فلا تومض الشاشة بفراغ
   const nx=new Image();
@@ -736,6 +757,30 @@ function tourGo(i,manual){
   cap.innerHTML=`<h3>${x.h}</h3><p>${x.p}</p><div class="bl">${x.b.map(b=>`<div><i><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></i>${b}</div>`).join('')}</div>`;
   if(manual){tourAuto=false;clearInterval(tourTimer);tourTimer=null;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('timing'));}
+}
+// الفيديو لا يُطلب من الشبكة إلا حين تضغط المعلمة — فمن لا يشاهده لا يدفع بايتاً.
+// واللقطة تبقى تحته، فإن تعذّر التشغيل لم تخسر الصفحة شيئاً.
+function tourStopVideo(){
+  const v=document.querySelector('#stage-shot video');
+  if(v){v.pause();v.remove();}
+  document.getElementById('stage-img').style.visibility='';
+}
+function tourPlay(){
+  const x=TOUR[tourAt]; if(!x.v)return;
+  tourAuto=false;clearInterval(tourTimer);tourTimer=null;   // لا تُبدَّل اللقطة والفيديو يعمل
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('timing'));
+  document.getElementById('stage-play').hidden=true;
+  const sh=document.getElementById('stage-shot');
+  const v=document.createElement('video');
+  v.autoplay=v.muted=v.loop=v.playsInline=true; v.preload='auto';
+  v.setAttribute('playsinline','');v.setAttribute('muted','');
+  v.poster='/promo/'+x.id+'.webp';
+  const canWebm=v.canPlayType('video/webm; codecs="vp9"')==='probably';
+  v.src='/promo/'+x.v+(canWebm?'.webm':'.mp4');
+  v.onplaying=()=>{document.getElementById('stage-img').style.visibility='hidden';};
+  v.onerror=()=>{tourStopVideo();document.getElementById('stage-play').hidden=false;};
+  sh.appendChild(v);
+  const pr=v.play(); if(pr&&pr.catch)pr.catch(()=>{v.controls=true;});
 }
 function tourStart(){
   if(tourTimer||!tourAuto)return;
