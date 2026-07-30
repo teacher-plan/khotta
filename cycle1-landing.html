@@ -84,6 +84,10 @@ section{padding:78px 0}
 .hero::after{content:'';position:absolute;inset-inline-end:-12%;bottom:-36%;width:54%;aspect-ratio:1;
   background:radial-gradient(circle,rgba(109,74,184,.11),transparent 66%);pointer-events:none}
 .hero-in{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);gap:50px;align-items:center}
+/* بلا لقطةٍ في الواجهة: عمودٌ واحد يتوسّط الصفحة */
+.hero-in.solo{grid-template-columns:minmax(0,1fr);max-width:820px;text-align:center;justify-items:center}
+.hero-in.solo .cta-row,.hero-in.solo .note{justify-content:center}
+.hero-in.solo .lede{max-width:62ch}
 .pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--border);
   border-radius:999px;padding:7px 17px;font-size:12.5px;font-weight:600;color:var(--red-d);box-shadow:var(--sh-sm)}
 .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--olive);box-shadow:0 0 0 3px rgba(72,120,72,.2);animation:pl 2.2s infinite}
@@ -321,14 +325,25 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 @media(max-width:640px){.reg{padding:40px 22px;border-radius:24px}}
 
 /* ══ الأسئلة ══ */
-.faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq{display:flex;flex-direction:column;gap:12px}
 .qa{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--sh-sm)}
-.qa summary{padding:19px 22px;font-family:var(--disp);font-size:15.5px;font-weight:600;cursor:pointer;list-style:none;
+.qa summary{padding:22px 26px;font-family:var(--disp);font-size:17px;font-weight:600;cursor:pointer;list-style:none;
   display:flex;align-items:center;justify-content:space-between;gap:14px;line-height:1.6}
 .qa summary::-webkit-details-marker{display:none}
-.qa summary::after{content:'+';font-size:22px;font-weight:400;color:var(--red-d);flex:none;transition:.2s;line-height:1}
-.qa[open] summary::after{transform:rotate(45deg)}
-.qa .body{padding:0 22px 21px;font-size:14.5px;color:var(--muted);line-height:2.05}
+/* سهمٌ لأسفل ينقلب لأعلى. علامةُ + المائلة تُقرأ × أي «احذف» لا «اطوِ» */
+.qa summary::after{content:'';width:9px;height:9px;flex:none;margin-top:-4px;
+  border-right:2.2px solid var(--red-d);border-bottom:2.2px solid var(--red-d);
+  transform:rotate(45deg);transition:transform .25s,margin .25s}
+.qa[open] summary::after{transform:rotate(-135deg);margin-top:4px}
+.qa .body{padding:4px 26px 26px}
+.qa .ans{font-size:15px;color:var(--muted);line-height:2.05;margin-bottom:22px;max-width:70ch}
+.qa[open]{border-color:var(--red);box-shadow:var(--sh)}
+.qa summary:hover{color:var(--red-d)}
+.qa summary:focus-visible{outline:2px solid var(--red);outline-offset:-3px;border-radius:16px}
+/* اللوحة الداكنة والجولة تملأ عرض الجواب، فنُلغي هوامش القسم عنها */
+.qa .body>.ai{margin-inline:-10px}
+.qa .body .btn{margin-top:4px}
+@media(max-width:640px){.qa summary{padding:18px 18px;font-size:15.5px}.qa .body{padding:2px 18px 22px}}
 
 .foot{background:var(--surface);border-top:1.5px solid var(--border);padding:34px 0;text-align:center;font-size:13px;color:var(--muted)}
 .foot .brand{justify-content:center;margin-bottom:12px;font-size:15px;display:inline-flex}
@@ -386,11 +401,8 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
     <a class="brand" href="#"><img src="/khottah_icon_192.png" alt=""/>
       <span>خُطّة<small>الحلقة الأولى</small></span></a>
     <div class="nav-links">
-      <a href="#about">ما هي؟</a>
-      <a href="#problems">ماذا تحلّ؟</a>
-      <a href="#tour">الأقسام</a>
-      <a href="#ai">الذكاء الاصطناعي</a>
-      <a href="#fahim">فهيم</a>
+      <a href="#learn">تعرّفي على «خُطّة»</a>
+      <a href="#reg">الحجز المسبق</a>
     </div>
     <button class="nav-cta" onclick="goReg()">احجزي مقعدكِ</button>
   </div>
@@ -398,7 +410,7 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 
 <!-- ═══ البطل ═══ -->
 <header class="hero">
-  <div class="wrap hero-in">
+  <div class="wrap hero-in solo">
     <div>
       <span class="pill"><i class="dot"></i> مصمَّمة لمعلّمة الصفوف الأولى الأربعة في سلطنة عُمان</span>
       <h1>منصّةٌ واحدة تُدير <span class="hl">يومَكِ الدراسيَّ كلَّه</span></h1>
@@ -408,30 +420,25 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
       </p>
       <div class="cta-row">
         <button class="btn btn-1" onclick="goReg()">احجزي مقعدكِ الآن</button>
-        <a class="btn btn-2" href="#about">اعرفي أكثر</a>
+        <a class="btn btn-2" href="#learn">تعرّفي على «خُطّة»</a>
       </div>
       <div class="note"><span style="color:var(--olive-d)"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></span>
         الحجز المسبق مجّانيّ ولا يُلزمكِ بشيء — نتواصل معكِ عند الإطلاق</div>
     </div>
-    <div class="hero-shot">
-      <div class="shot"><img src="/promo/students.webp" width="1440" height="1098" fetchpriority="high"
-        alt="لوحة طلابي: نجوم التميّز ومتابعة السلوك لكل شعبة"/></div>
-      <div class="tag-f tf1"><span class="ic"><svg class="i" aria-hidden="true"><use href="#i-star"/></svg></span> نجمةٌ بلمسة واحدة</div>
-      <div class="tag-f tf2"><span class="ic"><svg class="i" aria-hidden="true"><use href="#i-spark"/></svg></span> مدعومة بالذكاء الاصطناعي</div>
-    </div>
   </div>
 </header>
 
-<!-- ═══ س١: ما هي؟ ═══ -->
-<section id="about" style="background:var(--surface);border-block:1.5px solid var(--border)">
+<!-- ═══ تعرّف على خُطّة: كل الأسئلة متتالية ═══ -->
+<section id="learn" style="background:var(--surface);border-block:1.5px solid var(--border)">
   <div class="wrap">
     <div class="head rise">
-      <span class="tagline">السؤال ١</span>
-      <h2>ما هي منصّة «خُطّة»؟</h2>
-      <p>منصّةٌ عربيةٌ مبنيّةٌ لمعلّمة الحلقة الأولى (الصفوف ١–٤) في سلطنة عُمان.
-         تجمع في مكانٍ واحد أربعةَ أشياء كنتِ تتنقّلين بينها.</p>
+      <h2>تعرّف على «خُطّة»</h2>
+      <p>اضغطي على أيّ سؤالٍ ليظهر جوابُه.</p>
     </div>
-    <div class="perks c4">
+    <div class="faq">
+      <details class="qa rise" open>
+        <summary>ما هي منصّة «خُطّة»؟</summary>
+        <div class="body"><p class="ans">منصّةٌ عربيةٌ مبنيّةٌ لمعلّمة الحلقة الأولى (الصفوف ١–٤) في سلطنة عُمان. تجمع في مكانٍ واحد أربعةَ أشياء كنتِ تتنقّلين بينها.</p><div class="perks c4">
       <div class="perk rise" style="--pc:#6D4AB8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg></div>
         <h4>تحضيرُ الدرس</h4><p>خطّةٌ وشرائحُ وإنفوجرافيك وألعاب — تُولَّد من صفحات كتابكِ.</p></div>
       <div class="perk rise" style="--pc:#B8860B"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-star"/></svg></div>
@@ -440,19 +447,11 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
         <h4>أنشطةُ الحصص</h4><p>ثلاثون نشاطاً جاهزاً لحصص الاحتياط والوقت الفارغ.</p></div>
       <div class="perk rise" style="--pc:#8A6508"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-medal"/></svg></div>
         <h4>شهاداتُ التقدير</h4><p>شهادةٌ تُبنى من عمل الطالب، وتُحفظ صورةً باسمه.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ س٢: ماذا تحلّ؟ ═══ -->
-<section id="problems">
-  <div class="wrap">
-    <div class="head rise">
-      <span class="tagline">السؤال ٢</span>
-      <h2>أيّ مشكلةٍ تحلّها في يومي؟</h2>
-      <p>خمسٌ تعرفينها جيّداً — ولكلٍّ منها قسمٌ تفتحينه وتستعملينه.</p>
-    </div>
-    <div class="ps">
+    </div></div>
+      </details>
+      <details class="qa rise">
+        <summary>أيّ مشكلةٍ تحلّها في يومي؟</summary>
+        <div class="body"><p class="ans">خمسٌ تعرفينها جيّداً — ولكلٍّ منها قسمٌ تفتحينه وتستعملينه.</p><div class="ps">
 
       <div class="pr rise">
         <div class="side prob">
@@ -524,38 +523,22 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
         </div>
       </div>
 
-    </div>
-  </div>
-</section>
-
-<!-- ═══ جولة الأقسام ═══ -->
-<section id="tour" style="background:var(--surface);border-block:1.5px solid var(--border)">
-  <div class="wrap">
-    <div class="head rise">
-      <span class="tagline">السؤال ٣</span>
-      <h2>ما الأقسام التي أحصل عليها؟</h2>
-      <p>سبعةُ أقسام. اضغطي أيّها شئتِ لتري لقطةً حقيقيةً من داخله.</p>
-    </div>
-    <div class="showcase rise">
+    </div></div>
+      </details>
+      <details class="qa rise">
+        <summary>ما الأقسام التي أحصل عليها؟</summary>
+        <div class="body"><p class="ans">سبعةُ أقسام. اضغطي أيّها شئتِ لتري لقطةً حقيقيةً من داخله.</p><div class="showcase rise">
       <div class="tabs" id="tabs"></div>
       <div class="stage">
         <div class="stage-shot"><img id="stage-img" src="/promo/students.webp" alt=""/></div>
         <div class="stage-cap" id="stage-cap"></div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ الذكاء الاصطناعي ═══ -->
-<section id="ai">
-  <div class="wrap">
-    <div class="ai rise">
+    </div></div>
+      </details>
+      <details class="qa rise">
+        <summary>كيف تختصر عليّ وقت التحضير؟</summary>
+        <div class="body"><p class="ans">ترفعين صفحات درسكِ من الكتاب المدرسيّ، فتُولَّد لكِ ستُّ مهامّ كانت تأخذ مساءكِ.</p><div class="ai rise">
       <div class="ai-in">
-        <div class="head">
-          <span class="tagline"><svg class="i" aria-hidden="true"><use href="#i-spark"/></svg> السؤال ٤</span>
-          <h2>كيف تختصر عليّ وقت التحضير؟</h2>
-          <p>ترفعين صفحات درسكِ من الكتاب المدرسيّ، فتُولَّد لكِ ستُّ مهامّ كانت تأخذ مساءكِ.</p>
-        </div>
         <div class="ai-grid">
           <div class="ai-c" style="--cc:#6D4AB8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg></div>
             <h4>تحضير الدرس</h4><p>خطّةُ درسٍ كاملة من وحدتكِ ودرسكِ: الأهداف والتمهيد والأنشطة والتقويم.</p></div>
@@ -574,20 +557,11 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
           وكلُّ ما يُولَّد <b>يُعرض عليكِ لتُراجعيه وتُعدّليه</b> قبل أن تستعمليه.
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ فهيم ═══ -->
-<section id="fahim" style="background:var(--surface);border-block:1.5px solid var(--border)">
-  <div class="wrap">
-    <div class="head rise">
-      <span class="tagline">السؤال ٥</span>
-      <h2>من هو «فهيم»؟</h2>
-      <p>مساعدُكِ التربويّ داخل المنصّة: يعرف صفوفكِ وطلابكِ، فتسألينه بلغتكِ
-         عن أيّ موقفٍ في الحصة فيُجيبكِ عن حالتكِ أنتِ لا عن حالةٍ عامة.</p>
-    </div>
-    <div class="fh">
+    </div></div>
+      </details>
+      <details class="qa rise">
+        <summary>من هو «فهيم»؟</summary>
+        <div class="body"><p class="ans">مساعدُكِ التربويّ داخل المنصّة: يعرف صفوفكِ وطلابكِ، فتسألينه بلغتكِ عن أيّ موقفٍ في الحصة فيُجيبكِ عن حالتكِ أنتِ لا عن حالةٍ عامة.</p><div class="fh">
       <div class="fh-art rise">
         <div class="fh-orb">
           <div class="fh-ring"></div><div class="fh-ring b"></div>
@@ -622,30 +596,24 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
           أو اكتبي سؤالكِ بأي صياغة.
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ س٦–٨: أسئلةٌ عمليّة ═══ -->
-<section id="qa">
-  <div class="wrap">
-    <div class="head rise">
-      <span class="tagline">الأسئلة ٦ – ٨</span>
-      <h2>ثلاثةُ أسئلةٍ تُسأل دائماً</h2>
-    </div>
-    <div class="perks">
-      <div class="perk rise" style="--pc:#2F6FB0"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-offline"/></svg></div>
-        <h4>هل تعمل بلا إنترنت؟</h4>
-        <p>نعم. بنكُ الأنشطة والأصوات مُخزَّنٌ على جهازكِ، فتمضي الحصةُ في فصلٍ بلا شبكة كما هي.
-           والذي يحتاج الشبكة هو التوليدُ بالذكاء الاصطناعي والمزامنة فقط.</p></div>
-      <div class="perk rise" style="--pc:#A83030"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-fort"/></svg></div>
-        <h4>هل المحتوى عُمانيّ ويناسب أعمار صفّي؟</h4>
-        <p>نعم. الأفلاج واللبان والخنجر والقلاع والرزحة والمها والمحافظات.
-           وهو مُدرَّجٌ بالصفّ: لابن السابعة كلمةٌ واحدة كبيرة، ولابن العاشرة محيطُ المربّع.</p></div>
-      <div class="perk rise" style="--pc:#35603A"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg></div>
-        <h4>هل أحتاج خبرةً بالتقنية؟</h4>
-        <p>لا. أكثرُ ما في المنصّة يتمّ بضغطةٍ أو ضغطتين، وكلُّ كلمةٍ فيها مكتوبةٌ لمعلّمةٍ
-           واقفةٍ أمام صفّها. وعملُكِ يُحفظ وحده ويندمج بين جوّالكِ وحاسوبكِ في الخلفية.</p></div>
+    </div></div>
+      </details>
+      <details class="qa rise">
+        <summary>هل تعمل بلا إنترنت؟</summary>
+        <div class="body"><p class="ans">نعم. بنكُ الأنشطة والأصوات مُخزَّنٌ على جهازكِ، فتمضي الحصةُ في فصلٍ بلا شبكة كما هي. والذي يحتاج الشبكة هو التوليدُ بالذكاء الاصطناعي والمزامنة فقط.</p></div>
+      </details>
+      <details class="qa rise">
+        <summary>هل المحتوى عُمانيّ ويناسب أعمار صفّي؟</summary>
+        <div class="body"><p class="ans">نعم. الأفلاج واللبان والخنجر والقلاع والرزحة والمها والمحافظات. وهو مُدرَّجٌ بالصفّ: لابن السابعة كلمةٌ واحدة كبيرة، ولابن العاشرة محيطُ المربّع.</p></div>
+      </details>
+      <details class="qa rise">
+        <summary>هل أحتاج خبرةً بالتقنية؟</summary>
+        <div class="body"><p class="ans">لا. أكثرُ ما في المنصّة يتمّ بضغطةٍ أو ضغطتين، وكلُّ كلمةٍ فيها مكتوبةٌ لمعلّمةٍ واقفةٍ أمام صفّها. وعملُكِ يُحفظ وحده ويندمج بين جوّالكِ وحاسوبكِ في الخلفية.</p></div>
+      </details>
+      <details class="qa rise">
+        <summary>كيف أبدأ ومتى؟</summary>
+        <div class="body"><p class="ans">تُطلق المنصّة مع بداية العام الدراسيّ. احجزي مقعدكِ الآن ببياناتكِ، ونتواصل معكِ فور الإطلاق لتفعيل حسابكِ ومساعدتكِ في ضبط صفوفكِ.</p><button class="btn btn-1" onclick="goReg()">احجزي مقعدكِ الآن</button></div>
+      </details>
     </div>
   </div>
 </section>
@@ -775,12 +743,19 @@ function tourStart(){
   tourTimer=setInterval(()=>{if(tourAuto)tourGo((tourAt+1)%TOUR.length);},6400);
 }
 tourGo(0,true);tourAuto=true;
-// لا تبدأ الدورة إلا حين يصل القسم للشاشة — فلا تدور والمعلمة لم ترَها
+// الأجوبة مطويّة، فما بداخلها لا يصل الشاشة أبداً ولا يعمل مراقبُ التقاطع:
+// عند فتح أيّ جواب نُظهر عناصره فوراً، ونبدأ دورة الأقسام إن كانت داخله.
 (function(){
-  const s=document.getElementById('tour');
-  if(!('IntersectionObserver'in window)){tourStart();return;}
-  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){tourStart();io.disconnect();}}),{threshold:.25});
-  io.observe(s);
+  document.querySelectorAll('.qa').forEach(d=>{
+    d.addEventListener('toggle',()=>{
+      if(!d.open)return;
+      d.querySelectorAll('.rise').forEach((e,i)=>setTimeout(()=>e.classList.add('in'),i*55));
+      if(d.querySelector('#tabs'))tourStart();
+    });
+  });
+  // الجواب الأوّل مفتوحٌ ابتداءً، فلا حدث toggle له
+  const first=document.querySelector('.qa[open]');
+  if(first)first.querySelectorAll('.rise').forEach(e=>e.classList.add('in'));
 })();
 
 // ── النموذج ──
