@@ -181,6 +181,24 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
 .stage-shot{position:relative;border-radius:20px;overflow:hidden;border:1.5px solid var(--border);
   box-shadow:var(--sh-lg);background:var(--surface);min-height:240px}
 .stage-shot img{display:block;width:100%;max-width:100%;height:auto;transition:opacity .38s ease}
+/* ══ فيديو التعريف ══ */
+.intro{position:relative;margin:0 0 26px;border-radius:18px;overflow:hidden;
+  border:1.5px solid var(--border);box-shadow:var(--sh);background:#1A0E04;aspect-ratio:16/9}
+.intro>img,.intro>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.intro>video{object-fit:contain;background:#1A0E04}
+.intro .ip{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:12px;
+  align-items:center;justify-content:center;cursor:pointer;border:0;font-family:var(--disp);
+  font-size:15px;font-weight:600;color:#fff;background:linear-gradient(180deg,rgba(26,14,4,.15),rgba(26,14,4,.62));
+  transition:.2s}
+.intro .ip:hover{background:linear-gradient(180deg,rgba(26,14,4,.05),rgba(26,14,4,.55))}
+.intro .ip[hidden]{display:none}
+.intro .ip .rd{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--red);box-shadow:0 10px 32px rgba(0,0,0,.42);transition:.2s}
+.intro .ip:hover .rd{transform:scale(1.07);background:var(--red-d)}
+.intro .ip .rd svg{width:26px;height:26px;margin-inline-start:3px}
+.intro .cap{margin:-16px 0 26px;font-size:12.5px;color:var(--muted);text-align:center}
+.intro video::cue{font-family:var(--body);font-size:.9em;background:rgba(26,14,4,.82);line-height:1.7}
+@media(max-width:640px){.intro .ip{font-size:13.5px}.intro .ip .rd{width:52px;height:52px}}
 .stage-shot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;background:var(--surface)}
 .stage-shot .play{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
   display:flex;align-items:center;gap:10px;z-index:3;cursor:pointer;font-family:var(--disp);
@@ -450,7 +468,8 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
     <div class="faq">
       <details class="qa rise" open>
         <summary>ما هي منصّة «خُطّة»؟</summary>
-        <div class="body"><p class="ans">منصّةٌ عربيةٌ مبنيّةٌ لمعلّمة الحلقة الأولى (الصفوف ١–٤) في سلطنة عُمان. تجمع في مكانٍ واحد أربعةَ أشياء كنتِ تتنقّلين بينها.</p><div class="perks c4">
+        <div class="body"><p class="ans">منصّةٌ عربيةٌ مبنيّةٌ لمعلّمة الحلقة الأولى (الصفوف ١–٤) في سلطنة عُمان. تجمع في مكانٍ واحد أربعةَ أشياء كنتِ تتنقّلين بينها.</p>
+        <div id="intro-slot"></div><div class="perks c4">
       <div class="perk rise" style="--pc:#6D4AB8"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg></div>
         <h4>تحضيرُ الدرس</h4><p>خطّةٌ وشرائحُ وإنفوجرافيك وألعاب — تُولَّد من صفحات كتابكِ.</p></div>
       <div class="perk rise" style="--pc:#B8860B"><div class="ic"><svg class="i" aria-hidden="true"><use href="#i-star"/></svg></div>
@@ -758,6 +777,47 @@ function tourGo(i,manual){
   if(manual){tourAuto=false;clearInterval(tourTimer);tourTimer=null;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('timing'));}
 }
+/* ══════════════════ فيديو التعريف ══════════════════
+   موضعٌ جاهز. لتفعيله: ضع الملفات في /promo/ ثم اجعل INTRO='intro'
+     intro.mp4   (مطلوب)   ترميز H.264 — هو ما يعمل على آيفون
+     intro.webm  (اختياري) ترميز VP9 — أصغر، لغير آيفون
+     intro.webp  (اختياري) صورة الغلاف؛ وإن غابت أُخذت من الفيديو
+     intro.vtt   (اختياري) الترجمة العربية المكتوبة
+   أوامر التحويل من التسجيل الأصليّ (raw) — ونُبقي الصوت لأن فيه الشرح:
+     ffmpeg -i raw -c:v libx264 -profile:v main -pix_fmt yuv420p -crf 24 \
+            -preset slow -movflags +faststart -c:a aac -b:a 128k intro.mp4
+     ffmpeg -i raw -c:v libvpx-vp9 -crf 34 -b:v 0 -row-mt 1 -c:a libopus -b:a 96k intro.webm
+   وحين يكون INTRO=null لا يُعرض شيءٌ إطلاقاً ولا تتأثّر الصفحة. */
+const INTRO=null;
+(function(){
+  const slot=document.getElementById('intro-slot');
+  if(!slot||!INTRO)return;
+  slot.innerHTML=
+    '<div class="intro">'
+    +'<img src="/promo/'+INTRO+'.webp" alt="" onerror="this.remove()"/>'
+    +'<button class="ip" id="intro-play">'
+    +'<span class="rd"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="#fff"/></svg></span>'
+    +'<span>شاهدي تعريفاً قصيراً بالمنصّة</span></button></div>'
+    +'<div class="cap">فيديو قصير بصوتٍ وترجمةٍ مكتوبة — يمكنكِ إيقاف الترجمة من إعدادات المشغّل.</div>';
+  document.getElementById('intro-play').addEventListener('click',function(){
+    const box=slot.querySelector('.intro'), btn=this;
+    btn.hidden=true;
+    const v=document.createElement('video');
+    v.controls=true; v.playsInline=true; v.preload='auto';
+    v.setAttribute('playsinline','');
+    // فيه شرحٌ منطوق، فلا يُكتم — والتشغيل بضغطةٍ من المعلمة فيُسمح بالصوت
+    const canWebm=v.canPlayType('video/webm; codecs="vp9"')==='probably';
+    v.src='/promo/'+INTRO+(canWebm?'.webm':'.mp4');
+    const t=document.createElement('track');
+    t.kind='captions'; t.srclang='ar'; t.label='العربية';
+    t.src='/promo/'+INTRO+'.vtt'; t.default=true;
+    v.appendChild(t);
+    v.onerror=()=>{v.remove();btn.hidden=false;};
+    box.appendChild(v);
+    const pr=v.play(); if(pr&&pr.catch)pr.catch(()=>{});
+  });
+})();
+
 // الفيديو لا يُطلب من الشبكة إلا حين تضغط المعلمة — فمن لا يشاهده لا يدفع بايتاً.
 // واللقطة تبقى تحته، فإن تعذّر التشغيل لم تخسر الصفحة شيئاً.
 function tourStopVideo(){
