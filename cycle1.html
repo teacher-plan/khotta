@@ -2927,84 +2927,117 @@ let cy1SaveQueue=Promise.resolve();
 // عند مغادرة/إخفاء الصفحة يُدفع ما تبقى فوراً حتى لا يضيع شيء.
 let _cy1FlushTimer=null,_cy1Dirty=false,_cy1Waiters=[];
 
-/* ══ حاجز الكتابة من جهازين ══
+/* ══ الحفظ عند العمل على جهازين ══
    الحفظ يكتب ملف المعلمة كاملاً. فلو فتحت الموقع على الجوال واللابتوب، ومنحت
    نجوماً من الجوال ثم أضافت مهمة من اللابتوب، لكتب اللابتوب نسخته المحمَّلة
    قبل النجوم فوق كل شيء — وتُمحى النجوم بلا أن تدري.
 
-   الحاجز: نحتفظ بـ updated_at كما رأته القاعدة عند التحميل (_cy1Base)، ونكتب
-   بشرطه. فإن كان جهازٌ آخر قد كتب، اختلف الشرط فلم يُطابق أي صفّ، فنعرف أن
-   ثمّة تعارضاً قبل أن نمحو شيئاً.
+   والحلّ يقع في الخلفية بلا أن تشعر: الحفظ وظيفة أساسية لا ميزة، ولا شأن
+   للمعلمة بعدد أجهزتها.
 
-   ولماذا الشرط في الكتابة لا قراءةٌ ثم كتابة: القراءة ثم الكتابة فيها فُرجة —
-   قد يكتب الجهاز الآخر بينهما فنمحوه ونحن نظنّ أننا تحقّقنا. أمّا الشرط
-   فيُنفّذه الخادم في العملية نفسها، فلا فُرجة فيه.
+   ① نكتب بشرط updated_at كما رأيناه عند التحميل. فإن كتب جهازٌ آخر لم يُطابق
+      الشرط صفّاً، فنعرف بالتعارض قبل أن نمحو شيئاً. والشرط داخل عملية الكتابة
+      لا قراءةٌ ثم كتابة: في القراءة ثم الكتابة فُرجة قد يكتب فيها الآخر
+      فنمحوه ونحن نظنّ أننا تحقّقنا.
 
-   وعند التعارض نُعيد تحميل الملف الأحدث ونُخبر المعلمة صريحاً. تفقد ما كتبته
-   في تلك اللحظة وحدها — وهذا أهون بكثير من أن تفقد عمل يومٍ كامل صامتاً. */
-let _cy1Base=null;
+   ② وعند التعارض نجلب الأحدث ونُعيد فوقه ما غيّرته هي وحده، ثم نكتب ثانيةً.
+      ونعرف ما غيّرته لأننا نحتفظ بنسخة الملف كما حُمّل: ما اختلف عنها فهو
+      عملها، وما لم يختلف فنسخة الخادم أولى به.
+
+   ③ وفي الخرائط المفهرسة (النجوم، السلوك، حالة الدروس…) يقع الدمج على مستوى
+      المفتاح الداخلي لا الخريطة كلها — فنجوم شعبةٍ من الجوال وسلوك شعبةٍ
+      أخرى من اللابتوب يبقيان معاً.
+
+   ما يبقى خارج الحماية: أن يُعدّل الجهازان الشيء نفسه بالضبط (نجوم الشعبة
+   ذاتها) في اللحظة ذاتها — فآخر من كتب يفوز. وهذا لا مفرّ منه بلا تعقيدٍ
+   لا يستحقّه احتمالُه. */
+
+let _cy1Base=null;              // updated_at كما تراه القاعدة
+let _cy1Loaded=null;            // نسخة الملف كما حُمّل — بها نعرف ما غيّرناه
+const _cy1Touched=new Set();    // المفاتيح التي مسّها هذا الجهاز منذ آخر حفظ ناجح
+
+// الخرائط المفهرسة بمعرّف: تُدمج بمفاتيحها الداخلية لا ككتلة واحدة
+const CY1_MAPS=['plan_units','plan_state','stars','beh_log','calendar_events','assets'];
+const _isMap=v=>v&&typeof v==='object'&&!Array.isArray(v);
+const _same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b);}catch(e){return false;}};
+
+/* الدمج: نبدأ من نسخة الخادم، ثم نُعيد فوقها ما غيّرناه نحن وحده. */
+function cy1Merge(remote,mine,base,touched){
+  const out={...(remote||{})};
+  touched.forEach(k=>{
+    const m=mine?mine[k]:undefined, b=base?base[k]:undefined, r=out[k];
+    if(_isMap(m)&&_isMap(r)){
+      const merged={...r};
+      // مفاتيح غيّرناها أو أضفناها
+      Object.keys(m).forEach(id=>{ if(!_same(b&&b[id],m[id]))merged[id]=m[id]; });
+      // مفاتيح حذفناها — ولا نحذف ما غيّره الخادم بعدنا
+      if(_isMap(b))Object.keys(b).forEach(id=>{
+        if(!(id in m)&&_same(b[id],r[id]))delete merged[id];
+      });
+      out[k]=merged;
+    }else{
+      out[k]=m;   // قيمة مفردة أو مصفوفة: تعديلنا هو الأحدث
+    }
+  });
+  return out;
+}
 
 function cy1Flush(){
   clearTimeout(_cy1FlushTimer);_cy1FlushTimer=null;
   if(!_cy1Dirty||!currentUser){const w=_cy1Waiters;_cy1Waiters=[];w.forEach(r=>r());return cy1SaveQueue;}
   _cy1Dirty=false;
-  const snapshot=profile;
   const waiters=_cy1Waiters;_cy1Waiters=[];
-  const uid=currentUser.id,mail=currentUser.email||'';
   // نسلسل عمليات الحفظ (لا نرسلها بالتوازي) حتى لا تُفقَد آخر تعديل إذا وصلت استجابة أبطأ متأخرة بعد استجابة أحدث
-  cy1SaveQueue=cy1SaveQueue.then(async()=>{
-    const now=new Date().toISOString();
-    // لا أساس بعد (أول حفظ، أو صفّ لم يوجد) → إنشاء بلا شرط
-    if(!_cy1Base){
-      const{data,error}=await sb.from('cycle1_profiles')
-        .upsert({id:uid,email:mail,data:snapshot,updated_at:now})
-        .select('updated_at').maybeSingle();
-      if(error)throw error;
-      _cy1Base=(data&&data.updated_at)||now;
-      return;
-    }
-    const{data,error}=await sb.from('cycle1_profiles')
-      .update({email:mail,data:snapshot,updated_at:now})
-      .eq('id',uid).eq('updated_at',_cy1Base)   // ← الشرط: لم يكتب أحد بعدي
-      .select('updated_at');
-    if(error)throw error;
-    if(!data||!data.length){await cy1Conflict();return;}
-    _cy1Base=data[0].updated_at;
-  }).catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);})
+  cy1SaveQueue=cy1SaveQueue.then(()=>cy1Push(0))
+    .catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);})
     .finally(()=>{cyBusyDone();waiters.forEach(r=>r());});
   return cy1SaveQueue;
 }
 
-// كتب جهازٌ آخر بعد تحميلنا: نأخذ الأحدث ولا نمحوه، ونُخبرها بما جرى
-async function cy1Conflict(){
-  let got=false;
-  try{
-    const{data,error}=await sb.from('cycle1_profiles').select('data,updated_at').eq('id',currentUser.id).maybeSingle();
-    if(!error&&data){profile=data.data||{};_cy1Base=data.updated_at||null;got=true;}
-  }catch(e){}
-  _cy1Dirty=false;
-  cyBusyDone();
-  // إن أخفقت إعادة التحميل بقي الأساس قديماً، فيُرفض كل حفظ بعده وتظلّ تعمل
-  // على ملفٍ لا يُحفَظ. لا نُخاطر بذلك: نُحدّث الصفحة لتبدأ من حالة موثوقة.
-  if(!got){
-    toast('حُفظ عملكِ من جهاز آخر — نُحدّث الصفحة',true);
-    setTimeout(()=>location.reload(),2500);
+// نجح الرفع: يصير ما رفعناه هو الأساس الجديد للمقارنة
+function cy1Settled(snapshot,ts){
+  _cy1Base=ts||null;
+  try{_cy1Loaded=JSON.parse(JSON.stringify(snapshot));}catch(e){_cy1Loaded=null;}
+  _cy1Touched.clear();
+}
+
+async function cy1Push(attempt){
+  const uid=currentUser.id,mail=currentUser.email||'';
+  const snapshot=profile;
+  const now=new Date().toISOString();
+
+  // لا أساس بعد (أول حفظ، أو لم يوجد صفّ) → إنشاء بلا شرط
+  if(!_cy1Base){
+    const{data,error}=await sb.from('cycle1_profiles')
+      .upsert({id:uid,email:mail,data:snapshot,updated_at:now})
+      .select('updated_at').maybeSingle();
+    if(error)throw error;
+    cy1Settled(snapshot,(data&&data.updated_at)||now);
     return;
   }
-  toast('حُفظ عملكِ من جهاز آخر — هذه أحدث نسخة، أعيدي ما كتبتِه الآن',true);
-  // إعادة رسم القسم المفتوح ببيانات الملف الأحدث
-  try{
-    const cur=(document.querySelector('.page.active')||{}).id||'';
-    const id=cur.replace(/^page-/,'');
-    if(id==='yawmi'&&typeof renderYawmi==='function')renderYawmi();
-    else if(id==='plan'&&typeof planRender==='function')planRender();
-    else if(id==='students'&&typeof starRender==='function')starRender();
-    else if(id==='ach'&&typeof achRender==='function')achRender();
-    else if(typeof renderYawmi==='function')renderYawmi();
-  }catch(e){}
+
+  const{data,error}=await sb.from('cycle1_profiles')
+    .update({email:mail,data:snapshot,updated_at:now})
+    .eq('id',uid).eq('updated_at',_cy1Base)     // ← لم يكتب أحد بعدي
+    .select('updated_at');
+  if(error)throw error;
+  if(data&&data.length){cy1Settled(snapshot,data[0].updated_at);return;}
+
+  // كتب جهازٌ آخر — ندمج ونُعيد المحاولة بلا أن تشعر المعلمة
+  if(attempt>=4)throw new Error('cy1: تعذّر الدمج بعد محاولات');
+  const{data:fresh,error:e2}=await sb.from('cycle1_profiles')
+    .select('data,updated_at').eq('id',uid).maybeSingle();
+  if(e2)throw e2;
+  if(!fresh){_cy1Base=null;return cy1Push(attempt+1);}   // حُذف الصفّ؟ نُنشئه
+  profile=cy1Merge(fresh.data||{},profile,_cy1Loaded||{},_cy1Touched);
+  _cy1Base=fresh.updated_at||null;
+  return cy1Push(attempt+1);
 }
+
 function cy1Save(partial,busyText){
   if(!currentUser)return Promise.resolve();
+  // نُسجّل ما مسّه هذا الجهاز — عليه يقوم الدمج عند التعارض
+  Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));
   profile={...profile,...partial,updated_at:new Date().toISOString()};
   _cy1Dirty=true;
   cyBusy(busyText||'يحفظ');
@@ -3012,6 +3045,7 @@ function cy1Save(partial,busyText){
   _cy1FlushTimer=setTimeout(cy1Flush,900);
   return new Promise(res=>_cy1Waiters.push(res));
 }
+
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')cy1Flush();});
 window.addEventListener('pagehide',()=>{cy1Flush();});
 
