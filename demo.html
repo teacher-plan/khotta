@@ -676,6 +676,12 @@ body.inapp #c1-notif-btn{display:flex}
 .acct-dot{width:11px;height:11px;border-radius:50%;flex:none}
 .acct-g{font-size:12px;font-weight:800;color:var(--muted);flex:none;min-width:74px}
 .acct-note{font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:9px}
+.qt-row{margin-bottom:10px}
+.qt-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px}
+.qt-nm{font-weight:800}
+.qt-n{font-weight:800;font-variant-numeric:tabular-nums}
+.qt-bar{height:8px;border-radius:99px;background:var(--border);overflow:hidden}
+.qt-fill{height:100%;border-radius:99px;transition:width .4s ease}
 .acct-wa{display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;
   background:#25D366;color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:13px}
 .acct-wa:hover{background:#1EBE5A}
@@ -1872,11 +1878,15 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
     <div class="grp">اسمكِ كما يظهر في المنصّة وفي الشهادات</div>
     <input class="acct-in" id="acct-name" type="text" placeholder="الاسم"/>
     <div class="grp">رقم هاتفكِ</div>
-    <p class="acct-note">لتتواصل معكِ الإدارة عند الحاجة. يظهر للإدارة وحدها.</p>
+    <p class="acct-note">لتتواصل معكِ الإدارة عند الحاجة. يظهر للإدارة وحدها. مثال: ٩١٢٣٤٥٦٧</p>
+    <!-- الحقل ltr كي لا ينقلب الرقم، فلا يصلح خلط العربية في الـ placeholder:
+         المحايدات تُعاد ترتيبها فيخرج «XXXXXXXمثال: 9». المثال في السطر أعلاه. -->
     <input class="acct-in" id="acct-phone" type="tel" inputmode="tel" dir="ltr"
-           style="text-align:right" placeholder="مثال: 9XXXXXXX" maxlength="20"/>
+           style="text-align:right" placeholder="9XXXXXXX" maxlength="20"/>
     <div class="grp">أسماء شعبكِ</div>
     <div id="acct-classes"></div>
+    <div class="grp">رصيدكِ هذا الشهر</div>
+    <div id="acct-quota"></div>
     <div class="grp">التواصل مع الإدارة</div>
     <p class="acct-note">لأي استفسارٍ أو مشكلةٍ تواجهكِ، أو لطلب تعديلٍ لا تجدينه هنا.</p>
     <a class="acct-wa" id="acct-wa" target="_blank" rel="noopener">
@@ -3253,6 +3263,40 @@ function acctOpen(){
   const msg='السلام عليكم، أنا '+(profile.display_name||'معلمة')+' من منصّة خُطّة، ولديّ استفسار:';
   wa.href='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent(msg);
   document.getElementById('acct-modal').classList.add('open');
+  acctQuota();
+}
+// عدّاد الرصيد. المعلّمة كانت تكتشف الحدّ حين تصطدم به فيُرفض توليدها بلا
+// سابق إنذار؛ العدّاد يجعلها توزّع رصيدها على الشهر بنفسها.
+async function acctQuota(){
+  const box=document.getElementById('acct-quota');if(!box)return;
+  const bar=(nm,used,lim)=>{
+    const pct=lim?Math.min(100,Math.round(used/lim*100)):0;
+    const col=pct>=90?'#C9453B':pct>=70?'#D98B2B':'#2F7D74';
+    return `<div class="qt-row"><div class="qt-top"><span class="qt-nm">${nm}</span>
+      <span class="qt-n" style="color:${col}">${used} من ${lim}</span></div>
+      <div class="qt-bar"><div class="qt-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+  };
+  box.innerHTML='<div class="acct-note">يجري الحساب…</div>';
+  try{
+    let text=0,img=0,qT=300,qI=80;
+    if(KH_DEMO){text=48;img=6;}
+    else{
+      const month=new Date().toISOString().slice(0,7);
+      // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
+      const{data,error}=await sb.from('ai_usage').select('kind,count').eq('month',month);
+      if(error)throw error;
+      (data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
+      // نفس افتراضات الخادم، كي لا يعرض العدّاد حدّاً يخالف ما يفرضه فعلاً
+      qT=parseInt(await c1Setting('quota_text')||'')||300;
+      qI=parseInt(await c1Setting('quota_img')||'')||80;
+    }
+    box.innerHTML=bar('توليد نصّي (خطط، اختبارات، ألعاب)',text,qT)
+                 +bar('توليد صور (إنفوجرافيك، شرائح)',img,qI)
+                 +'<p class="acct-note" style="margin:2px 0 0">يتجدّد الرصيد مطلع كل شهر.</p>';
+  }catch(e){
+    // الرصيد معلومةٌ مساعدة لا وظيفة: تعذّر قراءته لا يستحقّ رسالة خطأ مقلقة
+    box.innerHTML='<div class="acct-note">تعذّر عرض الرصيد الآن.</div>';
+  }
 }
 function acctClose(){document.getElementById('acct-modal').classList.remove('open');}
 async function acctSave(){
