@@ -22,6 +22,10 @@
    البنية مطابقة لصفحة المعلم — تُبنى الأقسام قسماً تلو الآخر
 ══════════════════════════════════════════════════════════ */
 :root{
+  /* خطّان بدورين: Baloo للعناوين (شخصية) وCairo للنصّ (وضوح).
+     تعميمُ Baloo على النصّ كان سيُتعب القراءة — عريضٌ مستديرٌ صُمّم
+     لكلمتين لا لفقرة، والمعلمة تقرأ واقفةً أمام صفّها. */
+  --disp:'Baloo Bhaijaan 2','Cairo',Tahoma,sans-serif;
   --bg:#F7EEE2;--surface:#FFFDF9;--card:#FBF4EA;--border:#E3D2BD;
   --red:#D86048;--red-d:#A83030;--red-deep:#7A2020;
   --olive:#487848;--olive-d:#35603A;
@@ -31,6 +35,7 @@
 :focus-visible{outline:2.5px solid var(--red);outline-offset:2px}
 .plan-chk:focus-visible{outline-offset:1px}
 html{-webkit-text-size-adjust:100%}
+h1,h2,h3,h4,.c1-pagehead h1,.eg-step-title,.c1-mbox h3{font-family:var(--disp)}
 body{direction:rtl;font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;position:relative}
 /* خلفية «الشفق الحي»: بقع لونية ضبابية من لوني الهوية تسبح ببطء خلف كل شيء */
 body::before,body::after{content:"";position:fixed;z-index:-1;border-radius:50%;filter:blur(90px);pointer-events:none}
@@ -142,7 +147,7 @@ body.inapp #c1-notif-btn{display:flex}
 /* عنوان قسم أنيق بلا خلفية ملوّنة — نفس مبدأ صفحة المعلم */
 .c1-pagehead{text-align:start;margin-bottom:34px}
 .c1-pagehead .tag{font-size:11px;font-weight:800;letter-spacing:2.5px;color:var(--red-d);margin-bottom:6px}
-.c1-pagehead h1{font-family:inherit;font-weight:800;font-size:clamp(19px,3.2vw,26px);color:var(--ink);line-height:1.3;margin:0 0 5px}
+.c1-pagehead h1{font-weight:800;font-size:clamp(19px,3.2vw,26px);color:var(--ink);line-height:1.3;margin:0 0 5px}
 .c1-pagehead p{color:var(--muted);font-size:12.5px;margin:0;max-width:560px}
 
 /* بطاقة قيد البناء */
@@ -674,6 +679,27 @@ body.inapp #c1-notif-btn{display:flex}
 .acct-wa{display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;
   background:#25D366;color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:13px}
 .acct-wa:hover{background:#1EBE5A}
+/* ══ زخرفة رأس القسم ══
+   عنقودٌ واحد في الزاوية، بمبدأ الكولاج نفسه: أشكالٌ مصمتة بحدٍّ أسود
+   سميك. يُقصّ عند حدود الرأس فلا يزيد عرض الصفحة. واحدٌ لكل صفحة فقط —
+   ظهورُه مرّتين في صفحةٍ واحدة يجعله ضوضاء لا زينة. */
+.c1-pagehead.deco{position:relative;overflow:hidden;border-radius:20px;
+  padding:20px 22px;background:var(--surface);border:2.5px solid var(--ink);
+  box-shadow:0 6px 0 rgba(42,21,3,.12)}
+.c1-pagehead.deco>*:not(.pd){position:relative;z-index:2}
+.pd{position:absolute;z-index:1;border:2.5px solid var(--ink);pointer-events:none}
+.pd1{inset-inline-end:-26px;top:-34px;width:126px;height:126px;background:#FF5A5F;transform:rotate(16deg)}
+.pd2{inset-inline-end:74px;bottom:-46px;width:98px;height:98px;border-radius:50%;background:#4ECDC4}
+.pd3{inset-inline-end:150px;top:-18px;width:66px;height:66px;border-radius:14px;background:#FFD166;transform:rotate(-12deg)}
+@media(max-width:640px){.pd3{display:none}
+  .pd1{width:92px;height:92px;inset-inline-end:-20px;top:-26px}
+  .pd2{width:70px;height:70px;inset-inline-end:52px;bottom:-32px}}
+/* حالات الفراغ: زخرفةٌ صغيرة تُحوّلها من عطبٍ إلى دعوة */
+.plan-empty-card{position:relative;overflow:hidden}
+.plan-empty-card::before{content:'';position:absolute;inset-inline-end:-22px;top:-26px;
+  width:76px;height:76px;border-radius:18px;background:rgba(216,96,72,.14);transform:rotate(18deg)}
+.plan-empty-card::after{content:'';position:absolute;inset-inline-end:44px;bottom:-30px;
+  width:56px;height:56px;border-radius:50%;background:rgba(78,205,196,.18)}
 .plan-bar{position:relative;display:flex;align-items:center;justify-content:flex-start;
   min-height:122px;margin-bottom:20px;padding:0 34px;border-radius:22px;overflow:hidden;
   background:#FFF6E6;border:3px solid var(--ink);box-shadow:0 8px 0 rgba(42,21,3,.14)}
@@ -2184,7 +2210,7 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
 
 <!-- قسم حصص الاحتياط — مستقلّ لا يرتبط بخطة ولا بمادة -->
 <div class="page" id="page-reserve"><div class="wrap">
-  <div class="c1-pagehead"><div class="tag">حصص الاحتياط</div><h1>حصةٌ جاءتكِ فجأة؟ خذي نشاطاً جاهزاً</h1>
+  <div class="c1-pagehead deco"><span class="pd pd1"></span><span class="pd pd2"></span><span class="pd pd3"></span><div class="tag">حصص الاحتياط</div><h1>حصةٌ جاءتكِ فجأة؟ خذي نشاطاً جاهزاً</h1>
     <p>أنشطةٌ تغرس قيمةً وتملأ الوقت بفائدة — بلا تحضير ولا ورق، وتعمل بلا إنترنت.</p></div>
 
   <div class="rs-head">
@@ -2249,7 +2275,8 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
 
 <!-- قسم إنجازاتك ومبادراتك -->
 <div class="page" id="page-ach"><div class="wrap">
-  <div class="c1-pagehead">
+  <div class="c1-pagehead deco">
+    <span class="pd pd1"></span><span class="pd pd2"></span><span class="pd pd3"></span>
     <div class="tag">إنجازاتك</div>
     <h1>إنجازاتك ومبادراتك</h1>
     <p>نبذة شخصية وسجلّ إنجازاتك المهنية</p>
