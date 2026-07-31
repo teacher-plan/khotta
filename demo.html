@@ -1418,6 +1418,15 @@ body:has(#page-fahim.active){overflow:hidden}
 .fh-typing-dots i:nth-child(2){animation-delay:.15s}.fh-typing-dots i:nth-child(3){animation-delay:.3s}
 @keyframes fhBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
 #fh-inputrow{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--card);align-items:flex-end}
+#fh-clip{width:38px;height:38px;flex:none;border:1.5px solid var(--border);border-radius:50%;
+  background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+#fh-clip:hover{border-color:var(--red);color:var(--red)}
+#fh-thumbs{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
+#fh-thumbs:not(:empty){padding-top:10px}
+.fh-th{position:relative;width:62px;height:62px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
+.fh-th img{width:100%;height:100%;object-fit:cover;display:block}
+.fh-th button{position:absolute;top:2px;inset-inline-end:2px;width:19px;height:19px;border:0;border-radius:50%;
+  background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:1;cursor:pointer;padding:0}
 #fh-input{flex:1;resize:none;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:11px 16px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;max-height:90px}
 #fh-input:focus{border-color:var(--red)}
 #fh-send{width:44px;height:44px;flex:none;border:none;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(216,96,72,.4);transition:transform .15s}
@@ -1877,11 +1886,9 @@ body.demo{padding-bottom:64px}
 body.demo .c1-mi.danger{display:none}
 /* فهيم صفحةٌ مثبّتة بملء الشاشة (inset:0) فلا يُزحزحها padding الجسم،
    وكان الشريط يغطّي صندوق الكتابة وزرّ الإرسال فيتعذّر إرسال أي سؤال */
-body.demo #page-fahim.active{bottom:56px}
-body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
-@media(max-width:620px){body.demo #page-fahim.active{bottom:50px}
-  body.demo #page-fahim.active .wrap{height:calc(100dvh - 50px)}}
-@media(max-width:620px){.demo-bar .db-txt{display:none}body.demo{padding-bottom:58px}}
+body.demo #page-fahim.active{bottom:var(--db-h,56px)}
+body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
+@media(max-width:620px){.demo-bar .db-txt{display:none}body.demo{padding-bottom:calc(var(--db-h,58px) + 8px)}}
 </style>
 </head>
 <body>
@@ -2264,8 +2271,13 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
           <button class="fh-card" onclick="fhAsk('اكتب لي رسالة قصيرة ومهذبة لولي أمر عن سلوك ابنه في الصف مؤخراً')">رسالة لولي أمر</button>
         </div>
         <div id="fh-body"></div>
+        <div id="fh-thumbs"></div>
         <div id="fh-inputrow">
-          <textarea id="fh-input" rows="1" placeholder="اسألي فهيم عن أي شيء تربوي" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
+          <input type="file" id="fh-file" accept="image/*" multiple hidden onchange="fhPick(this)"/>
+          <button id="fh-clip" onclick="document.getElementById('fh-file').click()" title="أرفقي صورة ليقرأها فهيم" aria-label="إرفاق صورة">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M16.5 6v11.5a4.5 4.5 0 1 1-9 0V5a3 3 0 0 1 6 0v10.5a1.5 1.5 0 0 1-3 0V6H9v9.5a3 3 0 0 0 6 0V5a4.5 4.5 0 0 0-9 0v12.5a6 6 0 0 0 12 0V6h-1.5z"/></svg>
+          </button>
+          <textarea id="fh-input" rows="1" placeholder="اسألي فهيم عن أي شيء" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
           <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
         </div>
       </div>
@@ -3317,6 +3329,11 @@ function demoBoot(){
     +'<button class="db-rs" onclick="location.reload()">إعادة الضبط</button>'
     +'<a class="db-cta" href="/cycle1-landing.html#reg">أعجبتكِ؟ احجزي مقعدكِ</a>'
     +'</div>');
+  // ارتفاع الشريط يتغيّر بالتفافه على الشاشات الضيّقة، فقياسه أوثق من رقمٍ
+  // ثابت: بالرقم الثابت كان يغطّي صندوق كتابة فهيم فيتعذّر إرسال أي سؤال.
+  const dbH=()=>{const b=document.querySelector('.demo-bar');
+    if(b)document.documentElement.style.setProperty('--db-h',b.offsetHeight+'px');};
+  dbH();addEventListener('resize',dbH);setTimeout(dbH,400);
   if(typeof starRender==='function'){c1Go('students');}
 }
 let _demoBusyGuard=null;
@@ -9104,22 +9121,65 @@ function fhContext(){
 function fhRender(){
   const body=document.getElementById('fh-body');if(!body)return;
   if(!fhMsgs.length){
-    body.innerHTML='<div class="plan-empty-card" style="margin:auto;max-width:420px">مرحباً بكِ! اسألي فهيم عن أي شيء تربوي يخص صفوف الحلقة الأولى — إدارة الصف، الأنشطة، أو أي موقف يومي.</div>';
+    body.innerHTML='<div class="plan-empty-card" style="margin:auto;max-width:420px">مرحباً بكِ! اسألي فهيم عمّا شئتِ — إدارة الصف والأنشطة والمواقف اليومية، أو أي سؤالٍ عام. ويمكنكِ إرفاق صورة (صفحة كتاب، ورقة طالبة، تعميم) ليقرأها ويلخّصها لكِ.</div>';
     return;
   }
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
-    ?`<div class="fh-msg user">${escHtml(m.content)}</div>`
+    ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
     :`<div class="fh-brow">${fhAvaHtml()}<div class="fh-msg bot">${escHtml(m.content)}</div></div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
+
+// ── صورٌ ترفعها المعلمة ليقرأها فهيم ──
+let fhImgs=[];
+const FH_MAX_IMGS=4;
+async function fhPick(inp){
+  const files=[...(inp.files||[])].filter(f=>/^image\//.test(f.type));
+  inp.value='';
+  for(const f of files){
+    if(fhImgs.length>=FH_MAX_IMGS){toast('أربع صورٍ كحدٍّ أقصى',true);break;}
+    try{fhImgs.push(await fhShrink(f));}catch(e){toast('تعذّرت قراءة الصورة',true);}
+  }
+  fhThumbs();
+}
+// نُصغّر قبل الإرسال: صورة الهاتف قد تبلغ خمسة ميجابايت، ورفعها كما هي بطيءٌ
+// على شبكة المدرسة ويُحاسَب عليها، ودقّة ١٦٠٠ بكسل تكفي لقراءة صفحة كتاب.
+function fhShrink(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onerror=rej;
+    fr.onload=()=>{
+      const im=new Image();
+      im.onerror=rej;
+      im.onload=()=>{
+        const sc=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight));
+        const cv=document.createElement('canvas');
+        cv.width=Math.round(im.naturalWidth*sc);cv.height=Math.round(im.naturalHeight*sc);
+        const g=cv.getContext('2d');
+        g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+        g.drawImage(im,0,0,cv.width,cv.height);
+        res(cv.toDataURL('image/jpeg',0.82));
+      };
+      im.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function fhThumbs(){
+  const box=document.getElementById('fh-thumbs');if(!box)return;
+  box.innerHTML=fhImgs.map((u,i)=>
+    `<div class="fh-th"><img src="${u}" alt="مرفق"/><button onclick="fhImgs.splice(${i},1);fhThumbs()" title="إزالة">&times;</button></div>`).join('');
+}
 async function fhSend(){
   if(fhBusy)return;
   const inp=document.getElementById('fh-input');
   const msg=(inp.value||'').trim();
-  if(!msg)return;
+  if(!msg&&!fhImgs.length)return;
+  const imgs=fhImgs.slice();
+  fhImgs=[];fhThumbs();
   inp.value='';
-  fhMsgs.push({role:'user',content:msg});
+  fhMsgs.push({role:'user',content:msg||'',imgs});
   fhRender();
   const body=document.getElementById('fh-body');
   body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+fhAvaHtml()+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
@@ -9136,7 +9196,10 @@ async function fhSend(){
   }
   try{
     const{data,error}=await sb.functions.invoke('generate-chat',{body:{
-      chatId:fhChatId,message:msg,history:fhMsgs.slice(0,-1).slice(-12),context:fhContext()
+      chatId:fhChatId,message:msg,images:imgs,
+      // السجلّ نصٌّ فقط: إعادة إرسال الصور كل دور تُضاعف الكلفة بلا فائدة
+      history:fhMsgs.slice(0,-1).slice(-12).map(m=>({role:m.role,content:m.content})),
+      context:fhContext()
     }});
     document.getElementById('fh-typing')?.remove();
     if(error||!data||!data.reply){

@@ -83,15 +83,26 @@ Deno.serve(async (req) => {
         .filter((m: { role?: string; content?: string }) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
         .slice(-12)
         .map((m: { role: string; content: string }) => ({ role: m.role, content: String(m.content).slice(0, 2000) }));
-    if (!userMsg) return json({ error: "no_message" }, 400);
+    // صورٌ ترفعها المعلمة ليقرأها فهيم (صفحة كتاب، ورقة طالبة، تعميم إداري).
+    // أربع كحد أقصى: المدخل يُحاسب بالحجم، وأربع تكفي درساً كاملاً.
+    const images: string[] = (Array.isArray(b.images) ? b.images : [])
+      .filter((u: unknown) => typeof u === "string" && /^data:image\//.test(u as string))
+      .slice(0, 4) as string[];
+    if (!userMsg && !images.length) return json({ error: "no_message" }, 400);
 
-    const model = st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash";
+    // مع صورة نحتاج نموذج رؤية مضموناً: النموذج النصي يُسقط الصور بصمت
+    // فتظن المعلمة أنه قرأها وهو يجيب من فراغ.
+    const model = images.length
+      ? (st.model_chat_vision || st.vision_model || "google/gemini-2.5-flash")
+      : (st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash-lite");
 
     const system = [
       "أنت «فهيم» 🦉 — المساعد التربوي الذكي لمنصة «خطتي الفصلية» للمعلمين في سلطنة عُمان.",
       "شخصيتك: ودود، عملي، مختصر، مشجّع — تجيب كزميل خبير لا كموسوعة.",
-      "تخصصك حصراً: التعليم والتدريس (تحضير الدروس، استراتيجيات التدريس، إدارة الصف، التقويم، التعامل مع الطلاب وأولياء الأمور، منهج كامبردج المطبق في عمان، صياغة الأسئلة والأنشطة).",
-      "أي طلب خارج التعليم (برمجة، سياسة، ترفيه عام، واجبات شخصية...) اعتذر عنه بلطف وبجملة واحدة وأعد التوجيه لما تستطيعه.",
+      "خبرتك الأعمق في التعليم والتدريس (تحضير الدروس، استراتيجيات التدريس، إدارة الصف، التقويم، التعامل مع الطلاب وأولياء الأمور، منهج كامبردج المطبق في عمان، صياغة الأسئلة والأنشطة) — وإليها تعود كلما أمكن.",
+      "لكنك لست محصوراً فيها: أجب عن أي سؤال عام تسأله المعلمة (معلومة، صياغة نص، ترجمة، حساب، تنظيم وقت، شأن يومي) بنفس الود والاختصار، فالمعلمة إنسان قبل أن تكون معلمة.",
+      "ما تعتذر عنه فقط: ما يضر أو يخالف نظام سلطنة عُمان، أو ما يخصّ طفلاً بعينه بحكم طبي أو نفسي — عندها انصح بإحالته للمختص.",
+      "لا تدّعِ اطلاعاً على أخبار أو أسعار أو أحداث بعد وقت تدريبك، ولا تخترع مصدراً أو رابطاً. إن لم تعرف فقل ذلك بجملة واحدة.",
       "أجب بالعربية الفصحى الميسّرة. اجعل الإجابات قصيرة عملية (٣-٦ أسطر غالباً) إلا إن طُلب التفصيل.",
       context ? `سياق المعلم الحالي (استخدمه لتخصيص إجاباتك دون أن تعيده حرفياً): ${context}` : "",
     ].filter(Boolean).join("\n");
@@ -109,10 +120,13 @@ Deno.serve(async (req) => {
         messages: [
           { role: "system", content: system },
           ...history,
-          { role: "user", content: userMsg },
+          { role: "user", content: images.length
+            ? [{ type: "text", text: userMsg || "اقرأ هذه الصورة ولخّصها لي." },
+               ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))]
+            : userMsg },
         ],
         temperature: 0.6,
-        max_tokens: 900,
+        max_tokens: images.length ? 1400 : 900,
       }),
     });
     const or = await orResp.json();
@@ -122,8 +136,10 @@ Deno.serve(async (req) => {
 
     // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) ═
     // سقف حجم المحادثة المحفوظة — لا تنمو بلا حد
-    const newMessages = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }].slice(-60);
-    const title = (history.find((m) => m.role === "user")?.content || userMsg).slice(0, 60);
+    const askedText = userMsg || "(صورة مرفقة)";
+    // نحفظ نص السؤال لا الصور: تخزين data URI يضخّم الصف ويُعاد إرساله كل دور
+    const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: reply }].slice(-60);
+    const title = (history.find((m) => m.role === "user")?.content || askedText).slice(0, 60);
     let savedId = chatId;
     const doSave = async () => {
       if (chatId) {
