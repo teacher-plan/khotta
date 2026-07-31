@@ -56,6 +56,10 @@ Deno.serve(async (req) => {
     const bookContext = String(b.bookContext || "").slice(0, 4000);
     const slideCount = Math.max(5, Math.min(12, parseInt(b.slideCount) || 10));
     if (!lesson) return json({ error: "no_lesson" }, 400);
+    // وضعٌ موجز للعرض المصوَّر: هناك تُحوَّل كل شريحة إلى صورة، فلا حاجة
+    // للودجات ولا لملاحظات الإلقاء ولا للتعليق الصوتي — كانت تُولَّد ثم
+    // تُرمى، وتضاعف زمن التوليد حتى يظنّ المستخدم أن العملية تعلّقت.
+    const brief = b.brief === true;
 
     const model = st.model_slides || st.ai_model || "google/gemini-2.5-flash";
     const gradeNum = parseInt(grade) || 0;
@@ -73,6 +77,24 @@ Deno.serve(async (req) => {
       'equation: {"left":"15","op":"−","right":"4","answer":"11"} — معادلة كبيرة بارزة',
       'none — شريحة نقاط عادية بلا ودجة (bullets فقط)',
     ].join("\n");
+
+    const briefSchema = JSON.stringify({
+      objectives: ["أنا أستطيع أن...", "...", "..."],
+      slides: [{ title: "عنوان الشريحة", points: ["نقطة قصيرة", "..."] }],
+      homework: "واجب منزلي قصير",
+    });
+    const briefSystem = [
+      "أنت مصمم مناهج خبير في سلطنة عُمان، تخطّط عرضاً تعليمياً لصف من الحلقة الأولى (١-٤) بمنهج كامبردج.",
+      `أعمار الطلاب: ${age || "٧-١٠"} سنوات — لغة وأمثلة تناسب هذا العمر، جمل قصيرة مباشرة.`,
+      bookContext
+        ? `ملخص فعلي لمحتوى الدرس من كتاب الطالب المعتمد — ابنِ منه حصراً:\n${bookContext}`
+        : "لا صفحات كتاب مرفقة — بناءً على خبرتك بمنهج كامبردج المعتمد في سلطنة عُمان لهذا الصف والمادة، توقّع المحتوى الفعلي المرجّح لهذا الدرس تحديداً (لا محتوى عام) وابنِ عليه بثقة.",
+      "أعطِ ٣ مخرجات تعليمية بصيغة «أنا أستطيع أن...» في objectives.",
+      `ثم بالضبط ${slideCount} شرائح متدرّجة: الفكرة الأساسية، ثم التطبيق، ثم التدريب، ثم الخلاصة.`,
+      "كل شريحة: عنوان قصير و٢-٣ نقاط موجزة فقط. هذه النقاط ستتحول إلى رسم توضيحي، فاجعلها ملموسة ومصوّرة لا مجرّدة.",
+      "بالعربية الفصحى السليمة، بلا رموز تعبيرية.",
+      `أعد JSON فقط بهذا الشكل حصراً: ${briefSchema}`,
+    ].filter(Boolean).join("\n");
 
     const schema = JSON.stringify({
       slides: [
@@ -130,18 +152,18 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: system },
+            { role: "system", content: brief ? briefSystem : system },
             { role: "user", content: userMsg },
           ],
           response_format: { type: "json_object" },
           temperature: 0.5,
-          max_tokens: 3000,
+          max_tokens: brief ? 1400 : 3000,
         }),
       });
       const j = await r.json();
       if (!r.ok) return { ok: false as const, detail: j };
       const text = j?.choices?.[0]?.message?.content || "";
-      let parsed: { slides?: unknown[]; homework?: string } | null = null;
+      let parsed: { slides?: unknown[]; homework?: string; objectives?: unknown[] } | null = null;
       try { parsed = JSON.parse(text); }
       catch (_) { const m = text.match(/\{[\s\S]*\}/); try { parsed = m ? JSON.parse(m[0]) : null; } catch (_2) { parsed = null; } }
       if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 3) return { ok: false as const, detail: text.slice(0, 300) };
@@ -151,7 +173,7 @@ Deno.serve(async (req) => {
     let attempt = await callOnce();
     if (!attempt.ok) attempt = await callOnce();
     if (!attempt.ok) return json({ error: "bad_output", detail: attempt.detail }, 502);
-    return json({ slides: attempt.parsed.slides, homework: attempt.parsed.homework || "", model, usage: attempt.usage });
+    return json({ slides: attempt.parsed.slides, objectives: (attempt.parsed as { objectives?: unknown }).objectives || [], homework: attempt.parsed.homework || "", model, usage: attempt.usage });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }
