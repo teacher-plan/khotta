@@ -3362,7 +3362,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='dev';
+const KH_BUILD='b27049b';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5414,7 +5414,7 @@ async function planSlidesBtn(id){
 let sl2Jobs={};
 // مهلةٌ صريحة لكل نداء. بدونها يبقى الطلب المتعثّر معلّقاً بلا نهاية، فيقف
 // العدّاد عند ٠/٦ إلى الأبد — وهو ما حدث فعلاً: لا خطأ يُلتقط ولا شيء يتحرّك.
-const SL2_T={book:75000,plan:90000,img:150000,job:600000};
+const SL2_T={book:60000,plan:75000,img:150000,job:420000};
 function sl2Wait(pr,ms,job){
   return Promise.race([
     Promise.resolve(pr).catch(()=>null),
@@ -5504,13 +5504,18 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   const bs=await sl2Wait(c1BookSummary(id,grade,subject,unitName,lessonName),SL2_T.book,job);
   if(bs&&bs.__cancel)return null;
   const bookContext=(bs&&!bs.__timeout)?bs:'';
-  step('يخطّط الشرائح',0);
   let data=null;
-  // خطّة الشرائح أساس كل ما بعدها، فلا معنى للمضيّ بدونها — نعيد المحاولة
-  for(let t=1;t<=3&&!data;t++){
+  // محاولتان لا ثلاث: الخادم نفسه يعيد المحاولة مرّتين داخلياً، وكل نداءٍ
+  // يعيد المحاولة عند الازدحام — فثلاث طبقاتٍ متراكمة تعني انتظاراً يقارب
+  // خمس دقائق يبدو معه العدّاد متوقّفاً، وهو ما شكت منه المعلّمة فعلاً.
+  for(let t=1;t<=2&&!data;t++){
     if(job&&job.cancelled)return null;
+    // رقم المحاولة يظهر للمعلّمة: صمتُ الشريط هو ما يوحي بالتعطّل لا طولُ الوقت
+    step('يخطّط الشرائح'+(t>1?` (محاولة ${slArNum(t)})`:''),0);
     const r=await sl2Wait(sb.functions.invoke('generate-lesson-slides',{
-      body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS+2}
+      // brief: العرض المصوَّر لا يحتاج ودجاتٍ ولا ملاحظات إلقاء ولا تعليقاً
+      // صوتياً — كانت تُولَّد ثم تُرمى، وتضاعف زمن الانتظار بلا فائدة
+      body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS,brief:true}
     }),SL2_T.plan,job)||{};
     if(r.__cancel)return null;
     if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
@@ -5523,9 +5528,12 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   }
   if(!data)return null;
   const all=data.slides;
+  // الوضع الموجز يعيد الأهداف صريحةً؛ ونُبقي قراءتها من ودجة القائمة احتياطاً
+  // لو ردّ الخادم بالشكل القديم (نسخةٌ لم تُنشر بعد مثلاً).
   const objSlide=all.find(s2=>s2&&s2.widget&&s2.widget.kind==='checklist');
-  const objectives=((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[])
-    .map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
+  const rawObj=(Array.isArray(data.objectives)&&data.objectives.length)?data.objectives
+    :((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[]);
+  const objectives=rawObj.map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
   const body=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
   if(!body.length)return null;
   const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step,job);
