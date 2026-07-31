@@ -1994,11 +1994,35 @@ input,textarea,select{font-size:16px !important;}
         <thead><tr style="background:#FBF4EA">
           <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">الاسم</th>
           <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">البريد</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">الهاتف</th>
           <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">الصفوف</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">المواد</th>
           <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">الإعداد</th>
           <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">آخر نشاط</th>
         </tr></thead>
-        <tbody id="mc1-teachers-b"><tr><td colspan="5" style="padding:14px;text-align:center;color:#8A7460">يجري التحميل</td></tr></tbody>
+        <tbody id="mc1-teachers-b"><tr><td colspan="7" style="padding:14px;text-align:center;color:#8A7460">يجري التحميل</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- استهلاك الذكاء الاصطناعي -->
+    <h1 style="margin-top:34px">استهلاك الذكاء الاصطناعي</h1>
+    <p>كم استهلكت كل معلّمة هذا الشهر، ومن اقتربت من حصّتها</p>
+    <div style="background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+        <label style="font-size:12.5px;font-weight:800">الشهر</label>
+        <input type="month" id="mc1-usage-month" onchange="mc1LoadUsage(true)"
+               style="padding:7px 10px;border:1.5px solid #E3D2BD;border-radius:9px;background:#fff;font-family:'Cairo',sans-serif;font-size:12.5px"/>
+        <span id="mc1-usage-sum" style="font-size:12.5px;color:#8A7460;font-weight:800"></span>
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px">
+        <thead><tr style="background:#FBF4EA">
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">المعلمة</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">نصّي</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">صور</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">المجموع</th>
+          <th style="padding:10px;border:1px solid #E3D2BD;font-weight:800">من الحصّة</th>
+        </tr></thead>
+        <tbody id="mc1-usage-b"><tr><td colspan="5" style="padding:14px;text-align:center;color:#8A7460">يجري التحميل</td></tr></tbody>
       </table></div>
     </div>
   </div></div>
@@ -5606,28 +5630,110 @@ function applySubjectTheme(cfg){
 
 
 
+// أرقام الهاتف تُدخَل أحياناً بأرقامٍ عربية (٩٢٣٤٥٦٧٨)، و\D في التعبير
+// النمطي يعدّها غير رقمية فيمحوها كلّها ويخرج رابط واتساب فارغاً.
+function mc1Digits(s){
+  return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
+                      .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
+                      .replace(/\D/g,'');
+}
+// مطابقة العدد في العربية: ٣–١٠ جمع، وما فوقها مفرد
+function mc1Plural(n,one,few,many){return n>=3&&n<=10?many:(n===2?few:one);}
+
 // جدول معلمي الحلقة الأولى
 async function mc1LoadTeachers(){
   const tb=document.getElementById('mc1-teachers-b');if(!tb||tb.dataset.ready)return;
   try{
     const{data:allowed}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
     const{data:profs}=await sb.from('cycle1_profiles').select('email,data,updated_at');
+    // الهاتف لا يُخزَّن في ملف المعلّمة بل في سجلّ التسجيل المسبق، ويُربط
+    // بالحساب عبر account_email عند إنشائه. لذا نجلبه من هناك.
+    // فشل الجلب لا يُسقط الجدول كلّه — يظهر الهاتف «—» وحسب.
+    let phmap={};
+    try{
+      const{data:regs}=await sb.from('pre_registrations').select('account_email,phone');
+      (regs||[]).forEach(r=>{if(r.account_email&&r.phone)phmap[r.account_email.toLowerCase()]=r.phone;});
+    }catch(e){}
     const pmap={};(profs||[]).forEach(p=>{pmap[(p.email||'').toLowerCase()]=p;});
     const rows=(allowed||[]).map(a=>{
-      const p=pmap[(a.email||'').toLowerCase()];
+      const em=(a.email||'').toLowerCase();
+      const p=pmap[em];
       const d=(p&&p.data)||{};
       const grades=(d.grades||[]).map(g=>['الأول','الثاني','الثالث','الرابع'][g.num-1]).join('، ');
+      // المواد موزّعة على شعب كل صف، وتتكرّر بين الشعب — نجمعها بلا تكرار
+      const subj=[...new Set([].concat(...(d.grades||[]).map(g=>
+        [].concat(...(g.classes||[]).map(c=>c.subjects||[])))))].join('، ');
+      const ph=phmap[em]||'';
       const when=p&&p.updated_at?new Date(p.updated_at).toLocaleDateString('ar'):'—';
       return '<tr>'+
         '<td style="padding:9px;border:1px solid #E3D2BD;font-weight:800">'+escHtml(d.display_name||'—')+'</td>'+
         '<td style="padding:9px;border:1px solid #E3D2BD;direction:ltr;text-align:left;font-size:11.5px">'+escHtml(a.email||'')+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;direction:ltr;text-align:left;font-size:11.5px">'+
+          (ph?'<a href="https://wa.me/968'+escHtml(mc1Digits(ph).slice(-8))+'" target="_blank" rel="noopener" style="color:#1f7a45;font-weight:800;text-decoration:none">'+escHtml(ph)+'</a>':'—')+'</td>'+
         '<td style="padding:9px;border:1px solid #E3D2BD">'+(grades||'—')+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;font-size:11.5px">'+(escHtml(subj)||'—')+'</td>'+
         '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center;color:'+(d.setupDone?'#487848':'#A83030')+';font-weight:800">'+(d.setupDone?'مكتمل':'لم يبدأ')+'</td>'+
         '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center">'+when+'</td></tr>';
     });
-    tb.innerHTML=rows.join('')||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#8A7460">لا حسابات حلقة أولى بعد — أنشئها من صفحة الإحالات</td></tr>';
+    tb.innerHTML=rows.join('')||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#8A7460">لا حسابات حلقة أولى بعد — أنشئها من صفحة الإحالات</td></tr>';
     tb.dataset.ready='1';
-  }catch(e){tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:#A83030">تعذّر التحميل: '+escHtml(e.message||'')+'</td></tr>';}
+  }catch(e){tb.innerHTML='<tr><td colspan="7" style="padding:14px;text-align:center;color:#A83030">تعذّر التحميل: '+escHtml(e.message||'')+'</td></tr>';}
+}
+
+// جدول استهلاك الذكاء الاصطناعي — يقرأ ai_usage (المشرفة فقط، بسياسة RLS)
+async function mc1LoadUsage(force){
+  const tb=document.getElementById('mc1-usage-b');if(!tb)return;
+  if(tb.dataset.ready&&!force)return;
+  const mi=document.getElementById('mc1-usage-month');
+  if(mi&&!mi.value)mi.value=new Date().toISOString().slice(0,7);
+  const month=(mi&&mi.value)||new Date().toISOString().slice(0,7);
+  const sum=document.getElementById('mc1-usage-sum');
+  try{
+    const{data:use,error}=await sb.from('ai_usage').select('user_id,kind,count').eq('month',month);
+    if(error)throw error;
+    const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data');
+    const{data:cfg}=await sb.from('ai_settings').select('key,value').in('key',['quota_text','quota_img']);
+    const st={};(cfg||[]).forEach(r=>{st[r.key]=r.value;});
+    // نفس الافتراضات المزروعة في دالّة الحصص على الخادم
+    const qT=parseInt(st.quota_text||'')||300, qI=parseInt(st.quota_img||'')||80;
+    const agg={};
+    (use||[]).forEach(r=>{
+      const a=agg[r.user_id]||(agg[r.user_id]={text:0,img:0});
+      if(r.kind==='img')a.img+=r.count||0; else a.text+=r.count||0;
+    });
+    const pmap={};(profs||[]).forEach(p=>{pmap[p.id]=p;});
+    const list=Object.entries(agg).map(([id,a])=>{
+      const p=pmap[id]||{};
+      return{name:((p.data||{}).display_name)||p.email||'حساب غير معروف',
+             email:p.email||'',text:a.text,img:a.img,total:a.text+a.img,
+             // النسبة من الحصّة الأشدّ استهلاكاً — هي التي ستوقف المعلّمة أولاً
+             pct:Math.max(qT?a.text/qT:0, qI?a.img/qI:0)};
+    }).sort((x,y)=>y.total-x.total);
+    const tot=list.reduce((s,x)=>s+x.total,0);
+    if(sum)sum.textContent=list.length
+      ? '‏'+list.length+' '+mc1Plural(list.length,'معلّمة','معلّمتان','معلّمات')
+        +' · مجموع '+tot+' '+mc1Plural(tot,'عملية','عمليتان','عمليات')
+      : '';
+    tb.innerHTML=list.map(r=>{
+      const p=Math.round(r.pct*100);
+      const col=p>=90?'#A83030':p>=70?'#B06D18':'#487848';
+      return '<tr>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;font-weight:800">'+escHtml(r.name)+
+          (r.email?'<div style="font-weight:400;direction:ltr;text-align:left;font-size:11px;color:#8A7460">'+escHtml(r.email)+'</div>':'')+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center">'+r.text+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center">'+r.img+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center;font-weight:800">'+r.total+'</td>'+
+        '<td style="padding:9px;border:1px solid #E3D2BD;text-align:center;color:'+col+';font-weight:800">'+p+'٪</td></tr>';
+    }).join('')||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#8A7460">لا استهلاك مسجّل في هذا الشهر</td></tr>';
+    tb.dataset.ready='1';
+  }catch(e){
+    const msg=String(e.message||'');
+    // الجدول أو السياسة غير مطبَّقين بعد: رسالة تدلّ على الإجراء لا على الخطأ
+    const hint=/does not exist|schema cache|permission|policy/i.test(msg)
+      ? 'لم تُطبَّق سياسة القراءة بعد — نفّذي ملف supabase_ai_usage_admin_read.sql مرّة واحدة من محرّر SQL في لوحة سوبابيز'
+      : 'تعذّر التحميل: '+msg;
+    tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:#A83030">'+escHtml(hint)+'</td></tr>';
+  }
 }
 
 // ══ مراسلات الحلقة الأولى: جماعية + خاصة + استبيانات ══
@@ -5901,7 +6007,7 @@ function mgrc1Go(id){
   document.querySelectorAll('.mgrc1-page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('mgrc1-page-'+id);
   if(pg)pg.classList.add('active');
-  if(id==='teachers')mc1LoadTeachers();
+  if(id==='teachers'){mc1LoadTeachers();mc1LoadUsage();}
   if(id==='live')c1SfxSlots();
   if(id==='msgs')c1msgInit();
 }
