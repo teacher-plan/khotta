@@ -1871,6 +1871,10 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
     <h3>إعدادات الحساب</h3>
     <div class="grp">اسمكِ كما يظهر في المنصّة وفي الشهادات</div>
     <input class="acct-in" id="acct-name" type="text" placeholder="الاسم"/>
+    <div class="grp">رقم هاتفكِ</div>
+    <p class="acct-note">لتتواصل معكِ الإدارة عند الحاجة. يظهر للإدارة وحدها.</p>
+    <input class="acct-in" id="acct-phone" type="tel" inputmode="tel" dir="ltr"
+           style="text-align:right" placeholder="مثال: 9XXXXXXX" maxlength="20"/>
     <div class="grp">أسماء شعبكِ</div>
     <div id="acct-classes"></div>
     <div class="grp">التواصل مع الإدارة</div>
@@ -3229,9 +3233,15 @@ function demoBoot(){
 let _demoBusyGuard=null;
 /* ══ إعدادات الحساب ══ */
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
+function acctDigits(s){
+  return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
+                      .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
+                      .replace(/\D/g,'');
+}
 function acctOpen(){
   document.getElementById('c1-menu').classList.remove('open');
   document.getElementById('acct-name').value=profile.display_name||'';
+  document.getElementById('acct-phone').value=profile.phone||'';
   const box=document.getElementById('acct-classes');
   const cls=c1AllClasses();
   box.innerHTML=cls.length?cls.map(c=>
@@ -3248,6 +3258,10 @@ function acctClose(){document.getElementById('acct-modal').classList.remove('ope
 async function acctSave(){
   const nm=(document.getElementById('acct-name').value||'').trim();
   if(nm.length<2){toast('اكتبي اسمكِ أولاً',true);return;}
+  // الرقم يُدخَل أحياناً بأرقامٍ عربية أو بمسافاتٍ وشرطات، فنخزّنه موحَّداً
+  // بأرقامٍ لاتينية: الإدارة تبني منه رابط واتساب، وهو لا يقبل غيرها.
+  const ph=acctDigits(document.getElementById('acct-phone').value);
+  if(ph&&(ph.length<8||ph.length>15)){toast('تأكّدي من رقم الهاتف',true);return;}
   // نُعيد بناء الصفوف بأسماء الشعب الجديدة — بلا مساس بالطلاب ولا النجوم
   const edits={};
   document.querySelectorAll('#acct-classes input[data-cid]').forEach(i=>{
@@ -3255,7 +3269,7 @@ async function acctSave(){
   });
   const grades=(profile.grades||[]).map(g=>({...g,
     classes:(g.classes||[]).map(c=>edits[c.id]?{...c,name:edits[c.id]}:c)}));
-  await cy1Save({display_name:nm,grades},'يحفظ الإعدادات');
+  await cy1Save({display_name:nm,phone:ph,grades},'يحفظ الإعدادات');
   const el=document.getElementById('c1-menu-name');
   if(el)el.textContent=(KH_DEMO?'أ. ':'')+nm;
   acctClose();toast('حُفظت إعدادات حسابكِ');
