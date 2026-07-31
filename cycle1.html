@@ -676,6 +676,13 @@ body.inapp #c1-notif-btn{display:flex}
 .acct-dot{width:11px;height:11px;border-radius:50%;flex:none}
 .acct-g{font-size:12px;font-weight:800;color:var(--muted);flex:none;min-width:74px}
 .acct-note{font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:9px}
+.acct-del{flex:none;width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:19px;line-height:1;
+  border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit}
+.acct-del:hover{border-color:var(--red);color:var(--red)}
+.acct-add{width:100%;margin-top:4px;padding:9px;border-radius:10px;cursor:pointer;
+  border:1.5px dashed var(--border);background:transparent;color:var(--muted);
+  font-family:inherit;font-size:12.5px;font-weight:800}
+.acct-add:hover{border-color:var(--red);color:var(--red)}
 .qt-row{margin-bottom:10px}
 .qt-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px}
 .qt-nm{font-weight:800}
@@ -709,6 +716,7 @@ body.inapp #c1-notif-btn{display:flex}
 .plan-bar{position:relative;display:flex;align-items:center;justify-content:flex-start;
   min-height:122px;margin-bottom:20px;padding:0 34px;border-radius:22px;overflow:hidden;
   background:#FFF6E6;border:3px solid var(--ink);box-shadow:0 8px 0 rgba(42,21,3,.14)}
+.c1-note{color:var(--muted);font-size:12.5px;line-height:1.9;max-width:640px;margin:0 0 18px}
 .plan-bar .pb-txt{position:relative;z-index:3}
 .plan-bar h3{font-family:'Baloo Bhaijaan 2','Cairo',cursive;font-size:clamp(21px,2.6vw,29px);
   font-weight:800;color:var(--ink);line-height:1.35}
@@ -1883,7 +1891,9 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
          المحايدات تُعاد ترتيبها فيخرج «XXXXXXXمثال: 9». المثال في السطر أعلاه. -->
     <input class="acct-in" id="acct-phone" type="tel" inputmode="tel" dir="ltr"
            style="text-align:right" placeholder="9XXXXXXX" maxlength="20"/>
-    <div class="grp">أسماء شعبكِ</div>
+    <div class="grp">طالباتُ شعبكِ</div>
+    <p class="acct-note">صحّحي اسماً كُتب خطأً، أو أضيفي منضمّةً جديدة. النجوم والسلوك تتبع كلَّ طالبةٍ باسمها.</p>
+    <div id="acct-tabs" class="su-grade-tabs"></div>
     <div id="acct-classes"></div>
     <div class="grp">رصيدكِ هذا الشهر</div>
     <div id="acct-quota"></div>
@@ -2363,8 +2373,15 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
   <div class="c1-pagehead">
     <div class="tag">المحفوظات</div>
     <h1>ألعاب وملخصات جاهزة</h1>
-    <p>ما تُجهّزه معلمات الحلقة الأولى من ألعاب وملخصات بصرية، مرتّباً حسب الصف والمادة والدرس. عايني ما يناسبك، واضغطي «حفظ» لينتقل إلى بطاقة الدرس عندك. وما تُنشئينه أنتِ يظهر هنا تلقائياً لزميلاتك.</p>
   </div>
+  <div class="plan-bar">
+    <div class="pb-art" aria-hidden="true">
+      <span class="pb-s1"></span><span class="pb-s2"></span><span class="pb-s3"></span>
+      <span class="pb-s4"></span><span class="pb-s5"></span>
+    </div>
+    <div class="pb-txt"><h3>ما جهّزته زميلاتُكِ</h3><p>ألعابٌ وملخصاتٌ بصرية، مرتّبةٌ حسب الصف والمادة والدرس</p></div>
+  </div>
+  <p class="c1-note">عايني ما يناسبكِ واضغطي «حفظ» لينتقل إلى بطاقة الدرس عندكِ. وما تُنشئينه أنتِ يظهر هنا تلقائياً لزميلاتكِ.</p>
   <div class="c1-sel-row">
     <select class="c1-select" id="sh-grade-sel" onchange="shSwitch('grade',this.value)"></select>
     <select class="c1-select" id="sh-subj-sel" onchange="shSwitch('subject',this.value)"></select>
@@ -3247,17 +3264,50 @@ function acctDigits(s){
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
                       .replace(/\D/g,'');
 }
+let acctRoster={},acctCls=null;
+function acctRenderRoster(){
+  const tabs=document.getElementById('acct-tabs'),box=document.getElementById('acct-classes');
+  const cls=c1AllClasses();
+  if(!cls.length){
+    tabs.innerHTML='';
+    box.innerHTML='<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+    return;
+  }
+  if(!acctCls||!cls.some(c=>c.id===acctCls))acctCls=cls[0].id;
+  tabs.innerHTML=cls.map(c=>{
+    const n=(acctRoster[c.id]||[]).length;
+    return `<button type="button" class="su-gt ${c.id===acctCls?'on':''}" onclick="acctTab('${escHtml(c.id)}')">${escHtml(c.name||'')}${n?`<span class="ok">${n}</span>`:''}</button>`;
+  }).join('');
+  const list=acctRoster[acctCls]||[];
+  box.innerHTML=(list.length?list.map((s,i)=>
+    `<div class="acct-row">
+      <span class="acct-g" style="min-width:26px;text-align:center">${i+1}</span>
+      <input class="acct-in" type="text" value="${escHtml(s.nm||'')}" maxlength="40"
+             oninput="acctRoster['${escHtml(acctCls)}'][${i}].nm=this.value"/>
+      <button type="button" class="acct-del" title="حذف" onclick="acctDelStu(${i})">&times;</button>
+    </div>`).join('')
+    : '<p class="acct-note">لا طالبات في هذه الشعبة بعد.</p>')
+    +'<button type="button" class="acct-add" onclick="acctAddStu()">+ إضافة طالبة</button>';
+}
+function acctTab(id){acctCls=id;acctRenderRoster();}
+function acctAddStu(){(acctRoster[acctCls]=acctRoster[acctCls]||[]).push({nm:'',si:-1});acctRenderRoster();}
+function acctDelStu(i){
+  const l=acctRoster[acctCls]||[];
+  if(!confirm('حذف «'+(l[i]&&l[i].nm||'')+'»؟ ستُحذف نجومها وسجلّ سلوكها معها.'))return;
+  l.splice(i,1);acctRenderRoster();
+}
 function acctOpen(){
   document.getElementById('c1-menu').classList.remove('open');
   document.getElementById('acct-name').value=profile.display_name||'';
   document.getElementById('acct-phone').value=profile.phone||'';
-  const box=document.getElementById('acct-classes');
-  const cls=c1AllClasses();
-  box.innerHTML=cls.length?cls.map(c=>
-    `<div class="acct-row"><span class="acct-dot" style="background:${c.color||'#D86048'}"></span>
-      <span class="acct-g">الصف ${escHtml(PLAN_GNAMES[c.grade-1]||'')}</span>
-      <input class="acct-in" data-cid="${escHtml(c.id)}" type="text" value="${escHtml(c.name||'')}" maxlength="24"/></div>`).join('')
-    : '<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+  // نسخةُ عملٍ منفصلة: التعديل لا يمسّ الملف حتى تضغط «حفظ»، فالإغلاق يتراجع.
+  // كل طالبة تحمل si = موضعها الأصلي، وهو ما تُبنى عليه إعادةُ ترتيب النجوم.
+  acctRoster={};
+  c1AllClasses().forEach(c=>{
+    acctRoster[c.id]=(c.students||[]).map((nm,i)=>({nm,si:i}));
+  });
+  acctCls=null;
+  acctRenderRoster();
   const wa=document.getElementById('acct-wa');
   const msg='السلام عليكم، أنا '+(profile.display_name||'معلمة')+' من منصّة خُطّة، ولديّ استفسار:';
   wa.href='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent(msg);
@@ -3305,14 +3355,22 @@ async function acctSave(){
   // بأرقامٍ لاتينية: الإدارة تبني منه رابط واتساب، وهو لا يقبل غيرها.
   const ph=acctDigits(document.getElementById('acct-phone').value);
   if(ph&&(ph.length<8||ph.length>15)){toast('تأكّدي من رقم الهاتف',true);return;}
-  // نُعيد بناء الصفوف بأسماء الشعب الجديدة — بلا مساس بالطلاب ولا النجوم
-  const edits={};
-  document.querySelectorAll('#acct-classes input[data-cid]').forEach(i=>{
-    const v=(i.value||'').trim(); if(v)edits[i.dataset.cid]=v;
-  });
-  const grades=(profile.grades||[]).map(g=>({...g,
-    classes:(g.classes||[]).map(c=>edits[c.id]?{...c,name:edits[c.id]}:c)}));
-  await cy1Save({display_name:nm,phone:ph,grades},'يحفظ الإعدادات');
+  // النجوم وسجلّ السلوك مصفوفتان مفهرستان بموضع الطالبة لا باسمها، فحذفُ
+  // طالبةٍ من المنتصف يزحزح كلَّ من بعدها وتنتقل نجومهنّ لغيرهنّ. لذا نُعيد
+  // بناء المصفوفتين بالسحب من الموضع الأصلي (si)، والمنضمّة الجديدة تبدأ نظيفة.
+  const stars={...(profile.stars||{})}, beh={...(profile.beh_log||{})};
+  const grades=(profile.grades||[]).map(g=>({...g,classes:(g.classes||[]).map(c=>{
+    const list=acctRoster[c.id];
+    if(!list)return c;
+    const kept=list.filter(s=>(s.nm||'').trim());
+    const oldS=profile.stars&&profile.stars[c.id]||[];
+    const oldB=profile.beh_log&&profile.beh_log[c.id]||[];
+    stars[c.id]=kept.map(s=>s.si>=0?(oldS[s.si]||0):0);
+    beh[c.id]=kept.map(s=>s.si>=0?(oldB[s.si]||[]):[]);
+    return{...c,students:kept.map(s=>s.nm.trim())};
+  })}));
+  await cy1Save({display_name:nm,phone:ph,grades,stars,beh_log:beh},'يحفظ الإعدادات');
+  profile.stars=stars;profile.beh_log=beh;
   const el=document.getElementById('c1-menu-name');
   if(el)el.textContent=(KH_DEMO?'أ. ':'')+nm;
   acctClose();toast('حُفظت إعدادات حسابكِ');
@@ -3969,7 +4027,7 @@ async function ttTimes(){
 }
 
 // ── معالج الإعداد — مطابق لبنية صفحة المعلم: الفصل ← الصفوف ← مواد وشعب كل صف ──
-let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='',suRosters={},suRActive=null;
+let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='',suPhone='',suRosters={},suRActive=null;
 const SUBJ_COLORS={'الهوية والمواطنة':['#8A5030','#6B3A1F'],'ديني حياتي':['#487848','#35603A'],'أحب لغتي':['#A83030','#7A2020'],'اللغة الإنجليزية':['#5F8A8B','#44686A'],'الرياضيات':['#C0A848','#A08830'],'العلوم':['#2F6B6D','#1F4B4D'],'عالمي الرقمي':['#4F6D8A','#3A5268']};
 function c1AllClasses(){
   const out=[];
@@ -3982,7 +4040,7 @@ let ttTickTimer=null;
 function ttRenderSetup(){
   const el=document.getElementById('tt-setup');
   el.classList.remove('hidden');
-  if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suGrades=[];suData={};}
+  if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suPhone=profile.phone||'';suGrades=[];suData={};}
   suRender();
 }
 function suRender(){
@@ -3991,6 +4049,9 @@ function suRender(){
   if(suStep===1){
     el.innerHTML='<div class="su-card">'+steps+'<h2>البيانات الأساسية</h2><div class="d">اسمك والفصل الدراسي الحالي</div>'
       +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" value="'+escHtml(suName)+'"/></div>'
+      +'<div class="fld"><label for="su-phone">رقم الهاتف</label>'
+      +'<input type="tel" inputmode="tel" id="su-phone" dir="ltr" style="text-align:right" placeholder="9XXXXXXX" maxlength="20" value="'+escHtml(suPhone)+'"/>'
+      +'<small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">لتتواصل معكِ الإدارة عند الحاجة. مثال: ٩١٢٣٤٥٦٧</small></div>'
       +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
       +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
       +'</div></div>'
@@ -4160,6 +4221,10 @@ function suGradeTab(g){
 function suNext1(){
   suName=(document.getElementById('su-name').value||'').trim();
   if(!suName){toast('اكتبي اسمك أولاً',true);return;}
+  // يُطلب مرّةً واحدة هنا، فيُلزَم به: تركه اختيارياً يعني حساباتٍ بلا رقم
+  // لا سبيل لاستدراكها إلا بمطاردة كل معلّمة على حدة.
+  suPhone=acctDigits(document.getElementById('su-phone').value);
+  if(suPhone.length<8||suPhone.length>15){toast('اكتبي رقم هاتفكِ',true);return;}
   if(!suSem){toast('اختاري الفصل الدراسي',true);return;}
   suStep=2;suRender();
 }
@@ -4184,7 +4249,7 @@ async function suFinish(){
   const flat=suBuildClasses();
   if(!flat.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
   const grades=suGrades.map(g=>({num:g,classes:flat.filter(c=>c.g===g).map(c=>({id:c.id,name:c.name,num:c.num,color:c.color,subjects:c.subjects,students:(suRosters[c.id]||[]).filter(Boolean)}))})).filter(g=>g.classes.length);
-  await cy1Save({display_name:suName,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
+  await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
   document.getElementById('c1-menu-name').textContent=suName;
   suData={};suRosters={};window._suFocus=null;suRActive=null;
   renderYawmi();
