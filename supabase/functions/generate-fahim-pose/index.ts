@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
     // لا حاجة لجلبها وتحويلها base64 يدوياً هنا (يفشل مع الصور الكبيرة بسبب حد المكدّس)
     const mascotHttpUrl = mascotUrl + "?v=" + Date.now();
 
-    let model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
+    let model = st.model_fahim_pose || st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
     if (!model.startsWith("google/")) model = "google/gemini-3.1-flash-image-preview";
 
     const editInstr = [
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
       "لا نص ولا كتابة داخل الصورة إطلاقاً.",
     ].join("\n");
 
-    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,

@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
     const slideCount = Math.max(5, Math.min(12, parseInt(b.slideCount) || 10));
     if (!lesson) return json({ error: "no_lesson" }, 400);
 
-    const model = st.ai_model || "google/gemini-2.5-flash";
+    const model = st.model_slides || st.ai_model || "google/gemini-2.5-flash";
     const gradeNum = parseInt(grade) || 0;
     const age = gradeNum ? gradeNum + 6 : 0;
 
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
     ].filter(Boolean).join("\n");
 
     const callOnce = async () => {
-      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,

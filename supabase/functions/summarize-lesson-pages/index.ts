@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 16) : [];
     if (!images.length) return json({ error: "no_images" }, 400);
 
-    const model = st.vision_model || "google/gemini-2.5-flash";
+    const model = st.model_summary || st.vision_model || "google/gemini-2.5-flash";
 
     const system = [
       "أنت مساعد بحث تربوي دقيق. أمامك صفحات درس واحد من كتاب طالب معتمد في سلطنة عُمان (منهج كامبردج).",
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
     const userContent: unknown[] = [{ type: "text", text: userMsg }];
     for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
 
-    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,

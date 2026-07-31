@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -59,8 +60,8 @@ Deno.serve(async (req) => {
 
     // مع صفحات الكتاب: نموذج رؤية مضمون دائماً (ai_model قد يكون نصياً فيُسقط الصور بصمت)
     const model = images.length
-      ? (st.vision_model || "google/gemini-2.5-flash")
-      : (st.ai_model || "google/gemini-2.5-flash");
+      ? (st.model_game_vision || st.vision_model || "google/gemini-2.5-flash")
+      : (st.model_game || st.ai_model || "google/gemini-2.5-flash");
 
     const gradeNum = parseInt(grade) || 0;
     const age = gradeNum ? gradeNum + 6 : 0;

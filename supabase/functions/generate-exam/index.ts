@@ -11,6 +11,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
 
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
 
-    const model = st.ai_model || "deepseek/deepseek-chat";
+    const model = st.model_exam || st.ai_model || "deepseek/deepseek-chat";
     const maxQ = parseInt(st.max_questions || "30") || 30;
     const allowedTypes = (st.allowed_types || "mcq,essay,tf,fill,match").split(",");
     const adminPrompt = st.system_prompt || "";
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
       "options تُملأ فقط لأسئلة mcq. colA/colB فقط لأسئلة match. وزّع الأنواع المطلوبة على العدد الإجمالي.",
     ].filter(Boolean).join("\n");
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,

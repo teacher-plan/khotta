@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
         .map((m: { role: string; content: string }) => ({ role: m.role, content: String(m.content).slice(0, 2000) }));
     if (!userMsg) return json({ error: "no_message" }, 400);
 
-    const model = st.chat_model || st.ai_model || "google/gemini-2.5-flash";
+    const model = st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash";
 
     const system = [
       "أنت «فهيم» 🦉 — المساعد التربوي الذكي لمنصة «خطتي الفصلية» للمعلمين في سلطنة عُمان.",
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       context ? `سياق المعلم الحالي (استخدمه لتخصيص إجاباتك دون أن تعيده حرفياً): ${context}` : "",
     ].filter(Boolean).join("\n");
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,

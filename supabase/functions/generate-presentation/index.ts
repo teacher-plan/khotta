@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
 
     // النموذج الذي يختاره المشرف من لوحة التحكم (ارفع الجودة باختيار Claude Sonnet مثلاً).
     // عند إرفاق صور صفحات الكتاب نحتاج نموذجاً يدعم الرؤية، فنرجع لنموذج الرؤية إن كان المختار لا يدعمها.
-    let model = st.ai_model || st.vision_model || "google/gemini-2.5-flash";
+    let model = st.model_presentation || st.ai_model || st.vision_model || "google/gemini-2.5-flash";
     if (images.length && /deepseek/i.test(model)) model = st.vision_model || "google/gemini-2.5-flash";
 
     const schema =
@@ -90,7 +91,7 @@ Deno.serve(async (req) => {
     ];
     for (const url of images) content.push({ type: "image_url", image_url: { url } });
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,
