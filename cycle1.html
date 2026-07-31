@@ -1713,6 +1713,23 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-grp-chip{border:2px solid rgba(109,40,217,.3);background:#fff;border-radius:10px;padding:8px 16px;font-family:inherit;font-size:13.5px;font-weight:700;color:#3d3428;cursor:pointer;transition:.15s}
 .gm-grp-chip.sel{border-color:#6d28d9;background:#ede9fe;transform:scale(1.06)}
 .gm-grp-chip.done{border-color:#15803d;background:#dcfce7;color:#15803d;cursor:default;font-size:12px;padding:5px 12px}
+
+/* ══ شريط وضع التجربة ══ */
+body.demo{padding-bottom:64px}
+.demo-bar{position:fixed;inset-inline:0;bottom:0;z-index:960;display:flex;align-items:center;
+  gap:12px;flex-wrap:wrap;justify-content:center;padding:11px 16px;
+  background:rgba(255,253,249,.97);backdrop-filter:blur(12px);
+  border-top:1.5px solid var(--border);box-shadow:0 -6px 26px rgba(48,24,0,.12);
+  font-size:12.5px}
+.demo-bar .db-tag{font-weight:800;color:#fff;background:var(--red-d);border-radius:999px;padding:5px 13px}
+.demo-bar .db-txt{color:var(--muted)}
+.demo-bar .db-rs,.demo-bar .db-cta{border:0;border-radius:10px;padding:8px 15px;font-family:inherit;
+  font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none}
+.demo-bar .db-rs{background:var(--card);border:1.5px solid var(--border);color:var(--ink)}
+.demo-bar .db-cta{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff}
+/* ما لا معنى له بلا حساب */
+body.demo .c1-mi.danger{display:none}
+@media(max-width:620px){.demo-bar .db-txt{display:none}body.demo{padding-bottom:58px}}
 </style>
 </head>
 <body>
@@ -2626,7 +2643,28 @@ body:has(#page-fahim.active){overflow:hidden}
 // ══ الأساسيات ══
 const SUPABASE_URL='https://mkdsnnfkkdwdkywnwnjh.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHNubmZra2R3ZGt5d253bmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDk0MDgsImV4cCI6MjA5NDU4NTQwOH0.girscgcDBxUi2O1kWjD5Q_Uc-6bJZEtuAa_tpZlazQo';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+/* ══ وضع التجربة (demo.html) ══
+   يُولَّد demo.html من هذا الملف نفسه بحقن KH_DEMO، فلا ينحرف عن المنتج أبداً.
+   وفيه نستبدل عميل Supabase بعميلٍ مسدود: لا شيء يصل الشبكة إطلاقاً —
+   لا كتابةَ إلى بيانات معلمةٍ حقيقية، ولا استدعاءَ لدوالّ الذكاء الاصطناعي
+   (وهي مدفوعة، ولولا السدّ لاستنزفها أيُّ زائرٍ بلا حساب). */
+const KH_DEMO=!!window.KH_DEMO;
+const sb=KH_DEMO?(function(){
+  const nores=Promise.resolve({data:null,error:null});
+  const chain=()=>new Proxy(function(){},{get:(t,k)=>
+    (k==='then')?undefined:(k==='maybeSingle'||k==='single'||k==='csv')?(()=>nores):chain(),
+    apply:()=>chain()});
+  const q=new Proxy({},{get:(t,k)=>{
+    if(k==='then')return (r)=>nores.then(r);
+    return ()=>q;}});
+  return {from:()=>q, rpc:()=>nores,
+    auth:{getSession:()=>Promise.resolve({data:{session:null}}),
+      onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+      signOut:()=>Promise.resolve({}), getUser:()=>Promise.resolve({data:{user:null}})},
+    functions:{invoke:()=>Promise.resolve({data:null,error:{message:'demo'}})},
+    storage:{from:()=>({upload:()=>nores,remove:()=>nores,
+      getPublicUrl:()=>({data:{publicUrl:''}}),createSignedUrl:()=>nores})}};
+})():window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
 let currentUser=null,profile={};
 
@@ -2769,6 +2807,7 @@ trophy:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><pat
 book:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 14H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>`,
 mail:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.3l8 5.2 8-5.2V6H4zm16 2.2-7.4 4.8a1 1 0 0 1-1.2 0L4 8.2V18h16V8.2z"/></svg>`
 };
+const DEMO_SECTIONS=['students','reserve'];
 const C1_SECTIONS=[
   {id:'yawmi', ic:'cal', nm:'يومي',    lv:'مسار يومك وحصصك ومفكرتك',      built:true},
   {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
@@ -2787,7 +2826,7 @@ function c1Board(open){
   if(typeof fhInitMascot==='function')fhInitMascot();
   const cur=(document.querySelector('.page.active')||{}).id;
   const hasUnreadMsgs=c1Notifs.some(n=>!n.read);
-  document.getElementById('c1b-grid').innerHTML=C1_SECTIONS.map(s=>{
+  document.getElementById('c1b-grid').innerHTML=C1_SECTIONS.filter(s=>!KH_DEMO||DEMO_SECTIONS.includes(s.id)).map(s=>{
     if(!s.built)return `<div class="c1b-tile soon"><span class="soon-b">قريباً</span><span class="ic">${C1_ICONS[s.ic]||""}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></div>`;
     const dot=(s.id==='msgs'&&hasUnreadMsgs)?'<span class="c1b-dot"></span>':'';
     const isFahim=s.id==='fahim';
@@ -2912,6 +2951,42 @@ async function afterAuth(session){
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
+}
+/* ══ إقلاع وضع التجربة ══
+   بيانات معلمةٍ وشعبةٍ وهمية بأسماء عُمانية. لا تسجيلَ دخول، ولا اتصالَ
+   بالخادم، وكلُّ ما تغيّره الزائرة يبقى في ذاكرة المتصفّح ويزول بالتحديث. */
+const DEMO_T=d=>new Date(Date.now()-d*864e5).toISOString();
+function demoBoot(){
+  currentUser={id:'demo',email:'demo@khotati.com'};
+  profile={
+    display_name:'أ. مريم البوسعيدية',
+    ach_profile:{name:'مريم البوسعيدية',school:'مدرسة الخوض للتعليم الأساسي'},
+    stars:{c3a:[24,19,17,15,12,11,9,7,6,4,3,0]},
+    beh_log:{c3a:[
+      [{kind:'star',date:DEMO_T(0)},{kind:'star',date:DEMO_T(0)}],
+      [{kind:'star',date:DEMO_T(0)}],[{kind:'star',date:DEMO_T(1)}],[],
+      [{kind:'viol',type:'تأخر عن الحصة',date:DEMO_T(0)}],
+      [],[],[{kind:'viol',type:'إزعاج',date:DEMO_T(20)}],[],[],
+      [{kind:'viol',type:'إزعاج',date:DEMO_T(0)},{kind:'viol',type:'عدم إحضار الكتاب',date:DEMO_T(1)}],
+      []]},
+    grades:[{num:3,classes:[{id:'c3a',name:'٣/أ',color:'#D86048',students:[
+      'ريّان الحارثي','لُجين البلوشية','عبدالله الرواحي','مها الكندية','يوسف الهنائي','شمسة المعمرية',
+      'سالم الشكيلي','رهف الرحبية','حمد العبري','نور السيابية','بدر الحجري','جواهر الفارسية']}]}],
+    plan_units:{},plan_state:{},calendar_events:{},assets:{}
+  };
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  document.body.classList.add('inapp','demo');
+  const nm=document.getElementById('c1-menu-name');
+  if(nm)nm.textContent=profile.display_name;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="demo-bar">'
+    +'<span class="db-tag">نسخة تجريبية — بيانات وهمية</span>'
+    +'<span class="db-txt">جرّبي بحرية: لا شيء هنا يُحفظ ولا يؤثّر في أحد.</span>'
+    +'<button class="db-rs" onclick="location.reload()">إعادة الضبط</button>'
+    +'<a class="db-cta" href="/cycle1-landing.html#reg">أعجبتكِ؟ احجزي مقعدكِ</a>'
+    +'</div>');
+  if(typeof starRender==='function'){c1Go('students');}
 }
 function cyBusy(text){
   const el=document.getElementById('cy-busy');if(!el)return;
@@ -3424,6 +3499,7 @@ c1SelectEnhanceAll();
       history.replaceState(null,'',location.pathname);
     }
   }catch(e){}
+  if(KH_DEMO){setTimeout(demoBoot,0);return;}
   const{data:{session}}=await sb.auth.getSession();
   if(session)await afterAuth(session);
   else showLogin();
@@ -5177,8 +5253,13 @@ async function c1SfxHas(kind){
   return _c1SfxAvail[kind];
 }
 async function c1Sound(kind,fallback){
-  if(await c1SfxHas(kind)){
-    try{new Audio(sb.storage.from('library-files').getPublicUrl('game-sfx/c1_'+kind+'.mp3').data.publicUrl).play();return;}catch(e){}
+  // في التجربة لا خادم، وأصواتُ zzfx مُركّبةٌ في الصفحة فتعمل بلا شبكة
+  if(!KH_DEMO&&await c1SfxHas(kind)){
+    try{
+      const u=sb.storage.from('library-files').getPublicUrl('game-sfx/c1_'+kind+'.mp3').data.publicUrl;
+      // رابطٌ فارغ يُنتج new Audio('') فيفشل بلا صوتٍ أصلاً — نتراجع بدلاً منه
+      if(u){const a=new Audio(u);const pr=a.play();if(pr&&pr.catch)pr.catch(()=>fallback());return;}
+    }catch(e){}
   }
   fallback();
 }
