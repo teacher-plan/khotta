@@ -1977,6 +1977,7 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
     </a>
     <div class="c1-mrow"><button class="c1-mbtn no" onclick="acctClose()">إغلاق</button>
       <button class="c1-mbtn go" onclick="acctSave()">حفظ</button></div>
+    <div id="acct-build" style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:10px;direction:ltr"></div>
   </div>
 </div>
 
@@ -3359,6 +3360,9 @@ function demoBoot(){
 let _demoBusyGuard=null;
 /* ══ إعدادات الحساب ══ */
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
+// ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
+// فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
+const KH_BUILD='dev';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -3411,6 +3415,8 @@ function acctOpen(){
   const wa=document.getElementById('acct-wa');
   const msg='السلام عليكم، أنا '+(profile.display_name||'معلمة')+' من منصّة خُطّة، ولديّ استفسار:';
   wa.href='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent(msg);
+  const bd=document.getElementById('acct-build');
+  if(bd)bd.textContent='نسخة '+KH_BUILD;
   document.getElementById('acct-modal').classList.add('open');
   acctQuota();
 }

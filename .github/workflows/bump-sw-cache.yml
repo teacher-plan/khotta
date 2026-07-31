@@ -23,9 +23,12 @@ jobs:
         run: |
           SHORT=$(git rev-parse --short HEAD)
           sed -i "s/const CACHE_NAME = '[^']*'/const CACHE_NAME = 'khotta-$SHORT'/" sw.js
-          if git diff --quiet sw.js; then echo "no change"; exit 0; fi
+          # ختم النسخة داخل الصفحة نفسها: عامل الخدمة يخزّنها، فقد تُبلّغ معلّمة
+          # عن علّةٍ أُصلحت وهي تعمل على نسخةٍ قديمة. الختم يحسم أيّ نسخةٍ لديها.
+          sed -i "s/const KH_BUILD='[^']*'/const KH_BUILD='$SHORT'/" cycle1.html
+          if git diff --quiet sw.js cycle1.html; then echo "no change"; exit 0; fi
           git config user.name "sw-bump-bot"
           git config user.email "actions@github.com"
-          git add sw.js
+          git add sw.js cycle1.html
           git commit -m "chore: ترقية كاش SW إلى $SHORT [sw-auto]"
           git push
