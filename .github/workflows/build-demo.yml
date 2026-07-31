@@ -1,0 +1,32 @@
+# يُعيد توليد demo.html من cycle1.html عند كل تعديل عليه.
+# بلا هذا تتحوّل نسخة التجربة خلال أسابيع إلى منتجٍ لم يعد موجوداً —
+# وهذا أسوأ من ألّا تكون هناك تجربة، لأنها تَعِد المعلمة بما لا تجده.
+name: Build demo page
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cycle1.html'
+      - 'tools/build-demo.mjs'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[demo-auto]')"
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: توليد demo.html
+        run: node tools/build-demo.mjs
+      - name: رفع النسخة المولّدة
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet demo.html; then
+            echo "لا تغيير في نسخة التجربة"; exit 0
+          fi
+          git add demo.html
+          git commit -m "chore: تحديث نسخة التجربة من cycle1.html [demo-auto]"
+          git push
