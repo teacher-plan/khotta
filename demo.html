@@ -3104,10 +3104,14 @@ function demoBoot(){
     +'</div>');
   if(typeof starRender==='function'){c1Go('students');}
 }
+let _demoBusyGuard=null;
 function cyBusy(text){
   const el=document.getElementById('cy-busy');if(!el)return;
   document.getElementById('cy-busy-txt').textContent=text||'يحفظ';
   el.classList.add('on');
+  // شبكةُ أمانٍ للتجربة وحدها: الشاشة تحجب كلَّ ضغطة، فلو بقيت مفتوحةً في
+  // مسارٍ لم أختبره ظنّت الزائرةُ أن الموقع تعلّق وغادرت. لا تمسّ المنتج.
+  if(KH_DEMO){clearTimeout(_demoBusyGuard);_demoBusyGuard=setTimeout(cyBusyDone,6000);}
 }
 function cyBusyDone(){
   const el=document.getElementById('cy-busy');if(el)el.classList.remove('on');
@@ -3227,6 +3231,10 @@ async function cy1Push(attempt){
 
 function cy1Save(partial,busyText){
   if(!currentUser)return Promise.resolve();
+  // في التجربة لا خادم ولا ما يُحفظ: نُحدّث الملف محلياً ونخرج فوراً.
+  // بدونها كانت كلُّ ضغطةٍ تفتح شاشة «يحفظ» ثم تنتظر ردّاً لا يأتي،
+  // فتبقى الشاشة مفتوحةً تحجب كلَّ ضغطةٍ بعدها.
+  if(KH_DEMO){profile={...profile,...partial};return Promise.resolve();}
   // نُسجّل ما مسّه هذا الجهاز — عليه يقوم الدمج عند التعارض
   Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));
   profile={...profile,...partial,updated_at:new Date().toISOString()};
