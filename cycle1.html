@@ -717,6 +717,51 @@ body.inapp #c1-notif-btn{display:flex}
   min-height:122px;margin-bottom:20px;padding:0 34px;border-radius:22px;overflow:hidden;
   background:#FFF6E6;border:3px solid var(--ink);box-shadow:0 8px 0 rgba(42,21,3,.14)}
 .c1-note{color:var(--muted);font-size:12.5px;line-height:1.9;max-width:640px;margin:0 0 18px}
+
+/* ── العرض المصوَّر (v2) ── */
+#sl2-bg{position:fixed;inset:0;z-index:4000;background:#241708;display:none;flex-direction:column}
+#sl2-bg.on{display:flex}
+.sl2-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(0,0,0,.32);color:#fff;flex:none}
+.sl2-title{font-weight:800;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl2-count{font-size:12.5px;font-weight:800;opacity:.85;font-variant-numeric:tabular-nums}
+.sl2-x,.sl2-dl{border:0;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:800;
+  background:rgba(255,255,255,.16);color:#fff}
+.sl2-x{width:32px;height:32px;font-size:22px;line-height:1;flex:none}
+.sl2-dl{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:12.5px;flex:none}
+.sl2-x:hover,.sl2-dl:hover{background:rgba(255,255,255,.3)}
+.sl2-view{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px}
+.sl2-view img{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;
+  box-shadow:0 10px 34px rgba(0,0,0,.4)}
+.sl2-nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border:0;
+  border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:30px;line-height:1;
+  cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center}
+.sl2-nav:hover{background:rgba(255,255,255,.34)}
+.sl2-nav:disabled{opacity:.25;cursor:default}
+/* في RTL يقع inline-start يميناً: «السابق» يمين و«التالي» يسار — وهو ما
+   تتوقّعه اليد العربية. الخلط هنا يجعل زرّ الرجوع في موضع التقدّم. */
+.sl2-nav.prev{inset-inline-start:12px}
+.sl2-nav.next{inset-inline-end:12px}
+.sl2-dots{display:flex;gap:7px;justify-content:center;padding:0 0 14px;flex:none}
+.sl2-dots button{width:9px;height:9px;border-radius:50%;border:0;padding:0;cursor:pointer;
+  background:rgba(255,255,255,.32)}
+.sl2-dots button.on{background:#FFD166;width:22px;border-radius:99px}
+/* الغلاف: نفس زينة البار وخطّه، فالعرض يُفتتح بهوية المنصّة لا بصورةٍ مولَّدة */
+.sl2-cover{position:relative;width:min(100%,980px);aspect-ratio:16/9;border-radius:22px;overflow:hidden;
+  background:#FFF6E6;border:3px solid var(--ink);box-shadow:0 10px 0 rgba(42,21,3,.18);
+  display:flex;flex-direction:column;justify-content:center;padding:clamp(18px,4vw,44px);text-align:start}
+.sl2-cover .pb-art{position:absolute;inset:0;pointer-events:none;z-index:1}
+.sl2-cover .pb-art span{position:absolute;border:3px solid var(--ink);display:block}
+.sl2-cover .cv{position:relative;z-index:3;max-width:64%}
+.sl2-cover .cv-tag{font-size:clamp(10px,1.3vw,12px);font-weight:800;letter-spacing:2.5px;color:var(--red-d)}
+.sl2-cover .cv-h{font-family:'Baloo Bhaijaan 2','Cairo',cursive;font-weight:800;color:var(--ink);
+  font-size:clamp(20px,4vw,42px);line-height:1.3;margin:6px 0 4px}
+.sl2-cover .cv-t{font-size:clamp(11px,1.6vw,15px);font-weight:800;color:var(--muted);margin-bottom:10px}
+.sl2-cover .cv-ob{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.sl2-cover .cv-ob li{position:relative;padding-inline-start:20px;font-size:clamp(11px,1.6vw,15.5px);
+  line-height:1.75;color:var(--ink)}
+.sl2-cover .cv-ob li::before{content:'';position:absolute;inset-inline-start:0;top:.52em;
+  width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--ink)}
+@media(max-width:760px){.sl2-cover .cv{max-width:100%}.sl2-cover .pb-s3,.sl2-cover .pb-s4,.sl2-cover .pb-s5{display:none}}
 .plan-bar .pb-txt{position:relative;z-index:3}
 .plan-bar h3{font-family:'Baloo Bhaijaan 2','Cairo',cursive;font-size:clamp(21px,2.6vw,29px);
   font-weight:800;color:var(--ink);line-height:1.35}
@@ -2538,6 +2583,23 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
 </div>
 
 <!-- مسرح العروض التقديمية التفاعلية -->
+<!-- عرضٌ مصوَّر (v2): غلافٌ بالكود ثم ست شرائح إنفوجرافيك -->
+<div id="sl2-bg">
+  <div class="sl2-bar">
+    <button class="sl2-x" onclick="sl2Close()" title="إغلاق">&times;</button>
+    <span class="sl2-title" id="sl2-title"></span>
+    <span class="sl2-count" id="sl2-count"></span>
+    <button class="sl2-dl" onclick="sl2Download()" title="تحميل نسخة تعمل بلا إنترنت">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4l-4.7-4.7 1.4-1.4 3.3 3.3V3h2zM5 19h14v2H5z"/></svg>
+      تحميل
+    </button>
+  </div>
+  <div class="sl2-view" id="sl2-view"></div>
+  <button class="sl2-nav prev" id="sl2-prev" onclick="sl2Go(-1)" aria-label="السابق">&#8250;</button>
+  <button class="sl2-nav next" id="sl2-next" onclick="sl2Go(1)" aria-label="التالي">&#8249;</button>
+  <div class="sl2-dots" id="sl2-dots"></div>
+</div>
+
 <div id="sl-stage-bg">
   <div class="sl-stage" id="sl-stage">
     <div class="sl-prog" id="sl-prog" style="width:10%"></div>
@@ -5078,7 +5140,10 @@ function slSlideHtml(slide,i,uid){
     ${slide.type==='closing'&&slState.homework?`<div class="sl-hw rise">الواجب: ${escHtml(slState.homework)}</div>`:''}
   </div>`;
 }
+// العروض المولَّدة قبل هذا التحديث نصّية تفاعلية ولا تزال محفوظة عند المعلّمات،
+// فنُبقي عارضها العامل بدل أن نُبطلها عليهنّ.
 function slOpenWith(slidesData,title,subject){
+  if(slidesData&&slidesData.v===2)return sl2Open(slidesData,title);
   const slides=(slidesData&&slidesData.slides)||[];
   if(!slides.length){toast('لا يوجد عرض بعد',true);return;}
   const theme=slSubjectTheme(subject);
@@ -5153,30 +5218,222 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape')slClose();
 });
 
-// زر العرض التقديمي: عرض إن كان جاهزاً، وإلا توليد من الدرس الآن
+// ═══ العرض المصوَّر: غلافٌ بالكود ثم ست شرائح إنفوجرافيك ═══
+// ست صور لا عشر: كل صورة تكلّف نحو عشرة أضعاف الشريحة النصية، والست تغطّي
+// الدرس تربوياً. الغلاف بالكود لا بالتوليد — الأهداف واسم المعلّمة نصٌّ نعرفه،
+// وتوليده صورةً يُنفق رصيداً على ما نملكه، ويخاطر بخطأ إملائيٍّ لا نملك تصحيحه.
+const SL2_IMGS=6;
+let sl2St=null;
+function sl2CoverHtml(d){
+  const obj=(d.objectives||[]).map(o=>`<li>${escHtml(o)}</li>`).join('');
+  return `<div class="sl2-cover">
+    <div class="pb-art" aria-hidden="true">
+      <span class="pb-s1"></span><span class="pb-s2"></span><span class="pb-s3"></span>
+      <span class="pb-s4"></span><span class="pb-s5"></span>
+    </div>
+    <div class="cv">
+      <div class="cv-tag">${escHtml(d.subject||'')}</div>
+      <h2 class="cv-h">${escHtml(d.lesson||'')}</h2>
+      <div class="cv-t">${escHtml(profile.display_name||'')}</div>
+      ${obj?`<ul class="cv-ob">${obj}</ul>`:''}
+    </div>
+  </div>`;
+}
+function sl2Open(d,title){
+  if(!d||!Array.isArray(d.images)||!d.images.length){toast('لا يوجد عرض بعد',true);return;}
+  sl2St={d,cur:0,n:d.images.length+1};
+  document.getElementById('sl2-title').textContent=title||d.lesson||'';
+  const dots=document.getElementById('sl2-dots');
+  dots.innerHTML='';
+  for(let i=0;i<sl2St.n;i++){
+    const b=document.createElement('button');b.onclick=()=>sl2Show(i);dots.appendChild(b);
+  }
+  document.getElementById('sl2-bg').classList.add('on');
+  document.body.style.overflow='hidden';
+  sl2Show(0);
+}
+function sl2Show(i){
+  if(!sl2St)return;
+  sl2St.cur=Math.max(0,Math.min(sl2St.n-1,i));
+  const v=document.getElementById('sl2-view');
+  v.innerHTML=sl2St.cur===0?sl2CoverHtml(sl2St.d)
+    :`<img src="${escHtml(sl2St.d.images[sl2St.cur-1])}" alt="شريحة ${sl2St.cur}"/>`;
+  document.getElementById('sl2-count').textContent=slArNum(sl2St.cur+1)+' / '+slArNum(sl2St.n);
+  [...document.getElementById('sl2-dots').children].forEach((b,k)=>b.classList.toggle('on',k===sl2St.cur));
+  document.getElementById('sl2-prev').disabled=sl2St.cur===0;
+  document.getElementById('sl2-next').disabled=sl2St.cur===sl2St.n-1;
+}
+function sl2Go(d){if(sl2St)sl2Show(sl2St.cur+d);}
+function sl2Close(){
+  document.getElementById('sl2-bg').classList.remove('on');
+  document.body.style.overflow='';sl2St=null;
+}
+// تحميل نسخةٍ مستقلّة: الصور تُدمج داخل الملف لا تُربط، فالعرض يعمل في صفٍّ
+// بلا تغطية — وهو الموضع الذي بُني له. الملف أثقل، والثقل هنا هو الفائدة.
+async function sl2Download(){
+  if(!sl2St)return;
+  const btn=document.querySelector('.sl2-dl');
+  if(btn){btn.disabled=true;btn.textContent='يُجهّز…';}
+  try{
+    const imgs=[];
+    for(const u of sl2St.d.images){
+      const r=await fetch(u);const b=await r.blob();
+      imgs.push(await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);}));
+    }
+    const blob=new Blob([sl2FileHtml(sl2St.d,imgs)],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(sl2St.d.lesson||'العرض').replace(/[\\/:*?"<>|]/g,'')+'.html';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('نُزّل العرض — يعمل بلا إنترنت','ok');
+  }catch(e){toast('تعذّر تحميل العرض',true);}
+  finally{if(btn){btn.disabled=false;btn.innerHTML='تحميل';}}
+}
+function sl2FileHtml(d,imgs){
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const obj=(d.objectives||[]).map(o=>`<li>${esc(o)}</li>`).join('');
+  const slides=[`<section class="s cover"><div class="art"><i class="a1"></i><i class="a2"></i><i class="a3"></i><i class="a4"></i></div>
+      <div class="cv"><div class="tg">${esc(d.subject)}</div><h1>${esc(d.lesson)}</h1>
+      <div class="tc">${esc(profile.display_name||'')}</div>
+      ${obj?`<ul>${obj}</ul>`:''}</div></section>`]
+    .concat(imgs.map((src,i)=>`<section class="s"><img src="${src}" alt="شريحة ${i+1}"/></section>`)).join('');
+  // نُبقي الملف بلا أي طلبٍ خارجي: لا خطوط ولا صور مرتبطة — وإلا سقط الوعد
+  // بالعمل دون اتصال عند أول فتحٍ في صفٍّ بلا شبكة.
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/><title>${esc(d.lesson)}</title><style>
+*{box-sizing:border-box}body{margin:0;background:#241708;color:#fff;font-family:'Tahoma','Arial',sans-serif;
+ height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(0,0,0,.32);flex:none}
+.bar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar span{font-size:12.5px;opacity:.85}
+.wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;position:relative}
+.s{display:none;max-width:100%;max-height:100%}.s.on{display:flex;align-items:center;justify-content:center}
+.s img{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px}
+.cover{position:relative;width:min(100%,980px);aspect-ratio:16/9;border-radius:22px;overflow:hidden;
+ background:#FFF6E6;border:3px solid #2A1503;color:#2A1503;flex-direction:column;justify-content:center;
+ padding:clamp(18px,4vw,44px)}
+.art{position:absolute;inset:0}.art i{position:absolute;border:3px solid #2A1503;display:block}
+.a1{inset-inline-end:-34px;top:-46px;width:210px;height:210px;background:#FF5A5F;transform:rotate(16deg)}
+.a2{inset-inline-end:132px;bottom:-64px;width:158px;height:158px;border-radius:50%;background:#4ECDC4}
+.a3{inset-inline-end:268px;top:-30px;width:112px;height:112px;background:#FFD166;transform:rotate(-14deg);border-radius:20px}
+.a4{inset-inline-end:372px;bottom:-40px;width:92px;height:92px;background:#A78BFA;transform:rotate(24deg)}
+.cv{position:relative;z-index:3;max-width:64%;text-align:start}
+.tg{font-size:12px;font-weight:800;letter-spacing:2.5px;color:#A33}
+.cv h1{font-size:clamp(20px,4vw,42px);line-height:1.3;margin:6px 0 4px}
+.tc{font-size:15px;font-weight:800;color:#7A6A58;margin-bottom:10px}
+.cv ul{margin:0;padding:0;list-style:none}
+.cv li{position:relative;padding-inline-start:20px;font-size:clamp(11px,1.6vw,15.5px);line-height:1.8;margin-bottom:6px}
+.cv li::before{content:'';position:absolute;inset-inline-start:0;top:.55em;width:9px;height:9px;
+ border-radius:50%;background:#C9453B;border:2px solid #2A1503}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border:0;border-radius:50%;
+ background:rgba(255,255,255,.18);color:#fff;font-size:30px;cursor:pointer}
+.nav:disabled{opacity:.25;cursor:default}
+.prev{inset-inline-start:12px}.next{inset-inline-end:12px}
+.dots{display:flex;gap:7px;justify-content:center;padding:0 0 14px;flex:none}
+.dots b{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.32);cursor:pointer}
+.dots b.on{background:#FFD166;width:22px;border-radius:99px}
+@media(max-width:760px){.cv{max-width:100%}.a3,.a4{display:none}}
+</style></head><body>
+<div class="bar"><b>${esc(d.lesson)}</b><span id="c"></span></div>
+<div class="wrap">${slides}
+<button class="nav prev" id="p">&#8250;</button><button class="nav next" id="n">&#8249;</button></div>
+<div class="dots" id="d"></div>
+<script>
+var S=[].slice.call(document.querySelectorAll('.s')),i=0,D=document.getElementById('d');
+var AR=function(n){return String(n).replace(/[0-9]/g,function(x){return '٠١٢٣٤٥٦٧٨٩'[+x];});};
+S.forEach(function(_,k){var b=document.createElement('b');b.onclick=function(){go(k);};D.appendChild(b);});
+function go(k){i=Math.max(0,Math.min(S.length-1,k));
+ S.forEach(function(s,j){s.className='s'+(j?'':' cover')+(j===i?' on':'');});
+ [].slice.call(D.children).forEach(function(b,j){b.className=j===i?'on':'';});
+ document.getElementById('c').textContent=AR(i+1)+' / '+AR(S.length);
+ document.getElementById('p').disabled=i===0;document.getElementById('n').disabled=i===S.length-1;}
+document.getElementById('p').onclick=function(){go(i-1);};
+document.getElementById('n').onclick=function(){go(i+1);};
+document.addEventListener('keydown',function(e){
+ if(e.key==='ArrowLeft')go(i+1);else if(e.key==='ArrowRight')go(i-1);});
+go(0);
+<\/script></body></html>`;
+}
 async function planSlidesBtn(id){
   await c1AssetsLoad();
   const existing=c1Asset(id).slides;
   if(existing){slOpenWith(existing,(planFindLesson(id)||{}).name,planSubject);return;}
   const l=planFindLesson(id);if(!l)return;
-  cyBusy('يقرأ الدرس ويصمم العرض... قد يستغرق دقيقة');
+  cyBusy('يقرأ الدرس ويصمّم العرض... قد يستغرق دقيقتين');
   try{
-    const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name);
-    const{data,error}=await sb.functions.invoke('generate-lesson-slides',{
-      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,bookContext:bookContext||'',slideCount:10}
-    });
-    if(error||!data||!data.slides){
-      const reason=(data&&data.error)||error?.message||'';
-      toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد العرض، حاولي مجدداً',true);
-      return;
-    }
-    const slidesData={slides:data.slides,homework:data.homework||''};
-    await c1AssetSet(id,{slides:slidesData});
+    const built=await sl2Build(id,planGrade,planSubject,l.unit,l.name);
+    if(!built)return;
+    await c1AssetSet(id,built);
+    shPublishSlides(id,planGrade,planSubject,built.slides);
     planRenderUnits();
     toast('جهز العرض التقديمي','ok');
-    slOpenWith(slidesData,l.name,planSubject);
+    slOpenWith(built.slides,l.name,planSubject);
   }catch(e){toast('تعذّر توليد العرض',true);}
   finally{cyBusyDone();}
+}
+// يبني الحمولة كاملةً: خطّة الشرائح نصّاً ثم صورها. يعيد null عند الفشل بعد
+// إظهار السبب، فلا يحفظ عرضاً ناقصاً تكتشفه المعلّمة أمام صفّها.
+async function sl2Build(id,grade,subject,unitName,lessonName){
+  const bookContext=await c1BookSummary(id,grade,subject,unitName,lessonName);
+  const{data,error}=await sb.functions.invoke('generate-lesson-slides',{
+    body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS+2}
+  });
+  if(error||!data||!Array.isArray(data.slides)||!data.slides.length){
+    const reason=(data&&data.error)||error?.message||'';
+    toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد العرض، حاولي مجدداً',true);
+    return null;
+  }
+  const all=data.slides;
+  // الشريحة الثانية أهدافٌ بصيغة «أنا أستطيع أن…» — نأخذها للغلاف لا للصور
+  const objSlide=all.find(s=>s&&s.widget&&s.widget.kind==='checklist');
+  const objectives=((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[])
+    .map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
+  // نستبعد الغلاف وشريحة الأهداف: الأول نرسمه بالكود والثانية صارت في الغلاف
+  const body=all.filter(s=>s!==objSlide&&(s||{}).type!=='cover').slice(0,SL2_IMGS);
+  if(!body.length){toast('تعذّر توليد العرض، حاولي مجدداً',true);return null;}
+  const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext);
+  if(urls.length<body.length){
+    toast(urls.length?'تعذّر إكمال صور العرض — حاولي مجدداً':'تعذّر رسم صور العرض، حاولي مجدداً',true);
+    return null;
+  }
+  return{slides:{v:2,lesson:lessonName,subject,objectives,images:urls,homework:data.homework||''}};
+}
+// الصور بالتوازي اثنتين اثنتين: التسلسل يعني انتظار دقيقتين، والستّ دفعةً
+// واحدة تصطدم بحدّ الطلبات في الدقيقة عند المزوّد.
+async function sl2Images(id,grade,subject,lessonName,body,bookContext){
+  const urls=[];
+  for(let i=0;i<body.length;i+=2){
+    const batch=body.slice(i,i+2).map((s,j)=>sl2OneImage(id,grade,subject,lessonName,s,i+j,bookContext));
+    const done=await Promise.all(batch);
+    if(done.some(u=>!u))return urls.filter(Boolean);
+    urls.push(...done);
+    cyBusy('يرسم شرائح العرض… '+slArNum(urls.length)+' من '+slArNum(body.length));
+  }
+  return urls;
+}
+async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
+  try{
+    const pts=(slide.points||[]).filter(Boolean).join(' · ');
+    const prompt=`شريحة عرض تعليمية بعنوان «${slide.title||lessonName}»`
+      +(pts?` تشرح: ${pts}`:'')
+      +'. تصميم إنفوجرافيك واضح لطفل، عنوانٌ كبير ورسومٌ توضيحية، بلا زحام نصّي.';
+    const{data,error}=await sb.functions.invoke('generate-infographic',{
+      body:{grade:String(grade),subject,lessonNames:[lessonName],teacherPrompt:prompt,
+            size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
+    });
+    if(error||!data||!data.image)return null;
+    const blob=await c1CompressInfo(data.image);
+    const path=`c1-slides/${currentUser.id}/${id}-${idx}-${Date.now().toString(36)}.jpg`;
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
+    if(upErr)return null;
+    return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
+  }catch(e){return null;}
+}
+function shPublishSlides(lessonId,grade,subject,content){
+  const units=(profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[];
+  for(const u of units)for(const l of u.lessons)if(l.id===lessonId)
+    return shAutoPublish({kind:'slides',lessonId,grade,subject,unit:u.name,lesson:l.name,content});
 }
 
 // زر اللعبة: تشغيل مباشر إن كانت جاهزة، وإلا انتقال للاستوديو بالدرس محدداً
@@ -5435,7 +5692,9 @@ function todayFahim(msg){
 // هكذا لا يصير اجتهاد الأولى قاعدةً للجميع، ولا نُغرّم درساً تُدرّسه معلمة
 // واحدة بثلاثة استدعاءات بلا مستفيد.
 // العرض واللعبة: نسخة واحدة تكفي — الأولى أغلى استدعاءً والثانية تُصمَّم يدوياً.
-const SH_VARIANTS={prep:3,info:3};
+// العرض صار ست صورٍ لا شرائح نصّية، فتكلفته قفزت — والتنوّع الثلاثي هو ما
+// يجعلها محتملة: ثلاث معلّماتٍ تولّدن، ومن بعدهنّ تأخذ نسخةً منها بلا رصيد.
+const SH_VARIANTS={prep:3,info:3,slides:3};
 async function shPoolFetch(lessonId,kinds){
   if(!lessonId||!kinds.length)return{};
   try{
@@ -5570,14 +5829,11 @@ async function todayGenerate(){
       if(need.has('slides')&&!quota){
         cyBusy('يصمّم العرض التقديمي'+suffix);
         try{
-          const{data,error}=await sb.functions.invoke('generate-lesson-slides',{
-            body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,bookContext,slideCount:10}
-          });
-          if(_todayQuota(data,error))quota=true;
-          else if(data&&data.slides){
-            const sl={slides:data.slides,homework:data.homework||''};
-            await c1AssetSet(id,{slides:sl});
-            shAutoPublish({kind:'slides',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,content:sl});
+          // نفس مسار زر العرض تماماً، فلا يختلف ما تراه المعلّمة باختلاف الطريق
+          const built=await sl2Build(id,ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName);
+          if(built){
+            await c1AssetSet(id,built);
+            shAutoPublish({kind:'slides',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,content:built.slides});
             need.delete('slides');done.add('slides');
           }
         }catch(e){}
