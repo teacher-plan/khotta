@@ -718,6 +718,22 @@ body.inapp #c1-notif-btn{display:flex}
   background:#FFF6E6;border:3px solid var(--ink);box-shadow:0 8px 0 rgba(42,21,3,.14)}
 .c1-note{color:var(--muted);font-size:12.5px;line-height:1.9;max-width:640px;margin:0 0 18px}
 
+/* شريط التجهيز الخلفي: يعلو المحتوى ويبقى دون النوافذ، فلا يحجب زرّاً */
+#sl2-chip,#sl2-ready{position:fixed;inset-inline-start:14px;bottom:14px;z-index:370;
+  display:flex;align-items:center;gap:9px;max-width:min(92vw,340px);
+  padding:9px 13px;border-radius:13px;font-family:inherit;font-size:12.5px;font-weight:800;
+  box-shadow:0 8px 24px rgba(0,0,0,.22)}
+#sl2-chip{background:var(--ink);color:#fff}
+#sl2-chip span:not(.sp){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sl2-chip b{font-variant-numeric:tabular-nums;opacity:.85;flex:none}
+#sl2-chip .sp{flex:none;width:14px;height:14px;border-radius:50%;border:2.5px solid rgba(255,255,255,.28);
+  border-top-color:#fff;animation:sl2spin .8s linear infinite}
+@keyframes sl2spin{to{transform:rotate(360deg)}}
+#sl2-ready{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border:0;cursor:pointer}
+#sl2-ready b{background:rgba(255,255,255,.22);border-radius:8px;padding:4px 10px;flex:none}
+@media(prefers-reduced-motion:reduce){#sl2-chip .sp{animation-duration:2.4s}}
+body.demo #sl2-chip,body.demo #sl2-ready{bottom:calc(var(--db-h,56px) + 12px)}
+
 /* ── العرض المصوَّر (v2) ── */
 #sl2-bg{position:fixed;inset:0;z-index:4000;background:#241708;display:none;flex-direction:column}
 #sl2-bg.on{display:flex}
@@ -5378,75 +5394,112 @@ async function planSlidesBtn(id){
   const existing=c1Asset(id).slides;
   if(existing){slOpenWith(existing,(planFindLesson(id)||{}).name,planSubject);return;}
   const l=planFindLesson(id);if(!l)return;
-  cyBusy('يقرأ الدرس ويصمّم العرض... قد يستغرق دقيقتين');
-  try{
-    const built=await sl2Build(id,planGrade,planSubject,l.unit,l.name);
-    if(!built)return;
-    await c1AssetSet(id,built);
-    shPublishSlides(id,planGrade,planSubject,built.slides);
-    planRenderUnits();
-    toast('جهز العرض التقديمي','ok');
-    slOpenWith(built.slides,l.name,planSubject);
-  }catch(e){toast('تعذّر توليد العرض',true);}
-  finally{cyBusyDone();}
+  if(sl2Jobs[id]){toast('العرض يُجهَّز الآن — سنُعلمكِ حالما يكتمل');return;}
+  sl2Start(id,planGrade,planSubject,l.unit,l.name);
 }
-// يبني الحمولة كاملةً: خطّة الشرائح نصّاً ثم صورها. يعيد null عند الفشل بعد
-// إظهار السبب، فلا يحفظ عرضاً ناقصاً تكتشفه المعلّمة أمام صفّها.
-async function sl2Build(id,grade,subject,unitName,lessonName){
-  const bookContext=await c1BookSummary(id,grade,subject,unitName,lessonName);
-  const{data,error}=await sb.functions.invoke('generate-lesson-slides',{
-    body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS+2}
-  });
-  if(error||!data||!Array.isArray(data.slides)||!data.slides.length){
-    const reason=(data&&data.error)||error?.message||'';
-    toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد العرض، حاولي مجدداً',true);
-    return null;
+// ═ التجهيز في الخلفية ═
+// كان التوليد يحجب الشاشة دقيقتين فتقف المعلّمة عاجزةً عن أي عمل، وأيّ تعثّر
+// يضيّع الجهد كلَّه. صار يعمل خلفياً بشريطٍ صغير لا يمنع التنقّل، ويعيد
+// المحاولة على ما تعثّر وحده لا على العرض كلّه.
+let sl2Jobs={};
+function sl2Start(id,grade,subject,unitName,lessonName){
+  if(sl2Jobs[id])return;
+  sl2Jobs[id]={lesson:lessonName,step:'يقرأ الدرس',done:0,total:SL2_IMGS};
+  sl2Chip();
+  toast('بدأنا تجهيز العرض — تابعي عملكِ وسنُعلمكِ عند اكتماله','ok');
+  (async()=>{
+    try{
+      const built=await sl2Build(id,grade,subject,unitName,lessonName,p=>{
+        if(sl2Jobs[id]){Object.assign(sl2Jobs[id],p);sl2Chip();}
+      });
+      if(!built)throw new Error('build');
+      await c1AssetSet(id,built);
+      shPublishSlides(id,grade,subject,built.slides);
+      delete sl2Jobs[id];sl2Chip();
+      planRenderUnits();
+      const n=built.slides.images.length;
+      toast(n<SL2_IMGS?`جهز العرض — ${slArNum(n)} من ${slArNum(SL2_IMGS)} شرائح`:'جهز العرض التقديمي','ok');
+      sl2Ready(id,lessonName);
+    }catch(e){
+      delete sl2Jobs[id];sl2Chip();
+      toast('تعذّر تجهيز العرض — جرّبي مرّة أخرى',true);
+    }
+  })();
+}
+// شريطٌ صغير أسفل الشاشة: يُطمئن أن العمل جارٍ بلا أن يحجب زرّاً واحداً
+function sl2Chip(){
+  const ids=Object.keys(sl2Jobs);
+  let el=document.getElementById('sl2-chip');
+  if(!ids.length){el&&el.remove();return;}
+  if(!el){
+    el=document.createElement('div');el.id='sl2-chip';
+    document.body.appendChild(el);
   }
+  const j=sl2Jobs[ids[0]];
+  const more=ids.length>1?` (+${slArNum(ids.length-1)})`:'';
+  el.innerHTML=`<span class="sp"></span><span>${escHtml(j.step)} — ${escHtml(j.lesson)}${more}</span>`
+    +(j.total?`<b>${slArNum(j.done)}/${slArNum(j.total)}</b>`:'');
+}
+function sl2Ready(id,lessonName){
+  const el=document.createElement('button');
+  el.id='sl2-ready';el.type='button';
+  el.innerHTML=`<span>عرض «${escHtml(lessonName)}» جاهز</span><b>افتحيه</b>`;
+  el.onclick=()=>{el.remove();const a=c1Asset(id).slides;if(a)slOpenWith(a,lessonName,planSubject);};
+  document.getElementById('sl2-ready')?.remove();
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),20000);
+}
+// يبني الحمولة كاملةً: خطّة الشرائح نصّاً ثم صورها.
+async function sl2Build(id,grade,subject,unitName,lessonName,onStep){
+  const step=(t,d,n)=>onStep&&onStep({step:t,done:d||0,total:n==null?SL2_IMGS:n});
+  step('يقرأ الدرس من الكتاب',0);
+  const bookContext=await c1BookSummary(id,grade,subject,unitName,lessonName);
+  step('يخطّط الشرائح',0);
+  let data=null;
+  // خطّة الشرائح أساس كل ما بعدها، فلا معنى للمضيّ بدونها — نعيد المحاولة
+  for(let t=1;t<=3&&!data;t++){
+    const r=await sb.functions.invoke('generate-lesson-slides',{
+      body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS+2}
+    });
+    if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
+      const reason=(r.data&&r.data.error)||r.error?.message||'';
+      if(String(reason).includes('quota_exceeded')){
+        toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);return null;
+      }
+      if(t<3)await new Promise(r2=>setTimeout(r2,1500*t));
+    }else data=r.data;
+  }
+  if(!data)return null;
   const all=data.slides;
-  // الشريحة الثانية أهدافٌ بصيغة «أنا أستطيع أن…» — نأخذها للغلاف لا للصور
-  const objSlide=all.find(s=>s&&s.widget&&s.widget.kind==='checklist');
+  const objSlide=all.find(s2=>s2&&s2.widget&&s2.widget.kind==='checklist');
   const objectives=((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[])
     .map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
-  // نستبعد الغلاف وشريحة الأهداف: الأول نرسمه بالكود والثانية صارت في الغلاف
-  const body=all.filter(s=>s!==objSlide&&(s||{}).type!=='cover').slice(0,SL2_IMGS);
-  if(!body.length){toast('تعذّر توليد العرض، حاولي مجدداً',true);return null;}
-  const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext);
-  if(urls.length<body.length){
-    toast(urls.length?'تعذّر إكمال صور العرض — حاولي مجدداً':'تعذّر رسم صور العرض، حاولي مجدداً',true);
-    return null;
-  }
-  return{slides:{v:2,lesson:lessonName,subject,objectives,images:urls,homework:data.homework||''}};
+  const body=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
+  if(!body.length)return null;
+  const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step);
+  // نصفُ عرضٍ خيرٌ من لا شيء بعد دقيقتين: نحفظ ما نجح ونصارح المعلّمة بعدده،
+  // ولا نُلغي كل الجهد لأنّ صورةً واحدة تعثّرت.
+  const got=urls.filter(Boolean);
+  if(got.length<3)return null;
+  return{slides:{v:2,lesson:lessonName,subject,objectives,images:got,homework:data.homework||''}};
 }
-// الصور بالتوازي اثنتين اثنتين: التسلسل يعني انتظار دقيقتين، والستّ دفعةً
-// واحدة تصطدم بحدّ الطلبات في الدقيقة عند المزوّد.
-async function sl2Images(id,grade,subject,lessonName,body,bookContext){
-  const urls=[];
-  for(let i=0;i<body.length;i+=2){
-    const batch=body.slice(i,i+2).map((s,j)=>sl2OneImage(id,grade,subject,lessonName,s,i+j,bookContext));
-    const done=await Promise.all(batch);
-    if(done.some(u=>!u))return urls.filter(Boolean);
-    urls.push(...done);
-    cyBusy('يرسم شرائح العرض… '+slArNum(urls.length)+' من '+slArNum(body.length));
+// اثنتان معاً: التسلسل انتظارٌ طويل، والستّ دفعةً واحدة تصطدم بحدّ الطلبات
+// في الدقيقة. ثم جولتا استدراكٍ لما تعثّر وحده — لا للعرض كلّه.
+async function sl2Images(id,grade,subject,lessonName,body,bookContext,step){
+  const urls=new Array(body.length).fill(null);
+  const count=()=>urls.filter(Boolean).length;
+  for(let round=1;round<=3;round++){
+    const missing=body.map((s2,i)=>i).filter(i=>!urls[i]);
+    if(!missing.length)break;
+    if(round>1)await new Promise(r=>setTimeout(r,2000*(round-1)));
+    for(let k=0;k<missing.length;k+=2){
+      const pair=missing.slice(k,k+2);
+      const done=await Promise.all(pair.map(i=>sl2OneImage(id,grade,subject,lessonName,body[i],i,bookContext)));
+      pair.forEach((i,j)=>{if(done[j])urls[i]=done[j];});
+      step('يرسم شرائح العرض',count());
+    }
   }
   return urls;
-}
-async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
-  try{
-    const pts=(slide.points||[]).filter(Boolean).join(' · ');
-    const prompt=`شريحة عرض تعليمية بعنوان «${slide.title||lessonName}»`
-      +(pts?` تشرح: ${pts}`:'')
-      +'. تصميم إنفوجرافيك واضح لطفل، عنوانٌ كبير ورسومٌ توضيحية، بلا زحام نصّي.';
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
-      body:{grade:String(grade),subject,lessonNames:[lessonName],teacherPrompt:prompt,
-            size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
-    });
-    if(error||!data||!data.image)return null;
-    const blob=await c1CompressInfo(data.image);
-    const path=`c1-slides/${currentUser.id}/${id}-${idx}-${Date.now().toString(36)}.jpg`;
-    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
-    if(upErr)return null;
-    return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
-  }catch(e){return null;}
 }
 function shPublishSlides(lessonId,grade,subject,content){
   const units=(profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[];
@@ -5782,7 +5835,7 @@ async function todayGenerate(){
 
   const done=new Set(),labels={prep:'الخطة',info:'الملخص',slides:'العرض'};
   const adopted=new Set();
-  let quota=false,bookContext='';
+  let quota=false,bookContext='',slidesBg=false;
   try{
     // ① الجاهز من زميلة أولاً — أسرع وأرخص من التوليد، ولا يمسّ الحصة الشهرية
     if(!todayForceOwn){
@@ -5845,16 +5898,9 @@ async function todayGenerate(){
       }
 
       if(need.has('slides')&&!quota){
-        cyBusy('يصمّم العرض التقديمي'+suffix);
-        try{
-          // نفس مسار زر العرض تماماً، فلا يختلف ما تراه المعلّمة باختلاف الطريق
-          const built=await sl2Build(id,ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName);
-          if(built){
-            await c1AssetSet(id,built);
-            shAutoPublish({kind:'slides',lessonId:id,grade:ctx.grade,subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,content:built.slides});
-            need.delete('slides');done.add('slides');
-          }
-        }catch(e){}
+        // العرض أطول الأجزاء زمناً، فيمضي خلفياً ولا يحبس الخطة والملخص خلفه
+        sl2Start(id,ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName);
+        need.delete('slides');slidesBg=true;
       }
 
       // مهلة تصاعدية بين الجولات: تعثّر الخادم اللحظي يزول بالانتظار
@@ -5867,7 +5913,10 @@ async function todayGenerate(){
     const nm=s=>[...s].map(k=>labels[k]).join(' و');
     const from=adopted.size?` (${nm(adopted)} من زميلتك)`:'';
     if(quota)toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم'+(done.size||adopted.size?`. جهزنا ${nm(new Set([...done,...adopted]))}`:''),true);
-    else if(!need.size)toast('جهزت كل أجزاء الدرس'+from+' — تبقّت اللعبة تصمّمينها في الاستوديو','ok');
+    // لا نقول «جهزت كل الأجزاء» والعرض ما زال يُرسم — الشريط الخلفي يتابعه
+    else if(!need.size)toast(slidesBg
+      ? 'جهزت الخطة والملخص'+from+'، والعرض يُجهَّز في الخلفية — تابعي عملكِ'
+      : 'جهزت كل أجزاء الدرس'+from+' — تبقّت اللعبة تصمّمينها في الاستوديو','ok');
     else if(done.size||adopted.size)toast(`جهزنا ${nm(new Set([...done,...adopted]))}، وتعذّر ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات`,true);
     else toast(`تعذّر تجهيز ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات — تحققي من الاتصال`,true);
   }catch(e){toast('تعذّر الاتصال، حاولي مجدداً',true);}
