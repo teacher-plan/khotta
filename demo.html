@@ -726,6 +726,10 @@ body.inapp #c1-notif-btn{display:flex}
 #sl2-chip{background:var(--ink);color:#fff}
 #sl2-chip span:not(.sp){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #sl2-chip b{font-variant-numeric:tabular-nums;opacity:.85;flex:none}
+#sl2-chip .mn{opacity:.6}
+#sl2-chip .cx{flex:none;width:22px;height:22px;border:0;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.18);color:#fff;font-size:15px;line-height:1;padding:0;font-family:inherit}
+#sl2-chip .cx:hover{background:rgba(255,255,255,.34)}
 #sl2-chip .sp{flex:none;width:14px;height:14px;border-radius:50%;border:2.5px solid rgba(255,255,255,.28);
   border-top-color:#fff;animation:sl2spin .8s linear infinite}
 @keyframes sl2spin{to{transform:rotate(360deg)}}
@@ -5402,6 +5406,16 @@ async function planSlidesBtn(id){
 // يضيّع الجهد كلَّه. صار يعمل خلفياً بشريطٍ صغير لا يمنع التنقّل، ويعيد
 // المحاولة على ما تعثّر وحده لا على العرض كلّه.
 let sl2Jobs={};
+// مهلةٌ صريحة لكل نداء. بدونها يبقى الطلب المتعثّر معلّقاً بلا نهاية، فيقف
+// العدّاد عند ٠/٦ إلى الأبد — وهو ما حدث فعلاً: لا خطأ يُلتقط ولا شيء يتحرّك.
+const SL2_T={book:75000,plan:90000,img:150000,job:600000};
+function sl2Wait(pr,ms,job){
+  return Promise.race([
+    Promise.resolve(pr).catch(()=>null),
+    new Promise(res=>setTimeout(()=>res({__timeout:true}),ms)),
+    new Promise(res=>{ if(job) job.onCancel=()=>res({__cancel:true}); })
+  ]);
+}
 function sl2Start(id,grade,subject,unitName,lessonName){
   if(sl2Jobs[id])return;
   sl2Jobs[id]={lesson:lessonName,step:'يقرأ الدرس',done:0,total:SL2_IMGS};
@@ -5409,9 +5423,19 @@ function sl2Start(id,grade,subject,unitName,lessonName){
   toast('بدأنا تجهيز العرض — تابعي عملكِ وسنُعلمكِ عند اكتماله','ok');
   (async()=>{
     try{
-      const built=await sl2Build(id,grade,subject,unitName,lessonName,p=>{
-        if(sl2Jobs[id]){Object.assign(sl2Jobs[id],p);sl2Chip();}
-      });
+      const job=sl2Jobs[id];
+      job.at=Date.now();
+      // حارسٌ أخير غير مشروط: سباقٌ على مستوى المهمّة كلّها، لا اعتماداً على
+      // أن يكون التعليق داخل نداءٍ موقوت. أيّ تعثّرٍ لم نتوقّعه ينتهي برسالة
+      // لا بشريطٍ يدور بلا نهاية — وهو ما وقع فعلاً.
+      const built=await Promise.race([
+        sl2Build(id,grade,subject,unitName,lessonName,p=>{
+          if(sl2Jobs[id]){Object.assign(sl2Jobs[id],p);sl2Chip();}
+        },job).catch(()=>null),
+        new Promise(res=>{job.guard=setTimeout(()=>res(null),SL2_T.job);})
+      ]);
+      clearTimeout(job.guard);
+      if(job.cancelled)throw new Error('cancel');
       if(!built)throw new Error('build');
       await c1AssetSet(id,built);
       shPublishSlides(id,grade,subject,built.slides);
@@ -5421,8 +5445,9 @@ function sl2Start(id,grade,subject,unitName,lessonName){
       toast(n<SL2_IMGS?`جهز العرض — ${slArNum(n)} من ${slArNum(SL2_IMGS)} شرائح`:'جهز العرض التقديمي','ok');
       sl2Ready(id,lessonName);
     }catch(e){
+      const wasCancel=(sl2Jobs[id]||{}).cancelled||String(e&&e.message)==='cancel';
       delete sl2Jobs[id];sl2Chip();
-      toast('تعذّر تجهيز العرض — جرّبي مرّة أخرى',true);
+      toast(wasCancel?'أُلغي تجهيز العرض':'تعذّر تجهيز العرض — جرّبي مرّة أخرى',true);
     }
   })();
 }
@@ -5435,10 +5460,26 @@ function sl2Chip(){
     el=document.createElement('div');el.id='sl2-chip';
     document.body.appendChild(el);
   }
-  const j=sl2Jobs[ids[0]];
+  const id=ids[0],j=sl2Jobs[id];
   const more=ids.length>1?` (+${slArNum(ids.length-1)})`:'';
+  // الزمن المنقضي يفرّق بين «يعمل ببطء» و«توقّف» — بدونه لا تملك المعلّمة
+  // إلا الانتظار والظنّ.
+  const mins=j.at?Math.floor((Date.now()-j.at)/60000):0;
   el.innerHTML=`<span class="sp"></span><span>${escHtml(j.step)} — ${escHtml(j.lesson)}${more}</span>`
-    +(j.total?`<b>${slArNum(j.done)}/${slArNum(j.total)}</b>`:'');
+    +(j.total?`<b>${slArNum(j.done)}/${slArNum(j.total)}</b>`:'')
+    +(mins?`<b class="mn">${slArNum(mins)}د</b>`:'')
+    +`<button class="cx" onclick="sl2Cancel('${escHtml(id)}')" title="إلغاء">&times;</button>`;
+  clearTimeout(sl2ChipTick);
+  sl2ChipTick=setTimeout(sl2Chip,20000);
+}
+let sl2ChipTick=null;
+function sl2Cancel(id){
+  const j=sl2Jobs[id];if(!j)return;
+  j.cancelled=true;
+  if(j.onCancel)j.onCancel();
+  clearTimeout(j.guard);
+  delete sl2Jobs[id];sl2Chip();
+  toast('أُلغي تجهيز العرض');
 }
 function sl2Ready(id,lessonName){
   const el=document.createElement('button');
@@ -5450,17 +5491,22 @@ function sl2Ready(id,lessonName){
   setTimeout(()=>el.remove(),20000);
 }
 // يبني الحمولة كاملةً: خطّة الشرائح نصّاً ثم صورها.
-async function sl2Build(id,grade,subject,unitName,lessonName,onStep){
+async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   const step=(t,d,n)=>onStep&&onStep({step:t,done:d||0,total:n==null?SL2_IMGS:n});
   step('يقرأ الدرس من الكتاب',0);
-  const bookContext=await c1BookSummary(id,grade,subject,unitName,lessonName);
+  // ملخّص الكتاب تحسينٌ لا شرط: تعثّره لا يمنع العرض، فنمضي بدونه
+  const bs=await sl2Wait(c1BookSummary(id,grade,subject,unitName,lessonName),SL2_T.book,job);
+  if(bs&&bs.__cancel)return null;
+  const bookContext=(bs&&!bs.__timeout)?bs:'';
   step('يخطّط الشرائح',0);
   let data=null;
   // خطّة الشرائح أساس كل ما بعدها، فلا معنى للمضيّ بدونها — نعيد المحاولة
   for(let t=1;t<=3&&!data;t++){
-    const r=await sb.functions.invoke('generate-lesson-slides',{
+    if(job&&job.cancelled)return null;
+    const r=await sl2Wait(sb.functions.invoke('generate-lesson-slides',{
       body:{grade:String(grade),subject,unit:unitName,lesson:lessonName,bookContext:bookContext||'',slideCount:SL2_IMGS+2}
-    });
+    }),SL2_T.plan,job)||{};
+    if(r.__cancel)return null;
     if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
       const reason=(r.data&&r.data.error)||r.error?.message||'';
       if(String(reason).includes('quota_exceeded')){
@@ -5476,7 +5522,7 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep){
     .map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
   const body=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
   if(!body.length)return null;
-  const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step);
+  const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step,job);
   // نصفُ عرضٍ خيرٌ من لا شيء بعد دقيقتين: نحفظ ما نجح ونصارح المعلّمة بعدده،
   // ولا نُلغي كل الجهد لأنّ صورةً واحدة تعثّرت.
   const got=urls.filter(Boolean);
@@ -5485,7 +5531,7 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep){
 }
 // اثنتان معاً: التسلسل انتظارٌ طويل، والستّ دفعةً واحدة تصطدم بحدّ الطلبات
 // في الدقيقة. ثم جولتا استدراكٍ لما تعثّر وحده — لا للعرض كلّه.
-async function sl2Images(id,grade,subject,lessonName,body,bookContext,step){
+async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job){
   const urls=new Array(body.length).fill(null);
   const count=()=>urls.filter(Boolean).length;
   for(let round=1;round<=3;round++){
@@ -5493,9 +5539,13 @@ async function sl2Images(id,grade,subject,lessonName,body,bookContext,step){
     if(!missing.length)break;
     if(round>1)await new Promise(r=>setTimeout(r,2000*(round-1)));
     for(let k=0;k<missing.length;k+=2){
+      if(job&&job.cancelled)return urls;
       const pair=missing.slice(k,k+2);
-      const done=await Promise.all(pair.map(i=>sl2OneImage(id,grade,subject,lessonName,body[i],i,bookContext)));
-      pair.forEach((i,j)=>{if(done[j])urls[i]=done[j];});
+      // مهلةٌ لكل صورة على حدة: صورةٌ عالقة كانت تُجمّد العرض كلَّه بلا نهاية
+      const done=await Promise.all(pair.map(i=>
+        sl2Wait(sl2OneImage(id,grade,subject,lessonName,body[i],i,bookContext),SL2_T.img,job)));
+      if(done.some(d=>d&&d.__cancel))return urls;
+      pair.forEach((i,j)=>{const d=done[j];if(d&&typeof d==='string')urls[i]=d;});
       step('يرسم شرائح العرض',count());
     }
   }
