@@ -7,6 +7,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
     const colors = (b.colors && typeof b.colors === "object") ? b.colors : null;
     if (!name || !desc) return json({ error: "missing_fields" }, 400);
 
-    const model = st.slide_model || "google/gemini-2.5-flash-image";
+    const model = st.model_game_theme || st.slide_model || "google/gemini-2.5-flash-image";
 
     const prompt = [
       `خلفية ساحة لعبة تعليمية للأطفال (7-13 سنة) بثيم: ${desc}.`,

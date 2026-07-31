@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -60,8 +61,8 @@ Deno.serve(async (req) => {
     // عند إرفاق صفحات الكتاب نحتاج نموذجاً يدعم الرؤية
     // مع صفحات الكتاب: نموذج رؤية مضمون (لا نمرّ بـ ai_model النصي)
     const model = images.length
-      ? (st.vision_model || "google/gemini-2.5-flash")
-      : (st.ai_model || "google/gemini-2.5-flash");
+      ? (st.model_plan_vision || st.vision_model || "google/gemini-2.5-flash")
+      : (st.model_plan || st.ai_model || "google/gemini-2.5-flash");
 
     // عمر الطلاب في عُمان: الصف الأول = ٧ سنوات (العمر = الصف + ٦)
     const gradeNum = parseInt(grade) || 0;
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
     // الخطة هي أساس التحضير كله — لا نستسلم من أول محاولة:
     // (١) محاولة كاملة (بالصور إن وُجدت) → (٢) إعادة عند خروج غير سليم → (٣) تراجع نصي بلا صور
     const callOnce = async (withImages: boolean) => {
-      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
           "X-Title": "Khotta Lesson Prep",
         },
         body: JSON.stringify({
-          model: withImages ? model : (st.ai_model || "google/gemini-2.5-flash"),
+          model: withImages ? model : (st.model_plan || st.ai_model || "google/gemini-2.5-flash"),
           messages: [
             { role: "system", content: system },
             { role: "user", content: withImages && images.length ? userContent : userMsg },

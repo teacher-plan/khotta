@@ -9,6 +9,7 @@
 // النموذج: ai_settings.seg_model ثم vision_model ثم gemini-2.5-flash
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     if (!basePath) return json({ error: "no_book" }, 400);
     if (sheetEnd - sheetStart > 39) return json({ error: "batch_too_large" }, 400);
 
-    const model = st.seg_model || st.vision_model || "google/gemini-2.5-flash";
+    const model = st.model_segment || st.seg_model || st.vision_model || "google/gemini-2.5-flash";
 
     // روابط صور الأوراق العامة من التخزين
     const supaUrl = Deno.env.get("SUPABASE_URL")!;
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       content.push({ type: "image_url", image_url: { url: imgUrl(s) } });
     }
 
-    const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + apiKey,

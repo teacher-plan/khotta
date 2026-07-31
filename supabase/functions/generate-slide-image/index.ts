@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     const safeTitle = title || (kind === "closing" ? "شكراً لكم" : subject || `شريحة ${slideNo}`);
 
     // نموذج الرسم الموحّد — يُبدَّل من ai_settings (مفتاح slide_model) بدون نشر
-    const model = st.slide_model || "google/gemini-2.5-flash-image";
+    const model = st.model_slide_image || st.slide_model || "google/gemini-2.5-flash-image";
 
     // نظام بصري بأسلوب المخططات التوضيحية الكبيرة: الرسم التوضيحي هو المحتوى (نمط NotebookLM)
     const style = st.slide_style_prompt || [
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
       if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
     } else {
       // النماذج غير جوجل (مثل Seedream) عبر واجهة الصور الموحدة /v1/images
-      const r = await fetch("https://openrouter.ai/api/v1/images", {
+      const r = await orFetch("https://openrouter.ai/api/v1/images", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,

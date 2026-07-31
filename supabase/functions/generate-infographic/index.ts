@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
+import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     if (!isEdit && !lessonNames.length) return json({ error: "no_lessons" }, 400);
 
     // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
-    let model = st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
+    let model = st.model_infographic || st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
     // التعديل بالوصف يتطلب نموذج جوجل (يستقبل صورة ويعيد صورة معدّلة)
     if (isEdit && !model.startsWith("google/")) model = "google/gemini-3.1-flash-image-preview";
 
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       });
     // النماذج غير جوجل (مثل Seedream) تعمل عبر واجهة الصور الموحدة /v1/images فقط
     const callImagesApi = async () => {
-      const r = await fetch("https://openrouter.ai/api/v1/images", {
+      const r = await orFetch("https://openrouter.ai/api/v1/images", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
         "حافظ حرفياً على كل شيء آخر دون أي تغيير: التخطيط، الألوان، الرسومات، وجميع النصوص الأخرى وأماكنها.",
         "أخرج الصورة بنفس أبعاد الصورة الأصلية ونفس أسلوبها تماماً.",
       ].join("\n");
-      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
