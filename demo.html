@@ -5506,6 +5506,29 @@ function shPublishSlides(lessonId,grade,subject,content){
   for(const u of units)for(const l of u.lessons)if(l.id===lessonId)
     return shAutoPublish({kind:'slides',lessonId,grade,subject,unit:u.name,lesson:l.name,content});
 }
+async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
+  try{
+    const pts=(slide.points||[]).filter(Boolean).join(' · ');
+    const prompt=`شريحة عرض تعليمية بعنوان «${slide.title||lessonName}»`
+      +(pts?` تشرح: ${pts}`:'')
+      +'. تصميم إنفوجرافيك واضح لطفل، عنوانٌ كبير ورسومٌ توضيحية، بلا زحام نصّي.';
+    const{data,error}=await sb.functions.invoke('generate-infographic',{
+      body:{grade:String(grade),subject,lessonNames:[lessonName],teacherPrompt:prompt,
+            size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
+    });
+    if(error||!data||!data.image)return null;
+    const blob=await c1CompressInfo(data.image);
+    const path=`c1-slides/${currentUser.id}/${id}-${idx}-${Date.now().toString(36)}.jpg`;
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
+    if(upErr)return null;
+    return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
+  }catch(e){return null;}
+}
+function shPublishSlides(lessonId,grade,subject,content){
+  const units=(profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[];
+  for(const u of units)for(const l of u.lessons)if(l.id===lessonId)
+    return shAutoPublish({kind:'slides',lessonId,grade,subject,unit:u.name,lesson:l.name,content});
+}
 
 // زر اللعبة: تشغيل مباشر إن كانت جاهزة، وإلا انتقال للاستوديو بالدرس محدداً
 async function planGameBtn(id){
