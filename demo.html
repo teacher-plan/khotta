@@ -1716,7 +1716,7 @@ body:has(#page-fahim.active){overflow:hidden}
 
 /* ══ شريط وضع التجربة ══ */
 body.demo{padding-bottom:64px}
-.demo-bar{position:fixed;inset-inline:0;bottom:0;z-index:960;display:flex;align-items:center;
+.demo-bar{position:fixed;inset-inline:0;bottom:0;z-index:380;display:flex;align-items:center;
   gap:12px;flex-wrap:wrap;justify-content:center;padding:11px 16px;
   background:rgba(255,253,249,.97);backdrop-filter:blur(12px);
   border-top:1.5px solid var(--border);box-shadow:0 -6px 26px rgba(48,24,0,.12);
@@ -1729,6 +1729,12 @@ body.demo{padding-bottom:64px}
 .demo-bar .db-cta{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff}
 /* ما لا معنى له بلا حساب */
 body.demo .c1-mi.danger{display:none}
+/* فهيم صفحةٌ مثبّتة بملء الشاشة (inset:0) فلا يُزحزحها padding الجسم،
+   وكان الشريط يغطّي صندوق الكتابة وزرّ الإرسال فيتعذّر إرسال أي سؤال */
+body.demo #page-fahim.active{bottom:56px}
+body.demo #page-fahim.active .wrap{height:calc(100dvh - 56px)}
+@media(max-width:620px){body.demo #page-fahim.active{bottom:50px}
+  body.demo #page-fahim.active .wrap{height:calc(100dvh - 50px)}}
 @media(max-width:620px){.demo-bar .db-txt{display:none}body.demo{padding-bottom:58px}}
 </style>
 </head>
@@ -2655,14 +2661,21 @@ const sb=KH_DEMO?(function(){
   const chain=()=>new Proxy(function(){},{get:(t,k)=>
     (k==='then')?undefined:(k==='maybeSingle'||k==='single'||k==='csv')?(()=>nores):chain(),
     apply:()=>chain()});
-  const q=new Proxy({},{get:(t,k)=>{
-    if(k==='then')return (r)=>nores.then(r);
-    return ()=>q;}});
-  return {from:()=>q, rpc:()=>nores,
+  // صفوفٌ مزروعة لجداول القراءة فقط، كي لا تظهر الأقسام فارغة
+  const rows=(tbl)=>(window.DEMO_ROWS&&window.DEMO_ROWS[tbl])||[];
+  const mk=(tbl)=>{const res=Promise.resolve({data:rows(tbl),error:null});
+    const one=Promise.resolve({data:rows(tbl)[0]||null,error:null});
+    const q=new Proxy({},{get:(t,k)=>{
+      if(k==='then')return (r)=>res.then(r);
+      if(k==='maybeSingle'||k==='single')return ()=>one;
+      return ()=>q;}});
+    return q;};
+  return {from:(tbl)=>mk(tbl), rpc:()=>nores,
     auth:{getSession:()=>Promise.resolve({data:{session:null}}),
       onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
       signOut:()=>Promise.resolve({}), getUser:()=>Promise.resolve({data:{user:null}})},
-    functions:{invoke:()=>Promise.resolve({data:null,error:{message:'demo'}})},
+    // كلُّ أدوات التوليد تمرّ من هنا، فبوّابةٌ واحدة تكفي وتُغني عن ترقيع كل موضع
+    functions:{invoke:()=>{demoAiNotice();return Promise.resolve({data:null,error:{message:'demo'}});}},
     storage:{from:()=>({upload:()=>nores,remove:()=>nores,
       getPublicUrl:()=>({data:{publicUrl:''}}),createSignedUrl:()=>nores})}};
 })():window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -2808,7 +2821,7 @@ trophy:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><pat
 book:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 14H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>`,
 mail:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.3l8 5.2 8-5.2V6H4zm16 2.2-7.4 4.8a1 1 0 0 1-1.2 0L4 8.2V18h16V8.2z"/></svg>`
 };
-const DEMO_SECTIONS=['students','reserve'];
+const DEMO_SECTIONS=['yawmi','plan','studio','students','reserve','fahim','ach','shared','lib'];
 const C1_SECTIONS=[
   {id:'yawmi', ic:'cal', nm:'يومي',    lv:'مسار يومك وحصصك ومفكرتك',      built:true},
   {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
@@ -2957,10 +2970,73 @@ async function afterAuth(session){
    بيانات معلمةٍ وشعبةٍ وهمية بأسماء عُمانية. لا تسجيلَ دخول، ولا اتصالَ
    بالخادم، وكلُّ ما تغيّره الزائرة يبقى في ذاكرة المتصفّح ويزول بالتحديث. */
 const DEMO_T=d=>new Date(Date.now()-d*864e5).toISOString();
+// نموذجُ خطّة درسٍ يُعرض في التجربة بدل استدعاء التوليد (وهو مدفوع)
+const DEMO_PREP=`## الأهداف
+- أن تقارن الطالبة بين عددين ضمن ١٠٠٠ مستخدمةً < و > و =.
+- أن ترتّب مجموعةً من الأعداد تصاعدياً وتنازلياً.
+
+## التمهيد (٥ دقائق)
+اكتبي على السبورة عدد طلاب الشعبة وعدد طلاب الشعبة المجاورة، واسألي:
+أيّهما أكثر؟ وكيف عرفتِ؟
+
+## العرض (٢٠ دقيقة)
+١. راجعي القيمة المكانية: المئات ثم العشرات ثم الآحاد.
+٢. قاعدة المقارنة: نبدأ من أكبر منزلة، فإن تساوت انتقلنا لما بعدها.
+٣. أمثلة محلولة على السبورة: ٤٥٦ و٤٦٥ — ثم ٧٠٩ و٧٩٠.
+
+## النشاط (١٠ دقائق)
+بطاقات أعداد لكل مجموعة، ترتّبها تصاعدياً وتُعلّقها على الحبل.
+
+## التقويم (٥ دقائق)
+ثلاثة أسئلة قصيرة شفهية، ونجمة لكل إجابةٍ صحيحة مُعلَّلة.`;
+let _demoNoticeAt=0;
+function demoAiNotice(){
+  const now=Date.now();
+  if(now-_demoNoticeAt<4000)return;   // نداءٌ واحد قد يُطلق عدّة دوالّ
+  _demoNoticeAt=now;
+  try{toast('التوليد بالذكاء الاصطناعي مُعطَّل في التجربة — وهو يعمل كاملاً في حسابكِ');}catch(e){}
+}
+/* ألعابٌ محفوظة تظهر في المحفوظات والمكتبة والاستوديو */
+window.DEMO_ROWS={
+ c1_shared_assets:[
+  {id:'s1',kind:'game',grade:'3',subject:'الرياضيات',unit:'الوحدة الأولى: الأعداد ضمن ١٠٠٠',
+   lesson:'مقارنة الأعداد وترتيبها',title:'اختبار سريع — مقارنة الأعداد',created_at:DEMO_T(3),
+   teacher_name:'أ. سعاد الحضرمية',content:{structure:'quiz',items:[]}},
+  {id:'s2',kind:'prep',grade:'3',subject:'الرياضيات',unit:'الوحدة الأولى: الأعداد ضمن ١٠٠٠',
+   lesson:'القيمة المكانية',title:'خطة درس — القيمة المكانية',created_at:DEMO_T(8),
+   teacher_name:'أ. هدى الشحية',content:'خطةُ درسٍ كاملة بالأهداف والتمهيد والأنشطة والتقويم.'},
+  {id:'s3',kind:'game',grade:'3',subject:'الرياضيات',unit:'الوحدة الثانية: الجمع والطرح',
+   lesson:'الجمع بإعادة التجميع',title:'عجلة الجمع',created_at:DEMO_T(14),
+   teacher_name:'أ. أمل البلوشية',content:{structure:'items',items:[]}}],
+ c1_library_items:[
+  {id:'l1',grade:'3',subject:'الرياضيات',title:'بطاقات القيمة المكانية — جاهزة للطباعة',
+   kind:'ملف',created_at:DEMO_T(5),teacher_name:'أ. سعاد الحضرمية',rating_avg:4.6,rating_count:9,
+   desc:'اثنتا عشرة بطاقةً محسوسة تُقصّ وتُستعمل في المجموعات.'},
+  {id:'l2',grade:'3',subject:'الرياضيات',title:'ورقة عمل: مقارنة الأعداد',
+   kind:'ورقة عمل',created_at:DEMO_T(19),teacher_name:'أ. مريم الغافرية',rating_avg:4.9,rating_count:14,
+   desc:'عشرون مسألةً متدرّجة مع مفتاح الإجابة.'}],
+ games:[
+  {id:'g1',user_id:'demo',grade:'3',subject:'الرياضيات',unit:'الوحدة الأولى: الأعداد ضمن ١٠٠٠',
+   lesson:'مقارنة الأعداد وترتيبها',title:'مقارنة الأعداد وترتيبها — اختبار سريع',template:'quiz',
+   created_at:DEMO_T(2),content:{structure:'quiz',items:[
+     {q:'أيّ العددين أكبر: ٤٥٦ أم ٤٦٥؟',c:['٤٥٦','٤٦٥'],a:1},
+     {q:'رتّبي تصاعدياً: ٣٠٩ ، ٣٩٠ ، ٣٠٩',c:['٣٠٩ ، ٣٠٩ ، ٣٩٠','٣٩٠ ، ٣٠٩ ، ٣٠٩'],a:0},
+     {q:'أيّ منزلةٍ نقارنها أولاً؟',c:['الآحاد','المئات'],a:1}]}},
+  {id:'g2',user_id:'demo',grade:'3',subject:'العلوم',unit:'الوحدة الأولى: الكائنات الحية',
+   lesson:'أجزاء النبات ووظائفها',title:'أجزاء النبات — مطابقة',template:'match',
+   created_at:DEMO_T(6),content:{structure:'pairs',pairs:[
+     ['الجذر','يمتصّ الماء ويثبّت النبتة'],['الساق','ينقل الماء والغذاء'],
+     ['الورقة','تصنع الغذاء بضوء الشمس'],['الزهرة','تُنتج البذور']]}},
+  {id:'g3',user_id:'demo',grade:'3',subject:'أحب لغتي',unit:'الوحدة الأولى: وطني عُمان',
+   lesson:'الأسماء والأفعال',title:'الأسماء والأفعال — فرز',template:'groups',
+   created_at:DEMO_T(11),content:{structure:'groups',groupNames:['اسم','فعل'],items:[
+     {t:'مِيناء',g:0},{t:'يَكتب',g:1},{t:'سَفينة',g:0},{t:'يَلعب',g:1},{t:'مَدرسة',g:0},{t:'قَرَأ',g:1}]}}
+]};
 function demoBoot(){
   currentUser={id:'demo',email:'demo@khotati.com'};
   profile={
-    display_name:'أ. مريم البوسعيدية',
+    setupDone:true,
+    display_name:'مريم البوسعيدية',   // التحية تُضيف «أ.» بنفسها
     ach_profile:{name:'مريم البوسعيدية',school:'مدرسة الخوض للتعليم الأساسي'},
     stars:{c3a:[24,19,17,15,12,11,9,7,6,4,3,0]},
     beh_log:{c3a:[
@@ -2970,16 +3046,55 @@ function demoBoot(){
       [],[],[{kind:'viol',type:'إزعاج',date:DEMO_T(20)}],[],[],
       [{kind:'viol',type:'إزعاج',date:DEMO_T(0)},{kind:'viol',type:'عدم إحضار الكتاب',date:DEMO_T(1)}],
       []]},
-    grades:[{num:3,classes:[{id:'c3a',name:'٣/أ',color:'#D86048',students:[
+    grades:[{num:3,classes:[{id:'c3a',name:'٣/أ',color:'#D86048',
+      subjects:['الرياضيات','العلوم','أحب لغتي','ديني حياتي','الهوية والمواطنة'],students:[
       'ريّان الحارثي','لُجين البلوشية','عبدالله الرواحي','مها الكندية','يوسف الهنائي','شمسة المعمرية',
       'سالم الشكيلي','رهف الرحبية','حمد العبري','نور السيابية','بدر الحجري','جواهر الفارسية']}]}],
-    plan_units:{},plan_state:{},calendar_events:{},assets:{}
+    semester:'الفصل الأول',
+    timetable:{times:null,schedule:{
+      sun:{0:{c:'c3a',s:'الرياضيات'},1:{c:'c3a',s:'أحب لغتي'},3:{c:'c3a',s:'العلوم'},5:{c:'c3a',s:'ديني حياتي'}},
+      mon:{0:{c:'c3a',s:'أحب لغتي'},2:{c:'c3a',s:'الرياضيات'},4:{c:'c3a',s:'الهوية والمواطنة'}},
+      tue:{1:{c:'c3a',s:'العلوم'},2:{c:'c3a',s:'الرياضيات'},5:{c:'c3a',s:'أحب لغتي'}},
+      wed:{0:{c:'c3a',s:'ديني حياتي'},3:{c:'c3a',s:'الرياضيات'},4:{c:'c3a',s:'العلوم'}},
+      thu:{1:{c:'c3a',s:'أحب لغتي'},2:{c:'c3a',s:'الهوية والمواطنة'},4:{c:'c3a',s:'الرياضيات'}}}},
+    plan_units:{
+      '3|الرياضيات':[
+        {name:'الوحدة الأولى: الأعداد ضمن ١٠٠٠',lessons:[
+          {id:'d-m1',name:'قراءة الأعداد وكتابتها'},{id:'d-m2',name:'القيمة المكانية'},
+          {id:'d-m3',name:'مقارنة الأعداد وترتيبها'},{id:'d-m4',name:'التقريب إلى أقرب عشرة'}]},
+        {name:'الوحدة الثانية: الجمع والطرح',lessons:[
+          {id:'d-m5',name:'الجمع بإعادة التجميع'},{id:'d-m6',name:'الطرح بإعادة التجميع'},
+          {id:'d-m7',name:'حل المسائل الكلامية'}]}],
+      '3|العلوم':[
+        {name:'الوحدة الأولى: الكائنات الحية',lessons:[
+          {id:'d-s1',name:'حاجات النبات'},{id:'d-s2',name:'أجزاء النبات ووظائفها'},
+          {id:'d-s3',name:'دورة حياة النبات'}]}],
+      '3|أحب لغتي':[
+        {name:'الوحدة الأولى: وطني عُمان',lessons:[
+          {id:'d-a1',name:'قراءة: في ميناء صحار'},{id:'d-a2',name:'الأسماء والأفعال'},
+          {id:'d-a3',name:'كتابة: وصف مكان'}]}]},
+    plan_state:{
+      'd-m1':{done:true},'d-m2':{done:true},
+      'd-m3':{prep:DEMO_PREP,prep_at:DEMO_T(1)},
+      'd-s1':{done:true}},
+    user_tasks:[
+      {id:'t1',t:'تجهيز أوراق نشاط القيمة المكانية',done:false},
+      {id:'t2',t:'متابعة سلوك بدر مع وليّ الأمر',done:false},
+      {id:'t3',t:'تسليم سجلّ المتابعة للإدارة',done:true}],
+    achievements:[
+      {id:'a1',type:'win',title:'دورة «استراتيجيات التعلّم النشط»',date:DEMO_T(140),
+       desc:'أربعون ساعةً تدريبية بالمديرية التعليمية بمحافظة مسقط، طُبّقت ثمارُها في حصص الرياضيات.'},
+      {id:'a2',type:'init',title:'مبادرة «ركن القراءة» في الفصل',date:DEMO_T(60),
+       desc:'ركنٌ صغير بخمسين قصة، تُستعار بدفترِ إعارةٍ يديره الطلاب أنفسهم.'},
+      {id:'a3',type:'win',title:'المركز الأول — مسابقة أفضل وسيلة تعليمية',date:DEMO_T(25),
+       desc:'وسيلةٌ محسوسة لتعليم القيمة المكانية من موادّ البيئة.'}],
+    calendar_events:{},assets:{}
   };
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp','demo');
   const nm=document.getElementById('c1-menu-name');
-  if(nm)nm.textContent=profile.display_name;
+  if(nm)nm.textContent='أ. '+profile.display_name;
   document.body.insertAdjacentHTML('beforeend',
     '<div class="demo-bar">'
     +'<span class="db-tag">نسخة تجريبية — بيانات وهمية</span>'
@@ -8395,6 +8510,15 @@ async function fhSend(){
   body.insertAdjacentHTML('beforeend','<div class="fh-brow" id="fh-typing">'+fhAvaHtml()+'<div class="fh-msg bot"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div></div>');
   body.scrollTop=body.scrollHeight;
   fhBusy=true;document.getElementById('fh-send').disabled=true;
+  if(KH_DEMO){
+    // في التجربة نُجيب بردودٍ مكتوبة مسبقاً: التوليد الحيّ مدفوع، ولو فُتح
+    // بلا حساب لاستنزفه أيُّ زائر. ونقول ذلك صراحةً بدل إيهامها بأنه يعمل.
+    await new Promise(r=>setTimeout(r,900));
+    document.getElementById('fh-typing')?.remove();
+    fhMsgs.push({role:'assistant',content:demoFahimReply(msg)});
+    fhBusy=false;document.getElementById('fh-send').disabled=false;
+    fhRender();return;
+  }
   try{
     const{data,error}=await sb.functions.invoke('generate-chat',{body:{
       chatId:fhChatId,message:msg,history:fhMsgs.slice(0,-1).slice(-12),context:fhContext()
@@ -8414,6 +8538,31 @@ async function fhSend(){
   }
   fhBusy=false;document.getElementById('fh-send').disabled=false;
   fhRender();
+}
+/* ردودٌ حقيقية مكتوبة مسبقاً لأسئلة البطاقات الجاهزة. ما عداها نُجيب بصدق
+   أن التوليد الحيّ يحتاج حساباً، ولا نُلفّق جواباً تربوياً لا نضمنه. */
+const DEMO_FAHIM=[
+ [/ترحيب|صباح/, 'جرّبي «دائرة الكلمة الطيبة»: يقف الصفّ دائرةً، وتقولين لجارتكِ كلمةً طيّبة، '
+  +'فتنتقل بينهم حتى تعود إليكِ. تأخذ ثلاث دقائق، وتفتح اليوم بابتسامة.\n\n'
+  +'وإن ضاق الوقت: اسألي «مَن فعل أمس شيئاً يفخر به؟» واسمعي ثلاثة فقط.'],
+ [/مشاغب|هدّئ|هدئ|فوضى|ضجيج/, 'جرّبي **إشارة الهدوء**: ارفعي يدكِ وابدئي عدّاً تنازلياً صامتاً '
+  +'بأصابعكِ من خمسة. مَن يراكِ يرفع يده ويصمت، فينتقل الصمت بينهم بلا صوتٍ منكِ.\n\n'
+  +'الأهمّ: علّميهم الإشارة في وقت الهدوء لا في وقت الفوضى، ثم امدحي أوّل من يستجيب.'],
+ [/يبكي|بكاء|حزين/, 'لا تسأليه «لماذا تبكي؟» أمام الصفّ — السؤال أمام الجميع يزيد انغلاقه.\n\n'
+  +'اجلسي بمستوى نظره، وقولي: «أنا هنا، وحين تجهز أخبرني». أعطِه ورقةً وقلماً '
+  +'إن لم يرغب بالكلام. أكثرُ الأطفال يتكلّمون بعد أن يهدأ الجسد لا قبله.'],
+ [/ولي أمر|وليّ أمر|رسالة|أهل/, 'صيغةٌ مختصرة تصلح للإرسال:\n\n'
+  +'«السلام عليكم، معكم معلمة ابنكم في الصف الثالث. أودّ إطلاعكم على ملاحظةٍ بسيطة '
+  +'في سلوكه داخل الصف مؤخراً، وأثق أن تعاوننا معاً سيساعده. متى يناسبكم التواصل؟»\n\n'
+  +'ابدئي دائماً بما هو إيجابيّ، واذكري سلوكاً محدّداً لا وصفاً عامّاً للطفل.']
+];
+function demoFahimReply(msg){
+  const hit=DEMO_FAHIM.find(([re])=>re.test(msg||''));
+  if(hit)return hit[1]+'\n\n— — —\nهذه إجابةٌ محفوظة في النسخة التجريبية. '
+    +'وفي حسابكِ يقرأ فهيم صفوفكِ وطلابكِ ونجومهم، ويُجيب عن حالتكِ أنتِ.';
+  return 'في النسخة التجريبية يُجيب فهيم عن أسئلة البطاقات الجاهزة أعلاه فقط.\n\n'
+    +'أمّا في حسابكِ فيقرأ صفوفكِ وموادّكِ وسجلّ طلابكِ، ويُجيبكِ عن أي موقفٍ تصفينه بلغتكِ. '
+    +'اضغطي إحدى البطاقات لتري نموذجاً حقيقياً.';
 }
 function fhNewChat(){fhChatId=null;fhMsgs=[];fhRender();}
 async function fhHistory(){
