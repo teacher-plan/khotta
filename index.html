@@ -3252,6 +3252,14 @@ input,textarea,select{font-size:16px !important;}
       <div style="flex:1"><label class="eg-lbl">أقصى عدد أسئلة</label><input type="number" id="ai-max-q" value="30" min="1" max="100"></div>
       <div style="flex:1"><label class="eg-lbl">أقصى عدد صفحات</label><input type="number" id="ai-max-pages" value="5" min="1" max="20"></div>
     </div>
+    <label class="eg-lbl">الحصة الشهرية لكل معلمة</label>
+    <div class="eg-row">
+      <div style="flex:1"><label class="eg-lbl" style="font-weight:400">عمليات نصية</label>
+        <input type="number" id="ai-quota-text" value="300" min="10" max="5000"></div>
+      <div style="flex:1"><label class="eg-lbl" style="font-weight:400">صور</label>
+        <input type="number" id="ai-quota-img" value="200" min="5" max="2000" oninput="aiQuotaHint()"></div>
+    </div>
+    <div id="ai-quota-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.8"></div>
     <label class="eg-lbl">أنواع الأسئلة المسموحة</label>
     <div class="eg-types">
       <label class="eg-chip"><input type="checkbox" class="ai-atype" value="mcq" checked> اختيار من متعدد</label>
@@ -15123,6 +15131,9 @@ async function loadAiSettings(){
     const tc=document.getElementById('ai-teacher-count');if(tc)tc.value=m.teacher_count||'0';
     const en=document.getElementById('ai-gen-enabled');if(en)en.checked=(m.generator_enabled!=='0');
     const mdl=document.getElementById('ai-model');if(mdl){const val=m.ai_model||'deepseek/deepseek-chat';if(![...mdl.options].some(o=>o.value===val)){const o=document.createElement('option');o.value=val;o.textContent=val+' (مخصّص)';o.setAttribute('data-desc','نموذج مخصّص أدخلته يدوياً.');mdl.appendChild(o);}mdl.value=val;egAiModelDesc();}
+    const qt=document.getElementById('ai-quota-text');if(qt)qt.value=m.quota_text||'300';
+    const qi=document.getElementById('ai-quota-img');if(qi)qi.value=m.quota_img||'200';
+    aiQuotaHint();
     const mq=document.getElementById('ai-max-q');if(mq)mq.value=m.max_questions||'30';
     const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
     const at=(m.allowed_types||'mcq,essay,tf,fill,match').split(',');
@@ -15208,6 +15219,15 @@ function egAiModelDesc(){
   const tag=o.getAttribute('data-tag'),desc=o.getAttribute('data-desc')||'';
   box.innerHTML=(tag?`<span style="display:inline-block;background:rgba(46,125,50,.12);color:#2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:6px">${escHtml(tag)}</span>`:'')+escHtml(desc);
 }
+// العرض التقديمي يستهلك ست صور، فرقم الحصة وحده لا يقول شيئاً للمشرفة —
+// نترجمه إلى عدد العروض والملخصات التي يتيحها فعلاً.
+const AI_SLIDE_IMGS=6;
+function aiQuotaHint(){
+  const el=document.getElementById('ai-quota-hint');if(!el)return;
+  const n=parseInt(document.getElementById('ai-quota-img')?.value)||0;
+  el.textContent=n?`تكفي نحو ${egToArabic(Math.floor(n/AI_SLIDE_IMGS))} عرضاً تقديمياً (كل عرض ${egToArabic(AI_SLIDE_IMGS)} صور)، أو ${egToArabic(n)} ملخصاً بصرياً.`:'';
+}
+
 async function saveAiLimits(){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
   const enabled=document.getElementById('ai-gen-enabled').checked?'1':'0';
@@ -15223,7 +15243,9 @@ async function saveAiLimits(){
       {key:'ai_model',value:model,updated_at:new Date().toISOString()},
       {key:'max_questions',value:String(maxQ),updated_at:new Date().toISOString()},
       {key:'max_pages',value:String(maxP),updated_at:new Date().toISOString()},
-      {key:'allowed_types',value:types,updated_at:new Date().toISOString()}
+      {key:'allowed_types',value:types,updated_at:new Date().toISOString()},
+      {key:'quota_text',value:String(parseInt(document.getElementById('ai-quota-text').value)||300),updated_at:new Date().toISOString()},
+      {key:'quota_img',value:String(parseInt(document.getElementById('ai-quota-img').value)||200),updated_at:new Date().toISOString()}
     ],{onConflict:'key'});
     if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ التحكم والحدود','ok');
   }catch(e){toast('حدث خطأ',true);}

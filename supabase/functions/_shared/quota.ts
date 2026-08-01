@@ -32,7 +32,10 @@ async function ensureUsageTable() {
 export async function takeQuota(admin: any, userId: string, email: string, kind: "text" | "img", st: Record<string, string>) {
   if ((email || "").toLowerCase() === ADMIN_EMAIL) return { ok: true, used: 0, limit: 0 };
   const month = new Date().toISOString().slice(0, 7);
-  const limit = parseInt(st[kind === "img" ? "quota_img" : "quota_text"] || "") || (kind === "img" ? 80 : 300);
+  // الافتراضي للصور ٢٠٠ لا ٨٠: ٨٠ وُضعت حين كان الملخص البصري صورةً واحدة
+  // لكل درس، ثم صار العرض التقديمي يستهلك ستّاً — فصار الافتراضي يكفي ثلاثة
+  // عشر عرضاً في الشهر، وهو ما استنفدته معلّمةٌ واحدة في جلسة.
+  const limit = parseInt(st[kind === "img" ? "quota_img" : "quota_text"] || "") || (kind === "img" ? 200 : 300);
 
   const attempt = async () => {
     const { data, error } = await admin.from("ai_usage").select("count")
