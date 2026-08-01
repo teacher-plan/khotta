@@ -1952,9 +1952,35 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
 <div id="c1-menu">
   <div class="c1-mi" id="c1-menu-name" style="color:var(--muted);font-size:11.5px;cursor:default">—</div>
   <div class="c1-mi" onclick="acctOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9.4 4c0 .6-.05 1.2-.15 1.75l2.1 1.63-2 3.46-2.5-1a7.6 7.6 0 0 1-3 1.74L15.5 22h-4l-.35-2.42a7.6 7.6 0 0 1-3-1.74l-2.5 1-2-3.46 2.1-1.63a8.6 8.6 0 0 1 0-3.5L1.65 8.62l2-3.46 2.5 1a7.6 7.6 0 0 1 3-1.74L11.5 2h4l.35 2.42c1.1.35 2.12.94 3 1.74l2.5-1 2 3.46-2.1 1.63c.1.55.15 1.15.15 1.75z"/></svg> إعدادات الحساب</div>
+  <div class="c1-mi" onclick="pwOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm3 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg> تغيير كلمة المرور</div>
   <div class="c1-mi" onclick="guideOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm1.8-7.2-.9.9c-.7.7-1.1 1.3-1.1 2.3h-2v-.5c0-1 .4-1.9 1.1-2.6l1.2-1.2c.4-.3.6-.8.6-1.3a2 2 0 0 0-4 0H8a4 4 0 0 1 8 0c0 .8-.3 1.5-.9 2.1l-.3.3z"/></svg> دليل الاستخدام</div>
   <div class="c1-mi danger" onclick="c1ResetData()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 3v1H4v2h1l1 14h12l1-14h1V4h-5V3H9zm2 5h2v8h-2V8z"/></svg> حذف كل بياناتي</div>
   <div class="c1-mi danger" onclick="confirmSignOut()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 9V5l-7 7 7 7v-4h8V9h-8zm6 10v2H3V3h13v2H5v14h11z"/></svg> تسجيل الخروج</div>
+</div>
+
+<!-- ══ تغيير كلمة المرور ══
+     كان كلُّ نسيانٍ يمرّ بالإدارة: تُعاد كلمة المرور من لوحة الإحالات وتُنقل
+     يدوياً. والمعلّمة داخلة أصلاً حين تفتح هذه القائمة، فجلستُها نفسها هي
+     إثبات هُويّتها — لا حاجة لبريدٍ ولا لانتظار ردٍّ من أحد. -->
+<div class="c1-modal" id="pw-modal" onclick="if(event.target===this)pwClose()">
+  <div class="c1-mbox">
+    <h3>تغيير كلمة المرور</h3>
+    <p class="acct-note" id="pw-who"></p>
+    <div class="grp">كلمة المرور الجديدة</div>
+    <input class="acct-in" id="pw-new" type="password" dir="ltr" style="text-align:left"
+           autocomplete="new-password" placeholder="٨ أحرف فأكثر" oninput="pwCheck()"/>
+    <div class="grp">أعيدي كتابتها</div>
+    <!-- التكرار ليس تزيّناً: خطأٌ مطبعيٌّ واحد في كلمةٍ مخفيّة يُخرجها من
+         حسابها عند أوّل خروج، ولا تعرف ما الذي كتبته. -->
+    <input class="acct-in" id="pw-new2" type="password" dir="ltr" style="text-align:left"
+           autocomplete="new-password" placeholder="نفس الكلمة" oninput="pwCheck()"/>
+    <label class="acct-note" style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:2px">
+      <input type="checkbox" id="pw-show" onchange="pwToggleShow()"/> إظهار الكلمة
+    </label>
+    <p class="acct-note" id="pw-msg" style="min-height:20px"></p>
+    <div class="c1-mrow"><button class="c1-mbtn no" onclick="pwClose()">إلغاء</button>
+      <button class="c1-mbtn go" id="pw-save" onclick="pwSave()" disabled>حفظ</button></div>
+  </div>
 </div>
 
 <!-- ══ إعدادات الحساب ══ -->
@@ -3169,6 +3195,68 @@ async function c1ResetData(){
     toast('حُذفت بياناتك — نبدأ من جديد');
     setTimeout(()=>location.reload(),900);
   }catch(e){cyBusyDone();toast('تعذّر الحذف — تحققي من الاتصال',true);}
+}
+
+/* ══ تغيير كلمة المرور ══
+   الجلسة القائمة هي الإثبات، فلا نطلب الكلمة القديمة: أكثرُ من تحتاج التغيير
+   هي من لا تذكرها أصلاً ودخلت بجلسةٍ محفوظة — وطلبُها يسدّ الباب في وجه
+   الحالة التي وُضع لها الزرّ. وهو اتّساقٌ مع «حذف كل بياناتي» في القائمة
+   نفسها، وهو أشدّ أثراً ولا يطلب سوى تأكيد. */
+const PW_MIN=8;
+function pwOpen(){
+  document.getElementById('c1-menu').classList.remove('open');
+  if(KH_DEMO){toast('تغيير كلمة المرور مُعطَّل في التجربة — وهو يعمل في حسابكِ');return;}
+  if(!currentUser){toast('سجّلي الدخول أولاً',true);return;}
+  const who=document.getElementById('pw-who');
+  if(who)who.innerHTML='كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(currentUser.email||'')+'</bdi>. تبقين داخل حسابكِ بعد التغيير.';
+  ['pw-new','pw-new2'].forEach(id=>{document.getElementById(id).value='';});
+  const sh=document.getElementById('pw-show');
+  if(sh)sh.checked=false;
+  pwToggleShow();
+  pwCheck();
+  document.getElementById('pw-modal').classList.add('open');
+  setTimeout(()=>{try{document.getElementById('pw-new').focus();}catch(e){}},60);
+}
+function pwClose(){document.getElementById('pw-modal').classList.remove('open');}
+function pwToggleShow(){
+  const t=document.getElementById('pw-show').checked?'text':'password';
+  ['pw-new','pw-new2'].forEach(id=>{document.getElementById(id).type=t;});
+}
+// الرسالة تسبق الضغط لا تتبعه: كلمةٌ قصيرة أو غير متطابقة تُرفض من الخادم
+// برسالةٍ إنجليزية لا تفهمها المعلّمة، فنقولها بالعربية قبل أن تصل إليه.
+function pwCheck(){
+  const a=document.getElementById('pw-new').value,b=document.getElementById('pw-new2').value;
+  const msg=document.getElementById('pw-msg'),btn=document.getElementById('pw-save');
+  let err='';
+  if(a&&a.length<PW_MIN)err='الكلمة أقصر من '+PW_MIN+' أحرف';
+  else if(a&&b&&a!==b)err='الكلمتان غير متطابقتين';
+  msg.textContent=err;
+  msg.style.color=err?'var(--red)':'var(--muted)';
+  if(!err&&a&&b){msg.textContent='جاهزة للحفظ';msg.style.color='var(--ok,#2E7D32)';}
+  btn.disabled=!(a&&b&&a===b&&a.length>=PW_MIN);
+}
+async function pwSave(){
+  const pw=document.getElementById('pw-new').value;
+  const btn=document.getElementById('pw-save');
+  btn.disabled=true;btn.textContent='يُحفظ…';
+  try{
+    const{error}=await sb.auth.updateUser({password:pw});
+    if(error)throw error;
+    pwClose();
+    // التنبيه صريح: نجاحٌ صامت يجعلها تشكّ أتغيّرت الكلمة أم لا، فتُعيدها.
+    toast('تغيّرت كلمة المرور — استعمليها في الدخول القادم');
+  }catch(e){
+    const m=String(e&&e.message||'');
+    document.getElementById('pw-msg').textContent=
+      /different|same/i.test(m)?'هذه كلمتكِ الحالية — اختاري كلمةً جديدة'
+      :/weak|short|least/i.test(m)?'كلمةٌ ضعيفة — أطيلي الكلمة أو نوّعي حروفها'
+      :/session|expired|jwt/i.test(m)?'انتهت جلستكِ — سجّلي الدخول ثم أعيدي المحاولة'
+      :'تعذّر الحفظ — تحقّقي من الاتصال وأعيدي المحاولة';
+    document.getElementById('pw-msg').style.color='var(--red)';
+  }finally{
+    btn.textContent='حفظ';
+    pwCheck();
+  }
 }
 
 async function confirmSignOut(){
