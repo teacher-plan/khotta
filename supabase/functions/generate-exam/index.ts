@@ -10,7 +10,7 @@
 //   (SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY متوفّران تلقائياً)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota } from "../_shared/quota.ts";
 import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
@@ -62,6 +62,12 @@ Deno.serve(async (req) => {
     // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
     const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
     if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
+    // على توليدٍ لم تستلمه.
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "text");
+      return json(body, status);
+    };
 
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
 
@@ -155,7 +161,7 @@ Deno.serve(async (req) => {
     });
 
     const or = await orResp.json();
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
 
     const content = or?.choices?.[0]?.message?.content || "";
     let parsed: unknown;
@@ -170,6 +176,7 @@ Deno.serve(async (req) => {
     const questions = (parsed as { questions?: unknown[] })?.questions || [];
     return json({ questions, model, usage: or?.usage || null });
   } catch (e) {
+    // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);
   }
 });

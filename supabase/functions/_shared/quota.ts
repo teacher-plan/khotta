@@ -62,3 +62,24 @@ export async function takeQuota(admin: any, userId: string, email: string, kind:
     return { ok: true, used: 0, limit };
   }
 }
+
+// إعادةُ ما خُصم عند فشل التوليد.
+// الخصم يقع قبل النداء كي لا يُتجاوز الحدّ بطلباتٍ متوازية، لكن المعلمة كانت
+// تُحاسَب على توليدٍ لم تستلمه: ست محاولاتٍ فاشلة لعرضٍ واحد تلتهم ستّاً من
+// حصتها بلا مخرَج واحد — وهو ما استنزف الحصة كاملةً في جلسة واحدة.
+// deno-lint-ignore no-explicit-any
+export async function refundQuota(admin: any, userId: string, email: string, kind: "text" | "img") {
+  if ((email || "").toLowerCase() === ADMIN_EMAIL) return;
+  const month = new Date().toISOString().slice(0, 7);
+  try {
+    const { data } = await admin.from("ai_usage").select("count")
+      .eq("user_id", userId).eq("month", month).eq("kind", kind).maybeSingle();
+    const used = data?.count || 0;
+    if (used <= 0) return;
+    await admin.from("ai_usage").update({ count: used - 1 })
+      .eq("user_id", userId).eq("month", month).eq("kind", kind);
+  } catch (e) {
+    // الاسترجاع اجتهادي: فشله يترك خصماً زائداً، وهو أهون من منع الردّ
+    console.error("quota refund failed", String((e as { message?: string })?.message || e));
+  }
+}

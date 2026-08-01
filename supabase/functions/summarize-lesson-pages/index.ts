@@ -9,7 +9,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota } from "../_shared/quota.ts";
 import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
@@ -47,6 +47,12 @@ Deno.serve(async (req) => {
     // حصة اقتصادية (نص) رغم أن المدخل صور — المخرج نص قصير فقط
     const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
     if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
+    // على توليدٍ لم تستلمه.
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "text");
+      return json(body, status);
+    };
 
     const b = await req.json().catch(() => ({}));
     const grade = String(b.grade || "");
@@ -88,11 +94,12 @@ Deno.serve(async (req) => {
       }),
     });
     const or = await r.json();
-    if (!r.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
     const summary = (or?.choices?.[0]?.message?.content || "").trim();
-    if (!summary) return json({ error: "no_summary" }, 502);
+    if (!summary) return refund({ error: "no_summary" }, 502);
     return json({ summary, model, usage: or?.usage || null });
   } catch (e) {
+    // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);
   }
 });
