@@ -1671,16 +1671,18 @@ input,textarea,select{font-size:16px !important;}
 </style>
 <style id="orb-css">
 .orb-t{font-size:12.5px;font-weight:800;margin:14px 0 8px;color:var(--text)}
-.orb-row{display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 0;border-top:1px solid var(--border)}
+.orb-row{display:flex;align-items:center;gap:10px;font-size:12px;padding:9px 0;border-top:1px solid var(--border)}
 .orb-row .n{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-weight:800;font-size:11px;background:var(--border);color:var(--text)}
-.orb-row .g{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orb-row .g{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.orb-row .g b{font-weight:800}
+.orb-row .g small{font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.6}
 .orb-row .bar{flex:none;width:70px;height:6px;border-radius:99px;background:var(--border);overflow:hidden}
 .orb-row .bar i{display:block;height:100%;border-radius:99px;background:currentColor}
-.orb-row .v{flex:none;font-weight:800;font-variant-numeric:tabular-nums;min-width:64px;text-align:left;direction:ltr}
+.orb-row .v{flex:none;font-weight:800;font-variant-numeric:tabular-nums;min-width:66px;text-align:left;direction:ltr}
 .orb-row.good{color:#2F7D74}.orb-row.warn{color:#B06D18}.orb-row.bad{color:#A83030}
 .orb-row.off{color:var(--muted);opacity:.75}
-.orb-row.off .v{font-size:10.5px;font-weight:600}
+.orb-row.off .v{font-size:9.5px;font-weight:700;line-height:1.5;min-width:110px}
 </style>
 </head>
 <body>
@@ -6534,22 +6536,27 @@ async function loadOrBalance(force){
     // المفتاح التالي، والقائمة المختصرة على الموجود تُخفي التقسيم كلَّه.
     const kb=document.getElementById('orb-keys');
     if(kb){
-      const NM=['التحضير وفهيم والألعاب','الإنفوجرافيك','الشرائح','الإدارة'];
+      // أسماء المجموعات ومهامّها — مطابقة لـ KEY_GROUP في _shared/ai.ts.
+      // الاسم وحده لا يكفي: «الإدارة» لا تقول إن تقطيع الكتب منها، فيظنّ
+      // المشرف أن مفتاحاً معطّلاً لا يضرّ حتى يقف رفع كتابٍ جديد.
+      const NM=['التحضير','الإنفوجرافيك','الشرائح','الإدارة'];
+      const TK=['خطة الدرس · فهيم · الألعاب · تلخيص صفحات الكتاب',
+                'الملخص البصري للدرس',
+                'العرض المصوَّر · صور الشرائح · عروض ٥-١٢',
+                'تقطيع الكتب · استخراج الدروس · مولّد الاختبارات · خلفيات الألعاب · وضعيات فهيم'];
       const EV=['OPENROUTER_API_KEY','OPENROUTER_API_KEY_2','OPENROUTER_API_KEY_3','OPENROUTER_API_KEY_4'];
       const ks=Array.isArray(data.keys)?data.keys:[];
       const rows=[0,1,2,3].map(i=>{
         const k=ks.find(x=>x.key===i+1)||{key:i+1,configured:false};
-        if(!k.configured)return `<div class="orb-row off">
-          <span class="n">${egToArabic(i+1)}</span>
-          <span class="g">${NM[i]}</span>
-          <span class="v" dir="ltr">${EV[i]} — غير مضاف</span></div>`;
-        if(k.ok===false)return `<div class="orb-row bad">
-          <span class="n">${egToArabic(i+1)}</span><span class="g">${NM[i]}</span>
+        const head=`<span class="n">${egToArabic(i+1)}</span>
+          <span class="g"><b>${NM[i]}</b><small>${TK[i]}</small></span>`;
+        if(!k.configured)return `<div class="orb-row off">${head}
+          <span class="v" dir="ltr">${EV[i]}<br/>غير مضاف</span></div>`;
+        if(k.ok===false)return `<div class="orb-row bad">${head}
           <span class="v">مفتاح معطّل</span></div>`;
         const pct=k.total>0?Math.round(k.remaining/k.total*100):0;
         const cls=pct<15?'bad':pct<40?'warn':'good';
-        return `<div class="orb-row ${cls}">
-          <span class="n">${egToArabic(i+1)}</span><span class="g">${NM[i]}</span>
+        return `<div class="orb-row ${cls}">${head}
           <span class="bar"><i style="width:${pct}%"></i></span>
           <span class="v">$${Number(k.remaining).toFixed(2)}</span></div>`;
       }).join('');
