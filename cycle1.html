@@ -676,6 +676,12 @@ body.inapp #c1-notif-btn{display:flex}
 .acct-dot{width:11px;height:11px;border-radius:50%;flex:none}
 .acct-g{font-size:12px;font-weight:800;color:var(--muted);flex:none;min-width:74px}
 .acct-note{font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:9px}
+.acct-diag{border:1.5px solid var(--border);background:var(--surface);color:var(--muted);
+  border-radius:10px;padding:8px 16px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.acct-diag:hover{border-color:var(--red);color:var(--red)}
+#acct-diag-out{margin-top:10px;padding:10px;border-radius:10px;background:var(--ink);color:#EDE4D6;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.75;direction:ltr;
+  text-align:left;white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto}
 .acct-del{flex:none;width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:19px;line-height:1;
   border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit}
 .acct-del:hover{border-color:var(--red);color:var(--red)}
@@ -1977,7 +1983,11 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
     </a>
     <div class="c1-mrow"><button class="c1-mbtn no" onclick="acctClose()">إغلاق</button>
       <button class="c1-mbtn go" onclick="acctSave()">حفظ</button></div>
-    <div id="acct-build" style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:10px;direction:ltr"></div>
+    <div style="text-align:center;margin-top:12px">
+      <button type="button" class="acct-diag" onclick="diagRun()">فحص الاتصال بالخدمات</button>
+    </div>
+    <pre id="acct-diag-out" hidden></pre>
+    <div id="acct-build" style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:10px"></div>
   </div>
 </div>
 
@@ -3367,6 +3377,44 @@ function acctDigits(s){
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
                       .replace(/\D/g,'');
 }
+// ═ فحصٌ تشخيصي ═
+// أربع جولاتٍ ضاعت في تخمين سبب فشل التوليد، لأن الواجهة لا تُظهر إلا رسالةً
+// عامّة. هذا الفحص ينادي كل خدمةٍ نداءً حقيقياً واحداً ويعرض حالة الردّ وجسمه
+// كما هما — فيصير التشخيص من دليلٍ لا من ظنّ.
+const DIAG=[
+  {k:'الحصة المتبقية', fn:null},
+  {k:'خطة الشرائح',    fn:'generate-lesson-slides', body:{grade:'1',subject:'الرياضيات',lesson:'فحص',slideCount:6,brief:true}},
+  {k:'رسم صورة',       fn:'generate-infographic',   body:{grade:'1',subject:'الرياضيات',lessonNames:['فحص'],teacherPrompt:'دائرة حمراء بسيطة',size:'1K',aspect:'1:1'}},
+  {k:'محادثة فهيم',    fn:'generate-chat',          body:{message:'فحص'}}
+];
+async function diagRun(){
+  const out=document.getElementById('acct-diag-out');
+  const btn=document.querySelector('.acct-diag');
+  if(!out)return;
+  out.hidden=false;out.textContent='';
+  if(btn){btn.disabled=true;btn.textContent='جارٍ الفحص…';}
+  const log=t=>{out.textContent+=t+'\n';out.scrollTop=out.scrollHeight;};
+  log('build='+KH_BUILD+'  '+new Date().toISOString().slice(0,16));
+  try{
+    const month=new Date().toISOString().slice(0,7);
+    const{data:u}=await sb.from('ai_usage').select('kind,count').eq('month',month);
+    log('usage: '+JSON.stringify(u||[]));
+  }catch(e){log('usage: ERR '+e.message);}
+  for(const d of DIAG){
+    if(!d.fn)continue;
+    const t0=Date.now();
+    try{
+      const res=await sb.functions.invoke(d.fn,{body:d.body});
+      const st=(res.response||(res.error&&res.error.context)||{}).status||(res.error?'?':200);
+      const why=await c1FnErr(res);
+      const okKey=res.data&&(res.data.slides||res.data.image||res.data.reply);
+      log(`${d.fn}: status=${st} ${Math.round((Date.now()-t0)/1000)}s ${okKey?'OK':'FAIL '+(why||'').slice(0,120)}`);
+    }catch(e){log(`${d.fn}: THREW ${String(e).slice(0,120)}`);}
+  }
+  log('— انتهى الفحص —');
+  if(btn){btn.disabled=false;btn.textContent='فحص الاتصال بالخدمات';}
+}
+
 let acctRoster={},acctCls=null;
 function acctRenderRoster(){
   const tabs=document.getElementById('acct-tabs'),box=document.getElementById('acct-classes');
@@ -3414,8 +3462,9 @@ function acctOpen(){
   const wa=document.getElementById('acct-wa');
   const msg='السلام عليكم، أنا '+(profile.display_name||'معلمة')+' من منصّة خُطّة، ولديّ استفسار:';
   wa.href='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent(msg);
+  // bdi يعزل الرمز اللاتيني عن اتجاه الجملة العربية، وإلا انقلب ترتيبهما
   const bd=document.getElementById('acct-build');
-  if(bd)bd.textContent='نسخة '+KH_BUILD;
+  if(bd)bd.innerHTML='نسخة <bdi dir="ltr">'+escHtml(KH_BUILD)+'</bdi>';
   document.getElementById('acct-modal').classList.add('open');
   acctQuota();
 }
@@ -3437,12 +3486,15 @@ async function acctQuota(){
     else{
       const month=new Date().toISOString().slice(0,7);
       // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
-      const{data,error}=await sb.from('ai_usage').select('kind,count').eq('month',month);
-      if(error)throw error;
-      (data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
+      // مهلةٌ صريحة: طلبٌ لا يعود كان يترك «يجري الحساب…» معلّقاً إلى الأبد
+      const cap=(pr,d)=>Promise.race([Promise.resolve(pr).catch(()=>d),
+        new Promise(r=>setTimeout(()=>r(d),12000))]);
+      const q=await cap(sb.from('ai_usage').select('kind,count').eq('month',month),null);
+      if(!q||q.error)throw new Error('usage');
+      (q.data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
       // نفس افتراضات الخادم، كي لا يعرض العدّاد حدّاً يخالف ما يفرضه فعلاً
-      qT=parseInt(await c1Setting('quota_text')||'')||300;
-      qI=parseInt(await c1Setting('quota_img')||'')||80;
+      qT=parseInt(await cap(c1Setting('quota_text'),'')||'')||300;
+      qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||80;
     }
     box.innerHTML=bar('توليد نصّي (خطط، اختبارات، ألعاب)',text,qT)
                  +bar('توليد صور (إنفوجرافيك، شرائح)',img,qI)
