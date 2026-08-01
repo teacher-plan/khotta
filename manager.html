@@ -3484,7 +3484,7 @@ input,textarea,select{font-size:16px !important;}
       <div style="flex:1"><label class="eg-lbl" style="font-weight:400">عمليات نصية</label>
         <input type="number" id="ai-quota-text" value="300" min="10" max="5000"></div>
       <div style="flex:1"><label class="eg-lbl" style="font-weight:400">صور</label>
-        <input type="number" id="ai-quota-img" value="80" min="5" max="2000" oninput="aiQuotaHint()"></div>
+        <input type="number" id="ai-quota-img" value="200" min="5" max="2000" oninput="aiQuotaHint()"></div>
     </div>
     <div id="ai-quota-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.8"></div>
     <label class="eg-lbl">أنواع الأسئلة المسموحة</label>
@@ -5704,7 +5704,7 @@ async function mc1LoadUsage(force){
     const{data:cfg}=await sb.from('ai_settings').select('key,value').in('key',['quota_text','quota_img']);
     const st={};(cfg||[]).forEach(r=>{st[r.key]=r.value;});
     // نفس الافتراضات المزروعة في دالّة الحصص على الخادم
-    const qT=parseInt(st.quota_text||'')||300, qI=parseInt(st.quota_img||'')||80;
+    const qT=parseInt(st.quota_text||'')||300, qI=parseInt(st.quota_img||'')||200;
     const agg={};
     (use||[]).forEach(r=>{
       const a=agg[r.user_id]||(agg[r.user_id]={text:0,img:0});
@@ -15919,7 +15919,7 @@ async function loadAiSettings(){
     const en=document.getElementById('ai-gen-enabled');if(en)en.checked=(m.generator_enabled!=='0');
     const mdl=document.getElementById('ai-model');if(mdl){const val=m.ai_model||'deepseek/deepseek-chat';if(![...mdl.options].some(o=>o.value===val)){const o=document.createElement('option');o.value=val;o.textContent=val+' (مخصّص)';o.setAttribute('data-desc','نموذج مخصّص أدخلته يدوياً.');mdl.appendChild(o);}mdl.value=val;egAiModelDesc();}
     const qt=document.getElementById('ai-quota-text');if(qt)qt.value=m.quota_text||'300';
-    const qi=document.getElementById('ai-quota-img');if(qi)qi.value=m.quota_img||'80';
+    const qi=document.getElementById('ai-quota-img');if(qi)qi.value=m.quota_img||'200';
     aiQuotaHint();
     const mq=document.getElementById('ai-max-q');if(mq)mq.value=m.max_questions||'30';
     const mp=document.getElementById('ai-max-pages');if(mp)mp.value=m.max_pages||'5';
@@ -16023,7 +16023,7 @@ async function saveAiLimits(){
       {key:'max_pages',value:String(maxP),updated_at:new Date().toISOString()},
       {key:'allowed_types',value:types,updated_at:new Date().toISOString()},
       {key:'quota_text',value:String(parseInt(document.getElementById('ai-quota-text').value)||300),updated_at:new Date().toISOString()},
-      {key:'quota_img',value:String(parseInt(document.getElementById('ai-quota-img').value)||80),updated_at:new Date().toISOString()}
+      {key:'quota_img',value:String(parseInt(document.getElementById('ai-quota-img').value)||200),updated_at:new Date().toISOString()}
     ],{onConflict:'key'});
     if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ التحكم والحدود','ok');
   }catch(e){toast('حدث خطأ',true);}
