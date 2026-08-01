@@ -79,6 +79,8 @@ tr:last-child td{border-bottom:none;}
 .status-badge.paid{background:rgba(26,122,58,.1);color:var(--green);}
 .status-badge.pending{background:rgba(184,134,11,.1);color:var(--gold);}
 .action-btn{background:var(--card);border:1.5px solid var(--gold);color:var(--gold);border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:800;white-space:nowrap;}
+.action-btn.primary{background:linear-gradient(135deg,#1a7a3a,#27ae60);border-color:#1a7a3a;color:#fff}
+.action-btn:disabled{opacity:.6}
 .action-btn.done{border-color:var(--green);color:var(--green);}
 .delete-btn{background:rgba(192,57,43,.08);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:6px 8px;}
 .empty{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
@@ -553,6 +555,47 @@ function genRandomPassword(){
   for(let i=0;i<8;i++)p+=chars[bytes[i]%chars.length];
   return p;
 }
+// ═ تفعيل الحساب بضغطة ═
+// المسار قبله: توليد بريدٍ صناعي (c12@khotati.app) ثم نسخ كلمة المرور من
+// نافذةٍ وإرسالها يدوياً. فيه خطوتان يدويّتان وخطرُ ضياع كلمة المرور، وبريدٌ
+// لا تعرفه المعلّمة فلا تستطيع استرجاع كلمتها بنفسها أبداً.
+// هذا يستعمل بريدها الذي سجّلت به، ويرسل إليه بياناتها.
+async function activateTeacher(regId){
+  const r=registrations.find(x=>x.id===regId);
+  if(!r)return;
+  if(!r.email){alert('❌ لا يوجد بريد إلكتروني في تسجيلها — استخدم «إنشاء حساب مخصص».');return;}
+  if(!confirm(`تفعيل حساب ${r.name}؟\n\nسيُنشأ الحساب ببريدها ${r.email} وتصلها بياناتها على البريد نفسه.`))return;
+  const btn=document.getElementById('activate-btn-'+regId);
+  if(btn){btn.disabled=true;btn.textContent='⏳ يُفعّل...';}
+  try{
+    const res=await sb.functions.invoke('activate-teacher',{body:{regId}});
+    const{data,error}=res;
+    // عند ردٍّ غير 2xx تُفرّغ مكتبة سوبابيز data وتضع الجسم في error.context،
+    // فقراءة data.error وحدها تُعيد رسالةً عامّة لا تدلّ على شيء.
+    let why=(data&&data.error)||'';
+    if(!why&&error){
+      const ctx=res.response||error.context;
+      if(ctx&&ctx.clone){try{const j=await ctx.clone().json();why=(j&&j.error)||'';}catch(_){}}
+    }
+    if(error||!data||!data.ok){
+      const msg=why==='already_active'?'الحساب مفعَّل أصلاً'
+        :why==='email_in_use'?'البريد مستعمل في حسابٍ آخر — استخدم «إنشاء حساب مخصص»'
+        :why==='bad_email'?'البريد المسجَّل غير صالح'
+        :why||(error&&error.message)||'خطأ غير معروف';
+      throw new Error(msg);
+    }
+    await loadRegistrations();
+    renderAccountsTab();
+    // نعرض كلمة المرور للمشرف حتى لو نجح البريد: رسالةٌ قد تقع في المهملات،
+    // وبقاؤه بلا نسخةٍ يعني معلّمةً معطَّلة حتى إعادة تعيينٍ جديدة.
+    alert(data.mailed
+      ? `✅ فُعِّل الحساب وأُرسلت البيانات إلى ${data.email}\n\nكلمة المرور: ${data.password}\n(احتفظ بها — قد تقع الرسالة في المهملات)`
+      : `✅ فُعِّل الحساب — لكن لم يُرسَل البريد.\n\nالبريد: ${data.email}\nكلمة المرور: ${data.password}\n\nأرسلها إليها الآن.\n\nالسبب: ${data.mailReason||'خدمة البريد غير مهيّأة'}`);
+  }catch(e){
+    alert('❌ تعذّر التفعيل: '+(e.message||''));
+    if(btn){btn.disabled=false;btn.textContent='⚡ تفعيل الحساب';}
+  }
+}
 async function generateTeacherAccount(regId){
   const btn=document.getElementById('gen-account-btn-'+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ جارٍ الإنشاء...';}
@@ -652,7 +695,8 @@ function renderAccountsTab(){
     const actionBtn=accEmail
       ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="showTeacherAccount(${r.id})">👁 عرض البيانات</button>
          <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
-      :`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
+      :`<button class="action-btn primary" id="activate-btn-${r.id}" onclick="activateTeacher(${r.id})">⚡ تفعيل الحساب</button>
+         <button class="action-btn" id="gen-account-btn-${r.id}" onclick="generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
          <button class="action-btn" id="custom-account-btn-${r.id}" onclick="createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button>`;
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
