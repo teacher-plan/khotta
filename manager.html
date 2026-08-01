@@ -1749,6 +1749,19 @@ input,textarea,select{font-size:16px !important;}
 .mgrc1-tile.now{border-color:#487848}
 .mgrc1-tile.now::after{content:"✓";position:absolute;top:9px;inset-inline-end:9px;width:21px;height:21px;border-radius:50%;background:#487848;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
 </style>
+<style id="orb-css">
+.orb-t{font-size:12.5px;font-weight:800;margin:14px 0 8px;color:var(--text)}
+.orb-row{display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 0;border-top:1px solid var(--border)}
+.orb-row .n{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:11px;background:var(--border);color:var(--text)}
+.orb-row .g{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orb-row .bar{flex:none;width:70px;height:6px;border-radius:99px;background:var(--border);overflow:hidden}
+.orb-row .bar i{display:block;height:100%;border-radius:99px;background:currentColor}
+.orb-row .v{flex:none;font-weight:800;font-variant-numeric:tabular-nums;min-width:64px;text-align:left;direction:ltr}
+.orb-row.good{color:#2F7D74}.orb-row.warn{color:#B06D18}.orb-row.bad{color:#A83030}
+.orb-row.off{color:var(--muted);opacity:.75}
+.orb-row.off .v{font-size:10.5px;font-weight:600}
+</style>
 </head>
 <body>
 
@@ -3646,6 +3659,7 @@ input,textarea,select{font-size:16px !important;}
     <div class="eg-credit-track" style="height:12px;margin-top:10px"><div class="eg-credit-fill" id="orb-fill" style="width:0%"></div></div>
     <button class="eg-export" style="margin-top:12px;width:auto;padding:8px 14px" onclick="loadOrBalance(true)">🔄 تحديث الرصيد</button>
     <span id="orb-status" style="font-size:11.5px;color:var(--muted);margin-right:8px"></span>
+    <div id="orb-keys"></div>
   </div>
   <!-- ميزانية التوليد -->
   <div class="eg-card">
@@ -3656,7 +3670,6 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <button class="eg-export" style="margin-top:10px;width:auto;padding:8px 14px;flex:none" onclick="aiFetchTeacherCount()">🔄 جلب العدد الفعلي</button>
     <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted);font-size:13px;font-weight:600">إجمالي الميزانية السنوية</span><span id="ai-total-budget" style="color:var(--gold);font-size:18px;font-weight:800">$0</span></div>
-    <div id="orb-keys"></div>
     <button class="eg-generate" style="margin-top:12px" onclick="saveAiBudget()">💾 حفظ الميزانية</button>
   </div>
 
@@ -7263,22 +7276,30 @@ async function loadOrBalance(force){
     document.getElementById('orb-used').textContent=fmt(data.used);
     const pct=data.total>0?Math.round(data.remaining/data.total*100):0;
     document.getElementById('orb-fill').style.width=pct+'%';
-    // رصيد كل مفتاح على حدة: المجموع يُخفي أن أحدها على وشك النفاد، فتتوقّف
-    // المهامّ المسندة إليه وإن بقي في غيره رصيد وفير.
+    // الخانات الأربع دائماً — بما لم يُضَف بعد: المشرف يحتاج أن يرى أين يضع
+    // المفتاح التالي، والقائمة المختصرة على الموجود تُخفي التقسيم كلَّه.
     const kb=document.getElementById('orb-keys');
     if(kb){
+      const NM=['التحضير وفهيم والألعاب','الإنفوجرافيك','الشرائح','الإدارة'];
+      const EV=['OPENROUTER_API_KEY','OPENROUTER_API_KEY_2','OPENROUTER_API_KEY_3','OPENROUTER_API_KEY_4'];
       const ks=Array.isArray(data.keys)?data.keys:[];
-      kb.innerHTML=ks.length<2?'':ks.map(k=>{
-        const ok=k.ok!==false;
-        const pct=ok&&k.total>0?Math.round(k.remaining/k.total*100):0;
-        const col=!ok?'#A83030':pct<15?'#A83030':pct<40?'#B06D18':'#2F7D74';
-        return `<div style="display:flex;align-items:center;gap:9px;margin-top:7px;font-size:12.5px">
-          <span style="font-weight:800;flex:none">مفتاح ${egToArabic(k.key)}</span>
-          <div style="flex:1;height:7px;border-radius:99px;background:var(--border);overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${col};border-radius:99px"></div></div>
-          <span style="font-weight:800;color:${col};flex:none;font-variant-numeric:tabular-nums">${
-            ok?('$'+Number(k.remaining).toFixed(2)):'معطّل'}</span></div>`;
+      const rows=[0,1,2,3].map(i=>{
+        const k=ks.find(x=>x.key===i+1)||{key:i+1,configured:false};
+        if(!k.configured)return `<div class="orb-row off">
+          <span class="n">${egToArabic(i+1)}</span>
+          <span class="g">${NM[i]}</span>
+          <span class="v" dir="ltr">${EV[i]} — غير مضاف</span></div>`;
+        if(k.ok===false)return `<div class="orb-row bad">
+          <span class="n">${egToArabic(i+1)}</span><span class="g">${NM[i]}</span>
+          <span class="v">مفتاح معطّل</span></div>`;
+        const pct=k.total>0?Math.round(k.remaining/k.total*100):0;
+        const cls=pct<15?'bad':pct<40?'warn':'good';
+        return `<div class="orb-row ${cls}">
+          <span class="n">${egToArabic(i+1)}</span><span class="g">${NM[i]}</span>
+          <span class="bar"><i style="width:${pct}%"></i></span>
+          <span class="v">$${Number(k.remaining).toFixed(2)}</span></div>`;
       }).join('');
+      kb.innerHTML='<div class="orb-t">المفاتيح والمهامّ المسندة إليها</div>'+rows;
     }
     if(st)st.textContent='آخر تحديث: الآن';
   }catch(e){if(st)st.textContent='تعذّر الجلب — انشر دالة openrouter-balance أولاً';}
