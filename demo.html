@@ -5474,6 +5474,15 @@ async function planSlidesBtn(id){
   if(existing){slOpenWith(existing,(planFindLesson(id)||{}).name,planSubject);return;}
   const l=planFindLesson(id);if(!l)return;
   if(sl2Jobs[id]){toast('العرض يُجهَّز الآن — سنُعلمكِ حالما يكتمل');return;}
+  // نتحقّق من الرصيد قبل البدء: بدء عرضٍ برصيدٍ لا يكفيه ينفق ما تبقّى على
+  // شرائح ناقصة ثم يفشل — وهو ما استهلك حصّة الصور كاملةً في جلسة واحدة.
+  const left=await sl2ImgsLeft();
+  if(left!=null&&left<SL2_IMGS){
+    toast(left>0
+      ? `رصيد الصور المتبقّي ${slArNum(left)} والعرض يحتاج ${slArNum(SL2_IMGS)} — يتجدّد مطلع الشهر`
+      : 'نفد رصيد الصور الشهري — يتجدّد مطلع الشهر القادم',true);
+    return;
+  }
   sl2Start(id,planGrade,planSubject,l.unit,l.name);
 }
 // ═ التجهيز في الخلفية ═
@@ -5481,6 +5490,19 @@ async function planSlidesBtn(id){
 // يضيّع الجهد كلَّه. صار يعمل خلفياً بشريطٍ صغير لا يمنع التنقّل، ويعيد
 // المحاولة على ما تعثّر وحده لا على العرض كلّه.
 let sl2Jobs={};
+// المتبقّي من حصّة الصور، أو null إن تعذّرت القراءة — وعندها نمضي ولا نمنع:
+// خللٌ في قراءة العدّاد لا يجوز أن يحرم المعلّمة من عرضٍ رصيدها يكفيه.
+async function sl2ImgsLeft(){
+  if(KH_DEMO)return null;
+  try{
+    const month=new Date().toISOString().slice(0,7);
+    const{data,error}=await sb.from('ai_usage').select('count')
+      .eq('month',month).eq('kind','img').maybeSingle();
+    if(error)return null;
+    const lim=parseInt(await c1Setting('quota_img')||'')||80;
+    return Math.max(0,lim-((data&&data.count)||0));
+  }catch(e){return null;}
+}
 // مهلةٌ صريحة لكل نداء. بدونها يبقى الطلب المتعثّر معلّقاً بلا نهاية، فيقف
 // العدّاد عند ٠/٦ إلى الأبد — وهو ما حدث فعلاً: لا خطأ يُلتقط ولا شيء يتحرّك.
 const SL2_T={book:60000,plan:75000,img:150000,job:420000};

@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota } from "../_shared/quota.ts";
 import { orFetch } from "../_shared/ai.ts";
 
 const cors = {
@@ -47,6 +47,12 @@ Deno.serve(async (req) => {
     // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
     const quota = await takeQuota(admin, user.id, user.email || "", "img", st);
     if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
+    // على توليدٍ لم تستلمه.
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "img");
+      return json(body, status);
+    };
 
     const b = await req.json().catch(() => ({}));
     const grade = String(b.grade || "");
@@ -167,10 +173,10 @@ Deno.serve(async (req) => {
         }),
       });
       const or = await r.json();
-      if (!r.ok) return json({ error: "provider_error", detail: or }, 502);
+      if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
       const msg = or?.choices?.[0]?.message;
       const outImg = msg?.images?.[0]?.image_url?.url || "";
-      if (!outImg) return json({ error: "no_image", detail: msg?.content || null }, 502);
+      if (!outImg) return refund({ error: "no_image", detail: msg?.content || null }, 502);
       return json({ image: outImg, model, usage: or?.usage || null, edited: true });
     }
 
@@ -181,19 +187,20 @@ Deno.serve(async (req) => {
       let or = await orResp.json();
       if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
       if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-      if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+      if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
       const msg = or?.choices?.[0]?.message;
       img = msg?.images?.[0]?.image_url?.url || "";
       usage = or?.usage || null;
-      if (!img) return json({ error: "no_image", detail: msg?.content || null }, 502);
+      if (!img) return refund({ error: "no_image", detail: msg?.content || null }, 502);
     } else {
       const r = await callImagesApi();
-      if (!r.ok) return json({ error: "provider_error", detail: r.detail }, 502);
+      if (!r.ok) return refund({ error: "provider_error", detail: r.detail }, 502);
       img = r.img;
     }
 
     return json({ image: img, model, usage });
   } catch (e) {
+    // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);
   }
 });
