@@ -5491,6 +5491,25 @@ async function planSlidesBtn(id){
 let sl2Jobs={};
 // المتبقّي من حصّة الصور، أو null إن تعذّرت القراءة — وعندها نمضي ولا نمنع:
 // خللٌ في قراءة العدّاد لا يجوز أن يحرم المعلّمة من عرضٍ رصيدها يكفيه.
+// ═ حفظ العمل الناقص ═
+// كل صورةٍ تُرسَم تُدفع ثمناً فور رسمها، نجح العرض أم فشل. وكان التعثّر يُلغي
+// المحاولة كلَّها فتُرمى الصور التي نجحت — وتُدفع من جديد عند المحاولة التالية.
+// نحفظها هنا مع خطّتها: المحاولة التالية تستأنف ولا تُعيد شراء ما اشتُري.
+// محلياً لا في قاعدة البيانات: لا عمود لها، والغرض إنقاذ مالٍ لا مزامنة.
+const SL2_WIP_TTL=7*864e5;
+function _sl2WipKey(id){return 'c1sl2wip:'+id;}
+function sl2WipGet(id){
+  try{
+    const w=JSON.parse(localStorage.getItem(_sl2WipKey(id))||'null');
+    if(!w||!w.at||Date.now()-w.at>SL2_WIP_TTL||!Array.isArray(w.plan)||!Array.isArray(w.images))return null;
+    return w;
+  }catch(e){return null;}
+}
+function sl2WipSet(id,plan,images){
+  try{localStorage.setItem(_sl2WipKey(id),JSON.stringify({plan,images,at:Date.now()}));}catch(e){}
+}
+function sl2WipClear(id){try{localStorage.removeItem(_sl2WipKey(id));}catch(e){}}
+
 async function sl2ImgsLeft(){
   if(KH_DEMO)return null;
   try{
@@ -5598,6 +5617,21 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   const bs=await sl2Wait(c1BookSummary(id,grade,subject,unitName,lessonName),SL2_T.book,job);
   if(bs&&bs.__cancel)return null;
   const bookContext=(bs&&!bs.__timeout)?bs:'';
+  // عملٌ ناقصٌ من محاولةٍ سابقة؟ نستأنف بخطّته نفسها — تغييرُ الخطّة يُبطل
+  // الصور المدفوعة لأن كل صورةٍ مرسومةٌ لعنوان شريحتها.
+  const wip=sl2WipGet(id);
+  if(wip&&wip.images.filter(Boolean).length){
+    step('يكمل ما تبقّى من العرض',wip.images.filter(Boolean).length,wip.plan.length);
+    const urls2=await sl2Images(id,grade,subject,lessonName,wip.plan,bookContext,step,job,wip.images);
+    const got2=urls2.filter(u=>typeof u==='string');
+    sl2WipSet(id,wip.plan,urls2.map(u=>typeof u==='string'?u:null));
+    if(got2.length>=3){
+      sl2WipClear(id);
+      return{slides:{v:2,lesson:lessonName,subject,objectives:wip.obj||[],images:got2,homework:wip.hw||''}};
+    }
+    if(urls2.quota)return{quota:true};
+    return{why:urls2.why||''};
+  }
   let data=null;
   // محاولتان لا ثلاث: الخادم نفسه يعيد المحاولة مرّتين داخلياً، وكل نداءٍ
   // يعيد المحاولة عند الازدحام — فثلاث طبقاتٍ متراكمة تعني انتظاراً يقارب
@@ -5631,22 +5665,34 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   const body=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
   if(!body.length)return null;
   const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step,job);
+  // نحفظ قبل الحكم: حتى لو فشل الباقي، ما نجح مدفوعٌ ومحفوظ
+  sl2WipSet(id,body,urls.map(u=>typeof u==='string'?u:null));
   // نصفُ عرضٍ خيرٌ من لا شيء بعد دقيقتين: نحفظ ما نجح ونصارح المعلّمة بعدده،
   // ولا نُلغي كل الجهد لأنّ صورةً واحدة تعثّرت.
   const got=urls.filter(u=>typeof u==='string');
-  if(urls.quota&&got.length<3)return{quota:true};
-  if(got.length<3)return{why:urls.why||''};
+  if(got.length<3){
+    // نُبقي الخطّة والأهداف مع العمل الناقص كي تستأنف المحاولة التالية بها
+    try{const w=sl2WipGet(id);if(w){w.obj=objectives;w.hw=data.homework||'';
+      localStorage.setItem(_sl2WipKey(id),JSON.stringify(w));}}catch(e){}
+    if(urls.quota)return{quota:true};
+    return{why:urls.why||''};
+  }
+  sl2WipClear(id);
   return{slides:{v:2,lesson:lessonName,subject,objectives,images:got,homework:data.homework||''}};
 }
 // اثنتان معاً: التسلسل انتظارٌ طويل، والستّ دفعةً واحدة تصطدم بحدّ الطلبات
 // في الدقيقة. ثم جولتا استدراكٍ لما تعثّر وحده — لا للعرض كلّه.
-async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job){
-  const urls=new Array(body.length).fill(null);
+async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job,seed){
+  const urls=(seed&&seed.length===body.length)?seed.map(u=>typeof u==='string'?u:null)
+                                             :new Array(body.length).fill(null);
   const count=()=>urls.filter(Boolean).length;
   for(let round=1;round<=3;round++){
     const missing=body.map((s2,i)=>i).filter(i=>!urls[i]);
     if(!missing.length)break;
     if(round>1)await new Promise(r=>setTimeout(r,2000*(round-1)));
+    // جولةٌ لم تنجح فيها صورةٌ واحدة تعني عطلاً عند المزوّد لا تعثّراً عابراً،
+    // ومواصلة المحاولة تشتري صوراً لا تأتي: كل نداءٍ يُدفع ثمنه وإن فشل.
+    const before=count();
     for(let k=0;k<missing.length;k+=2){
       if(job&&job.cancelled)return urls;
       const pair=missing.slice(k,k+2);
@@ -5662,6 +5708,7 @@ async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job){
       pair.forEach((i,j)=>{const d=done[j];if(d&&typeof d==='string')urls[i]=d;});
       step('يرسم شرائح العرض',count());
     }
+    if(round>1&&count()===before)break;
   }
   return urls;
 }
