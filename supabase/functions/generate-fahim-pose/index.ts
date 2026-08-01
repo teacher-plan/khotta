@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
         ] }],
         modalities: ["image", "text"],
       }),
-    });
+    }, { st, task: "fahim_pose" });
     const or = await r.json();
     if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
     const msg = or?.choices?.[0]?.message;

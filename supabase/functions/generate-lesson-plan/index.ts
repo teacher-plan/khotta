@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           temperature: 0.4,
           max_tokens: 3200,
         }),
-      });
+      }, { st, task: "plan" });
       const j = await r.json();
       if (!r.ok) return { ok: false as const, detail: j };
       const text = j?.choices?.[0]?.message?.content || "";

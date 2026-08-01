@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
         temperature: 0.2,
         max_tokens: 1200,
       }),
-    });
+    }, { st, task: "summary" });
     const or = await r.json();
     if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
     const summary = (or?.choices?.[0]?.message?.content || "").trim();

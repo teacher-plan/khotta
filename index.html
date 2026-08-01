@@ -3410,6 +3410,7 @@ input,textarea,select{font-size:16px !important;}
     </div>
     <button class="eg-export" style="margin-top:10px;width:auto;padding:8px 14px;flex:none" onclick="aiFetchTeacherCount()">🔄 جلب العدد الفعلي</button>
     <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted);font-size:13px;font-weight:600">إجمالي الميزانية السنوية</span><span id="ai-total-budget" style="color:var(--gold);font-size:18px;font-weight:800">$0</span></div>
+    <div id="orb-keys"></div>
     <button class="eg-generate" style="margin-top:12px" onclick="saveAiBudget()">💾 حفظ الميزانية</button>
   </div>
 
@@ -6516,6 +6517,23 @@ async function loadOrBalance(force){
     document.getElementById('orb-used').textContent=fmt(data.used);
     const pct=data.total>0?Math.round(data.remaining/data.total*100):0;
     document.getElementById('orb-fill').style.width=pct+'%';
+    // رصيد كل مفتاح على حدة: المجموع يُخفي أن أحدها على وشك النفاد، فتتوقّف
+    // المهامّ المسندة إليه وإن بقي في غيره رصيد وفير.
+    const kb=document.getElementById('orb-keys');
+    if(kb){
+      const ks=Array.isArray(data.keys)?data.keys:[];
+      kb.innerHTML=ks.length<2?'':ks.map(k=>{
+        const ok=k.ok!==false;
+        const pct=ok&&k.total>0?Math.round(k.remaining/k.total*100):0;
+        const col=!ok?'#A83030':pct<15?'#A83030':pct<40?'#B06D18':'#2F7D74';
+        return `<div style="display:flex;align-items:center;gap:9px;margin-top:7px;font-size:12.5px">
+          <span style="font-weight:800;flex:none">مفتاح ${egToArabic(k.key)}</span>
+          <div style="flex:1;height:7px;border-radius:99px;background:var(--border);overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:99px"></div></div>
+          <span style="font-weight:800;color:${col};flex:none;font-variant-numeric:tabular-nums">${
+            ok?('$'+Number(k.remaining).toFixed(2)):'معطّل'}</span></div>`;
+      }).join('');
+    }
     if(st)st.textContent='آخر تحديث: الآن';
   }catch(e){if(st)st.textContent='تعذّر الجلب — انشر دالة openrouter-balance أولاً';}
 }
