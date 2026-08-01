@@ -5265,6 +5265,23 @@ document.addEventListener('keydown',e=>{
 // ست صور لا عشر: كل صورة تكلّف نحو عشرة أضعاف الشريحة النصية، والست تغطّي
 // الدرس تربوياً. الغلاف بالكود لا بالتوليد — الأهداف واسم المعلّمة نصٌّ نعرفه،
 // وتوليده صورةً يُنفق رصيداً على ما نملكه، ويخاطر بخطأ إملائيٍّ لا نملك تصحيحه.
+// سبب الخطأ الحقيقي من دالّة الحافة.
+// عند ردٍّ غير 2xx تُعيد مكتبة سوبابيز data=null ورسالةً عامّة
+// («Edge Function returned a non-2xx status code»)، ويبقى جسم الردّ — وفيه
+// السبب الفعلي مثل quota_exceeded — داخل error.context بلا قراءة. فكان نفاد
+// الحصّة يظهر للمعلّمة «تعذّر، حاولي مجدداً» فتُعيد المحاولة بلا جدوى.
+async function c1FnErr(res){
+  if(!res)return '';
+  if(res.data&&res.data.error)return String(res.data.error);
+  const e=res.error;if(!e)return '';
+  const ctx=res.response||e.context;
+  if(ctx&&typeof ctx.clone==='function'){
+    try{const j=await ctx.clone().json();if(j&&j.error)return String(j.error);}catch(_){
+      try{const t=await ctx.clone().text();if(t)return t.slice(0,200);}catch(_2){}
+    }
+  }
+  return String(e.message||'');
+}
 const SL2_IMGS=6;
 let sl2St=null;
 function sl2CoverHtml(d){
@@ -5522,7 +5539,7 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
     }),SL2_T.plan,job)||{};
     if(r.__cancel)return null;
     if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
-      const reason=(r.data&&r.data.error)||r.error?.message||'';
+      const reason=await c1FnErr(r);
       if(String(reason).includes('quota_exceeded')){
         toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);return null;
       }
@@ -5588,12 +5605,13 @@ async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
     const prompt=`شريحة عرض تعليمية بعنوان «${slide.title||lessonName}»`
       +(pts?` تشرح: ${pts}`:'')
       +'. تصميم إنفوجرافيك واضح لطفل، عنوانٌ كبير ورسومٌ توضيحية، بلا زحام نصّي.';
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
+    const res=await sb.functions.invoke('generate-infographic',{
       body:{grade:String(grade),subject,lessonNames:[lessonName],teacherPrompt:prompt,
             size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
     });
+    const{data,error}=res;
     if(error||!data||!data.image){
-      const reason=String((data&&data.error)||error?.message||'');
+      const reason=await c1FnErr(res);
       return{err:reason.includes('quota_exceeded')?'quota':reason||'fail'};
     }
     const blob=await c1CompressInfo(data.image);
@@ -5648,11 +5666,12 @@ async function planInfoBtn(id){
   cyBusy('يقرأ الدرس ويرسم ملخصه... قد يستغرق دقيقة');
   try{
     const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name);
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
+    const _infoRes=await sb.functions.invoke('generate-infographic',{
       body:{grade:String(planGrade),subject:planSubject,lessonNames:[l.name],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
     });
+    const{data,error}=_infoRes;
     if(error||!data||!data.image){
-      const reason=(data&&data.error)||error?.message||'';
+      const reason=await c1FnErr(_infoRes);
       toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد الملخص، حاولي مجدداً',true);
       return;
     }
@@ -5917,9 +5936,8 @@ async function todayGenerateOwn(){
   todayForceOwn=true;
   try{await todayGenerate();}finally{todayForceOwn=false;}
 }
-function _todayQuota(d,e){
-  const s=((d&&d.error)||'')+' '+((e&&e.message)||'');
-  return s.includes('quota_exceeded');
+async function _todayQuota(res){
+  return (await c1FnErr(res)).includes('quota_exceeded');
 }
 async function todayGenerate(){
   const ctx=todayCache;
@@ -5964,10 +5982,11 @@ async function todayGenerate(){
       if(need.has('prep')){
         cyBusy('يُعِدّ خطة الدرس'+suffix);
         try{
-          const{data,error}=await sb.functions.invoke('generate-lesson-plan',{
+          const res=await sb.functions.invoke('generate-lesson-plan',{
             body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,images:[],bookContext}
           });
-          if(_todayQuota(data,error))quota=true;
+          const{data}=res;
+          if(await _todayQuota(res))quota=true;
           else if(data&&data.plan){
             const all={...(profile.plan_state||{}),[id]:{...planGet(id),prep:data.plan,prep_at:new Date().toISOString()}};
             await cy1Save({plan_state:all},'يحفظ الخطة');
@@ -5980,10 +5999,11 @@ async function todayGenerate(){
       if(need.has('info')&&!quota){
         cyBusy('يرسم الملخص البصري'+suffix+'... قد يستغرق دقيقة');
         try{
-          const{data,error}=await sb.functions.invoke('generate-infographic',{
+          const res=await sb.functions.invoke('generate-infographic',{
             body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext}
           });
-          if(_todayQuota(data,error))quota=true;
+          const{data}=res;
+          if(await _todayQuota(res))quota=true;
           else if(data&&data.image){
             const blob=await c1CompressInfo(data.image);
             const path=c1InfoPath(id);
@@ -7876,14 +7896,12 @@ async function infoEdit(){
   let img=null,reason='';
   try{
     const editImage=await infoShrinkForEdit(infoImageRaw);
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
+    const _re=await sb.functions.invoke('generate-infographic',{
       body:{editImage,editPrompt:p,grade:String(studioGrade||''),subject:studioSubject||''}
     });
+    const{data,error}=_re;
     if(!error&&data&&data.image){img=data.image;}
-    else{
-      if(error){reason=error.message||'خطأ في الاتصال';}
-      else if(data&&data.error){reason=data.error;}
-    }
+    else{reason=await c1FnErr(_re);}
   }catch(e){reason=String(e);}
   if(btn){btn.disabled=false;btn.textContent='نفّذي التعديل';}
   if(!img){toast('تعذّر التعديل، حاولي بصياغة أوضح',true);return;}
@@ -7910,13 +7928,13 @@ async function infoGenerate(){
   uiBusy('يرسم الإنفوجرافيك… قد يستغرق دقيقة');
   let img=null,reason='';
   try{
-    const{data,error}=await sb.functions.invoke('generate-infographic',{
+    const _r=await sb.functions.invoke('generate-infographic',{
       body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt,size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT}
     });
+    const{data,error}=_r;
     if(!error&&data&&data.image){img=data.image;}
     else{
-      if(error)reason=error.message||'خطأ في الاتصال';
-      else if(data&&data.error)reason=data.error;
+      reason=(await c1FnErr(_r))||'خطأ في الاتصال';
     }
   }catch(e){reason=String(e);}
   uiBusyDone();
@@ -8208,16 +8226,16 @@ async function gmGenerate(){
   try{
     const lId=c1LessonIdByName(grade,subject,lessons[0].unit,lessons[0].name);
     const bookContext=await c1BookSummary(lId,grade,subject,lessons[0].unit,lessons[0].name);
-    const{data,error}=await sb.functions.invoke('generate-game-content',{
+    const _r=await sb.functions.invoke('generate-game-content',{
       body:{grade,subject,lessonNames:lessons.map(l=>l.name),structure:GM_STRUCT[gmTpl],count,images:[],
             bookContext:bookContext||'',level:gmLevel()}
     });
+    const{data,error}=_r;
     if(!error&&data&&data.items){
       items=data.items;
       if(data.groupNames&&data.groupNames.length>=2)gmGroupNames=data.groupNames.map(String);
     }else{
-      if(error)reason=error.message||'خطأ في الاتصال';
-      else if(data&&data.error)reason=data.error;
+      reason=(await c1FnErr(_r))||'خطأ في الاتصال';
     }
   }catch(e){reason=String(e);}
   uiBusyDone();
@@ -9346,15 +9364,16 @@ async function fhSend(){
     fhRender();return;
   }
   try{
-    const{data,error}=await sb.functions.invoke('generate-chat',{body:{
+    const _chatRes=await sb.functions.invoke('generate-chat',{body:{
       chatId:fhChatId,message:msg,images:imgs,
       // السجلّ نصٌّ فقط: إعادة إرسال الصور كل دور تُضاعف الكلفة بلا فائدة
       history:fhMsgs.slice(0,-1).slice(-12).map(m=>({role:m.role,content:m.content})),
       context:fhContext()
     }});
+    const{data,error}=_chatRes;
     document.getElementById('fh-typing')?.remove();
     if(error||!data||!data.reply){
-      const reason=(data&&data.error)||error?.message||'';
+      const reason=await c1FnErr(_chatRes);
       if(String(reason).includes('quota_exceeded'))fhMsgs.push({role:'assistant',content:'وصلتِ حد استخدامك الشهري للمساعد — يتجدد الرصيد مطلع الشهر القادم.'});
       else fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
     }else{
