@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
     // إن رفض النموذج إعداد المقاس نعيد المحاولة بدونه بدل إفشال الشريحة
     const call = (cfg: Record<string, unknown> | null) =>
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
+      orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
           modalities: ["image", "text"],
           ...(cfg ? { image_config: cfg } : {}),
         }),
-      });
+      }, { st, task: "slide_image" });
     let img = "";
     let usage: unknown = null;
     if (model.startsWith("google/")) {
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
         },
         // Seedream يشترط حداً أدنى كبيراً للبكسلات وسعره ثابت — نرسل دائماً 4K
         body: JSON.stringify({ model, prompt: userPrompt, resolution: "4K", aspect_ratio: "16:9" }),
-      });
+      }, { st, task: "slide_image" });
       const j = await r.json();
       if (!r.ok) return refund({ error: "provider_error", detail: j }, 502);
       const d = j?.data?.[0] || {};

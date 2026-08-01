@@ -30,32 +30,88 @@ function waitMs(attempt: number, retryAfter: string | null) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// بديلٌ مباشر عن fetch لنداءات OpenRouter — نفس التوقيع ونفس المخرَج،
-// فلا يحتاج ما بعده أيّ تغيير.
-export async function orFetch(url: string, init: RequestInit): Promise<Response> {
-  let last: Response | null = null;
-  const started = Date.now();
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    let r: Response;
-    try {
-      r = await fetch(url, init);
-    } catch (e) {
-      // انقطاع شبكة بين الحافة والمزوّد — يستحقّ محاولةً أخرى.
-      if (attempt === MAX_ATTEMPTS) throw e;
-      await sleep(waitMs(attempt, null));
-      continue;
-    }
-    if (r.ok || !worthRetry(r.status) || attempt === MAX_ATTEMPTS) return r;
-    const d = waitMs(attempt, r.headers.get("retry-after"));
-    // لا نبدأ انتظاراً يتجاوز ميزانية الوقت المتبقّية بلا طائل.
-    if (Date.now() - started + d > MAX_WAIT_MS * 2) return r;
-    console.warn(`openrouter ${r.status} — إعادة المحاولة ${attempt}/${MAX_ATTEMPTS} بعد ${d}ms`);
-    // نستهلك الجسم كي لا يتسرّب الاتصال، ونحتفظ بآخر ردٍّ للطوارئ.
-    try { await r.text(); } catch { /* تجاهُل */ }
-    last = r;
-    await sleep(d);
+// ═══ مفاتيح متعدّدة ═══
+// مفتاحٌ واحد يعني نقطة انهيارٍ واحدة: نفاد رصيده أو تعطّل حسابه يوقف المنصّة
+// كلَّها — وهو ما وقع فعلاً. المفاتيح الإضافية اختيارية: يُقرأ ما وُجد منها.
+// وتوزيع المهامّ عليها يعزل الأعطال أيضاً: خللٌ في مفتاح الصور لا يُسكت فهيم.
+export function orKeys(): string[] {
+  const out: string[] = [];
+  for (const name of ["OPENROUTER_API_KEY", "OPENROUTER_API_KEY_2", "OPENROUTER_API_KEY_3", "OPENROUTER_API_KEY_4"]) {
+    const v = (Deno.env.get(name) || "").trim();
+    if (v && !out.includes(v)) out.push(v);
   }
-  return last!;
+  return out;
+}
+
+// عطلٌ يخصّ المفتاح نفسه لا الطلب: انتهاء صلاحية (401)، نفاد رصيد (402)،
+// حظر (403)، أو بلوغ حدّ الحساب (429). عندها لا معنى لإعادة المحاولة بالمفتاح
+// ذاته — ننتقل إلى التالي فوراً.
+function keyFault(status: number) {
+  return status === 401 || status === 402 || status === 403 || status === 429;
+}
+
+// ترتيب المفاتيح لمهمّةٍ بعينها: ما تختاره المشرفة أولاً، ثم الباقي احتياطاً.
+// key_<task> في ai_settings يحمل رقم المفتاح (١ فما فوق).
+export function keyOrder(st: Record<string, string>, task?: string): string[] {
+  const keys = orKeys();
+  if (!task || keys.length < 2) return keys;
+  const pick = parseInt(st["key_" + task] || "") || 0;
+  if (pick < 1 || pick > keys.length) return keys;
+  const first = keys[pick - 1];
+  return [first, ...keys.filter((k) => k !== first)];
+}
+
+function withKey(init: RequestInit, key: string): RequestInit {
+  const h = new Headers(init.headers || {});
+  h.set("Authorization", "Bearer " + key);
+  return { ...init, headers: h };
+}
+
+export interface OrOpts { st?: Record<string, string>; task?: string }
+
+// بديلٌ مباشر عن fetch لنداءات OpenRouter — نفس التوقيع ونفس المخرَج،
+// فلا يحتاج ما بعده أيّ تغيير. يتنقّل بين المفاتيح عند عطلٍ يخصّها.
+export async function orFetch(url: string, init: RequestInit, opts?: OrOpts): Promise<Response> {
+  const keys = keyOrder(opts?.st || {}, opts?.task);
+  // بلا مفاتيح في البيئة نمضي بما في الترويسة كما هي (توافقاً مع القديم)
+  const pool: (string | null)[] = keys.length ? keys : [null];
+  let last: Response | null = null;
+  let lastErr: unknown = null;
+  const started = Date.now();
+
+  for (let ki = 0; ki < pool.length; ki++) {
+    const key = pool[ki];
+    const req = key ? withKey(init, key) : init;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let r: Response;
+      try {
+        r = await fetch(url, req);
+      } catch (e) {
+        lastErr = e;
+        // انقطاع شبكة بين الحافة والمزوّد — يستحقّ محاولةً أخرى.
+        if (attempt === MAX_ATTEMPTS) break;
+        await sleep(waitMs(attempt, null));
+        continue;
+      }
+      if (r.ok) return r;
+      if (keyFault(r.status) && ki < pool.length - 1) {
+        console.warn(`openrouter ${r.status} على المفتاح ${ki + 1} — الانتقال إلى ${ki + 2}`);
+        try { await r.text(); } catch { /* تجاهُل */ }
+        last = r;
+        break;                              // مفتاحٌ آخر، بلا انتظار
+      }
+      if (!worthRetry(r.status) || attempt === MAX_ATTEMPTS) return r;
+      const d = waitMs(attempt, r.headers.get("retry-after"));
+      // لا نبدأ انتظاراً يتجاوز ميزانية الوقت المتبقّية بلا طائل.
+      if (Date.now() - started + d > MAX_WAIT_MS * 2) return r;
+      console.warn(`openrouter ${r.status} — إعادة المحاولة ${attempt}/${MAX_ATTEMPTS} بعد ${d}ms`);
+      try { await r.text(); } catch { /* تجاهُل */ }
+      last = r;
+      await sleep(d);
+    }
+  }
+  if (last) return last;
+  throw lastErr || new Error("openrouter unreachable");
 }
 
 // اختيار النموذج حسب المهمّة.

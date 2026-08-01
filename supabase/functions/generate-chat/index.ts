@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
         temperature: 0.6,
         max_tokens: images.length ? 1400 : 900,
       }),
-    });
+    }, { st, task: "chat" });
     const or = await orResp.json();
     if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
     const reply = or?.choices?.[0]?.message?.content || "";

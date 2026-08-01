@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
 
     // بعض النماذج لا تقبل كل إعدادات المقاس/الجودة — نحاول كاملة ثم نتدرّج تلقائياً
     const call = (cfg: Record<string, unknown> | null) =>
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
+      orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
           modalities: ["image", "text"],
           ...(cfg ? { image_config: cfg } : {}),
         }),
-      });
+      }, { st, task: "infographic" });
     // النماذج غير جوجل (مثل Seedream) تعمل عبر واجهة الصور الموحدة /v1/images فقط
     const callImagesApi = async () => {
       const r = await orFetch("https://openrouter.ai/api/v1/images", {
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
         },
         // Seedream يشترط حداً أدنى كبيراً للبكسلات وسعره ثابت — نرسل دائماً 4K
         body: JSON.stringify({ model, prompt: userPrompt, resolution: "4K", aspect_ratio: aspect }),
-      });
+      }, { st, task: "infographic" });
       const j = await r.json();
       if (!r.ok) return { ok: false, detail: j, img: "" };
       const d = j?.data?.[0] || {};
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
           ] }],
           modalities: ["image", "text"],
         }),
-      });
+      }, { st, task: "infographic" });
       const or = await r.json();
       if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
       const msg = or?.choices?.[0]?.message;

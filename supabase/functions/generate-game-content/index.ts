@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
 
     const callOr = (withImages: boolean) =>
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
+      orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
           temperature: 0.5,
           max_tokens: 2000,
         }),
-      });
+      }, { st, task: "game" });
     let grounded = images.length > 0;
     let orResp = await callOr(images.length > 0);
     let or = await orResp.json();

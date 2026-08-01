@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         temperature: 0.1,
         max_tokens: 4000,
       }),
-    });
+    }, { st, task: "extract" });
 
     const or = await orResp.json();
     if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);

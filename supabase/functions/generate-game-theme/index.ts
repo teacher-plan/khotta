@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     ].join(" ");
 
     const call = (cfg: Record<string, unknown> | null) =>
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
+      orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + apiKey,
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
           modalities: ["image", "text"],
           ...(cfg ? { image_config: cfg } : {}),
         }),
-      });
+      }, { st, task: "game_theme" });
 
     let orResp = await call({ aspect_ratio: "16:9", image_size: "1K" });
     let or = await orResp.json();

@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
         temperature: 0.5,
         max_tokens: 8000,
       }),
-    });
+    }, { st, task: "exam_vision" });
     const or = await orResp.json();
     if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
 
