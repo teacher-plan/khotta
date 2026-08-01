@@ -34,13 +34,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // مفتاحٌ واحد يعني نقطة انهيارٍ واحدة: نفاد رصيده أو تعطّل حسابه يوقف المنصّة
 // كلَّها — وهو ما وقع فعلاً. المفاتيح الإضافية اختيارية: يُقرأ ما وُجد منها.
 // وتوزيع المهامّ عليها يعزل الأعطال أيضاً: خللٌ في مفتاح الصور لا يُسكت فهيم.
-export function orKeys(): string[] {
-  const out: string[] = [];
-  for (const name of ["OPENROUTER_API_KEY", "OPENROUTER_API_KEY_2", "OPENROUTER_API_KEY_3", "OPENROUTER_API_KEY_4"]) {
+const KEY_ENV = ["OPENROUTER_API_KEY", "OPENROUTER_API_KEY_2", "OPENROUTER_API_KEY_3", "OPENROUTER_API_KEY_4"];
+
+// الخانات بمواضعها لا مضغوطة: رقم المفتاح مرتبطٌ باسم المتغيّر لا بترتيب
+// الموجود. لو أُضيف _3 دون _2 لصار مفتاح الشرائح يعمل بمفتاح الإنفوجرافيك
+// بلا أن يظهر شيء — إسنادٌ خاطئ صامت، وهو أسوأ من غياب المفتاح.
+export function orKeySlots(): (string | null)[] {
+  const seen = new Set<string>();
+  return KEY_ENV.map((name) => {
     const v = (Deno.env.get(name) || "").trim();
-    if (v && !out.includes(v)) out.push(v);
-  }
-  return out;
+    if (!v || seen.has(v)) return null;
+    seen.add(v);
+    return v;
+  });
+}
+
+export function orKeys(): string[] {
+  return orKeySlots().filter((k): k is string => !!k);
 }
 
 // عطلٌ يخصّ المفتاح نفسه لا الطلب: انتهاء صلاحية (401)، نفاد رصيد (402)،
@@ -71,14 +81,14 @@ const KEY_GROUP: Record<string, number> = {
 export function keyOrder(st: Record<string, string>, task?: string): string[] {
   const keys = orKeys();
   if (!task || keys.length < 2) return keys;
+  const slots = orKeySlots();
   const explicit = parseInt(st["key_" + task] || "") || 0;
   const group = parseInt(st["keygrp_" + (KEY_GROUP[task] || 0)] || "") || KEY_GROUP[task] || 0;
-  // مفتاحٌ لم يُضَف بعد: نسقط إلى الترتيب الطبيعي بدل تعطيل المهمّة
+  // خانةٌ فارغة تعني أن المفتاح لم يُضَف بعد: نسقط إلى الترتيب الطبيعي بدل
+  // تعطيل المهمّة، ولا نأخذ مفتاح خانةٍ أخرى ظنّاً أنه المقصود.
   for (const pick of [explicit, group]) {
-    if (pick >= 1 && pick <= keys.length) {
-      const first = keys[pick - 1];
-      return [first, ...keys.filter((k) => k !== first)];
-    }
+    const first = pick >= 1 && pick <= slots.length ? slots[pick - 1] : null;
+    if (first) return [first, ...keys.filter((k) => k !== first)];
   }
   return keys;
 }
