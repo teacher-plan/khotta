@@ -1684,6 +1684,22 @@ input,textarea,select{font-size:16px !important;}
 .orb-row.off{color:var(--muted);opacity:.75}
 .orb-row.off .v{font-size:9.5px;font-weight:700;line-height:1.5;min-width:110px}
 </style>
+<style id="ai-ui-css">
+.ai-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.ai-hero .h{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px}
+.ai-hero .h .k{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.5px}
+.ai-hero .h .v{font-size:20px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.ai-hero .h .s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.ai-hero .h.good .v{color:#2F7D74}.ai-hero .h.warn .v{color:#B06D18}.ai-hero .h.bad .v{color:#A83030}
+.ai-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;
+  border-bottom:2px solid var(--border);scrollbar-width:none}
+.ai-tabs::-webkit-scrollbar{display:none}
+.ai-tabs button{flex:none;padding:10px 14px;border:0;background:none;cursor:pointer;
+  font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;color:var(--muted);
+  border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.ai-tabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+.ai-sec{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.5px;margin:2px 0 10px}
+</style>
 </head>
 <body>
 
@@ -3197,15 +3213,22 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- تبويبات إدارة المولّد -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--border);flex-wrap:wrap;">
-    <button id="aitab-content" onclick="switchAiTab('content')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--gold);border-bottom:2px solid var(--gold);margin-bottom:-2px">📥 المحتوى</button>
-    <button id="aitab-exam" onclick="switchAiTab('exam')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">📝 الاختبارات</button>
-    <button id="aitab-ppt" onclick="switchAiTab('ppt')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">🎨 العروض والرسم</button>
-    <button id="aitab-budget" onclick="switchAiTab('budget')" class="ai-tab" style="padding:10px 16px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">💰 الميزانية</button>
-  </div>
+  <!-- شريط الحالة: أهمّ ثلاثة أرقام قبل أي تبويب — الرصيد والاستهلاك وحال
+       المولّد. كانت مبعثرة في تبويباتٍ ثلاثة، فلا يعرف المشرف حال المنصّة
+       إلا بجولةٍ عليها. -->
+  <div id="ai-hero" class="ai-hero"></div>
 
-  <!-- ═ تبويب ١: المحتوى (الفهرس + الكتاب) ═ -->
-  <div id="aipanel-content">
+  <div class="ai-tabs" id="ai-tabbar"></div>
+
+  <div id="aipanel-overview" style="display:none"></div>
+  <div id="aipanel-models" style="display:none"></div>
+  <div id="aipanel-limits" style="display:none"></div>
+  <div id="aipanel-prompts" style="display:none"></div>
+  <div id="aipanel-books" style="display:none"></div>
+  <div id="aipanel-games" style="display:none"></div>
+
+<!-- ═ تبويب ١: المحتوى (الفهرس + الكتاب) ═ -->
+  <div id="aiold-content" hidden>
   <!-- 📚 رفع الكتاب وتقطيعه الذكي — تدفق واحد متكامل -->
   <div class="eg-card">
     <div class="eg-step-title">📚 رفع الكتاب وتقطيعه الذكي</div>
@@ -3238,7 +3261,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- ═ تبويب ٢: الاختبارات (التعليمات + الحدود + قالب التصدير) ═ -->
-  <div id="aipanel-exam" style="display:none">
+  <div id="aiold-exam" hidden>
   <div class="eg-card">
     <div class="eg-step-title">📝 تعليمات توجيه الذكاء الاصطناعي</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">تُرسَل مع كل طلب توليد لتوجيه أسلوب الأسئلة ومستواها (اللغة، المنهج العماني، نمط الوزارة، أساليب مفضّلة/ممنوعة). تُحفظ فوراً وتُطبَّق على كل المعلمين.</p>
@@ -3251,18 +3274,6 @@ input,textarea,select{font-size:16px !important;}
   <div class="eg-card">
     <div class="eg-step-title">⚙️ التحكم والحدود</div>
     <label class="eg-chip" style="margin-bottom:14px;display:inline-flex"><input type="checkbox" id="ai-gen-enabled" checked> تفعيل المولّد للمعلمين</label>
-    <label class="eg-lbl">نموذج الذكاء الاصطناعي</label>
-    <select id="ai-model" class="eg-card" style="width:100%;margin-bottom:6px" dir="ltr" onchange="egAiModelDesc()">
-      <option value="deepseek/deepseek-chat" data-desc="⭐ الأرخص والأسرع مع عربية جيدة جداً — الخيار الموصى به لمعظم الاختبارات." data-tag="موصى به · اقتصادي">DeepSeek V3 — الأرخص والأسرع (موصى به)</option>
-      <option value="deepseek/deepseek-reasoner" data-desc="استدلال أقوى ومناسب للأسئلة التحليلية والمقالية العميقة، لكنه أبطأ وأغلى قليلاً." data-tag="استدلال قوي">DeepSeek Reasoner — استدلال أقوى</option>
-      <option value="google/gemini-2.5-flash" data-desc="⭐ يقرأ ويحلّل الملفات الكبيرة (كتب/مراجع كاملة) بسياق ضخم، وسريع ورخيص في الوقت نفسه — الأنسب عند إرفاق مرجع طويل." data-tag="موصى به للملفات الكبيرة · رخيص">Gemini 2.5 Flash — تحليل الملفات الكبيرة (موصى به)</option>
-      <option value="google/gemini-2.5-flash-lite" data-desc="أرخص خيارات جوجل، جيّد للاختبارات البسيطة وتوفير التكلفة إلى أقصى حد." data-tag="الأرخص">Gemini Flash-Lite — الأرخص</option>
-      <option value="openai/gpt-5-mini" data-desc="متوازن من OpenAI بين الجودة والتكلفة، صياغة أسئلة منظّمة وواضحة." data-tag="متوازن">GPT-5 mini — متوازن</option>
-      <option value="anthropic/claude-haiku-4.5" data-desc="عربية ممتازة وصياغة راقية وسريع، أغلى قليلاً من DeepSeek — جودة عالية بتكلفة معقولة." data-tag="عربية ممتازة">Claude Haiku 4.5 — عربية ممتازة</option>
-      <option value="anthropic/claude-sonnet-4.6" data-desc="أعلى جودة عربية وأدقّها في اتباع التعليمات والمواصفات الوزارية، لكنه الأغلى — للاختبارات المهمة." data-tag="أعلى جودة">Claude Sonnet 4.6 — أعلى جودة (الأغلى)</option>
-    </select>
-    <div id="ai-model-desc" style="font-size:12px;color:var(--muted);margin-bottom:6px;line-height:1.8"></div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">يُطبَّق على كل عمليات التوليد لدى جميع المعلمين. جرّب وقارن الجودة مقابل التكلفة.</div>
     <div class="eg-row">
       <div style="flex:1"><label class="eg-lbl">أقصى عدد أسئلة</label><input type="number" id="ai-max-q" value="30" min="1" max="100"></div>
       <div style="flex:1"><label class="eg-lbl">أقصى عدد صفحات</label><input type="number" id="ai-max-pages" value="5" min="1" max="20"></div>
@@ -3287,6 +3298,34 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- قالب التصدير -->
+  <!-- النموذج العام -->
+  <div class="eg-card" id="ai-model-card">
+    <div class="eg-step-title">🧠 النموذج العام</div>
+    <label class="eg-lbl">نموذج الذكاء الاصطناعي</label>
+    <select id="ai-model" class="eg-card" style="width:100%;margin-bottom:6px" dir="ltr" onchange="egAiModelDesc()">
+      <option value="deepseek/deepseek-chat" data-desc="⭐ الأرخص والأسرع مع عربية جيدة جداً — الخيار الموصى به لمعظم الاختبارات." data-tag="موصى به · اقتصادي">DeepSeek V3 — الأرخص والأسرع (موصى به)</option>
+      <option value="deepseek/deepseek-reasoner" data-desc="استدلال أقوى ومناسب للأسئلة التحليلية والمقالية العميقة، لكنه أبطأ وأغلى قليلاً." data-tag="استدلال قوي">DeepSeek Reasoner — استدلال أقوى</option>
+      <option value="google/gemini-2.5-flash" data-desc="⭐ يقرأ ويحلّل الملفات الكبيرة (كتب/مراجع كاملة) بسياق ضخم، وسريع ورخيص في الوقت نفسه — الأنسب عند إرفاق مرجع طويل." data-tag="موصى به للملفات الكبيرة · رخيص">Gemini 2.5 Flash — تحليل الملفات الكبيرة (موصى به)</option>
+      <option value="google/gemini-2.5-flash-lite" data-desc="أرخص خيارات جوجل، جيّد للاختبارات البسيطة وتوفير التكلفة إلى أقصى حد." data-tag="الأرخص">Gemini Flash-Lite — الأرخص</option>
+      <option value="openai/gpt-5-mini" data-desc="متوازن من OpenAI بين الجودة والتكلفة، صياغة أسئلة منظّمة وواضحة." data-tag="متوازن">GPT-5 mini — متوازن</option>
+      <option value="anthropic/claude-haiku-4.5" data-desc="عربية ممتازة وصياغة راقية وسريع، أغلى قليلاً من DeepSeek — جودة عالية بتكلفة معقولة." data-tag="عربية ممتازة">Claude Haiku 4.5 — عربية ممتازة</option>
+      <option value="anthropic/claude-sonnet-4.6" data-desc="أعلى جودة عربية وأدقّها في اتباع التعليمات والمواصفات الوزارية، لكنه الأغلى — للاختبارات المهمة." data-tag="أعلى جودة">Claude Sonnet 4.6 — أعلى جودة (الأغلى)</option>
+    </select>
+    <div id="ai-model-desc" style="font-size:12px;color:var(--muted);margin-bottom:6px;line-height:1.8"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">يُطبَّق على كل عمليات التوليد لدى جميع المعلمين. جرّب وقارن الجودة مقابل التكلفة.</div>
+  </div>
+  <!-- نموذج لكل مهمّة -->
+  <div class="eg-card">
+    <div class="eg-step-title">🎚️ نموذج لكل مهمّة</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:12px">
+      المهامّ ليست سواءً: تلخيصُ صفحةٍ لا يحتاج ما تحتاجه خطّةُ درسٍ كاملة.
+      اترك المهمّة على <b>«الإعداد العام»</b> لتتبع النموذج أعلاه، أو اختر لها نموذجاً أوفر.
+      <b>لا شيء يتغيّر حتى تختار بنفسك.</b>
+    </div>
+    <div id="ai-task-models"></div>
+    <button class="eg-generate" style="margin-top:12px" onclick="saveTaskModels()">💾 حفظ نماذج المهامّ</button>
+  </div>
+
   <div class="eg-card">
     <div class="eg-step-title">🖨️ قالب التصدير</div>
     <div class="eg-row">
@@ -3314,7 +3353,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- ═ تبويب ٣: العروض والرسم ═ -->
-  <div id="aipanel-ppt" style="display:none">
+  <div id="aiold-ppt" hidden>
   <!-- إدارة العروض التقديمية -->
   <div class="eg-card">
     <div class="eg-step-title">🖼️ إدارة العروض التقديمية</div>
@@ -3397,7 +3436,7 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- ═ تبويب ٤: الميزانية والاستهلاك ═ -->
-  <div id="aipanel-budget" style="display:none">
+  <div id="aiold-budget" hidden>
   <!-- 🏆 الخطط الذهبية المنشورة -->
   <div class="eg-card">
     <div class="eg-step-title">🏆 الخطط الذهبية المشتركة</div>
@@ -6237,18 +6276,119 @@ async function saveAnnouncement(){
 }
 
 // تبويبات صفحة إدارة المولّد
-function switchAiTab(tab){
-  ['content','exam','ppt','budget'].forEach(t=>{
-    const p=document.getElementById('aipanel-'+t);
-    if(p)p.style.display=t===tab?'block':'none';
-    const b=document.getElementById('aitab-'+t);
-    if(!b)return;
-    const active=t===tab;
-    b.style.color=active?'var(--gold)':'var(--muted)';
-    b.style.borderBottom=active?'2px solid var(--gold)':'2px solid transparent';
+// ═══ واجهة إدارة المولّد ═══
+// كانت أربعة تبويبات مبنية على تاريخ البناء لا على ما يقرّره المشرف: «المحتوى»
+// يجمع رفع الكتب مع حدود الحصص مع قالب التصدير، و«العروض والرسم» صار سلّة لكل
+// ما لم يجد مكاناً. فيبحث المشرف عن الإعداد في ثلاثة تبويبات قبل أن يجده.
+// أُعيد التقسيم على أساس القرار: النماذج، الحدود، التوجيه، المناهج، الألعاب.
+// والبطاقات تُنقل كما هي بمعرّفاتها — كل ما فيها من منطقٍ يعمل بلا تغيير.
+const AI_TABS=[
+  {id:'overview',nm:'نظرة عامة',ic:'📊'},
+  {id:'models',  nm:'النماذج والمفاتيح',ic:'🧠'},
+  {id:'limits',  nm:'الحدود والميزانية',ic:'💰'},
+  {id:'prompts', nm:'توجيه الذكاء',ic:'📝'},
+  {id:'books',   nm:'المناهج والاختبارات',ic:'📚'},
+  {id:'games',   nm:'الألعاب وفهيم',ic:'🎮'},
+];
+// أين تذهب كل بطاقة: المعرّف الذي بداخلها → اللوح الجديد.
+// نستدلّ بمعرّفٍ داخلي لا بالعنوان: العنوان نصٌّ يتغيّر، والمعرّف عقدٌ مع الكود.
+const AI_CARD_MAP=[
+  ['ai-model-card',   'models'],
+  ['ai-task-models',  'models'],
+  ['orb-keys',        'models'],
+  ['ai-gen-enabled',  'limits'],
+  ['ai-budget-per',   'limits'],
+  ['ai-remain-fill',  'limits'],
+  ['ai-system-prompt','prompts'],
+  ['ppt-system-prompt','prompts'],
+  ['seg-grade',       'books'],
+  ['ex-font',         'books'],
+  ['gmth-name',       'games'],
+  ['gcfg-tpl',        'games'],
+  ['gm-sfx-slots',    'games'],
+  ['fh-mascot-prev',  'games'],
+  ['fh-pose-grid',    'games'],
+  ['gp-list',         'games'],
+];
+let _aiLaidOut=false;
+function aiLayout(){
+  if(_aiLaidOut)return;
+  const bar=document.getElementById('ai-tabbar');
+  if(!bar)return;
+  bar.innerHTML=AI_TABS.map(t=>
+    `<button id="aitab-${t.id}" onclick="switchAiTab('${t.id}')">${t.ic} ${t.nm}</button>`).join('');
+  for(const [anchor,panel] of AI_CARD_MAP){
+    const el=document.getElementById(anchor);
+    if(!el)continue;                       // بطاقةٌ غير موجودة في هذه الصفحة
+    // صنف البطاقة يحمله أحياناً عنصرٌ داخليّ (ai-model قائمةٌ بصنف eg-card)،
+    // فلا يكفي closest وحده: بطاقةٌ حقيقية تحوي عنواناً، وما دونه عنصرُ نموذج.
+    const isCard=e=>e&&(e.classList.contains('eg-card')||e.classList.contains('admin-panel-card'))
+                    &&!!e.querySelector('.eg-step-title');
+    const card=isCard(el)?el
+      :((el.parentElement&&(el.parentElement.closest('.eg-card')||el.parentElement.closest('.admin-panel-card')))
+        ||el.closest('.eg-card')||el.closest('.admin-panel-card'));
+    const to=document.getElementById('aipanel-'+panel);
+    if(card&&to&&!to.contains(card))to.appendChild(card);
+  }
+  // ما بقي في الألواح القديمة ينتقل إلى «الحدود» بدل أن يختفي: بطاقةٌ لم
+  // تُذكر في الخريطة خطأٌ في الخريطة لا سببٌ لإخفاء إعدادٍ عن المشرف.
+  ['content','exam','ppt','budget'].forEach(o=>{
+    const src=document.getElementById('aiold-'+o);
+    const to=document.getElementById('aipanel-limits');
+    if(!src||!to)return;
+    [...src.children].forEach(c=>{ if(c.classList&&(c.classList.contains('eg-card')||c.classList.contains('admin-panel-card')))to.appendChild(c); });
   });
-  if(tab==='budget'){loadOrBalance();gpAdminList();}
-  if(tab==='ppt'){gmThemeList();gmSfxSlots();fhMascotPrev();gmLoadThemes().then(()=>gcfgLoad());}
+  _aiLaidOut=true;
+  switchAiTab('overview');
+}
+function switchAiTab(tab){
+  aiLayout();
+  AI_TABS.forEach(t=>{
+    const p=document.getElementById('aipanel-'+t.id);
+    if(p)p.style.display=t.id===tab?'block':'none';
+    const b=document.getElementById('aitab-'+t.id);
+    if(b)b.classList.toggle('on',t.id===tab);
+  });
+  if(tab==='overview'){aiOverview();loadOrBalance();}
+  if(tab==='models'){loadOrBalance();if(typeof renderTaskModels==='function')renderTaskModels(_aiSettings||{});}
+  if(tab==='limits'){if(typeof gpAdminList==='function')gpAdminList();}
+  if(tab==='games'){gmThemeList();gmSfxSlots();fhMascotPrev();gmLoadThemes().then(()=>gcfgLoad());}
+}
+// نظرة عامة: ما يحتاجه المشرف قبل أي إعداد — هل المولّد يعمل، وكم بقي، ومن
+// يستهلك. الأرقام نفسها موجودة في التبويبات، لكن جمعها هنا يوفّر الجولة عليها.
+async function aiOverview(){
+  const box=document.getElementById('aipanel-overview');
+  if(!box)return;
+  if(!box.dataset.init){
+    box.innerHTML='<div class="ai-sec">حال المنصّة</div><div id="ai-ov-cards" class="ai-hero"></div>'
+      +'<div class="ai-sec" style="margin-top:18px">أكثر المعلمات استهلاكاً هذا الشهر</div>'
+      +'<div class="eg-card"><div id="ai-ov-top" style="font-size:12.5px;color:var(--muted)">…</div></div>';
+    box.dataset.init='1';
+  }
+  const cards=document.getElementById('ai-ov-cards');
+  const on=document.getElementById('ai-gen-enabled');
+  const mdl=document.getElementById('ai-model');
+  const h=(k,v,s,c)=>`<div class="h ${c||''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
+  cards.innerHTML=h('المولّد',on&&on.checked?'يعمل':'موقوف','لكل المعلمات',on&&on.checked?'good':'bad')
+    +h('النموذج العام',(mdl&&mdl.value||'—').split('/').pop(),'يُطبَّق ما لم تُخصَّص المهمّة')
+    +h('حصة الصور',document.getElementById('ai-quota-img')?.value||'—','شهرياً لكل معلمة')
+    +h('حصة النصوص',document.getElementById('ai-quota-text')?.value||'—','شهرياً لكل معلمة');
+  try{
+    const month=new Date().toISOString().slice(0,7);
+    const{data:use}=await sb.from('ai_usage').select('user_id,kind,count').eq('month',month);
+    const agg={};(use||[]).forEach(r=>{const a=agg[r.user_id]||(agg[r.user_id]={t:0,i:0});
+      if(r.kind==='img')a.i+=r.count||0;else a.t+=r.count||0;});
+    const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data');
+    const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
+    const list=Object.entries(agg).map(([id,a])=>({
+      nm:((pm[id]?.data||{}).display_name)||pm[id]?.email||'حساب غير معروف',t:a.t,i:a.i}))
+      .sort((x,y)=>(y.t+y.i)-(x.t+x.i)).slice(0,5);
+    document.getElementById('ai-ov-top').innerHTML=list.length
+      ? list.map(r=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--border)">
+          <span style="font-weight:800">${escHtml(r.nm)}</span>
+          <span style="font-variant-numeric:tabular-nums">${egToArabic(r.t)} نصّي · ${egToArabic(r.i)} صورة</span></div>`).join('')
+      : 'لا استهلاك مسجّل هذا الشهر.';
+  }catch(e){document.getElementById('ai-ov-top').textContent='تعذّر قراءة الاستهلاك — تأكّد من تنفيذ ملف سياسة ai_usage.';}
 }
 
 // ═ 🎮 إدارة ثيمات الألعاب (مشرف) ═
@@ -11669,6 +11809,7 @@ async function egApplyConfig(){
   try{
     const{data}=await sb.from('ai_settings').select('key,value');
     const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    _aiSettings=m;
     egLimits.enabled=(m.generator_enabled!=='0');
     egLimits.maxQ=parseInt(m.max_questions)||30;
     egLimits.maxPages=parseInt(m.max_pages)||5;
@@ -14878,7 +15019,7 @@ function egInsertShape(type){
 function egInsertImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('الملف ليس صورة',true);return;}if(f.size>3*1024*1024){toast('حجم الصورة كبير (الحد ٣ ميجابايت)',true);input.value='';return;}const rd=new FileReader();rd.onload=e=>{egAddObject('<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain;display:block" alt=""/>',180,140);input.value='';};rd.readAsDataURL(f);}
 
 // ══ إدارة مولّد الاختبارات (المشرف) — إعدادات تُحفظ في ai_settings ══
-let _aiConsumed=0;
+let _aiConsumed=0,_aiSettings={};
 // ══ مساعد المحتوى الذكي (المشرف): استخراج الفهرس + تقطيع الكتاب لنصّ كل درس ══
 const LT_MAX=40000; // سقف نصّ الدرس الواحد
 let _ltBookFile=null;
@@ -15265,15 +15406,6 @@ function egAiModelDesc(){
   const tag=o.getAttribute('data-tag'),desc=o.getAttribute('data-desc')||'';
   box.innerHTML=(tag?`<span style="display:inline-block;background:rgba(46,125,50,.12);color:#2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:6px">${escHtml(tag)}</span>`:'')+escHtml(desc);
 }
-// العرض التقديمي يستهلك ست صور، فرقم الحصة وحده لا يقول شيئاً للمشرفة —
-// نترجمه إلى عدد العروض والملخصات التي يتيحها فعلاً.
-const AI_SLIDE_IMGS=6;
-function aiQuotaHint(){
-  const el=document.getElementById('ai-quota-hint');if(!el)return;
-  const n=parseInt(document.getElementById('ai-quota-img')?.value)||0;
-  el.textContent=n?`تكفي نحو ${egToArabic(Math.floor(n/AI_SLIDE_IMGS))} عرضاً تقديمياً (كل عرض ${egToArabic(AI_SLIDE_IMGS)} صور)، أو ${egToArabic(n)} ملخصاً بصرياً.`:'';
-}
-
 async function saveAiLimits(){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
   const enabled=document.getElementById('ai-gen-enabled').checked?'1':'0';
@@ -15296,6 +15428,68 @@ async function saveAiLimits(){
     if(error)toast('فشل الحفظ: '+error.message,true);else toast('✅ تم حفظ التحكم والحدود','ok');
   }catch(e){toast('حدث خطأ',true);}
   finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ التحكم والحدود';}}
+}
+
+// ═══ نموذج لكل مهمّة ═══
+// كل مهمّة تقرأ ai_settings['model_'+key]، فإن كان فارغاً تبعت الإعداد العام.
+// الترتيب هنا من الأثقل إلى الأخفّ ليقع نظر المشرفة على مواضع التوفير أولاً.
+const AI_TASKS=[
+  {k:'plan',        n:'خطّة الدرس',            d:'أثقل مهمّة وأهمّها — لا يُنصح بتخفيفها'},
+  {k:'presentation',n:'العرض التقديمي',        d:'بناء شرائح متسلسلة، يستفيد من نموذج قوي'},
+  {k:'exam',        n:'مولّد الاختبارات',      d:'صياغة أسئلة دقيقة'},
+  {k:'game',        n:'محتوى الألعاب',         d:'أسئلة قصيرة — يكفيها نموذج متوسط'},
+  {k:'chat',        n:'محادثة فهيم',           d:'ردود قصيرة متكرّرة — أوفر مرشّح للتخفيف'},
+  {k:'summary',     n:'تلخيص صفحات الدرس',     d:'قراءة صفحات وإخراج نصّ قصير — مرشّح للتخفيف'},
+  {k:'extract',     n:'استخراج الدروس',        d:'مهمّة إدارية تُنفَّذ مرّة واحدة'},
+  {k:'segment',     n:'تقسيم الكتاب',          d:'مهمّة إدارية تُنفَّذ مرّة واحدة'}
+];
+// نماذج نصّية فقط — مهامّ الصور (إنفوجرافيك/شرائح مرسومة) لها مساراتها الخاصة
+// وتُقيَّد بنماذج صور، فإدراجها هنا يفتح باب اختيارٍ خاطئ يكسر التوليد.
+const AI_TASK_MODELS=[
+  ['','⚙️ الإعداد العام (كما هو أعلاه)'],
+  ['google/gemini-2.5-flash-lite','Gemini Flash-Lite — الأرخص'],
+  ['deepseek/deepseek-chat','DeepSeek V3 — رخيص وعربيته جيدة'],
+  ['google/gemini-2.5-flash','Gemini 2.5 Flash — متوازن وسريع'],
+  ['openai/gpt-5-mini','GPT-5 mini — متوازن'],
+  ['anthropic/claude-haiku-4.5','Claude Haiku 4.5 — عربية ممتازة'],
+  ['anthropic/claude-sonnet-4.6','Claude Sonnet 4.6 — أعلى جودة (الأغلى)']
+];
+function renderTaskModels(m){
+  const box=document.getElementById('ai-task-models');if(!box)return;
+  box.innerHTML=AI_TASKS.map(t=>{
+    const cur=(m||{})['model_'+t.k]||'';
+    // نموذجٌ ضُبط يدوياً من خارج هذه الشاشة يجب أن يظهر لا أن يُمحى بصمت
+    const extra=cur&&!AI_TASK_MODELS.some(o=>o[0]===cur)?`<option value="${escHtml(cur)}" selected>${escHtml(cur)} (مخصّص)</option>`:'';
+    return `<div style="margin-bottom:18px">
+      <label class="eg-lbl">${escHtml(t.n)}</label>
+      <select class="eg-card ai-tmodel" data-k="${t.k}" style="width:100%;margin-bottom:0" dir="ltr">
+        ${AI_TASK_MODELS.map(o=>`<option value="${o[0]}"${o[0]===cur?' selected':''}>${escHtml(o[1])}</option>`).join('')}${extra}
+      </select>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">${escHtml(t.d)}</div>
+    </div>`;
+  }).join('');
+}
+async function saveTaskModels(){
+  if(!sb)return;
+  const btn=event&&event.target?event.target:null;
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري الحفظ...';}
+  try{
+    const rows=[...document.querySelectorAll('.ai-tmodel')].map(s=>({
+      key:'model_'+s.dataset.k,value:s.value,updated_at:new Date().toISOString()}));
+    const{error}=await sb.from('ai_settings').upsert(rows,{onConflict:'key'});
+    if(error)toast('فشل الحفظ: '+error.message,true);
+    else toast('✅ تم حفظ نماذج المهامّ','ok');
+  }catch(e){toast('حدث خطأ',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ نماذج المهامّ';}}
+}
+
+// العرض التقديمي يستهلك ست صور، فرقم الحصة وحده لا يقول شيئاً للمشرفة —
+// نترجمه إلى عدد العروض والملخصات التي يتيحها فعلاً.
+const AI_SLIDE_IMGS=6;
+function aiQuotaHint(){
+  const el=document.getElementById('ai-quota-hint');if(!el)return;
+  const n=parseInt(document.getElementById('ai-quota-img')?.value)||0;
+  el.textContent=n?`تكفي نحو ${egToArabic(Math.floor(n/AI_SLIDE_IMGS))} عرضاً تقديمياً (كل عرض ${egToArabic(AI_SLIDE_IMGS)} صور)، أو ${egToArabic(n)} ملخصاً بصرياً.`:'';
 }
 
 function aiComputeBudget(){
