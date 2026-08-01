@@ -96,6 +96,18 @@ Deno.serve(async (req) => {
     if (!isAdmin) return json({ error: "forbidden" }, 403);
 
     const b = await req.json().catch(() => ({}));
+
+    // وضع الاختبار: يرسل رسالةً نموذجية ولا ينشئ حساباً ولا يمسّ صفّاً.
+    // بدونه لا سبيل للتأكّد من إعداد البريد إلا بتفعيل معلّمةٍ حقيقية —
+    // وخطأ الإعداد عندها يكلّف حساباً مفعَّلاً لم تصلها بياناته.
+    if (b.test === true) {
+      const to = String(b.to || "").trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json({ error: "bad_email" }, 400);
+      const r = await sendMail(to, "رسالة اختبار — منصّة خُطّة",
+        mailHtml("معلّمتنا", to, "PaSSw0rdTest", "https://khotati.com/cycle1.html"));
+      return json({ ok: true, test: true, mailed: r.sent, mailReason: r.reason || null, to });
+    }
+
     const regId = b.regId;
     if (!regId) return json({ error: "no_reg" }, 400);
 

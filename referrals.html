@@ -253,6 +253,7 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
       <div class="search-row">
         <input id="accounts-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderAccountsTab()"/>
         <span class="results-count" id="accounts-results-count"></span>
+        <button class="action-btn" onclick="testActivationMail()">✉️ اختبار البريد</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -555,6 +556,21 @@ function genRandomPassword(){
   for(let i=0;i<8;i++)p+=chars[bytes[i]%chars.length];
   return p;
 }
+// اختبار إعداد البريد بلا تفعيل حسابٍ حقيقي: خطأ الإعداد لو اكتُشف عند أول
+// معلّمة لكلّف حساباً مفعَّلاً لم تصلها بياناته.
+async function testActivationMail(){
+  const to=(prompt('أدخل بريداً لإرسال رسالة اختبار إليه:')||'').trim();
+  if(!to)return;
+  try{
+    const res=await sb.functions.invoke('activate-teacher',{body:{test:true,to}});
+    const{data,error}=res;
+    if(error||!data||!data.ok)throw new Error((data&&data.error)||(error&&error.message)||'خطأ');
+    alert(data.mailed
+      ? `✅ أُرسلت رسالة الاختبار إلى ${data.to}\n\nافحص صندوق الوارد والمهملات.`
+      : `❌ لم تُرسَل الرسالة.\n\nالسبب: ${data.mailReason||'خدمة البريد غير مهيّأة'}\n\nتأكّد من سرّي RESEND_API_KEY و MAIL_FROM.`);
+  }catch(e){alert('❌ تعذّر الاختبار: '+(e.message||''));}
+}
+
 // ═ تفعيل الحساب بضغطة ═
 // المسار قبله: توليد بريدٍ صناعي (c12@khotati.app) ثم نسخ كلمة المرور من
 // نافذةٍ وإرسالها يدوياً. فيه خطوتان يدويّتان وخطرُ ضياع كلمة المرور، وبريدٌ
