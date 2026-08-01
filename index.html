@@ -1758,6 +1758,9 @@ input,textarea,select{font-size:16px !important;}
       <input type="email" class="onboard-input" id="pw-login-email" placeholder="البريد / اسم المستخدم" style="direction:ltr;text-align:right" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('pw-login-password').focus()"/>
       <input type="password" class="onboard-input" id="pw-login-password" placeholder="كلمة المرور" style="margin-top:8px;direction:ltr;text-align:right" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginWithPassword()"/>
       <button class="modal-save" id="pw-login-btn" style="width:100%;padding:12px;margin-top:8px" onclick="loginWithPassword()">تسجيل الدخول</button>
+      <!-- من فقدت جلستها ولا تذكر كلمتها كانت تنتظر ردّ الإدارة لتعود. -->
+      <button type="button" id="forgot-btn" onclick="forgotPassword()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--gold,#c9a84c);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:4px">نسيت كلمة المرور؟</button>
+      <p id="forgot-msg" style="font-size:12px;line-height:1.9;color:var(--muted,#999);margin-top:6px;min-height:18px"></p>
       <div style="display:flex;align-items:center;gap:8px;margin:16px 0 12px;color:var(--muted,#999);font-size:12px">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.15)"></div>ليس لديك حساب؟<div style="flex:1;height:1px;background:rgba(255,255,255,.15)"></div>
       </div>
@@ -3873,12 +3876,65 @@ async function loginWithPassword(){
    الجلسة القائمة هي الإثبات، فلا نطلب الكلمة القديمة: أكثرُ من تحتاج التغيير
    هي من لا تذكرها أصلاً ودخلت بجلسةٍ محفوظة — وطلبُها يسدّ الباب في وجه
    الحالة التي وُضع لها الزرّ. */
+/* ══ نسيت كلمة المرور؟ ══
+   زرُّ التغيير في قائمة الحساب يخدم من جلستها قائمة. أمّا من خرجت من حسابها
+   ولا تذكر كلمتها فكانت تقف عند شاشة الدخول حتى تردّ الإدارة.
+
+   ملحوظتان تحكمان الرسائل:
+   ١) سوبابيز يردّ بالنجاح حتى لو كان البريد غير مسجَّل — عمداً، كي لا يُستدلّ
+      على من عنده حساب. فلا نقول «أُرسلت» بل «إن كان مسجّلاً».
+   ٢) الحسابات ذات البريد الصناعي (t…@khotati.app) لا صندوق لها، فنضع مخرج
+      التواصل مع الإدارة في الرسالة نفسها. */
+const RESET_WA='96876990975';
+async function forgotPassword(){
+  const box=document.getElementById('forgot-msg');
+  const btn=document.getElementById('forgot-btn');
+  const email=(document.getElementById('pw-login-email').value||'').trim();
+  if(!email){
+    box.textContent='اكتبي بريدك في الحقل أعلاه ثم اضغطي هنا مرّة أخرى';
+    box.style.color='var(--red2)';
+    try{document.getElementById('pw-login-email').focus();}catch(e){}
+    return;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    box.textContent='البريد غير صالح — راجعي كتابته';
+    box.style.color='var(--red2)';return;
+  }
+  btn.disabled=true;btn.textContent='يُرسَل…';box.textContent='';
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email,
+      {redirectTo:location.origin+location.pathname});
+    if(error)throw error;
+    const wa='https://wa.me/'+RESET_WA+'?text='+encodeURIComponent('السلام عليكم، لم تصلني رسالة استعادة كلمة المرور. بريدي: '+email);
+    box.innerHTML='إن كان هذا البريد مسجّلاً فستصلك رسالةٌ فيها رابط. '
+      +'افحصي صندوق الوارد <b>والمهملات</b>. '
+      +'ولو لم تصلك خلال دقائق <a href="'+wa+'" target="_blank" rel="noopener" style="color:var(--gold,#c9a84c);font-weight:800">راسلي الإدارة</a>.';
+    box.style.color='var(--muted,#999)';
+  }catch(e){
+    const m=String(e&&e.message||'');
+    box.textContent=/rate|limit|seconds|Too many/i.test(m)
+      ?'أُرسلت رسالةٌ قبل قليل — انتظري دقيقةً ثم أعيدي المحاولة'
+      :'تعذّر الإرسال — تحققي من الاتصال وأعيدي المحاولة';
+    box.style.color='var(--red2)';
+  }finally{
+    btn.disabled=false;btn.textContent='نسيت كلمة المرور؟';
+  }
+}
+
 const PW_MIN=8;
-function pwOpen(){
+let pwRecovery=false;
+function pwOpen(opts){
+  const rec=!!(opts&&opts.recovery);
+  pwRecovery=rec;
   document.getElementById('user-menu').classList.remove('show');
-  if(!currentUser){toast('سجّلي الدخول أولاً',true);return;}
+  const mail=rec?(opts.email||''):(currentUser&&currentUser.email||'');
+  // في وضع الاستعادة الجلسةُ من الرابط لا من الدخول، فـ currentUser قد لا
+  // يكون ضُبط بعد — ولا يصحّ أن يمنعها ذلك من وضع كلمتها الجديدة.
+  if(!rec&&!currentUser){toast('سجّلي الدخول أولاً',true);return;}
   const who=document.getElementById('pw-who');
-  if(who)who.innerHTML='كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(currentUser.email||'')+'</bdi>. تبقين داخل حسابك بعد التغيير.';
+  if(who)who.innerHTML=rec
+    ? 'اختاري كلمة مرورٍ جديدة لحساب <bdi dir="ltr">'+escHtml(mail)+'</bdi>. ستدخلين بها مباشرةً.'
+    : 'كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(mail)+'</bdi>. تبقين داخل حسابك بعد التغيير.';
   ['pw-new','pw-new2'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('pw-show').checked=false;
   pwToggleShow();pwCheck();
@@ -3912,6 +3968,13 @@ async function pwSave(){
     pwClose();
     // نجاحٌ صامت يجعلها تشكّ أتغيّرت الكلمة أم لا، فتُعيدها.
     toast('تغيّرت كلمة المرور — استعمليها في الدخول القادم','ok');
+    // بعد الاستعادة نُنظّف الرابط من رمز الجلسة: بقاؤه في شريط العنوان يعني
+    // أنّ مشاركة الرابط أو سجلّ التصفّح يسلّم الحساب لغيرها.
+    if(pwRecovery){
+      try{history.replaceState(null,'',location.pathname);}catch(e){}
+      pwRecovery=false;
+      setTimeout(()=>location.reload(),900);
+    }
   }catch(e){
     const m=String(e&&e.message||'');
     const el=document.getElementById('pw-msg');
@@ -4623,8 +4686,19 @@ async function bootApp(session){
   },12000);
   const _minLoader=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms-(Date.now()-_loaderStart))));
 
+  // العائدة من رابط الاستعادة: نقرأ العلامة من العنوان لا من حدث المكتبة،
+  // لأنّ الحدث قد يكون انطلق قبل أن نشترك فيه فيمضي الرابط بلا أثر.
+  const isRecovery=/[#&?]type=recovery/.test(location.hash+location.search);
   const {data:{session}}=await sb.auth.getSession();
-  if(session){
+  if(isRecovery&&session){
+    // لا نُدخلها إلى التطبيق قبل أن تضع كلمتها: جلسةُ الرابط قصيرة، ودخولٌ
+    // بلا تغييرٍ يعيدها إلى العجز نفسه بعد انتهائها.
+    clearTimeout(_loaderTimeout);
+    hideLoader();
+    showAuthGate();
+    showAuthState('auth-login');
+    pwOpen({recovery:true,email:(session.user&&session.user.email)||''});
+  }else if(session){
     await Promise.all([bootApp(session),_minLoader(5000),preWarmSections()]);
     clearTimeout(_loaderTimeout);
     hideLoader();
@@ -4649,7 +4723,9 @@ async function bootApp(session){
 
   // راقب تغيّر حالة الدخول (بعد رجوع المستخدم من Google)
   sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='PASSWORD_RECOVERY'&&session){pwOpen({recovery:true,email:(session.user&&session.user.email)||''});return;}
     if(event==='SIGNED_IN'&&session){
+      if(pwRecovery)return;             // لا نُدخلها قبل أن تضع كلمتها
       if(!currentUser)await bootApp(session);
       else if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
       storeDriveRefreshToken(session);

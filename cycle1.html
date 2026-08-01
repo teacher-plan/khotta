@@ -61,6 +61,11 @@ body::after{width:48vmax;height:48vmax;bottom:-16vmax;inset-inline-end:-12vmax;
 .auth-btn{width:100%;border:none;border-radius:12px;padding:14px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(216,96,72,.4);transition:transform .15s;margin-top:6px}
 .auth-btn:hover{transform:translateY(-2px)}
 .auth-btn:disabled{opacity:.6;transform:none}
+.auth-link{display:block;width:100%;margin-top:11px;background:none;border:none;color:var(--red-d);
+  font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:4px}
+.auth-link:disabled{opacity:.55;cursor:default}
+.auth-hint{font-size:12px;line-height:1.9;color:var(--muted);margin-top:8px;min-height:18px}
+.auth-hint a{color:var(--red-d);font-weight:800}
 #auth-loading-box{color:var(--muted);font-size:13px;padding:10px}
 .spin{width:38px;height:38px;border:4px solid var(--border);border-top-color:var(--red);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -1930,6 +1935,10 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
       <div class="fld"><label for="cy1-login-email">البريد الإلكتروني</label><input id="cy1-login-email" type="email" autocomplete="username"/></div>
       <div class="fld"><label for="cy1-login-password">كلمة المرور</label><input id="cy1-login-password" type="password" autocomplete="current-password"/></div>
       <button class="auth-btn" id="cy1-login-btn" onclick="loginWithPassword()">تسجيل الدخول</button>
+      <!-- من فقدت جلستها ولا تذكر كلمتها كانت تنتظر ردّ الإدارة لتعود إلى
+           صفّها. هذا يعيدها بنفسها. -->
+      <button type="button" class="auth-link" id="cy1-forgot" onclick="forgotPassword()">نسيتِ كلمة المرور؟</button>
+      <p class="auth-hint" id="cy1-forgot-msg"></p>
     </div>
   </div>
 </div>
@@ -3182,6 +3191,51 @@ async function loginWithPassword(){
   if(error){btn.disabled=false;btn.textContent='تسجيل الدخول';toast('تعذّر الدخول — تحققي من البيانات',true);}
 }
 
+/* ══ نسيتِ كلمة المرور؟ ══
+   زرُّ التغيير في قائمة الحساب يخدم من جلستها قائمة. أمّا من خرجت من حسابها
+   ولا تذكر كلمتها فكانت تقف هنا عاجزةً حتى تردّ الإدارة. هذا يعيدها بنفسها.
+
+   ملحوظتان تحكمان الرسائل أدناه:
+   ١) سوبابيز يردّ بالنجاح حتى لو كان البريد غير مسجَّل — عمداً، كي لا يُستدلّ
+      على من عنده حساب. فلا يصحّ أن نقول «أُرسلت»، بل «إن كان مسجّلاً».
+   ٢) الحسابات المولَّدة ببريدٍ صناعي (c…@khotati.app) لا وجود لصندوقها، فلن
+      يصلها شيء أبداً. لذا نضع مخرج التواصل مع الإدارة في الرسالة نفسها. */
+async function forgotPassword(){
+  const box=document.getElementById('cy1-forgot-msg');
+  const btn=document.getElementById('cy1-forgot');
+  let email=(document.getElementById('cy1-login-email').value||'').trim();
+  if(!email){
+    box.textContent='اكتبي بريدكِ في الحقل أعلاه ثم اضغطي هنا مرّة أخرى';
+    box.style.color='var(--red-d)';
+    try{document.getElementById('cy1-login-email').focus();}catch(e){}
+    return;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    box.textContent='البريد غير صالح — راجعي كتابته';
+    box.style.color='var(--red-d)';return;
+  }
+  btn.disabled=true;btn.textContent='يُرسَل…';
+  box.textContent='';
+  try{
+    const{error}=await sb.auth.resetPasswordForEmail(email,
+      {redirectTo:location.origin+location.pathname});
+    if(error)throw error;
+    const wa='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent('السلام عليكم، لم تصلني رسالة استعادة كلمة المرور. بريدي: '+email);
+    box.innerHTML='إن كان هذا البريد مسجّلاً فستصلكِ رسالةٌ فيها رابط. '
+      +'افحصي صندوق الوارد <b>والمهملات</b>. '
+      +'ولو لم تصلكِ خلال دقائق <a href="'+wa+'" target="_blank" rel="noopener">راسلي الإدارة</a>.';
+    box.style.color='var(--muted)';
+  }catch(e){
+    const m=String(e&&e.message||'');
+    box.textContent=/rate|limit|seconds|Too many/i.test(m)
+      ?'أُرسلت رسالةٌ قبل قليل — انتظري دقيقةً ثم أعيدي المحاولة'
+      :'تعذّر الإرسال — تحقّقي من الاتصال وأعيدي المحاولة';
+    box.style.color='var(--red-d)';
+  }finally{
+    btn.disabled=false;btn.textContent='نسيتِ كلمة المرور؟';
+  }
+}
+
 // حذف كل بيانات الحسـاب (بتأكيد مزدوج) — يعيد الحساب لنقطة الصفر
 async function c1ResetData(){
   document.getElementById('c1-menu').classList.remove('open');
@@ -3203,12 +3257,20 @@ async function c1ResetData(){
    الحالة التي وُضع لها الزرّ. وهو اتّساقٌ مع «حذف كل بياناتي» في القائمة
    نفسها، وهو أشدّ أثراً ولا يطلب سوى تأكيد. */
 const PW_MIN=8;
-function pwOpen(){
+let pwRecovery=false;
+function pwOpen(opts){
+  const rec=!!(opts&&opts.recovery);
+  pwRecovery=rec;
   document.getElementById('c1-menu').classList.remove('open');
   if(KH_DEMO){toast('تغيير كلمة المرور مُعطَّل في التجربة — وهو يعمل في حسابكِ');return;}
-  if(!currentUser){toast('سجّلي الدخول أولاً',true);return;}
+  const mail=rec?(opts.email||''):(currentUser&&currentUser.email||'');
+  // في وضع الاستعادة الجلسةُ من الرابط لا من الدخول، فـ currentUser قد لا
+  // يكون ضُبط بعد — ولا يصحّ أن يمنعها ذلك من وضع كلمتها الجديدة.
+  if(!rec&&!currentUser){toast('سجّلي الدخول أولاً',true);return;}
   const who=document.getElementById('pw-who');
-  if(who)who.innerHTML='كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(currentUser.email||'')+'</bdi>. تبقين داخل حسابكِ بعد التغيير.';
+  if(who)who.innerHTML=rec
+    ? 'اختاري كلمة مرورٍ جديدة لحساب <bdi dir="ltr">'+escHtml(mail)+'</bdi>. ستدخلين بها مباشرةً.'
+    : 'كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(mail)+'</bdi>. تبقين داخل حسابكِ بعد التغيير.';
   ['pw-new','pw-new2'].forEach(id=>{document.getElementById(id).value='';});
   const sh=document.getElementById('pw-show');
   if(sh)sh.checked=false;
@@ -3245,6 +3307,13 @@ async function pwSave(){
     pwClose();
     // التنبيه صريح: نجاحٌ صامت يجعلها تشكّ أتغيّرت الكلمة أم لا، فتُعيدها.
     toast('تغيّرت كلمة المرور — استعمليها في الدخول القادم');
+    // بعد الاستعادة نُنظّف الرابط من رمز الجلسة: بقاؤه في شريط العنوان يعني
+    // أنّ مشاركة الرابط أو سجلّ التصفّح يسلّم الحساب لغيرها.
+    if(pwRecovery){
+      try{history.replaceState(null,'',location.pathname);}catch(e){}
+      pwRecovery=false;
+      setTimeout(()=>location.reload(),900);
+    }
   }catch(e){
     const m=String(e&&e.message||'');
     document.getElementById('pw-msg').textContent=
@@ -4142,11 +4211,22 @@ c1SelectEnhanceAll();
     }
   }catch(e){}
   if(KH_DEMO){setTimeout(demoBoot,0);return;}
+  // العائدة من رابط الاستعادة: نقرأ العلامة من العنوان لا من حدث المكتبة،
+  // لأنّ الحدث قد يكون انطلق قبل أن نشترك فيه فيمضي الرابط بلا أثر.
+  const isRecovery=/[#&?]type=recovery/.test(location.hash+location.search);
   const{data:{session}}=await sb.auth.getSession();
-  if(session)await afterAuth(session);
+  if(isRecovery&&session){
+    // لا نُدخلها إلى التطبيق قبل أن تضع كلمتها: جلسةُ الرابط قصيرة، ودخولٌ
+    // بلا تغييرٍ يعيدها إلى العجز نفسه بعد انتهائها.
+    document.getElementById('auth-loading-box').classList.add('hidden');
+    document.getElementById('cy1-login-form').classList.remove('hidden');
+    pwOpen({recovery:true,email:(session.user&&session.user.email)||''});
+  }
+  else if(session)await afterAuth(session);
   else showLogin();
   sb.auth.onAuthStateChange(async(event,s)=>{
-    if(event==='SIGNED_IN'&&s&&!currentUser)await afterAuth(s);
+    if(event==='PASSWORD_RECOVERY'&&s){pwOpen({recovery:true,email:(s.user&&s.user.email)||''});return;}
+    if(event==='SIGNED_IN'&&s&&!currentUser&&!pwRecovery)await afterAuth(s);
     if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
     if(event==='SIGNED_IN'&&s&&currentUser){
       if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
