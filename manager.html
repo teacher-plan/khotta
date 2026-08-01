@@ -6268,7 +6268,7 @@ function showPage(id,btn){
   if(id==='library')loadLibrary();
   if(id==='examgen')egInit();
   if(id==='faheem')fhPageInit();
-  if(id==='aimanage'){loadAiSettings();ltInit();}
+  if(id==='aimanage'){loadAiSettings();ltInit();aiLayout();}
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
@@ -6984,6 +6984,16 @@ const AI_CARD_MAP=[
 ];
 let _aiLaidOut=false;
 function aiLayout(){
+  try{ _aiLayout(); }
+  catch(e){
+    // تعثّرُ إعادة الترتيب كان يترك الشاشة بيضاء بلا تبويبٍ ولا بطاقة، وشاشةٌ
+    // فارغة أسوأ من ترتيبٍ قديم: نُظهر الألواح كما كانت ونمضي.
+    console.error('aiLayout',e);
+    ['content','exam','ppt','budget'].forEach(o=>{
+      const el=document.getElementById('aiold-'+o); if(el){el.hidden=false;el.style.display='block';}});
+  }
+}
+function _aiLayout(){
   if(_aiLaidOut)return;
   const bar=document.getElementById('ai-tabbar');
   if(!bar)return;
@@ -12545,6 +12555,12 @@ async function egApplyConfig(){
     const{data}=await sb.from('ai_settings').select('key,value');
     const m={};(data||[]).forEach(r=>m[r.key]=r.value);
     _aiSettings=m;
+    // الشاشة قد تُفتح قبل وصول الإعدادات، فتُرسم النظرة العامة بقيمٍ فارغة
+    setTimeout(()=>{try{
+      if(typeof renderTaskModels==='function'&&document.getElementById('ai-task-models'))renderTaskModels(m);
+      const ov=document.getElementById('aipanel-overview');
+      if(ov&&ov.style.display!=='none')aiOverview();
+    }catch(_){}},0);
     egLimits.enabled=(m.generator_enabled!=='0');
     egLimits.maxQ=parseInt(m.max_questions)||30;
     egLimits.maxPages=parseInt(m.max_pages)||5;
