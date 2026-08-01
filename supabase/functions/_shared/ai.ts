@@ -50,15 +50,37 @@ function keyFault(status: number) {
   return status === 401 || status === 402 || status === 403 || status === 429;
 }
 
-// ترتيب المفاتيح لمهمّةٍ بعينها: ما تختاره المشرفة أولاً، ثم الباقي احتياطاً.
-// key_<task> في ai_settings يحمل رقم المفتاح (١ فما فوق).
+// ═ مجموعات المهامّ ═
+// أربع مجموعاتٍ بدل أربع عشرة مهمّة: ضبطُ كلٍّ على حدة بابُ خطأ، والتقسيم
+// المنطقي يجمع ما يتعطّل معاً ويفصل ما يجب أن ينجو منفرداً.
+//  ١ التحضير: الخطة وفهيم والألعاب وقراءة الكتاب — قلب عمل المعلّمة اليومي.
+//  ٢ الإنفوجرافيك: أغلى بندٍ وأكثره استهلاكاً، فعزله يقي البقية من نفاده.
+//  ٣ الشرائح: العرض المصوَّر وصوره.
+//  ٤ الإدارة: تقطيع الكتب والاختبارات ووضعيات فهيم — عملٌ ثقيل يجري مرّةً
+//    واحدة، ولا يصحّ أن يستهلك رصيد الصفّ اليومي.
+const KEY_GROUP: Record<string, number> = {
+  plan: 1, plan_vision: 1, chat: 1, chat_vision: 1, game: 1, game_vision: 1, summary: 1,
+  infographic: 2,
+  slides: 3, slide_image: 3, presentation: 3,
+  extract: 4, segment: 4, exam: 4, exam_vision: 4, game_theme: 4, fahim_pose: 4,
+};
+
+// ترتيب المفاتيح لمهمّةٍ بعينها: ما يختاره المشرف أولاً، ثم مجموعتها، ثم
+// الباقي احتياطاً — فالتحوّل التلقائي يبقى قائماً مهما كان التقسيم.
+// key_<task> في ai_settings يتقدّم على المجموعة، فيبقى الضبط الدقيق ممكناً.
 export function keyOrder(st: Record<string, string>, task?: string): string[] {
   const keys = orKeys();
   if (!task || keys.length < 2) return keys;
-  const pick = parseInt(st["key_" + task] || "") || 0;
-  if (pick < 1 || pick > keys.length) return keys;
-  const first = keys[pick - 1];
-  return [first, ...keys.filter((k) => k !== first)];
+  const explicit = parseInt(st["key_" + task] || "") || 0;
+  const group = parseInt(st["keygrp_" + (KEY_GROUP[task] || 0)] || "") || KEY_GROUP[task] || 0;
+  // مفتاحٌ لم يُضَف بعد: نسقط إلى الترتيب الطبيعي بدل تعطيل المهمّة
+  for (const pick of [explicit, group]) {
+    if (pick >= 1 && pick <= keys.length) {
+      const first = keys[pick - 1];
+      return [first, ...keys.filter((k) => k !== first)];
+    }
+  }
+  return keys;
 }
 
 function withKey(init: RequestInit, key: string): RequestInit {
