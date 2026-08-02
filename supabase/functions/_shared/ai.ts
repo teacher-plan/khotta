@@ -72,7 +72,7 @@ const KEY_GROUP: Record<string, number> = {
   plan: 1, plan_vision: 1, chat: 1, chat_vision: 1, game: 1, game_vision: 1, summary: 1,
   infographic: 2,
   slides: 3, slide_image: 3, presentation: 3,
-  extract: 4, segment: 4, exam: 4, exam_vision: 4, game_theme: 4, fahim_pose: 4,
+  extract: 4, segment: 4, exam: 4, exam_vision: 4, game_theme: 4, fahim_pose: 4, roster: 4,
 };
 
 // ترتيب المفاتيح لمهمّةٍ بعينها: ما يختاره المشرف أولاً، ثم مجموعتها، ثم
