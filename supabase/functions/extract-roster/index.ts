@@ -116,7 +116,16 @@ Deno.serve(async (req) => {
     }, { st, task: "roster" });
 
     const or = await orResp.json();
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) {
+      // نفاد الرصيد ليس «عطلاً في الاتصال»، ورسالةٌ عامّة تجعل المعلّمة تُعيد
+      // المحاولة مراراً بلا جدوى وتظنّ العطل في ملفّها أو شبكتها.
+      const msg = String(or?.error?.message || or?.message || "");
+      const code = orResp.status === 402 || /credit|quota|insufficient|balance|payment/i.test(msg)
+        ? "no_credit"
+        : orResp.status === 429 ? "busy" : "provider_error";
+      console.error(`openrouter ${orResp.status} في extract-roster: ${msg}`);
+      return json({ error: code, detail: msg.slice(0, 200) }, 502);
+    }
 
     const text = or?.choices?.[0]?.message?.content || "";
     let parsed: { names?: unknown[] };
