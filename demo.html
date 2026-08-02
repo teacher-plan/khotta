@@ -409,6 +409,24 @@ body.inapp #c1-notif-btn{display:flex}
 .c1-mbox .fld input[type=text],.c1-mbox .fld input[type=date],.c1-mbox .fld select{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;font-family:inherit;font-size:13.5px;color:var(--ink);outline:none;box-sizing:border-box}
 .c1-mbox .fld input[type=text]:focus,.c1-mbox .fld input[type=date]:focus,.c1-mbox .fld select:focus{border-color:var(--red)}
 /* معالج الإعداد (مطابق لبنية صفحة المعلم) */
+/* ── الجولة التعريفية ── */
+.tour-box{max-width:400px;text-align:center}
+.tour-ic{width:62px;height:62px;margin:2px auto 14px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;box-shadow:0 8px 22px rgba(216,96,72,.32)}
+.tour-ic svg{width:30px;height:30px}
+.tour-box h3{font-size:19px;margin-bottom:8px}
+.tour-lv{font-size:14px;line-height:2;color:var(--muted);margin-bottom:16px;min-height:56px}
+.tour-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.tour-dots i{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s}
+.tour-dots i.on{background:var(--red-d);width:20px;border-radius:4px}
+.tour-skip{display:block;width:100%;margin-top:12px;background:none;border:none;color:var(--muted);
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;padding:4px}
+
+.su-roster-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.su-roster-btn{background:var(--card);border:1.5px solid var(--olive);color:var(--olive-d);border-radius:10px;
+  padding:9px 14px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.su-roster-btn:disabled{opacity:.6;cursor:default}
+.su-roster-hint{font-size:11.5px;color:var(--muted);line-height:1.8;flex:1;min-width:180px}
 .su-steps{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
 .su-steps i{width:34px;height:5px;border-radius:4px;background:var(--border)}
 .su-steps i.on{background:linear-gradient(90deg,var(--red),var(--red-d))}
@@ -1967,6 +1985,23 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
   <div class="c1-mi danger" onclick="confirmSignOut()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 9V5l-7 7 7 7v-4h8V9h-8zm6 10v2H3V3h13v2H5v14h11z"/></svg> تسجيل الخروج</div>
 </div>
 
+<!-- ══ الجولة التعريفية ══
+     تُعرض مرّةً بعد اكتمال الإعداد. بلا زرّ إغلاقٍ في الخلفية عمداً: ضغطةٌ
+     خاطئة خارج البطاقة كانت تُنهيها بلا رجعة، فالخروج بزرٍّ صريح. -->
+<div class="c1-modal" id="tour-modal">
+  <div class="c1-mbox tour-box">
+    <div class="tour-ic" id="tour-ic"></div>
+    <h3 id="tour-nm"></h3>
+    <p class="tour-lv" id="tour-lv"></p>
+    <div class="tour-dots" id="tour-dots"></div>
+    <div class="c1-mrow">
+      <button class="c1-mbtn no" id="tour-back" onclick="tourBack()">السابق</button>
+      <button class="c1-mbtn go" id="tour-next" onclick="tourNext()">التالي</button>
+    </div>
+    <button type="button" class="tour-skip" onclick="tourEnd()">تخطّي الجولة</button>
+  </div>
+</div>
+
 <!-- ══ تغيير كلمة المرور ══
      كان كلُّ نسيانٍ يمرّ بالإدارة: تُعاد كلمة المرور من لوحة الإحالات وتُنقل
      يدوياً. والمعلّمة داخلة أصلاً حين تفتح هذه القائمة، فجلستُها نفسها هي
@@ -2036,7 +2071,7 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
 <div id="main-app" class="hidden">
   <!-- يومي — لوحة الصباح: كل يومك في شاشة واحدة -->
   <div class="page active" id="page-yawmi"><div class="wrap">
-    <div class="yw-dhikr-box">
+    <div class="yw-dhikr-box" id="yw-dhikr">
       <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg>
       <span id="yw-dhikr-txt">سبحان الله وبحمده، سبحان الله العظيم</span>
     </div>
@@ -2645,6 +2680,9 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
     </div>
     <div class="guide-body" id="guide-body"></div>
     <div class="c1-mrow" style="margin-top:10px">
+      <!-- الجولة تُعرض مرّةً بعد الإعداد، فمن تخطّتها لا سبيل لها إليها.
+           وهنا مكانها الطبيعي: الباب نفسه الذي تطرقه حين تحتاج شرحاً. -->
+      <button class="c1-mbtn no" onclick="guideClose();tourReplay()">🧭 إعادة الجولة</button>
       <button class="c1-mbtn no" onclick="guideClose()">فهمت، شكراً</button>
     </div>
   </div>
@@ -3076,6 +3114,9 @@ async function driveDelete(fileId){
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// داخل value="…" لا تكفي escHtml: علامة اقتباسٍ واحدة في النصّ تُنهي السمة
+// فينكسر الحقل ويضيع ما بعده.
+function escAttr(s){return escHtml(s).replace(/"/g,'&quot;');}
 
 /* تهريب قيمةٍ ستوضَع داخل نصّ JavaScript داخل خاصية HTML — مثل:
      onclick="fn('${escJs(x)}')"
@@ -3531,7 +3572,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='aca6f3e';
+const KH_BUILD='2860f65';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -3920,20 +3961,30 @@ function ywDhikrStart(){
     },500);
   },5000);
 }
+// إيقافٌ صريح: المؤقّت يبقى دائراً وراء شاشة الإعداد فيُبدّل نصّاً لا يراه
+// أحد، ويتراكم يتيماً مع كل إعادة رسم.
+function ywDhikrStop(){clearInterval(ywDhikrTimer);clearTimeout(ywDhikrFade);}
+
 function renderYawmi(){
-  ywDhikrStart();
   const h=new Date().getHours();
   document.getElementById('c1-greet').textContent=(h<12?'صباح النور':'مساء الورد')+(profile.display_name?' أ. '+profile.display_name:'');
   document.getElementById('c1-date').textContent=new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   // معالج الإعداد يعيش هنا الآن (كان في قسم الجدول): يملأ الصفحة حتى يكتمل
   const setupBox=document.getElementById('tt-setup'),main=document.getElementById('yw-main');
+  const dhikr=document.getElementById('yw-dhikr');
   clearInterval(ywTick);
   if(!profile.setupDone){
     main.classList.add('hidden');
     setupBox.classList.remove('hidden');
+    // الإعداد شاشةٌ قائمة بذاتها: شريط الأذكار فوقها يزاحمها ويشتّت عمّا
+    // تطلبه من المعلّمة. مكانه «يومي» بعد أن يكتمل الإعداد.
+    if(dhikr)dhikr.classList.add('hidden');
+    ywDhikrStop();
     ttRenderSetup();
     return;
   }
+  if(dhikr)dhikr.classList.remove('hidden');
+  ywDhikrStart();
   setupBox.classList.add('hidden');main.classList.remove('hidden');
   ywRenderTT();
   ywRenderStars();
@@ -4376,9 +4427,12 @@ function suRender(){
   const steps='<div class="su-steps">'+[1,2,3,4,5].map(n=>'<i class="'+(n<=suStep?'on':'')+'"></i>').join('')+'</div>';
   if(suStep===1){
     el.innerHTML='<div class="su-card">'+steps+'<h2>البيانات الأساسية</h2><div class="d">اسمك والفصل الدراسي الحالي</div>'
-      +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" value="'+escHtml(suName)+'"/></div>'
+      // oninput لا suNext1 وحدها: أزرار الفصل الدراسي تُعيد الرسم من هذه
+      // المتغيّرات، فما لم يُلتقط ما كُتب فوراً مُسح الاسم والهاتف عند أوّل
+      // ضغطةٍ على الفصل — وهو ما وقع فعلاً.
+      +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" oninput="suName=this.value" value="'+escAttr(suName)+'"/></div>'
       +'<div class="fld"><label for="su-phone">رقم الهاتف</label>'
-      +'<input type="tel" inputmode="tel" id="su-phone" dir="ltr" style="text-align:right" placeholder="9XXXXXXX" maxlength="20" value="'+escHtml(suPhone)+'"/>'
+      +'<input type="tel" inputmode="tel" id="su-phone" dir="ltr" style="text-align:right" placeholder="9XXXXXXX" maxlength="20" oninput="suPhone=this.value" value="'+escAttr(suPhone)+'"/>'
       +'<small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">لتتواصل معكِ الإدارة عند الحاجة. مثال: ٩١٢٣٤٥٦٧</small></div>'
       +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
       +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
@@ -4441,6 +4495,13 @@ function suRender(){
       +'<h2>قوائم الطلاب</h2><div class="d">أدخلي أسماء طلاب كل شعبة مرة واحدة فقط، مهما كان عدد موادها</div>'
       +'<div class="su-grade-tabs">'+tabs+'</div>'
       +(active?('<div class="fld"><label>طلاب شعبة '+active.name+'</label>'
+        // كتابة ثلاثين اسماً بيدها لكل شعبة أطولُ خطوةٍ في الإعداد وأكثرها
+        // مدعاةً للتوقّف. والكشف عندها أصلاً من المدرسة.
+        +'<div class="su-roster-tools">'
+        +'<input type="file" id="su-roster-file" accept="image/*,application/pdf" multiple hidden onchange="suRosterExtract(this)"/>'
+        +'<button type="button" class="su-roster-btn" id="su-roster-btn" onclick="document.getElementById(\'su-roster-file\').click()">📎 استخراج الأسماء من كشف</button>'
+        +'<span class="su-roster-hint" id="su-roster-msg">صورة الكشف أو ملف PDF — تُضاف الأسماء إلى القائمة أدناه</span>'
+        +'</div>'
         +'<textarea id="su-roster-ta" rows="8" placeholder="اسم في كل سطر" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical" oninput="suRSave()">'+escHtml(txt)+'</textarea></div>')
         :'<div class="d">لا توجد شعب محددة</div>')
       +'<div class="c1-mrow" style="margin-top:8px"><button class="c1-mbtn no" onclick="suStep=3;suRender()">رجوع</button>'
@@ -4497,6 +4558,66 @@ function suRSave(){
   const ta=document.getElementById('su-roster-ta');
   if(!ta)return;
   suRosters[suRActive]=ta.value.split('\n').map(x=>x.trim()).filter(Boolean);
+}
+
+/* ══ استخراج الأسماء من كشف ══
+   الكشف يُقرأ بنموذج رؤية ثم تُضاف أسماؤه إلى قائمة الشعبة الحالية.
+   إضافةً لا استبدالاً: قد يكون الكشف على ورقتين، أو تكون كتبت بعض الأسماء
+   بيدها قبل الرفع — والاستبدال يمحو ذلك بلا استئذان. */
+const ROSTER_MAX_MB=8;
+function readAsDataUrl(f){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(String(r.result||''));
+    r.onerror=()=>rej(new Error('read'));
+    r.readAsDataURL(f);
+  });
+}
+async function suRosterExtract(input){
+  const files=[...(input.files||[])].slice(0,4);
+  input.value='';                       // كي يعمل اختيار الملف نفسه ثانيةً
+  if(!files.length)return;
+  const msg=document.getElementById('su-roster-msg');
+  const btn=document.getElementById('su-roster-btn');
+  const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
+  const big=files.find(f=>f.size>ROSTER_MAX_MB*1024*1024);
+  if(big){say('الملف أكبر من '+ROSTER_MAX_MB+' ميجا — صوّري الكشف بجودةٍ أقلّ',true);return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ يقرأ الكشف…';}
+  say('قد يستغرق نصف دقيقة — لا تُغلقي الصفحة');
+  try{
+    const payload=[];
+    for(const f of files)payload.push({name:f.name,data:await readAsDataUrl(f)});
+    const{data,error}=await sb.functions.invoke('extract-roster',{body:{files:payload}});
+    let why=(data&&data.error)||'';
+    if(error&&!why)why=error.message||'';
+    if(why||!data)throw new Error(why||'خطأ');
+    const names=Array.isArray(data.names)?data.names:[];
+    if(!names.length){say('لم أجد أسماءً في الملف — تأكّدي أنّ الكشف واضحٌ في الصورة',true);return;}
+    // الدمج مع الموجود بلا تكرار
+    const ta=document.getElementById('su-roster-ta');
+    const cur=(ta.value||'').split('\n').map(x=>x.trim()).filter(Boolean);
+    const seen=new Set(cur.map(x=>x.replace(/\s+/g,' ')));
+    let added=0;
+    for(const n of names){
+      const k=String(n).replace(/\s+/g,' ').trim();
+      if(!k||seen.has(k))continue;
+      seen.add(k);cur.push(k);added++;
+    }
+    ta.value=cur.join('\n');
+    suRSave();
+    // العدد صريحٌ ومعه دعوةٌ للمراجعة: القراءة الآلية تُخطئ أحياناً، واسمٌ
+    // خاطئ يبقى على الطالبة طول العام في النجوم والشهادات.
+    say(added?('أُضيف '+added+' اسماً — راجعيها وصحّحي ما يلزم'):'كل الأسماء موجودةٌ مسبقاً');
+    if(added)toast('أُضيف '+added+' اسماً إلى الشعبة');
+  }catch(e){
+    const m=String(e&&e.message||'');
+    say(m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
+      :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورةً أو PDF'
+      :m==='no_files'?'لم يُرفَق ملف'
+      :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='📎 استخراج الأسماء من كشف';}
+  }
 }
 function suGoStep5(){
   suRSave();
@@ -4582,6 +4703,70 @@ async function suFinish(){
   suData={};suRosters={};window._suFocus=null;suRActive=null;
   renderYawmi();
   toast('اكتمل الإعداد — أهلاً بك');
+  tourStart();
+}
+
+/* ══ الجولة التعريفية ══
+   المعلّمة تخرج من الإعداد إلى شاشةٍ فيها عشرة أقسام لا تعرف أيّها يخدمها،
+   فتقف عند «يومي» ولا تكتشف البقية إلا مصادفةً — أو لا تكتشفها.
+
+   ستّ محطّاتٍ لا عشر: جولةٌ تعرض كل قسمٍ تصير واجباً يُتخطّى، وأكثر ما
+   تحتاجه في يومها الأوّل هذه. والبقية تجدها في لوحة التنقّل ودليل الاستخدام،
+   وإليهما تنتهي الجولة.
+
+   والمحطّات تُبنى من C1_SECTIONS نفسها: نسخةٌ ثانية من الأسماء والأوصاف
+   تتخلّف عن الأقسام بعد تعديلٍ أو اثنين. */
+const TOUR_IDS=['yawmi','plan','studio','students','fahim','shared'];
+let tourIdx=0;
+function tourSteps(){
+  const first=(profile.display_name||'').split(' ')[0];
+  const steps=[{
+    ic:C1_ICONS.spark,
+    nm:'أهلاً بكِ'+(first?' أ. '+first:''),
+    lv:'اكتمل إعدادكِ. هذه جولةٌ قصيرة في أقسام المنصّة — دقيقةٌ واحدة، وتقدرين على تخطّيها متى شئتِ.',
+  }];
+  for(const id of TOUR_IDS){
+    const s=C1_SECTIONS.find(x=>x.id===id);
+    if(s)steps.push({ic:C1_ICONS[s.ic]||'',nm:s.nm,lv:s.lv});
+  }
+  steps.push({
+    ic:C1_ICONS.book,
+    nm:'وأين البقية؟',
+    lv:'زرّ التنقّل في أعلى الشاشة يفتح كل الأقسام. وفي قائمة حسابكِ «دليل الاستخدام» يشرحها بالتفصيل متى احتجتِ.',
+  });
+  return steps;
+}
+// إعادةٌ بطلبها من الدليل: تتجاوز علامة الإتمام لأنها طلبتها صراحةً.
+function tourReplay(){tourIdx=0;document.getElementById('tour-modal').classList.add('open');tourRender();}
+function tourStart(){
+  // لا تتكرّر: من أتمّها أو تخطّاها لا تُعرض عليها ثانيةً. وتبقى في متناولها
+  // من دليل الاستخدام.
+  if(profile.tourDone)return;
+  tourIdx=0;
+  document.getElementById('tour-modal').classList.add('open');
+  tourRender();
+}
+function tourRender(){
+  const steps=tourSteps(),s=steps[tourIdx],last=tourIdx===steps.length-1;
+  document.getElementById('tour-ic').innerHTML=s.ic;
+  document.getElementById('tour-nm').textContent=s.nm;
+  document.getElementById('tour-lv').textContent=s.lv;
+  document.getElementById('tour-dots').innerHTML=
+    steps.map((_,i)=>'<i class="'+(i===tourIdx?'on':'')+'"></i>').join('');
+  document.getElementById('tour-back').style.visibility=tourIdx?'visible':'hidden';
+  document.getElementById('tour-next').textContent=last?'لنبدأ':'التالي';
+}
+function tourNext(){
+  if(tourIdx>=tourSteps().length-1){tourEnd();return;}
+  tourIdx++;tourRender();
+}
+function tourBack(){if(tourIdx){tourIdx--;tourRender();}}
+async function tourEnd(){
+  document.getElementById('tour-modal').classList.remove('open');
+  if(profile.tourDone)return;
+  profile.tourDone=true;
+  // حفظٌ صامت: فشلُه يعني تكرار الجولة لا ضياع عمل، فلا يستحقّ إزعاجها برسالة.
+  try{await cy1Save({tourDone:true});}catch(e){}
 }
 
 // ── الجدول ──
