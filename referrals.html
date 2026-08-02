@@ -43,6 +43,16 @@ button{font-family:'Cairo',sans-serif;cursor:pointer;}
 .tabs-bar button{flex-shrink:0;padding:14px 20px;background:none;border:none;font-family:'Cairo',sans-serif;font-size:13.5px;font-weight:800;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;}
 .tabs-bar button.active{color:var(--gold);border-bottom-color:var(--gold);}
 
+/* ══ مبدّل الحلقة ══
+   الحلقتان منصّتان مختلفتان بموادّ وحسابات مستقلّة، فخلط صفوفهما في جدولٍ
+   واحد يجعل التفعيل والعمولة يقعان على الحلقة الخطأ. المبدّل يعزلهما. */
+.cycle-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 22px;position:sticky;top:114px;z-index:28;flex-wrap:wrap;}
+.cycle-bar .lbl{font-size:12px;font-weight:800;color:var(--muted);}
+.cycle-seg{display:flex;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;}
+.cycle-seg button{background:none;border:none;border-radius:7px;padding:7px 14px;font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap;}
+.cycle-seg button.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+.cycle-note{font-size:11.5px;color:var(--muted);}
+
 .wrap{max-width:980px;margin:0 auto;padding:24px 18px;position:relative;z-index:1;}
 .tab-section{display:none;}
 .tab-section.active{display:block;}
@@ -166,6 +176,16 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
     <button onclick="switchTab('accounts',this)">🔑 إنشاء حساب معلم</button>
   </div>
 
+  <div class="cycle-bar">
+    <span class="lbl">الحلقة المعروضة:</span>
+    <div class="cycle-seg" id="cycle-seg">
+      <button data-scope="cycle1" onclick="setCycleScope('cycle1',this)">🧒 الحلقة الأولى (١-٤)</button>
+      <button data-scope="post" onclick="setCycleScope('post',this)">📘 ما بعد الحلقة الأولى (٥-١٢)</button>
+      <button data-scope="all" onclick="setCycleScope('all',this)">🗂️ الكل</button>
+    </div>
+    <span class="cycle-note" id="cycle-note"></span>
+  </div>
+
   <div class="wrap">
     <!-- ══ تبويب 0: نظرة عامة ══ -->
     <div class="tab-section active" id="tab-overview">
@@ -223,6 +243,7 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
         <div class="form-row">
           <input id="manual-reg-name" type="text" placeholder="الاسم"/>
           <input id="manual-reg-phone" type="tel" placeholder="الهاتف (مثال: 9XXXXXXX)" dir="ltr" style="text-align:right"/>
+          <input id="manual-reg-email" type="email" placeholder="البريد الإلكتروني (لازم للتفعيل)" dir="ltr" style="text-align:right"/>
           <select id="manual-reg-stage">
             <option value="cycle1">🧒 الحلقة الأولى (١-٤)</option>
             <option value="5-9">📘 الحلقة الثانية (٥-٩)</option>
@@ -233,13 +254,13 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
       </div>
       <div class="stats-row" id="data-stats-row"></div>
       <div class="search-row">
-        <input id="data-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderDataTab()"/>
+        <input id="data-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف أو البريد..." oninput="renderDataTab()"/>
         <span class="results-count" id="data-results-count"></span>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th><th>إجراءات</th></tr></thead>
-          <tbody id="data-table-body"><tr><td colspan="7"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
+          <thead><tr><th>الاسم</th><th>الهاتف</th><th>البريد</th><th>المرحلة</th><th>أُحيل بواسطة</th><th>التاريخ</th><th>حالة الاشتراك</th><th>إجراءات</th></tr></thead>
+          <tbody id="data-table-body"><tr><td colspan="8"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -251,14 +272,14 @@ tbody tr:hover{background:rgba(184,134,11,.04);}
         <p>بعد تأكيد استلام الدفع، أنشئ اسم مستخدم وكلمة مرور للمعلم لتسجيل الدخول مباشرة بدون جوجل</p>
       </div>
       <div class="search-row">
-        <input id="accounts-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف..." oninput="renderAccountsTab()"/>
+        <input id="accounts-search" type="text" placeholder="🔎 بحث بالاسم أو الهاتف أو البريد..." oninput="renderAccountsTab()"/>
         <span class="results-count" id="accounts-results-count"></span>
         <button class="action-btn" onclick="testActivationMail()">✉️ اختبار البريد</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الاسم</th><th>الهاتف</th><th>حالة الدفع</th><th>الحساب</th><th>إجراءات</th></tr></thead>
-          <tbody id="accounts-table-body"><tr><td colspan="5"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
+          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>حالة الدفع</th><th>الحساب</th><th>إجراءات</th></tr></thead>
+          <tbody id="accounts-table-body"><tr><td colspan="6"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -333,6 +354,7 @@ async function afterAuth(session){
   document.getElementById('dashboard').style.display='block';
   loadMyPhone();
   loadSubPrice();
+  syncScopeUI();
   await Promise.all([loadFriends(),loadRegistrations()]);
   renderDataTab();
   renderFinanceTab();
@@ -389,14 +411,16 @@ async function deleteFriend(id){
   renderFinanceTab();
   renderOverviewTab();
 }
-function copyLink(code){
-  const link=`${location.origin}/landing.html?ref=${code}`;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(link).then(()=>{
-      const el=document.getElementById('copy-msg-'+code);
-      if(el){el.textContent='✅ تم النسخ';setTimeout(()=>el.textContent='',1500);}
-    });
-  }
+// صفحة الحجز تختلف بالحلقة: رابطُ الحلقة الثانية يضع معلّمةَ الأولى في
+// الجدول الخطأ، فيصلها حسابٌ لا يفتح موادّها. لكل حلقةٍ رابطُها.
+function copyLink(code,scope){
+  const link=`${location.origin}${SCOPE_LANDING[scope]}?ref=${code}`;
+  const done=()=>{
+    const el=document.getElementById('copy-msg-'+code);
+    if(el){el.textContent='✅ نُسخ رابط '+SCOPE_LABEL[scope];setTimeout(()=>el.textContent='',1800);}
+  };
+  if(navigator.clipboard)navigator.clipboard.writeText(link).then(done,()=>prompt('انسخ الرابط:',link));
+  else prompt('انسخ الرابط:',link);
 }
 function renderFriendsTable(){
   const tbody=document.getElementById('friends-table-body');
@@ -405,8 +429,9 @@ function renderFriendsTable(){
     <tr>
       <td class="cell-name">${escHtml(f.name)}</td>
       <td><div class="ref-link-cell">
-        <span class="ref-link-text">/landing.html?ref=${escHtml(f.code)}</span>
-        <button class="copy-btn" onclick="copyLink('${f.code}')">📋</button>
+        <span class="ref-link-text">?ref=${escHtml(f.code)}</span>
+        <button class="copy-btn" onclick="copyLink('${f.code}','cycle1')" title="رابط الحلقة الأولى">📋 الحلقة الأولى</button>
+        <button class="copy-btn" onclick="copyLink('${f.code}','post')" title="رابط ما بعد الحلقة الأولى">📋 ما بعدها</button>
         <span id="copy-msg-${f.code}" style="font-size:11px;color:var(--green);font-weight:700"></span>
       </div></td>
       <td>${f.commission_rate}%</td>
@@ -418,14 +443,20 @@ function renderFriendsTable(){
 async function addManualRegistration(){
   const name=document.getElementById('manual-reg-name').value.trim();
   const phone=document.getElementById('manual-reg-phone').value.trim();
+  const email=document.getElementById('manual-reg-email').value.trim();
   const stage=document.getElementById('manual-reg-stage').value;
   if(!name){alert('يرجى إدخال الاسم');return;}
   if(!phone||phone.length<8){alert('يرجى إدخال رقم هاتف صحيح');return;}
+  // بلا بريدٍ لا يعمل التفعيل بضغطة، ولا تستطيع المعلّمة استرجاع كلمتها
+  // بنفسها — فالنقص يظهر يوم التفعيل لا يوم الإضافة. نسأل الآن.
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){alert('❌ البريد غير صالح');return;}
+  if(!email&&!confirm('بلا بريدٍ لن يعمل «تفعيل الحساب» ولا استرجاع كلمة المرور.\n\nالمتابعة بلا بريد؟'))return;
   try{
-    const{error}=await sb.from('pre_registrations').insert({name,phone,stage});
+    const{error}=await sb.from('pre_registrations').insert({name,phone,email:email||null,stage});
     if(error){alert('فشلت الإضافة: '+error.message);return;}
     document.getElementById('manual-reg-name').value='';
     document.getElementById('manual-reg-phone').value='';
+    document.getElementById('manual-reg-email').value='';
     await loadRegistrations();
     renderDataTab();
     renderAccountsTab();
@@ -436,11 +467,49 @@ async function addManualRegistration(){
 async function loadRegistrations(){
   try{
     const{data,error}=await sb.from('pre_registrations').select('*').order('created_at',{ascending:false});
-    if(error){document.getElementById('data-table-body').innerHTML='<tr><td colspan="7"><div class="empty">❌ تعذّر التحميل — تأكد من تنفيذ سياسات RLS</div></td></tr>';return;}
+    if(error){document.getElementById('data-table-body').innerHTML='<tr><td colspan="8"><div class="empty">❌ تعذّر التحميل — تأكد من تنفيذ سياسات RLS</div></td></tr>';return;}
     registrations=data||[];
   }catch(e){}
 }
 const stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 الحلقة الثانية',['10-12']:'🎓 ما بعد الأساسي'};
+
+// ══ عزل الحلقات ══
+// منصّتان مستقلّتان: موادّ الحلقة الأولى وحساباتها (c…@khotati.app، cycle1)
+// غير موادّ ما بعدها (t…@khotati.app، main). عرضهما في جدولٍ واحد أوقع
+// التفعيل على الحلقة الخطأ أكثر من مرّة، ولا يظهر الخطأ إلا عند دخول المعلّمة.
+const SCOPE_STAGES={cycle1:['cycle1'],post:['5-9','10-12']};
+const SCOPE_LABEL={cycle1:'الحلقة الأولى',post:'ما بعد الحلقة الأولى',all:'كل الحلقات'};
+// صفحة الحجز تختلف بالحلقة، فرابط الصديق يجب أن يوافق ما يُروَّج له.
+const SCOPE_LANDING={cycle1:'/cycle1-landing.html',post:'/landing.html'};
+let cycleScope=localStorage.getItem('kh_cycle_scope')||'cycle1';
+if(!SCOPE_LABEL[cycleScope])cycleScope='cycle1';
+
+// مرحلةٌ غير معروفة (صفٌّ قديم أو مكتوب يدوياً) تُنسب إلى ما بعد الحلقة الأولى
+// لا تُخفى: صفٌّ لا يظهر في أيّ نطاق يضيع صاحبُه بلا أن ينتبه أحد.
+function scopeOf(stage){return stage==='cycle1'?'cycle1':'post';}
+function scopedRegs(){
+  if(cycleScope==='all')return registrations;
+  return registrations.filter(r=>scopeOf(r.stage)===cycleScope);
+}
+function setCycleScope(scope,btn){
+  cycleScope=scope;
+  localStorage.setItem('kh_cycle_scope',scope);
+  document.querySelectorAll('#cycle-seg button').forEach(b=>b.classList.toggle('active',b===btn));
+  syncScopeUI();
+  renderDataTab();renderFinanceTab();renderOverviewTab();renderAccountsTab();renderFriendsTable();
+}
+// الإضافة اليدوية تتبع النطاق المعروض: قائمةٌ تعرض مراحل حلقةٍ أخرى تُنشئ
+// صفّاً يختفي فور إضافته لأنه خارج النطاق — فيُضاف مرّتين وثلاثاً.
+function syncScopeUI(){
+  document.querySelectorAll('#cycle-seg button').forEach(b=>b.classList.toggle('active',b.dataset.scope===cycleScope));
+  const note=document.getElementById('cycle-note');
+  if(note)note.textContent=`تعرض الجداول والأرقام أدناه بيانات: ${SCOPE_LABEL[cycleScope]}`;
+  const sel=document.getElementById('manual-reg-stage');
+  if(sel){
+    const stages=cycleScope==='all'?['cycle1','5-9','10-12']:SCOPE_STAGES[cycleScope];
+    sel.innerHTML=stages.map(s=>`<option value="${s}">${stageLabel[s]}</option>`).join('');
+  }
+}
 
 // ══ رقمي الشخصي (محفوظ محلياً) ══
 function saveMyPhone(){
@@ -491,10 +560,11 @@ function whatsappLink(phone){
 }
 
 function renderDataTab(){
-  const total=registrations.length;
-  const paid=registrations.filter(r=>r.payment_status==='paid').length;
+  const regs=scopedRegs();
+  const total=regs.length;
+  const paid=regs.filter(r=>r.payment_status==='paid').length;
   const pending=total-paid;
-  const referred=registrations.filter(r=>r.referred_by).length;
+  const referred=regs.filter(r=>r.referred_by).length;
   const conversion=total?Math.round((paid/total)*100):0;
   document.getElementById('data-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">إجمالي المسجّلين</div></div>
@@ -504,12 +574,12 @@ function renderDataTab(){
     <div class="stat-card"><div class="stat-num gold">${referred}</div><div class="stat-label">عبر رابط صديق</div></div>
   `;
   const q=(document.getElementById('data-search')?.value||'').trim().toLowerCase();
-  const filtered=q?registrations.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)):registrations;
+  const filtered=q?regs.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)||(r.email||'').toLowerCase().includes(q)):regs;
   const countEl=document.getElementById('data-results-count');
   if(countEl)countEl.textContent=q?`${filtered.length} من ${total} نتيجة`:'';
   const tbody=document.getElementById('data-table-body');
-  if(!registrations.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  if(!total){tbody.innerHTML=`<tr><td colspan="8"><div class="empty">لا يوجد مسجّلون في ${SCOPE_LABEL[cycleScope]} بعد</div></td></tr>`;return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
     const f=friends.find(fr=>fr.code===r.referred_by);
     const refLabel=r.referred_by?(f?escHtml(f.name):escHtml(r.referred_by)):'<span style="color:var(--muted)">مباشر</span>';
@@ -519,6 +589,7 @@ function renderDataTab(){
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
       <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
+      <td dir="ltr" style="text-align:right;font-family:monospace;font-size:11.5px">${r.email?escHtml(r.email):'<span style="color:var(--red)">— لا بريد</span>'}</td>
       <td>${stageLabel[r.stage]||escHtml(r.stage)}</td>
       <td>${refLabel}</td>
       <td style="color:var(--muted);font-size:12px">${new Date(r.created_at).toLocaleDateString('ar-OM')}</td>
@@ -698,12 +769,13 @@ async function resetTeacherPassword(regId){
 function renderAccountsTab(){
   const tbody=document.getElementById('accounts-table-body');
   if(!tbody)return;
+  const regs=scopedRegs();
   const q=(document.getElementById('accounts-search')?.value||'').trim().toLowerCase();
-  const filtered=q?registrations.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)):registrations;
+  const filtered=q?regs.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)||(r.email||'').toLowerCase().includes(q)):regs;
   const countEl=document.getElementById('accounts-results-count');
-  if(countEl)countEl.textContent=q?`${filtered.length} من ${registrations.length} نتيجة`:'';
-  if(!registrations.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty">لا يوجد مسجّلون بعد</div></td></tr>';return;}
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  if(countEl)countEl.textContent=q?`${filtered.length} من ${regs.length} نتيجة`:'';
+  if(!regs.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty">لا يوجد مسجّلون في ${SCOPE_LABEL[cycleScope]} بعد</div></td></tr>`;return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
     const paidStatus=r.payment_status==='paid'?'<span class="status-badge paid">✅ مدفوع</span>':'<span class="status-badge pending">⏳ قيد الانتظار</span>';
     const accEmail=r.account_email;
@@ -717,6 +789,7 @@ function renderAccountsTab(){
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
       <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
+      <td>${stageLabel[r.stage]||escHtml(r.stage)}</td>
       <td>${paidStatus}</td>
       <td>${accCell}</td>
       <td>${actionBtn}</td>
@@ -737,32 +810,38 @@ async function deleteRegistration(id,name){
 // ══ تبويب الإدارة المالية ══
 function computeFinanceRows(){
   const price=subscriptionPrice;
+  // الحساب داخل النطاق وحده: عمولةٌ محسوبةٌ على الحلقتين معاً تُدفع مرّتين
+  // حين تُراجَع كل حلقةٍ على حدة، وهو خطأٌ في المال لا في العرض.
+  const regs=scopedRegs();
   const rows=friends.map(f=>{
-    const referredRows=registrations.filter(r=>r.referred_by===f.code);
+    const referredRows=regs.filter(r=>r.referred_by===f.code);
     const paidRows=referredRows.filter(r=>r.payment_status==='paid');
     const totalCommission=Math.round(paidRows.length*price*(f.commission_rate/100)*100)/100;
     return{friend:f,referredCount:referredRows.length,paidCount:paidRows.length,totalCommission};
   });
-  const totalOwed=Math.round(rows.filter(r=>localStorage.getItem('payout_'+r.friend.code)!=='1').reduce((s,r)=>s+r.totalCommission,0)*100)/100;
-  // إجمالي الأرباح: كل الاشتراكات المدفوعة في النظام (مُحالة + مباشرة)
-  const totalPaidAll=registrations.filter(r=>r.payment_status==='paid').length;
+  // مفتاح الصرف يحمل النطاق: صديقٌ له إحالاتٌ في الحلقتين تُصرف عمولته
+  // في كلٍّ منهما على حدة، فمفتاحٌ واحد يُسكت المستحقّ الثاني بلا أثر.
+  const payoutKey=c=>'payout_'+(cycleScope==='all'?'':cycleScope+'_')+c;
+  const totalOwed=Math.round(rows.filter(r=>localStorage.getItem(payoutKey(r.friend.code))!=='1').reduce((s,r)=>s+r.totalCommission,0)*100)/100;
+  // إجمالي الأرباح: كل الاشتراكات المدفوعة في النطاق (مُحالة + مباشرة)
+  const totalPaidAll=regs.filter(r=>r.payment_status==='paid').length;
   const totalRevenue=Math.round(totalPaidAll*price*100)/100;
   // إجمالي مستحقات كل الأصدقاء (مدفوعة وغير مدفوعة معاً)
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
   // صافي الربح بعد خصم عمولات الأصدقاء
   const netProfit=Math.round((totalRevenue-totalCommissionAll)*100)/100;
-  return{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit};
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,payoutKey,regs};
 }
 
 function renderFinanceTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit}=computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,payoutKey,regs}=computeFinanceRows();
   document.getElementById('finance-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num green">${totalRevenue.toFixed(2)} ر.ع</div><div class="stat-label">💰 مجموع الأرباح (الإجمالي)</div></div>
     <div class="stat-card"><div class="stat-num">${netProfit.toFixed(2)} ر.ع</div><div class="stat-label">📈 صافي الربح بعد العمولات</div></div>
     <div class="stat-card"><div class="stat-num gold">${totalCommissionAll.toFixed(2)} ر.ع</div><div class="stat-label">🤝 إجمالي مستحقات الأصدقاء</div></div>
     <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">⏳ مستحق غير مدفوع بعد</div></div>
     <div class="stat-card"><div class="stat-num">${friends.length}</div><div class="stat-label">عدد الأصدقاء النشطين</div></div>
-    <div class="stat-card"><div class="stat-num gold">${registrations.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
+    <div class="stat-card"><div class="stat-num gold">${regs.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
   `;
   const q=(document.getElementById('finance-search')?.value||'').trim().toLowerCase();
   const filtered=q?rows.filter(r=>r.friend.name.toLowerCase().includes(q)):rows;
@@ -772,8 +851,7 @@ function renderFinanceTab(){
   if(!rows.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">أضف أصدقاءً أولاً من تبويب "روابط الأصدقاء"</div></td></tr>';return;}
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
-    const localKey='payout_'+r.friend.code;
-    const paidOut=localStorage.getItem(localKey)==='1';
+    const paidOut=localStorage.getItem(payoutKey(r.friend.code))==='1';
     return `<tr>
       <td class="cell-name">${escHtml(r.friend.name)}</td>
       <td>${r.referredCount}</td>
@@ -785,7 +863,7 @@ function renderFinanceTab(){
   }).join('');
 }
 function togglePayout(code){
-  const key='payout_'+code;
+  const key='payout_'+(cycleScope==='all'?'':cycleScope+'_')+code;
   const cur=localStorage.getItem(key)==='1';
   if(cur)localStorage.removeItem(key);else localStorage.setItem(key,'1');
   renderFinanceTab();
@@ -803,19 +881,19 @@ async function markRegistrationPaid(id,status){
 
 // ══ تبويب النظرة العامة (ملخّص شامل للمدير) ══
 function renderOverviewTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit}=computeFinanceRows();
-  const total=registrations.length;
-  const paid=registrations.filter(r=>r.payment_status==='paid').length;
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,regs}=computeFinanceRows();
+  const total=regs.length;
+  const paid=regs.filter(r=>r.payment_status==='paid').length;
   const conversion=total?Math.round((paid/total)*100):0;
-  const referred=registrations.filter(r=>r.referred_by).length;
+  const referred=regs.filter(r=>r.referred_by).length;
   const directCount=total-referred;
 
   const now=new Date();
   const isThisMonth=d=>{const dt=new Date(d);return dt.getFullYear()===now.getFullYear()&&dt.getMonth()===now.getMonth();};
   const lastMonthDate=new Date(now.getFullYear(),now.getMonth()-1,1);
   const isLastMonth=d=>{const dt=new Date(d);return dt.getFullYear()===lastMonthDate.getFullYear()&&dt.getMonth()===lastMonthDate.getMonth();};
-  const thisMonthCount=registrations.filter(r=>isThisMonth(r.created_at)).length;
-  const lastMonthCount=registrations.filter(r=>isLastMonth(r.created_at)).length;
+  const thisMonthCount=regs.filter(r=>isThisMonth(r.created_at)).length;
+  const lastMonthCount=regs.filter(r=>isLastMonth(r.created_at)).length;
   let growthLabel='';
   if(lastMonthCount>0){
     const growthPct=Math.round(((thisMonthCount-lastMonthCount)/lastMonthCount)*100);
@@ -837,13 +915,13 @@ function renderOverviewTab(){
     <div class="kpi-card"><div class="kpi-icon">🗓️</div><div class="kpi-num">${thisMonthCount}</div><div class="kpi-label">تسجيلات هذا الشهر</div></div>
   `;
 
-  const stages=['cycle1','5-9','10-12'];
+  const stages=cycleScope==='all'?['cycle1','5-9','10-12']:SCOPE_STAGES[cycleScope];
   const stageGrid=document.getElementById('overview-stage-grid');
   if(!total){
-    stageGrid.innerHTML='<div class="empty">لا توجد بيانات بعد</div>';
+    stageGrid.innerHTML=`<div class="empty">لا توجد بيانات في ${SCOPE_LABEL[cycleScope]} بعد</div>`;
   }else{
     stageGrid.innerHTML=stages.map(s=>{
-      const count=registrations.filter(r=>r.stage===s).length;
+      const count=regs.filter(r=>r.stage===s).length;
       const pct=total?Math.round((count/total)*100):0;
       return `<div class="stage-card">
         <div class="stage-name">${stageLabel[s]}</div>

@@ -106,6 +106,8 @@ a{color:inherit;}
 .stage-grid{display:grid;grid-template-columns:1fr;gap:8px;}
 .stage-chip{padding:13px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-weight:800;font-size:13.5px;color:var(--text);text-align:right;transition:all .15s;}
 .stage-chip.sel{background:linear-gradient(135deg,var(--gold),var(--gold2));border-color:var(--gold2);color:#fff;}
+.cycle1-hint{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.9;}
+.cycle1-hint a{color:var(--gold);font-weight:800;text-decoration:none;}
 .submit-btn{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:15px;margin-top:6px;box-shadow:0 10px 26px rgba(184,134,11,.28);}
 .submit-btn:disabled{opacity:.6;}
 .reg-msg{text-align:center;font-size:13px;font-weight:700;margin-top:12px;padding:10px;border-radius:10px;display:none;}
@@ -276,7 +278,7 @@ a{color:inherit;}
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)"><span>هل يلائم المنهج العُماني وكل المراحل؟</span><span class="arrow">▾</span></button>
-      <div class="faq-a"><p>نعم، مصمم خصيصاً للمعلم العُماني، ويدعم الحلقة الأولى والثانية وما بعد الأساسي بأدوات مخصصة لكل مرحلة.</p></div>
+      <div class="faq-a"><p>نعم، مصمم خصيصاً للمعلم العُماني، ويدعم الحلقة الثانية وما بعد الأساسي بأدوات مخصصة لكل مرحلة. وللحلقة الأولى منصّةٌ مستقلّة بموادّها وأدواتها.</p></div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)"><span>متى يبدأ الإطلاق الرسمي؟</span><span class="arrow">▾</span></button>
@@ -308,10 +310,13 @@ a{color:inherit;}
       <div class="field">
         <label>المرحلة التعليمية *</label>
         <div class="stage-grid">
-          <button type="button" class="stage-chip" data-stage="cycle1" onclick="selectStage('cycle1',this)">🧒 الحلقة الأولى (١-٤)</button>
           <button type="button" class="stage-chip" data-stage="5-9" onclick="selectStage('5-9',this)">📘 الحلقة الثانية (٥-٩)</button>
           <button type="button" class="stage-chip" data-stage="10-12" onclick="selectStage('10-12',this)">🎓 ما بعد الأساسي (١٠-١٢)</button>
         </div>
+        <!-- معلّمات الحلقة الأولى لهنّ منصّةٌ وصفحةُ حجزٍ مستقلّتان: تسجيلهنّ هنا
+             يضعهنّ في جدول الحلقة الثانية فيصلهنّ حسابٌ لا يفتح موادّهنّ. -->
+        <p class="cycle1-hint">معلّمة الحلقة الأولى (١–٤)؟
+          <a href="/cycle1-landing.html">احجزي مقعدكِ من صفحة الحلقة الأولى ←</a></p>
       </div>
       <button class="submit-btn" id="submit-btn" onclick="submitRegistration()" disabled style="opacity:.5;cursor:not-allowed">🚀 اشترك الآن</button>
       <div class="reg-msg" id="reg-msg"></div>
@@ -359,9 +364,10 @@ function selectStage(stage,btn){
   btn.classList.add('sel');
   checkForm();
 }
-// ══ روابط الاشتراك/الدفع حسب الحلقة (تُملأ لاحقاً بروابط الدفع الفعلية) ══
-// الحلقة الأولى → موقع الحلقة الأولى · الحلقة الثانية وما بعد الأساسي → الموقع الرئيسي
-const CYCLE_LINKS={cycle1:'',"5-9":'',"10-12":''};
+// ══ روابط الاشتراك/الدفع حسب المرحلة (تُملأ لاحقاً بروابط الدفع الفعلية) ══
+// هذه الصفحة لما بعد الحلقة الأولى وحدها؛ الحلقة الأولى في cycle1-landing.html
+const STAGES=["5-9","10-12"];
+const CYCLE_LINKS={"5-9":'',"10-12":''};
 function validOmaniPhone(p){
   let d=(p||'').replace(/\D/g,'');
   if(d.startsWith('00968'))d=d.slice(5);else if(d.startsWith('968')&&d.length>8)d=d.slice(3);
@@ -423,6 +429,9 @@ async function submitRegistration(){
   if(!validOmaniPhone(phone)){showMsg('يرجى إدخال رقم عُماني صحيح (يبدأ بـ ٧ أو ٩ ومكوّن من ٨ أرقام)',true);return;}
   if(!validEmail(email)){showMsg('يرجى إدخال بريد إلكتروني صحيح',true);return;}
   if(!selectedStage){showMsg('يرجى اختيار المرحلة التعليمية',true);return;}
+  // حارسٌ على المرحلة لا على الزرّ: صفٌّ بمرحلةٍ لا تخصّ هذه الصفحة يختلط
+  // بجدول الحلقة الأولى، ولا يظهر الخطأ إلا يوم يُفعَّل حسابٌ خاطئ.
+  if(!STAGES.includes(selectedStage)){showMsg('هذه الصفحة لما بعد الحلقة الأولى — استخدمي صفحة الحلقة الأولى',true);return;}
 
   const btn=document.getElementById('submit-btn');
   btn.disabled=true;btn.textContent='⏳ جاري الاشتراك...';
