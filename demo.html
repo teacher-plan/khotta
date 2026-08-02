@@ -410,17 +410,27 @@ body.inapp #c1-notif-btn{display:flex}
 .c1-mbox .fld input[type=text]:focus,.c1-mbox .fld input[type=date]:focus,.c1-mbox .fld select:focus{border-color:var(--red)}
 /* معالج الإعداد (مطابق لبنية صفحة المعلم) */
 /* ── الجولة التعريفية ── */
-.tour-box{max-width:400px;text-align:center}
-.tour-ic{width:62px;height:62px;margin:2px auto 14px;border-radius:18px;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;box-shadow:0 8px 22px rgba(216,96,72,.32)}
-.tour-ic svg{width:30px;height:30px}
-.tour-box h3{font-size:19px;margin-bottom:8px}
-.tour-lv{font-size:14px;line-height:2;color:var(--muted);margin-bottom:16px;min-height:56px}
-.tour-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
-.tour-dots i{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s}
-.tour-dots i.on{background:var(--red-d);width:20px;border-radius:4px}
-.tour-skip{display:block;width:100%;margin-top:12px;background:none;border:none;color:var(--muted);
-  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;padding:4px}
+#tour-layer{position:fixed;inset:0;z-index:4300;pointer-events:none}
+#tour-layer.hidden{display:none}
+/* الظلّ الهائل يُعتّم كل شيء إلا مستطيل هذا العنصر — فيصير «ثقباً» بلا قناع */
+#tour-spot{position:fixed;border-radius:16px;box-shadow:0 0 0 9999px rgba(28,14,4,.62);
+  outline:3px solid var(--red);outline-offset:2px;transition:all .28s cubic-bezier(.4,0,.2,1);pointer-events:none}
+#tour-spot.none{outline:none;box-shadow:0 0 0 9999px rgba(28,14,4,.62);width:0;height:0}
+#tour-card{position:fixed;width:min(340px,calc(100vw - 28px));background:var(--surface);border-radius:18px;
+  padding:16px 18px;box-shadow:0 18px 50px rgba(48,24,0,.4);pointer-events:auto;transition:all .28s cubic-bezier(.4,0,.2,1)}
+.tour-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tour-ic{width:36px;height:36px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff}
+.tour-ic svg{width:19px;height:19px}
+#tour-card h3{font-size:16.5px;margin:0}
+.tour-lv{font-size:13.5px;line-height:1.95;color:var(--muted);margin-bottom:13px}
+.tour-dots{display:flex;gap:5px;justify-content:center;margin-bottom:12px}
+.tour-dots i{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s}
+.tour-dots i.on{background:var(--red-d);width:17px;border-radius:4px}
+.tour-btns{display:flex;gap:8px;justify-content:flex-end}
+.tour-btns .c1-mbtn{padding:9px 18px;font-size:13px}
+.tour-skip{display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--muted);
+  font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:3px}
 
 .su-roster-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
 .su-roster-btn{background:var(--card);border:1.5px solid var(--olive);color:var(--olive-d);border-radius:10px;
@@ -1988,13 +1998,15 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
 <!-- ══ الجولة التعريفية ══
      تُعرض مرّةً بعد اكتمال الإعداد. بلا زرّ إغلاقٍ في الخلفية عمداً: ضغطةٌ
      خاطئة خارج البطاقة كانت تُنهيها بلا رجعة، فالخروج بزرٍّ صريح. -->
-<div class="c1-modal" id="tour-modal">
-  <div class="c1-mbox tour-box">
-    <div class="tour-ic" id="tour-ic"></div>
-    <h3 id="tour-nm"></h3>
+<div id="tour-layer" class="hidden">
+  <!-- «الثقب» ليس صورةً بل ظلٌّ هائل حول مستطيلٍ شفّاف: ما تحته يظهر على
+       حقيقته بلا رفعِ طبقاتٍ ولا حيلِ z-index تنكسر داخل عناصر محوَّلة. -->
+  <div id="tour-spot"></div>
+  <div id="tour-card">
+    <div class="tour-top"><span class="tour-ic" id="tour-ic"></span><h3 id="tour-nm"></h3></div>
     <p class="tour-lv" id="tour-lv"></p>
     <div class="tour-dots" id="tour-dots"></div>
-    <div class="c1-mrow">
+    <div class="tour-btns">
       <button class="c1-mbtn no" id="tour-back" onclick="tourBack()">السابق</button>
       <button class="c1-mbtn go" id="tour-next" onclick="tourNext()">التالي</button>
     </div>
@@ -3572,7 +3584,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='2860f65';
+const KH_BUILD='3e74e5d';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -4614,6 +4626,10 @@ async function suRosterExtract(input){
     say(m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
       :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورةً أو PDF'
       :m==='no_files'?'لم يُرفَق ملف'
+      // رصيدٌ نافد لا يُصلحه تكرار المحاولة: نقولها صريحةً ونوجّهها للإدارة
+      // بدل أن تُعيد الرفع مراراً وتظنّ العطل في كشفها.
+      :m==='no_credit'?'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. أدخلي الأسماء يدوياً الآن'
+      :m==='busy'?'الخدمة مزدحمة — أعيدي المحاولة بعد دقيقة'
       :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
   }finally{
     if(btn){btn.disabled=false;btn.textContent='📎 استخراج الأسماء من كشف';}
@@ -4716,45 +4732,104 @@ async function suFinish(){
 
    والمحطّات تُبنى من C1_SECTIONS نفسها: نسخةٌ ثانية من الأسماء والأوصاف
    تتخلّف عن الأقسام بعد تعديلٍ أو اثنين. */
-const TOUR_IDS=['yawmi','plan','studio','students','fahim','shared'];
-let tourIdx=0;
+// كل محطّة تنقلها إلى القسم وتُضيء أهمّ ما فيه. و«أهمّ ما فيه» هو ما تفعله
+// هناك فعلاً، لا وصفٌ عامّ للقسم — الوصف العامّ موجودٌ في لوحة التنقّل أصلاً،
+// وتكراره في جولةٍ يجعلها بلا قيمة.
+//
+// at قائمةٌ لا محدِّدٌ واحد: المعلّمة الجديدة لا بيانات لها، فأكثر العناصر
+// المهمّة لم تُرسم بعد (لا حصّة جارية، ولا دروس، ولا نجوم). نأخذ أوّل ما وُجد
+// ظاهراً، وإن لم يوجد شيء عرضنا البطاقة في الوسط بلا إضاءة — الشرح يصل في
+// الحالين، ولا تنكسر الجولة على حسابٍ فارغ.
+const TOUR=[
+  {sec:'yawmi', at:['#yw-now-card','#yw-main','#c1-greet'], ic:'cal', nm:'يومي',
+   lv:'مبدأ يومك. بطاقة الحصّة الجارية تُريكِ ما تُدرّسينه الآن، ومنها تفتحين تحضيره مباشرةً بلا بحث.'},
+  {sec:'plan', at:['#plan-sections','#plan-empty','#plan-grade-sel'], ic:'chart', nm:'الخطة',
+   lv:'وحدات مادّتك ودروسها. تُعلّمين الدرس مُنجَزاً فيتقدّم مؤشّر خطّتك وحده — بلا جدول متابعةٍ منفصل.'},
+  {sec:'studio', at:['#studio-game-options-card','#studio-grade-sel'], ic:'game', nm:'الاستوديو',
+   lv:'اختاري الدرس، ويُبنى لكِ لعبةٌ أو إنفوجرافيك من الكتاب المعتمد — جاهزٌ للعرض على شاشة الصفّ.'},
+  {sec:'students', at:['#stu-board','#stu-empty','#stu-grade-sel'], ic:'star', nm:'طلابي',
+   lv:'نجمةٌ بضغطة، وسلوكٌ يُسجَّل بتاريخه. يتراكم طوال الفصل فتخرج تقارير أولياء الأمور جاهزة.'},
+  {sec:'fahim', at:['#fh-body','#fh-head'], ic:'fox', nm:'فهيم',
+   lv:'اسأليه عن أيّ شيء في درسك أو صفّك. ويقرأ صور صفحات الكتاب أيضاً، فاسأليه عمّا بين يديك.'},
+  {sec:'shared', at:['#sh-tab-all','#sh-grade-sel'], ic:'game', nm:'المحفوظات',
+   lv:'ما أعدّته معلّمات الحلقة قبلك. استدعي الجاهز قبل أن تُولّدي — أسرع، ولا يستهلك رصيدك.'},
+  {sec:null, at:['#c1-corner'], ic:'book', nm:'وأين البقية؟',
+   lv:'هذا الزرّ يفتح كل الأقسام. ومن قائمة حسابك «دليل الاستخدام» يشرحها بالتفصيل، ومنه تُعيدين هذه الجولة.'},
+];
+let tourIdx=0,tourOn=false;
 function tourSteps(){
   const first=(profile.display_name||'').split(' ')[0];
-  const steps=[{
-    ic:C1_ICONS.spark,
-    nm:'أهلاً بكِ'+(first?' أ. '+first:''),
-    lv:'اكتمل إعدادكِ. هذه جولةٌ قصيرة في أقسام المنصّة — دقيقةٌ واحدة، وتقدرين على تخطّيها متى شئتِ.',
-  }];
-  for(const id of TOUR_IDS){
-    const s=C1_SECTIONS.find(x=>x.id===id);
-    if(s)steps.push({ic:C1_ICONS[s.ic]||'',nm:s.nm,lv:s.lv});
-  }
-  steps.push({
-    ic:C1_ICONS.book,
-    nm:'وأين البقية؟',
-    lv:'زرّ التنقّل في أعلى الشاشة يفتح كل الأقسام. وفي قائمة حسابكِ «دليل الاستخدام» يشرحها بالتفصيل متى احتجتِ.',
-  });
-  return steps;
+  return [{sec:null,at:[],ic:'spark',nm:'أهلاً بكِ'+(first?' أ. '+first:''),
+    lv:'اكتمل إعدادك. سآخذك جولةً قصيرة بين الأقسام وأُريكِ أهمّ ما في كلٍّ منها — دقيقةٌ واحدة، وتقدرين على تخطّيها متى شئتِ.'},
+    ...TOUR];
 }
-// إعادةٌ بطلبها من الدليل: تتجاوز علامة الإتمام لأنها طلبتها صراحةً.
-function tourReplay(){tourIdx=0;document.getElementById('tour-modal').classList.add('open');tourRender();}
+function tourFirstVisible(sels){
+  for(const q of sels||[]){
+    const el=document.querySelector(q);
+    if(!el)continue;
+    const r=el.getBoundingClientRect();
+    if(r.width<=4||r.height<=4)continue;     // المرسوم فعلاً لا المخفيّ
+    // وإضاءةٌ تبتلع الشاشة لا تُضيء شيئاً: حين لا يوجد إلا عنصرٌ ضخم (حسابٌ
+    // جديد بلا حصص فيسقط إلى الحاوية كلّها) فالوسط أصدق من تعتيمٍ بلا هدف.
+    if(r.width*r.height>innerWidth*innerHeight*0.7)continue;
+    return el;
+  }
+  return null;
+}
 function tourStart(){
   // لا تتكرّر: من أتمّها أو تخطّاها لا تُعرض عليها ثانيةً. وتبقى في متناولها
   // من دليل الاستخدام.
   if(profile.tourDone)return;
-  tourIdx=0;
-  document.getElementById('tour-modal').classList.add('open');
+  tourOpen();
+}
+// إعادةٌ بطلبها من الدليل: تتجاوز علامة الإتمام لأنها طلبتها صراحةً.
+function tourReplay(){tourOpen();}
+function tourOpen(){
+  tourIdx=0;tourOn=true;
+  document.getElementById('tour-layer').classList.remove('hidden');
   tourRender();
 }
 function tourRender(){
   const steps=tourSteps(),s=steps[tourIdx],last=tourIdx===steps.length-1;
-  document.getElementById('tour-ic').innerHTML=s.ic;
+  const card=document.getElementById('tour-card');
+  document.getElementById('tour-ic').innerHTML=C1_ICONS[s.ic]||'';
   document.getElementById('tour-nm').textContent=s.nm;
   document.getElementById('tour-lv').textContent=s.lv;
   document.getElementById('tour-dots').innerHTML=
     steps.map((_,i)=>'<i class="'+(i===tourIdx?'on':'')+'"></i>').join('');
   document.getElementById('tour-back').style.visibility=tourIdx?'visible':'hidden';
   document.getElementById('tour-next').textContent=last?'لنبدأ':'التالي';
+  if(s.sec)c1Go(s.sec);
+  // مهلةٌ بعد الانتقال: رسم القسم يقع في هذه الدورة، والقياس قبله يُعطي
+  // مستطيلاً صفرياً فتقفز الإضاءة إلى ركنٍ فارغ.
+  setTimeout(()=>tourPlace(s),s.sec?90:0);
+}
+function tourPlace(s){
+  const spot=document.getElementById('tour-spot'),card=document.getElementById('tour-card');
+  const el=tourFirstVisible(s.at);
+  if(!el){
+    spot.classList.add('none');
+    spot.style.cssText='';spot.className='none';
+    card.style.left='50%';card.style.top='50%';card.style.transform='translate(-50%,-50%)';
+    return;
+  }
+  // scroll فوريّ لا سَلِس: القياس بعد السَلِس يقع أثناء الحركة فتُضيء موضعاً
+  // تتركه الصفحة بعد جزءٍ من الثانية.
+  el.scrollIntoView({block:'center',inline:'nearest',behavior:'auto'});
+  const r=el.getBoundingClientRect(),pad=8;
+  spot.className='';
+  spot.style.left=(r.left-pad)+'px';spot.style.top=(r.top-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px';spot.style.height=(r.height+pad*2)+'px';
+  // البطاقة تحت المُضاء إن اتّسع المكان، وإلا فوقه — ومحصورةٌ داخل الشاشة
+  // كي لا تخرج نصفها على الجوال.
+  card.style.transform='none';
+  const cw=card.offsetWidth||320,ch=card.offsetHeight||220,m=12;
+  const below=r.bottom+pad+m, above=r.top-pad-m-ch;
+  // وإن لم يتّسع فوقه ولا تحته (عنصرٌ يملأ الطول) أسندناها إلى أسفل الشاشة
+  // لا إلى وسطها: التوسيط يحجب أعلى ما نُشير إليه وهو أوّل ما تنظر إليه.
+  card.style.top=(below+ch<innerHeight-m?below:(above>m?above:innerHeight-ch-m))+'px';
+  let left=r.left+r.width/2-cw/2;
+  card.style.left=Math.min(Math.max(m,left),innerWidth-cw-m)+'px';
 }
 function tourNext(){
   if(tourIdx>=tourSteps().length-1){tourEnd();return;}
@@ -4762,12 +4837,16 @@ function tourNext(){
 }
 function tourBack(){if(tourIdx){tourIdx--;tourRender();}}
 async function tourEnd(){
-  document.getElementById('tour-modal').classList.remove('open');
+  tourOn=false;
+  document.getElementById('tour-layer').classList.add('hidden');
   if(profile.tourDone)return;
   profile.tourDone=true;
   // حفظٌ صامت: فشلُه يعني تكرار الجولة لا ضياع عمل، فلا يستحقّ إزعاجها برسالة.
   try{await cy1Save({tourDone:true});}catch(e){}
 }
+// المقاسات تتغيّر بدوران الجهاز أو بظهور لوحة المفاتيح، فتبقى الإضاءة على
+// موضعٍ قديم لو لم نُعِد الحساب.
+addEventListener('resize',()=>{if(tourOn)tourPlace(tourSteps()[tourIdx]);});
 
 // ── الجدول ──
 // لون الشعبة تختاره المعلمة، وبعض الألوان تعطي نصاً بتباين ٣:١ على خلفية الخلية
