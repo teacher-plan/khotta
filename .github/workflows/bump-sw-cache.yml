@@ -31,4 +31,13 @@ jobs:
           git config user.email "actions@github.com"
           git add sw.js cycle1.html
           git commit -m "chore: ترقية كاش SW إلى $SHORT [sw-auto]"
-          git push
+          # سير عملٍ آخر (بناء نسخة التجربة) يدفع إلى main عند الدفعة نفسها،
+          # فيسبق أحدهما ويُرفض الثاني. الرفض هنا يعني بقاء المعلّمات على
+          # كاشٍ قديم يُخفي الإصلاح الذي دُفع للتوّ.
+          for i in 1 2 3 4 5; do
+            git push && exit 0
+            echo "دفعٌ مرفوض — إعادة الأساس ثم المحاولة ($i)"
+            git pull --rebase --autostash origin main || exit 1
+            sleep $((i*3))
+          done
+          exit 1

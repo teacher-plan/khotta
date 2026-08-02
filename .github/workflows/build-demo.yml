@@ -29,4 +29,13 @@ jobs:
           fi
           git add demo.html
           git commit -m "chore: تحديث نسخة التجربة من cycle1.html [demo-auto]"
-          git push
+          # سير عملٍ آخر (ترقية كاش SW) يدفع إلى main عند الدفعة نفسها،
+          # فيسبق أحدهما ويُرفض الثاني. الرفض هنا يعني بقاء نسخة التجربة
+          # قديمةً بلا أن ينتبه أحد — وهو ما وُجد هذا الملف لمنعه.
+          for i in 1 2 3 4 5; do
+            git push && exit 0
+            echo "دفعٌ مرفوض — إعادة الأساس ثم المحاولة ($i)"
+            git pull --rebase --autostash origin main || exit 1
+            sleep $((i*3))
+          done
+          exit 1
