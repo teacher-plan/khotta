@@ -3902,8 +3902,10 @@ async function forgotPassword(){
   }
   btn.disabled=true;btn.textContent='يُرسَل…';box.textContent='';
   try{
-    const{error}=await sb.auth.resetPasswordForEmail(email,
-      {redirectTo:location.origin+location.pathname});
+    // عبر دالّة الحافة لا مباشرةً: سوبابيز لا يعرف حلقاتنا، فالنداء المباشر
+    // كان يرسل الرابط لحساب المشرف ولمعلّمات الحلقة الأخرى أيضاً.
+    const{error}=await sb.functions.invoke('request-password-reset',
+      {body:{email,cycle:'main'}});
     if(error)throw error;
     const wa='https://wa.me/'+RESET_WA+'?text='+encodeURIComponent('السلام عليكم، لم تصلني رسالة استعادة كلمة المرور. بريدي: '+email);
     box.innerHTML='إن كان هذا البريد مسجّلاً فستصلك رسالةٌ فيها رابط. '
