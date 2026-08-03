@@ -709,12 +709,6 @@ body.inapp #c1-notif-btn{display:flex}
 .acct-dot{width:11px;height:11px;border-radius:50%;flex:none}
 .acct-g{font-size:12px;font-weight:800;color:var(--muted);flex:none;min-width:74px}
 .acct-note{font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:9px}
-.acct-diag{border:1.5px solid var(--border);background:var(--surface);color:var(--muted);
-  border-radius:10px;padding:8px 16px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
-.acct-diag:hover{border-color:var(--red);color:var(--red)}
-#acct-diag-out{margin-top:10px;padding:10px;border-radius:10px;background:var(--ink);color:#EDE4D6;
-  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.75;direction:ltr;
-  text-align:left;white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto}
 .acct-del{flex:none;width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:19px;line-height:1;
   border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit}
 .acct-del:hover{border-color:var(--red);color:var(--red)}
@@ -2118,10 +2112,6 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
     </a>
     <div class="c1-mrow"><button class="c1-mbtn no" onclick="acctClose()">إغلاق</button>
       <button class="c1-mbtn go" onclick="acctSave()">حفظ</button></div>
-    <div style="text-align:center;margin-top:12px">
-      <button type="button" class="acct-diag" onclick="diagRun()">فحص الاتصال بالخدمات</button>
-    </div>
-    <pre id="acct-diag-out" hidden></pre>
     <div id="acct-build" style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:10px"></div>
   </div>
 </div>
@@ -2336,10 +2326,10 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
       </label>
     </div>
     <div class="eg-row" style="margin-top:12px">
-      <div style="flex:1"><label class="eg-lbl">عدد العناصر</label><input type="number" id="gm-count" min="3" max="15" value="6" class="c1-select" style="max-width:none;width:100%"></div>
+      <div style="flex:1"><label class="eg-lbl">عدد العناصر</label><select id="gm-count" class="c1-select" style="max-width:none;width:100%"><option value="5">٥</option><option value="6" selected>٦</option><option value="7">٧</option><option value="8">٨</option><option value="9">٩</option><option value="10">١٠</option><option value="11">١١</option><option value="12">١٢</option><option value="13">١٣</option><option value="14">١٤</option><option value="15">١٥</option><option value="16">١٦</option><option value="17">١٧</option><option value="18">١٨</option><option value="19">١٩</option><option value="20">٢٠</option></select></div>
     </div>
     <label class="eg-lbl">الثيم</label>
-    <select id="gm-theme" class="hidden"><option value="">كلاسيكي (بلا خلفية)</option></select>
+    <select id="gm-theme" class="hidden"><option value=""></option></select>
     <div id="gm-theme-grid" class="gm-theme-grid"></div>
     <button class="eg-generate" onclick="gmGenerate()">ولّدي محتوى اللعبة</button>
   </div>
@@ -3643,44 +3633,6 @@ function acctDigits(s){
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
                       .replace(/\D/g,'');
 }
-// ═ فحصٌ تشخيصي ═
-// أربع جولاتٍ ضاعت في تخمين سبب فشل التوليد، لأن الواجهة لا تُظهر إلا رسالةً
-// عامّة. هذا الفحص ينادي كل خدمةٍ نداءً حقيقياً واحداً ويعرض حالة الردّ وجسمه
-// كما هما — فيصير التشخيص من دليلٍ لا من ظنّ.
-const DIAG=[
-  {k:'الحصة المتبقية', fn:null},
-  {k:'خطة الشرائح',    fn:'generate-lesson-slides', body:{grade:'1',subject:'الرياضيات',lesson:'فحص',slideCount:6,brief:true}},
-  {k:'رسم صورة',       fn:'generate-infographic',   body:{grade:'1',subject:'الرياضيات',lessonNames:['فحص'],teacherPrompt:'دائرة حمراء بسيطة',size:'1K',aspect:'1:1'}},
-  {k:'محادثة فهيم',    fn:'generate-chat',          body:{message:'فحص'}}
-];
-async function diagRun(){
-  const out=document.getElementById('acct-diag-out');
-  const btn=document.querySelector('.acct-diag');
-  if(!out)return;
-  out.hidden=false;out.textContent='';
-  if(btn){btn.disabled=true;btn.textContent='جارٍ الفحص…';}
-  const log=t=>{out.textContent+=t+'\n';out.scrollTop=out.scrollHeight;};
-  log('build='+KH_BUILD+'  '+new Date().toISOString().slice(0,16));
-  try{
-    const month=new Date().toISOString().slice(0,7);
-    const{data:u}=await sb.from('ai_usage').select('kind,count').eq('month',month);
-    log('usage: '+JSON.stringify(u||[]));
-  }catch(e){log('usage: ERR '+e.message);}
-  for(const d of DIAG){
-    if(!d.fn)continue;
-    const t0=Date.now();
-    try{
-      const res=await sb.functions.invoke(d.fn,{body:d.body});
-      const st=(res.response||(res.error&&res.error.context)||{}).status||(res.error?'?':200);
-      const why=await c1FnErr(res);
-      const okKey=res.data&&(res.data.slides||res.data.image||res.data.reply);
-      log(`${d.fn}: status=${st} ${Math.round((Date.now()-t0)/1000)}s ${okKey?'OK':'FAIL '+(why||'').slice(0,120)}`);
-    }catch(e){log(`${d.fn}: THREW ${String(e).slice(0,120)}`);}
-  }
-  log('— انتهى الفحص —');
-  if(btn){btn.disabled=false;btn.textContent='فحص الاتصال بالخدمات';}
-}
-
 let acctRoster={},acctCls=null;
 function acctRenderRoster(){
   const tabs=document.getElementById('acct-tabs'),box=document.getElementById('acct-classes');
@@ -8788,7 +8740,7 @@ async function gmLoadThemes(){
     gmThemes=[...GM_SCENES,...(data||[])];
     const sel=document.getElementById('gm-theme');
     const cur=sel.value;
-    sel.innerHTML='<option value="">كلاسيكي (بلا خلفية)</option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+    sel.innerHTML='<option value=""></option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
     if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
     gmApplyForcedTheme();
     gmRenderThemeGrid();
@@ -8803,7 +8755,7 @@ function gmRenderThemeGrid(){
   const card=(id,name,bg)=>`<button type="button" class="gm-theme-card ${cur===id?'on':''} ${forced&&forced.id!==id?'locked':''}" data-id="${escHtml(id)}" onclick="gmGridPick('${escHtml(id)}')">
     <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div>
     <div class="nm">${escHtml(name)}</div></button>`;
-  grid.innerHTML=card('','كلاسيكي','')+gmThemes.map(t=>card(t.id,t.name,t.bg_url)).join('');
+  grid.innerHTML=gmThemes.map(t=>card(t.id,t.name,t.bg_url)).join('');
   grid.title=forced?'ثيم هذه اللعبة ثابت: '+forced.name:'';
   // الثيم المختار (أو المفروض) يُحمَّل بهدوء الآن ليكون جاهزاً لحظة التشغيل
   const pre=forced||gmThemes.find(t=>t.id===cur);
@@ -8842,8 +8794,16 @@ function gmPickTpl(t){
 async function gmGenerate(){
   const lessons=studioSelectedLessons();
   if(!lessons.length){toast('اختاري درساً أولاً',true);return;}
+  // «كلاسيكي (بلا خلفية)» حُذف، فلا مهرب من اختيارٍ صريح — وبلا هذا الفحص
+  // تُولَّد اللعبة ثم تُفتح على تدرّجٍ رماديّ بلا مشهد
+  if(!gmForcedTheme(gmTpl)&&!document.getElementById('gm-theme').value){
+    toast('اختاري ثيماً للعبة أولاً',true);
+    const g=document.getElementById('gm-theme-grid');
+    if(g)g.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   const grade=String(studioGrade||''),subject=studioSubject||'';
-  const count=Math.max(3,Math.min(15,parseInt(document.getElementById('gm-count').value)||6));
+  const count=Math.max(5,Math.min(20,parseInt(document.getElementById('gm-count').value)||6));
   const btn=document.querySelector('#studio-game-options-card .eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد المحتوى من الدرس...';}
   uiBusy('يولّد محتوى اللعبة من الدرس…');
