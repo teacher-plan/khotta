@@ -9062,7 +9062,7 @@ function gmPlayWith(items,title){
 let gmRunCurrent=null;
 function gmStart(){gmSound('pop');gmMusicApply();if(gmRunCurrent)gmRunCurrent();}
 function gmClose(){
-  clearInterval(gmQuizTimer);gmMusicStop();
+  clearInterval(gmQuizTimer);clearInterval(gmMemTimer);gmMusicStop();
   try{gmLiveSnd.forEach(a=>{a.pause();a.currentTime=0;});gmLiveSnd=[];}catch(e){}
   const bg=document.getElementById('gm-stage-bg');
   bg.style.display='none';
@@ -9118,7 +9118,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('<div id="gm-stage-body"></div></div>');
   parts.push('<div style="position:fixed;bottom:6px;left:10px;z-index:9;font-size:10px;color:rgba(255,255,255,.55)">منصة خطتي الفصلية</div>');
   parts.push('<scr'+'ipt>');
-  parts.push('var gmMuted=false,gmAC=null,gmQuizTimer=null;');
+  parts.push('var gmMuted=false,gmAC=null,gmQuizTimer=null,gmMemTimer=null;');
   parts.push('var GM_OPT='+JSON.stringify((gmGameCfg[tpl]&&gmGameCfg[tpl].opts)||{})+',gmSfxT={},gmTpl='+JSON.stringify(tpl)+';');
   // لوحات الألوان تُستخدَم داخل محرّكات العجلة والذاكرة والبالون — بلا تصديرها
   // يسقط الملف المستقلّ بخطأ مرجعٍ غير معرَّف عند التشغيل
@@ -9590,7 +9590,7 @@ function gmRunMatch(pairs){
   });
 }
 // ─ محرك اختبار السرعة ─
-let gmQuizTimer=null;
+let gmQuizTimer=null,gmMemTimer=null;
 function gmRunQuiz(qs){
   const body=document.getElementById('gm-stage-body');
   let qi=0,score=0;
@@ -9692,17 +9692,28 @@ function gmRunMemory(pairs){
   const cards=[];
   pairs.forEach((p,i)=>{cards.push({t:p.a,i});cards.push({t:p.b,i});});
   const shuf=cards.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
-  // تبدأ كلها مكشوفةً ثلاثَ ثوانٍ، ثم تُقلَب وتُخلَط أمام العين، ثم يُفتح اللعب
+  // تبدأ كلها مكشوفةً ستَّ ثوانٍ للحفظ، ثم تُقلَب ويُفتح اللعب
   body.innerHTML=`<div class="gm-mem-grid" id="gm-mem-grid">${shuf.map((c,k)=>{
     const pc=GM_MEM_PAIR_COLS[c.i%GM_MEM_PAIR_COLS.length];
     return `<button class="gm-memcard flip" data-i="${c.i}" style="--pc:${pc[0]};--pcbg:${pc[1]}">
     <span class="gm-mem-front"><span>؟</span></span><span class="gm-mem-back">${escHtml(c.t)}</span></button>`;}).join('')}</div>`;
   const grid=document.getElementById('gm-mem-grid');
-  setTimeout(()=>{
-    grid.querySelectorAll('.gm-memcard').forEach(b=>b.classList.remove('flip'));
+  // عدٌّ تنازليّ ظاهر: بلا رقمٍ يتناقص لا تعرف الطالبة كم بقي لها لتحفظ
+  let left=6;
+  hud('👀 احفظي البطاقات… '+egToArabic(left));
+  clearInterval(gmMemTimer);
+  gmMemTimer=setInterval(()=>{
+    left--;
+    if(left<=0){
+      clearInterval(gmMemTimer);gmMemTimer=null;
+      grid.querySelectorAll('.gm-memcard').forEach(b=>b.classList.remove('flip'));
+      gmSound('pop');
+      setTimeout(()=>{lock=false;hud();},450);
+      return;
+    }
+    hud('👀 احفظي البطاقات… '+egToArabic(left));
     gmSound('pop');
-    setTimeout(()=>{lock=false;hud();},450);
-  },6000);
+  },1000);
   body.querySelectorAll('.gm-memcard').forEach(b=>b.onclick=()=>{
     if(lock||b.classList.contains('flip')||b.classList.contains('done'))return;
     b.classList.add('flip');gmSound('pop');
