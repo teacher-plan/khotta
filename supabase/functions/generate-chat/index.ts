@@ -84,7 +84,10 @@ Deno.serve(async (req) => {
     const b = await req.json().catch(() => ({}));
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;
     const userMsg = String(b.message || "").trim().slice(0, 2000);
-    const context = String(b.context || "").slice(0, 1500);
+    // كان السقف ١٥٠٠ حرفاً والعميل يرسل حتى ٢٨٠٠ — فيُقصّ نصف السياق صامتاً،
+    // ويقع القصّ على آخره حيث النجوم والسلوك والإنجازات: أدقّ ما فيه وأكثره
+    // فائدةً في سؤالٍ عن طالبةٍ بعينها. صار السقف يسع ما يُرسَل.
+    const context = String(b.context || "").slice(0, 3200);
     // بحث الويب اختياريّ بضغطةٍ من المعلّمة، لا تلقائيّ: لكلّ استعمالٍ ثمنٌ
     // يقارب أربعين رسالةً عادية، فتفعيله على كل سؤالٍ يُنفق بلا حاجة
     const web = b.web === true;

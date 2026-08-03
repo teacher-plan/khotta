@@ -9976,6 +9976,13 @@ function fhContext(){
         'الصف '+PLAN_GNAMES[g.num-1]+': '+(g.classes||[]).map(c=>c.name+' ('+(c.subjects||[]).join('، ')+' — '+(c.students||[]).length+' طالباً)').join('، ')
       ).join(' | '));
     }
+    // أسماء الطالبات كاملةً لكل شعبة: بدونها لا يعرف المساعد من في الصفّ،
+    // فيعجز عن أبسط سؤالٍ عن طالبةٍ بعينها رغم أنّ الاسم في الحساب
+    try{
+      const roster=c1AllClasses().filter(c=>(c.students||[]).length)
+        .map(c=>c.name+': '+(c.students||[]).join('، '));
+      if(roster.length)parts.push('أسماء طالبات كل شعبة: '+roster.join(' | '));
+    }catch(e){}
     // جدول اليوم
     try{
       const dayId=(TT_DAYS[new Date().getDay()]||{}).id;
@@ -10018,14 +10025,28 @@ function fhContext(){
       Object.keys(profile.beh_log||{}).forEach(cid=>{
         const c=c1AllClasses().find(x=>x.id===cid);if(!c)return;
         const arr=profile.beh_log[cid]||[];
-        const n=arr.reduce((s,a)=>s+(a||[]).length,0);
-        if(n)behInfo.push(c.name+': '+n+' مخالفة مسجلة');
+        const names=c.students||[];
+        // بالاسم والنوع لا بعددٍ مجرّد: «١٢ مخالفة في شعبة» لا تُعين على شيء،
+        // والمعلّمة تسأل عن طالبةٍ بعينها لا عن إحصاءِ شعبة
+        const per=names.map((nm,i)=>{
+          const es=(arr[i]||[]).filter(e=>e&&e.kind==='viol');
+          if(!es.length)return null;
+          const types=[...new Set(es.map(e=>e.type).filter(Boolean))].slice(0,3).join('/');
+          return nm+' ('+es.length+(types?': '+types:'')+')';
+        }).filter(Boolean);
+        if(per.length)behInfo.push(c.name+' — '+per.join('، '));
       });
-      if(behInfo.length)parts.push('سجل السلوك والمشاركات: '+behInfo.join('، '));
+      if(behInfo.length)parts.push('مخالفات سلوكية مسجّلة (بالاسم والنوع): '+behInfo.join(' | '));
+      else parts.push('لا مخالفات سلوكية مسجّلة على أي طالبة.');
     }catch(e){}
     if((profile.achievements||[]).length)parts.push('وثّقت '+(profile.achievements||[]).length+' إنجازاً/مبادرة مهنية في سجلها.');
-    parts.push('استخدم هذه المعلومات لتجيب من واقع صفوفها الفعلي بأسماء شعبها وطلابها، لا بإجابات عامة.');
-    return parts.join('\n').slice(0,2800);
+    // كان هنا أمرٌ بأن يجيب «من واقع صفوفها لا بإجاباتٍ عامة» — يناقض كونه
+    // مساعداً عامّاً، ويجرّ سؤالاً عن الطبخ أو الترجمة إلى شعبها وطالباتها.
+    // ويُلحَق بعد القصّ لا قبله: معلّمةٌ بشعبٍ كثيرة يطول سياقها فيقع القصّ
+    // على آخره — فيضيع هذا السطر وهو أهمّ ما فيه، ويعود المساعد يحشر صفوفها
+    // في كل جواب
+    const rule='\nهذه معلوماتُ حسابها: استعملها حين يكون السؤال عن صفوفها أو طالباتها أو خطتها أو عملها — عندها أجب بالأسماء والأرقام الفعلية لا بعموميات. وإن كان السؤال عن شيء آخر فتجاهلها تماماً ولا تُشِر إليها.';
+    return parts.join('\n').slice(0,3200-rule.length)+rule;
   }catch(e){return'';}
 }
 function fhRender(){
