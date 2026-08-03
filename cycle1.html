@@ -716,9 +716,10 @@ body.inapp #c1-notif-btn{display:flex}
   border:1.5px dashed var(--border);background:transparent;color:var(--muted);
   font-family:inherit;font-size:12.5px;font-weight:800}
 .acct-add:hover{border-color:var(--red);color:var(--red)}
-.qchip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--border);background:var(--surface);
+.qchip{display:inline-flex;align-items:center;gap:9px;border:1.5px solid var(--border);background:var(--surface);
   border-radius:999px;padding:6px 8px 6px 14px;font-size:12.5px;font-weight:800;color:var(--muted)}
-.qchip b{font-variant-numeric:tabular-nums;font-size:13.5px}
+.qchip .qbar{width:96px;height:8px;border-radius:99px;background:var(--border);overflow:hidden;flex:none}
+.qchip .qbar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
 .qchip .qq{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);background:transparent;
   color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center;flex:none;transition:.15s}
@@ -3737,10 +3738,12 @@ async function qChip(boxId,kind){
   try{
     const q=await khQuota();
     const used=kind==='img'?q.img:q.text, lim=kind==='img'?q.qI:q.qT;
-    const left=Math.max(0,lim-used);
-    const pct=lim?left/lim:1;
+    const pct=lim?Math.max(0,lim-used)/lim:1;
     const col=pct<=.1?'#C9453B':pct<=.3?'#D98B2B':'#2F7D74';
-    box.innerHTML=`<span class="qchip">الرصيد المتبقّي: <b style="color:${col}">${egArNum(left)}</b>
+    // شريطٌ بلا رقم: المعلّمة تحتاج أن تعرف أنّ الرصيد يقارب النفاد، لا أن
+    // تحصي ما بقي منه — والرقم العاري يدعو إلى التقتير قبل أوانه
+    box.innerHTML=`<span class="qchip">الرصيد المتبقّي
+      <span class="qbar"><i style="width:${(pct*100).toFixed(0)}%;background:${col}"></i></span>
       <button type="button" class="qq" onclick="qhelpOpen()" title="ما هذا الرصيد؟" aria-label="ما هذا الرصيد؟">؟</button></span>`;
   }catch(e){box.innerHTML='';}
 }
