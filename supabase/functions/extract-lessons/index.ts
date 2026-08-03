@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY (نفس مفتاح generate-exam)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, ensureVision } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const { data: rows } = await admin.from("ai_settings").select("key,value");
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
-    const model = st.model_extract || st.vision_model || "google/gemini-2.5-flash";
+    const model = ensureVision(st.model_extract || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
 
     const b = await req.json().catch(() => ({}));
     const images: string[] = Array.isArray(b.images) ? b.images : (b.image ? [b.image] : []);

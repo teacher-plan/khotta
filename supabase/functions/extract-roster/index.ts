@@ -13,6 +13,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { orFetch, pickVisionModel } from "../_shared/ai.ts";
+import { takeQuota, refundQuota } from "../_shared/quota.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,19 @@ Deno.serve(async (req) => {
     const { data: rows } = await admin.from("ai_settings").select("key,value");
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
+    if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
+
+    // ⛔ حصة الاستخدام الشهرية — كانت هذه الدالة وحدها بلا حصة رغم أنها
+    // تُستدعى من حساب المعلّمة وترفع حتى أربع صور إلى أغلى نموذجٍ في المنصة:
+    // رفعٌ متكرّر واحد كان يستنزف بلا أن يُحسب على أحد. تُحسَب على حصة الصور
+    // لأن مدخلها صورٌ لا نصّ.
+    const quota = await takeQuota(admin, user.id, user.email || "", "img", st);
+    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "img");
+      return json(body, status);
+    };
+
     // gemini-2.5-pro لا flash: الأسماء العربية بخطّ اليد أو بمسحٍ رديء هي
     // بالضبط ما يفرّق فيه النموذج القوي.
     const model = pickVisionModel(st, "roster", "google/gemini-2.5-pro");
@@ -60,7 +74,7 @@ Deno.serve(async (req) => {
     const b = await req.json().catch(() => ({}));
     const files: { name?: string; data?: string }[] =
       Array.isArray(b.files) ? b.files.slice(0, MAX_FILES) : [];
-    if (!files.length) return json({ error: "no_files" }, 400);
+    if (!files.length) return refund({ error: "no_files" }, 400);
 
     const content: unknown[] = [{
       type: "text",
@@ -70,7 +84,7 @@ Deno.serve(async (req) => {
     for (const f of files) {
       const url = String(f?.data || "");
       if (!url.startsWith("data:")) continue;
-      if (url.length > MAX_BYTES * 1.4) return json({ error: "file_too_large" }, 413);
+      if (url.length > MAX_BYTES * 1.4) return refund({ error: "file_too_large" }, 413);
       if (url.startsWith("data:application/pdf")) {
         content.push({
           type: "file",
@@ -80,7 +94,7 @@ Deno.serve(async (req) => {
         content.push({ type: "image_url", image_url: { url } });
       }
     }
-    if (content.length < 2) return json({ error: "unsupported_type" }, 400);
+    if (content.length < 2) return refund({ error: "unsupported_type" }, 400);
 
     // التعليمات مكتوبةٌ حول ما يُفسد الكشف عملياً: الترقيم، والعناوين،
     // وأرقام الجلوس، والأعمدة المجاورة — لا حول «استخرج الأسماء» فحسب.
@@ -124,7 +138,7 @@ Deno.serve(async (req) => {
         ? "no_credit"
         : orResp.status === 429 ? "busy" : "provider_error";
       console.error(`openrouter ${orResp.status} في extract-roster: ${msg}`);
-      return json({ error: code, detail: msg.slice(0, 200) }, 502);
+      return refund({ error: code, detail: msg.slice(0, 200) }, 502);
     }
 
     const text = or?.choices?.[0]?.message?.content || "";

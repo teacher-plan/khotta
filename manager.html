@@ -3552,7 +3552,10 @@ input,textarea,select{font-size:16px !important;}
     <div style="font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:12px">
       المهامّ ليست سواءً: تلخيصُ صفحةٍ لا يحتاج ما تحتاجه خطّةُ درسٍ كاملة.
       اترك المهمّة على <b>«الإعداد العام»</b> لتتبع النموذج أعلاه، أو اختر لها نموذجاً أوفر.
-      <b>لا شيء يتغيّر حتى تختار بنفسك.</b>
+      <b>لا شيء يتغيّر حتى تختار بنفسك.</b><br>
+      المهامّ الموسومة <b>👁️ يقرأ الصور</b> تُرسِل صفحات الكتاب إلى النموذج،
+      فلا تُعرَض عليها النماذج النصّية — اختيارُ نصّيٍّ لها يُسقِط الصفحات بصمت
+      فيؤلّف النموذج الدرس من معرفته العامة بدل الكتاب المعتمد.
     </div>
     <div id="ai-task-models"></div>
     <button class="eg-generate" style="margin-top:12px" onclick="saveTaskModels()">💾 حفظ نماذج المهامّ</button>
@@ -16233,26 +16236,30 @@ async function saveAiLimits(){
 // ═══ نموذج لكل مهمّة ═══
 // كل مهمّة تقرأ ai_settings['model_'+key]، فإن كان فارغاً تبعت الإعداد العام.
 // الترتيب هنا من الأثقل إلى الأخفّ ليقع نظر المشرفة على مواضع التوفير أولاً.
+// v=المهمّة ترفق صور صفحات الكتاب فلا يصلح لها إلا نموذجٌ يقرأ الصور.
+// كانت كلها تُعرَض عليها النماذج نفسها، فيُختار نصّيٌّ لمهمّةٍ بصرية فتُسقَط
+// الصور بصمت ويؤلّف النموذج الدرس من معرفته العامة بدل الكتاب المعتمد.
 const AI_TASKS=[
   {k:'plan',        n:'خطّة الدرس',            d:'أثقل مهمّة وأهمّها — لا يُنصح بتخفيفها'},
-  {k:'presentation',n:'العرض التقديمي',        d:'بناء شرائح متسلسلة، يستفيد من نموذج قوي'},
+  {k:'presentation',n:'العرض التقديمي',  v:1,  d:'يقرأ صفحات الكتاب — يلزمه نموذج رؤية'},
   {k:'exam',        n:'مولّد الاختبارات',      d:'صياغة أسئلة دقيقة'},
   {k:'game',        n:'محتوى الألعاب',         d:'أسئلة قصيرة — يكفيها نموذج متوسط'},
-  {k:'chat',        n:'محادثة فهيم',           d:'ردود قصيرة متكرّرة — أوفر مرشّح للتخفيف'},
-  {k:'summary',     n:'تلخيص صفحات الدرس',     d:'قراءة صفحات وإخراج نصّ قصير — مرشّح للتخفيف'},
-  {k:'extract',     n:'استخراج الدروس',        d:'مهمّة إدارية تُنفَّذ مرّة واحدة'},
-  {k:'segment',     n:'تقسيم الكتاب',          d:'مهمّة إدارية تُنفَّذ مرّة واحدة'}
+  {k:'chat',        n:'محادثة خُطّة AI',        d:'ردود قصيرة متكرّرة — أوفر مرشّح للتخفيف'},
+  {k:'summary',     n:'تلخيص صفحات الدرس', v:1,d:'يقرأ صفحات الكتاب — يلزمه نموذج رؤية'},
+  {k:'extract',     n:'استخراج الدروس',    v:1,d:'يقرأ صفحات الكتاب — يلزمه نموذج رؤية'},
+  {k:'segment',     n:'تقسيم الكتاب',      v:1,d:'يقرأ صفحات الكتاب — يلزمه نموذج رؤية'}
 ];
 // نماذج نصّية فقط — مهامّ الصور (إنفوجرافيك/شرائح مرسومة) لها مساراتها الخاصة
 // وتُقيَّد بنماذج صور، فإدراجها هنا يفتح باب اختيارٍ خاطئ يكسر التوليد.
+// الحقل الثالث: 1 = يقرأ الصور. النصّية تُخفى عن المهامّ البصرية.
 const AI_TASK_MODELS=[
-  ['','⚙️ الإعداد العام (كما هو أعلاه)'],
-  ['google/gemini-2.5-flash-lite','Gemini Flash-Lite — الأرخص'],
-  ['deepseek/deepseek-chat','DeepSeek V3 — رخيص وعربيته جيدة'],
-  ['google/gemini-2.5-flash','Gemini 2.5 Flash — متوازن وسريع'],
-  ['openai/gpt-5-mini','GPT-5 mini — متوازن'],
-  ['anthropic/claude-haiku-4.5','Claude Haiku 4.5 — عربية ممتازة'],
-  ['anthropic/claude-sonnet-4.6','Claude Sonnet 4.6 — أعلى جودة (الأغلى)']
+  ['','⚙️ الإعداد العام (كما هو أعلاه)',1],
+  ['google/gemini-2.5-flash-lite','Gemini Flash-Lite — الأرخص',1],
+  ['deepseek/deepseek-chat','DeepSeek V3 — رخيص وعربيته جيدة (نصّي لا يقرأ الصور)',0],
+  ['google/gemini-2.5-flash','Gemini 2.5 Flash — متوازن وسريع',1],
+  ['openai/gpt-5-mini','GPT-5 mini — متوازن',1],
+  ['anthropic/claude-haiku-4.5','Claude Haiku 4.5 — عربية ممتازة',1],
+  ['anthropic/claude-sonnet-4.6','Claude Sonnet 4.6 — أعلى جودة (الأغلى)',1]
 ];
 function renderTaskModels(m){
   const box=document.getElementById('ai-task-models');if(!box)return;
@@ -16260,10 +16267,13 @@ function renderTaskModels(m){
     const cur=(m||{})['model_'+t.k]||'';
     // نموذجٌ ضُبط يدوياً من خارج هذه الشاشة يجب أن يظهر لا أن يُمحى بصمت
     const extra=cur&&!AI_TASK_MODELS.some(o=>o[0]===cur)?`<option value="${escHtml(cur)}" selected>${escHtml(cur)} (مخصّص)</option>`:'';
+    // المهمّة البصرية لا تُعرض عليها النماذج النصّية أصلاً — المنع في المصدر
+    // أسلم من تحذيرٍ يُقرأ بعد فوات الأمر (والخادم يحرسها ثانيةً على كل حال)
+    const opts=AI_TASK_MODELS.filter(o=>!t.v||o[2]);
     return `<div style="margin-bottom:18px">
-      <label class="eg-lbl">${escHtml(t.n)}</label>
+      <label class="eg-lbl">${escHtml(t.n)}${t.v?' <span style="font-weight:400;color:var(--muted);font-size:11px">👁️ يقرأ الصور</span>':''}</label>
       <select class="eg-card ai-tmodel" data-k="${t.k}" style="width:100%;margin-bottom:0" dir="ltr">
-        ${AI_TASK_MODELS.map(o=>`<option value="${o[0]}"${o[0]===cur?' selected':''}>${escHtml(o[1])}</option>`).join('')}${extra}
+        ${opts.map(o=>`<option value="${o[0]}"${o[0]===cur?' selected':''}>${escHtml(o[1])}</option>`).join('')}${extra}
       </select>
       <div style="font-size:11px;color:var(--muted);margin-top:4px">${escHtml(t.d)}</div>
     </div>`;

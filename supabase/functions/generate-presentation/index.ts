@@ -9,7 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, ensureVision } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
     // النموذج الذي يختاره المشرف من لوحة التحكم (ارفع الجودة باختيار Claude Sonnet مثلاً).
     // عند إرفاق صور صفحات الكتاب نحتاج نموذجاً يدعم الرؤية، فنرجع لنموذج الرؤية إن كان المختار لا يدعمها.
     let model = st.model_presentation || st.ai_model || st.vision_model || "google/gemini-2.5-flash";
-    if (images.length && /deepseek/i.test(model)) model = st.vision_model || "google/gemini-2.5-flash";
+    // كان الشرط /deepseek/ وحده — فيمرّ كل نصّيٍّ آخر وتُسقَط صفحات الكتاب بصمت
+    if (images.length) model = ensureVision(model, st.vision_model || "google/gemini-2.5-flash");
 
     const schema =
       '{"slides":[{"title":"عنوان الشريحة","bullets":["نقطة أولى","نقطة ثانية"],"notes":"ملاحظات شرح للمعلم لهذه الشريحة"}]}';

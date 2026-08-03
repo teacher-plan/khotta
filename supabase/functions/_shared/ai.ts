@@ -158,6 +158,23 @@ export function pickModel(
   return st["model_" + task] || st.ai_model || fallback;
 }
 
+// عائلاتٌ نصّية معروفة لا تقرأ الصور. الضبط اليدويّ لأحدها في مهمّةٍ تقرأ
+// صفحات الكتاب لا يُنتج خطأً: المزوّد يقبل الطلب ويُسقط الصور بصمت، فيؤلّف
+// النموذج درساً من معرفته العامة ويظنّه أحدٌ مأخوذاً من الكتاب المعتمد.
+// الخطأ الصامت أسوأ من الصاخب، فنمنعه هنا بدل انتظار من يلحظه.
+const TEXT_ONLY_MODELS =
+  /deepseek-(chat|v3|v4|r1)|tencent\/hy3|qwen3-30b|inclusionai\/|meituan\/|poolside\//i;
+
+// حارسُ الرؤية: يُعيد النموذج المضبوط إن كان يقرأ الصور، وإلا عاد إلى
+// الاحتياطيّ. يُلَفّ به كل سلسلة اختيارٍ في مهمّةٍ ترفق صوراً.
+export function ensureVision(model: string, fallback: string): string {
+  if (model && TEXT_ONLY_MODELS.test(model)) {
+    console.warn("vision guard: " + model + " نصّيٌّ لا يقرأ الصور — رُدّ إلى " + fallback);
+    return fallback;
+  }
+  return model || fallback;
+}
+
 // مثلها للمهامّ التي تقرأ صور صفحات الكتاب — لا يجوز أن تسقط إلى نموذجٍ نصّي،
 // لأنه يُسقط الصور بصمت فيخرج الدرس من معرفةٍ عامة لا من الكتاب المعتمد.
 export function pickVisionModel(
@@ -165,5 +182,5 @@ export function pickVisionModel(
   task: string,
   fallback: string,
 ): string {
-  return st["model_" + task] || st.vision_model || fallback;
+  return ensureVision(st["model_" + task] || st.vision_model || fallback, fallback);
 }

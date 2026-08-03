@@ -10,7 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, ensureVision } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 16) : [];
     if (!images.length) return json({ error: "no_images" }, 400);
 
-    const model = st.model_summary || st.vision_model || "google/gemini-2.5-flash";
+    const model = ensureVision(st.model_summary || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
 
     const system = [
       "أنت مساعد بحث تربوي دقيق. أمامك صفحات درس واحد من كتاب طالب معتمد في سلطنة عُمان (منهج كامبردج).",

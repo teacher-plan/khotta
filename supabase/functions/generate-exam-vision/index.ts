@@ -9,7 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, ensureVision } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       await refundQuota(admin, user.id, user.email || "", "text");
       return json(body, status);
     };
-    const model = st.model_exam_vision || st.vision_model || "google/gemini-2.5-flash";
+    const model = ensureVision(st.model_exam_vision || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
     const maxQ = parseInt(st.max_questions || "30") || 30;
     const allowedTypes = (st.allowed_types || "mcq,essay,tf,fill,match").split(",");
     const adminPrompt = st.system_prompt || "";
