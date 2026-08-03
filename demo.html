@@ -1951,15 +1951,32 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-memcard.flip .gm-mem-back{transform:rotateY(0)}
 /* كل زوجٍ مطابَق يأخذ لوناً خاصاً به فيُرى الترابط بلمحة — بلا أحمر (لونُ الخطأ) */
 .gm-memcard.done .gm-mem-back{background:var(--pcbg,#E4F0EC);color:var(--pc,#1F5C55);border:2.5px solid var(--pc,#1F5C55);box-shadow:0 0 16px var(--pcbg,#E4F0EC)}
-.gm-grp-buckets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.gm-grp-bucket{border:2.5px dashed rgba(109,40,217,.4);border-radius:14px;padding:10px;min-height:110px;cursor:pointer;transition:.15s;background:rgba(109,40,217,.05)}
-.gm-grp-bucket h3{margin:0 0 8px;font-size:14.5px;text-align:center;color:#6d28d9}
-.gm-grp-bucket.err{border-color:#b91c1c;background:#fee2e2;animation:gmShake .3s}
-.gm-grp-list{display:flex;flex-direction:column;gap:5px}
-.gm-grp-pool{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.gm-grp-chip{border:2px solid rgba(109,40,217,.3);background:#fff;border-radius:10px;padding:8px 16px;font-family:inherit;font-size:13.5px;font-weight:700;color:#3d3428;cursor:pointer;transition:.15s}
-.gm-grp-chip.sel{border-color:#6d28d9;background:#ede9fe;transform:scale(1.06)}
-.gm-grp-chip.done{border-color:#15803d;background:#dcfce7;color:#15803d;cursor:default;font-size:12px;padding:5px 12px}
+.gm-grp-buckets{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+/* لكلّ مجموعةٍ لونها الخاصّ (--gc) — الصندوقان المتطابقان بصرياً كانا يُقرآن
+   بالعنوان وحده، فيضيع الفرز البصريّ الذي هو أصل اللعبة */
+.gm-grp-bucket{position:relative;border:2.5px solid var(--gc,#1F5C55);border-radius:18px;padding:0 0 12px;min-height:132px;cursor:pointer;transition:.18s;overflow:hidden;
+  background:linear-gradient(180deg,var(--gcbg,#DCEDE9),rgba(255,255,255,.92));
+  box-shadow:0 6px 18px rgba(0,0,0,.16)}
+.gm-grp-bucket:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+.gm-grp-bucket h3{margin:0 0 10px;padding:9px 10px;font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;font-size:15.5px;text-align:center;color:#fff;background:var(--gc,#1F5C55);
+  display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.2px}
+.gm-grp-bucket h3::before{content:'';width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.85);flex:none}
+.gm-grp-bucket.err{border-color:#b91c1c;animation:gmShake .3s}
+.gm-grp-bucket.err h3{background:#b91c1c}
+.gm-grp-bucket.hit{animation:gmGrpHit .45s ease-out}
+@keyframes gmGrpHit{0%{transform:scale(1)}40%{transform:scale(1.04);box-shadow:0 0 0 5px var(--gcbg,#DCEDE9)}100%{transform:scale(1)}}
+.gm-grp-list{display:flex;flex-direction:column;gap:6px;padding:0 10px}
+.gm-grp-pool{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.gm-grp-chip{border:2.5px solid rgba(42,21,3,.22);background:linear-gradient(160deg,#FFFDF7,#F7EEE2);border-radius:12px;padding:10px 18px;
+  font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;font-size:14.5px;font-weight:600;color:#2A1503;cursor:pointer;transition:.15s;
+  box-shadow:0 3px 9px rgba(0,0,0,.12)}
+.gm-grp-chip:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,.18)}
+.gm-grp-chip.sel{border-color:#C0A848;background:linear-gradient(160deg,#FFF8E4,#F7EBCE);transform:scale(1.07);box-shadow:0 0 0 4px rgba(232,195,74,.3),0 6px 14px rgba(0,0,0,.18)}
+/* بعد الفرز يأخذ العنصر لون مجموعته، فيُرى الانتماء بلمحةٍ لا بموضعه فقط */
+.gm-grp-chip.done{border-color:var(--gc,#1F5C55);background:#fff;color:var(--gc,#1F5C55);cursor:default;font-size:13px;padding:7px 13px;
+  transform:none;box-shadow:none;animation:gmGrpLand .4s cubic-bezier(.34,1.56,.64,1)}
+.gm-grp-chip.done:hover{transform:none;box-shadow:none}
+@keyframes gmGrpLand{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 
 /* ══ شريط وضع التجربة ══ */
 body.demo{padding-bottom:64px}
@@ -8634,7 +8651,7 @@ const GM_TPL_INSTR={
   balloon:'فرقعي البالون الذي يحمل الإجابة الصحيحة قبل أن يطير بعيداً.',
   box:'افتحي الصندوق لتظهر السؤال المخبأ خلفه، ثم أجيبي عنه.',
   memory:'تُكشف البطاقات كلها ستّ ثوانٍ في البداية — احفظي مواضعها! ثم تُقلَب، فاقلبي بطاقتين في كل مرة بحثاً عن الزوج المترابط: إن تطابقتا بقيتا مكشوفتين بلونٍ خاصّ بهما، وإلا انقلبتا من جديد. ولتحديد من تُجرّب، اضغطي زر «اختيار طالب عشوائياً» 🙋 أعلى الشاشة.',
-  groups:'اسحبي كل عنصر إلى المجموعة الصحيحة التي ينتمي إليها.',
+  groups:'اضغطي عنصراً من الأسفل فيُضاء، ثم اضغطي صندوق مجموعته الصحيحة في الأعلى — لكلّ مجموعة لونها، والعنصر الصحيح ينتقل إليها بلونها. ولتحديد من تُجرّب، اضغطي زر «اختيار طالب عشوائياً» 🙋 أعلى الشاشة.',
   millionaire:'تسلّقي سلّم الأسئلة إجابة صحيحة تلو الأخرى، مستعينةً بوسائل المساعدة الثلاث 🆘 عند الحاجة. ولتحديد من تُجيب، اضغطي زر «اختيار طالب عشوائياً» 🙋 أعلى الشاشة.',
   race:'كل إجابة صحيحة تقدّم سيارة فريقك خطوة — أول فريق يصل للنهاية يفوز.',
   boxes:'افتحي صندوقاً بعد كل إجابة صحيحة — بعضها كنز وبعضها قنبلة، فاختاري بحكمة.',
@@ -9087,7 +9104,7 @@ function gmCollectCss(){
     let rules;try{rules=sh.cssRules;}catch(e){continue;}
     for(const r of rules){
       const key=(r.selectorText||'')+' '+(r.name||'');
-      if(/\.gm-|#gm-|gmShake|gmPop\b|gmBob|gmPopOut|gmPickPulse|gmMillCountPulse/.test(key))out+=r.cssText+'\n';
+      if(/\.gm-|#gm-|gmShake|gmPop\b|gmBob|gmPopOut|gmPickPulse|gmMillCountPulse|gmGrpHit|gmGrpLand/.test(key))out+=r.cssText+'\n';
     }
   }
   return out;
@@ -9742,13 +9759,14 @@ function gmRunGroups(items){
   let sel=null,done=0,tries=0;
   const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span>${egToArabic(done)} / ${egToArabic(items.length)}</span><span>محاولات: ${egToArabic(tries)}</span>`;};
   hud();
+  const GC=[['#1F5C55','#DCEDE9'],['#B06D18','#FBEBD6']];
+  const gsty=g=>`--gc:${GC[g][0]};--gcbg:${GC[g][1]}`;
   body.innerHTML=`<div class="gm-panel" style="max-width:680px">
     <div class="gm-grp-buckets">
-      <div class="gm-grp-bucket" data-g="0"><h3>${escHtml(gmGroupNames[0]||'أ')}</h3><div class="gm-grp-list"></div></div>
-      <div class="gm-grp-bucket" data-g="1"><h3>${escHtml(gmGroupNames[1]||'ب')}</h3><div class="gm-grp-list"></div></div>
+      <div class="gm-grp-bucket" data-g="0" style="${gsty(0)}"><h3>${escHtml(gmGroupNames[0]||'أ')}</h3><div class="gm-grp-list"></div></div>
+      <div class="gm-grp-bucket" data-g="1" style="${gsty(1)}"><h3>${escHtml(gmGroupNames[1]||'ب')}</h3><div class="gm-grp-list"></div></div>
     </div>
-    <div class="gm-grp-pool">${items.map((o,i)=>`<button class="gm-grp-chip" data-g="${o.g?1:0}">${escHtml(o.t)}</button>`).join('')}</div>
-    <p style="font-size:12px;color:#8a7c68;text-align:center;margin:8px 0 0">اضغطي عنصراً ثم اضغطي مجموعته الصحيحة</p></div>`;
+    <div class="gm-grp-pool">${items.map((o,i)=>`<button class="gm-grp-chip" data-g="${o.g?1:0}">${escHtml(o.t)}</button>`).join('')}</div></div>`;
   const chips=body.querySelectorAll('.gm-grp-chip');
   chips.forEach(c=>c.onclick=()=>{
     chips.forEach(x=>x.classList.remove('sel'));
@@ -9761,7 +9779,9 @@ function gmRunGroups(items){
     if(sel.dataset.g===bk.dataset.g){
       gmSound('ok');
       sel.classList.remove('sel');sel.classList.add('done');sel.onclick=null;
+      sel.style.cssText=gsty(+bk.dataset.g);
       bk.querySelector('.gm-grp-list').appendChild(sel);
+      bk.classList.remove('hit');void bk.offsetWidth;bk.classList.add('hit');
       sel=null;done++;hud();
       if(done===items.length){gmSound('win');gmConfetti();
         body.insertAdjacentHTML('beforeend',`<div class="gm-panel gm-end" style="margin-top:12px;padding:14px"><h2 style="margin:2px 0">فرز مكتمل! ${egToArabic(tries)} محاولة</h2><button class="gm-btn" style="margin-top:8px" onclick="gmRunGroups(gmItems)">إعادة التشغيل</button></div>`);}
