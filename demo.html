@@ -1450,8 +1450,11 @@ body:has(#page-fahim.active){overflow:hidden}
 @keyframes fhDotPulse{0%,100%{opacity:1}50%{opacity:.35}}
 .fh-hbtn{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:9px;padding:7px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:12px;font-weight:700}
 .fh-hbtn:hover{background:rgba(255,255,255,.3)}
-.fh-hero{margin:auto;max-width:520px;text-align:center;padding:22px 18px}
-.fh-hero h2{margin:0 0 8px;font-size:19px;color:var(--ink)}
+.fh-hero{margin:auto;max-width:520px;text-align:center;padding:22px 18px;animation:fhMsgIn .5s both}
+.fh-hero-mark{width:58px;height:58px;margin:0 auto 14px;border-radius:19px;display:flex;align-items:center;justify-content:center;
+  font-size:27px;color:#fff;background:linear-gradient(135deg,var(--red-deep),var(--red-d) 55%,var(--red));
+  box-shadow:0 8px 22px rgba(122,32,32,.32)}
+.fh-hero h2{margin:0 0 8px;font-size:22px;color:var(--ink)}
 .fh-hero .sub{margin:0 0 18px;font-size:13.5px;line-height:1.95;color:var(--muted)}
 .fh-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;text-align:start}
 .fh-hero-it{border:1.5px solid var(--border);border-radius:13px;padding:11px 13px;background:var(--surface)}
@@ -1464,7 +1467,20 @@ body:has(#page-fahim.active){overflow:hidden}
 #fhp-hist-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
 .fh-hist-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:12.5px;cursor:pointer;display:flex;justify-content:space-between;gap:6px;align-items:center;transition:.15s}
 .fh-hist-item:hover,.fh-hist-item.sel{border-color:var(--red)}
-#fh-body{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.fhp-side-quota{padding:11px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:center;flex:none}
+.fhp-side-quota .qchip{border-color:transparent;background:transparent;padding:0;gap:8px;font-size:11.5px}
+.fh-delall{background:transparent;border:1.5px solid var(--border);color:var(--muted);font-size:11px;padding:5px 9px}
+.fh-delall:hover{background:transparent;border-color:var(--red);color:var(--red)}
+.fh-del{opacity:.45;transition:.15s}
+.fh-hist-item:hover .fh-del{opacity:1}
+#fh-body{flex:1;overflow-y:auto;padding:18px 14px;display:flex;flex-direction:column;gap:11px;
+  background:
+    radial-gradient(circle at 12% 8%,rgba(216,96,72,.055),transparent 42%),
+    radial-gradient(circle at 88% 92%,rgba(72,120,72,.06),transparent 44%),
+    radial-gradient(rgba(42,21,3,.055) 1px,transparent 1px) 0 0/22px 22px,
+    var(--bg)}
+.fh-msg{animation:fhMsgIn .32s cubic-bezier(.34,1.4,.64,1) both}
+@keyframes fhMsgIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 .fh-msg{max-width:100%;min-width:0;padding:10px 13px;border-radius:16px;font-size:13px;line-height:1.95;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .fh-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border-bottom-left-radius:6px;max-width:86%}
 .fh-msg.bot{background:var(--surface);border:1px solid var(--border);color:var(--ink);border-bottom-right-radius:6px}
@@ -2416,7 +2432,6 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
         <button class="fh-hbtn" onclick="fhNewChat()" title="محادثة جديدة"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> جديدة</button>
       </div>
     </div>
-    <div id="fahim-quota" style="padding:8px 14px 0;text-align:center"></div>
     <div class="fhp-row">
       <div class="fhp-main">
         <div id="fh-body"></div>
@@ -2431,7 +2446,13 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
         </div>
       </div>
       <aside id="fhp-side">
-        <div class="fhp-side-head">محادثاتي السابقة <button class="fh-hbtn" onclick="fhSideToggle()"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.71 2.88 18.3 9.17 12 2.88 5.71 4.3 4.29l6.29 6.3 6.29-6.3z"/></svg></button></div>
+        <div id="fahim-quota" class="fhp-side-quota"></div>
+        <div class="fhp-side-head">محادثاتي السابقة
+          <span style="display:flex;gap:5px;align-items:center">
+            <button class="fh-hbtn fh-delall" onclick="fhDelAllChats()" title="حذف كل المحادثات">حذف الكل</button>
+            <button class="fh-hbtn" onclick="fhSideToggle()"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.71 2.88 18.3 9.17 12 2.88 5.71 4.3 4.29l6.29 6.3 6.29-6.3z"/></svg></button>
+          </span>
+        </div>
         <div id="fhp-hist-list"></div>
       </aside>
     </div>
@@ -9945,8 +9966,9 @@ function fhRender(){
   const body=document.getElementById('fh-body');if(!body)return;
   if(!fhMsgs.length){
     body.innerHTML=`<div class="fh-hero">
+      <div class="fh-hero-mark">✦</div>
       <h2>خُطّة AI</h2>
-      <p class="sub">اكتبي أي سؤال لنبدأ.</p>
+      <p class="sub">مساعدٌ ذكيٌّ عامّ — اكتبي أي سؤال لنبدأ.</p>
     </div>`;
     return;
   }
@@ -10097,8 +10119,25 @@ async function fhOpenChat(id){
     document.querySelectorAll('.fh-hist-item').forEach(el=>el.classList.toggle('sel',el.dataset.id===id));
   }catch(e){}
 }
+// الحذف نهائيّ ولا تراجع عنه، وكان يقع بضغطةٍ واحدة على «✕» صغير بجوار
+// كل محادثة — فتُمحى محادثةٌ بلمسةٍ خاطئة بلا سؤال
 async function fhDelChat(id){
-  try{await sb.from('ai_chats').delete().eq('id',id);if(fhChatId===id)fhNewChat();fhHistory();}catch(e){}
+  if(!confirm('حذف هذه المحادثة نهائياً؟'))return;
+  try{
+    await sb.from('ai_chats').delete().eq('id',id);
+    if(fhChatId===id)fhNewChat();
+    fhHistory();toast('حُذفت المحادثة','ok');
+  }catch(e){toast('تعذّر الحذف',true);}
+}
+async function fhDelAllChats(){
+  try{
+    const{data}=await sb.from('ai_chats').select('id');
+    if(!data||!data.length){toast('لا توجد محادثات محفوظة',true);return;}
+    if(!confirm('حذف كل المحادثات المحفوظة ('+egArNum(data.length)+') نهائياً؟'))return;
+    // ترشيحٌ صريح بالمعرّفات: حذفٌ بلا شرطٍ يرفضه سوبابيز حمايةً من المحو الشامل
+    await sb.from('ai_chats').delete().in('id',data.map(c=>c.id));
+    fhNewChat();fhHistory();toast('حُذفت كل المحادثات','ok');
+  }catch(e){toast('تعذّر الحذف',true);}
 }
 
 // ═══════════ إنجازاتك ومبادراتك — سجلّ مهني يحفّز على التوثيق ═══════════

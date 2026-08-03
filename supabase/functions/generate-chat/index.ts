@@ -83,11 +83,12 @@ Deno.serve(async (req) => {
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;
     const userMsg = String(b.message || "").trim().slice(0, 2000);
     const context = String(b.context || "").slice(0, 1500);
-    // آخر رسائل المحادثة من العميل (نقتصر على ١٢ لضبط التكلفة)
+    // آخر رسائل المحادثة من العميل (ثمانٍ: التاريخ يُعاد قراءته كاملاً مع
+    // كل سؤال، فطوله يبطّئ أوّل حرفٍ في الردّ أكثر مما ينفع سياقه)
     const history: Array<{ role: string; content: string }> =
       (Array.isArray(b.history) ? b.history : [])
         .filter((m: { role?: string; content?: string }) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-        .slice(-12)
+        .slice(-8)
         .map((m: { role: string; content: string }) => ({ role: m.role, content: String(m.content).slice(0, 2000) }));
     // صورٌ ترفعها المعلمة ليقرأها فهيم (صفحة كتاب، ورقة طالبة، تعميم إداري).
     // أربع كحد أقصى: المدخل يُحاسب بالحجم، وأربع تكفي درساً كاملاً.
@@ -138,6 +139,10 @@ Deno.serve(async (req) => {
         ],
         temperature: 0.6,
         max_tokens: images.length ? 1400 : 900,
+        // OpenRouter يوزّع الطلب على عدة مزوّدين للنموذج نفسه، وترتيبه
+        // الافتراضي يوازن السعر بالسرعة. المحادثة تُقاس بسرعة أوّل حرف،
+        // فنطلب صراحةً أعلى إنتاجية.
+        provider: { sort: "throughput" },
       }),
     }, { st, task: "chat" });
     const or = await orResp.json();
