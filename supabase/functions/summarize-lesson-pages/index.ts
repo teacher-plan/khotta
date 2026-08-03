@@ -10,7 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch, ensureVision } from "../_shared/ai.ts";
+import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -94,7 +94,11 @@ Deno.serve(async (req) => {
       }),
     }, { st, task: "summary" });
     const or = await r.json();
-    if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
+    if (!r.ok) {
+      const _m = String(or?.error?.message || or?.message || "");
+      console.error(`openrouter ${r.status} في summarize-lesson-pages: ${_m}`);
+      return refund({ error: orErrCode(r.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
     const summary = (or?.choices?.[0]?.message?.content || "").trim();
     if (!summary) return refund({ error: "no_summary" }, 502);
     return json({ summary, model, usage: or?.usage || null });

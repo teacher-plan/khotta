@@ -146,6 +146,17 @@ export async function orFetch(url: string, init: RequestInit, opts?: OrOpts): Pr
   throw lastErr || new Error("openrouter unreachable");
 }
 
+// تصنيف عطل المزوّد. كان كلُّ عطلٍ يُردّ «provider_error» فتقرأه المعلّمة
+// «تعذّر التوليد، حاولي مرّة أخرى» — وهي جملةٌ تدعوها إلى التكرار. لكنّ
+// نفاد الرصيد لا يُصلحه تكرار، والازدحام يُصلحه انتظارٌ لا إلحاح. وكلّ
+// محاولةٍ فاشلة تقتطع من حصتها. فالتصنيف هنا ليس تجميلاً: هو الفرق بين
+// معلّمةٍ تراسل الإدارة وأخرى تظنّ العطل في جهازها فتترك المنصة.
+export function orErrCode(status: number, msg: string): string {
+  if (status === 402 || /credit|quota|insufficient|balance|payment/i.test(msg)) return "no_credit";
+  if (status === 429) return "busy";
+  return "provider_error";
+}
+
 // اختيار النموذج حسب المهمّة.
 // الترتيب: مفتاح المهمّة → الإعداد العام (ai_model) → الافتراضي.
 // أُبقي ai_model قبل الافتراضي عمداً: المشرفة ضبطته صراحةً، فتجاهله يغيّر

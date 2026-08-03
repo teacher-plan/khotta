@@ -9,7 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -173,7 +173,11 @@ Deno.serve(async (req) => {
         }),
       }, { st, task: "infographic" });
       const or = await r.json();
-      if (!r.ok) return refund({ error: "provider_error", detail: or }, 502);
+      if (!r.ok) {
+        const _m = String(or?.error?.message || or?.message || "");
+        console.error(`openrouter ${r.status} في generate-infographic: ${_m}`);
+        return refund({ error: orErrCode(r.status, _m), detail: _m.slice(0, 200) }, 502);
+      }
       const msg = or?.choices?.[0]?.message;
       const outImg = msg?.images?.[0]?.image_url?.url || "";
       if (!outImg) return refund({ error: "no_image", detail: msg?.content || null }, 502);
@@ -187,14 +191,23 @@ Deno.serve(async (req) => {
       let or = await orResp.json();
       if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
       if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-      if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
+      if (!orResp.ok) {
+        const _m = String(or?.error?.message || or?.message || "");
+        console.error(`openrouter ${orResp.status} في generate-infographic: ${_m}`);
+        return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+      }
       const msg = or?.choices?.[0]?.message;
       img = msg?.images?.[0]?.image_url?.url || "";
       usage = or?.usage || null;
       if (!img) return refund({ error: "no_image", detail: msg?.content || null }, 502);
     } else {
       const r = await callImagesApi();
-      if (!r.ok) return refund({ error: "provider_error", detail: r.detail }, 502);
+      if (!r.ok) {
+        const _d = r.detail as { error?: { message?: string }; message?: string } | undefined;
+        const _m = String(_d?.error?.message || _d?.message || "");
+        console.error(`openrouter images في generate-infographic: ${_m}`);
+        return refund({ error: orErrCode(402, _m) === "no_credit" ? "no_credit" : "provider_error", detail: _m.slice(0, 200) }, 502);
+      }
       img = r.img;
     }
 

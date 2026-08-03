@@ -10,7 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -167,7 +167,9 @@ Deno.serve(async (req) => {
         }),
       }, { st, task: "slides" });
       const j = await r.json();
-      if (!r.ok) return { ok: false as const, detail: j };
+      // رمزُ الحالة يُمرَّر مع الفشل: بدونه يُبتلع نفادُ الرصيد داخل
+      // «bad_output» فيُقرأ عطلاً في المحتوى لا في الحساب
+      if (!r.ok) return { ok: false as const, detail: j, status: r.status, msg: String(j?.error?.message || j?.message || "") };
       const text = j?.choices?.[0]?.message?.content || "";
       let parsed: { slides?: unknown[]; homework?: string; objectives?: unknown[] } | null = null;
       try { parsed = JSON.parse(text); }
@@ -178,7 +180,15 @@ Deno.serve(async (req) => {
 
     let attempt = await callOnce();
     if (!attempt.ok) attempt = await callOnce();
-    if (!attempt.ok) return refund({ error: "bad_output", detail: attempt.detail }, 502);
+    if (!attempt.ok) {
+      const st_ = (attempt as { status?: number }).status;
+      const m_ = (attempt as { msg?: string }).msg || "";
+      if (st_) {
+        console.error(`openrouter ${st_} في generate-lesson-slides: ${m_}`);
+        return refund({ error: orErrCode(st_, m_), detail: m_.slice(0, 200) }, 502);
+      }
+      return refund({ error: "bad_output", detail: attempt.detail }, 502);
+    }
     return json({ slides: attempt.parsed.slides, objectives: (attempt.parsed as { objectives?: unknown }).objectives || [], homework: attempt.parsed.homework || "", model, usage: attempt.usage });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

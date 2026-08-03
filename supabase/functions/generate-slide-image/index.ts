@@ -9,7 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -118,7 +118,11 @@ Deno.serve(async (req) => {
       let orResp = await call({ aspect_ratio: "16:9" });
       let or = await orResp.json();
       if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-      if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
+      if (!orResp.ok) {
+        const _m = String(or?.error?.message || or?.message || "");
+        console.error(`openrouter ${orResp.status} في generate-slide-image: ${_m}`);
+        return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+      }
       const msg = or?.choices?.[0]?.message;
       img = msg?.images?.[0]?.image_url?.url || "";
       usage = or?.usage || null;
@@ -137,7 +141,11 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ model, prompt: userPrompt, resolution: "4K", aspect_ratio: "16:9" }),
       }, { st, task: "slide_image" });
       const j = await r.json();
-      if (!r.ok) return refund({ error: "provider_error", detail: j }, 502);
+      if (!r.ok) {
+        const _m = String(j?.error?.message || j?.message || "");
+        console.error(`openrouter ${r.status} في generate-slide-image: ${_m}`);
+        return refund({ error: orErrCode(r.status, _m), detail: _m.slice(0, 200) }, 502);
+      }
       const d = j?.data?.[0] || {};
       img = d.b64_json ? "data:image/png;base64," + d.b64_json : (d.url || "");
       if (!img) return refund({ error: "no_image", detail: j }, 502);

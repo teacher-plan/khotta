@@ -5793,6 +5793,20 @@ document.addEventListener('keydown',e=>{
 // («Edge Function returned a non-2xx status code»)، ويبقى جسم الردّ — وفيه
 // السبب الفعلي مثل quota_exceeded — داخل error.context بلا قراءة. فكان نفاد
 // الحصّة يظهر للمعلّمة «تعذّر، حاولي مجدداً» فتُعيد المحاولة بلا جدوى.
+// ترجمةُ رمز العطل إلى جملةٍ تُملي على المعلّمة ما تفعله.
+// «تعذّر التوليد، حاولي مجدداً» جملةٌ تدعو إلى التكرار — ونفادُ الرصيد لا
+// يُصلحه تكرار، والازدحام يُصلحه انتظارٌ لا إلحاح، وبلوغُ الحصة لا يُصلحه
+// شيءٌ حتى مطلع الشهر. وكلّ محاولةٍ فاشلة تقتطع من حصتها. فالمعلّمة التي
+// تُعيد المحاولة عشراً تظنّ العطل في جهازها، ولا يخطر لها أن تراسل الإدارة.
+function c1ErrMsg(code,fallback){
+  const c=String(code||'');
+  if(c.includes('no_credit'))return 'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. لا تُعيدي المحاولة الآن.';
+  if(c.includes('quota_exceeded'))return 'وصلتِ حدّ استخدامك الشهري — يتجدّد مطلع الشهر القادم.';
+  if(c.includes('busy'))return 'الخدمة مزدحمة الآن — أعيدي المحاولة بعد دقيقة.';
+  if(c.includes('disabled'))return 'التوليد موقوفٌ مؤقتاً من الإدارة.';
+  if(c.includes('server_not_configured'))return 'إعدادات الخدمة ناقصة — راسلي الإدارة.';
+  return fallback||'تعذّر التوليد — تحقّقي من الاتصال وأعيدي المحاولة.';
+}
 async function c1FnErr(res){
   if(!res)return '';
   if(res.data&&res.data.error)return String(res.data.error);
@@ -6023,7 +6037,7 @@ function sl2Start(id,grade,subject,unitName,lessonName){
       clearTimeout(job.guard);
       if(job.cancelled)throw new Error('cancel');
       if(built&&built.quota){delete sl2Jobs[id];sl2Chip();
-        toast('وصلتِ حدّ توليد الصور الشهري — يتجدّد مطلع الشهر القادم',true);return;}
+        toast(c1ErrMsg(built.code,'وصلتِ حدّ توليد الصور الشهري — يتجدّد مطلع الشهر القادم.'),true);return;}
       if(built&&!built.slides){delete sl2Jobs[id];sl2Chip();
         toast('تعذّر رسم شرائح العرض'+(built.why?' — '+String(built.why).slice(0,60):''),true);return;}
       if(!built)throw new Error('build');
@@ -6100,7 +6114,7 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
       sl2WipClear(id);
       return{slides:{v:2,lesson:lessonName,subject,objectives:wip.obj||[],images:got2,homework:wip.hw||''}};
     }
-    if(urls2.quota)return{quota:true};
+    if(urls2.quota)return{quota:true,code:urls2.code};
     return{why:urls2.why||''};
   }
   let data=null;
@@ -6119,8 +6133,9 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
     if(r.__cancel)return null;
     if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
       const reason=await c1FnErr(r);
-      if(String(reason).includes('quota_exceeded')){
-        toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);return null;
+      // ثلاثةٌ لا يُصلحها تكرار — نتوقّف فوراً بدل استهلاك المحاولات الثلاث
+      if(/quota_exceeded|no_credit|disabled/.test(String(reason))){
+        toast(c1ErrMsg(reason),true);return null;
       }
       if(t<3)await new Promise(r2=>setTimeout(r2,1500*t));
     }else data=r.data;
@@ -6145,7 +6160,7 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
     // نُبقي الخطّة والأهداف مع العمل الناقص كي تستأنف المحاولة التالية بها
     try{const w=sl2WipGet(id);if(w){w.obj=objectives;w.hw=data.homework||'';
       localStorage.setItem(_sl2WipKey(id),JSON.stringify(w));}}catch(e){}
-    if(urls.quota)return{quota:true};
+    if(urls.quota)return{quota:true,code:urls.code};
     return{why:urls.why||''};
   }
   sl2WipClear(id);
@@ -6172,7 +6187,8 @@ async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job,s
         sl2Wait(sl2OneImage(id,grade,subject,lessonName,body[i],i,bookContext),SL2_T.img,job)));
       if(done.some(d=>d&&d.__cancel))return urls;
       // نفاد الحصّة ليس تعثّراً يُستدرَك: نتوقّف فوراً بدل ثلاث جولاتٍ عبثية
-      if(done.some(d=>d&&d.err==='quota')){urls.quota=true;return urls;}
+      const _st=done.find(d=>d&&typeof d.err==='string'&&d.err.startsWith('stop:'));
+      if(_st){urls.quota=true;urls.code=_st.err.slice(5);return urls;}
       // نحتفظ بأول سببٍ حقيقي: «تعذّر» وحدها لا تُعين على تشخيص شيء
       const bad=done.find(d=>d&&d.err&&d.err!=='quota');
       if(bad&&!urls.why)urls.why=bad.err;
@@ -6204,7 +6220,7 @@ async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
     const{data,error}=res;
     if(error||!data||!data.image){
       const reason=await c1FnErr(res);
-      return{err:reason.includes('quota_exceeded')?'quota':reason||'fail'};
+      return{err:/quota_exceeded|no_credit|disabled/.test(reason)?('stop:'+reason):(reason||'fail')};
     }
     const blob=await c1CompressInfo(data.image);
     const path=`c1-slides/${currentUser.id}/${id}-${idx}-${Date.now().toString(36)}.jpg`;
@@ -6264,7 +6280,7 @@ async function planInfoBtn(id){
     const{data,error}=_infoRes;
     if(error||!data||!data.image){
       const reason=await c1FnErr(_infoRes);
-      toast(String(reason).includes('quota_exceeded')?'وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم':'تعذّر توليد الملخص، حاولي مجدداً',true);
+      toast(c1ErrMsg(reason,'تعذّر توليد الملخص — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
       return;
     }
     const blob=await c1CompressInfo(data.image);
@@ -6514,12 +6530,18 @@ async function todayGenerateOwn(){
   todayForceOwn=true;
   try{await todayGenerate();}finally{todayForceOwn=false;}
 }
-async function _todayQuota(res){
-  return (await c1FnErr(res)).includes('quota_exceeded');
+let _todayStopCode='';
+async function _todayStop(res){
+  const r=await c1FnErr(res);
+  // ثلاثة أعطالٍ لا يُصلحها تكرار: بلوغ الحصة، ونفاد الرصيد، وإيقاف التوليد.
+  // إعادة المحاولة عليها تُطيل الانتظار بلا أمل وتُوهم المعلّمة أن العطل عابر.
+  if(/quota_exceeded|no_credit|disabled/.test(r)){_todayStopCode=r;return true;}
+  return false;
 }
 async function todayGenerate(){
   const ctx=todayCache;
   if(!ctx||!ctx.lessonId){toast('لا يوجد درس محدد اليوم',true);return;}
+  _todayStopCode='';
   const btn=document.getElementById('today-gen-btn');
   if(btn)btn.disabled=true;
   const id=ctx.lessonId;
@@ -6564,7 +6586,7 @@ async function todayGenerate(){
             body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,images:[],bookContext}
           });
           const{data}=res;
-          if(await _todayQuota(res))quota=true;
+          if(await _todayStop(res))quota=true;
           else if(data&&data.plan){
             const all={...(profile.plan_state||{}),[id]:{...planGet(id),prep:data.plan,prep_at:new Date().toISOString()}};
             await cy1Save({plan_state:all},'يحفظ الخطة');
@@ -6581,7 +6603,7 @@ async function todayGenerate(){
             body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext}
           });
           const{data}=res;
-          if(await _todayQuota(res))quota=true;
+          if(await _todayStop(res))quota=true;
           else if(data&&data.image){
             const blob=await c1CompressInfo(data.image);
             const path=c1InfoPath(id);
@@ -6612,7 +6634,7 @@ async function todayGenerate(){
 
     const nm=s=>[...s].map(k=>labels[k]).join(' و');
     const from=adopted.size?` (${nm(adopted)} من زميلتك)`:'';
-    if(quota)toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم'+(done.size||adopted.size?`. جهزنا ${nm(new Set([...done,...adopted]))}`:''),true);
+    if(quota)toast(c1ErrMsg(_todayStopCode)+(done.size||adopted.size?` جهزنا ${nm(new Set([...done,...adopted]))}.`:''),true);
     // لا نقول «جهزت كل الأجزاء» والعرض ما زال يُرسم — الشريط الخلفي يتابعه
     else if(!need.size)toast(slidesBg
       ? 'جهزت الخطة والملخص'+from+'، والعرض يُجهَّز في الخلفية — تابعي عملكِ'
@@ -8524,8 +8546,7 @@ async function infoGenerate(){
   uiBusyDone();
   if(btn){btn.disabled=false;btn.textContent='ولّدي الإنفوجرافيك';}
   if(!img){
-    if(String(reason).includes('quota_exceeded'))toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);
-    else toast('تعذّر توليد الإنفوجرافيك، حاولي مجدداً',true);
+    toast(c1ErrMsg(reason,'تعذّر توليد الإنفوجرافيك — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
     return;
   }
   infoImagePrevRaw=null;
@@ -8849,8 +8870,7 @@ async function gmGenerate(){
   uiBusyDone();
   if(btn){btn.disabled=false;btn.textContent='ولّدي محتوى اللعبة';}
   if(!items){
-    if(String(reason).includes('quota_exceeded'))toast('وصلتِ حد التوليد الشهري — يتجدد مطلع الشهر القادم',true);
-    else toast('تعذّر توليد محتوى اللعبة، حاولي مجدداً',true);
+    toast(c1ErrMsg(reason,'تعذّر توليد محتوى اللعبة — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
     return;
   }
   gmItems=items;
@@ -10083,8 +10103,7 @@ async function fhSend(){
     document.getElementById('fh-typing')?.remove();
     if(error||!data||!data.reply){
       const reason=await c1FnErr(_chatRes);
-      if(String(reason).includes('quota_exceeded'))fhMsgs.push({role:'assistant',content:'وصلتِ حد استخدامك الشهري للمساعد — يتجدد الرصيد مطلع الشهر القادم.'});
-      else fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
+      fhMsgs.push({role:'assistant',content:c1ErrMsg(reason,'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply,web:data.webUsed===true});
       // طلبت البحث ولم يجرِ: حصتها منه نفدت. تُخبَر صراحةً كي لا تحسب

@@ -7,7 +7,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { orFetch } from "../_shared/ai.ts";
+import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -126,7 +126,11 @@ Deno.serve(async (req) => {
     let or = await orResp.json();
     if (!orResp.ok) { orResp = await call({ aspect_ratio: "16:9" }); or = await orResp.json(); }
     if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) {
+      const _m = String(or?.error?.message || or?.message || "");
+      console.error(`openrouter ${orResp.status} في generate-game-theme: ${_m}`);
+      return json({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
     const img = or?.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
     if (!img || !img.startsWith("data:image/")) return json({ error: "no_image" }, 502);
 

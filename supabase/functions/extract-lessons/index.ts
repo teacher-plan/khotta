@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY (نفس مفتاح generate-exam)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { orFetch, ensureVision } from "../_shared/ai.ts";
+import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
     const jwt = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !user) return json({ error: "unauthorized" }, 401);
+    // للمشرف وحده — مثل segment-book. كانت مفتوحةً لكل حسابٍ مُفعَّل وبلا
+    // حصة: ستّ صورٍ في الطلب الواحد بلا حدٍّ ولا احتساب على أحد.
+    if ((user.email || "").toLowerCase() !== "teacherplane2026project@gmail.com") return json({ error: "forbidden" }, 403);
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) return json({ error: "server_not_configured" }, 500);
@@ -92,7 +95,11 @@ Deno.serve(async (req) => {
     }, { st, task: "extract" });
 
     const or = await orResp.json();
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) {
+      const _m = String(or?.error?.message || or?.message || "");
+      console.error(`openrouter ${orResp.status} في extract-lessons: ${_m}`);
+      return json({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
 
     const text = or?.choices?.[0]?.message?.content || "";
     let parsed: unknown;

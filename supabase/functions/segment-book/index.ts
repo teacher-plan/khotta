@@ -9,7 +9,7 @@
 // النموذج: ai_settings.seg_model ثم vision_model ثم gemini-2.5-flash
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { orFetch, ensureVision } from "../_shared/ai.ts";
+import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -113,7 +113,11 @@ Deno.serve(async (req) => {
       }),
     }, { st, task: "segment" });
     const or = await orResp.json();
-    if (!orResp.ok) return json({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) {
+      const _m = String(or?.error?.message || or?.message || "");
+      console.error(`openrouter ${orResp.status} في segment-book: ${_m}`);
+      return json({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
 
     const text = or?.choices?.[0]?.message?.content || "";
     let parsed: { lessons?: unknown[]; units?: unknown[]; lastUnit?: string } | null = null;

@@ -9,7 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
-import { orFetch, ensureVision } from "../_shared/ai.ts";
+import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -132,7 +132,11 @@ Deno.serve(async (req) => {
       orResp = await callOr(false);
       or = await orResp.json();
     }
-    if (!orResp.ok) return refund({ error: "provider_error", detail: or }, 502);
+    if (!orResp.ok) {
+      const _m = String(or?.error?.message || or?.message || "");
+      console.error(`openrouter ${orResp.status} في generate-game-content: ${_m}`);
+      return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
 
     const text = or?.choices?.[0]?.message?.content || "";
     let parsed: { items?: unknown[]; groupNames?: string[] } | null = null;
