@@ -28,7 +28,7 @@ create policy "c1lib_delete_own" on c1_library_items
   for delete to authenticated using (user_id = auth.uid());
 
 -- الملفات المرفقة تُحفظ داخل مخزن library-files الموجود، تحت مسار مخصص
--- c1-library/ — بلا أي أثر على سياسات المخزن الأخرى (أصوات الألعاب، الكتب، شخصية فهيم).
+-- c1-library/ — بلا أي أثر على سياسات المخزن الأخرى (أصوات الألعاب، الكتب).
 drop policy if exists "c1lib_storage_insert" on storage.objects;
 create policy "c1lib_storage_insert" on storage.objects
   for insert to authenticated

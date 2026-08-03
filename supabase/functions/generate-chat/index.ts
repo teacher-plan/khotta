@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         .filter((m: { role?: string; content?: string }) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
         .slice(-8)
         .map((m: { role: string; content: string }) => ({ role: m.role, content: String(m.content).slice(0, 2000) }));
-    // صورٌ ترفعها المعلمة ليقرأها فهيم (صفحة كتاب، ورقة طالبة، تعميم إداري).
+    // صورٌ ترفعها المعلمة ليقرأها المساعد (صفحة كتاب، ورقة طالبة، تعميم إداري).
     // أربع كحد أقصى: المدخل يُحاسب بالحجم، وأربع تكفي درساً كاملاً.
     const images: string[] = (Array.isArray(b.images) ? b.images : [])
       .filter((u: unknown) => typeof u === "string" && /^data:image\//.test(u as string))
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       ? ensureVision(st.model_chat_vision || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash")
       : (st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash-lite");
 
-    // فهيم مساعدٌ عامّ لا متخصّصٌ تربويّ. كان تعريفه يحصره في التعليم ويأمره
+    // المساعد عامٌّ لا متخصّصٌ تربويّ. كان تعريفه يحصره في التعليم ويأمره
     // أن «يعود إليه كلما أمكن»، فيَجُرّ الأسئلة العامة إلى الصفّ ويحشر
     // المدرسة في جوابٍ لا يخصّها — فتنصرف المعلّمة إلى مساعدٍ عامٍّ آخر.
     // معرفته بصفوفها ميزةٌ إضافية تُستدعى عند الحاجة، لا هُويّةٌ تحكم كل ردّ.
