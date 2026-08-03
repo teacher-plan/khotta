@@ -74,8 +74,10 @@ Deno.serve(async (req) => {
     if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
     // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
     // على توليدٍ لم تستلمه.
+    let webOn = false;
     const refund = async (body: Record<string, unknown>, status: number) => {
       await refundQuota(admin, user.id, user.email || "", "text");
+      if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
       return json(body, status);
     };
 
@@ -83,6 +85,14 @@ Deno.serve(async (req) => {
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;
     const userMsg = String(b.message || "").trim().slice(0, 2000);
     const context = String(b.context || "").slice(0, 1500);
+    // بحث الويب اختياريّ بضغطةٍ من المعلّمة، لا تلقائيّ: لكلّ استعمالٍ ثمنٌ
+    // يقارب أربعين رسالةً عادية، فتفعيله على كل سؤالٍ يُنفق بلا حاجة
+    const web = b.web === true;
+    // حصة بحثٍ منفصلة: من نفدت حصةُ بحثها يُجاب سؤالها بلا بحث، ولا يُمنع
+    if (web) {
+      const wq = await takeQuota(admin, user.id, user.email || "", "search", st);
+      webOn = wq.ok;
+    }
     // آخر رسائل المحادثة من العميل (ثمانٍ: التاريخ يُعاد قراءته كاملاً مع
     // كل سؤال، فطوله يبطّئ أوّل حرفٍ في الردّ أكثر مما ينفع سياقه)
     const history: Array<{ role: string; content: string }> =
@@ -143,6 +153,9 @@ Deno.serve(async (req) => {
         // الافتراضي يوازن السعر بالسرعة. المحادثة تُقاس بسرعة أوّل حرف،
         // فنطلب صراحةً أعلى إنتاجية.
         provider: { sort: "throughput" },
+        // ثلاث نتائج لا خمس: السعر بالنتيجة ($4 لكل ألف)، والثلاث تكفي
+        // للتحقّق من خبرٍ أو رقمٍ وتوفّر أربعين بالمئة من ثمن البحث
+        ...(webOn ? { plugins: [{ id: "web", max_results: 3 }] } : {}),
       }),
     }, { st, task: "chat" });
     const or = await orResp.json();
@@ -180,7 +193,9 @@ Deno.serve(async (req) => {
       } else console.error("chat save failed", msg);
     }
 
-    return json({ reply, chatId: savedId, model, usage: or?.usage || null });
+    // webUsed يُخبر الواجهة إن جرى البحث فعلاً: من نفدت حصتها تُجاب بلا بحث
+    // وينبغي أن ترى ذلك، لا أن تظنّ جوابها مبنيّاً على مصدرٍ حديث
+    return json({ reply, chatId: savedId, model, webUsed: webOn, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);

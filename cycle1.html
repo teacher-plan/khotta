@@ -1492,6 +1492,13 @@ body:has(#page-fahim.active){overflow:hidden}
 #fh-clip{width:38px;height:38px;flex:none;border:1.5px solid var(--border);border-radius:50%;
   background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
 #fh-clip:hover{border-color:var(--red);color:var(--red)}
+#fh-web{width:38px;height:38px;flex:none;border:1.5px solid var(--border);border-radius:50%;
+  background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+#fh-web:hover{border-color:var(--olive-d);color:var(--olive-d)}
+#fh-web.on{background:var(--olive-d);border-color:var(--olive-d);color:#fff;box-shadow:0 0 0 3px rgba(72,120,72,.22)}
+.fh-webtag{display:inline-flex;align-items:center;gap:4px;background:rgba(72,120,72,.12);color:var(--olive-d);
+  border:1px solid rgba(72,120,72,.3);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;
+  margin-bottom:7px;white-space:nowrap}
 #fh-thumbs{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
 #fh-thumbs:not(:empty){padding-top:10px}
 .fh-th{position:relative;width:62px;height:62px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
@@ -2440,6 +2447,9 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
           <input type="file" id="fh-file" accept="image/*" multiple hidden onchange="fhPick(this)"/>
           <button id="fh-clip" onclick="document.getElementById('fh-file').click()" title="إرفاق صورة ليقرأها المساعد" aria-label="إرفاق صورة">
             <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M16.5 6v11.5a4.5 4.5 0 1 1-9 0V5a3 3 0 0 1 6 0v10.5a1.5 1.5 0 0 1-3 0V6H9v9.5a3 3 0 0 0 6 0V5a4.5 4.5 0 0 0-9 0v12.5a6 6 0 0 0 12 0V6h-1.5z"/></svg>
+          </button>
+          <button id="fh-web" onclick="fhToggleWeb()" title="البحث في الويب — للأخبار والأسعار والمعلومات الحديثة" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.95a15.6 15.6 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.9 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14A7.9 7.9 0 0 1 4 12c0-.69.1-1.36.26-2h3.38a16.5 16.5 0 0 0 0 4H4.26zm.84 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.1 16zm2.95-8H5.1a7.99 7.99 0 0 1 4.33-3.56A15.6 15.6 0 0 0 8.05 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4zm.23 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.5 16.5 0 0 0 0-4h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
           </button>
           <textarea id="fh-input" rows="1" placeholder="اكتبي رسالتكِ…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
           <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
@@ -9884,6 +9894,15 @@ function behFileClose(){document.getElementById('beh-file-modal').classList.remo
 
 // ═══════════ فهيم — مساعد تربوي بسياق معلمة الحلقة الأولى ═══════════
 let fhMsgs=[],fhChatId=null,fhBusy=false;
+// البحث مطفأٌ في كل جلسةٍ جديدة عمداً: لا يُحفظ تفعيله في التخزين المحلّي كي
+// لا يبقى شغّالاً من جلسةٍ سابقة فتُنفق حصته على أسئلةٍ لا تحتاجه
+let fhWeb=false;
+function fhToggleWeb(){
+  fhWeb=!fhWeb;
+  const b=document.getElementById('fh-web');
+  if(b){b.classList.toggle('on',fhWeb);b.setAttribute('aria-pressed',fhWeb?'true':'false');}
+  toast(fhWeb?'🌐 البحث في الويب مفعّل لرسالتك القادمة':'أُطفئ البحث في الويب','ok');
+}
 function fhSideToggle(){document.getElementById('fhp-side').classList.toggle('open');}
 // شخصية فهيم (الصورة) تُدار من صفحة المشرف — نفس المسار المستخدم في صفحة المعلم، فرفعة واحدة تخدم الصفحتين
 function fhMascotUrl(){return sb.storage.from('library-files').getPublicUrl('assistant/mascot.png').data.publicUrl+'?v='+(localStorage.getItem('fhMascotV')||'1');}
@@ -9973,7 +9992,7 @@ function fhRender(){
   }
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
     ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
-    :`<div class="fh-msg bot">${escHtml(m.content)}</div>`).join('');
+    :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${escHtml(m.content)}</div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
@@ -10045,8 +10064,8 @@ async function fhSend(){
     const _chatRes=await sb.functions.invoke('generate-chat',{body:{
       chatId:fhChatId,message:msg,images:imgs,
       // السجلّ نصٌّ فقط: إعادة إرسال الصور كل دور تُضاعف الكلفة بلا فائدة
-      history:fhMsgs.slice(0,-1).slice(-12).map(m=>({role:m.role,content:m.content})),
-      context:fhContext()
+      history:fhMsgs.slice(0,-1).slice(-8).map(m=>({role:m.role,content:m.content})),
+      context:fhContext(),web:fhWeb
     }});
     const{data,error}=_chatRes;
     document.getElementById('fh-typing')?.remove();
@@ -10055,7 +10074,10 @@ async function fhSend(){
       if(String(reason).includes('quota_exceeded'))fhMsgs.push({role:'assistant',content:'وصلتِ حد استخدامك الشهري للمساعد — يتجدد الرصيد مطلع الشهر القادم.'});
       else fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
     }else{
-      fhMsgs.push({role:'assistant',content:data.reply});
+      fhMsgs.push({role:'assistant',content:data.reply,web:data.webUsed===true});
+      // طلبت البحث ولم يجرِ: حصتها منه نفدت. تُخبَر صراحةً كي لا تحسب
+      // جوابها مبنيّاً على مصدرٍ حديث وهو من ذاكرة النموذج
+      if(fhWeb&&data.webUsed!==true)toast('نفدت حصة البحث هذا الشهر — أُجيبَ سؤالك بلا بحث',true);
       if(data.chatId){const isNew=!fhChatId;fhChatId=data.chatId;if(isNew)fhHistory();}
     }
   }catch(e){

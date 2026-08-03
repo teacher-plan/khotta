@@ -1,6 +1,8 @@
 // حصص استخدام الذكاء الاصطناعي — تُفرض على الخادم (لا يمكن تجاوزها من المتصفح)
 // kind: 'text' (خطط/اختبارات/محادثة...) أو 'img' (إنفوجرافيك/شرائح مرسومة)
+//       أو 'search' (بحث الويب داخل المحادثة)
 // الحدود من ai_settings: quota_text (افتراضي 300/شهر) و quota_img (افتراضي 80/شهر)
+//                        و quota_search (افتراضي 20/شهر)
 // المشرف بلا حدود. أي عطل داخلي في نظام الحصص لا يمنع المعلم (fail-open) لكنه يُسجَّل.
 
 const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
@@ -29,13 +31,17 @@ async function ensureUsageTable() {
 }
 
 // deno-lint-ignore no-explicit-any
-export async function takeQuota(admin: any, userId: string, email: string, kind: "text" | "img", st: Record<string, string>) {
+export async function takeQuota(admin: any, userId: string, email: string, kind: "text" | "img" | "search", st: Record<string, string>) {
   if ((email || "").toLowerCase() === ADMIN_EMAIL) return { ok: true, used: 0, limit: 0 };
   const month = new Date().toISOString().slice(0, 7);
   // الافتراضي للصور ٢٠٠ لا ٨٠: ٨٠ وُضعت حين كان الملخص البصري صورةً واحدة
   // لكل درس، ثم صار العرض التقديمي يستهلك ستّاً — فصار الافتراضي يكفي ثلاثة
   // عشر عرضاً في الشهر، وهو ما استنفدته معلّمةٌ واحدة في جلسة.
-  const limit = parseInt(st[kind === "img" ? "quota_img" : "quota_text"] || "") || (kind === "img" ? 200 : 300);
+  // بحث الويب يُحاسَب بذاته وحدّه ضيّق: نتيجة البحث الواحدة تكلّف نحو أربعين
+  // ضعفَ الرسالة العادية، فحدٌّ مشتركٌ معها يُنفق الميزانية بلا أن يُلحظ
+  const QK: Record<string, string> = { img: "quota_img", search: "quota_search", text: "quota_text" };
+  const DEF: Record<string, number> = { img: 200, search: 20, text: 300 };
+  const limit = parseInt(st[QK[kind]] || "") || DEF[kind];
 
   const attempt = async () => {
     const { data, error } = await admin.from("ai_usage").select("count")
@@ -71,7 +77,7 @@ export async function takeQuota(admin: any, userId: string, email: string, kind:
 // تُحاسَب على توليدٍ لم تستلمه: ست محاولاتٍ فاشلة لعرضٍ واحد تلتهم ستّاً من
 // حصتها بلا مخرَج واحد — وهو ما استنزف الحصة كاملةً في جلسة واحدة.
 // deno-lint-ignore no-explicit-any
-export async function refundQuota(admin: any, userId: string, email: string, kind: "text" | "img") {
+export async function refundQuota(admin: any, userId: string, email: string, kind: "text" | "img" | "search") {
   if ((email || "").toLowerCase() === ADMIN_EMAIL) return;
   const month = new Date().toISOString().slice(0, 7);
   try {
