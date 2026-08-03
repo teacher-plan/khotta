@@ -1951,11 +1951,6 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-memcard.flip .gm-mem-back{transform:rotateY(0)}
 /* كل زوجٍ مطابَق يأخذ لوناً خاصاً به فيُرى الترابط بلمحة — بلا أحمر (لونُ الخطأ) */
 .gm-memcard.done .gm-mem-back{background:var(--pcbg,#E4F0EC);color:var(--pc,#1F5C55);border:2.5px solid var(--pc,#1F5C55);box-shadow:0 0 16px var(--pcbg,#E4F0EC)}
-.gm-mem-grid.shuffling .gm-memcard{animation:gmMemShuffle .9s ease-in-out}
-@keyframes gmMemShuffle{
-  0%{transform:translate(0,0) rotate(0)}
-  50%{transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--rot,0deg)) scale(.9)}
-  100%{transform:translate(0,0) rotate(0)}}
 .gm-grp-buckets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .gm-grp-bucket{border:2.5px dashed rgba(109,40,217,.4);border-radius:14px;padding:10px;min-height:110px;cursor:pointer;transition:.15s;background:rgba(109,40,217,.05)}
 .gm-grp-bucket h3{margin:0 0 8px;font-size:14.5px;text-align:center;color:#6d28d9}
@@ -8637,7 +8632,7 @@ const GM_TPL_INSTR={
   quiz:'أجيبي بأسرع وقت ممكن عن كل سؤال قبل نفاد الوقت — كل إجابة صحيحة تمنحك نقاطاً أعلى.',
   balloon:'فرقعي البالون الذي يحمل الإجابة الصحيحة قبل أن يطير بعيداً.',
   box:'افتحي الصندوق لتظهر السؤال المخبأ خلفه، ثم أجيبي عنه.',
-  memory:'اقلبي بطاقتين في كل مرة — إن تطابقتا بقيتا مكشوفتين، وإلا انقلبتا من جديد.',
+  memory:'تُكشف البطاقات كلها ستّ ثوانٍ في البداية — احفظي مواضعها! ثم تُقلَب، فاقلبي بطاقتين في كل مرة بحثاً عن الزوج المترابط: إن تطابقتا بقيتا مكشوفتين بلونٍ خاصّ بهما، وإلا انقلبتا من جديد. ولتحديد من تُجرّب، اضغطي زر «اختيار طالب عشوائياً» 🙋 أعلى الشاشة.',
   groups:'اسحبي كل عنصر إلى المجموعة الصحيحة التي ينتمي إليها.',
   millionaire:'تسلّقي سلّم الأسئلة إجابة صحيحة تلو الأخرى، مستعينةً بوسائل المساعدة الثلاث 🆘 عند الحاجة. ولتحديد من تُجيب، اضغطي زر «اختيار طالب عشوائياً» 🙋 أعلى الشاشة.',
   race:'كل إجابة صحيحة تقدّم سيارة فريقك خطوة — أول فريق يصل للنهاية يفوز.',
@@ -9705,18 +9700,9 @@ function gmRunMemory(pairs){
   const grid=document.getElementById('gm-mem-grid');
   setTimeout(()=>{
     grid.querySelectorAll('.gm-memcard').forEach(b=>b.classList.remove('flip'));
-    setTimeout(()=>{
-      const els=[...grid.children];
-      els.forEach(el=>{
-        el.style.setProperty('--dx',(Math.random()*120-60).toFixed(0)+'px');
-        el.style.setProperty('--dy',(Math.random()*90-45).toFixed(0)+'px');
-        el.style.setProperty('--rot',(Math.random()*40-20).toFixed(0)+'deg');
-      });
-      grid.classList.add('shuffling');gmSound('pop');
-      setTimeout(()=>{els.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).forEach(x=>grid.appendChild(x[1]));},420);
-      setTimeout(()=>{grid.classList.remove('shuffling');lock=false;hud();},960);
-    },450);
-  },3000);
+    gmSound('pop');
+    setTimeout(()=>{lock=false;hud();},450);
+  },6000);
   body.querySelectorAll('.gm-memcard').forEach(b=>b.onclick=()=>{
     if(lock||b.classList.contains('flip')||b.classList.contains('done'))return;
     b.classList.add('flip');gmSound('pop');
