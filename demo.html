@@ -1935,13 +1935,27 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-boxcard.open .gm-box-front{transform:rotateY(180deg)}
 .gm-boxcard.open .gm-box-back{transform:rotateY(0)}
 .gm-mem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;width:100%;max-width:640px}
-.gm-memcard{position:relative;min-height:92px;border:none;border-radius:12px;cursor:pointer;background:none;font-family:inherit}
-.gm-memcard .gm-mem-front,.gm-memcard .gm-mem-back{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;transition:transform .4s;box-shadow:0 5px 14px rgba(0,0,0,.28);padding:6px}
-.gm-memcard .gm-mem-front{background:linear-gradient(145deg,#6d28d9,#8b5cf6);color:#fff;font-size:30px;font-weight:800}
-.gm-memcard .gm-mem-back{background:rgba(255,252,245,.96);color:#3d3428;font-weight:700;font-size:12.5px;transform:rotateY(180deg);line-height:1.6}
+.gm-memcard{position:relative;min-height:100px;border:none;border-radius:14px;cursor:pointer;background:none;font-family:inherit}
+.gm-memcard .gm-mem-front,.gm-memcard .gm-mem-back{position:absolute;inset:0;border-radius:14px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;transition:transform .4s;box-shadow:0 5px 14px rgba(0,0,0,.28);padding:8px}
+/* ظهر البطاقة: حبرٌ داكن بإطارٍ ذهبيّ ونقشٍ قطريّ خفيف — من لوحة الهوية بدل البنفسجيّ المسطّح */
+.gm-memcard .gm-mem-front{background:
+    repeating-linear-gradient(45deg,rgba(232,195,74,.07) 0 7px,transparent 7px 14px),
+    linear-gradient(145deg,#3A2410,#2A1503);
+  border:2.5px solid #C0A848;color:#E8C34A;font-size:26px;font-weight:800;
+  box-shadow:0 5px 14px rgba(0,0,0,.35),inset 0 0 22px rgba(232,195,74,.12)}
+.gm-memcard .gm-mem-front span{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:2.5px solid rgba(232,195,74,.55);background:rgba(232,195,74,.08)}
+.gm-memcard .gm-mem-back{background:linear-gradient(160deg,#FFFDF7,#F7EEE2);color:#2A1503;
+  font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;font-weight:600;font-size:14.5px;line-height:1.75;
+  text-wrap:balance;transform:rotateY(180deg);border:2.5px solid rgba(42,21,3,.12)}
 .gm-memcard.flip .gm-mem-front{transform:rotateY(180deg)}
 .gm-memcard.flip .gm-mem-back{transform:rotateY(0)}
-.gm-memcard.done .gm-mem-back{background:#dcfce7;color:#15803d;border:2px solid #15803d}
+/* كل زوجٍ مطابَق يأخذ لوناً خاصاً به فيُرى الترابط بلمحة — بلا أحمر (لونُ الخطأ) */
+.gm-memcard.done .gm-mem-back{background:var(--pcbg,#E4F0EC);color:var(--pc,#1F5C55);border:2.5px solid var(--pc,#1F5C55);box-shadow:0 0 16px var(--pcbg,#E4F0EC)}
+.gm-mem-grid.shuffling .gm-memcard{animation:gmMemShuffle .9s ease-in-out}
+@keyframes gmMemShuffle{
+  0%{transform:translate(0,0) rotate(0)}
+  50%{transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--rot,0deg)) scale(.9)}
+  100%{transform:translate(0,0) rotate(0)}}
 .gm-grp-buckets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .gm-grp-bucket{border:2.5px dashed rgba(109,40,217,.4);border-radius:14px;padding:10px;min-height:110px;cursor:pointer;transition:.15s;background:rgba(109,40,217,.05)}
 .gm-grp-bucket h3{margin:0 0 8px;font-size:14.5px;text-align:center;color:#6d28d9}
@@ -9112,6 +9126,9 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('<scr'+'ipt>');
   parts.push('var gmMuted=false,gmAC=null,gmQuizTimer=null;');
   parts.push('var GM_OPT='+JSON.stringify((gmGameCfg[tpl]&&gmGameCfg[tpl].opts)||{})+',gmSfxT={},gmTpl='+JSON.stringify(tpl)+';');
+  // لوحات الألوان تُستخدَم داخل محرّكات العجلة والذاكرة والبالون — بلا تصديرها
+  // يسقط الملف المستقلّ بخطأ مرجعٍ غير معرَّف عند التشغيل
+  parts.push('var GM_PAL='+JSON.stringify(GM_PAL)+',GM_PAL_F='+JSON.stringify(GM_PAL_F)+',GM_MEM_PAIR_COLS='+JSON.stringify(GM_MEM_PAIR_COLS)+';');
   parts.push('var GM_SFX='+JSON.stringify(sfx)+';');
   parts.push('var gmSfxAudio={};Object.keys(GM_SFX).forEach(function(k){var a=new Audio(GM_SFX[k]);a.preload="auto";gmSfxAudio[k]=a;});');
   parts.push('function gmSound(kind){if(gmMuted)return;try{var a=gmSfxAudio[kind];if(a){var c=a.cloneNode();c.volume=.45;c.play().catch(function(){});return;}');
@@ -9669,16 +9686,38 @@ function gmRunBox(items){
   });
 }
 // ─ محرك بطاقات الذاكرة ─
+// لون لكل زوجٍ مطابَق — بلا أحمر كي لا يلتبس بلون الخطأ. [اللون، خلفيّته الفاتحة]
+const GM_MEM_PAIR_COLS=[['#1F5C55','#DCEDE9'],['#B06D18','#FBEBD6'],['#2A5183','#DDE7F4'],
+  ['#41592B','#E4EDDC'],['#7A5C1E','#F5EBD4'],['#0E6C7E','#D8EDF1'],['#5C3781','#E9E1F2'],
+  ['#6B4A22','#EFE4D6'],['#2F7D74','#DEEFEC'],['#4A5568','#E4E7EB']];
 function gmRunMemory(pairs){
   const body=document.getElementById('gm-stage-body');
-  let flipped=[],done=0,tries=0,lock=false;
-  const hud=()=>{document.getElementById('gm-stage-hud').innerHTML=`<span>${egToArabic(done)} / ${egToArabic(pairs.length)}</span><span>محاولات: ${egToArabic(tries)}</span>`;};
-  hud();
+  let flipped=[],done=0,tries=0,lock=true;
+  const hud=(msg)=>{document.getElementById('gm-stage-hud').innerHTML=msg?`<span>${msg}</span>`:`<span>${egToArabic(done)} / ${egToArabic(pairs.length)}</span><span>محاولات: ${egToArabic(tries)}</span>`;};
+  hud('👀 احفظي البطاقات…');
   const cards=[];
   pairs.forEach((p,i)=>{cards.push({t:p.a,i});cards.push({t:p.b,i});});
   const shuf=cards.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
-  body.innerHTML=`<div class="gm-mem-grid">${shuf.map((c,k)=>`<button class="gm-memcard" data-i="${c.i}">
-    <span class="gm-mem-front">؟</span><span class="gm-mem-back">${escHtml(c.t)}</span></button>`).join('')}</div>`;
+  // تبدأ كلها مكشوفةً ثلاثَ ثوانٍ، ثم تُقلَب وتُخلَط أمام العين، ثم يُفتح اللعب
+  body.innerHTML=`<div class="gm-mem-grid" id="gm-mem-grid">${shuf.map((c,k)=>{
+    const pc=GM_MEM_PAIR_COLS[c.i%GM_MEM_PAIR_COLS.length];
+    return `<button class="gm-memcard flip" data-i="${c.i}" style="--pc:${pc[0]};--pcbg:${pc[1]}">
+    <span class="gm-mem-front"><span>؟</span></span><span class="gm-mem-back">${escHtml(c.t)}</span></button>`;}).join('')}</div>`;
+  const grid=document.getElementById('gm-mem-grid');
+  setTimeout(()=>{
+    grid.querySelectorAll('.gm-memcard').forEach(b=>b.classList.remove('flip'));
+    setTimeout(()=>{
+      const els=[...grid.children];
+      els.forEach(el=>{
+        el.style.setProperty('--dx',(Math.random()*120-60).toFixed(0)+'px');
+        el.style.setProperty('--dy',(Math.random()*90-45).toFixed(0)+'px');
+        el.style.setProperty('--rot',(Math.random()*40-20).toFixed(0)+'deg');
+      });
+      grid.classList.add('shuffling');gmSound('pop');
+      setTimeout(()=>{els.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).forEach(x=>grid.appendChild(x[1]));},420);
+      setTimeout(()=>{grid.classList.remove('shuffling');lock=false;hud();},960);
+    },450);
+  },3000);
   body.querySelectorAll('.gm-memcard').forEach(b=>b.onclick=()=>{
     if(lock||b.classList.contains('flip')||b.classList.contains('done'))return;
     b.classList.add('flip');gmSound('pop');
