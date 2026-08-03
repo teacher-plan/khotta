@@ -716,12 +716,19 @@ body.inapp #c1-notif-btn{display:flex}
   border:1.5px dashed var(--border);background:transparent;color:var(--muted);
   font-family:inherit;font-size:12.5px;font-weight:800}
 .acct-add:hover{border-color:var(--red);color:var(--red)}
-.qt-row{margin-bottom:10px}
-.qt-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px}
-.qt-nm{font-weight:800}
-.qt-n{font-weight:800;font-variant-numeric:tabular-nums}
-.qt-bar{height:8px;border-radius:99px;background:var(--border);overflow:hidden}
-.qt-fill{height:100%;border-radius:99px;transition:width .4s ease}
+.qchip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--border);background:var(--surface);
+  border-radius:999px;padding:6px 8px 6px 14px;font-size:12.5px;font-weight:800;color:var(--muted)}
+.qchip b{font-variant-numeric:tabular-nums;font-size:13.5px}
+.qchip .qq{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);background:transparent;
+  color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;line-height:1;padding:0;
+  display:flex;align-items:center;justify-content:center;flex:none;transition:.15s}
+.qchip .qq:hover{border-color:var(--red);color:var(--red)}
+#qhelp-bg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(20,12,6,.55)}
+#qhelp-bg.on{display:flex}
+#qhelp-bg .card{background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:22px 22px 18px;
+  max-width:min(400px,90vw);text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+#qhelp-bg .card h3{margin:0 0 10px;font-size:16px;color:var(--ink)}
+#qhelp-bg .card p{margin:0 0 16px;font-size:13.5px;line-height:1.9;color:var(--muted)}
 .acct-wa{display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;
   background:#25D366;color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:13px}
 .acct-wa:hover{background:#1EBE5A}
@@ -2102,8 +2109,6 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
     <p class="acct-note">صحّحي اسماً كُتب خطأً، أو أضيفي منضمّةً جديدة. النجوم والسلوك تتبع كلَّ طالبةٍ باسمها.</p>
     <div id="acct-tabs" class="su-grade-tabs"></div>
     <div id="acct-classes"></div>
-    <div class="grp">رصيدكِ هذا الشهر</div>
-    <div id="acct-quota"></div>
     <div class="grp">التواصل مع الإدارة</div>
     <p class="acct-note">لأي استفسارٍ أو مشكلةٍ تواجهكِ، أو لطلب تعديلٍ لا تجدينه هنا.</p>
     <a class="acct-wa" id="acct-wa" target="_blank" rel="noopener">
@@ -2276,8 +2281,17 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
 
 
 <!-- قسم الاستوديو — ألعاب متقدمة وإنفوجرافيك -->
+<div id="qhelp-bg" onclick="if(event.target===this)qhelpClose()">
+  <div class="card">
+    <h3>ما هذا الرصيد؟</h3>
+    <p>رصيدٌ خاصّ باستخدام خدمات الذكاء الاصطناعي في المنصة، ويتجدّد تلقائياً مطلع كل شهر.</p>
+    <button class="c1-mbtn go" onclick="qhelpClose()">حسناً</button>
+  </div>
+</div>
+
 <div class="page" id="page-studio"><div class="wrap">
   <div class="c1-pagehead"><div class="tag">الاستوديو</div><h1>ألعاب متقدمة وإنفوجرافيك بالذكاء الاصطناعي</h1></div>
+  <div id="studio-quota" style="text-align:center;margin:-6px 0 14px"></div>
 
   <div class="c1-sel-row">
     <select class="c1-select" id="studio-grade-sel" onchange="studioSwitchGrade(Number(this.value))"></select>
@@ -2418,6 +2432,7 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
         <button class="fh-hbtn" onclick="fhNewChat()" title="محادثة جديدة"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> جديدة</button>
       </div>
     </div>
+    <div id="fahim-quota" style="padding:8px 14px 0;text-align:center"></div>
     <div class="fhp-row">
       <div class="fhp-main">
         <div class="fh-cards">
@@ -3252,12 +3267,12 @@ function c1Go(id){
   if(id==='plan')planRender();
   if(id==='students')starRender();
   if(id==='reserve')rsRender();
-  if(id==='fahim'){fhRender();fhHistory();fhInitMascot();}
+  if(id==='fahim'){fhRender();fhHistory();fhInitMascot();qChip('fahim-quota','text');}
   if(id==='ach')achRender();
   if(id==='shared')shRender();
   if(id==='lib')libRender();
   if(id==='msgs')msgsRender();
-  if(id==='studio')studioRender();
+  if(id==='studio'){studioRender();qChip('studio-quota','img');}
 }
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -3684,43 +3699,44 @@ function acctOpen(){
   const bd=document.getElementById('acct-build');
   if(bd)bd.innerHTML='نسخة <bdi dir="ltr">'+escHtml(KH_BUILD)+'</bdi>';
   document.getElementById('acct-modal').classList.add('open');
-  acctQuota();
 }
 // عدّاد الرصيد. المعلّمة كانت تكتشف الحدّ حين تصطدم به فيُرفض توليدها بلا
-// سابق إنذار؛ العدّاد يجعلها توزّع رصيدها على الشهر بنفسها.
-async function acctQuota(){
-  const box=document.getElementById('acct-quota');if(!box)return;
-  const bar=(nm,used,lim)=>{
-    const pct=lim?Math.min(100,Math.round(used/lim*100)):0;
-    const col=pct>=90?'#C9453B':pct>=70?'#D98B2B':'#2F7D74';
-    return `<div class="qt-row"><div class="qt-top"><span class="qt-nm">${nm}</span>
-      <span class="qt-n" style="color:${col}">${used} من ${lim}</span></div>
-      <div class="qt-bar"><div class="qt-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
-  };
-  box.innerHTML='<div class="acct-note">يجري الحساب…</div>';
+// سابق إنذار؛ العدّاد يجعلها توزّع رصيدها على الشهر بنفسها. ومكانه الطبيعيّ
+// داخل القسم الذي يستهلكه، لا مدفوناً في إعدادات الحساب حيث لا يُرى وقت
+// الحاجة إليه: الصور في الاستوديو، والنصّ عند فهيم.
+let _khQuota=null,_khQuotaAt=0;
+async function khQuota(force){
+  if(!force&&_khQuota&&Date.now()-_khQuotaAt<60000)return _khQuota;
+  if(KH_DEMO){_khQuota={text:48,img:6,qT:300,qI:200};_khQuotaAt=Date.now();return _khQuota;}
+  const month=new Date().toISOString().slice(0,7);
+  // مهلةٌ صريحة: طلبٌ لا يعود كان يترك «يجري الحساب…» معلّقاً إلى الأبد
+  const cap=(pr,d)=>Promise.race([Promise.resolve(pr).catch(()=>d),
+    new Promise(r=>setTimeout(()=>r(d),12000))]);
+  // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
+  const q=await cap(sb.from('ai_usage').select('kind,count').eq('month',month),null);
+  if(!q||q.error)throw new Error('usage');
+  let text=0,img=0;
+  (q.data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
+  // نفس افتراضات الخادم، كي لا يعرض العدّاد حدّاً يخالف ما يفرضه فعلاً
+  const qT=parseInt(await cap(c1Setting('quota_text'),'')||'')||300;
+  const qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||200;
+  _khQuota={text,img,qT,qI};_khQuotaAt=Date.now();
+  return _khQuota;
+}
+function qhelpOpen(){document.getElementById('qhelp-bg').classList.add('on');}
+function qhelpClose(){document.getElementById('qhelp-bg').classList.remove('on');}
+// شارةٌ مقتضبة: الرصيد المتبقّي وعلامة استفهامٍ تشرحه — بلا تفصيلٍ ولا أشرطة
+async function qChip(boxId,kind){
+  const box=document.getElementById(boxId);if(!box)return;
   try{
-    let text=0,img=0,qT=300,qI=200;
-    if(KH_DEMO){text=48;img=6;}
-    else{
-      const month=new Date().toISOString().slice(0,7);
-      // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
-      // مهلةٌ صريحة: طلبٌ لا يعود كان يترك «يجري الحساب…» معلّقاً إلى الأبد
-      const cap=(pr,d)=>Promise.race([Promise.resolve(pr).catch(()=>d),
-        new Promise(r=>setTimeout(()=>r(d),12000))]);
-      const q=await cap(sb.from('ai_usage').select('kind,count').eq('month',month),null);
-      if(!q||q.error)throw new Error('usage');
-      (q.data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
-      // نفس افتراضات الخادم، كي لا يعرض العدّاد حدّاً يخالف ما يفرضه فعلاً
-      qT=parseInt(await cap(c1Setting('quota_text'),'')||'')||300;
-      qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||200;
-    }
-    box.innerHTML=bar('توليد نصّي (خطط، اختبارات، ألعاب)',text,qT)
-                 +bar('توليد صور (إنفوجرافيك، شرائح)',img,qI)
-                 +'<p class="acct-note" style="margin:2px 0 0">يتجدّد الرصيد مطلع كل شهر.</p>';
-  }catch(e){
-    // الرصيد معلومةٌ مساعدة لا وظيفة: تعذّر قراءته لا يستحقّ رسالة خطأ مقلقة
-    box.innerHTML='<div class="acct-note">تعذّر عرض الرصيد الآن.</div>';
-  }
+    const q=await khQuota();
+    const used=kind==='img'?q.img:q.text, lim=kind==='img'?q.qI:q.qT;
+    const left=Math.max(0,lim-used);
+    const pct=lim?left/lim:1;
+    const col=pct<=.1?'#C9453B':pct<=.3?'#D98B2B':'#2F7D74';
+    box.innerHTML=`<span class="qchip">الرصيد المتبقّي: <b style="color:${col}">${egArNum(left)}</b>
+      <button type="button" class="qq" onclick="qhelpOpen()" title="ما هذا الرصيد؟" aria-label="ما هذا الرصيد؟">؟</button></span>`;
+  }catch(e){box.innerHTML='';}
 }
 function acctClose(){document.getElementById('acct-modal').classList.remove('open');}
 async function acctSave(){
