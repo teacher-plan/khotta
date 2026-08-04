@@ -1833,6 +1833,14 @@ body:has(#page-fahim.active){overflow:hidden}
 .eg-pick-lbl{font-size:12px;font-weight:800;color:var(--muted)}
 .eg-sel{width:100%}
 .eg-hint{font-size:11.5px;color:var(--muted);line-height:1.7;min-height:1.7em}
+/* صندوق الاقتراح الذكي أعلى خيارات اللعبة */
+.gm-reco{background:linear-gradient(135deg,rgba(72,120,72,.10),rgba(232,195,74,.14));
+  border:1.5px solid var(--olive);border-radius:14px;padding:13px 16px;margin-bottom:14px}
+.gm-reco-t{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.gm-reco-t>span{font-size:22px;line-height:1.2;flex:none}
+.gm-reco-t b{display:block;font-size:14.5px;color:var(--olive-d);margin-bottom:2px}
+.gm-reco-t span:not(:first-child),.gm-reco-t div>span{font-size:12.5px;color:var(--muted);line-height:1.6}
+.gm-reco-btns{display:flex;gap:8px;flex-wrap:wrap}
 .gm-tpl-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:11px}
 .gm-tpl-btn{display:flex;flex-direction:column;align-items:center;gap:9px;background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:18px 12px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center}
 .gm-tpl-btn:hover{border-color:var(--red);transform:translateY(-3px);box-shadow:0 8px 18px rgba(48,24,0,.08)}
@@ -2380,6 +2388,17 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
   </div>
 
   <div class="eg-card" id="studio-game-options-card">
+    <!-- الاقتراح الذكي: يقرأ الدرس المختار ويرشّح القالب الأنسب مع سببه،
+         وزرّ «إنشاء سريع» يتّخذ كل القرارات (قالب/مستوى/عدد/ثيم) دفعةً واحدة -->
+    <div id="gm-reco" class="gm-reco hidden">
+      <div class="gm-reco-t"><span>✨</span><div>
+        <b id="gm-reco-name"></b>
+        <span id="gm-reco-why"></span></div></div>
+      <div class="gm-reco-btns">
+        <button type="button" class="eg-regen" onclick="gmRecoApply()">اعتمدي الاقتراح</button>
+        <button type="button" class="eg-generate" style="margin:0" onclick="gmQuick()">⚡ إنشاء سريع — كل القرارات عنّي</button>
+      </div>
+    </div>
     <div class="eg-step-title">اختاري قالب اللعبة ومستوى الأسئلة</div>
     <div class="eg-pick-row">
       <label class="eg-pick">
@@ -8559,10 +8578,11 @@ async function studioRenderLessons(){
   if(!lessons.length){sel.innerHTML='<option value="">لا دروس مرفوعة لهذه المادة بعد</option>';studioLessonName=null;return;}
   if(!studioLessonName||!lessons.some(l=>l.name===studioLessonName))studioLessonName=lessons[0].name;
   sel.innerHTML=lessons.map(l=>`<option value="${escHtml(l.name)}" ${l.name===studioLessonName?'selected':''}>${escHtml(l.unit)} — ${escHtml(l.name)}</option>`).join('');
+  if(typeof gmRecoRender==='function')gmRecoRender();
 }
 function studioSwitchGrade(g){studioGrade=g;studioSubject=null;studioRenderSubjects();}
 function studioSwitchSubject(s){studioSubject=s;studioLessonName=null;studioRenderLessons();}
-function studioSwitchLesson(n){studioLessonName=n;}
+function studioSwitchLesson(n){studioLessonName=n;if(typeof gmRecoRender==='function')gmRecoRender();}
 function studioSelectedLessons(){
   if(!studioLessonName)return[];
   const l=studioLessons.find(x=>x.name===studioLessonName);
@@ -8941,6 +8961,81 @@ function gmTplHint(){
 function gmLevel(){
   const el=document.getElementById('gm-level-sel');
   return (el&&el.value)||'متوسط';
+}
+/* ═ الاقتراح الذكي ═
+   يقرأ اسم الدرس ووحدته ومادّته ويرشّح القالب الأنسب مع سببٍ مُعلن.
+   محليٌّ بلا نداء ذكاءٍ اصطناعي: فوريّ، مجانيّ، ويعمل بلا إنترنت — وطبيعة
+   الدرس تُقرأ من عنوانه بدقّةٍ تكفي للترشيح، والقرار الأخير للمعلّمة دائماً.
+
+   المنطق التربوي:
+   - مفردات/معانٍ/مصطلحات ← المطابقة (ربط المفهوم بمعناه هو المهارة نفسها)
+   - تصنيف/أنواع/مجموعات ← فرز المجموعات
+   - حروف/كلمات للترسيخ ← بطاقات الذاكرة (تكرار التعرّض يثبّت الرمز)
+   - مراجعة عامة/تقويم ← المليونير أو السباق (تغطية واسعة بحماس)
+   - عمليات حسابية/مسائل ← اختبار السرعة (طلاقة الإجراء تحتاج تمريناً موقوتاً)
+   - غير ذلك ← العجلة (أعمّ القوالب وأسلمها لأي محتوى) */
+const GM_NAMES={wheel:'العجلة',match:'المطابقة',quiz:'اختبار السرعة',balloon:'فرقع البالون',
+  box:'افتح الصندوق',memory:'بطاقات الذاكرة',groups:'فرز المجموعات',millionaire:'من سيربح المليون',
+  race:'سباق الفريقين',boxes:'كنوز وقنابل'};
+function gmRecommend(){
+  const ls=studioSelectedLessons();
+  if(!ls.length)return null;
+  const txt=(ls[0].name+' '+(ls[0].unit||'')).toLowerCase();
+  const subj=studioSubject||'';
+  const has=(...ws)=>ws.some(w=>txt.includes(w));
+  if(has('مفرد','معنى','معاني','مصطلح','مرادف','ضد','كلمات و'))
+    return{tpl:'match',why:'الدرس يقوم على ربط الكلمة بمعناها — والمطابقة تجعل هذا الربط هو اللعب نفسه.'};
+  if(has('تصنيف','أنواع','مجموعات','يصنف','فرز'))
+    return{tpl:'groups',why:'الدرس يقوم على التصنيف — وفرز المجموعات يجعل الطالب يُصنّف بيده لا يشاهد.'};
+  if(has('حرف','الحروف','تهجئة','هجاء'))
+    return{tpl:'memory',why:'ترسيخ الحروف يحتاج تكرار تعرّض — وبطاقات الذاكرة تُعيد عرض الحرف مرّاتٍ بلا ملل.'};
+  if(has('مراجعة','تقويم','اختبار الوحدة','ختام'))
+    return{tpl:'millionaire',why:'درس مراجعة — والمليونير يغطّي أسئلةً كثيرة متدرّجةً بحماس المسرح.'};
+  if(has('جمع','طرح','ضرب','قسمة','عمليات','مسائل','حساب'))
+    return{tpl:'quiz',why:'طلاقة العمليات تحتاج تمريناً موقوتاً — واختبار السرعة يبنيها سؤالاً بعد سؤال.'};
+  if(has('قصة','قصّة','نص الاستماع','حكاية'))
+    return{tpl:'box',why:'درسٌ قصصيّ — وفتح الصناديق يُبقي التشويق حاضراً بين أسئلة الفهم.'};
+  if(subj.includes('رياض'))
+    return{tpl:'race',why:'في الرياضيات ينفع حماس الفريقين — السباق يجعل كل إجابةٍ خطوةً مرئية للأمام.'};
+  return{tpl:'wheel',why:'العجلة أعمّ القوالب وأسلمها لهذا الدرس — وكل دورةٍ تختار سؤالاً وطالباً عشوائياً.'};
+}
+function gmRecoRender(){
+  const box=document.getElementById('gm-reco');
+  if(!box)return;
+  const r=gmRecommend();
+  if(!r){box.classList.add('hidden');return;}
+  box.classList.remove('hidden');
+  document.getElementById('gm-reco-name').textContent='الاقتراح الذكي: لعبة '+GM_NAMES[r.tpl];
+  document.getElementById('gm-reco-why').textContent=r.why;
+  box.dataset.tpl=r.tpl;
+}
+function gmRecoApply(){
+  const box=document.getElementById('gm-reco');
+  if(box&&box.dataset.tpl){gmPickTpl(box.dataset.tpl);toast('اختير القالب المقترح — عدّلي ما تشائين ثم ولّدي','ok');}
+}
+/* ثيمٌ يُختار تلقائياً بمادة الدرس: المشاهد المدمجة موسومةٌ بموادّها أصلاً */
+function gmAutoTheme(){
+  const subj=studioSubject||'';
+  const t=gmThemes.find(x=>x.subj&&subj&&(subj.includes(x.subj)||x.subj.includes(subj)))
+        ||gmThemes.find(x=>x.subj==='عامّ')||gmThemes[0];
+  return t?t.id:'';
+}
+/* ⚡ الوضع السريع: قالبٌ مقترح + مستوى متوسط + ٦ عناصر + ثيم المادة —
+   ثم التوليد فوراً. المعلّمة تراجع الناتج وتُشغّل: ثلاث ضغطاتٍ من الدرس
+   إلى اللعبة، وكل قرارٍ اتُّخذ عنها يبقى قابلاً للتعديل بعد التوليد. */
+function gmQuick(){
+  const ls=studioSelectedLessons();
+  if(!ls.length){toast('اختاري درساً أولاً',true);return;}
+  const r=gmRecommend();
+  if(r)gmPickTpl(r.tpl);
+  const lv=document.getElementById('gm-level-sel');if(lv)lv.value='متوسط';
+  const ct=document.getElementById('gm-count');if(ct)ct.value='6';
+  if(!gmForcedTheme(gmTpl)){
+    const th=gmAutoTheme();
+    if(th){document.getElementById('gm-theme').value=th;gmRenderThemeGrid();}
+  }
+  toast('⚡ اختير القالب والثيم تلقائياً — جاري التوليد…','ok');
+  gmGenerate();
 }
 function gmPickTpl(t){
   const prevStruct=GM_STRUCT[gmTpl];
