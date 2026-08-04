@@ -174,7 +174,12 @@ Deno.serve(async (req) => {
       let parsed: { slides?: unknown[]; homework?: string; objectives?: unknown[] } | null = null;
       try { parsed = JSON.parse(text); }
       catch (_) { const m = text.match(/\{[\s\S]*\}/); try { parsed = m ? JSON.parse(m[0]) : null; } catch (_2) { parsed = null; } }
-      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 3) return { ok: false as const, detail: text.slice(0, 300) };
+      // العرض المصوَّر يحوّل كل شريحةٍ إلى صورة، فالعدد الناقص هنا عرضٌ ناقص
+      // عند المعلّمة. نرفضه ليُعاد الطلب بدل تمريره ثم اكتشافه في الواجهة.
+      const need = brief ? slideCount : 3;
+      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < need) {
+        return { ok: false as const, detail: text.slice(0, 300) };
+      }
       return { ok: true as const, parsed, usage: j?.usage || null };
     };
 
