@@ -5816,6 +5816,11 @@ async function c1FnErr(res){
   return String(e.message||'');
 }
 const SL2_IMGS=6;
+// العرض ستّ شرائح إنفوجرافيك دائماً، ولا يتوقّف السعي إليها إلا لنفاد الرصيد.
+// المثابرة هنا مقصودة: التسليم الناقص أسوأ من الانتظار، ولا شيء ممّا اشتُري
+// يُرمى — يُحفَظ ويُستأنَف.
+const SL2_PLAN_TRIES=4;   // محاولات بناء الخطّة حتى تكتمل الستّ
+const SL2_IMG_ROUNDS=8;   // جولات استدراك الصور المتعثّرة
 let sl2St=null;
 function sl2CoverHtml(d){
   const obj=(d.objectives||[]).map(o=>`<li>${escHtml(o)}</li>`).join('');
@@ -5990,6 +5995,14 @@ function sl2WipSet(id,plan,images){
   try{localStorage.setItem(_sl2WipKey(id),JSON.stringify({plan,images,at:Date.now()}));}catch(e){}
 }
 function sl2WipClear(id){try{localStorage.removeItem(_sl2WipKey(id));}catch(e){}}
+// رسالةُ توقّفٍ لا رسالةُ فشل: تذكر ما أُنجز كي تطمئنّ المعلّمة أن الضغطة
+// التالية تُكمل ولا تبدأ من الصفر.
+function sl2ResumeMsg(id){
+  const w=sl2WipGet(id),n=w?w.images.filter(Boolean).length:0;
+  return n
+    ? `حُفظت ${slArNum(n)} من ${slArNum(SL2_IMGS)} شرائح — اضغطي «العرض» مرّة أخرى ليُكمل ما تبقّى`
+    : 'الخدمة مزدحمة الآن — اضغطي «العرض» مرّة أخرى بعد قليل';
+}
 
 async function sl2ImgsLeft(){
   if(KH_DEMO)return null;
@@ -6004,7 +6017,9 @@ async function sl2ImgsLeft(){
 }
 // مهلةٌ صريحة لكل نداء. بدونها يبقى الطلب المتعثّر معلّقاً بلا نهاية، فيقف
 // العدّاد عند ٠/٦ إلى الأبد — وهو ما حدث فعلاً: لا خطأ يُلتقط ولا شيء يتحرّك.
-const SL2_T={book:60000,plan:75000,img:150000,job:420000};
+// job: سقفٌ للمهمة كلّها. رُفع مع رفع عدد الجولات — سبعُ دقائق كانت تقطع
+// استدراكاً كان سينجح، فتخرج المعلّمة بعرضٍ ناقص لا لعطلٍ بل لضيق المهلة.
+const SL2_T={book:60000,plan:75000,img:150000,job:1200000};
 function sl2Wait(pr,ms,job){
   return Promise.race([
     Promise.resolve(pr).catch(()=>null),
@@ -6034,20 +6049,23 @@ function sl2Start(id,grade,subject,unitName,lessonName){
       if(job.cancelled)throw new Error('cancel');
       if(built&&built.quota){delete sl2Jobs[id];sl2Chip();
         toast(c1ErrMsg(built.code,'وصلتِ حدّ توليد الصور الشهري — يتجدّد مطلع الشهر القادم.'),true);return;}
+      // ليس فشلاً بل توقّفٌ مؤقّت: كل شريحةٍ رُسمت محفوظةٌ ومدفوعة، والضغطة
+      // التالية تستأنف من حيث وقفنا ولا تُعيد شراء شيء. نقول ذلك صراحةً كي
+      // لا تظنّ المعلّمة أن جهدها ضاع فتمتنع عن المحاولة.
       if(built&&!built.slides){delete sl2Jobs[id];sl2Chip();
-        toast('تعذّر رسم شرائح العرض'+(built.why?' — '+String(built.why).slice(0,60):''),true);return;}
-      if(!built)throw new Error('build');
+        toast(sl2ResumeMsg(id),true);return;}
+      if(!built){delete sl2Jobs[id];sl2Chip();
+        toast(sl2ResumeMsg(id),true);return;}
       await c1AssetSet(id,built);
       shPublishSlides(id,grade,subject,built.slides);
       delete sl2Jobs[id];sl2Chip();
       planRenderUnits();
-      const n=built.slides.images.length;
-      toast(n<SL2_IMGS?`جهز العرض — ${slArNum(n)} من ${slArNum(SL2_IMGS)} شرائح`:'جهز العرض التقديمي','ok');
+      toast('جهز العرض التقديمي — ستّ شرائح','ok');
       sl2Ready(id,lessonName);
     }catch(e){
       const wasCancel=(sl2Jobs[id]||{}).cancelled||String(e&&e.message)==='cancel';
       delete sl2Jobs[id];sl2Chip();
-      toast(wasCancel?'أُلغي تجهيز العرض':'تعذّر تجهيز العرض — جرّبي مرّة أخرى',true);
+      toast(wasCancel?'أُلغي تجهيز العرض':sl2ResumeMsg(id),true);
     }
   })();
 }
@@ -6100,24 +6118,27 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
   const bookContext=(bs&&!bs.__timeout)?bs:'';
   // عملٌ ناقصٌ من محاولةٍ سابقة؟ نستأنف بخطّته نفسها — تغييرُ الخطّة يُبطل
   // الصور المدفوعة لأن كل صورةٍ مرسومةٌ لعنوان شريحتها.
+  // خطّةٌ محفوظةٌ أقصر من ستّ (من نسخةٍ أقدم كانت تقبل النقص) لا تُستأنف:
+  // استئنافها يعني عرضاً ناقصاً أبداً. نُسقطها ونخطّط من جديد.
   const wip=sl2WipGet(id);
-  if(wip&&wip.images.filter(Boolean).length){
+  if(wip&&wip.plan.length<SL2_IMGS)sl2WipClear(id);
+  else if(wip&&wip.images.filter(Boolean).length){
     step('يكمل ما تبقّى من العرض',wip.images.filter(Boolean).length,wip.plan.length);
     const urls2=await sl2Images(id,grade,subject,lessonName,wip.plan,bookContext,step,job,wip.images);
     const got2=urls2.filter(u=>typeof u==='string');
     sl2WipSet(id,wip.plan,urls2.map(u=>typeof u==='string'?u:null));
-    if(got2.length>=3){
+    if(got2.length>=SL2_IMGS){
       sl2WipClear(id);
       return{slides:{v:2,lesson:lessonName,subject,objectives:wip.obj||[],images:got2,homework:wip.hw||''}};
     }
     if(urls2.quota)return{quota:true,code:urls2.code};
     return{why:urls2.why||''};
   }
-  let data=null;
-  // محاولتان لا ثلاث: الخادم نفسه يعيد المحاولة مرّتين داخلياً، وكل نداءٍ
-  // يعيد المحاولة عند الازدحام — فثلاث طبقاتٍ متراكمة تعني انتظاراً يقارب
-  // خمس دقائق يبدو معه العدّاد متوقّفاً، وهو ما شكت منه المعلّمة فعلاً.
-  for(let t=1;t<=2&&!data;t++){
+  let data=null,body=null,objectives=[];
+  // العرض ستّ شرائح لا أقلّ. خطّةٌ ترجع خمساً تُعاد لا تُقبل: خمسُ شرائح
+  // تعني عرضاً ناقصاً تكتشفه المعلّمة أمام صفّها. نعيد الطلب حتى تكتمل
+  // الستّ، ولا نتوقّف إلا على ما لا يُصلحه تكرار: نفاد الرصيد أو الإيقاف.
+  for(let t=1;t<=SL2_PLAN_TRIES&&!body;t++){
     if(job&&job.cancelled)return null;
     // رقم المحاولة يظهر للمعلّمة: صمتُ الشريط هو ما يوحي بالتعطّل لا طولُ الوقت
     step('يخطّط الشرائح'+(t>1?` (محاولة ${slArNum(t)})`:''),0);
@@ -6129,30 +6150,40 @@ async function sl2Build(id,grade,subject,unitName,lessonName,onStep,job){
     if(r.__cancel)return null;
     if(r.error||!r.data||!Array.isArray(r.data.slides)||!r.data.slides.length){
       const reason=await c1FnErr(r);
-      // ثلاثةٌ لا يُصلحها تكرار — نتوقّف فوراً بدل استهلاك المحاولات الثلاث
-      if(/quota_exceeded|no_credit|disabled/.test(String(reason))){
-        toast(c1ErrMsg(reason),true);return null;
-      }
-      if(t<3)await new Promise(r2=>setTimeout(r2,1500*t));
-    }else data=r.data;
+      // ثلاثةٌ لا يُصلحها تكرار — نتوقّف فوراً بدل استهلاك المحاولات كلّها
+      if(/quota_exceeded|no_credit|disabled/.test(String(reason)))
+        return{quota:true,code:reason};
+      await new Promise(r2=>setTimeout(r2,Math.min(8000,1500*t)));
+      continue;
+    }
+    data=r.data;
+    const all=data.slides;
+    // الوضع الموجز يعيد الأهداف صريحةً؛ ونُبقي قراءتها من ودجة القائمة احتياطاً
+    // لو ردّ الخادم بالشكل القديم (نسخةٌ لم تُنشر بعد مثلاً).
+    const objSlide=all.find(s2=>s2&&s2.widget&&s2.widget.kind==='checklist');
+    const rawObj=(Array.isArray(data.objectives)&&data.objectives.length)?data.objectives
+      :((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[]);
+    objectives=rawObj.map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
+    const cand=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
+    if(cand.length>=SL2_IMGS){body=cand;break;}
+    // خطّةٌ ناقصة: نُعيد الطلب. وفي المحاولة الأخيرة نقبل ما بيدنا ونكمله
+    // بشرائح مشتقّة من عناوينه بدل أن نخرج بلا عرضٍ إطلاقاً.
+    if(t===SL2_PLAN_TRIES&&cand.length){
+      while(cand.length<SL2_IMGS)
+        cand.push({title:lessonName,points:['خلاصة الدرس','تدرّب مع معلّمتك']});
+      body=cand;
+    }
+    if(!body)await new Promise(r2=>setTimeout(r2,Math.min(8000,1500*t)));
   }
-  if(!data)return null;
-  const all=data.slides;
-  // الوضع الموجز يعيد الأهداف صريحةً؛ ونُبقي قراءتها من ودجة القائمة احتياطاً
-  // لو ردّ الخادم بالشكل القديم (نسخةٌ لم تُنشر بعد مثلاً).
-  const objSlide=all.find(s2=>s2&&s2.widget&&s2.widget.kind==='checklist');
-  const rawObj=(Array.isArray(data.objectives)&&data.objectives.length)?data.objectives
-    :((objSlide&&objSlide.widget.params&&objSlide.widget.params.items)||[]);
-  const objectives=rawObj.map(x=>String(x||'').trim()).filter(Boolean).slice(0,4);
-  const body=all.filter(s2=>s2!==objSlide&&(s2||{}).type!=='cover').slice(0,SL2_IMGS);
-  if(!body.length)return null;
+  if(!body)return{why:'تعذّر بناء خطّة الشرائح'};
   const urls=await sl2Images(id,grade,subject,lessonName,body,bookContext,step,job);
   // نحفظ قبل الحكم: حتى لو فشل الباقي، ما نجح مدفوعٌ ومحفوظ
   sl2WipSet(id,body,urls.map(u=>typeof u==='string'?u:null));
-  // نصفُ عرضٍ خيرٌ من لا شيء بعد دقيقتين: نحفظ ما نجح ونصارح المعلّمة بعدده،
-  // ولا نُلغي كل الجهد لأنّ صورةً واحدة تعثّرت.
+  // العرض ستٌّ كاملة أو لا يُسلَّم: نصفُ عرضٍ يصل المعلّمة على أنه «جاهز» ثم
+  // تكتشف نقصه أمام الصفّ. ما نجح محفوظٌ ومدفوعٌ ولن يُشترى ثانيةً، والمحاولة
+  // التالية تستأنف من حيث وقفت.
   const got=urls.filter(u=>typeof u==='string');
-  if(got.length<3){
+  if(got.length<SL2_IMGS){
     // نُبقي الخطّة والأهداف مع العمل الناقص كي تستأنف المحاولة التالية بها
     try{const w=sl2WipGet(id);if(w){w.obj=objectives;w.hw=data.homework||'';
       localStorage.setItem(_sl2WipKey(id),JSON.stringify(w));}}catch(e){}
@@ -6168,12 +6199,12 @@ async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job,s
   const urls=(seed&&seed.length===body.length)?seed.map(u=>typeof u==='string'?u:null)
                                              :new Array(body.length).fill(null);
   const count=()=>urls.filter(Boolean).length;
-  for(let round=1;round<=3;round++){
+  let dry=0; // جولاتٌ متتالية بلا صورةٍ واحدة
+  for(let round=1;round<=SL2_IMG_ROUNDS;round++){
     const missing=body.map((s2,i)=>i).filter(i=>!urls[i]);
     if(!missing.length)break;
-    if(round>1)await new Promise(r=>setTimeout(r,2000*(round-1)));
-    // جولةٌ لم تنجح فيها صورةٌ واحدة تعني عطلاً عند المزوّد لا تعثّراً عابراً،
-    // ومواصلة المحاولة تشتري صوراً لا تأتي: كل نداءٍ يُدفع ثمنه وإن فشل.
+    // مهلةٌ متصاعدة لا ثابتة: الازدحام عند المزوّد ينفرج بالانتظار لا بالإلحاح
+    if(round>1)await new Promise(r=>setTimeout(r,Math.min(20000,2000*(round-1))));
     const before=count();
     for(let k=0;k<missing.length;k+=2){
       if(job&&job.cancelled)return urls;
@@ -6191,7 +6222,11 @@ async function sl2Images(id,grade,subject,lessonName,body,bookContext,step,job,s
       pair.forEach((i,j)=>{const d=done[j];if(d&&typeof d==='string')urls[i]=d;});
       step('يرسم شرائح العرض',count());
     }
-    if(round>1&&count()===before)break;
+    // جولةٌ واحدة عقيمة تعثّرٌ عابر يُستدرك؛ ثلاثٌ متتالية عطلٌ عند المزوّد،
+    // ومواصلة الطلب حينها تشتري صوراً لا تأتي — كل نداءٍ يُدفع ثمنه وإن فشل.
+    // ليست فشلاً للعرض: ما نجح محفوظ، والمحاولة التالية تستأنف منه.
+    dry=(count()===before)?dry+1:0;
+    if(dry>=3)break;
   }
   return urls;
 }
