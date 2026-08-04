@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>يوم المهن المصغّر</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.jobs{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));max-width:1100px;width:100%}
+.job{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:16px;cursor:pointer;
+  text-align:center;transition:transform .12s}
+.job:hover{transform:translateY(-4px)}
+.job .f{font-size:48px;display:block;margin-bottom:5px}
+.job b{font-size:clamp(16px,1.9vw,21px)}
+.job.visited{outline:5px solid var(--ok);outline-offset:-2px}
+.jd{max-width:1000px;width:100%;animation:up .35s both}
+.jd .hd{text-align:center;margin-bottom:14px}
+.jd .hd .f{font-size:clamp(56px,9vw,104px);line-height:1.15;display:block}
+.jd .hd h2{font-size:clamp(24px,3.4vw,42px);margin:4px 0 0}
+.jd .grid2{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(max-width:760px){.jd .grid2{grid-template-columns:1fr}}
+.jd .box{background:var(--paper);border:3px solid var(--ink);border-radius:15px;padding:14px 18px;text-align:start}
+.jd .box h4{margin:0 0 7px;color:var(--a2);font-size:clamp(15px,1.8vw,19px)}
+.jd .box p,.jd .box li{font-size:clamp(14.5px,1.75vw,19px);line-height:1.7;margin:0}
+.jd .box ul{margin:0;padding-inline-start:20px}
+.jd .act-box{background:var(--gold);border:3px solid var(--ink);border-radius:15px;padding:15px 20px;
+  margin-top:12px;font-weight:800;font-size:clamp(15.5px,1.9vw,21px);line-height:1.7;text-align:start}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٧ — يوم المهن المصغّر
+   الهدف: تقدير كل عملٍ وأثره في المجتمع.
+   القرار التربوي: كل مهنةٍ تنتهي بسؤال «ماذا يحدث لو اختفت يوماً؟» —
+   فالتقدير يُبنى من تخيّل الغياب لا من المدح المباشر. والمهمّة
+   التمثيلية تجعل الطفل «يلبس» المهنة دقيقةً فيشعر بها لا يسمع عنها.
+   ═══════════════════════════════════════════════════════════════════ */
+const JOBS = [
+  {f:'🧑‍🏫', n:'المعلّم', c:'#487848',
+   d:'يفتح أبواب المعرفة، ويُعلّم كلَّ أصحاب المهن الأخرى قبل أن يبدأوا.',
+   skills:['الصبر','الشرح الواضح','فهم الأطفال','حبّ التعلّم المستمر'],
+   impact:'كل طبيبٍ ومهندسٍ وطيّارٍ مرّ يوماً بيد معلّم — المعلّم يصنع أصحاب المهن كلّها.',
+   whatIf:'ماذا يحدث لو اختفى المعلّمون أسبوعاً؟ من يجيب عن أسئلتنا؟',
+   act:'🎭 مثّلوا: طالبٌ لا يفهم درس الجمع، وزميله «المعلّم الصغير» يشرح له بصبرٍ بثلاث طرقٍ مختلفة.'},
+  {f:'🧑‍⚕️', n:'الطبيب', c:'#D86048',
+   d:'يفحص ويشخّص ويعالج — وقد يستيقظ فجراً ليُنقذ حياةً لا يعرف صاحبها.',
+   skills:['الدقّة','الهدوء تحت الضغط','الرحمة','العلم المتجدّد'],
+   impact:'صحة المدينة كلّها بين يديه: يشفي المريض ويطمئن الخائف ويمنع انتشار المرض.',
+   whatIf:'ماذا يحدث لو مرض أحدنا ولا طبيب في المدينة؟',
+   act:'🎭 مثّلوا: طبيبةٌ تستقبل مريضاً خائفاً من الإبرة — كيف تطمئنه بكلماتٍ لطيفة قبل العلاج؟'},
+  {f:'🧑‍🌾', n:'المزارع', c:'#5E9E52',
+   d:'يزرع قبل الشمس وينتظر شهوراً — وكل طبقٍ على مائدتنا بدأ في أرضه.',
+   skills:['الصبر الطويل','معرفة التربة والمواسم','الاعتناء بالنبات','العمل الشاقّ'],
+   impact:'لا خبز ولا فواكه ولا خضار بلا مزارع — هو أول سلسلة الطعام كلّها.',
+   whatIf:'ماذا يحدث لو توقّف المزارعون موسماً كاملاً؟ ماذا نجد في السوق؟',
+   act:'🎭 مثّلوا: مزارعٌ يشرح لحفيده متى تُزرع النخلة وكم تنتظر لتثمر — والحفيد يستعجل الثمر!'},
+  {f:'🧑‍🚒', n:'رجل الإطفاء', c:'#8B2635',
+   d:'يركض نحو ما يهرب منه الجميع — شجاعته وظيفته اليومية.',
+   skills:['الشجاعة','سرعة القرار','اللياقة','العمل بروح الفريق'],
+   impact:'ينقذ الأرواح والبيوت، ويعلّمنا الوقاية قبل أن يحتاج أحدٌ إنقاذاً.',
+   whatIf:'ماذا يحدث لو شبّ حريقٌ صغير ولا فريق إطفاء في المدينة؟',
+   act:'🎭 مثّلوا: فريق إطفاءٍ يتدرّب: القائد ينادي التعليمات والفريق ينفّذ بسرعةٍ ونظام — ثم يعلّمون الصف قاعدة «انبطح وتدحرج».'},
+  {f:'🧑‍🔬', n:'العالِم', c:'#2F7D74',
+   d:'يسأل «لماذا؟» ألف مرّة، ويجرّب ويفشل ويعيد — حتى يكتشف ما يغيّر العالم.',
+   skills:['الفضول','الملاحظة الدقيقة','التجربة والمحاولة','تسجيل النتائج'],
+   impact:'الدواء والكهرباء والهاتف — كلّها بدأت بعالِمٍ سأل سؤالاً لم يسأله أحد.',
+   whatIf:'ماذا لو توقّف الناس عن السؤال والتجربة قبل مئة سنة؟ ماذا كان سينقصنا اليوم؟',
+   act:'🎭 مثّلوا: عالمةٌ تجرّب: «هل يطفو الليمون في الماء؟» — تتوقّع، تجرّب (تمثيلاً)، تسجّل، وتُعلن النتيجة للصف!'},
+  {f:'🧑‍🎨', n:'المصمّم', c:'#6B4E9E',
+   d:'كل شيءٍ جميلٍ حولك — غلاف كتابك، شكل هاتفك — رسمه مصمّمٌ قبل أن يُصنع.',
+   skills:['الخيال','الرسم','فهم ما يحبّه الناس','التجريب'],
+   impact:'يجعل الأشياء أجمل وأسهل استخداماً — الجمال الذي حولنا مهنةٌ أيضاً.',
+   whatIf:'ماذا لو صارت كل الكتب بلا صور وكل الأشياء بشكلٍ واحد رمادي؟',
+   act:'🎭 مثّلوا: مصمّمٌ يسأل «زبونه» ماذا يحبّ، ثم يرسم في الهواء شعاراً لفريق الصف — والزبون يطلب تعديلات!'},
+  {f:'🧑‍✈️', n:'الطيّار', c:'#B0721A',
+   d:'يقود بيتاً طائراً فيه مئات الأرواح فوق الغيوم — بدقّةٍ لا تقبل «تقريباً».',
+   skills:['التركيز الطويل','الحساب الدقيق','الهدوء','اتّباع قوائم الفحص'],
+   impact:'يصل الأهل بأهلهم عبر القارات، وينقل الدواء والبريد والخير بين البلدان.',
+   whatIf:'ماذا يحدث لو أراد جدّك السفر لبلدٍ بعيد ولا طائرات؟ كم يستغرق بالسيارة؟',
+   act:'🎭 مثّلوا: طيّارٌ ومساعده يقرآن قائمة الفحص قبل الإقلاع بنداءٍ واستجابة: «الوقود؟» «تمام!» — ثم يرحّبان بالركّاب.'},
+  {f:'🧑‍💻', n:'المبرمج', c:'#4B5D6B',
+   d:'يكتب «تعليماتٍ» تفهمها الآلة — فكلّ تطبيقٍ ولعبةٍ سطورٌ كتبها مبرمج.',
+   skills:['التفكير المنطقي','الترتيب خطوةً خطوة','الصبر على الخطأ','حلّ المشكلات'],
+   impact:'المنصة التي نتعلّم عليها الآن كتبها مبرمجون — البرمجة تبني أدوات كل المهن.',
+   whatIf:'ماذا يتوقّف في المدينة لو اختفت البرامج يوماً؟ الهواتف؟ المستشفيات؟',
+   act:'🎭 مثّلوا: «الروبوت والمبرمج» — زميلٌ روبوتٌ ينفّذ الأوامر حرفياً، والمبرمج يوجّهه ليصل إلى الباب: خطوة يمين، خطوتان أمام… وإن أخطأ الأمر اصطدم الروبوت بالمقعد!'},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg17" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#D8E8EF"/><stop offset="1" stop-color="#F2EAD6"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg17)"/>
+  <!-- أفق مدينة مهن -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="80" y="480" width="200" height="240" fill="#F0E0C0"/>
+    <path d="M60 480h240l-20-50H80z" fill="#D86048"/>
+    <path d="M150 430v-40M150 390l30 10-30 12z" fill="#E8C34A" stroke-width="4"/>
+    <rect x="360" y="540" width="170" height="180" fill="#E8D9A8"/>
+    <path d="M400 540v-60h90v60" fill="#2F7D74"/>
+    <rect x="600" y="500" width="190" height="220" fill="#F5F0E6"/>
+    <path d="M676 460v30M664 475h24" stroke="#D86048" stroke-width="7" stroke-linecap="round"/>
+    <rect x="860" y="560" width="180" height="160" fill="#F3D9C4"/>
+    <path d="M850 560h200l-24-46H874z" fill="#6B4E9E"/>
+    <rect x="1110" y="520" width="190" height="200" fill="#E0E6D8"/>
+    <circle cx="1205" cy="480" r="34" fill="#5E9E52"/>
+    <rect x="1370" y="580" width="160" height="140" fill="#E8D0B8"/>
+  </g>
+  <!-- طائرة صغيرة -->
+  <g stroke="#2A1503" stroke-width="4" transform="translate(1180 160) rotate(-8)">
+    <ellipse rx="70" ry="20" fill="#FFF9F0"/>
+    <path d="M-10 0l-34 -34h24l30 26z" fill="#9FD4E8"/>
+    <path d="M-10 0l-34 34h24l30 -26z" fill="#9FD4E8"/>
+    <path d="M58 -8q14 8 0 16z" fill="#D86048"/>
+  </g>
+  <g fill="#fff" opacity=".8"><ellipse cx="330" cy="130" rx="86" ry="32"/><ellipse cx="760" cy="90" rx="70" ry="26"/></g>
+  <rect y="720" width="1600" height="180" fill="#C9B48C"/>
+  <path d="M0 720h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, visited = {};
+
+K = Kit.build({
+  title: 'يوم المهن المصغّر',
+  accent: '#B0721A', accent2: '#8A5713',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'تقدير كل عملٍ وأثره: ثماني مهن، لكلٍّ مهاراتها وأثرها وسؤال «ماذا لو اختفت؟» — ومهمّة تمثيلية يلبس فيها الطلاب المهنة دقيقةً فيشعرون بها.',
+    tools: 'الشاشة. المهام التمثيلية بلا أدوات — الخيال يكفي.',
+    groups: 'الصف كلّه، وكل مهمّةٍ تمثيلية لمجموعةٍ متطوّعة مختلفة — حتى يمرّ الجميع على خشبة التمثيل.',
+    steps: [
+      'اسألي أولاً: «ماذا تريدون أن تصيروا؟» واستقبلي كل الإجابات باحترام.',
+      'افتحوا مهنةً من الثماني — اقرأوا وصفها ومهاراتها وأثرها.',
+      'اطرحي سؤال «ماذا لو اختفت؟» ودعي النقاش يشتعل قليلاً.',
+      'نفّذوا المهمّة التمثيلية بمجموعةٍ متطوّعة.',
+      'زوروا ما استطعتم من المهن — أربعٌ في الحصّة عددٌ جيّد.',
+    ],
+    time: '٥ إلى ٧ دقائق للمهنة الواحدة.',
+    script: 'اليوم نسافر بين المهن! في كل محطةٍ سنعرف: ماذا يفعل صاحبها؟ وما مهاراته؟ والسؤال الأهم: ماذا يحدث للمدينة لو اختفت مهنته يوماً واحداً؟ ستكتشفون أن كل مهنةٍ — كلَّ مهنة — تحمل المدينة على كتفها.',
+    tips: 'إن قال طالبٌ عن مهنةٍ «هذه غير مهمّة» فلا تصحّحي مباشرةً — اسألي الصف: «ماذا لو اختفت أسبوعاً؟» ودعي الاستنتاج يأتي منهم. واحرصي أن يجرّب التمثيلَ غيرُ المعتادين عليه.',
+    points: 'بلا نقاطٍ هنا — المهن لا تتنافس بل تتكامل، وهذه رسالة النشاط نفسها. كافئي الممثّلين بالتصفيق.',
+    levels: 'الأصغر: المعلّم والطبيب والإطفائي والمزارع أولاً فهي الأوضح. الأكبر: أضيفي «ما المهن الجديدة التي لم تكن أيام أجدادنا؟»',
+    close: [
+      'أيّ مهنةٍ تغيّرت نظرتكم إليها اليوم؟',
+      'ماذا تحتاج المدينة أكثر: مهنةً واحدةً قويّة أم كل المهن معاً؟',
+      'اسألوا الليلة أهلكم: ماذا تعملون؟ وما أجمل شيءٍ في عملكم؟',
+    ],
+  },
+});
+
+function home() {
+  visited = {};
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="18" y="38" width="64" height="44" rx="8" fill="#B0721A" stroke="#2A1503" stroke-width="5"/>
+      <path d="M38 38v-8a12 12 0 0 1 24 0v8" fill="none" stroke="#2A1503" stroke-width="5"/>
+      <rect x="42" y="52" width="16" height="12" rx="3" fill="#E8C34A" stroke="#2A1503" stroke-width="4"/>
+      <path d="M18 58h24M58 58h24" stroke="#2A1503" stroke-width="4"/>
+    </svg>
+    <h1>يوم المهن المصغّر</h1>
+    <p class="sub">ثماني مهن تحمل المدينة… في كل واحدةٍ سؤال: ماذا لو اختفت يوماً واحداً؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٥ – ٧ دقائق للمهنة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>الاستكشاف والتمثيل</b></span>
+      <span class="chip">القيمة: <b>تقدير كل عمل</b></span>
+    </div>`;
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'افتحوا مدينة المهن');
+  b1.onclick = () => { K.SFX.ok(); grid(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+}
+
+function grid() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+  const vc = Object.keys(visited).length;
+  wrap.appendChild(K.el('div', 'rowline',
+    `<span class="chip">المهن المستكشَفة: <b>${Kit.AR(vc)} / ${Kit.AR(JOBS.length)}</b></span>`));
+
+  const g = K.el('div', 'jobs');
+  JOBS.forEach((j, i) => {
+    const d = K.el('div', 'job' + (visited[i] ? ' visited' : ''));
+    d.innerHTML = `<span class="f">${j.f}</span><b>${Kit.esc(j.n)}</b>`;
+    d.onclick = () => { K.SFX.tap(); openJob(i); };
+    g.appendChild(d);
+  });
+  wrap.appendChild(g);
+
+  if (vc >= 4) {
+    const fin = K.el('button', 'btn p big', '🏙️ ختام الجولة');
+    fin.onclick = () => K.reflect({
+      value: 'تقدير كل عمل',
+      questions: [
+        'أيّ مهنةٍ تغيّرت نظرتكم إليها اليوم؟',
+        'لماذا لا تستغني المدينة عن أيّ مهنةٍ منها؟',
+        'اسألوا أهلكم الليلة: ما أجمل شيءٍ في عملكم؟',
+      ],
+    }, home);
+    wrap.appendChild(fin);
+  }
+  K.stage.appendChild(wrap);
+}
+
+function openJob(i) {
+  const j = JOBS[i];
+  visited[i] = true;
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'jd');
+  wrap.innerHTML = `
+    <div class="hd"><span class="f">${j.f}</span><h2 style="color:${j.c}">${Kit.esc(j.n)}</h2>
+      <p style="font-size:clamp(15.5px,1.9vw,21px);margin:6px auto 0;max-width:60ch">${Kit.esc(j.d)}</p></div>
+    <div class="grid2">
+      <div class="box"><h4>🛠️ مهاراته</h4><ul>${j.skills.map(s => `<li>${Kit.esc(s)}</li>`).join('')}</ul></div>
+      <div class="box"><h4>🌍 أثره في المجتمع</h4><p>${Kit.esc(j.impact)}</p></div>
+    </div>
+    <div class="box" style="margin-top:12px;background:var(--sand)">
+      <h4>🤔 سؤال النقاش</h4><p>${Kit.esc(j.whatIf)}</p></div>
+    <div class="act-box">${Kit.esc(j.act)}</div>`;
+  const row = K.el('div', 'rowline'); row.style.marginTop = '16px';
+  const back = K.el('button', 'btn p big', '← مهنةٌ أخرى');
+  back.onclick = () => { K.SFX.tap(); grid(); };
+  row.appendChild(back);
+  wrap.appendChild(row);
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

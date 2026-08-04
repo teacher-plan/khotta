@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>مدينة القيم</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+#city{width:min(96vw,1100px);max-height:50vh}
+#city svg{width:100%;height:auto;display:block}
+.place{cursor:pointer}
+.place:hover .bld{filter:brightness(1.08)}
+.place .glow{opacity:0}
+.place.lit .glow{opacity:1}
+.place .heart{opacity:0;transition:opacity .3s}
+.place.lit .heart{opacity:1}
+#city .gray{filter:saturate(.35)}
+.pickv{max-width:960px;width:100%;text-align:center;animation:up .35s both}
+.pickv h3{font-size:clamp(20px,2.8vw,34px);margin:0 0 14px}
+.vgrid{display:flex;gap:11px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.vbtn{border:3px solid var(--ink);border-radius:16px;background:var(--paper);cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:clamp(16px,2vw,22px);padding:13px 22px;min-height:64px}
+.vbtn .f{font-size:1.4em;margin-inline-end:7px}
+.vbtn.on{background:var(--gold)}
+.behav{display:grid;gap:10px;max-width:820px;margin:0 auto}
+.behav .btn{justify-content:flex-start;text-align:start;font-size:clamp(15.5px,1.9vw,21px);min-height:58px}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٨ — مدينة القيم
+   الهدف: فهم أثر القيم في المجتمع بصريّاً وفوريّاً.
+   القرار التصميمي المركزي: المدينة تبدأ رماديّةً باهتة، وكلّ سلوكٍ
+   إيجابيّ «يُضيء» مكاناً — فيرى الطفل بعينه أن سلوكه الفردي يُغيّر
+   لون مدينته كلّها. الأثر مرئيٌّ لا محكيّ.
+   ═══════════════════════════════════════════════════════════════════ */
+const VALUES = [
+  {id:'respect', f:'🙏', n:'الاحترام'},
+  {id:'coop',    f:'🤝', n:'التعاون'},
+  {id:'honest',  f:'💎', n:'الصدق'},
+  {id:'resp',    f:'🛡️', n:'المسؤولية'},
+  {id:'kind',    f:'💛', n:'اللطف'},
+];
+const PLACES = [
+  {id:'school', n:'المدرسة', x:230, y:355,
+   behaviors:{
+    respect:['نستمع للمعلّمة دون مقاطعة','ننتظر دورنا في الطابور'],
+    coop:['نساعد زميلاً تأخّر في مهمّته','ننظّف صفّنا معاً'],
+    honest:['نعترف حين ننسى الواجب','نُعيد ما نجده لصاحبه'],
+    resp:['نحافظ على كتب المدرسة','نصل إلى الصف في الوقت'],
+    kind:['نُرحّب بالطالب الجديد','نشارك أدواتنا من نسي أدواته'],
+   }},
+  {id:'park', n:'الحديقة', x:530, y:420,
+   behaviors:{
+    respect:['نلعب دون إزعاج الجالسين','ننتظر دورنا على الأرجوحة'],
+    coop:['نشارك الجميع في اللعب','نجمع النفايات بعد النزهة معاً'],
+    honest:['نعترف إن كسرنا غصناً خطأً','لا ندّعي أن الدور دورنا وهو ليس كذلك'],
+    resp:['لا نقطف الأزهار','نرمي نفاياتنا في السلّة'],
+    kind:['ندعو من يجلس وحده للّعب','نسقي نبتةً عطشى'],
+   }},
+  {id:'library', n:'المكتبة', x:830, y:340,
+   behaviors:{
+    respect:['نقرأ بصوتٍ هامس','نُعيد الكتاب لمكانه الصحيح'],
+    coop:['نساعد صغيراً في إيجاد كتابه','نرتّب الرفوف مع الأمينة'],
+    honest:['نُعيد الكتاب في موعده','نُخبر الأمينة إن تمزّقت صفحة'],
+    resp:['نحافظ على الكتب نظيفة','لا نطوي صفحات الكتاب'],
+    kind:['نقترح كتاباً جميلاً لصديق','نشكر أمينة المكتبة'],
+   }},
+  {id:'hospital', n:'المستشفى', x:1130, y:410,
+   behaviors:{
+    respect:['نخفض أصواتنا قرب المرضى','نحترم دور المنتظرين'],
+    coop:['نحمل حقيبة مريضٍ متعب','نفتح الباب لكرسيٍّ متحرّك'],
+    honest:['نُخبر الطبيب بالحقيقة عن الألم','لا نتظاهر بالمرض'],
+    resp:['نغسل أيدينا لحماية الآخرين','نغطّي فمنا عند العطاس'],
+    kind:['نزور مريضاً ونطمئنّ عليه','نرسم بطاقةً لمريضٍ صغير'],
+   }},
+  {id:'home', n:'المنزل', x:1400, y:350,
+   behaviors:{
+    respect:['نستأذن قبل دخول الغرف','نتحدّث بأدبٍ مع الوالدين'],
+    coop:['نساعد في ترتيب المائدة','نعتني بإخوتنا الصغار'],
+    honest:['نقول الحقيقة ولو أخطأنا','لا نُخفي شيئاً كسرناه'],
+    resp:['نرتّب أسرّتنا صباحاً','نُطفئ الأنوار عند الخروج'],
+    kind:['نقول كلمةً طيّبة كل صباح','نُحضّر كوب ماءٍ لوالدينا'],
+   }},
+];
+
+function citySvg() {
+  const bld = {
+    school:`<g class="bld"><rect x="-95" y="-60" width="190" height="95" fill="#F0E0C0" stroke="#2A1503" stroke-width="5"/>
+      <path d="M-105 -60L0 -125l105 65z" fill="#D86048" stroke="#2A1503" stroke-width="5"/>
+      <rect x="-62" y="-30" width="34" height="34" fill="#9FD4E8" stroke="#2A1503" stroke-width="4"/>
+      <rect x="28" y="-30" width="34" height="34" fill="#9FD4E8" stroke="#2A1503" stroke-width="4"/>
+      <rect x="-16" y="-14" width="32" height="49" fill="#8B5E34" stroke="#2A1503" stroke-width="4"/></g>`,
+    park:`<g class="bld"><ellipse cx="0" cy="26" rx="110" ry="26" fill="#8FBF7A" stroke="#2A1503" stroke-width="5"/>
+      <path d="M-40 20V-40" stroke="#2A1503" stroke-width="6"/><circle cx="-40" cy="-62" r="34" fill="#5E9E52" stroke="#2A1503" stroke-width="5"/>
+      <path d="M45 22V-20" stroke="#2A1503" stroke-width="5"/><circle cx="45" cy="-36" r="24" fill="#6FAE5E" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="8" cy="12" r="8" fill="#D86048" stroke="#2A1503" stroke-width="3"/></g>`,
+    library:`<g class="bld"><rect x="-90" y="-70" width="180" height="105" fill="#E8D9A8" stroke="#2A1503" stroke-width="5"/>
+      <path d="M-100 -70h200l-22-38h-156z" fill="#487848" stroke="#2A1503" stroke-width="5"/>
+      <rect x="-58" y="-40" width="30" height="40" fill="#8B2635" stroke="#2A1503" stroke-width="3"/>
+      <rect x="-20" y="-40" width="30" height="40" fill="#2F7D74" stroke="#2A1503" stroke-width="3"/>
+      <rect x="18" y="-40" width="30" height="40" fill="#D9A93C" stroke="#2A1503" stroke-width="3"/></g>`,
+    hospital:`<g class="bld"><rect x="-85" y="-85" width="170" height="120" fill="#F5F0E6" stroke="#2A1503" stroke-width="5"/>
+      <rect x="-22" y="-125" width="44" height="40" fill="#F5F0E6" stroke="#2A1503" stroke-width="5"/>
+      <path d="M0 -117v24M-12 -105h24" stroke="#D86048" stroke-width="7" stroke-linecap="round"/>
+      <rect x="-60" y="-56" width="28" height="28" fill="#9FD4E8" stroke="#2A1503" stroke-width="3"/>
+      <rect x="32" y="-56" width="28" height="28" fill="#9FD4E8" stroke="#2A1503" stroke-width="3"/></g>`,
+    home:`<g class="bld"><rect x="-70" y="-50" width="140" height="85" fill="#F3D9C4" stroke="#2A1503" stroke-width="5"/>
+      <path d="M-80 -50L0 -105l80 55z" fill="#B0721A" stroke="#2A1503" stroke-width="5"/>
+      <rect x="-42" y="-24" width="28" height="28" fill="#9FD4E8" stroke="#2A1503" stroke-width="4"/>
+      <rect x="12" y="-16" width="28" height="51" fill="#8B5E34" stroke="#2A1503" stroke-width="4"/></g>`,
+  };
+  const places = PLACES.map(p => `
+    <g class="place gray" id="pl-${p.id}" transform="translate(${p.x} ${p.y})">
+      <ellipse class="glow" cy="20" rx="130" ry="42" fill="#FFE9A8" opacity=".55"/>
+      ${bld[p.id]}
+      <g class="heart"><circle cy="-150" r="24" fill="#FFF9F0" stroke="#2A1503" stroke-width="4"/>
+        <text y="-141" font-size="26" text-anchor="middle">💛</text></g>
+      <text y="62" font-size="23" font-weight="bold" text-anchor="middle" fill="#2A1503">${p.n}</text>
+    </g>`).join('');
+  return `<svg viewBox="0 0 1600 560" aria-label="مدينة القيم">
+    <defs><linearGradient id="csky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8E4EE"/><stop offset="1" stop-color="#EFE6CF"/></linearGradient></defs>
+    <rect width="1600" height="560" rx="24" fill="url(#csky)" stroke="#2A1503" stroke-width="6"/>
+    <circle id="csun" cx="1450" cy="90" r="46" fill="#FFD97A" stroke="#2A1503" stroke-width="5" opacity=".45"/>
+    <rect y="440" width="1600" height="120" fill="#C9B48C"/>
+    <path d="M0 440h1600" stroke="#2A1503" stroke-width="5"/>
+    <path d="M60 500q400-40 740 0t740 0" stroke="#8B7355" stroke-width="16" fill="none" opacity=".5"/>
+    ${places}
+  </svg>`;
+}
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#F0E9DA"/>
+  <g fill="#2F7D74" opacity=".14"><circle cx="140" cy="180" r="120"/><circle cx="1480" cy="760" r="150"/></g>
+  <g fill="#D9A93C" opacity=".16"><circle cx="1420" cy="150" r="90"/><circle cx="200" cy="800" r="110"/></g>
+</svg>`;
+
+let K, lit = {}, curPlace = null, curValue = null, actions = 0;
+
+K = Kit.build({
+  title: 'مدينة القيم',
+  accent: '#2F7D74', accent2: '#1F5A54',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'فهم أثر السلوك الفردي في المجتمع: المدينة تبدأ باهتة، وكل سلوكٍ إيجابيّ يختاره الطلاب يُضيء مكاناً — الأثر يُرى بالعين لا يُشرح بالكلام.',
+    tools: 'الشاشة فقط.',
+    groups: 'الصف كلّه بالتناوب، أو فرقٌ يختار كلٌّ منها مكاناً «يتبنّاه» ويُضيئه.',
+    steps: [
+      'أروا الطلاب المدينة الباهتة واسألي: «ما ينقصها؟»',
+      'يختار طالبٌ (أو فريق) مكاناً بالضغط عليه.',
+      'يختار قيمةً من الخمس، فتظهر سلوكاتٌ مقترحة.',
+      'يقرأ السلوك بصوتٍ عالٍ ويضغطه — فيُضاء المكان.',
+      'قبل الضغط اسألي دائماً: «من فعل هذا فعلاً هذا الأسبوع؟»',
+      'حين تُضاء الأماكن الخمسة تشرق المدينة كلّها.',
+    ],
+    time: '١٥ إلى ٢٠ دقيقة.',
+    script: 'هذه مدينتنا… لكنّها باهتةٌ حزينة! سرُّ إشراقها ليس المال ولا الكهرباء — بل سلوك أهلها. كل سلوكٍ طيّب يختاره أحدكم يُضيء مكاناً. هيّا نُشرق مدينتنا!',
+    tips: 'اربطي كل سلوكٍ بواقع الصف: «من فعل هذا فعلاً؟» واجعلي الضغط على الزر احتفالاً لا مجرّد نقرة. المدينة المكتملة صورةٌ ختامية جميلة — اتركيها معروضةً لحظة.',
+    points: 'النشاط جماعيٌّ بلا فرقٍ افتراضياً — الإنجاز هو المدينة المضيئة نفسها. إن قسّمتِ فرقاً فلكل مكانٍ يُضيئه الفريق نقطة.',
+    levels: 'الأصغر: اقرئي السلوكات لهم واكتفي بثلاثة أماكن. الأكبر: بعد كل سلوكٍ جاهز اطلبي سلوكاً إضافياً من إنشائهم.',
+    close: [
+      'ما الذي جعل المدينة تُشرق — المباني أم الناس؟',
+      'أيّ سلوكٍ منها فعلناه هذا الأسبوع فعلاً؟',
+      'لو كانت مدرستنا مكاناً في المدينة، ما السلوك الذي يُضيئها غداً؟',
+    ],
+  },
+});
+
+function home() {
+  lit = {}; actions = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="14" y="46" width="30" height="40" fill="#F0E0C0" stroke="#2A1503" stroke-width="5"/>
+      <path d="M10 46l19-16 19 16z" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+      <rect x="56" y="38" width="30" height="48" fill="#E8D9A8" stroke="#2A1503" stroke-width="5"/>
+      <path d="M52 38h38l-8-14H60z" fill="#487848" stroke="#2A1503" stroke-width="4"/>
+      <text x="50" y="24" font-size="22" text-anchor="middle">💛</text>
+    </svg>
+    <h1>مدينة القيم</h1>
+    <p class="sub">مدينةٌ باهتة تنتظر من يُضيئها… وسرُّ الضوء سلوكٌ طيّبٌ واحد في كل مكان.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٥ – ٢٠ دقيقة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>ربط السلوك بالأثر</b></span>
+      <span class="chip">القيم: <b>الاحترام · التعاون · الصدق · المسؤولية · اللطف</b></span>
+    </div>`;
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); cityView(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+}
+
+function cityView() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+  const litCount = Object.keys(lit).length;
+  wrap.appendChild(K.el('div', 'rowline',
+    `<span class="chip">الأماكن المضيئة: <b>${Kit.AR(litCount)} / ${Kit.AR(PLACES.length)}</b></span>
+     <span class="chip">السلوكات الطيّبة: <b>${Kit.AR(actions)}</b></span>`));
+  const city = K.el('div', ''); city.id = 'city'; city.innerHTML = citySvg();
+  wrap.appendChild(city);
+
+  PLACES.forEach(p => {
+    const g = city.querySelector('#pl-' + p.id);
+    if (lit[p.id]) { g.classList.remove('gray'); g.classList.add('lit'); }
+    g.addEventListener('click', () => { K.SFX.tap(); pickValue(p); });
+  });
+  if (litCount >= PLACES.length) {
+    city.querySelector('#csun').setAttribute('opacity', '1');
+    const fin = K.el('button', 'btn p big', '🌇 أشرقت المدينة — الختام!');
+    fin.onclick = () => K.reflect({
+      value: 'أثر السلوك في المجتمع',
+      questions: [
+        'ما الذي أضاء المدينة — المباني أم سلوك أهلها؟',
+        'أيّ سلوكٍ من التي اخترناها فعلناه فعلاً هذا الأسبوع؟',
+        'ما السلوك الذي سنُضيء به صفّنا غداً؟',
+      ],
+    }, home);
+    wrap.appendChild(fin);
+    K.SFX.win();
+  } else {
+    wrap.appendChild(K.el('div', 'chip', litCount ? 'اضغطوا مكاناً آخر لإضاءته' : 'اضغطوا أيّ مكانٍ لنبدأ إضاءته'));
+  }
+  K.stage.appendChild(wrap);
+}
+
+function pickValue(place) {
+  curPlace = place;
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'pickv');
+  wrap.innerHTML = `<h3>اخترنا: <b>${Kit.esc(place.n)}</b> — أيّ قيمةٍ نزرع فيه؟</h3>`;
+  const vg = K.el('div', 'vgrid');
+  VALUES.forEach(v => {
+    const b = K.el('button', 'vbtn', `<span class="f">${v.f}</span>${v.n}`);
+    b.onclick = () => { K.SFX.tap(); pickBehavior(place, v); };
+    vg.appendChild(b);
+  });
+  wrap.appendChild(vg);
+  const back = K.el('button', 'btn sm', '← العودة للمدينة');
+  back.onclick = () => { K.SFX.tap(); cityView(); };
+  wrap.appendChild(back);
+  K.stage.appendChild(wrap);
+}
+
+function pickBehavior(place, value) {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'pickv');
+  wrap.innerHTML = `<h3>${value.f} <b>${value.n}</b> في <b>${Kit.esc(place.n)}</b> — أيّ سلوكٍ نختار؟</h3>
+    <p style="opacity:.75;margin:0 0 14px">اقرأوه بصوتٍ عالٍ قبل الضغط — وفكّروا: من فعله هذا الأسبوع؟</p>`;
+  const box = K.el('div', 'behav');
+  place.behaviors[value.id].forEach(b => {
+    const btn = K.el('button', 'btn', '✨ ' + Kit.esc(b));
+    btn.onclick = () => {
+      lit[place.id] = true; actions++;
+      K.SFX.star(); K.say(`أُضيء ${place.n} بسلوك ${value.n}! ✨`, '');
+      cityView();
+    };
+    box.appendChild(btn);
+  });
+  wrap.appendChild(box);
+  const back = K.el('button', 'btn sm', '← اختيار قيمةٍ أخرى');
+  back.style.marginTop = '16px';
+  back.onclick = () => { K.SFX.tap(); pickValue(place); };
+  wrap.appendChild(back);
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

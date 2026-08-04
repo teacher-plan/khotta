@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>صح أم يحتاج إلى تفكير؟</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.claim{max-width:1050px;width:100%;text-align:center;animation:up .35s both}
+.claim .txt{font-size:clamp(24px,3.6vw,46px);font-weight:800;line-height:1.5;
+  background:var(--paper);border:4px solid var(--ink);border-radius:22px;
+  box-shadow:var(--sh);padding:clamp(20px,3vw,40px);margin-bottom:20px}
+.claim .cat{margin-bottom:10px}
+.answers{display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
+.answers .btn{min-width:200px;font-size:clamp(18px,2.2vw,26px);min-height:76px;border-radius:18px}
+.ans-t{background:#DFF0E2}.ans-f{background:#F6E0DC}.ans-think{background:#FBF0CE}
+.answers .btn.picked{outline:6px solid var(--gold);outline-offset:3px}
+.why{margin-top:18px;background:var(--paper);border:3px solid var(--ink);border-radius:16px;
+  padding:16px 22px;font-size:clamp(17px,2.1vw,24px);text-align:start;
+  display:flex;gap:13px;align-items:flex-start;animation:up .3s both}
+.why .ic{font-size:29px;flex:none;line-height:1}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٢ — صح أم يحتاج إلى تفكير؟
+   الهدف: التفكير النقدي وعدم التسرّع.
+   القرار التربوي المركزي: الخيار الثالث «يحتاج إلى تفكير» ليس مهرباً —
+   بعض العبارات إجابتها الصحيحة فعلاً هي الثالثة، لأنها تعتمد على شرطٍ
+   ناقص. هكذا يتعلّم الطفل أن «لا أعرف بعد» موقفٌ علميٌّ محترم.
+   ═══════════════════════════════════════════════════════════════════ */
+const CLAIMS = [
+  // v: t صحيحة، f خاطئة، think تعتمد على تفصيل
+  {c:'علوم', t:'تشرب النباتات الماء بجذورها.', v:'t',
+   why:'الجذور تمتصّ الماء من التربة ثم يصعد إلى الساق والأوراق.'},
+  {c:'علوم', t:'الشمس تدور حول الأرض.', v:'f',
+   why:'الأرض هي التي تدور حول الشمس مرّةً كل سنة، وتدور حول نفسها فيكون الليل والنهار.'},
+  {c:'علوم', t:'كل الطيور تطير.', v:'f',
+   why:'النعامة والبطريق طيورٌ لا تطير. كلمة «كل» تجعل العبارة خاطئة بمثالٍ واحد.'},
+  {c:'علوم', t:'الماء الساخن أفضل من البارد.', v:'think',
+   why:'أفضل لماذا؟ للشاي نعم، وللعطش في يومٍ حار لا. العبارة ناقصة فلا نحكم قبل السؤال.'},
+  {c:'تعاون', t:'العمل في فريق يُنجز المهمّات الكبيرة أسرع.', v:'t',
+   why:'توزيع العمل يجعل كل فردٍ يُنجز جزءاً — وهذا سرّ نجاح الفرق.'},
+  {c:'تعاون', t:'القائد الجيّد يفعل كل شيءٍ بنفسه.', v:'f',
+   why:'القائد الجيّد يوزّع المهام ويثق بفريقه — من يفعل كل شيءٍ وحده ليس قائداً بل متعَب.'},
+  {c:'احترام', t:'نستمع لزميلنا حتى لو خالفنا رأيه.', v:'t',
+   why:'الاستماع لا يعني الموافقة — يعني الاحترام. وقد نتعلّم من الرأي المخالف.'},
+  {c:'احترام', t:'المقاطعة مقبولة إذا كانت إجابتي صحيحة.', v:'f',
+   why:'صحّة الإجابة لا تُبرّر قطع كلام الآخرين — ننتظر دورنا مهما كنّا واثقين.'},
+  {c:'بيئة', t:'رمي النفايات في البحر يضرّ الأسماك.', v:'t',
+   why:'الأسماك قد تبتلع البلاستيك فتمرض، والنفايات تُفسد بيوتها المرجانية.'},
+  {c:'بيئة', t:'قطع الأشجار مفيد دائماً لبناء البيوت.', v:'think',
+   why:'نحتاج الخشب أحياناً، لكن «دائماً» خطأ: القطع بلا زراعة بديلٍ يُفقدنا الظلّ والهواء النقي.'},
+  {c:'بيئة', t:'إغلاق الصنبور أثناء تنظيف الأسنان يوفّر ماءً كثيراً.', v:'t',
+   why:'الصنبور المفتوح دقيقتين يُهدر لتراتٍ كثيرة — إغلاقه عادةٌ صغيرة بأثرٍ كبير.'},
+  {c:'صحة', t:'السكّر الكثير مفيدٌ لأنه يعطي طاقة.', v:'f',
+   why:'يعطي طاقةً سريعة ثم تعباً أسرع، ويضرّ الأسنان — القليل يكفي.'},
+  {c:'صحة', t:'النوم المبكّر يساعدنا على التركيز في الصف.', v:'t',
+   why:'الدماغ يرتّب ما تعلّمناه أثناء النوم — من نام جيداً تعلّم جيداً.'},
+  {c:'حياة مدرسية', t:'من أخطأ في الإجابة يجب أن يخجل.', v:'f',
+   why:'الخطأ خطوةٌ في التعلّم — من لا يُخطئ لا يُحاول أصلاً.'},
+  {c:'حياة مدرسية', t:'الطالب الهادئ لا يفهم الدرس.', v:'f',
+   why:'الهدوء ليس دليل عدم فهم — بعضنا يفكّر بصمتٍ ويفهم عميقاً.'},
+  {c:'تفكير', t:'إذا قاله كثيرون فهو صحيح.', v:'f',
+   why:'الصواب يُعرف بالدليل لا بعدد القائلين — كان كثيرون يظنّون الأرض مسطّحة.'},
+  {c:'تفكير', t:'اللعب في الفسحة مضيعةٌ للوقت.', v:'f',
+   why:'اللعب يُريح الدماغ ويُقوّي الجسم والصداقات — وهو جزءٌ من التعلّم.'},
+  {c:'تفكير', t:'الكتاب أفضل من الشاشة.', v:'think',
+   why:'أفضل لماذا ولمن؟ للقراءة الطويلة ربما، ولمشاهدة تجربةٍ علمية الشاشة تفيد. نسأل قبل أن نحكم.'},
+  {c:'علوم', t:'الجليد ماءٌ تجمّد.', v:'t',
+   why:'الماء يتجمّد تحت الصفر ويعود سائلاً إذا سخن — المادة نفسها بحالتين.'},
+  {c:'حياة مدرسية', t:'طلب المساعدة دليل ضعف.', v:'f',
+   why:'طلب المساعدة شجاعةٌ وذكاء — الأقوياء يعرفون متى يحتاجون غيرهم.'},
+];
+const ROUNDS = 8, THINK_SECS = 20;
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bgq" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E4EFE0"/><stop offset="1" stop-color="#F5EFDF"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bgq)"/>
+  <g stroke="#2A1503" stroke-width="6" fill="#487848" opacity=".9">
+    <circle cx="170" cy="210" r="80"/>
+  </g>
+  <text x="170" y="248" font-size="110" font-weight="bold" fill="#F7EEE2" text-anchor="middle">؟</text>
+  <g stroke="#2A1503" stroke-width="5" fill="#D9A93C" opacity=".9">
+    <circle cx="1450" cy="270" r="62"/></g>
+  <text x="1450" y="300" font-size="84" font-weight="bold" fill="#2A1503" text-anchor="middle">؟</text>
+  <g stroke="#2A1503" stroke-width="5" fill="#2F7D74" opacity=".85"><circle cx="1330" cy="700" r="52"/></g>
+  <text x="1330" y="726" font-size="70" font-weight="bold" fill="#F7EEE2" text-anchor="middle">!</text>
+  <g stroke="#2A1503" stroke-width="4" fill="#FFF9F0">
+    <path d="M240 640a44 44 0 1 1 62 40l-14 8v18" fill="none" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="288" cy="740" r="7" fill="#2A1503"/>
+  </g>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4" opacity=".7">
+    <path d="M640 110l12 25 27 4-19 19 4 27-24-13-24 13 4-27-19-19 27-4z"/>
+    <path d="M1080 130l10 21 23 3-16 16 4 23-21-11-21 11 4-23-16-16 23-3z"/>
+  </g>
+  <rect y="820" width="1600" height="80" fill="#CBBC96"/>
+  <path d="M0 820h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, bag, round = 0, cur = null, locked = false, timer = null;
+
+K = Kit.build({
+  title: 'صح أم يحتاج إلى تفكير؟',
+  accent: '#487848', accent2: '#2F5233',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التفكير النقدي: يتعلّم الطالب أن بعض العبارات لا تُحكم بصح أو خطأ قبل سؤال «متى؟ لماذا؟ لمن؟» — وأن «لا أعرف بعد» موقفٌ محترم.',
+    tools: 'الشاشة فقط.',
+    groups: 'فريقان إلى أربعة، أو الصف كلّه برفع الأيدي: يدٌ للـ«صحيح»، يدان للـ«غير صحيح»، ذراعان متقاطعتان للـ«يحتاج تفكيراً».',
+    steps: [
+      'اقرئي العبارة بصوتٍ واضح ودعي العدّ التنازلي يعمل.',
+      'قبل انتهاء الوقت: كل فريقٍ يتشاور ويرفع إشارته.',
+      'اضغطي الإجابة التي اختارها أغلب الصف.',
+      'اقرئي الشرح واسألي: «من كان له سببٌ مختلف؟»',
+      'امنحي النقاط بالأزرار، ثم «العبارة التالية».',
+    ],
+    time: '١٠ إلى ١٥ دقيقة لثماني عبارات.',
+    script: 'سأقرأ عبارة… ولكم ثلاثة مواقف: صحيحة، غير صحيحة، أو — وهذا الأهم — «تحتاج إلى تفكير» لأنها ناقصة. انتبهوا: بعض العبارات تخدعكم بكلمة «كل» أو «دائماً»!',
+    tips: 'احتفلي بمن يختار «يحتاج إلى تفكير» في موضعها الصحيح أكثر من غيرها — هذا هو الهدف الحقيقي للنشاط. ونبّهي لكلمات التعميم: كل، دائماً، أبداً.',
+    points: 'نقطةٌ للإجابة الصحيحة، ونقطةٌ لكل تعليلٍ جيّد حتى مع إجابةٍ خاطئة. أزرار القيم أسفل اللوحة.',
+    levels: 'للأصغر: أوقفي المؤقّت واقرئي العبارة مرّتين. للأكبر: اطلبي منهم تأليف عبارةٍ «تحتاج تفكيراً» بأنفسهم في الختام.',
+    close: [
+      'ما الكلمات التي تجعل العبارة «تحتاج تفكيراً»؟',
+      'هل غيّر أحدكم رأيه بعد سماع الشرح؟ هذا ممتاز — لماذا؟',
+      'أين نسمع كلاماً يحتاج تفكيراً قبل تصديقه؟',
+    ],
+  },
+});
+
+bag = K.Bag(CLAIMS);
+
+function home() {
+  round = 0;
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="34" cy="42" r="26" fill="#487848" stroke="#2A1503" stroke-width="5"/>
+      <path d="M24 42l8 8 14-16" fill="none" stroke="#F7EEE2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="72" cy="62" r="22" fill="#E8C34A" stroke="#2A1503" stroke-width="5"/>
+      <text x="72" y="72" font-size="28" font-weight="bold" fill="#2A1503" text-anchor="middle">؟</text>
+    </svg>
+    <h1>صح أم يحتاج إلى تفكير؟</h1>
+    <p class="sub">بعض العبارات صحيحة، وبعضها خاطئة… وبعضها يخدعك لأنه ناقص. من ينتبه؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ١٥ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>التفكير النقدي</b></span>
+      <span class="chip">القيمة: <b>عدم التسرّع في الحكم</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function play() {
+  round++; locked = false;
+  cur = bag.next();
+  K.stage.innerHTML = '';
+
+  const wrap = K.el('div', 'claim');
+  wrap.innerHTML = `
+    <div class="rowline cat">
+      <span class="chip">الجولة <b>${Kit.AR(round)} / ${Kit.AR(ROUNDS)}</b></span>
+      <span class="chip">المجال: <b>${Kit.esc(cur.c)}</b></span>
+    </div>
+    <div class="txt">${Kit.esc(cur.t)}</div>`;
+
+  const tRow = K.el('div', 'rowline');
+  const ring = K.el('div', 'ring', '<i></i>');
+  const tim = K.el('div', 'timer'); tim.appendChild(ring);
+  tRow.appendChild(tim);
+  wrap.appendChild(tRow);
+
+  const ans = K.el('div', 'answers');
+  ans.style.marginTop = '16px';
+  const options = [
+    ['t', '✔ صحيحة', 'ans-t'],
+    ['f', '✘ غير صحيحة', 'ans-f'],
+    ['think', '🤔 تحتاج إلى تفكير', 'ans-think'],
+  ];
+  options.forEach(([v, label, cls]) => {
+    const b = K.el('button', 'btn ' + cls, label);
+    b.onclick = () => answer(b, v, wrap, ans);
+    ans.appendChild(b);
+  });
+  wrap.appendChild(ans);
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '16px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'تعليلٌ جميل'], [1, 'انتبه لكلمة خادعة'], [1, 'غيّر رأيه بدليل'],
+  ]));
+
+  timer = K.Timer({ secs: THINK_SECS, ring,
+    onEnd: () => { if (!locked) K.say('انتهى وقت التشاور — ما إجابتكم؟', 'info'); } });
+  timer.start();
+}
+
+function answer(btn, v, wrap, ans) {
+  if (locked) return;
+  locked = true;
+  timer.pause();
+  btn.classList.add('picked');
+  [...ans.children].forEach(b => { if (b !== btn) b.style.opacity = .45; b.style.pointerEvents = 'none'; });
+
+  const correct = v === cur.v;
+  correct ? (K.SFX.win(), K.praise()) : (K.SFX.soft(), K.encourage());
+
+  const labels = { t: 'صحيحة', f: 'غير صحيحة', think: 'تحتاج إلى تفكير' };
+  const why = K.el('div', 'why');
+  why.innerHTML = `<span class="ic">${correct ? '🌟' : '💡'}</span>
+    <span><b>الإجابة: ${labels[cur.v]}.</b><br/>${Kit.esc(cur.why)}</span>`;
+  wrap.insertBefore(why, wrap.querySelector('.teams'));
+
+  const nx = K.el('button', 'btn p big', round < ROUNDS ? 'العبارة التالية ←' : 'ختام النشاط ←');
+  nx.style.marginTop = '14px';
+  nx.onclick = () => {
+    K.SFX.tap();
+    if (round < ROUNDS) play();
+    else K.reflect({
+      value: 'التفكير قبل الحكم',
+      questions: [
+        'ما الكلمات التي كانت تخدعنا في العبارات؟',
+        'متى تكون الإجابة الصحيحة «أحتاج أن أفكّر أكثر»؟',
+        'ما عبارةٌ سمعناها خارج المدرسة وتحتاج تفكيراً؟',
+      ],
+    }, home);
+  };
+  wrap.insertBefore(nx, wrap.querySelector('.teams'));
+}
+
+home();
+</script>
+</body>
+</html>

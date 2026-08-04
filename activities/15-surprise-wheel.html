@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>عجلة المفاجآت</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.wheelwrap{position:relative;width:min(62vw,46vh,440px);margin:0 auto 14px}
+.wheelwrap svg{width:100%;height:auto;display:block}
+#rotor{transform-origin:250px 250px;transition:transform 4.2s cubic-bezier(.12,.68,.16,1)}
+.ptr{position:absolute;inset-inline-start:50%;inset-block-start:-12px;transform:translateX(-50%);z-index:3}
+.task15{max-width:940px;width:100%;text-align:center;animation:pop .4s both}
+.task15 .kind{display:inline-flex;margin-bottom:10px}
+.task15 .txt{font-size:clamp(20px,3vw,38px);font-weight:800;line-height:1.55;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);padding:clamp(18px,2.8vw,38px)}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٥ — عجلة المفاجآت
+   تمايزه عن عجلة الأسئلة في المنصة: تلك تختار «من يُجيب» على أسئلة
+   المعلّمة — وهذه تختار «نوع المهمّة» من سبعة أنواعٍ ببنك مهامّ جاهز:
+   حركة، لغز، قيمة، تمثيل، مهمة إبداعية… العجلة هنا مصدر المحتوى نفسه.
+   ═══════════════════════════════════════════════════════════════════ */
+const SECTORS = [
+  {id:'q',    n:'سؤال',        f:'❓', c:'#487848',
+   pool:['ما فصول السنة الأربعة؟','اذكر ثلاثة حيواناتٍ تعيش في الماء.','ما ألوان علم سلطنة عُمان؟',
+     'كم عدد أصابع اليدين معاً؟','ما اسم صغير القطة؟','اذكر ثلاث فواكه صيفية.']},
+  {id:'move', n:'حركة',        f:'🏃', c:'#D86048',
+   pool:['اقفزوا في أماكنكم خمس قفزاتٍ خفيفة!','قلّدوا مشية البطريق حول مقاعدكم مرّة واحدة!',
+     'مدّدوا الأذرع للسماء وعدّوا إلى عشرة!','صفّقوا بإيقاع: بطيء، سريع، بطيء!','قفوا على قدمٍ واحدة وعدّوا إلى ثمانية!']},
+  {id:'riddle', n:'لغز',       f:'🧩', c:'#2F7D74',
+   pool:['له أسنانٌ ولا يعضّ — ما هو؟ (المشط)','يمشي بلا قدمين ويدخل الأذنين — ما هو؟ (الصوت)',
+     'كلّما زاد نقص — ما هو؟ (العمر/الحفرة)','ترى كل شيءٍ وليس لها عيون — ما هي؟ (المرآة)',
+     'يحملك وتحمله في آنٍ واحد — ما هو؟ (الحذاء)']},
+  {id:'value', n:'قيمة',       f:'💛', c:'#D9A93C',
+   pool:['اذكروا ثلاث طرقٍ لإظهار الاحترام للمعلّمة.','ما أجمل كلمة شكرٍ سمعتموها؟ ومن قالها؟',
+     'اذكروا موقفاً ساعدكم فيه صديق.','كيف نعتذر اعتذاراً جميلاً حين نخطئ؟','اذكروا سلوكاً يجعل الصف مكاناً أسعد.']},
+  {id:'team', n:'تحدٍّ جماعي', f:'🤝', c:'#8B2635',
+   pool:['يعدّ الصف من ١ إلى ١٥ — كلُّ عددٍ بصوت طالبٍ مختلف دون اتفاق!','شكّلوا بأجسادكم حرف «م» — الصف كلّه معاً!',
+     'همهموا نشيداً واحداً معاً حتى يكتمل — بلا كلمات!','مرّروا تصفيقةً واحدة من أول طالبٍ لآخر طالبٍ كالموجة!']},
+  {id:'create', n:'مهمّة إبداعية', f:'🎨', c:'#6B4E9E',
+   pool:['اخترعوا اسماً مضحكاً لروبوت ينظّف الصفوف.','لو كان لصفّنا عَلَم، ماذا نرسم عليه؟',
+     'أكملوا: «لو كنتُ طائراً لَ…» — ثلاث إجاباتٍ مختلفة.','اخترعوا تحيّةً جديدة للصف بحركةٍ وكلمة.']},
+  {id:'star', n:'نجمة إضافية', f:'⭐', c:'#B0721A',
+   pool:['مبارك! نجمةٌ هديّة للفريق — ولها شرط: قولوا لفريقٍ آخر كلمة تشجيعٍ صادقة.']},
+];
+/* بنك لكل قطاع + منع تكرار القطاع مرتين متتاليتين */
+let lastSector = null;
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg15" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F6E3CE"/><stop offset="1" stop-color="#F2E7CE"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg15)"/>
+  <path d="M0 90q400 70 800 0t800 0" fill="none" stroke="#2A1503" stroke-width="4"/>
+  <g stroke="#2A1503" stroke-width="3">
+    <path d="M150 96l20 40 22-36z" fill="#D86048"/><path d="M400 116l20 40 22-36z" fill="#487848"/>
+    <path d="M650 100l20 40 22-36z" fill="#D9A93C"/><path d="M900 88l20 40 22-36z" fill="#2F7D74"/>
+    <path d="M1150 106l20 40 22-36z" fill="#6B4E9E"/><path d="M1400 96l20 40 22-36z" fill="#8B2635"/>
+  </g>
+  <!-- خيمتان -->
+  <g stroke="#2A1503" stroke-width="5">
+    <path d="M80 700l110-190 110 190z" fill="#D86048"/>
+    <path d="M136 700l54-94 54 94z" fill="#FFF9F0"/>
+    <path d="M1300 720l100-170 100 170z" fill="#2F7D74"/>
+    <path d="M1350 720l50-84 50 84z" fill="#FFF9F0"/>
+  </g>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4" opacity=".75">
+    <path d="M520 200l12 25 27 4-19 19 4 27-24-13-24 13 4-27-19-19 27-4z"/>
+    <path d="M1080 230l10 21 23 3-16 16 4 23-21-11-21 11 4-23-16-16 23-3z"/></g>
+  <rect y="800" width="1600" height="100" fill="#DEC591"/>
+  <path d="M0 800h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, bags = {}, spinning = false, angle = 0;
+
+K = Kit.build({
+  title: 'عجلة المفاجآت',
+  accent: '#D86048', accent2: '#A8402C',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'كسر الرتابة بمهامّ متنوّعة تُقرّرها العجلة: سؤال، حركة، لغز، قيمة، تحدٍّ جماعي، مهمّة إبداعية — فيتوازن اليوم بين التفكير والحركة والمرح.',
+    tools: 'الشاشة فقط. قطاع الحركة يحتاج مساحةً آمنة بجانب المقاعد.',
+    groups: 'فريقان إلى أربعة تدور لهم العجلة بالتناوب — أو الصف كلّه والمهمة للجميع.',
+    steps: [
+      'فريقُ الدور يضغط «أديروا العجلة» (أو تضغطين أنتِ).',
+      'تتوقّف العجلة على قطاع — تظهر مهمّته فوراً.',
+      'ينفّذ الفريق (أو الصف) المهمّة.',
+      'نقطة للفريق المنفّذ، ثم الدور للفريق التالي.',
+      'العجلة لا تعيد القطاع نفسه مرّتين متتاليتين.',
+    ],
+    time: '١٠ إلى ٢٠ دقيقة — مرنٌ حسب عدد الدورات.',
+    script: 'هذه عجلة المفاجآت — لا أحد يعلم ماذا تخبّئ! قد تطلب منكم قفزاً، وقد تسأل لغزاً، وقد تهديكم نجمة. استعدّوا لكل شيء… وأديروها!',
+    tips: 'دعي طالباً مختلفاً يضغط زرّ الدوران في كل مرّة — لحظة الضغط نفسها جائزة. وفي قطاع الحركة شاركي بنفسك؛ رؤية المعلّمة تقفز تُطلق الصف كلّه.',
+    points: 'نقطة لكل مهمّة منفّذة، وقطاع النجمة نقطته مشروطة بكلمة تشجيعٍ لفريقٍ آخر — هكذا حتى الحظّ يعلّم اللطف.',
+    levels: 'الأصغر: ساعديهم في الألغاز بتمثيل الإجابة. الأكبر: بعد كل لغزٍ اطلبي منهم تأليف لغزٍ مشابه.',
+    close: [
+      'أيّ قطاعٍ تمنّيتم أن تقف عنده العجلة؟ ولماذا؟',
+      'أيّ مهمّةٍ فاجأتكم بصعوبتها أو سهولتها؟',
+      'لماذا نحتاج التنويع: مرّة حركة ومرّة تفكير؟',
+    ],
+  },
+});
+
+SECTORS.forEach(s => bags[s.id] = K.Bag(s.pool));
+
+function wheelSvg() {
+  const n = SECTORS.length, step = 360 / n, r = 230, cx = 250, cy = 250;
+  const segs = SECTORS.map((s, i) => {
+    const a0 = (i * step - 90) * Math.PI / 180, a1 = ((i + 1) * step - 90) * Math.PI / 180;
+    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const am = (i + .5) * step - 90, amr = am * Math.PI / 180;
+    const tx = cx + r * .62 * Math.cos(amr), ty = cy + r * .62 * Math.sin(amr);
+    return `<path d="M${cx} ${cy}L${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}z"
+      fill="${s.c}" stroke="#2A1503" stroke-width="4"/>
+      <g transform="translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${am + 90})">
+        <text y="-6" font-size="34" text-anchor="middle">${s.f}</text>
+        <text y="26" font-size="19" font-weight="bold" fill="#FFF9F0" text-anchor="middle">${s.n}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 500 500">
+    <g id="rotor">${segs}
+      <circle cx="250" cy="250" r="46" fill="#FFF9F0" stroke="#2A1503" stroke-width="5"/>
+      <text x="250" y="262" font-size="34" text-anchor="middle">🎡</text></g>
+    <circle cx="250" cy="250" r="238" fill="none" stroke="#2A1503" stroke-width="7"/>
+  </svg>`;
+}
+
+function home() {
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="52" r="38" fill="#FFF9F0" stroke="#2A1503" stroke-width="5"/>
+      <path d="M50 52L50 14A38 38 0 0 1 83 33z" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+      <path d="M50 52L83 33A38 38 0 0 1 88 52z" fill="#D9A93C" stroke="#2A1503" stroke-width="4"/>
+      <path d="M50 52L17 33A38 38 0 0 1 50 14z" fill="#487848" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="50" cy="52" r="9" fill="#2A1503"/>
+      <path d="M50 6l-6 10h12z" fill="#8B2635" stroke="#2A1503" stroke-width="3"/>
+    </svg>
+    <h1>عجلة المفاجآت</h1>
+    <p class="sub">سبعة قطاعات… ولا أحد يعلم أين تقف. سؤال؟ حركة؟ لغز؟ أم نجمة؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ٢٠ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>المرونة والتنوّع</b></span>
+      <span class="chip">القيمة: <b>حتى الحظّ يعلّم اللطف</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'إلى العجلة!');
+  b1.onclick = () => { K.SFX.ok(); wheelView(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function wheelView() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:100%';
+
+  const ww = K.el('div', 'wheelwrap');
+  ww.innerHTML = `<div class="ptr"><svg width="44" height="40" viewBox="0 0 44 40">
+    <path d="M22 40L4 4h36z" fill="#8B2635" stroke="#2A1503" stroke-width="4"/></svg></div>` + wheelSvg();
+  wrap.appendChild(ww);
+
+  const spin = K.el('button', 'btn p big', '🎡 أديروا العجلة!');
+  spin.onclick = () => doSpin(spin, ww, wrap);
+  wrap.appendChild(spin);
+
+  const taskHost = K.el('div', ''); taskHost.id = 'task-host';
+  taskHost.style.cssText = 'width:100%;display:flex;justify-content:center;margin-top:14px';
+  wrap.appendChild(taskHost);
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '14px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'نفّذ بحماس'], [1, 'شجّع فريقاً آخر'], [1, 'التزم بالدور'],
+  ]));
+
+  K.bottom.querySelectorAll('.round-tool').forEach(x => x.remove());
+  const fin = K.tool('ختام النشاط ←', 'الختام', () => K.reflect({
+    value: 'المرونة',
+    questions: [
+      'أيّ قطاعٍ كان المفضّل؟ ولماذا؟',
+      'كيف تصرّفنا حين وقفت العجلة على ما لا نحبّ؟',
+      'لماذا يحتاج يومنا تنويعاً بين حركةٍ وتفكير؟',
+    ],
+  }, home), 'p');
+  fin.classList.add('round-tool');
+  K.addTool(fin);
+}
+
+function doSpin(btn, ww, wrap) {
+  if (spinning) return;
+  spinning = true;
+  btn.disabled = true;
+  document.getElementById('task-host').innerHTML = '';
+
+  // اختر قطاعاً (غير الأخير) ثم احسب زاوية الوصول إليه
+  let sector;
+  do { sector = SECTORS[Math.floor(Math.random() * SECTORS.length)]; }
+  while (SECTORS.length > 1 && sector === lastSector);
+  lastSector = sector;
+
+  const idx = SECTORS.indexOf(sector);
+  const step = 360 / SECTORS.length;
+  // المؤشّر أعلى العجلة: القطاع idx يقع تحت المؤشّر حين تكون زاوية دورانه
+  const target = 360 * 5 - (idx * step + step / 2) + (Math.random() * step * .5 - step * .25);
+  angle += target + (360 - (angle % 360));
+  ww.querySelector('#rotor').style.transform = `rotate(${angle}deg)`;
+
+  // نقراتٌ تتباطأ مع العجلة
+  let t = 0, gap = 60;
+  (function tick() { if (t > 3600) return; K.SFX.tick(); t += gap; gap = Math.min(400, gap * 1.13); setTimeout(tick, gap); })();
+
+  setTimeout(() => {
+    spinning = false; btn.disabled = false;
+    K.SFX.win();
+    const task = bags[sector.id].next();
+    const host = document.getElementById('task-host');
+    const card = K.el('div', 'task15');
+    card.innerHTML = `<span class="chip kind" style="border-color:${sector.c}">${sector.f} <b>${sector.n}</b></span>
+      <div class="txt">${Kit.esc(task)}</div>`;
+    host.appendChild(card);
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+  }, 4400);
+}
+
+home();
+</script>
+</body>
+</html>

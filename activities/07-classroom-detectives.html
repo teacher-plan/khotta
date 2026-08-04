@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>محقّقو الصف</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.case{max-width:1050px;width:100%;animation:up .35s both}
+.case h2{font-size:clamp(23px,3.2vw,40px);margin:0 0 8px;text-align:center}
+.case .brief{font-size:clamp(17px,2.1vw,24px);text-align:center;background:var(--paper);
+  border:3px solid var(--ink);border-radius:16px;padding:16px 22px;margin-bottom:16px;line-height:1.75}
+.clues{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-bottom:16px}
+.clue{background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:14px 16px;
+  min-height:96px;position:relative;font-size:clamp(15.5px,1.8vw,20px);line-height:1.65}
+.clue .no{position:absolute;inset-block-start:-13px;inset-inline-start:14px;background:var(--a);
+  color:#fff;border:2px solid var(--ink);border-radius:99px;padding:2px 13px;font-weight:800;font-size:14px}
+.clue.hidden-c{display:grid;place-items:center;cursor:pointer;background:var(--sand);
+  border-style:dashed;font-weight:800;color:var(--a2)}
+.clue.hidden-c:hover{background:var(--gold)}
+.clue.shown{animation:pop .3s both}
+.suspects{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.sus{background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:13px 15px;
+  cursor:pointer;text-align:center;font-weight:800;font-size:clamp(15.5px,1.8vw,20px)}
+.sus .f{font-size:38px;display:block;margin-bottom:4px}
+.sus:hover{background:var(--gold)}
+.sus.right{background:var(--ok);color:#fff}
+.sus.wrong{opacity:.45;pointer-events:none}
+.solve{margin-top:16px;background:var(--paper);border:3px solid var(--ink);border-radius:16px;
+  padding:16px 20px;font-size:clamp(16px,2vw,22px);line-height:1.8;animation:up .3s both}
+.qbox{background:var(--sand);border:2px dashed var(--ink);border-radius:12px;padding:11px 16px;
+  margin-bottom:14px;font-weight:800;font-size:clamp(15.5px,1.9vw,21px);text-align:center}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٧ — محقّقو الصف
+   الهدف: الملاحظة والاستدلال — وقيمته الأخصّ: «لا نتّهم قبل الدليل».
+   القرار التربوي: كل قضيّةٍ حلُّها بريء — لا يوجد «مذنب» بين الشخصيات،
+   بل سوء فهمٍ يكشفه الدليل. هكذا يتدرّب الصف على الاستنتاج دون أن
+   يتدرّب على الاتهام.
+   ═══════════════════════════════════════════════════════════════════ */
+const CASES = [
+  {
+    title:'قضية بطاقة المكتبة المختفية',
+    brief:'استعارت سارة كتاباً من مكتبة المدرسة، وحين أرادت إعادته لم تجد بطاقة المكتبة في محفظتها. آخر مرّة رأتها كانت صباح أمس.',
+    clues:[
+      'أمينة المكتبة: «سارة استعارت الكتاب أمس صباحاً، والبطاقة كانت معها».',
+      'زميلتها مريم: «رأيتُ سارة تضع البطاقة داخل الكتاب نفسه كي لا تنساها».',
+      'الكتاب المستعار ما زال في حقيبة سارة منذ أمس ولم تفتحه.',
+      'محفظة سارة فيها كل بطاقاتها الأخرى — لم يضِع منها شيءٌ غير بطاقة المكتبة.',
+    ],
+    q:'أين البطاقة على الأرجح؟',
+    suspects:[
+      {f:'📖', t:'داخل الكتاب في حقيبتها', ok:true},
+      {f:'🏫', t:'سقطت في ساحة المدرسة', ok:false},
+      {f:'🧍', t:'أخذها أحد الزملاء', ok:false},
+    ],
+    solve:'الدليل ٢ يقول إنها وضعتها داخل الكتاب، والدليل ٣ يقول إن الكتاب لم يُفتح منذ أمس — إذن البطاقة ما زالت بين صفحاته! لاحظوا: كاد الظنّ يتّجه إلى «أحدٍ أخذها»، لكن الدليل قادنا لمكانٍ أبسط وأقرب.',
+    value:'لا نتّهم أحداً قبل أن نجمع الأدلّة.',
+  },
+  {
+    title:'قضية الفوضى في ركن القراءة',
+    brief:'دخلت المعلّمة صباحاً فوجدت كتب ركن القراءة على الأرض، والسجّادة مُزاحة. الصف كان مغلقاً طوال الليل.',
+    clues:[
+      'عامل النظافة: «نظّفتُ الصف مساءً، وكان الركن مرتّباً، والنافذة كانت مفتوحةً قليلاً للتهوية».',
+      'كتب الرفّ الأعلى فقط هي التي سقطت — كتب الرفوف السفلى في أماكنها.',
+      'ليلة أمس هبّت رياحٌ قويّة سمعها الجميع في الحيّ.',
+      'لا ينقص من الركن كتابٌ واحد — كلّها موجودة على الأرض.',
+    ],
+    q:'ما سبب الفوضى على الأرجح؟',
+    suspects:[
+      {f:'🌬️', t:'الرياح من النافذة المفتوحة', ok:true},
+      {f:'🧒', t:'طالبٌ عبث بالركن', ok:false},
+      {f:'🐈', t:'قطّة دخلت الصف', ok:false},
+    ],
+    solve:'النافذة مفتوحة + رياحٌ قويّة + سقوط كتب الرفّ الأعلى وحده (الأقرب للنافذة) + لا شيء مفقود = الفاعل هو الريح! لو كان شخصاً لَما سقطت كتب الأعلى فقط، ولربّما نقص شيء.',
+    value:'الدليل الصغير (أيّ رفٍّ سقط؟) قد يحلّ القضيّة كلّها.',
+  },
+  {
+    title:'قضية الأدوات في المكان الخطأ',
+    brief:'وجدت المعلّمة علبة ألوان الصف كاملةً داخل صندوق أدوات الرياضة، مع أنها تعود دائماً إلى خزانة الفنون.',
+    clues:[
+      'حصّة أمس الأخيرة كانت رسماً في ساحة المدرسة بجانب ملعب الرياضة.',
+      'مشرفة الفنون: «طلبتُ من الطلاب جمع الأدوات بسرعة لأن المطر بدأ ينزل».',
+      'صندوق الرياضة كان أقرب صندوقٍ إلى مكان الرسم في الساحة.',
+      'العلبة كاملةٌ ومرتّبة — من وضعها هناك رتّبها بعناية.',
+    ],
+    q:'كيف وصلت الألوان إلى صندوق الرياضة؟',
+    suspects:[
+      {f:'🌧️', t:'وضعها الطلاب في أقرب صندوقٍ هرباً من المطر', ok:true},
+      {f:'🙈', t:'أحدهم أراد إخفاءها مازحاً', ok:false},
+      {f:'🤷', t:'أخطأت المشرفة في العدّ ولم تكن في الخزانة أصلاً', ok:false},
+    ],
+    solve:'مطرٌ مفاجئ + أمرٌ بالجمع السريع + صندوق الرياضة هو الأقرب + ترتيبٌ بعناية = الطلاب أنقذوا الألوان من المطر في أقرب مكانٍ آمن! ليست فوضى بل تصرّفٌ ذكيّ لم يُفهم.',
+    value:'أحياناً ما يبدو خطأً هو تصرّفٌ حسنٌ لم نفهم ظروفه.',
+  },
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg7" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#DFE3E8"/><stop offset="1" stop-color="#F2EBDC"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg7)"/>
+  <!-- لوح التحقيق -->
+  <g stroke="#2A1503" stroke-width="6">
+    <rect x="60" y="120" width="330" height="250" rx="12" fill="#C9A87C"/>
+    <rect x="90" y="150" width="90" height="70" fill="#FFF9F0" transform="rotate(-4 135 185)" stroke-width="3"/>
+    <rect x="210" y="160" width="90" height="70" fill="#FBF0CE" transform="rotate(3 255 195)" stroke-width="3"/>
+    <rect x="140" y="260" width="90" height="70" fill="#DFF0E2" transform="rotate(-2 185 295)" stroke-width="3"/>
+    <path d="M135 185L255 195M255 195L185 295" stroke="#8B2635" stroke-width="3" fill="none"/>
+    <circle cx="135" cy="185" r="6" fill="#8B2635" stroke-width="2"/>
+    <circle cx="255" cy="195" r="6" fill="#8B2635" stroke-width="2"/>
+    <circle cx="185" cy="295" r="6" fill="#8B2635" stroke-width="2"/>
+  </g>
+  <!-- عدسة -->
+  <g stroke="#2A1503" stroke-width="7" fill="none">
+    <circle cx="1400" cy="250" r="80" fill="#DCEBF5" fill-opacity=".55"/>
+    <path d="M1345 308l-70 74" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <!-- ملفات -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="1280" y="620" width="220" height="150" rx="8" fill="#D9A93C" transform="rotate(-3 1390 695)"/>
+    <rect x="1300" y="600" width="220" height="150" rx="8" fill="#E8D9A8" transform="rotate(2 1410 675)"/>
+    <path d="M1320 640h180M1320 672h180M1320 704h130" stroke-width="3" opacity=".5"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="5" fill="#FFF9F0" opacity=".9">
+    <circle cx="260" cy="700" r="46"/><path d="M260 700l18-26M260 700h24" stroke-linecap="round" fill="none"/>
+  </g>
+  <rect y="830" width="1600" height="70" fill="#B8A184"/>
+  <path d="M0 830h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, caseIdx = 0, cur = null, shown = 0, solved = false;
+
+K = Kit.build({
+  title: 'محقّقو الصف',
+  accent: '#4B5D6B', accent2: '#35434E',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الملاحظة والاستدلال: يجمع الصف الأدلّة واحداً واحداً ويبني الاستنتاج منها — والدرس الأعمق: لا اتهام قبل الدليل، وكل القضايا هنا حلّها بريء.',
+    tools: 'الشاشة فقط. ويُفيد دفترُ تحقيقٍ ورقيّ لكل فريقٍ يكتب فيه استنتاجه قبل الكشف.',
+    groups: 'فرقُ تحقيقٍ من ٣–٥. كلّ فريقٍ يتشاور سرّاً قبل إعلان استنتاجه.',
+    steps: [
+      'اقرئي وصف القضيّة بصوت المحقّق الغامض.',
+      'اكشفي الأدلّة واحداً واحداً — وبعد كلّ دليل اسألي: «ماذا تغيّر في ظنّكم؟»',
+      'قبل كشف الدليل الأخير: كل فريقٍ يكتب أو يُعلن استنتاجه.',
+      'افتحي الاحتمالات ودعي الفرق تختار.',
+      'اقرئي الحلّ وناقشي: أيّ دليلٍ كان المفتاح؟',
+    ],
+    time: '١٥ إلى ٢٠ دقيقة لقضيّتين.',
+    script: 'محقّقو الصف! لدينا قضيّةٌ غامضة… ومهمّتنا أن نصل إلى الحقيقة بالأدلّة لا بالتخمين. القاعدة الذهبية: المحقّق الجيّد لا يتّهم أحداً قبل أن يجمع كل الأدلّة!',
+    tips: 'أوقفي أيّ اتهامٍ متسرّع بلطف: «دليلك؟». ولاحظي أن حلول القضايا كلّها بريئة — استعملي ذلك في الختام: كم مرّة ظننّا السوء وكان التفسير بسيطاً؟',
+    points: 'نقطةٌ للاستنتاج الصحيح، ونقطتان لفريقٍ غيّر استنتاجه بعد دليلٍ جديد وعلّل — تغيير الرأي بالدليل أثمن من إصابة التخمين.',
+    levels: 'الأصغر: اكشفي الأدلّة كلّها قبل السؤال. الأكبر: أخفي الدليل الرابع واسأليهم أيّ دليلٍ إضافيٍّ يحتاجون.',
+    close: [
+      'أيّ دليلٍ حلّ القضيّة فعلاً؟',
+      'هل اتّهمنا أحداً قبل الدليل؟ ماذا نتعلّم؟',
+      'كل الحلول كانت بريئة — ماذا يقول ذلك عن سوء الظنّ؟',
+    ],
+  },
+});
+
+function home() {
+  caseIdx = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="42" cy="42" r="26" fill="#DCEBF5" stroke="#2A1503" stroke-width="6"/>
+      <path d="M61 61l22 22" stroke="#2A1503" stroke-width="10" stroke-linecap="round"/>
+      <path d="M32 42l8 8 13-15" stroke="#4B5D6B" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>محقّقو الصف</h1>
+    <p class="sub">قضايا غامضة وأدلّةٌ تُكشف واحداً واحداً… والقاعدة: لا اتهام قبل الدليل.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٥ – ٢٠ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>الاستدلال المنطقي</b></span>
+      <span class="chip">القيمة: <b>حُسن الظنّ والتثبّت</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'افتحوا القضيّة الأولى');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function play() {
+  cur = CASES[caseIdx];
+  shown = 0; solved = false;
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'case');
+  wrap.innerHTML = `
+    <div class="rowline" style="margin-bottom:10px">
+      <span class="chip">القضيّة <b>${Kit.AR(caseIdx + 1)} / ${Kit.AR(CASES.length)}</b></span>
+    </div>
+    <h2>🕵️ ${Kit.esc(cur.title)}</h2>
+    <div class="brief">${Kit.esc(cur.brief)}</div>`;
+
+  const clues = K.el('div', 'clues');
+  cur.clues.forEach((c, i) => {
+    const d = K.el('div', 'clue hidden-c', `🔍 اكشفوا الدليل ${Kit.AR(i + 1)}`);
+    d.onclick = () => {
+      if (!d.classList.contains('hidden-c')) return;
+      d.className = 'clue shown';
+      d.innerHTML = `<span class="no">دليل ${Kit.AR(i + 1)}</span>${Kit.esc(c)}`;
+      shown++; K.SFX.soft();
+      if (shown === cur.clues.length) {
+        K.say('كل الأدلّة مكشوفة — ما استنتاج الفرق؟', 'info');
+        sus.style.display = '';
+        qb.style.display = '';
+      }
+    };
+    clues.appendChild(d);
+  });
+  wrap.appendChild(clues);
+
+  const qb = K.el('div', 'qbox', '❓ ' + Kit.esc(cur.q));
+  qb.style.display = 'none';
+  wrap.appendChild(qb);
+
+  const sus = K.el('div', 'suspects');
+  sus.style.display = 'none';
+  cur.suspects.forEach(o => {
+    const d = K.el('div', 'sus', `<span class="f">${o.f}</span>${Kit.esc(o.t)}`);
+    d.onclick = () => {
+      if (solved) return;
+      if (o.ok) {
+        solved = true;
+        d.classList.add('right');
+        [...sus.children].forEach(x => { if (x !== d) x.classList.add('wrong'); });
+        K.SFX.win(); K.praise();
+        const sv = K.el('div', 'solve', `<b>📋 حلّ القضيّة:</b><br/>${Kit.esc(cur.solve)}<br/><br/>💛 <b>${Kit.esc(cur.value)}</b>`);
+        wrap.appendChild(sv);
+        const nx = K.el('button', 'btn p big', caseIdx < CASES.length - 1 ? 'القضيّة التالية ←' : 'ختام النشاط ←');
+        nx.style.cssText = 'margin-top:14px;display:block;margin-inline:auto';
+        nx.onclick = () => {
+          K.SFX.tap();
+          if (caseIdx < CASES.length - 1) { caseIdx++; play(); }
+          else K.reflect({
+            value: 'التثبّت وحُسن الظنّ',
+            questions: [
+              'أيّ دليلٍ في القضايا كان «المفتاح»؟',
+              'كل الحلول كانت بريئة — ماذا نتعلّم عن سوء الظنّ؟',
+              'ماذا نفعل حين نرى شيئاً غريباً في الصف قبل أن نتّهم؟',
+            ],
+          }, home);
+        };
+        wrap.appendChild(nx);
+        setTimeout(() => sv.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+      } else {
+        d.classList.add('shake'); K.SFX.soft(); K.encourage();
+        setTimeout(() => d.classList.remove('shake'), 420);
+      }
+    };
+    sus.appendChild(d);
+  });
+  wrap.appendChild(sus);
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '16px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'استنتاجٌ بدليل'], [2, 'غيّر رأيه بعد دليل'], [1, 'لم يتّهم أحداً'],
+  ]));
+}
+
+home();
+</script>
+</body>
+</html>

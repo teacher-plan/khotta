@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>الصورة تتكلّم</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.frame{width:min(88vw,54vh*1.5,860px);aspect-ratio:3/2;border:12px solid #8B5E34;outline:4px solid var(--ink);
+  border-radius:8px;background:#FFF9F0;box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
+.frame svg{width:100%;height:100%;display:block}
+.qsteps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.qsteps button{border:3px solid var(--ink);border-radius:99px;background:var(--paper);cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:clamp(13px,1.6vw,16.5px);padding:9px 15px;min-height:48px;opacity:.6}
+.qsteps button.on{opacity:1;background:var(--gold)}
+.qsteps button.done{opacity:1;background:#DFF0E2}
+.bigq{font-size:clamp(20px,2.9vw,36px);font-weight:800;background:var(--paper);border:4px solid var(--ink);
+  border-radius:18px;box-shadow:var(--sh);padding:clamp(14px,2.2vw,28px);max-width:900px;
+  margin:0 auto 12px;animation:up .3s both;line-height:1.5}
+.hintline{font-size:clamp(14.5px,1.8vw,19px);opacity:.8;max-width:70ch;margin:0 auto;font-weight:700}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٣ — الصورة تتكلّم
+   الهدف: الملاحظة واللغة والتعبير عبر بروتوكول الأسئلة الخمسة.
+   القرار التصميمي: الصور مشاهد SVG مرسومة داخل الملف — كل مشهدٍ فيه
+   «قصةٌ معلّقة»: شيءٌ حدث للتوّ وشيءٌ يوشك — لأن سؤالَي «ماذا حدث؟»
+   و«ماذا سيحدث؟» يحتاجان مشهداً في منتصف حكاية، لا صورةً ساكنة.
+   ═══════════════════════════════════════════════════════════════════ */
+const QUESTIONS = [
+  {q:'ماذا ترون في الصورة؟', h:'نُسمّي الأشياء والأشخاص — بلا تفسيرٍ بعد. كل يدٍ تضيف شيئاً لم يُذكر.'},
+  {q:'ماذا تلاحظون؟', h:'أدقّ من الرؤية: الألوان، الملامح، شيءٌ صغير في الزاوية… ما الذي لا يُرى من أول نظرة؟'},
+  {q:'ماذا تعتقدون أنه حدث قبل قليل؟', h:'نبني القصة من الأدلّة — ولكلّ رأيٍ دليله من الصورة نفسها.'},
+  {q:'ماذا قد يحدث بعد ذلك؟', h:'توقّعاتٌ مفتوحة — أكثر من نهايةٍ ممكنة، والمعلّلة أجمل.'},
+  {q:'ما القيمة التي تتكلّم بها الصورة؟', h:'لو نطقت الصورة بنصيحةٍ واحدة، ماذا تقول؟'},
+];
+const PICTURES = [
+  {title:'العشّ الذي سقط', value:'الرحمة بالمخلوقات',
+   svg:`<svg viewBox="0 0 900 600">
+    <rect width="900" height="600" fill="#D8ECF2"/>
+    <circle cx="780" cy="90" r="52" fill="#FFD97A" stroke="#2A1503" stroke-width="4"/>
+    <rect y="470" width="900" height="130" fill="#8FBF7A"/>
+    <path d="M0 470h900" stroke="#2A1503" stroke-width="4"/>
+    <path d="M180 470V150" stroke="#2A1503" stroke-width="10"/>
+    <circle cx="180" cy="120" r="85" fill="#5E9E52" stroke="#2A1503" stroke-width="5"/>
+    <path d="M180 210q60 10 90 40" stroke="#2A1503" stroke-width="7" fill="none"/>
+    <!-- العش على الأرض وبيضة -->
+    <ellipse cx="330" cy="500" rx="58" ry="24" fill="#B0721A" stroke="#2A1503" stroke-width="4"/>
+    <path d="M285 495q45-18 90 0" stroke="#8A5713" stroke-width="4" fill="none"/>
+    <ellipse cx="330" cy="488" rx="14" ry="18" fill="#F5F0E6" stroke="#2A1503" stroke-width="3"/>
+    <!-- عصفور فوق يراقب -->
+    <g transform="translate(255 190)">
+      <ellipse rx="24" ry="18" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="20" cy="-10" r="12" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="24" cy="-12" r="2.6" fill="#2A1503"/>
+      <path d="M30 -8l12 3-12 4z" fill="#E8C34A" stroke="#2A1503" stroke-width="2.5"/>
+    </g>
+    <!-- طفلان يقتربان -->
+    <g transform="translate(620 420)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-58" r="20" fill="#F3D9C4"/>
+      <path d="M0 -38v52M0 -26l-24 20M0 -26l22 14M0 14l-16 34M0 14l16 34" fill="none" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(710 435)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-50" r="17" fill="#E8C4A8"/>
+      <path d="M0 -33v45M0 -22l-20 16M0 -22l20 10M0 12l-13 30M0 12l13 30" fill="none" stroke-linecap="round"/>
+    </g>
+    <path d="M560 430q-60 40-140 55" stroke="#2A1503" stroke-width="3" stroke-dasharray="6 8" fill="none"/>
+   </svg>`},
+  {title:'المظلّة الواحدة', value:'المشاركة واللطف',
+   svg:`<svg viewBox="0 0 900 600">
+    <rect width="900" height="600" fill="#B9CBD8"/>
+    <g stroke="#5F7A8E" stroke-width="3" opacity=".7">
+      <path d="M120 40v70M240 90v70M420 30v70M600 80v70M760 40v70M320 190v60M520 210v60M680 190v60M150 260v60M820 230v60"/>
+    </g>
+    <rect y="480" width="900" height="120" fill="#7E8E99"/>
+    <path d="M0 480h900" stroke="#2A1503" stroke-width="4"/>
+    <ellipse cx="640" cy="530" rx="90" ry="14" fill="#5F7A8E"/>
+    <!-- طفل بمظلة -->
+    <g transform="translate(320 380)" stroke="#2A1503" stroke-width="4">
+      <path d="M-90 -90a90 55 0 0 1 180 0z" fill="#D86048" stroke-width="5"/>
+      <path d="M-90 -90q22 14 45 0t45 0 45 0 45 0" fill="none"/>
+      <path d="M0 -88v150" stroke-width="6"/>
+      <circle cy="-20" r="21" fill="#F3D9C4"/>
+      <path d="M0 1v60M0 14l-26 18M0 14l26 12M0 61l-17 38M0 61l17 38" fill="none" stroke-linecap="round"/>
+    </g>
+    <!-- طفل مبلل بعيد -->
+    <g transform="translate(640 400)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-46" r="19" fill="#E8C4A8"/>
+      <path d="M0 -27v55M0 -14l-22 24M0 -14l22 24M0 28l-15 36M0 28l15 36" fill="none" stroke-linecap="round"/>
+      <path d="M-30 -70q4 10 -3 14M28 -78q4 10 -3 14M-6 -90q4 10 -3 14" stroke="#5F7A8E" stroke-width="3" fill="none"/>
+    </g>
+    <path d="M420 330q90 10 150 40" stroke="#2A1503" stroke-width="3" stroke-dasharray="6 8" fill="none"/>
+   </svg>`},
+  {title:'اللوحة شبه المكتملة', value:'التعاون يُكمل الجمال',
+   svg:`<svg viewBox="0 0 900 600">
+    <rect width="900" height="600" fill="#F2E9D8"/>
+    <rect y="500" width="900" height="100" fill="#C9A87C"/>
+    <path d="M0 500h900" stroke="#2A1503" stroke-width="4"/>
+    <!-- جدارية نصف ملونة -->
+    <rect x="120" y="80" width="660" height="330" fill="#FFF9F0" stroke="#2A1503" stroke-width="6"/>
+    <g stroke="#2A1503" stroke-width="4">
+      <circle cx="290" cy="190" r="60" fill="#FFD97A"/>
+      <path d="M180 340q80-70 160-10t150 0" fill="none" stroke-width="5"/>
+      <path d="M470 200q40-46 90 0" fill="none" stroke-width="5" stroke-dasharray="8 8" opacity=".5"/>
+      <path d="M600 300q50-40 100 6" fill="none" stroke-width="5" stroke-dasharray="8 8" opacity=".5"/>
+      <circle cx="660" cy="170" r="44" fill="none" stroke-dasharray="8 8" opacity=".5"/>
+    </g>
+    <!-- سلم وطلاء -->
+    <g stroke="#2A1503" stroke-width="5">
+      <path d="M700 500L760 300M820 500l-60-200" fill="none"/>
+      <path d="M718 440h84M710 470h96M728 405h70" fill="none"/>
+    </g>
+    <g stroke="#2A1503" stroke-width="4">
+      <rect x="200" y="450" width="52" height="44" rx="6" fill="#D86048"/>
+      <rect x="280" y="455" width="48" height="40" rx="6" fill="#487848"/>
+      <path d="M370 470l70 -14 4 16-70 14z" fill="#B0721A"/>
+    </g>
+    <!-- طفلة تحمل فرشاة -->
+    <g transform="translate(520 430)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-52" r="19" fill="#F3D9C4"/>
+      <path d="M0 -33v52M0 -20l-24 14M0 -20l30 -12M0 19l-15 36M0 19l15 36" fill="none" stroke-linecap="round"/>
+      <path d="M32 -34l16 -8" stroke-width="5"/><path d="M48 -44l8 -4" stroke="#D86048" stroke-width="7"/>
+    </g>
+   </svg>`},
+  {title:'الكرسيّ الفارغ في الملعب', value:'الانتباه لمن حولنا',
+   svg:`<svg viewBox="0 0 900 600">
+    <rect width="900" height="600" fill="#D8ECDF"/>
+    <circle cx="120" cy="90" r="46" fill="#FFD97A" stroke="#2A1503" stroke-width="4"/>
+    <rect y="440" width="900" height="160" fill="#8FBF7A"/>
+    <path d="M0 440h900" stroke="#2A1503" stroke-width="4"/>
+    <!-- أطفال يلعبون كرة -->
+    <g transform="translate(280 380)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-52" r="19" fill="#F3D9C4"/>
+      <path d="M0 -33v50M0 -20l-26 8M0 -20l26 -16M0 17l-18 38M0 17l14 40" fill="none" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(420 400)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-48" r="18" fill="#E8C4A8"/>
+      <path d="M0 -30v46M0 -18l-24 -10M0 -18l24 10M0 16l-14 36M0 16l16 34" fill="none" stroke-linecap="round"/>
+    </g>
+    <circle cx="352" cy="290" r="26" fill="#fff" stroke="#2A1503" stroke-width="4"/>
+    <path d="M340 270q12 12 24 0M352 264v52M330 290h44" stroke="#2A1503" stroke-width="3" fill="none"/>
+    <!-- طفل يجلس وحده على مقعد -->
+    <g stroke="#2A1503" stroke-width="4">
+      <rect x="660" y="380" width="150" height="16" rx="6" fill="#B0721A"/>
+      <path d="M676 396v60M794 396v60" stroke-width="6"/>
+    </g>
+    <g transform="translate(735 340)" stroke="#2A1503" stroke-width="4">
+      <circle cy="-24" r="18" fill="#F3D9C4"/>
+      <path d="M0 -6v46M0 6l-20 12M0 6l20 12M0 40l-12 20M0 40l12 20" fill="none" stroke-linecap="round"/>
+      <path d="M-14 -30q6 -8 12 -6" stroke-width="3" fill="none"/>
+    </g>
+   </svg>`},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EEE6D5"/>
+  <g stroke="#2A1503" stroke-width="4" opacity=".55">
+    <rect x="70" y="150" width="170" height="130" fill="#FFF9F0" transform="rotate(-4 155 215)"/>
+    <rect x="90" y="170" width="130" height="90" fill="#D8ECF2" transform="rotate(-4 155 215)"/>
+    <rect x="1360" y="180" width="170" height="130" fill="#FFF9F0" transform="rotate(3 1445 245)"/>
+    <rect x="1380" y="200" width="130" height="90" fill="#F3D9C4" transform="rotate(3 1445 245)"/>
+    <rect x="90" y="560" width="150" height="115" fill="#FFF9F0" transform="rotate(3 165 617)"/>
+    <rect x="108" y="578" width="114" height="79" fill="#DFF0E2" transform="rotate(3 165 617)"/>
+    <rect x="1370" y="570" width="150" height="115" fill="#FFF9F0" transform="rotate(-3 1445 627)"/>
+    <rect x="1388" y="588" width="114" height="79" fill="#FBF0CE" transform="rotate(-3 1445 627)"/>
+  </g>
+  <rect y="820" width="1600" height="80" fill="#C9B48C"/>
+  <path d="M0 820h1600" stroke="#2A1503" stroke-width="5"/>
+</svg>`;
+
+let K, picIdx = 0, qIdx = 0;
+
+K = Kit.build({
+  title: 'الصورة تتكلّم',
+  accent: '#2F7D74', accent2: '#1F5A54',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الملاحظة واللغة والتعبير عبر «الأسئلة الخمسة»: من التسمية، إلى الملاحظة الدقيقة، إلى بناء القصة، إلى التوقّع، إلى استخراج القيمة.',
+    tools: 'الشاشة فقط.',
+    groups: 'الصف كلّه — النقاش الجماعي جوهر النشاط. يمكن تخصيص سؤالٍ لكل صفٍّ من المقاعد.',
+    steps: [
+      'اعرضي الصورة صامتةً ٢٠ ثانية أولاً — «نتأمّل بلا كلام».',
+      'افتحي السؤال الأول واستقبلي إجاباتٍ كثيرة قصيرة.',
+      'انتقلي بين الأسئلة الخمسة بالأزرار — لا تتجاوزي سؤالاً.',
+      'قاعدة السؤالين ٣ و٤: كل رأيٍ يحتاج دليلاً من الصورة.',
+      'اختمي الصورة بسؤال القيمة ثم انتقلي للصورة التالية.',
+    ],
+    time: '٥ إلى ٧ دقائق للصورة الواحدة.',
+    script: 'هذه الصورة لا صوت لها… لكنها تتكلّم! سنسمعها بأعيننا: أولاً نرى، ثم نلاحظ، ثم نسأل: ما الذي حدث؟ وما الذي سيحدث؟ ومن قال رأياً فليقل معه: «ودليلي من الصورة…»',
+    tips: 'صمت التأمّل الأول أهم خطوة — لا تختصريه. واحتفلي بالملاحظة الدقيقة الصغيرة أكثر من الإجابة السريعة الكبيرة. عبارة «ودليلي من الصورة» تحوّل الخيال إلى استدلال.',
+    points: 'بلا فرقٍ ونقاط — النقاش مفتوح. كافئي بالإشادة: «ملاحظة عين الصقر» لأدقّ ملاحظة، و«راوي اليوم» لأجمل قصة.',
+    levels: 'الأصغر: الأسئلة الثلاثة الأولى تكفي. الأكبر: أضيفي «لو كنتَ داخل الصورة، ماذا تفعل؟»',
+    close: [
+      'أيّ صورةٍ تكلّمت أكثر؟ وماذا قالت؟',
+      'ما الفرق بين «أرى» و«ألاحظ»؟',
+      'لماذا احتجنا دليلاً لكل رأي؟',
+    ],
+  },
+});
+
+function home() {
+  picIdx = 0; qIdx = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="12" y="20" width="76" height="56" rx="4" fill="#FFF9F0" stroke="#8B5E34" stroke-width="8"/>
+      <rect x="12" y="20" width="76" height="56" rx="4" fill="none" stroke="#2A1503" stroke-width="3"/>
+      <circle cx="34" cy="40" r="8" fill="#FFD97A" stroke="#2A1503" stroke-width="3"/>
+      <path d="M20 66l18-16 14 10 16-18 12 24z" fill="#487848" stroke="#2A1503" stroke-width="3"/>
+      <path d="M62 88q6 8 14 6t8-10" fill="none" stroke="#2A1503" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <h1>الصورة تتكلّم</h1>
+    <p class="sub">صورٌ تحمل قصصاً… وخمسة أسئلة تجعلها تنطق. أنصتوا بأعينكم!</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٥ – ٧ دقائق للصورة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>الملاحظة والتعبير</b></span>
+      <span class="chip">القيمة: <b>لكل رأيٍ دليل</b></span>
+    </div>`;
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'افتحوا المعرض');
+  b1.onclick = () => { K.SFX.ok(); show(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+}
+
+function show() {
+  const pic = PICTURES[picIdx];
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:100%';
+
+  wrap.appendChild(K.el('div', 'rowline', `<span class="chip" style="margin-bottom:10px">
+    الصورة <b>${Kit.AR(picIdx + 1)} / ${Kit.AR(PICTURES.length)}</b></span>`));
+  const fr = K.el('div', 'frame'); fr.innerHTML = pic.svg;
+  wrap.appendChild(fr);
+
+  const steps = K.el('div', 'qsteps');
+  QUESTIONS.forEach((q, i) => {
+    const b = K.el('button', i < qIdx ? 'done' : (i === qIdx ? 'on' : ''), Kit.AR(i + 1) + '. ' + q.q.split('؟')[0].slice(0, 14) + '…');
+    b.onclick = () => { qIdx = i; K.SFX.tap(); show(); };
+    steps.appendChild(b);
+  });
+  wrap.appendChild(steps);
+
+  const q = QUESTIONS[qIdx];
+  wrap.appendChild(K.el('div', 'bigq', '💬 ' + q.q));
+  wrap.appendChild(K.el('p', 'hintline', q.h));
+
+  const row = K.el('div', 'rowline'); row.style.marginTop = '14px';
+  if (qIdx < QUESTIONS.length - 1) {
+    const nx = K.el('button', 'btn p big', 'السؤال التالي ←');
+    nx.onclick = () => { qIdx++; K.SFX.tap(); show(); };
+    row.appendChild(nx);
+  } else {
+    const val = K.el('div', 'chip', `💛 قيمة هذه الصورة: <b>${Kit.esc(pic.value)}</b>`);
+    row.appendChild(val);
+    const nx = K.el('button', 'btn p big', picIdx < PICTURES.length - 1 ? 'الصورة التالية ←' : 'ختام النشاط ←');
+    nx.onclick = () => {
+      K.SFX.tap();
+      if (picIdx < PICTURES.length - 1) { picIdx++; qIdx = 0; show(); }
+      else K.reflect({
+        value: 'الملاحظة قبل الحكم',
+        questions: [
+          'أيّ صورةٍ «تكلّمت» أكثر؟ وماذا قالت لكم؟',
+          'ما أدقّ ملاحظةٍ سمعناها اليوم؟',
+          'لماذا طلبنا دليلاً من الصورة مع كل رأي؟',
+        ],
+      }, home);
+    };
+    row.appendChild(nx);
+  }
+  wrap.appendChild(row);
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

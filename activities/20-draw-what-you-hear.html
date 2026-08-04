@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>ارسم ما تسمع</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.dsc{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.dsc .lines{font-size:clamp(19px,2.7vw,32px);font-weight:800;line-height:2;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,38px);margin-bottom:16px;text-align:start}
+.dsc .lines .ln{display:block;opacity:.25;transition:opacity .4s}
+.dsc .lines .ln.on{opacity:1}
+.reveal20{width:min(84vw,46vh*1.5,700px);aspect-ratio:3/2;border:10px solid #8B5E34;outline:4px solid var(--ink);
+  border-radius:8px;background:#FFF9F0;margin:0 auto 14px;overflow:hidden;animation:pop .45s both}
+.reveal20 svg{width:100%;height:100%;display:block}
+.discuss{background:var(--gold);border:3px solid var(--ink);border-radius:15px;padding:14px 20px;
+  font-weight:800;font-size:clamp(15.5px,1.9vw,21px);max-width:820px;margin:0 auto;line-height:1.7}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٢٠ — ارسم ما تسمع
+   الهدف: دقّة الإنصات والترجمة من الأذن إلى اليد.
+   القرار التصميمي: الوصف يُعرض سطراً سطراً بضغطة المعلّمة (لا دفعةً
+   واحدة) — لأن مهارة النشاط هي الإمساك بالتفاصيل المتتابعة. والمقارنة
+   الختامية ليست «من أصاب؟» بل «أين اختلفنا ولماذا؟» — فالاختلاف نفسه
+   هو مادة الدرس.
+   ═══════════════════════════════════════════════════════════════════ */
+const PROMPTS = [
+  {level:'سهل', title:'البيت والشمس',
+   lines:['في منتصف الورقة بيتٌ صغير له بابٌ ونافذتان.','فوق البيت — في الزاوية اليمنى — شمسٌ مبتسمة.',
+     'أمام البيت شجرةٌ واحدة أطول من البيت قليلاً.','وتحت الشجرة قطّةٌ نائمة.'],
+   svg:`<svg viewBox="0 0 600 400">
+     <rect width="600" height="400" fill="#FFF9F0"/>
+     <rect x="230" y="200" width="150" height="110" fill="#F0E0C0" stroke="#2A1503" stroke-width="5"/>
+     <path d="M215 200l90-60 90 60z" fill="#D86048" stroke="#2A1503" stroke-width="5"/>
+     <rect x="285" y="255" width="36" height="55" fill="#8B5E34" stroke="#2A1503" stroke-width="4"/>
+     <rect x="245" y="222" width="28" height="26" fill="#9FD4E8" stroke="#2A1503" stroke-width="3"/>
+     <rect x="332" y="222" width="28" height="26" fill="#9FD4E8" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="510" cy="80" r="42" fill="#FFD97A" stroke="#2A1503" stroke-width="4"/>
+     <path d="M496 88q14 12 28 0" stroke="#2A1503" stroke-width="3" fill="none"/>
+     <circle cx="498" cy="72" r="4" fill="#2A1503"/><circle cx="522" cy="72" r="4" fill="#2A1503"/>
+     <path d="M140 310V190" stroke="#2A1503" stroke-width="8"/>
+     <circle cx="140" cy="160" r="52" fill="#5E9E52" stroke="#2A1503" stroke-width="5"/>
+     <ellipse cx="140" cy="322" rx="34" ry="16" fill="#B8B8B8" stroke="#2A1503" stroke-width="4"/>
+     <circle cx="164" cy="314" r="12" fill="#B8B8B8" stroke="#2A1503" stroke-width="4"/>
+     <path d="M172 308q6-6 4-10M110 322q-12 4-10 12" stroke="#2A1503" stroke-width="3" fill="none"/>
+   </svg>`},
+  {level:'متوسط', title:'قارب في البحر',
+   lines:['خطٌّ أفقيّ في منتصف الورقة يفصل البحر عن السماء.','في البحر قاربٌ شراعيّ، شراعه مثلّثٌ كبير.',
+     'في السماء ثلاث غيماتٍ — الوسطى أكبرها.','طائران بعيدان يُرسمان كحرف ٧ مفتوح.','وفي أسفل الورقة سمكةٌ واحدة تقفز من الماء.'],
+   svg:`<svg viewBox="0 0 600 400">
+     <rect width="600" height="400" fill="#FFF9F0"/>
+     <rect y="200" width="600" height="200" fill="#9FD4E8" opacity=".6"/>
+     <path d="M0 200h600" stroke="#2A1503" stroke-width="4"/>
+     <path d="M220 260h160l-30 40H250z" fill="#B0721A" stroke="#2A1503" stroke-width="4"/>
+     <path d="M300 255V130" stroke="#2A1503" stroke-width="5"/>
+     <path d="M300 130l85 120h-85z" fill="#FFF" stroke="#2A1503" stroke-width="4"/>
+     <ellipse cx="150" cy="80" rx="46" ry="20" fill="#fff" stroke="#2A1503" stroke-width="3"/>
+     <ellipse cx="300" cy="60" rx="62" ry="26" fill="#fff" stroke="#2A1503" stroke-width="3"/>
+     <ellipse cx="460" cy="85" rx="42" ry="18" fill="#fff" stroke="#2A1503" stroke-width="3"/>
+     <path d="M480 150q10-12 20 0M510 140q10-12 20 0" stroke="#2A1503" stroke-width="3" fill="none"/>
+     <path d="M120 350q20-40 45-18 12-16 8-30-30 0-53 48z" fill="#D9A93C" stroke="#2A1503" stroke-width="3.5"/>
+     <path d="M100 372q30 8 60 0" stroke="#2A1503" stroke-width="3" fill="none" opacity=".5"/>
+   </svg>`},
+  {level:'متقدّم', title:'الروبوت الطبّاخ',
+   lines:['في المنتصف روبوتٌ جسمه مستطيلٌ ورأسه مربّع.','على رأسه هوائيّان صغيران في نهاية كلٍّ منهما كرة.',
+     'عيناه مختلفتان: اليمنى دائرة واليسرى نجمة!','في يده اليمنى مقلاةٌ فيها بيضة.','وعلى بطنه ثلاثة أزرارٍ ملوّنة فوق بعضها.',
+     'وعن يساره — على الأرض — قطُّ روبوتٍ صغيرٌ مربّع الشكل.'],
+   svg:`<svg viewBox="0 0 600 400">
+     <rect width="600" height="400" fill="#FFF9F0"/>
+     <rect x="250" y="150" width="110" height="140" rx="12" fill="#8FA8B8" stroke="#2A1503" stroke-width="5"/>
+     <rect x="262" y="80" width="86" height="66" rx="10" fill="#AEC2CE" stroke="#2A1503" stroke-width="5"/>
+     <path d="M280 78V52M330 78V52" stroke="#2A1503" stroke-width="4"/>
+     <circle cx="280" cy="46" r="7" fill="#D86048" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="330" cy="46" r="7" fill="#D9A93C" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="288" cy="108" r="10" fill="#fff" stroke="#2A1503" stroke-width="3.5"/>
+     <path d="M322 100l4 8 9 1-7 7 2 9-8-4-8 4 2-9-7-7 9-1z" fill="#E8C34A" stroke="#2A1503" stroke-width="3"/>
+     <path d="M296 128q10 8 20 0" stroke="#2A1503" stroke-width="3" fill="none"/>
+     <circle cx="305" cy="185" r="8" fill="#D86048" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="305" cy="210" r="8" fill="#D9A93C" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="305" cy="235" r="8" fill="#487848" stroke="#2A1503" stroke-width="3"/>
+     <path d="M250 175l-45 25" stroke="#2A1503" stroke-width="6"/>
+     <ellipse cx="175" cy="210" rx="38" ry="12" fill="#4B5D6B" stroke="#2A1503" stroke-width="4"/>
+     <ellipse cx="175" cy="205" rx="16" ry="8" fill="#FFF" stroke="#2A1503" stroke-width="3"/>
+     <circle cx="175" cy="203" r="6" fill="#E8C34A" stroke="#2A1503" stroke-width="2.5"/>
+     <path d="M360 185l40 20" stroke="#2A1503" stroke-width="6"/>
+     <rect x="255" y="290" width="30" height="40" fill="#6B8296" stroke="#2A1503" stroke-width="4"/>
+     <rect x="325" y="290" width="30" height="40" fill="#6B8296" stroke="#2A1503" stroke-width="4"/>
+     <rect x="430" y="290" width="64" height="46" rx="8" fill="#AEC2CE" stroke="#2A1503" stroke-width="4"/>
+     <rect x="440" y="262" width="44" height="32" rx="6" fill="#8FA8B8" stroke="#2A1503" stroke-width="4"/>
+     <circle cx="452" cy="276" r="4" fill="#2A1503"/><circle cx="472" cy="276" r="4" fill="#2A1503"/>
+     <path d="M446 254v-10M478 254v-10" stroke="#2A1503" stroke-width="3"/>
+     <path d="M494 310q16 -4 16 -16" stroke="#2A1503" stroke-width="4" fill="none"/>
+   </svg>`},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg20" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F2ECE0"/><stop offset="1" stop-color="#EFE7D2"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg20)"/>
+  <!-- نافذة ضوء -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="1280" y="100" width="240" height="300" fill="#D8ECF2"/>
+    <path d="M1400 100v300M1280 250h240" stroke-width="4"/>
+  </g>
+  <!-- حامل رسم -->
+  <g stroke="#2A1503" stroke-width="6">
+    <path d="M120 760L220 360l100 400" fill="none"/>
+    <path d="M155 640h130" stroke-width="5"/>
+    <rect x="140" y="420" width="160" height="140" fill="#FFF9F0" stroke-width="5"/>
+    <path d="M160 500q30-40 60 0t60-10" stroke="#D86048" stroke-width="5" fill="none"/>
+  </g>
+  <!-- ألوان وفراشي -->
+  <g stroke="#2A1503" stroke-width="4">
+    <ellipse cx="1420" cy="700" rx="90" ry="40" fill="#F5F0E6"/>
+    <circle cx="1385" cy="690" r="13" fill="#D86048"/><circle cx="1420" cy="683" r="13" fill="#487848"/>
+    <circle cx="1455" cy="692" r="13" fill="#D9A93C"/><circle cx="1438" cy="714" r="13" fill="#2F7D74"/>
+    <path d="M1310 640l50 -80" stroke-width="6"/><path d="M1360 560l10 -16" stroke="#D86048" stroke-width="9"/>
+  </g>
+  <g opacity=".35" stroke-width="4" fill="none" stroke="#6B4E9E">
+    <path d="M640 140q30-26 60 0t60 0"/><path d="M900 190q30-26 60 0"/></g>
+  <rect y="820" width="1600" height="80" fill="#C9B48C"/>
+  <path d="M0 820h1600" stroke="#2A1503" stroke-width="5"/>
+</svg>`;
+
+let K, timer, idx = 0, shown = 0, phase = 'listen';
+
+K = Kit.build({
+  title: 'ارسم ما تسمع',
+  accent: '#2F7D74', accent2: '#1F5A54',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'دقّة الإنصات وترجمة الكلام المسموع إلى رسم: الوصف يُقرأ سطراً سطراً، والمقارنة الختامية ليست «من أصاب؟» بل «أين اختلفنا ولماذا؟».',
+    tools: 'ورقةٌ وقلمٌ لكل طالب. الشاشة تعرض الوصف لكِ ثم الصورة الأصلية للمقارنة.',
+    groups: 'فرديّ — كلٌّ يرسم وحده، والمقارنة جماعية ممتعة.',
+    steps: [
+      'وزّعي الأوراق واختاري المستوى.',
+      'قولي: «سأقرأ وصفاً سطراً سطراً — أنصتوا للسطر كاملاً قبل أن ترسموه».',
+      'اضغطي «السطر التالي» واقرئيه مرّتين بتمهّل، وامنحيهم وقتاً للرسم.',
+      'بعد اكتمال السطور شغّلي مؤقّت اللمسات الأخيرة (دقيقتان).',
+      'اضغطي «اكشفوا الصورة الأصلية» — ودعي الضحك والدهشة!',
+      'المقارنة: أين اختلفت رسومنا عن الأصل؟ ولماذا؟ أيّ سطرٍ كان غامضاً؟',
+    ],
+    time: '١٠ إلى ١٥ دقيقة للوصف الواحد.',
+    script: 'أذنٌ تسمع ويدٌ ترسم! سأصف لكم صورةً لا ترونها — سطراً سطراً. أنصتوا للسطر كلّه ثم ارسموه. لا توجد رسمةٌ خاطئة… لكن توجد أذنٌ أدقّ من أذن!',
+    tips: 'اقرئي السطر مرّتين دائماً ولا تزيدي — الإعادة الثالثة تقتل الإنصات. وعند المقارنة اجعلي السؤال «أيّ سطرٍ سبّب الاختلاف؟» فيكتشفون أن بعض الكلام يحتمل معنيين — وهذا درسٌ في التعبير أيضاً لا في الإنصات فقط.',
+    points: 'بلا نقاط — الرسم لا يُحكَّم. احتفلي بأدقّ التفاصيل: «من رسم النجمة في العين اليسرى؟» ودعيهم يرفعون رسومهم للجميع.',
+    levels: 'سهل: ٤ أسطر بعناصر مألوفة. متوسط: ٥ أسطر ومواضع أدقّ. متقدّم: ٦ أسطر وتفاصيل مقصودة الغرابة.',
+    close: [
+      'أيّ سطرٍ رسمناه كلُّنا بطرقٍ مختلفة؟ لماذا احتمل معنيين؟',
+      'ماذا يفعل المُنصت الجيّد قبل أن يبدأ التنفيذ؟',
+      'حين نشرح لغيرنا — ماذا نتعلّم من سطرٍ «فُهم غلط»؟',
+    ],
+  },
+});
+
+function home() {
+  idx = 0; shown = 0; phase = 'listen';
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M18 54V38h12L48 22v56L30 62z" fill="#2F7D74" stroke="#2A1503" stroke-width="5" stroke-linejoin="round" transform="scale(.8) translate(6 8)"/>
+      <path d="M58 78l26-26M84 52l6-6-8-8-6 6z" fill="#D9A93C" stroke="#2A1503" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M58 78l-6 8 8-2z" fill="#2A1503"/>
+    </svg>
+    <h1>ارسم ما تسمع</h1>
+    <p class="sub">وصفٌ يُقرأ سطراً سطراً… وأيدٍ ترسم ما تسمعه الآذان. ثم لحظة الحقيقة: المقارنة!</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ١٥ دقيقة</b></span>
+      <span class="chip">فرديّ + مقارنة جماعية</span>
+      <span class="chip">المهارة: <b>دقّة الإنصات</b></span>
+      <span class="chip">الأدوات: <b>ورقة وقلم لكل طالب</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">المستوى</div><div id="lv" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); shown = 0; phase = 'listen'; play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  const pick = () => {
+    const host = opts.querySelector('#lv'); host.innerHTML = '';
+    PROMPTS.forEach((p, i) => {
+      const b = K.el('button', 'btn sm' + (idx === i ? ' p' : ''), p.level);
+      b.onclick = () => { idx = i; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+}
+
+function play() {
+  const p = PROMPTS[idx];
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'dsc');
+  wrap.appendChild(K.el('div', 'rowline', `<span class="chip" style="margin-bottom:10px">
+    ${Kit.esc(p.level)} — <b>${Kit.esc(p.title)}</b> · ${Kit.AR(p.lines.length)} أسطر</span>`));
+
+  if (phase === 'listen') {
+    const lines = K.el('div', 'lines');
+    p.lines.forEach((l, i) => lines.appendChild(K.el('span', 'ln' + (i < shown ? ' on' : ''), `${Kit.AR(i + 1)}. ${Kit.esc(l)}`)));
+    wrap.appendChild(lines);
+    const row = K.el('div', 'rowline');
+    if (shown < p.lines.length) {
+      const nx = K.el('button', 'btn p big', shown === 0 ? '▶ السطر الأول' : `السطر التالي (${Kit.AR(shown + 1)}) ←`);
+      nx.onclick = () => { shown++; K.SFX.soft(); play(); };
+      row.appendChild(nx);
+    } else {
+      const ring = K.el('div', 'ring', '<i></i>');
+      const tim = K.el('div', 'timer'); tim.appendChild(ring);
+      row.appendChild(tim);
+      const startB = K.el('button', 'btn g', '⏱ دقيقتان للمسات الأخيرة');
+      startB.onclick = () => { timer.start(); startB.disabled = true; K.SFX.tap(); };
+      row.appendChild(startB);
+      const rev = K.el('button', 'btn p big', '🖼️ اكشفوا الصورة الأصلية!');
+      rev.onclick = () => { if (timer) timer.pause(); phase = 'reveal'; K.SFX.win(); play(); };
+      row.appendChild(rev);
+      timer = K.Timer({ secs: 120, ring, onEnd: () => K.say('انتهى الوقت — ارفعوا الأقلام!', 'info') });
+      timer.paint();
+    }
+    wrap.appendChild(row);
+  } else {
+    const fr = K.el('div', 'reveal20'); fr.innerHTML = p.svg;
+    wrap.appendChild(fr);
+    wrap.appendChild(K.el('div', 'discuss',
+      '💬 ارفعوا رسومكم! أين اختلفت عن الأصل؟ أيّ سطرٍ فهمه كلٌّ بطريقته؟ — الاختلاف ليس خطأً… بل اكتشاف!'));
+    const row = K.el('div', 'rowline'); row.style.marginTop = '16px';
+    const again = K.el('button', 'btn', 'وصفٌ آخر');
+    again.onclick = () => { K.SFX.tap(); home(); };
+    const fin = K.el('button', 'btn p big', 'ختام النشاط ←');
+    fin.onclick = () => K.reflect({
+      value: 'دقّة الإنصات',
+      questions: [
+        'أيّ سطرٍ رسمناه بطرقٍ مختلفة؟ لماذا احتمل أكثر من معنى؟',
+        'ماذا يفعل المُنصت الجيّد قبل أن يبدأ؟',
+        'حين نشرح لزميل — كيف نجعل كلامنا لا يُفهم غلطاً؟',
+      ],
+    }, home);
+    row.append(again, fin);
+    wrap.appendChild(row);
+  }
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

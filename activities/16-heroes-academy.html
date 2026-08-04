@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>أكاديمية الأبطال</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.stages{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.stages .st{border:3px solid var(--ink);border-radius:99px;background:var(--paper);
+  padding:9px 17px;font-weight:800;font-size:clamp(13px,1.6vw,17px);opacity:.55}
+.stages .st.on{opacity:1;background:var(--gold)}
+.stages .st.done{opacity:1;background:#DFF0E2}
+.ac{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.ac .hero-f{font-size:clamp(48px,7vw,92px);line-height:1.15;margin-bottom:6px}
+.ac h2{font-size:clamp(22px,3vw,38px);margin:0 0 12px}
+.ac .txt{font-size:clamp(18px,2.4vw,29px);font-weight:800;line-height:1.6;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,36px);margin-bottom:16px}
+.aa16{display:grid;gap:11px;grid-template-columns:1fr 1fr;max-width:840px;margin:0 auto}
+@media(max-width:640px){.aa16{grid-template-columns:1fr}}
+.aa16 .btn{font-size:clamp(15.5px,1.9vw,21px);min-height:62px}
+.aa16 .btn.right{background:var(--ok);color:#fff}
+.aa16 .btn.off{opacity:.45;pointer-events:none}
+.titles{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));max-width:1000px;margin:0 auto}
+.tcard{background:var(--paper);border:4px solid var(--gold);border-radius:18px;padding:18px;
+  animation:pop .5s both;text-align:center}
+.tcard .f{font-size:52px;display:block;margin-bottom:6px}
+.tcard b{font-size:clamp(17px,2vw,23px)}
+.tcard p{margin:7px 0 0;font-size:14.5px;opacity:.85;line-height:1.6}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٦ — أكاديمية الأبطال
+   الهدف: أربع «بطولات» مختلفة، وفي الختام لكل فريقٍ لقبٌ يستحقّه.
+   القرار التربوي الصريح من البرومبت: لا فريق واحد يفوز. الألقاب تُشتقّ
+   من أداء كل فريقٍ الفعلي (أين جمع أكثر نقاطه) فيخرج الجميع أبطالاً —
+   بصدق، لا بمجاملة: اللقب يعكس ما فعلوه حقاً.
+   ═══════════════════════════════════════════════════════════════════ */
+const STAGES = [
+  {id:'know', n:'بطل المعرفة', f:'📚', kind:'mc',
+   pool:[
+    {t:'أيّ الكواكب أقرب إلى الشمس؟', o:['الأرض','عطارد','المشتري','زحل'], a:1},
+    {t:'ما الغاز الذي نتنفّسه لنعيش؟', o:['الأكسجين','ثاني أكسيد الكربون','الهيليوم','البخار'], a:0},
+    {t:'أين تعيش الأسماك؟', o:['في الرمال','في الماء','فوق الأشجار','تحت الأرض'], a:1},
+    {t:'كم عدد ألوان قوس المطر؟', o:['ثلاثة','خمسة','سبعة','عشرة'], a:2},
+   ]},
+  {id:'coop', n:'بطل التعاون', f:'🤝', kind:'do',
+   pool:[
+    'تحدّي البرج البشري للأيدي: يضع الفريق أيديهم فوق بعضٍ يداً يداً — ثم يرفعونها معاً في لحظةٍ واحدة!',
+    'تحدّي النقل الصامت: ينقل الفريق كتاباً من أول عضوٍ لآخر عضو — بالمرافق فقط، بلا أصابع!',
+    'تحدّي الصفّ الأعمى: يصطفّ الفريق حسب الطول — وأعينهم مغمضة، بالهمس فقط!',
+   ]},
+  {id:'ethics', n:'بطل الأخلاق', f:'💛', kind:'mc',
+   pool:[
+    {t:'وجدتَ حقيبة زميلٍ مفتوحة وفيها لعبةٌ تحبّها. ما تصرّف البطل؟', o:['آخذها فلن يعرف','أغلق حقيبته وأخبره','آخذها وأعيدها غداً','أتركها مفتوحة'], a:1},
+    {t:'دفعك زميلٌ خطأً واعتذر فوراً. ما تصرّف البطل؟', o:['أدفعه مثلما دفعني','أقبل اعتذاره وأبتسم','أشتكي فوراً','أتجاهله دائماً'], a:1},
+    {t:'رأيتَ طالباً كبيراً يضايق صغيراً. ما تصرّف البطل؟', o:['أتفرّج','أخبر معلّماً فوراً','أصوّر المشهد','أنضمّ للكبير'], a:1},
+    {t:'فزتَ وحزن صديقك الخاسر. ما تصرّف البطل؟', o:['أتباهى أمامه','أقول: لعبتَ ممتازاً وكدتَ تفوز','أضحك عليه','أطلب جائزة'], a:1},
+   ]},
+  {id:'create', n:'بطل الإبداع', f:'🎨', kind:'do',
+   pool:[
+    'تحدّي الآلة العجيبة: يمثّل الفريق معاً آلةً واحدة — كلُّ عضوٍ جزءٌ يتحرّك بانتظام — وليخمّنها الصف!',
+    'تحدّي القافية: يؤلّف الفريق بيتين بسيطين عن مدرستهم — ولو مضحكين!',
+    'تحدّي إعادة الاستخدام: اذكروا خمسة استخداماتٍ مدهشة لعلبة أحذيةٍ فارغة.',
+  ]},
+];
+const TITLES = {
+  know:   {f:'🦉', t:'أبطال المعرفة', d:'عقولٌ لامعة تسبق السؤال بالجواب'},
+  coop:   {f:'🤝', t:'أبطال التعاون', d:'فريقٌ يدُه واحدة وقلبه واحد'},
+  ethics: {f:'💛', t:'أبطال الأخلاق', d:'مواقفهم أجمل من إجاباتهم'},
+  create: {f:'🎨', t:'أبطال الإبداع', d:'يرون ما لا يراه أحد'},
+};
+const Q_PER_STAGE = 2;
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg16" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E8E4F2"/><stop offset="1" stop-color="#F4EEDF"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg16)"/>
+  <!-- أكاديمية بأقواس -->
+  <g stroke="#2A1503" stroke-width="6">
+    <rect x="480" y="330" width="640" height="330" fill="#F0E6D2"/>
+    <path d="M450 330h700l-40-90H490z" fill="#6B4E9E"/>
+    <path d="M560 660v-160a60 60 0 0 1 120 0v160" fill="#E8DCC4"/>
+    <path d="M740 660v-160a60 60 0 0 1 120 0v160" fill="#E8DCC4"/>
+    <path d="M920 660v-160a60 60 0 0 1 120 0v160" fill="#E8DCC4"/>
+    <path d="M770 240h60v-50h-60z" fill="#E8C34A"/>
+    <path d="M800 190v-40" stroke-width="5"/><path d="M800 150l40 12-40 14z" fill="#D86048" stroke-width="4"/>
+  </g>
+  <!-- شارات معلقة -->
+  <g stroke="#2A1503" stroke-width="4">
+    <circle cx="200" cy="260" r="52" fill="#D9A93C"/>
+    <path d="M200 236l8 16 18 3-13 13 3 18-16-9-16 9 3-18-13-13 18-3z" fill="#FFF9F0"/>
+    <path d="M180 310l-14 40 34-18 34 18-14-40" fill="#8B2635"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="4">
+    <circle cx="1400" cy="300" r="46" fill="#2F7D74"/>
+    <text x="1400" y="316" font-size="42" text-anchor="middle">🤝</text>
+    <path d="M1382 344l-12 36 30-16 30 16-12-36" fill="#487848"/>
+  </g>
+  <rect y="800" width="1600" height="100" fill="#C9BC9C"/>
+  <path d="M0 800h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, bags = {}, stageIdx = 0, qInStage = 0, answered = false;
+/* نقاط كل فريقٍ في كل مرحلة — منها تُشتقّ الألقاب في الختام */
+let stageScores = [];
+
+K = Kit.build({
+  title: 'أكاديمية الأبطال',
+  accent: '#6B4E9E', accent2: '#4B3573',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'أربع بطولات: المعرفة، التعاون، الأخلاق، الإبداع — وفي التخرّج ينال كل فريقٍ لقباً مشتقاً من أدائه الفعلي. لا فريق واحد يفوز: لكلٍّ بطولته الصادقة.',
+    tools: 'الشاشة. تحدّيات التعاون تحتاج مساحةً آمنة.',
+    groups: 'فريقان إلى أربعة يخوضون المراحل الأربع كلّها بالتناوب على الأسئلة والتحدّيات.',
+    steps: [
+      'كل مرحلةٍ سؤالان أو تحدّيان يتناوب عليهما الفرق.',
+      'أسئلة الاختيار: تشاورٌ ثم إجابة المتحدّث.',
+      'تحدّيات التعاون والإبداع تُنفَّذ بالأجساد فعلياً ثم «أنجزوه».',
+      'النقاط تُحسب لكل مرحلةٍ على حدة — منها تُشتقّ الألقاب.',
+      'في التخرّج: يُعلن لقب كل فريقٍ بحفاوةٍ متساوية.',
+    ],
+    time: '٢٠ إلى ٢٥ دقيقة للمراحل الأربع.',
+    script: 'أهلاً بكم في أكاديمية الأبطال! هنا لا يتخرّج فريقٌ واحدٌ فائزاً — بل يتخرّج الجميع أبطالاً، كلٌّ بلقبه: فمنكم بطل المعرفة، ومنكم بطل التعاون، ومنكم بطل الأخلاق أو الإبداع. أروني بطولاتكم!',
+    tips: 'أعلني الألقاب في الختام بحفاوةٍ متساوية تماماً — نبرة صوتك مع اللقب الأخير يجب أن تساوي الأول. واشرحي سرّ كل لقب: «نلتم هذا لأنكم جمعتم أعلى نقاطكم في مرحلة كذا».',
+    points: 'اللوحة تحسب تلقائياً نقاط كل فريقٍ في كل مرحلة، واللقب يُشتقّ من أقوى مراحل الفريق — فالنقاط هنا أداة عدلٍ لا منافسة.',
+    levels: 'الأصغر: سؤالٌ وتحدٍّ لكل مرحلة. الأكبر: ارفعي لكل مرحلةٍ سؤالاً ثالثاً بزر المرحلة نفسها قبل الانتقال.',
+    close: [
+      'أيّ بطولةٍ فاجأتكم ببراعتكم فيها؟',
+      'لماذا لا يكفي العالم بطلَ معرفةٍ بلا أبطال أخلاق؟',
+      'ما البطولة التي ستتدرّبون عليها هذا الأسبوع؟',
+    ],
+  },
+});
+
+STAGES.forEach(s => bags[s.id] = K.Bag(s.pool));
+
+function home() {
+  stageIdx = 0; qInStage = 0; stageScores = [];
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 6l11 22 25 4-18 18 4 25-22-12-22 12 4-25-18-18 25-4z" fill="#E8C34A" stroke="#2A1503" stroke-width="5"/>
+      <path d="M34 74l-10 22 26-13 26 13-10-22" fill="#6B4E9E" stroke="#2A1503" stroke-width="5" stroke-linejoin="round"/>
+    </svg>
+    <h1>أكاديمية الأبطال</h1>
+    <p class="sub">أربع بطولات… وأربعة ألقاب. لا يتخرّج منّا فائزٌ واحد — بل أبطالٌ جميعاً، كلٌّ ببطولته.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٢٠ – ٢٥ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>بطولاتٌ متنوّعة</b></span>
+      <span class="chip">القيمة: <b>لكلٍّ تميّزه</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ادخلوا الأكاديمية');
+  b1.onclick = () => { K.SFX.ok(); startStages(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function startStages() {
+  const n = home.teamCount ? home.teamCount() : 2;
+  stageScores = STAGES.map(() => new Array(n).fill(0));
+  nextQ();
+}
+
+/* لقطة نقاط الفرق قبل السؤال — الفرق بعده يُنسب لهذه المرحلة */
+let snapBefore = [];
+function snap() { return teams ? teams.list.map(t => t.score) : []; }
+
+function stageBar() {
+  const bar = K.el('div', 'stages');
+  STAGES.forEach((s, i) => bar.appendChild(
+    K.el('div', 'st' + (i < stageIdx ? ' done' : i === stageIdx ? ' on' : ''), s.f + ' ' + s.n)));
+  return bar;
+}
+
+function nextQ() {
+  if (qInStage >= Q_PER_STAGE) { qInStage = 0; stageIdx++; }
+  if (stageIdx >= STAGES.length) { graduation(); return; }
+  const st = STAGES[stageIdx];
+  const item = bags[st.id].next();
+  qInStage++; answered = false;
+
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'ac');
+  wrap.appendChild(stageBar());
+  wrap.appendChild(K.el('div', 'hero-f', st.f));
+  wrap.appendChild(K.el('h2', '', `${Kit.esc(st.n)} — ${Kit.AR(qInStage)} / ${Kit.AR(Q_PER_STAGE)}`));
+
+  if (st.kind === 'mc') {
+    wrap.appendChild(K.el('div', 'txt', Kit.esc(item.t)));
+    const aa = K.el('div', 'aa16');
+    item.o.forEach((o, i) => {
+      const b = K.el('button', 'btn', Kit.esc(o));
+      b.onclick = () => {
+        if (answered) return;
+        if (i === item.a) {
+          answered = true;
+          b.classList.add('right');
+          [...aa.children].forEach(x => { if (x !== b) x.classList.add('off'); });
+          K.SFX.win(); K.praise();
+          showNext(wrap);
+        } else { b.classList.add('shake'); K.SFX.soft(); K.encourage(); setTimeout(() => b.classList.remove('shake'), 420); }
+      };
+      aa.appendChild(b);
+    });
+    wrap.appendChild(aa);
+  } else {
+    wrap.appendChild(K.el('div', 'txt', Kit.esc(item)));
+    const okB = K.el('button', 'btn p big', '✅ أنجزوه!');
+    okB.onclick = () => { if (answered) return; answered = true; K.SFX.win(); K.praise(); showNext(wrap); };
+    wrap.appendChild(okB);
+  }
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '16px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'تعاونٌ جميل'], [1, 'موقفٌ أخلاقي'], [1, 'فكرةٌ مبدعة'],
+  ]));
+  snapBefore = snap();
+}
+
+function showNext(wrap) {
+  // انسب فرق النقاط منذ بداية السؤال إلى المرحلة الحالية
+  const now = snap();
+  now.forEach((v, i) => {
+    const d = v - (snapBefore[i] || 0);
+    if (d > 0 && stageScores[stageIdx]) stageScores[stageIdx][i] = (stageScores[stageIdx][i] || 0) + d;
+  });
+  snapBefore = now;
+  const last = stageIdx === STAGES.length - 1 && qInStage === Q_PER_STAGE;
+  const nx = K.el('button', 'btn p big', last ? '🎓 حفل التخرّج!' : 'التالي ←');
+  nx.style.marginTop = '14px';
+  nx.onclick = () => { K.SFX.tap(); nextQ(); };
+  wrap.insertBefore(nx, wrap.querySelector('.teams'));
+}
+
+function graduation() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'ac');
+  wrap.innerHTML = `<div class="hero-f">🎓</div><h2>حفل تخرّج الأبطال</h2>
+    <p style="font-size:clamp(15px,1.9vw,20px);opacity:.85;max-width:60ch;margin:0 auto 18px">
+    لكل فريقٍ لقبُه — مشتقٌّ من المرحلة التي تألّق فيها أكثر. اقرئي الألقاب بحفاوةٍ متساوية!</p>`;
+
+  // اللقب: المرحلة التي جمع فيها الفريق أعلى نقاطه — مع فضّ التعادل بالدور
+  const list = teams ? teams.list : [];
+  const used = {};
+  const titles = K.el('div', 'titles');
+  list.forEach((t, ti) => {
+    let best = -1, bestV = -1;
+    STAGES.forEach((s, si) => {
+      const v = (stageScores[si] && stageScores[si][ti]) || 0;
+      if (v > bestV || (v === bestV && !used[si] && used[best])) { bestV = v; best = si; }
+    });
+    // إن تساوى الكل صفراً أو تكرّر اللقب: أعطِ أول لقبٍ غير مستعمل
+    if (bestV <= 0 || used[best]) {
+      const free = STAGES.findIndex((s, si) => !used[si]);
+      if (free !== -1) best = free;
+    }
+    used[best] = true;
+    const tt = TITLES[STAGES[best].id];
+    titles.appendChild(K.el('div', 'tcard',
+      `<span class="f">${tt.f}</span><b>${Kit.esc(t.name)}</b>
+       <p style="font-weight:800;color:var(--a2);font-size:17px">${Kit.esc(tt.t)}</p>
+       <p>${Kit.esc(tt.d)}</p>`));
+  });
+  wrap.appendChild(titles);
+
+  const fin = K.el('button', 'btn p big', 'ختام النشاط ←');
+  fin.style.marginTop = '18px';
+  fin.onclick = () => K.reflect({
+    value: 'لكلٍّ تميّزه',
+    questions: [
+      'أيّ بطولةٍ فاجأتكم ببراعتكم فيها؟',
+      'لماذا يحتاج الصف أبطالَ الأنواع الأربعة كلّها؟',
+      'ما البطولة التي ستتدرّبون عليها هذا الأسبوع؟',
+    ],
+  }, home);
+  wrap.appendChild(fin);
+  K.stage.appendChild(wrap);
+  K.SFX.win();
+}
+
+home();
+</script>
+</body>
+</html>

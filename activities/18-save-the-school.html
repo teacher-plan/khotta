@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>مهمة إنقاذ المدرسة</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.missions{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));max-width:1050px;width:100%}
+.mi{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:17px;cursor:pointer;
+  text-align:center;transition:transform .12s}
+.mi:hover{transform:translateY(-4px)}
+.mi .f{font-size:46px;display:block;margin-bottom:5px}
+.mi b{font-size:clamp(16px,1.9vw,21px)}
+.mi p{margin:6px 0 0;font-size:14px;opacity:.8;line-height:1.6}
+.mi.saved{outline:5px solid var(--ok);outline-offset:-2px}
+.wsteps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.wsteps .w{border:3px solid var(--ink);border-radius:99px;background:var(--paper);
+  padding:8px 15px;font-weight:800;font-size:clamp(12.5px,1.5vw,16px);opacity:.55}
+.wsteps .w.on{opacity:1;background:var(--gold)}
+.wsteps .w.done{opacity:1;background:#DFF0E2}
+.msn{max-width:980px;width:100%;text-align:center;animation:up .35s both}
+.msn .txt{font-size:clamp(17px,2.3vw,27px);line-height:1.75;background:var(--paper);border:4px solid var(--ink);
+  border-radius:20px;box-shadow:var(--sh);padding:clamp(18px,2.8vw,34px);margin-bottom:16px;text-align:start}
+.msn .txt b{color:var(--a2)}
+.ideas{display:grid;gap:10px;max-width:820px;margin:0 auto}
+.ideas .btn{justify-content:flex-start;text-align:start;font-size:clamp(15px,1.85vw,20px);min-height:56px}
+.ideas .btn.sel{background:var(--a);color:#fff}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٨ — مهمة إنقاذ المدرسة
+   الهدف: المبادرة وحلّ المشكلات بخطواتٍ خمس: اكتشاف، سبب، حلول،
+   اختيار، خطة عمل. القرار التربوي المركزي: الخطوة الأخيرة «خطة عملٍ
+   حقيقية» تُكتب بأسماء طلابٍ حقيقيين وموعدٍ حقيقي — النشاط يخرج من
+   الشاشة إلى المدرسة الفعلية، وإلا بقي تمريناً نظرياً.
+   ═══════════════════════════════════════════════════════════════════ */
+const MISSIONS = [
+  {f:'💧', n:'هدر الماء', c:'#2F7D74',
+   story:'لاحظ الطلاب أن صنابير دورات المياه تبقى مفتوحةً أحياناً، وأن الماء يجري أحياناً بلا مستخدم. الماء نعمةٌ… وهو يضيع كل يوم.',
+   causes:['ننسى إغلاق الصنبور جيداً بعد الاستخدام','نظنّ أن الماء «لا ينفد» فلا نهتم','بعض الصنابير قديمة تقطر وحدها'],
+   solutions:[
+    {t:'حملة ملصقاتٍ نرسمها: «أغلقني جيداً!» فوق كل صنبور', pros:'سهلةٌ وننفّذها بأنفسنا هذا الأسبوع'},
+    {t:'فريق «حرّاس الماء»: طالبان يتفقّدان الصنابير في كل فسحة', pros:'متابعةٌ يومية مستمرة'},
+    {t:'إبلاغ الإدارة عن الصنابير التي تقطر لإصلاحها', pros:'يحلّ العطل من جذره'}],
+   plan:'اختاروا الحلّ (أو ادمجوا اثنين!)، وحدّدوا: من يرسم الملصقات؟ من هما حارسا الماء هذا الأسبوع؟ من يكتب رسالة الإدارة؟ ومتى نبدأ؟'},
+  {f:'🗑️', n:'النفايات في الساحة', c:'#487848',
+   story:'بعد الفسحة تمتلئ الساحة بأغلفة العصير والبسكويت، رغم وجود سلّة نفاياتٍ في الزاوية. الساحة جميلة… لكن بعد الفسحة تفقد جمالها.',
+   causes:['السلّة بعيدة في زاويةٍ واحدة والساحة كبيرة','نستعجل اللعب فنرمي الغلاف حيث نقف','لا نشعر أن الساحة «بيتنا» فننتظر عامل النظافة'],
+   solutions:[
+    {t:'اقتراح سلالٍ إضافية موزّعة — رسالةٌ للإدارة بخريطة أماكنها', pros:'يحلّ مشكلة البعد فعلاً'},
+    {t:'تحدّي «فسحة نظيفة»: الصف الذي تبقى منطقته أنظف ينال نجمة الأسبوع', pros:'يجعل النظافة لعبةً محبّبة'},
+    {t:'«دقيقة النظافة»: آخر دقيقةٍ من الفسحة يلتقط كلٌّ ما حوله', pros:'عادةٌ جماعية تدوم'}],
+   plan:'حدّدوا: من يرسم خريطة أماكن السلال المقترحة؟ من يشرح التحدّي للصفوف الأخرى؟ ومتى تبدأ أول «دقيقة نظافة»؟'},
+  {f:'📚', n:'ركن القراءة المهجور', c:'#6B4E9E',
+   story:'في الصف رفُّ كتبٍ جميل… لكن لا يقترب منه أحد. الكتب مغبرّة، وبعضها ممزّق، ولا أحد يعرف ماذا فيها أصلاً.',
+   causes:['الكتب قديمة ولا نعرف محتواها','الركن غير مريحٍ ولا يجذب أحداً','لا وقت مخصّصٌ للقراءة في يومنا'],
+   solutions:[
+    {t:'حملة «عرّف بكتاب»: كلُّ من قرأ كتاباً يقدّمه للصف في دقيقة', pros:'تجعل الكتب المجهولة مشوّقة'},
+    {t:'تجميل الركن: وسادة، لافتة ملوّنة، وترتيبٌ جديد بأيدينا', pros:'مكانٌ جميل يدعو للجلوس'},
+    {t:'«ربع ساعة قراءة» مرّةً في الأسبوع نتفق عليها مع المعلّمة', pros:'وقتٌ محميٌّ للقراءة'}],
+   plan:'حدّدوا: من يقدّم أول «عرّف بكتاب» غداً؟ من يحضر شيئاً لتجميل الركن؟ وأيّ يومٍ يكون «ربع ساعة القراءة»؟'},
+  {f:'🤗', n:'زميلٌ يحتاج المساعدة', c:'#D86048',
+   story:'في الصف زميلٌ تغيّر حاله: صار يجلس وحده في الفسحة، وقلّ كلامه، ولا يشارك كما كان. لم يقل شيئاً… لكن الأصدقاء يلاحظون.',
+   causes:['قد يمرّ بظرفٍ في البيت لا نعرفه','قد يكون تعرّض لموقفٍ أحزنه في المدرسة','قد يشعر أنه «خارج» المجموعة ولا يجرؤ على العودة'],
+   solutions:[
+    {t:'لا نحقّق معه! نُشركه بلطفٍ: «تعال معنا، ينقصنا لاعب»', pros:'يفتح الباب دون إحراجه'},
+    {t:'يجلس معه صديقٌ مقرّب ويسأله بهدوء: «أنا معك — هل من شيءٍ تحبّ أن تحكيه؟»', pros:'يشعر أنه ليس وحده'},
+    {t:'إن استمرّ حزنه نُخبر المعلّمة بهدوءٍ ودون تشهير', pros:'الكبار يستطيعون ما لا نستطيع'}],
+   plan:'هذه أرقّ المهام: حدّدوا — دون ذكر أسماء أمام الصف — كيف نجعل «الإشراك اللطيف» عادةً مع كل زميلٍ يجلس وحده؟ ومن يتذكّر قاعدة «أخبر المعلّمة إن استمرّ الحزن»؟'},
+];
+const STEPS = ['🔍 اكتشاف المشكلة', '🧭 تحديد السبب', '💡 اقتراح الحلول', '⚖️ اختيار الأفضل', '📋 خطة العمل'];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg18" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#DFEDE2"/><stop offset="1" stop-color="#F2ECD9"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg18)"/>
+  <!-- مدرسة كبيرة -->
+  <g stroke="#2A1503" stroke-width="6">
+    <rect x="560" y="360" width="480" height="300" fill="#F0E0C0"/>
+    <path d="M530 360l270-140 270 140z" fill="#D86048"/>
+    <rect x="620" y="440" width="70" height="70" fill="#9FD4E8"/>
+    <rect x="910" y="440" width="70" height="70" fill="#9FD4E8"/>
+    <rect x="755" y="510" width="90" height="150" fill="#8B5E34"/>
+    <path d="M800 190v-46M800 144l44 14-44 16z" fill="#E8C34A" stroke-width="5"/>
+  </g>
+  <!-- تفاصيل تحتاج إصلاحاً: صنبور يقطر وسلة ممتلئة ونبتة ذابلة -->
+  <g stroke="#2A1503" stroke-width="4">
+    <path d="M240 600q30 0 30 20v14" fill="none" stroke-width="6"/>
+    <rect x="215" y="580" width="34" height="24" rx="6" fill="#8FA8B8"/>
+    <path d="M268 656q6 12 0 18t-12 0 0-18q6-10 12 0z" fill="#9FD4E8" opacity=".9"/>
+    <path d="M262 700q6 12 0 18" fill="none" opacity=".6"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="4">
+    <path d="M1310 640h90l-12 90h-66z" fill="#7E8E99"/>
+    <path d="M1322 630q14-16 24-4t22-8 20 6" fill="none"/>
+    <circle cx="1336" cy="618" r="8" fill="#D9A93C"/><circle cx="1372" cy="612" r="7" fill="#D86048"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="4">
+    <path d="M1460 700h48v56h-48z" fill="#B0721A"/>
+    <path d="M1484 700q-4-30 -18-40M1484 700q6-26 20-34" fill="none" stroke="#8A9B6E" stroke-width="5"/>
+    <path d="M1466 660q-8-6 -12-14M1504 666q10-8 12-16" fill="none" stroke="#8A9B6E" stroke-width="4"/>
+  </g>
+  <rect y="760" width="1600" height="140" fill="#BFD3A8"/>
+  <path d="M0 760h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, saved = {}, cur = null, step = 0, chosen = null;
+
+K = Kit.build({
+  title: 'مهمة إنقاذ المدرسة',
+  accent: '#3E8E5A', accent2: '#2C6B43',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'المبادرة وحلّ المشكلات بخمس خطوات: اكتشاف، سبب، حلول، اختيار، خطة عمل — والخطة الأخيرة حقيقية بأسماء وتواريخ، فيخرج النشاط من الشاشة إلى المدرسة.',
+    tools: 'الشاشة، وورقةٌ كبيرة أو السبورة لكتابة خطة العمل النهائية.',
+    groups: 'الصف كلّه كفريق إنقاذٍ واحد، أو فرقٌ تتبنّى كلٌّ منها مهمّةً مختلفة.',
+    steps: [
+      'اختاروا مهمّةً من الأربع (مهمّة «زميلٌ يحتاج مساعدة» اقرئي تنبيهها أولاً في إدارة الصف).',
+      'اقرأوا القصة، ثم ناقشوا الأسباب الثلاثة: أيّها الأقرب لواقعنا؟',
+      'اعرضوا الحلول وناقشوا مزايا كلٍّ منها.',
+      'صوّتوا على الحلّ — أو ادمجوا حلّين.',
+      'الأهم: اكتبوا خطة العمل على السبورة بأسماءٍ وتواريخ حقيقية!',
+      'بعد أسبوع: عودوا للنشاط واسألوا — هل نفّذنا الخطة؟',
+    ],
+    time: '١٥ إلى ٢٠ دقيقة للمهمّة الواحدة.',
+    script: 'مدرستنا تحتاجنا! في كل مهمّةٍ مشكلةٌ حقيقية تشبه ما نراه كل يوم. لن نكتفي بالكلام — سنخرج بخطةٍ فيها أسماؤنا ومواعيدنا. فريق الإنقاذ لا يقول «ينبغي أن…» بل يقول «سأفعل أنا… يوم كذا»!',
+    tips: 'مهمّة «زميلٌ يحتاج مساعدة» حسّاسة: لا تربطيها بطالبٍ حاضرٍ بعينه أمام الصف أبداً — أبقيها عامّة، وإن كانت الحالة حقيقيةً فعالجيها فردياً خارج النشاط. وخطة العمل بلا أسماء وتواريخ ليست خطة.',
+    points: 'بلا نقاط — الجائزة أن تتحسّن المدرسة فعلاً. علّقي خطة العمل في الصف وعودوا إليها بعد أسبوع: التنفيذ هو النجاح.',
+    levels: 'الأصغر: مهمّة النفايات أو الماء فهما ملموستان. الأكبر: مهمّة الزميل وركن القراءة ونقاشٌ أعمق للأسباب.',
+    close: [
+      'ما الفرق بين «ينبغي أن يفعل أحدهم» و«سأفعل أنا يوم الأحد»؟',
+      'أيّ خطوةٍ من الخمس كانت الأصعب؟',
+      'متى نعود لنسأل: هل نفّذنا الخطة؟',
+    ],
+  },
+});
+
+function home() {
+  saved = saved || {};
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="24" y="42" width="52" height="40" fill="#F0E0C0" stroke="#2A1503" stroke-width="5"/>
+      <path d="M18 42l32-20 32 20z" fill="#D86048" stroke="#2A1503" stroke-width="5"/>
+      <path d="M50 96a26 26 0 0 1-18-8l8-8a15 15 0 0 0 20 0l8 8a26 26 0 0 1-18 8z" fill="#3E8E5A" stroke="#2A1503" stroke-width="4"/>
+      <path d="M14 66q10-8 20 0M66 66q10-8 20 0" stroke="#3E8E5A" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h1>مهمة إنقاذ المدرسة</h1>
+    <p class="sub">مشكلاتٌ حقيقية في مدرستنا… وفريق إنقاذٍ لا يكتفي بالكلام بل يخرج بخطةٍ فيها أسماءٌ ومواعيد.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٥ – ٢٠ دقيقة للمهمّة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>حل المشكلات</b></span>
+      <span class="chip">القيمة: <b>المبادرة</b></span>
+    </div>
+    <h3 style="margin:0 0 12px">اختاروا مهمّتكم:</h3>`;
+  const g = K.el('div', 'missions');
+  MISSIONS.forEach((m, i) => {
+    const d = K.el('div', 'mi' + (saved[i] ? ' saved' : ''));
+    d.innerHTML = `<span class="f">${m.f}</span><b>${Kit.esc(m.n)}</b><p>${Kit.esc(m.story.slice(0, 70))}…</p>`;
+    d.onclick = () => { K.SFX.ok(); cur = i; step = 0; chosen = null; mission(); };
+    g.appendChild(d);
+  });
+  s.appendChild(g);
+  const tb = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  tb.style.marginTop = '16px';
+  tb.onclick = () => K.teacher.open();
+  s.appendChild(tb);
+  K.stage.appendChild(s);
+}
+
+function stepBar() {
+  const bar = K.el('div', 'wsteps');
+  STEPS.forEach((s, i) => bar.appendChild(K.el('div', 'w' + (i < step ? ' done' : i === step ? ' on' : ''), s)));
+  return bar;
+}
+
+function mission() {
+  const m = MISSIONS[cur];
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'msn');
+  wrap.appendChild(K.el('div', 'rowline', `<span class="chip" style="margin-bottom:10px;border-color:${m.c}">${m.f} <b>${Kit.esc(m.n)}</b></span>`));
+  wrap.appendChild(stepBar());
+
+  const nx = (label, fn) => {
+    const b = K.el('button', 'btn p big', label);
+    b.style.marginTop = '14px';
+    b.onclick = () => { K.SFX.tap(); fn(); };
+    return b;
+  };
+
+  if (step === 0) {
+    wrap.appendChild(K.el('div', 'txt', `<b>🔍 المشكلة:</b><br/>${Kit.esc(m.story)}<br/><br/>
+      <b>سؤال الفريق:</b> هل رأينا هذه المشكلة في مدرستنا فعلاً؟ متى؟ أين؟`));
+    wrap.appendChild(nx('عرفنا المشكلة — إلى الأسباب ←', () => { step = 1; mission(); }));
+  } else if (step === 1) {
+    wrap.appendChild(K.el('div', 'txt', `<b>🧭 لماذا تحدث؟ ثلاثة أسبابٍ محتملة — ناقشوا: أيّها الأقرب لواقعنا؟</b><br/><br/>` +
+      m.causes.map((c, i) => `${Kit.AR(i + 1)}. ${Kit.esc(c)}`).join('<br/>')));
+    wrap.appendChild(nx('حدّدنا السبب — إلى الحلول ←', () => { step = 2; mission(); }));
+  } else if (step === 2) {
+    wrap.appendChild(K.el('div', 'txt', `<b>💡 ثلاثة حلولٍ مقترحة — ولكم أن تقترحوا رابعاً من عندكم!</b>`));
+    const box = K.el('div', 'ideas');
+    m.solutions.forEach(s2 => {
+      box.appendChild(K.el('div', 'btn', `💡 <span><b>${Kit.esc(s2.t)}</b><br/>
+        <span style="font-size:.82em;opacity:.8">لماذا؟ ${Kit.esc(s2.pros)}</span></span>`));
+    });
+    wrap.appendChild(box);
+    wrap.appendChild(nx('ناقشنا الحلول — إلى الاختيار ←', () => { step = 3; mission(); }));
+  } else if (step === 3) {
+    wrap.appendChild(K.el('div', 'txt', `<b>⚖️ صوّتوا الآن!</b> اضغطوا الحلّ الذي اختارته الأغلبية — ويمكن دمج حلّين.`));
+    const box = K.el('div', 'ideas');
+    m.solutions.forEach((s2, i) => {
+      const b = K.el('button', 'btn', `☐ ${Kit.esc(s2.t)}`);
+      b.onclick = () => {
+        b.classList.toggle('sel');
+        b.innerHTML = (b.classList.contains('sel') ? '☑ ' : '☐ ') + Kit.esc(s2.t);
+        K.SFX.star();
+      };
+      box.appendChild(b);
+    });
+    wrap.appendChild(box);
+    wrap.appendChild(nx('اخترنا — إلى خطة العمل ←', () => { step = 4; mission(); }));
+  } else {
+    wrap.appendChild(K.el('div', 'txt', `<b>📋 خطة العمل — هنا تصير المهمّة حقيقية:</b><br/><br/>${Kit.esc(m.plan)}<br/><br/>
+      <b>اكتبوها على السبورة الآن بهذا الشكل:</b><br/>
+      • من؟ (أسماء حقيقية)<br/>• ماذا يفعل بالضبط؟<br/>• متى؟ (يومٌ محدّد)<br/>• متى نتفقّد النتيجة؟`));
+    const fin = K.el('button', 'btn p big', '🎉 كُتبت الخطة — أُنقذت المهمّة!');
+    fin.style.marginTop = '14px';
+    fin.onclick = () => {
+      saved[cur] = true; K.SFX.win();
+      K.reflect({
+        value: 'المبادرة',
+        questions: [
+          'ما الفرق بين «ينبغي أن يفعل أحدهم» و«سأفعل أنا يوم الأحد»؟',
+          'أيّ الخطوات الخمس كانت الأصعب؟ ولماذا؟',
+          'متى نعود لنسأل: هل نفّذنا ما كتبنا؟',
+        ],
+      }, home);
+    };
+    wrap.appendChild(fin);
+  }
+  const back = K.el('button', 'btn sm hide-present', '← المهمّات');
+  back.style.marginTop = '14px';
+  back.onclick = () => { K.SFX.tap(); home(); };
+  wrap.appendChild(back);
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>
