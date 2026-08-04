@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>قصة من خمس كلمات</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.words{display:flex;flex-wrap:wrap;gap:clamp(10px,1.6vw,20px);justify-content:center;margin-bottom:8px}
+/* زرّ التبديل داخل البطاقة لا خارجها: كان معلّقاً فوق حافّتها بإزاحةٍ
+   سالبة، فاختفى تحت الشريط العلويّ في الصف الأوّل وتعذّر ضغطه. */
+.w{position:relative;background:var(--paper);border:4px solid var(--ink);border-radius:18px;
+  padding:clamp(9px,1.3vw,16px) clamp(15px,2.2vw,28px);font-size:clamp(19px,2.7vw,36px);
+  font-weight:800;box-shadow:var(--sh);animation:pop .38s both;line-height:1.2;
+  padding-inline-start:calc(clamp(15px,2.2vw,28px) + 40px)}
+.w:nth-child(1){transform:rotate(-1.6deg)}.w:nth-child(2){transform:rotate(1.2deg)}
+.w:nth-child(3){transform:rotate(-.8deg)}.w:nth-child(4){transform:rotate(1.7deg)}
+.w:nth-child(5){transform:rotate(-1.2deg)}
+.w .sw{position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:10px;
+  width:34px;height:34px;border-radius:50%;border:3px solid var(--ink);background:var(--gold);
+  cursor:pointer;font-family:inherit;font-weight:800;font-size:16px;display:grid;place-items:center;padding:0}
+.w .sw:hover{background:#fff}
+.w.used{background:var(--a);color:#fff}
+body.present .w .sw{display:none}
+body.present .w{padding-inline-start:clamp(15px,2.2vw,28px)}
+#pad{width:min(1000px,94vw);min-height:19vh;font-family:inherit;font-size:clamp(18px,2.1vw,26px);
+  line-height:1.9;padding:18px 22px;border:4px solid var(--ink);border-radius:18px;
+  background:var(--paper);color:inherit;box-shadow:var(--sh);resize:vertical;direction:rtl}
+#pad:focus{outline:4px solid var(--a);outline-offset:2px}
+.crit{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.crit button{border:2px solid var(--ink);border-radius:12px;background:var(--paper);padding:9px 15px;
+  font-family:inherit;font-weight:800;font-size:15.5px;cursor:pointer;min-height:46px;
+  display:inline-flex;align-items:center;gap:8px}
+.crit button.on{background:var(--ok);color:#fff}
+.crit button:hover{background:var(--gold)}
+.crit button.on:hover{background:var(--ok)}
+.rowline{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٩ — قصة من خمس كلمات
+   الهدف: الإبداع اللغوي والربط بين المتباعدات.
+   قرارٌ تربويّ: الكلمات الخمس تُسحب من فئاتٍ مختلفة عمداً (شخصية،
+   مكان، شيء، فعل، صفة) لا عشوائياً من كيسٍ واحد. خمسُ أسماءٍ لا تصنع
+   قصّة، والفئات المتباعدة هي ما يُجبر الخيال على العمل.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const BANK = {
+  سهل: {
+    شخصية: ['طفلٌ فضولي','جدّة حكيمة','معلّمة مرحة','قطّة صغيرة','صيّاد سمك','بائع الحلوى'],
+    مكان:  ['المدرسة','الحديقة','السوق','الشاطئ','المكتبة','بيت الجدّ'],
+    شيء:   ['مظلّة حمراء','كرة','مفتاح قديم','رغيف خبز','دفتر','دلو ماء'],
+    فعل:   ['يبحث','يُساعد','يختبئ','يجري','يرسم','يضحك'],
+    صفة:   ['في يومٍ ممطر','في الصباح الباكر','وهو خائف','بفرحٍ كبير','في صمتٍ تام','بسرعةٍ شديدة'],
+  },
+  متوسط: {
+    شخصية: ['مخترعٌ صغير','ربّان سفينة','عالمة نبات','حارس المتحف','مسافرٌ تائه','طبيبة الحيّ'],
+    مكان:  ['قمّة الجبل','محطّة القطار','وادٍ مهجور','مختبر المدرسة','جزيرة صغيرة','سوق قديم'],
+    شيء:   ['خريطة ممزّقة','بذرةٌ غريبة','صندوق مقفل','ساعة لا تعمل','رسالةٌ بلا اسم','فانوس'],
+    فعل:   ['يكتشف','يُصلح','ينقذ','يُخفي','يتذكّر','يُقايض'],
+    صفة:   ['قبل غروب الشمس','وسط العاصفة','بعد سنواتٍ طويلة','دون أن يشعر أحد','بشجاعةٍ نادرة','في آخر لحظة'],
+  },
+  متقدّم: {
+    شخصية: ['راوٍ لا يُصدّقه أحد','عالمة فلك','حارسة البذور','رسّام بلا ألوان','طفلٌ يسمع ما لا يُسمع','مرمّم الكتب'],
+    مكان:  ['مكتبةٌ تحت الأرض','واحةٌ اختفت','مرصدٌ مهجور','سوق العطّارين','سفينةٌ في الصحراء','مدينةٌ بلا أسماء'],
+    شيء:   ['مرآةٌ تُظهر الغد','قلمٌ بلا حبر','مفتاح بلا باب','بذرةٌ أخيرة','خيطٌ ذهبيّ','كتابٌ ناقص الصفحات'],
+    فعل:   ['يُعيد','يُقايض','يُطارد','يحرس','يفكّ لغز','يتخلّى عن'],
+    صفة:   ['حين توقّف الزمن','قبل أن يعرف السبب','رغم تحذير الجميع','في ليلةٍ بلا قمر','بعد وعدٍ قديم','والمطر لا يتوقّف'],
+  },
+};
+const ORDER = ['شخصية', 'مكان', 'شيء', 'فعل', 'صفة'];
+const CRITERIA = [
+  'استعملنا الكلمات الخمس كلّها',
+  'للقصّة بداية ووسط ونهاية',
+  'فيها شخصيّةٌ نفهم شعورها',
+  'فيها فكرةٌ مفاجئة',
+  'تعاوَن الفريق في بنائها',
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="lb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EFE3F2"/><stop offset="1" stop-color="#F7EEE2"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#lb)"/>
+  <!-- رفوف كتب على الجانبين، والوسط فارغٌ عمداً ليبقى النص مقروءاً -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="40" y="300" width="250" height="480" fill="#E5D3B3"/>
+    <path d="M40 420h250M40 540h250M40 660h250" fill="none"/>
+    <g fill="#8B2635"><rect x="60" y="330" width="34" height="86"/><rect x="140" y="336" width="28" height="80" fill="#487848"/></g>
+    <g fill="#2F7D74"><rect x="100" y="326" width="32" height="90"/><rect x="176" y="332" width="36" height="84" fill="#D9A93C"/></g>
+    <g fill="#487848"><rect x="60" y="452" width="30" height="86"/><rect x="98" y="446" width="34" height="92" fill="#D86048"/>
+      <rect x="140" y="454" width="28" height="84" fill="#2F7D74"/><rect x="176" y="448" width="34" height="90" fill="#8B2635"/></g>
+    <g fill="#D9A93C"><rect x="60" y="572" width="34" height="86"/><rect x="102" y="576" width="30" height="82" fill="#487848"/>
+      <rect x="140" y="570" width="34" height="88" fill="#6B4E9E"/></g>
+  </g>
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="1310" y="340" width="250" height="440" fill="#E5D3B3"/>
+    <path d="M1310 460h250M1310 580h250" fill="none"/>
+    <g fill="#2F7D74"><rect x="1330" y="370" width="32" height="88"/><rect x="1370" y="376" width="30" height="82" fill="#D86048"/>
+      <rect x="1408" y="368" width="34" height="90" fill="#E8C34A"/><rect x="1450" y="374" width="28" height="84" fill="#487848"/></g>
+    <g fill="#8B2635"><rect x="1330" y="492" width="34" height="86"/><rect x="1372" y="488" width="30" height="90" fill="#6B4E9E"/>
+      <rect x="1410" y="494" width="34" height="84" fill="#2F7D74"/></g>
+  </g>
+  <!-- كتبٌ طائرة -->
+  <g stroke="#2A1503" stroke-width="4">
+    <g transform="translate(620 150) rotate(-14)"><path d="M0 0h70v46H0z" fill="#fff"/>
+      <path d="M35 0v46" fill="none"/><path d="M0 0l-30 -14v46L0 46z" fill="#D86048"/><path d="M70 0l30 -14v46L70 46z" fill="#D86048"/></g>
+    <g transform="translate(940 210) rotate(11)"><path d="M0 0h58v38H0z" fill="#fff"/>
+      <path d="M29 0v38" fill="none"/><path d="M0 0l-25 -12v38L0 38z" fill="#487848"/><path d="M58 0l25 -12v38L58 38z" fill="#487848"/></g>
+    <g transform="translate(790 80) rotate(6)"><path d="M0 0h50v32H0z" fill="#fff"/>
+      <path d="M25 0v32" fill="none"/><path d="M0 0l-22 -10v32L0 32z" fill="#E8C34A"/><path d="M50 0l22 -10v32L50 32z" fill="#E8C34A"/></g>
+  </g>
+  <rect y="800" width="1600" height="100" fill="#C9A87C"/>
+  <path d="M0 800h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, timer, level = 'متوسط', mins = 5, words = [], round = 0;
+const TOTAL = 3;
+
+K = Kit.build({
+  title: 'قصة من خمس كلمات',
+  accent: '#6B4E9E', accent2: '#4B3573',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الإبداع اللغوي: ربط كلماتٍ متباعدة في قصّةٍ متماسكة لها بداية ووسط ونهاية.',
+    tools: 'الشاشة. وأوراقٌ وأقلام إن أردتِ أن يكتب كل فريق قصّته بنفسه.',
+    groups: 'فرقٌ من ٣ إلى ٥. وزّعي الأدوار: راوٍ، كاتب، مراقب وقت، متحدّث يعرض القصة.',
+    steps: [
+      'اختاري المستوى ومدّة الكتابة ثم «ابدأ النشاط».',
+      'تظهر خمس كلمات — اقرئيها بصوتٍ عالٍ مرّتين.',
+      'إن رأيتِ كلمةً صعبةً على الصف، اضغطي الدائرة الصفراء فوقها لتبديلها.',
+      'شغّلي المؤقّت واتركي الفرق تكتب.',
+      'عند انتهاء الوقت: يقرأ كل فريق قصّته بصوتٍ عالٍ.',
+      'استعملي «معايير التقييم» أثناء الاستماع — اضغطي المعيار المتحقّق.',
+      'اضغطي «كلماتٌ جديدة» لجولةٍ أخرى.',
+    ],
+    time: '١٥ إلى ٢٠ دقيقة لثلاث جولات.',
+    script: 'أمامكم خمس كلمات لا علاقة بينها… مهمّتكم أن تصنعوا منها قصّةً واحدة! الكلمات الخمس كلّها يجب أن تكون في القصّة. ابدأوا حين يبدأ المؤقّت.',
+    tips: 'لا تُصحّحي الإملاء أثناء الكتابة — التصحيح يقتل التدفّق. صحّحي بعد القراءة إن لزم. وامدحي الفكرة الغريبة؛ فهي دليل خيالٍ لا خطأ.',
+    points: 'نقطةٌ لكل معيارٍ يتحقّق من المعايير الخمسة. لا تُعطي نقطةً للأسرع — أطول قصّةٍ ليست أفضلها.',
+    levels: 'سهل: كلماتٌ مألوفة قريبة من حياة الطفل. متوسط: كلماتٌ تحتاج ربطاً. متقدّم: كلماتٌ مجرّدة تُناسب الصفّين الثالث والرابع.',
+    close: [
+      'أيّ كلمةٍ كانت الأصعب؟ كيف تجاوزتموها؟',
+      'ما القصّة التي أعجبتكم من فريقٍ آخر ولماذا؟',
+      'هل تغيّرت القصّة عن فكرتكم الأولى؟',
+    ],
+  },
+});
+
+/* سحبةٌ واحدة من كل فئة: هذا ما يجعل القصّة ممكنة أصلاً */
+function draw() {
+  const b = BANK[level];
+  return ORDER.map(k => b[k][Math.floor(Math.random() * b[k].length)]);
+}
+function swapOne(i) {
+  const b = BANK[level][ORDER[i]];
+  let w; do { w = b[Math.floor(Math.random() * b.length)]; } while (b.length > 1 && w === words[i]);
+  words[i] = w;
+}
+
+function home() {
+  round = 0;
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M18 20h30a10 10 0 0 1 10 10v52a8 8 0 0 0-8-8H18z" fill="#fff" stroke="#2A1503" stroke-width="5"/>
+      <path d="M82 20H52a10 10 0 0 0-10 10v52a8 8 0 0 1 8-8h32z" fill="#EFE3F2" stroke="#2A1503" stroke-width="5"/>
+      <path d="M50 30v52" stroke="#2A1503" stroke-width="5"/>
+      <path d="M72 8l5 11 11 5-11 5-5 11-5-11-11-5 11-5z" fill="#E8C34A" stroke="#2A1503" stroke-width="4"/>
+    </svg>
+    <h1>قصة من خمس كلمات</h1>
+    <p class="sub">خمسُ كلماتٍ لا رابط بينها… ومهمّتكم أن تصنعوا منها قصّةً واحدة.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٥ – ٢٠ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>الإبداع والتعبير</b></span>
+      <span class="chip">القيمة: <b>التعاون وتقبّل أفكار الآخرين</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:26px;flex-wrap:wrap;justify-content:center;align-items:center';
+  opts.innerHTML = `<div><div style="font-weight:800;margin-bottom:8px">المستوى</div><div id="lv" style="display:flex;gap:8px"></div></div>
+    <div><div style="font-weight:800;margin-bottom:8px">مدّة الكتابة</div><div id="mn" style="display:flex;gap:8px"></div></div>
+    <div><div style="font-weight:800;margin-bottom:8px">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = (sel, vals, get, set, fmt) => {
+    const host = opts.querySelector(sel); host.innerHTML = '';
+    vals.forEach(v => {
+      const b = K.el('button', 'btn sm' + (get() === v ? ' p' : ''), fmt ? fmt(v) : v);
+      b.onclick = () => { set(v); K.SFX.tap(); pick(sel, vals, get, set, fmt); };
+      host.appendChild(b);
+    });
+  };
+  pick('#lv', Object.keys(BANK), () => level, v => level = v);
+  pick('#mn', [3, 5, 7], () => mins, v => mins = v, v => Kit.AR(v) + ' د');
+  pick('#tc', [2, 3, 4], () => n, v => n = v, v => Kit.AR(v));
+  home.teamCount = () => n;
+}
+
+function play() {
+  round++;
+  words = draw();
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+
+  wrap.appendChild(K.el('div', 'rowline', `<span class="chip">الجولة <b>${Kit.AR(round)} / ${Kit.AR(TOTAL)}</b></span>
+    <span class="chip">المستوى: <b>${level}</b></span>`));
+
+  const wb = K.el('div', 'words'); wrap.appendChild(wb);
+
+  // المؤقّت + أزراره
+  const tRow = K.el('div', 'rowline');
+  const ring = K.el('div', 'ring', '<i></i>');
+  const tim = K.el('div', 'timer'); tim.appendChild(ring);
+  tRow.appendChild(tim);
+  const startB = K.el('button', 'btn p', '▶ ابدأ الكتابة');
+  const pauseB = K.el('button', 'btn', '⏸ إيقاف');
+  const addB = K.el('button', 'btn g hide-present', '+ دقيقة');
+  pauseB.disabled = true;
+  tRow.append(startB, pauseB, addB);
+  wrap.appendChild(tRow);
+
+  const pad = K.el('textarea');
+  pad.id = 'pad';
+  pad.placeholder = 'اكتبي هنا قصّة الصف… أو اتركيها فارغة إن كانت الفرق تكتب على أوراقها.';
+  pad.setAttribute('aria-label', 'مساحة كتابة القصة');
+  wrap.appendChild(pad);
+
+  const critBox = K.el('div', 'crit hide-present'); wrap.appendChild(critBox);
+  const teamsBox = K.el('div', 'teams'); wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+
+  paintWords(wb, pad);
+
+  timer = K.Timer({
+    secs: mins * 60, ring,
+    onEnd: () => {
+      startB.disabled = false; startB.textContent = '▶ متابعة'; pauseB.disabled = true;
+      K.say('انتهى الوقت — لنستمع إلى القصص!', 'info');
+    },
+  });
+  timer.paint();
+  startB.onclick = () => { timer.start(); startB.disabled = true; pauseB.disabled = false; K.SFX.tap(); };
+  pauseB.onclick = () => { timer.pause(); startB.disabled = false; startB.textContent = '▶ متابعة'; pauseB.disabled = true; K.SFX.tap(); };
+  addB.onclick = () => { timer.add(60); K.say('أُضيفت دقيقة', 'info'); };
+
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+
+  // المعايير: تُضغط أثناء استماع المعلّمة، فتُسند النقطة لفريقٍ بضغطتين
+  CRITERIA.forEach(c => {
+    const b = K.el('button', '', '☐ ' + c);
+    b.onclick = () => {
+      b.classList.toggle('on');
+      b.textContent = (b.classList.contains('on') ? '☑ ' : '☐ ') + c;
+      if (b.classList.contains('on')) teams.ask(1, c);
+    };
+    critBox.appendChild(b);
+  });
+  wrap.appendChild(K.valuesRow(teams, [[1, 'شارك كل أفراد الفريق'], [1, 'فكرةٌ مبتكرة'], [1, 'أصغى لفريقٍ آخر']]));
+
+  K.bottom.querySelectorAll('.round-tool').forEach(x => x.remove());
+  const nw = K.tool('🔄 كلماتٌ جديدة', 'تبديل الكلمات الخمس', () => { words = draw(); paintWords(wb, pad); });
+  nw.classList.add('round-tool');
+  const nx = K.tool(round < TOTAL ? 'الجولة التالية ←' : 'ختام النشاط ←', 'التالي', () => {
+    if (round < TOTAL) play();
+    else K.reflect({
+      value: 'الإبداع والتعاون',
+      questions: [
+        'أيّ كلمةٍ كانت الأصعب؟ كيف حللتم المشكلة؟',
+        'ما أجمل فكرةٍ سمعتموها من فريقٍ آخر؟',
+        'هل تغيّرت قصّتكم عن فكرتكم الأولى؟ لماذا؟',
+      ],
+    }, home);
+  }, 'p');
+  nx.classList.add('round-tool');
+  K.addTool(nw); K.addTool(nx);
+}
+
+function paintWords(wb, pad) {
+  wb.innerHTML = '';
+  words.forEach((w, i) => {
+    const d = K.el('div', 'w', Kit.esc(w));
+    const s = K.el('button', 'sw', '↻');
+    s.title = 'تبديل هذه الكلمة';
+    s.onclick = () => { swapOne(i); K.SFX.tap(); paintWords(wb, pad); };
+    d.appendChild(s);
+    // شطبٌ بصريّ حين تُستعمل الكلمة فعلاً في النصّ — يُري الصفَّ ما بقي
+    d.onclick = e => { if (e.target !== s) d.classList.toggle('used'); };
+    wb.appendChild(d);
+  });
+  if (pad) {
+    const check = () => {
+      const t = pad.value;
+      [...wb.children].forEach((d, i) => {
+        // الكلمة الأولى من العبارة تكفي: الطفل لا يكتب العبارة حرفياً
+        const key = words[i].split(' ')[0];
+        d.classList.toggle('used', key.length > 1 && t.includes(key));
+      });
+    };
+    pad.oninput = check;
+  }
+}
+
+home();
+</script>
+</body>
+</html>
