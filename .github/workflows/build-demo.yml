@@ -8,6 +8,7 @@ on:
     paths:
       - 'cycle1.html'
       - 'tools/build-demo.mjs'
+      - 'tools/check-html.mjs'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,8 +19,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
+      - name: فحص بنية الصفحات
+        # يسبق التوليد عمداً: نسخة التجربة تُبنى من cycle1.html، فتوليدها من
+        # مصدرٍ مكسور يُضاعف الخطأ ولا يكشفه
+        run: node tools/check-html.mjs
       - name: توليد demo.html
         run: node tools/build-demo.mjs
+      - name: فحص المخرَج
+        run: node tools/check-html.mjs demo.html
       - name: رفع النسخة المولّدة
         run: |
           git config user.name  "github-actions[bot]"

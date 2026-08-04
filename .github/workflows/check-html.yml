@@ -1,0 +1,23 @@
+# حارسُ بنية الصفحات — يعمل على كل دفعةٍ وكل طلب دمج.
+#
+# الحاجة إليه: صفحةٌ بقوسٍ CSS غير مغلق لا تُخطئ ولا تتوقّف — تُعرض بلا
+# تنسيقٍ إطلاقاً. ولا يكشفه فحصٌ نحويّ ولا بناء، بل عينٌ تنظر إلى الشاشة.
+# وقد لا تنظر إلا بعد أن تراه معلّمة. فالفحص هنا يقف قبل ذلك.
+name: Check page structure
+
+on:
+  push:
+    branches: [main]
+    paths: ['**.html', 'tools/check-html.mjs']
+  pull_request:
+    paths: ['**.html', 'tools/check-html.mjs']
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node tools/check-html.mjs
