@@ -15,10 +15,19 @@
 
 import fs from 'node:fs';
 
-const FILES = process.argv.slice(2).length
-  ? process.argv.slice(2)
-  : ['cycle1.html', 'manager.html', 'demo.html', 'landing.html',
-     'cycle1-landing.html', 'home.html', 'school.html', 'referrals.html', 'privacy.html'];
+// اكتشافٌ تلقائيّ لا قائمةٌ مكتوبة: القائمة الثابتة تفوّت ما يُضاف بعدها،
+// وأوّلُ ما فاتها index.html — أكبر صفحةٍ في المستودع.
+function findHtml(dir, out = []) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('.')) continue;
+    const p = dir === '.' ? e.name : `${dir}/${e.name}`;
+    if (e.isDirectory()) findHtml(p, out);
+    else if (e.name.endsWith('.html')) out.push(p);
+  }
+  return out;
+}
+
+const FILES = process.argv.slice(2).length ? process.argv.slice(2) : findHtml('.').sort();
 
 let failed = 0;
 
