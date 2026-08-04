@@ -1,0 +1,187 @@
+/* ═══════════════════════════════════════════════════════════════════
+   نظام التصميم المشترك — الأنشطة والفعاليات التفاعلية
+   ───────────────────────────────────────────────────────────────────
+   كل نشاطٍ يستورد هذا الملف ثم يُعرّف لونيه الخاصّين فقط:
+       :root{--a:#لون; --a2:#لون}
+   فتتبدّل الهويّة كاملةً بلا تكرار سطرٍ واحد من التنسيق.
+
+   قيدان يحكمان كل قرارٍ هنا:
+   ١) الشاشة الصفّية: النشاط يُعرض على بروجكتر تراه طالبةٌ في آخر الصف،
+      فأصغر خطٍّ هنا ١٨px، والأزرار لا تقلّ عن ٥٦px ارتفاعاً.
+   ٢) لا اتصال: لا خطوط من الشبكة ولا صور مرتبطة ولا مكتبات. المدارس
+      التي بُني لها هذا القسم تُقطع عنها الشبكة في منتصف الحصّة.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root{
+  --a:#487848; --a2:#2F5233;          /* لونا النشاط — يُعاد تعريفهما في كل ملف */
+  --sand:#F7EEE2; --ink:#2A1503; --paper:#FFF9F0;
+  --gold:#E8C34A; --terra:#D86048; --teal:#2F7D74; --red:#8B2635;
+  --ok:#3E8E5A; --warn:#C98A20;
+  --line:rgba(42,21,3,.14);
+  --sh:0 6px 0 rgba(42,21,3,.16), 0 12px 28px rgba(42,21,3,.14);
+  --r:18px;
+  /* الخط: مكدّسٌ من خطوط النظام. أيُّ خطٍّ من الشبكة يسقط الوعد بالعمل
+     دون اتصال، ويظهر بديلاً قبيحاً في أسوأ لحظة — أمام الصف. */
+  --f:'Segoe UI','Tahoma','Geneva Pro','Noto Sans Arabic','Arial',sans-serif;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--f);direction:rtl;text-align:right;
+  color:var(--ink);background:var(--sand);
+  overflow:hidden;display:flex;flex-direction:column;
+  font-size:clamp(17px,1.5vw,21px);line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══ المشهد الخلفي ══
+   يُرسم بـSVG داخل الملف. الطبقة الهادئة فوقه ضرورة لا زينة: النص فوق
+   مشهدٍ ملوّن يصير غير مقروءٍ من آخر الصف، والوضوح هنا يسبق الجمال. */
+.scene{position:fixed;inset:0;z-index:0;overflow:hidden}
+.scene svg{width:100%;height:100%;display:block}
+.scene::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(120% 90% at 50% 45%,rgba(255,249,240,.72),rgba(255,249,240,.30) 55%,transparent 78%)}
+
+/* ══ الهيكل ══ */
+.top{position:relative;z-index:5;display:flex;align-items:center;gap:10px;
+  padding:10px 16px;background:rgba(255,249,240,.86);backdrop-filter:blur(6px);
+  border-bottom:2px solid var(--line);flex:none}
+.top .nm{font-weight:800;font-size:19px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* safe center: التوسيط العادي يقصّ أعلى المحتوى حين يفيض — فيختفي عنوان
+   الجولة ولا سبيل للوصول إليه لأن التمرير لا يطال ما فوق نقطة البداية. */
+.stage{position:relative;z-index:4;flex:1;min-height:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:safe center;padding:clamp(12px,2.4vw,30px);gap:18px;overflow:auto}
+.bottom{position:relative;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 16px;background:rgba(255,249,240,.86);backdrop-filter:blur(6px);
+  border-top:2px solid var(--line);flex:none}
+
+/* ══ الأزرار ══ */
+.btn{appearance:none;border:3px solid var(--ink);border-radius:14px;cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:18px;padding:13px 20px;min-height:56px;
+  background:var(--paper);color:var(--ink);box-shadow:0 4px 0 rgba(42,21,3,.22);
+  transition:transform .08s,box-shadow .08s,background .15s;display:inline-flex;
+  align-items:center;justify-content:center;gap:9px}
+.btn:hover{background:#fff}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(42,21,3,.22)}
+.btn:focus-visible{outline:4px solid var(--gold);outline-offset:3px}
+.btn[disabled]{opacity:.4;cursor:default;transform:none;box-shadow:0 4px 0 rgba(42,21,3,.22)}
+.btn.p{background:var(--a);color:#fff}          /* رئيسي */
+.btn.p:hover{background:var(--a2)}
+.btn.g{background:var(--gold)}                   /* تنبيه لطيف */
+.btn.sm{font-size:15.5px;padding:8px 13px;min-height:44px;border-width:2px;border-radius:11px}
+.btn.ic{padding:0;width:48px;min-height:48px;font-size:20px}
+.btn.big{font-size:clamp(21px,2.6vw,30px);padding:18px 40px;min-height:70px;border-radius:18px}
+
+/* ══ البطاقات ══ */
+.card{background:var(--paper);border:3px solid var(--ink);border-radius:var(--r);
+  box-shadow:var(--sh);padding:clamp(16px,2.4vw,30px)}
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--paper);
+  border:2px solid var(--ink);border-radius:99px;padding:6px 14px;font-size:15.5px;font-weight:800}
+.chip b{color:var(--a2)}
+
+/* ══ شاشة البداية ══ */
+.start{max-width:1000px;width:100%;text-align:center;animation:up .45s both}
+.start h1{font-size:clamp(30px,5.2vw,60px);margin:0 0 6px;line-height:1.22}
+.start .sub{font-size:clamp(17px,2vw,23px);opacity:.85;margin:0 auto 18px;max-width:66ch}
+.start .meta{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:24px}
+.start .go{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.emblem{width:clamp(96px,13vw,150px);height:clamp(96px,13vw,150px);margin:0 auto 12px;display:block}
+
+/* ══ لوحة المعلّمة ══
+   دُرجٌ جانبيّ لا نافذة: النافذة تُغطّي النشاط فتفقد المعلّمة موضعها،
+   والدرج يُفتح ويُغلق وهي واقفةٌ أمام الصف. */
+/* الدرج مثبّتٌ عند الحافة البادئة — وهي في RTL الحافة اليمنى. وtranslateX
+   لا يعرف الاتجاه: القيمة السالبة تدفع يساراً دائماً، فكانت تدفع الدرج
+   المغلق إلى وسط الشاشة حيث يبتلع كل ضغطة. الموجبة هي الصحيحة هنا.
+   وvisibility تُغلق الباب على أي بقيّةٍ من التقاط الضغطات. */
+.tp{position:fixed;inset-block:0;inset-inline-start:0;width:min(560px,94vw);z-index:60;
+  background:var(--paper);border-inline-end:4px solid var(--ink);box-shadow:0 0 40px rgba(42,21,3,.4);
+  transform:translateX(102%);visibility:hidden;
+  transition:transform .28s,visibility 0s .28s;overflow:auto;padding:20px 22px 40px}
+.tp.on{transform:none;visibility:visible;transition:transform .28s,visibility 0s}
+.tp h2{margin:0 0 4px;font-size:26px}
+.tp h3{margin:22px 0 6px;font-size:19px;color:var(--a2);
+  border-inline-start:6px solid var(--a);padding-inline-start:10px}
+.tp ul,.tp ol{margin:0;padding-inline-start:22px}
+.tp li{margin-bottom:7px}
+.tp .x{position:absolute;inset-block-start:14px;inset-inline-end:14px}
+.veil{position:fixed;inset:0;background:rgba(42,21,3,.5);z-index:55;opacity:0;
+  pointer-events:none;transition:opacity .28s}
+.veil.on{opacity:1;pointer-events:auto}
+
+/* ══ المؤقّت ══ */
+.timer{display:flex;align-items:center;gap:10px}
+.timer .t{font-size:clamp(26px,3.6vw,46px);font-weight:800;font-variant-numeric:tabular-nums;
+  min-width:3.6ch;text-align:center;letter-spacing:1px}
+.timer.low .t{color:var(--red);animation:pulse .9s infinite}
+.ring{--p:1;width:clamp(64px,8vw,104px);height:clamp(64px,8vw,104px);border-radius:50%;flex:none;
+  background:conic-gradient(var(--a) calc(var(--p)*360deg),rgba(42,21,3,.12) 0);
+  display:grid;place-items:center;border:3px solid var(--ink)}
+.ring i{width:76%;height:76%;border-radius:50%;background:var(--paper);display:grid;place-items:center;
+  font-size:clamp(19px,2.4vw,30px);font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+
+/* ══ لوحة النقاط ══ */
+.teams{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.team{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:11px 14px;
+  min-width:170px;box-shadow:0 4px 0 rgba(42,21,3,.18)}
+.team .hd{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.team .dot{width:17px;height:17px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.team .nm2{font-weight:800;font-size:17px;flex:1;border:0;background:transparent;font-family:inherit;
+  color:inherit;min-width:0;padding:2px 4px;border-radius:6px}
+.team .nm2:focus{outline:2px solid var(--a);background:#fff}
+.team .sc{font-size:34px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;line-height:1}
+.team .ops{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.team .ops button{width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;
+  background:var(--sand);font-size:20px;font-weight:800;cursor:pointer;font-family:inherit}
+.team .ops button:hover{background:#fff}
+.team.lead{border-color:var(--gold);box-shadow:0 0 0 4px rgba(232,195,74,.4),0 4px 0 rgba(42,21,3,.18)}
+
+/* نقاطُ القيم: الفوز هنا ليس للأسرع. هذه الأزرار تجعل التعاون والاحترام
+   قابلَين للمكافأة بضغطةٍ واحدة، وإلا بقيا شعاراً في لوحة المعلّمة. */
+.vals{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.vals button{border:2px solid var(--ink);border-radius:99px;background:var(--paper);
+  padding:7px 14px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;min-height:44px}
+.vals button:hover{background:var(--gold)}
+
+/* ══ التغذية الراجعة ══ */
+.fb{position:fixed;inset-block-end:26px;inset-inline:0;margin:auto;width:max-content;max-width:90vw;
+  z-index:70;background:var(--ok);color:#fff;border:3px solid var(--ink);border-radius:99px;
+  padding:14px 30px;font-size:clamp(18px,2.2vw,26px);font-weight:800;box-shadow:var(--sh);
+  opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none}
+.fb.on{opacity:1;transform:none}
+.fb.warn{background:var(--warn)}
+.fb.info{background:var(--a)}
+
+/* ══ شاشة التأمّل الختامي ══ */
+.reflect{max-width:900px;text-align:center;animation:up .5s both}
+.reflect h2{font-size:clamp(26px,4vw,44px);margin:0 0 14px}
+.reflect .qs{display:grid;gap:12px;margin:18px 0 24px;text-align:start}
+.reflect .qs div{background:var(--paper);border:3px solid var(--ink);border-radius:14px;
+  padding:14px 18px;font-size:clamp(17px,2vw,22px);font-weight:700;
+  display:flex;gap:12px;align-items:flex-start}
+.reflect .qs b{color:var(--a);flex:none;font-size:1.15em}
+
+/* ══ وضع العرض ══
+   ليس تكبيراً للخط فحسب: كل ما يخصّ إعداد المعلّمة يختفي، فلا يرى الصفُّ
+   إلا النشاط. ما بقي ظاهراً بقي عمداً. */
+body.present .top,body.present .hide-present{display:none!important}
+body.present .stage{padding:clamp(16px,3vw,44px)}
+body.present{font-size:clamp(19px,1.85vw,26px)}
+body.present .btn{font-size:20px;min-height:62px}
+body.present .team .sc{font-size:44px}
+
+@media(pointer:coarse){.btn{min-height:62px}.btn.ic{width:56px;min-height:56px}}
+
+/* ══ الحركة: هادئة ومحدودة ══
+   الوميض والحركة الدائمة تُتعب الانتباه وتؤذي الحسّاسين للضوء. كل حركةٍ
+   هنا تنتهي، ولا شيء يتكرّر بلا توقّف إلا نبضةُ آخر عشر ثوانٍ. */
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.86)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes pulse{50%{opacity:.45}}
+@keyframes shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-5px)}}
+.pop{animation:pop .3s both}
+.shake{animation:shake .4s}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

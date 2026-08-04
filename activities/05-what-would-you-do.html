@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>ماذا ستفعل؟</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.situ{max-width:1050px;width:100%;animation:up .4s both}
+.situ .face{font-size:clamp(56px,9vw,110px);line-height:1;text-align:center;margin-bottom:6px}
+.situ h2{font-size:clamp(23px,3.2vw,40px);margin:0 0 10px;text-align:center;line-height:1.35}
+.situ .story{font-size:clamp(18px,2.2vw,26px);text-align:center;margin:0 auto 22px;max-width:56ch;line-height:1.75}
+.opts{display:grid;gap:13px}
+.opt{display:flex;align-items:center;gap:14px;text-align:start;padding:16px 20px;
+  font-size:clamp(17px,2vw,23px);font-weight:800;min-height:72px;width:100%}
+.opt .k{flex:none;width:44px;height:44px;border-radius:12px;border:3px solid var(--ink);
+  background:var(--sand);display:grid;place-items:center;font-size:21px}
+/* القفل بـpointer-events لا بـdisabled: السمة disabled تُخفّت الزرّ (opacity .4)
+   فيصير الخيار المُختار باهتاً بنصٍّ أبيض لا يُقرأ — وهو الخيار الذي يجب أن
+   يراه الصف أوضح من كل شيء. */
+.opt.locked{pointer-events:none}
+.opt.chosen{background:var(--a);color:#fff;border-color:var(--ink)}
+.opt.chosen .k{background:var(--gold);color:var(--ink)}
+.opt.best{background:var(--ok);color:#fff;border-color:var(--ink)}
+.opt.best .k{background:var(--gold);color:var(--ink)}
+.opt.dim{opacity:.45}
+/* النتيجة: لا نقول «خطأ». نُري ما سيحدث، ونترك الطفل يحكم — الحكم الذي
+   يصل إليه بنفسه يبقى، والحكم المفروض يُنسى بعد الحصّة. */
+.out{margin-top:18px;animation:up .35s both}
+.out .box{border:3px solid var(--ink);border-radius:16px;padding:16px 20px;background:var(--paper);
+  font-size:clamp(17px,2vw,23px);display:flex;gap:13px;align-items:flex-start;margin-bottom:11px}
+.out .box .ic{font-size:30px;flex:none;line-height:1}
+.out .val{background:var(--gold);font-weight:800}
+.progress{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
+.progress i{width:34px;height:9px;border-radius:99px;background:rgba(42,21,3,.18);border:1px solid var(--line)}
+.progress i.on{background:var(--a)}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٥ — ماذا ستفعل؟
+   الهدف: اتخاذ القرار والتعاطف.
+   قرارٌ تربويّ في التصميم: لا يوجد «خيار خاطئ» يُعلَن خطأً. كل خيارٍ
+   يُظهر نتيجته، والطفل يقارن. الحكم الذي يصل إليه بنفسه يبقى معه،
+   والحكم الذي يُملى عليه يُنسى مع نهاية الحصّة.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const CASES = [
+  {
+    face:'🧍‍♂️', title:'طالبٌ جديد يجلس وحده',
+    story:'في أوّل يومٍ له، جلس زميلٌ جديد في آخر الصف. لم يتحدّث مع أحد، وفي الفسحة بقي وحده على المقعد.',
+    value:'اللطف',
+    opts:[
+      {t:'أذهب إليه وأُعرّفه بنفسي وأدعوه للعب معنا', out:'ابتسم لأوّل مرّة اليوم. صار له صديقٌ في المدرسة، وشعر أن مكانه هنا.', best:true},
+      {t:'أنتظر حتى يأتي هو ويُكلّمنا', out:'بقي وحده اليوم كلّه. هو خجولٌ وينتظر أن يبدأ أحدٌ غيره — فلم يبدأ أحد.'},
+      {t:'أُخبر المعلّمة أن تطلب منه اللعب معنا', out:'لعب معنا، لكنّه شعر أنّه جاء بأمرٍ لا برغبتنا. الدعوة من صديقٍ أجمل من أمرٍ من معلّمة.'},
+    ],
+    ask:'كيف نشعر حين نكون جُدداً في مكانٍ لا نعرف فيه أحداً؟',
+  },
+  {
+    face:'✏️', title:'زميلٌ نسي أدواته',
+    story:'بدأت حصّة الرسم، واكتشف زميلك أنه نسي ألوانه في البيت. بدا حزيناً وخجل أن يطلب.',
+    value:'التعاون',
+    opts:[
+      {t:'أُشاركه ألواني ونعمل معاً', out:'أكملتما العمل معاً، واستمتعتما أكثر. المشاركة لم تُنقص ألوانك شيئاً.', best:true},
+      {t:'أُعطيه لوناً واحداً فقط', out:'استطاع أن يرسم شيئاً بسيطاً. خطوةٌ طيّبة — وكان يمكن أن تكون أطيب.'},
+      {t:'أنشغل برسمي؛ نسيانه ليس مسؤوليتي', out:'جلس بلا عمل حتى انتهت الحصّة. صحيحٌ أنه نسي، لكنّ مساعدته كانت بيدك.'},
+    ],
+    ask:'هل نقص شيءٌ منّا حين شاركنا؟ ماذا ربحنا؟',
+  },
+  {
+    face:'😳', title:'زميلٌ أخطأ أمام الصف',
+    story:'وقف زميلك ليقرأ، فأخطأ في كلمة. ضحك بعض الطلاب، فاحمرّ وجهه وصمت.',
+    value:'الاحترام',
+    opts:[
+      {t:'أضحك مثلهم — الأمر مضحك', out:'توقّف عن القراءة ولم يرفع يده بعدها أبداً. ضحكةٌ قصيرة كلّفته ثقته بنفسه.'},
+      {t:'أصمت ولا أفعل شيئاً', out:'لم تزد الأمر سوءاً، لكنّ صمتك جعل الضحك يبدو مقبولاً.'},
+      {t:'أقول: «كلّنا نُخطئ، أنا أخطأت أمس» وأُشجّعه على المتابعة', out:'أكمل القراءة، وتوقّف الضحك. كلمةٌ واحدةٌ منك غيّرت جوّ الصف كلّه.', best:true},
+    ],
+    ask:'ماذا نشعر حين يضحك أحدٌ على خطئنا؟ وماذا نشعر حين يُشجّعنا؟',
+  },
+  {
+    face:'💰', title:'وجدتَ شيئاً ليس لك',
+    story:'في ساحة المدرسة وجدتَ قلماً جميلاً جداً — من النوع الذي تتمنّاه منذ زمن. لا أحد حولك.',
+    value:'الأمانة',
+    opts:[
+      {t:'آخذه؛ فأنا وجدته ولا أحد يعلم', out:'صاحبه بحث عنه ثلاثة أيام. القلم في جيبك، لكنّك تعرف الحقيقة كلّما نظرت إليه.'},
+      {t:'أُسلّمه للمعلّمة ليصل صاحبه', out:'وصل القلم لصاحبته ففرحت. وأنتَ فرحتَ أكثر — والأمانة أثقل من قلم.', best:true},
+      {t:'أستعمله وأُعيده إن سأل أحد', out:'سأل صاحبه فأعدته، لكنّه لاحظ أنّه مستعمَل. الأمانة لا تنتظر أن يسأل أحد.'},
+    ],
+    ask:'ما الذي يجعلنا أُمناء حتى حين لا يرانا أحد؟',
+  },
+  {
+    face:'🗑️', title:'نفاياتٌ في ساحة المدرسة',
+    story:'رأيتَ في الطريق إلى الصف علبة عصيرٍ فارغة على الأرض. لم تكن أنت من رماها.',
+    value:'المسؤولية',
+    opts:[
+      {t:'أتجاوزها؛ لستُ أنا من رماها', out:'بقيت مكانها، وأضاف إليها آخرون. المدرسة صارت أقلّ جمالاً — قليلاً.'},
+      {t:'ألتقطها وأضعها في السلّة', out:'صارت الساحة أنظف بخطوةٍ واحدة منك. المسؤولية ليست عن أخطائنا فقط.', best:true},
+      {t:'أبحث عمّن رماها لأُخبر المعلّمة', out:'مضى وقتُ الحصّة، والعلبة ما زالت مكانها. البحث عن المُلام لا يُنظّف شيئاً.'},
+    ],
+    ask:'من المسؤول عن نظافة مدرستنا؟',
+  },
+  {
+    face:'🤫', title:'سرٌّ لا يجب أن يبقى سرّاً',
+    story:'أخبرك صديقك أن طالباً في الصف الآخر يُضايقه كل يوم، وطلب منك ألّا تُخبر أحداً.',
+    value:'الشجاعة والصدق',
+    opts:[
+      {t:'أحفظ السرّ كما وعدت', out:'استمرّت المضايقة، وصار صديقك يكره المجيء للمدرسة. بعض الأسرار تؤذي صاحبها.'},
+      {t:'أُخبره أنّ هذا يحتاج مساعدة، وأذهب معه إلى المعلّمة', out:'توقّفت المضايقة. لم تخُنه — بل وقفتَ معه حين لم يقدر أن يقف وحده.', best:true},
+      {t:'أواجه الطالب الآخر بنفسي', out:'تحوّل الأمر إلى خصامٍ بينكما، ولم تُحلّ المشكلة. المساعدة الصحيحة أحياناً تحتاج كبيراً.'},
+    ],
+    ask:'متى يكون إخبار الكبار مساعدةً لا وشاية؟',
+  },
+  {
+    face:'🥤', title:'صنبورٌ مفتوح',
+    story:'مررتَ بدورات المياه فوجدتَ صنبوراً مفتوحاً والماء يجري. أنت متأخّرٌ عن الحصّة.',
+    value:'المسؤولية',
+    opts:[
+      {t:'أُغلقه بسرعة ثم أُكمل طريقي', out:'تأخّرتَ نصف دقيقة، ووفّرتَ ماءً كثيراً. أصغر فعلٍ في أنسب وقت.', best:true},
+      {t:'أمضي؛ سيُغلقه شخصٌ آخر', out:'ظلّ مفتوحاً حتى الفسحة. كلّ من مرّ ظنّ أن غيره سيُغلقه.'},
+      {t:'أُخبر عامل النظافة حين أراه', out:'أُغلق بعد وقتٍ طويل. الإخبار جيّد، والفعل المباشر أسرع.'},
+    ],
+    ask:'لماذا نهتمّ بالماء ونحن لا ندفع ثمنه؟',
+  },
+  {
+    face:'🏃', title:'فريقٌ يخسر',
+    story:'في مسابقة الصف، أخطأ زميلك في السؤال الأخير فخسر فريقكم. بدأ بعض أعضاء الفريق يلومونه.',
+    value:'التعاون وروح الفريق',
+    opts:[
+      {t:'أشاركهم اللوم؛ هو سبب الخسارة فعلاً', out:'بكى، وتفكّك الفريق. وفي المسابقة القادمة لم يُرد أحدٌ أن يُجيب خوفاً من اللوم.'},
+      {t:'أقول: «لعبنا كفريق وخسرنا كفريق» وأشكره على محاولته', out:'هدأ الفريق، وشكرك زميلك. المرّة القادمة أجاب بثقة.', best:true},
+      {t:'أصمت وأبتعد عن المشكلة', out:'استمرّ اللوم بلا من يوقفه. الصمت أحياناً يُشبه الموافقة.'},
+    ],
+    ask:'حين يخسر الفريق، من المسؤول؟',
+  },
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#DCEBF5"/><stop offset="1" stop-color="#F5EAD6"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#s)"/>
+  <circle cx="1380" cy="140" r="70" fill="#FFD97A" stroke="#2A1503" stroke-width="6"/>
+  <g fill="#fff" opacity=".85"><ellipse cx="300" cy="150" rx="96" ry="46"/><ellipse cx="380" cy="132" rx="66" ry="38"/>
+    <ellipse cx="1050" cy="105" rx="78" ry="38"/></g>
+  <rect y="640" width="1600" height="260" fill="#8FBF7A"/>
+  <path d="M0 640h1600" stroke="#2A1503" stroke-width="6"/>
+  <!-- المدرسة -->
+  <g stroke="#2A1503" stroke-width="6">
+    <rect x="120" y="400" width="330" height="240" fill="#F0E0C0"/>
+    <path d="M100 400l185-110 185 110z" fill="#D86048"/>
+    <rect x="180" y="470" width="62" height="62" fill="#9FD4E8"/><rect x="330" y="470" width="62" height="62" fill="#9FD4E8"/>
+    <rect x="255" y="530" width="80" height="110" fill="#8B5E34"/>
+    <path d="M285 290v-42h58v28" fill="none"/><path d="M343 248l40 14-40 14z" fill="#E8C34A"/>
+  </g>
+  <!-- مكتبة وحديقة -->
+  <g stroke="#2A1503" stroke-width="6">
+    <rect x="1180" y="450" width="300" height="190" fill="#F5E7CE"/>
+    <path d="M1160 450h340l-30-56h-280z" fill="#487848"/>
+    <rect x="1230" y="510" width="60" height="60" fill="#9FD4E8"/><rect x="1360" y="510" width="60" height="60" fill="#9FD4E8"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="6">
+    <path d="M760 640V520" fill="none"/><circle cx="760" cy="470" r="76" fill="#5E9E52"/>
+    <path d="M960 640V545" fill="none"/><circle cx="960" cy="505" r="58" fill="#6FAE5E"/>
+  </g>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4" opacity=".85">
+    <path d="M620 190l14 29 32 5-23 22 5 32-28-15-28 15 5-32-23-22 32-5z"/></g>
+</svg>`;
+
+let K, teams, bag, done = 0, cur = null, answered = false;
+const TOTAL = 5;
+
+K = Kit.build({
+  title: 'ماذا ستفعل؟',
+  accent: '#D86048', accent2: '#A8402C',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'تنمية اتخاذ القرار والتعاطف: يوازن الطالب بين خيارات ويتوقّع نتيجة كلٍّ منها قبل أن يحكم.',
+    tools: 'الشاشة فقط. ويُفضَّل ترك مساحةٍ للنقاش بين الخيار والنتيجة.',
+    groups: 'يصلح جماعياً بالصف كلّه، أو بفرقٍ تتناوب على المواقف. الأفضل: يُصوّت الصف برفع اليد قبل الضغط.',
+    steps: [
+      'اقرئي الموقف بصوتٍ واضح أو اطلبي من طالبةٍ قراءته.',
+      'قبل الضغط: اطلبي تصويتاً برفع اليد على الخيارات الثلاثة.',
+      'اسألي فريقاً: «لماذا اخترتم هذا؟» — التعليل أهمّ من الاختيار.',
+      'اضغطي الخيار الذي اختاره أغلب الصف، واقرئي النتيجة.',
+      'ناقشي: هل توقّعنا هذه النتيجة؟',
+      'اضغطي «الموقف التالي».',
+    ],
+    time: '١٥ إلى ٢٠ دقيقة لخمسة مواقف مع النقاش.',
+    script: 'سنقف اليوم أمام مواقف حقيقيّة قد تحدث لأيٍّ منّا. لكل موقف ثلاثة طرق… وكل طريقٍ يقودنا إلى نتيجةٍ مختلفة. لنرَ إلى أين نصل.',
+    tips: 'لا تُسرعي إلى النتيجة — الوقت بين الاختيار والنتيجة هو موضع التعلّم. ولا تُوبّخي من اختار الخيار الأضعف؛ اسأليه: «ماذا سيحدث برأيك؟» ودعيه يكتشف.',
+    points: 'لا نقاط للاختيار الصحيح وحده. امنحي نقطةً لكل تعليلٍ جيّد، ولكل طالبٍ يستمع لرأيٍ يخالفه دون مقاطعة.',
+    levels: 'للصفوف الأصغر (١–٢): اقرئي الموقف مرّتين واكتفي بموقفين أو ثلاثة. للأكبر (٣–٤): اطلبي بعد كل موقف موقفاً مشابهاً من حياتهم.',
+    close: [
+      'أيّ موقفٍ منها حدث معكم فعلاً؟',
+      'ما أصعب قرارٍ اتّخذتموه في المدرسة؟',
+      'ما القيمة التي سنُطبّقها غداً؟',
+    ],
+  },
+});
+
+bag = K.Bag(CASES);
+
+function home() {
+  done = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 86V54" stroke="#2A1503" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M50 54L22 30M50 54l28-24" stroke="#2A1503" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <circle cx="22" cy="26" r="12" fill="#487848" stroke="#2A1503" stroke-width="5"/>
+      <circle cx="78" cy="26" r="12" fill="#D86048" stroke="#2A1503" stroke-width="5"/>
+      <circle cx="50" cy="90" r="9" fill="#E8C34A" stroke="#2A1503" stroke-width="5"/>
+    </svg>
+    <h1>ماذا ستفعل؟</h1>
+    <p class="sub">مواقفُ تحدث كل يوم في مدرستنا. لكل موقفٍ ثلاثة طرق — ولكل طريقٍ نتيجة.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٥ – ٢٠ دقيقة</b></span>
+      <span class="chip">الصف كلّه أو <b>٢ – ٤ فرق</b></span>
+      <span class="chip">المهارة: <b>اتخاذ القرار والتعاطف</b></span>
+      <span class="chip">القيم: <b>اللطف · الصدق · المسؤولية · الاحترام · التعاون</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); next(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function next() {
+  done++; answered = false;
+  cur = bag.next();
+  K.stage.innerHTML = '';
+
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+
+  const prog = K.el('div', 'progress');
+  for (let i = 0; i < TOTAL; i++) prog.appendChild(K.el('i', i < done ? 'on' : ''));
+  wrap.appendChild(prog);
+
+  const c = K.el('div', 'situ card');
+  c.innerHTML = `<div class="face">${cur.face}</div><h2>${Kit.esc(cur.title)}</h2>
+    <p class="story">${Kit.esc(cur.story)}</p>`;
+  const box = K.el('div', 'opts');
+  const keys = ['أ', 'ب', 'ج'];
+  cur.opts.forEach((o, i) => {
+    const b = K.el('button', 'btn opt', `<span class="k">${keys[i]}</span><span>${Kit.esc(o.t)}</span>`);
+    b.onclick = () => choose(b, o, box, c);
+    box.appendChild(b);
+  });
+  c.appendChild(box);
+  wrap.appendChild(c);
+
+  const teamsBox = K.el('div', 'teams'); wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'علّل اختياره'], [1, 'أصغى لرأيٍ مخالف'], [1, 'ذكر موقفاً من حياته'],
+  ]));
+}
+
+function choose(btn, opt, box, card) {
+  if (answered) return;
+  answered = true;
+  [...box.children].forEach(b => { b.classList.add('locked'); if (b !== btn) b.classList.add('dim'); });
+  btn.classList.add(opt.best ? 'best' : 'chosen');
+  opt.best ? K.SFX.win() : K.SFX.soft();
+
+  const out = K.el('div', 'out');
+  out.innerHTML = `
+    <div class="box"><span class="ic">${opt.best ? '🌟' : '🔎'}</span>
+      <span><b>ماذا حدث؟</b><br/>${Kit.esc(opt.out)}</span></div>
+    <div class="box val"><span class="ic">💛</span>
+      <span>القيمة التي تعلّمناها: <b>${Kit.esc(cur.value)}</b></span></div>
+    <div class="box"><span class="ic">💬</span><span>${Kit.esc(cur.ask)}</span></div>`;
+  card.appendChild(out);
+  // النتيجة هي موضع التعلّم — نُحضرها إلى العين بدل انتظار المعلّمة أن تُمرّر
+  setTimeout(() => out.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+
+  // الخيار الأفضل يُكشف دائماً بعد الاختيار — حتى لو اختاره الصف، ليقارن
+  if (!opt.best) {
+    const best = cur.opts.find(o => o.best);
+    const i = cur.opts.indexOf(best);
+    const showBtn = K.el('button', 'btn g', 'ماذا لو اخترنا طريقاً آخر؟');
+    showBtn.onclick = () => {
+      showBtn.remove();
+      [...box.children][i].classList.remove('dim');
+      [...box.children][i].classList.add('best');
+      const b2 = K.el('div', 'box');
+      b2.innerHTML = `<span class="ic">🌟</span><span><b>ولو اخترنا «${Kit.esc(best.t)}»:</b><br/>${Kit.esc(best.out)}</span>`;
+      out.insertBefore(b2, out.children[1]);
+      K.SFX.star();
+    };
+    out.appendChild(showBtn);
+  }
+
+  const nx = K.el('button', 'btn p big', done < TOTAL ? 'الموقف التالي ←' : 'ختام النشاط ←');
+  nx.style.marginTop = '14px';
+  nx.onclick = () => {
+    K.SFX.tap();
+    if (done < TOTAL) next();
+    else K.reflect({
+      value: 'اللطف والمسؤولية',
+      questions: [
+        'أيّ موقفٍ شعرتم أنه حدث معكم فعلاً؟',
+        'ما القرار الذي كنتم ستُغيّرونه لو عاد بكم الوقت؟',
+        'ما القيمة الواحدة التي سنُطبّقها في المدرسة غداً؟',
+      ],
+    }, home);
+  };
+  card.appendChild(nx);
+}
+
+home();
+</script>
+</body>
+</html>
