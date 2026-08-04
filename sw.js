@@ -10,6 +10,18 @@ self.addEventListener('install', e => {
       // معلمة الاحتياط قد تفتح القسم أول مرة في فصل بلا إنترنت، ولو انتظرنا
       // الجلب لوجدته فارغاً. حجمه صغير فلا يُثقل التثبيت.
       await cache.addAll(['/', '/index.html', '/reserve.js']);
+      // أنشطة حصص الاحتياط الجديدة: صفحاتٌ مستقلة تُفتح أمام صفٍّ قد يكون
+      // بلا إنترنت — فتُخزَّن مسبقاً كلّها مثل reserve.js، لا عند أول فتح.
+      // بلا انتظارٍ للتثبيت: كثيرةٌ والتثبيت لا يجوز أن يفشل بواحدةٍ منها.
+      const _acts = ['index.html', '_kit.css', '_kit.js',
+        '01-secret-box.html', '02-true-or-think.html', '03-one-minute-challenge.html',
+        '04-silent-leader.html', '05-what-would-you-do.html', '06-heroes-journey.html',
+        '07-classroom-detectives.html', '08-city-of-values.html', '09-build-the-bridge.html',
+        '10-skills-market.html', '11-choose-your-path.html', '12-knowledge-star.html',
+        '13-the-picture-speaks.html', '14-mystery-sound.html', '15-surprise-wheel.html',
+        '16-heroes-academy.html', '17-mini-career-day.html', '18-save-the-school.html',
+        '19-five-word-story.html', '20-draw-what-you-hear.html', '21-appreciation-message.html'];
+      _acts.forEach(f => cache.add('/activities/' + f).catch(() => {}));
       // html2canvas: تحويل الشهادة إلى صورة. ١٩٥ك فلا نُلزم به التثبيت —
       // نطلبه بلا انتظار، فإن وصل عمل التنزيل بلا إنترنت، وإلا فللشهادات
       // مسار طباعة يعمل دونه.

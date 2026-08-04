@@ -2521,13 +2521,8 @@ body.demo #page-fahim.active .wrap{height:calc(100dvh - var(--db-h,56px))}
   <div class="c1-pagehead deco"><span class="pd pd1"></span><span class="pd pd2"></span><span class="pd pd3"></span><div class="tag">حصص الاحتياط</div><h1>حصةٌ جاءتكِ فجأة؟ خذي نشاطاً جاهزاً</h1>
     <p>أنشطةٌ تغرس قيمةً وتملأ الوقت بفائدة — بلا تحضير ولا ورق، وتعمل بلا إنترنت.</p></div>
 
-  <div class="rs-head">
-    <div class="rs-fld">
-      <label>الصف</label>
-      <div class="rs-seg" id="rs-grade"></div>
-    </div>
-  </div>
-
+  <!-- كان هنا مرشّح الصف — الأنشطة الجديدة كلّها للحلقة الأولى بمستوياتٍ
+       داخل كل نشاط، فالمرشّح صار قراراً زائداً يؤخّر المعلّمة عن الجرس -->
   <button class="rs-surprise" onclick="rsSurprise()">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2zm7 13l.9 3.1L23 19l-3.1.9L19 23l-.9-3.1L15 19l3.1-.9L19 15z"/></svg>
     فاجئيني بنشاط مناسب
@@ -7496,66 +7491,83 @@ function rsLoad(){
   });
 }
 
-async function rsRender(){
-  const grid=document.getElementById('rs-grid');
-  if(!rsLoaded){
-    grid.innerHTML='<div class="plan-empty-card">يُجهّز الأنشطة…</div>';
-    const ok=await rsLoad();
-    if(!ok){grid.innerHTML='<div class="plan-empty-card">تعذّر تحميل الأنشطة — أعيدي فتح الصفحة مرة واحدة وهي متصلة، ثم ستعمل بلا إنترنت دائماً.</div>';return;}
-  }
-  if(!rsGrade)rsGrade=Number(localStorage.getItem('c1_rs_g'))||(planGradesList()[0]||1);
-  rsRenderFilters();
-  rsRenderList();
-}
+/* ═ القائمة الجديدة: أنشطة activities/ ═
+   واحدٌ وعشرون نشاطاً مستقلاً، كلٌّ ملفُّ HTML كامل ببداية ولوحة معلّمة
+   ووضع عرضٍ ومؤقّت. البنك القديم (reserve.js) استُبدل بها — بقي محرّكه
+   في الكود بلا استدعاء، وحذفُه عمليةٌ أكبر تُؤجَّل لما بعد الإطلاق. */
+const RS_ACTS=[
+  {n:1, f:'01-secret-box.html', t:'صندوق الأسرار', c:'#2F7D74', mins:12,
+   d:'شيءٌ مخفيّ خلف المربّعات — نكشف قليلاً ونستنتج كثيراً', k:'تفكير', v:'التأنّي قبل الحكم'},
+  {n:2, f:'02-true-or-think.html', t:'صح أم يحتاج إلى تفكير؟', c:'#487848', mins:12,
+   d:'عباراتٌ بعضها يخدع بكلمة «كل» أو «دائماً»', k:'تفكير', v:'التفكير النقدي'},
+  {n:3, f:'03-one-minute-challenge.html', t:'تحدي الدقيقة الواحدة', c:'#D86048', mins:5,
+   d:'دقيقةٌ واحدة وكل أفكار الصف — فاصلُ طاقةٍ مثالي', k:'حركة', v:'المثابرة'},
+  {n:4, f:'04-silent-leader.html', t:'القائد الصامت', c:'#6B4E9E', mins:12,
+   d:'قائدٌ سرّي يقود الحركة ومحقّقٌ يراقب', k:'حركة', v:'التركيز'},
+  {n:5, f:'05-what-would-you-do.html', t:'ماذا ستفعل؟', c:'#D86048', mins:18,
+   d:'مواقف حقيقية بثلاثة طرق — ولكل طريقٍ نتيجة', k:'قيم', v:'اللطف والمسؤولية'},
+  {n:6, f:'06-heroes-journey.html', t:'رحلة الأبطال', c:'#B0721A', mins:25,
+   d:'خريطة مغامرة بأربع محطات وكنزٍ لا يُفتح إلا معاً', k:'تعاون', v:'العمل الجماعي'},
+  {n:7, f:'07-classroom-detectives.html', t:'محقّقو الصف', c:'#4B5D6B', mins:18,
+   d:'قضايا وأدلّة تُكشف تدريجياً — ولا اتهام قبل الدليل', k:'تفكير', v:'التثبّت وحُسن الظن'},
+  {n:8, f:'08-city-of-values.html', t:'مدينة القيم', c:'#2F7D74', mins:18,
+   d:'مدينةٌ باهتة تُضيئها السلوكات الطيّبة مكاناً مكاناً', k:'قيم', v:'أثر السلوك'},
+  {n:9, f:'09-build-the-bridge.html', t:'تحدي بناء الجسر', c:'#B0721A', mins:30,
+   d:'ورقٌ وأكواب — وتخطيطٌ إلزاميّ قبل البناء', k:'تعاون', v:'التخطيط قبل العمل'},
+  {n:10, f:'10-skills-market.html', t:'سوق المهارات', c:'#8B2635', mins:25,
+   d:'ستة أكشاك يكتشف كلٌّ في أحدها موهبته', k:'تعاون', v:'تقدير اختلاف القدرات'},
+  {n:11, f:'11-choose-your-path.html', t:'اختر طريقك', c:'#6B4E9E', mins:12,
+   d:'قصصٌ تتفرّع بقرارات الصف ونهاياتٌ مختلفة', k:'قيم', v:'نتائج القرارات'},
+  {n:12, f:'12-knowledge-star.html', t:'من سيربح نجمة المعرفة؟', c:'#D9A93C', mins:22,
+   d:'أربع جولات: معرفة وتفكير وقيم ومفاجأة حركية', k:'مسابقة', v:'المنافسة الشريفة'},
+  {n:13, f:'13-the-picture-speaks.html', t:'الصورة تتكلّم', c:'#2F7D74', mins:7,
+   d:'صورٌ تحمل قصصاً وخمسة أسئلة تجعلها تنطق', k:'لغة', v:'لكل رأيٍ دليل'},
+  {n:14, f:'14-mystery-sound.html', t:'تحدي الصوت الغامض', c:'#4B5D6B', mins:12,
+   d:'أصواتٌ تُسمع ومصادر تُخمَّن — مع تلميحٍ بصري', k:'إنصات', v:'الإنصات'},
+  {n:15, f:'15-surprise-wheel.html', t:'عجلة المفاجآت', c:'#D86048', mins:15,
+   d:'سؤال؟ حركة؟ لغز؟ العجلة تقرّر', k:'متنوع', v:'المرونة'},
+  {n:16, f:'16-heroes-academy.html', t:'أكاديمية الأبطال', c:'#487848', mins:22,
+   d:'أربع بطولات ولقبٌ لكل فريق — لا فائز واحد', k:'تعاون', v:'لكلٍّ تميّزه'},
+  {n:17, f:'17-mini-career-day.html', t:'يوم المهن المصغّر', c:'#B0721A', mins:7,
+   d:'ثماني مهن وسؤال: ماذا لو اختفت يوماً؟', k:'استكشاف', v:'تقدير كل عمل'},
+  {n:18, f:'18-save-the-school.html', t:'مهمة إنقاذ المدرسة', c:'#3E8E5A', mins:18,
+   d:'مشكلة حقيقية وخمس خطوات تنتهي بخطةٍ بأسماء', k:'مبادرة', v:'المبادرة'},
+  {n:19, f:'19-five-word-story.html', t:'قصة من خمس كلمات', c:'#6B4E9E', mins:18,
+   d:'خمس كلماتٍ متباعدة تصير قصةً واحدة', k:'إبداع', v:'التعاون في الخيال'},
+  {n:20, f:'20-draw-what-you-hear.html', t:'ارسم ما تسمع', c:'#2F7D74', mins:12,
+   d:'وصفٌ يُقرأ سطراً سطراً وأيدٍ ترسم ثم المقارنة', k:'إنصات', v:'دقّة الإنصات'},
+  {n:21, f:'21-appreciation-message.html', t:'رسالة تقدير', c:'#D86048', mins:18,
+   d:'بطاقة تقديرٍ لزميل — عن فعله لا عن شكله', k:'قيم', v:'اللطف والامتنان'},
+];
+function rsActUrl(a){return 'activities/'+a.f;}
 
-// الصفّ وحده. كانت معه ثلاثةُ مرشّحاتٍ أخرى — الوقت والعارض والقيمة —
-// تملأ نصفَ الشاشة قبل أن تُرى الأنشطة، والمعلّمة تفتح هذا القسم وقد بقيت
-// دقائق على الجرس: كلُّ خيارٍ إضافيّ قرارٌ يؤخّرها عمّا جاءت له.
-function rsRenderFilters(){
-  // صفوف الحلقة الأولى الأربعة كلها متاحة — قد تُغطّي صفاً ليس من صفوفها
-  document.getElementById('rs-grade').innerHTML=[1,2,3,4].map(g=>
-    `<button class="${rsGrade===g?'on':''}" onclick="rsSetGrade(${g})">${PLAN_GNAMES[g-1]}</button>`).join('');
-}
-function rsSetGrade(g){rsGrade=g;localStorage.setItem('c1_rs_g',String(g));rsRenderFilters();rsRenderList();}
-
-function rsMatch(){
-  return (window.RESERVE_ACTIVITIES||[]).filter(a=>{
-    if(!a.grades.includes(rsGrade))return false;
-    return true;
-  });
-}
-
-function rsRenderList(){
-  const list=rsMatch(),vals=window.RESERVE_VALUES||{},fmts=window.RESERVE_FMT||{};
+function rsRender(){
   const cnt=document.getElementById('rs-count');
   const grid=document.getElementById('rs-grid');
-  if(!list.length){
-    cnt.textContent='';
-    grid.innerHTML='<div class="plan-empty-card">لا أنشطة لهذا الصف بعد — جرّبي صفاً آخر.</div>';
-    return;
-  }
-  // أنشطة الصفوف الصغرى قصيرة عمداً — انتباه الطفل لا يحتمل الطول، والمعلّمة
-  // قد تظنّ البنك ناقصاً. التفسير كان مشروطاً بمرشّح الوقت وقد حُذف، فصار
-  // مشروطاً بالأنشطة نفسها: إن كانت كلها قصيرة قيل السبب.
-  const longest=Math.max(...list.map(a=>a.mins));
-  cnt.innerHTML=escHtml(egArNum(list.length)+' نشاطاً مناسباً لصفّ '+PLAN_GNAMES[rsGrade-1])
-    +(longest<=12?'<br><span style="font-weight:400">أنشطة هذا الصف قصيرة عمداً — انتباه الطفل في هذا العمر لا يحتمل نشاطاً طويلاً. اجمعي نشاطين أو ثلاثة لتملأ الحصة.</span>':'');
-  // مجموعاتٌ مرتّبة بالطاقة في الغرفة من الأصخب إلى الأهدأ، لا ترتيباً تصنيفياً.
-  // المعلمة لا تسأل «أين المعلومات؟» بل «ماذا يحتاج فصلي الآن؟» — متوتّرٌ
-  // فيُهدَّأ، أو خامدٌ فيُوقَظ. فالعنوان يصف أثر المجموعة لا نوعها.
-  grid.innerHTML=RS_GROUPS.map(g=>{
-    const items=list.filter(a=>a.fmt===g.id);
-    if(!items.length)return '';   // المجموعات الفارغة تُطوى، فلا تُوهم بنقصٍ
-    const f=fmts[g.id]||{nm:'',ic:''};
-    return `<section class="rs-group">
-      <div class="rs-group-h">
-        <span class="rs-group-ic" style="--gc:${g.c}">${f.ic}</span>
-        <span class="rs-group-t"><b>${escHtml(f.nm)}</b><span>${escHtml(g.does)}</span></span>
-        <span class="rs-group-n">${egArNum(items.length)}</span>
+  cnt.innerHTML=egArNum(RS_ACTS.length)+' نشاطاً جاهزاً — كلٌّ فيه لوحة معلّمةٍ ووضع عرضٍ ومؤقّت، ويعمل بلا إنترنت';
+  grid.innerHTML='<div class="rs-grid">'+RS_ACTS.map(a=>{
+    const ago=rsUsedAgo('act'+a.n);
+    return `<button class="rs-card" style="--vc:${a.c}" onclick="rsOpenAct(${a.n})">
+      <div class="rs-card-top"><span class="v">${escHtml(a.v)}</span><span class="f">${escHtml(a.k)}</span></div>
+      <div class="rs-card-b">
+        <div class="rs-card-nm">${egArNum(a.n)} · ${escHtml(a.t)}</div>
+        <div class="rs-card-goal">${escHtml(a.d)}</div>
+        <div class="rs-card-meta">
+          <span class="rs-tag">~${rsMinsAr(a.mins)}</span>
+          ${ago?`<span class="rs-tag used">${escHtml(ago)}</span>`:''}
+        </div>
       </div>
-      <div class="rs-grid">${items.map(rsCardHtml).join('')}</div>
-    </section>`;
-  }).join('');
+    </button>`;
+  }).join('')+'</div>';
+}
+
+/* يفتح النشاط في تبويبٍ جديد: النشاط صفحةٌ كاملة بملء الشاشة ووضع عرضٍ
+   خاصّين بها، وحشرها في إطارٍ داخل المنصة يكسرهما ويحبس مفاتيح التحكم */
+function rsOpenAct(n){
+  const a=RS_ACTS.find(x=>x.n===n);if(!a)return;
+  rsMarkUsed('act'+n);
+  window.open(rsActUrl(a),'_blank');
+  rsRender(); // تحديث شارة «استعملتِه»
 }
 
 function rsCardHtml(a){
@@ -7576,15 +7588,13 @@ function rsCardHtml(a){
     </button>`;
 }
 
-// «فاجئيني»: أسرع طريق — ضغطة واحدة تعطيها نشاطاً مناسباً،
+// «فاجئيني»: أسرع طريق — ضغطة واحدة تعطيها نشاطاً،
 // ويتجنّب ما استعملته حديثاً حتى لا يتكرّر على الطلاب أنفسهم
 function rsSurprise(){
-  const list=rsMatch();
-  if(!list.length){toast('لا نشاط بهذه المواصفات — وسّعي الوقت',true);return;}
-  const used=rsUsed(),ago=id=>Date.now()-(used[id]||0);
-  const fresh=list.filter(a=>ago(a.id)>30*864e5);
-  const pool=fresh.length?fresh:list;
-  rsOpen(pool[Math.floor(Math.random()*pool.length)].id);
+  const used=rsUsed(),ago=n=>Date.now()-(used['act'+n]||0);
+  const fresh=RS_ACTS.filter(a=>ago(a.n)>30*864e5);
+  const pool=fresh.length?fresh:RS_ACTS;
+  rsOpenAct(pool[Math.floor(Math.random()*pool.length)].n);
 }
 
 function rsOpen(id){
@@ -7612,7 +7622,7 @@ function rsPlayClose(){
   document.getElementById('rs-play').classList.remove('on');
   document.body.style.overflow='';
   _rsCur=null;
-  rsRenderList();   // ليظهر وسم «استعملتِه اليوم»
+  rsRender();   // ليظهر وسم «استعملتِه اليوم»
 }
 
 function rsRenderPlay(){
