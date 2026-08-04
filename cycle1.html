@@ -8954,6 +8954,22 @@ function gmGridPick(id){
 }
 // مستوى الأسئلة الذي تختاره المعلمة، يُرسَل مع طلب التوليد
 const GM_TPL_HINT={wheel:'تدور وتختار سؤالاً عشوائياً',match:'طابقي المفهوم بمعناه',quiz:'أسئلة موقوتة بنقاط تنافسية',balloon:'فرقعي البالون الذي يحمل الإجابة',box:'صناديق مغلقة تخفي أسئلة',memory:'اقلبي بطاقتين وطابقيهما',groups:'ضعي كل عنصر في مجموعته',millionaire:'سلّم جوائز ووسائل مساعدة',race:'إجابة صحيحة تقدّم سيارتك',boxes:'أجيبي وافتحي صندوقاً وخاطري'};
+/* تعليمات الملف المستقلّ — ليست نسخةً مختصرة من GM_TPL_INSTR بل خطابٌ آخر:
+   تلك موجّهةٌ للمعلّمة داخل المنصة وتُحيل إلى زرّ اختيار الطالب 🙋 الذي لا
+   وجود له في الملف المصدَّر، وهذه موجّهةٌ للطلاب تُقرأ عليهم بصوتٍ عالٍ.
+   جملتان لا أكثر: التعليمات الطويلة لا تُقرأ أمام صفٍّ منتظِر. */
+const GM_TPL_HOWTO={
+  wheel:'سنُدير العجلة، وستختار لنا سؤالاً… ومن ترفع يدها أولاً تُجيب!',
+  match:'أمامكم بطاقات: كل مفهومٍ له معناه. اضغطوا الاثنين المتطابقين معاً.',
+  quiz:'أسئلة سريعة موقوتة — اقرأوا بتمهّل ثم اختاروا الإجابة الصحيحة.',
+  balloon:'كل بالونٍ يحمل إجابة. فرقعوا البالون الذي فيه الإجابة الصحيحة!',
+  box:'أمامكم صناديق مغلقة، في كلٍّ منها سؤال. أيّ صندوقٍ نفتح أولاً؟',
+  memory:'اقلبوا بطاقتين: إن تطابقتا بقيتا مفتوحتين. ركّزوا وتذكّروا المواضع!',
+  groups:'أمامكم عناصر ومجموعات — ضعوا كل عنصرٍ في مجموعته الصحيحة.',
+  millionaire:'سلّم أسئلةٍ يصعد بكم درجةً درجة، ومعكم وسائل مساعدة عند الحاجة.',
+  race:'فريقان في سباق! كل إجابةٍ صحيحة تُقدّم سيارة فريقكم خطوةً للأمام.',
+  boxes:'أجيبوا ثم اختاروا صندوقاً: فيه كنزٌ… أو مفاجأة! المخاطرة جزءٌ من اللعبة.',
+};
 function gmTplHint(){
   const el=document.getElementById('gm-tpl-hint');
   if(el)el.textContent=GM_TPL_HINT[gmTpl]||'';
@@ -9353,7 +9369,13 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push('</style></head><body>');
   parts.push(`<div id="gm-stage-bg" style="background-image:${bgStyle}">`);
   parts.push('<div id="gm-stage-veil"></div><canvas id="gm-confetti"></canvas>');
-  parts.push('<div id="gm-stage-head"><div id="gm-stage-brand"><b>خطتي</b></div><div id="gm-stage-title">'+escHtml(title)+'</div><div id="gm-stage-actions"><div id="gm-stage-hud"></div>'+(music?'<button class="gm-x" id="gm-music-btn" style="opacity:.45">'+GM_IC_MUSIC+'</button>':'')+'<button class="gm-x" id="gm-mute-btn">'+GM_IC_SOUND+'</button></div></div>');
+  // أدوات المعلّمة في الملف المستقلّ: ملء الشاشة للبروجكتر، وإعادةٌ لتلعب
+  // مجموعةٌ ثانية بلا إغلاق الملف وفتحه. كانا مفقودَين، فكانت المعلّمة
+  // تُعيد تحميل الصفحة يدوياً أمام الصف وتفقد شاشتها الكاملة.
+  parts.push('<div id="gm-stage-head"><div id="gm-stage-brand"><b>خطتي</b></div><div id="gm-stage-title">'+escHtml(title)+'</div><div id="gm-stage-actions"><div id="gm-stage-hud"></div>'
+    +'<button class="gm-x" id="gm-again-btn" title="إعادة اللعبة">⟲</button>'
+    +'<button class="gm-x" id="gm-full-btn" title="ملء الشاشة (F)">⛶</button>'
+    +(music?'<button class="gm-x" id="gm-music-btn" style="opacity:.45">'+GM_IC_MUSIC+'</button>':'')+'<button class="gm-x" id="gm-mute-btn">'+GM_IC_SOUND+'</button></div></div>');
   parts.push('<div id="gm-stage-body"></div></div>');
   parts.push('<div style="position:fixed;bottom:6px;left:10px;z-index:9;font-size:10px;color:rgba(255,255,255,.55)">منصة خطتي الفصلية</div>');
   parts.push('<scr'+'ipt>');
@@ -9371,6 +9393,10 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push("else if(kind==='win')zzfx(1.1,.05,539,0,.04,.29,1,1.92,0,0,567,.02,.02,0,0,0,.04);");
   parts.push("else if(kind==='spin')zzfx(.8,.05,270,0,.09,.14,1,1.9,0,0,-63,.03);}catch(e){}}");
   parts.push(fns);
+  // egToArabic اسمٌ مستعار لـegArNum، وtoString يطبع الدالة باسمها الأصلي —
+  // فكان المصدَّر يُعرّف egArNum بينما المحرّكات تنادي egToArabic، فتسقط كل
+  // لعبةٍ مُنزَّلة بـReferenceError أوّل ما تُعرَض النتيجة. الجسر يُصلح ذلك.
+  parts.push('var egToArabic=(typeof egArNum==="function")?egArNum:function(n){return String(n);};');
   parts.push('var gmItems='+JSON.stringify(items)+';');
   parts.push('var gmGroupNames='+JSON.stringify(groupNames||[])+';');
   parts.push('var GM_IC_SOUND='+JSON.stringify(GM_IC_SOUND)+',GM_IC_MUTED='+JSON.stringify(GM_IC_MUTED)+';');
@@ -9379,8 +9405,18 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
     parts.push('var GM_MUSIC='+JSON.stringify(music)+';var gmMusic=new Audio(GM_MUSIC);gmMusic.loop=true;gmMusic.volume=.10;var gmMusicOn=false;');
     parts.push("document.getElementById('gm-music-btn').onclick=function(){gmMusicOn=!gmMusicOn;this.style.opacity=gmMusicOn?'1':'.45';if(gmMusicOn)gmMusic.play().catch(function(){});else gmMusic.pause();};");
   }
-  parts.push("document.getElementById('gm-stage-body').innerHTML='<div class=\"gm-panel gm-end\" style=\"max-width:420px\"><h2 style=\"margin:6px 0\">'+"+JSON.stringify(title)+"+'</h2><button class=\"gm-btn\" style=\"font-size:18px;padding:14px 44px\" id=\"gm-start-btn\">ابدئي اللعب</button></div>';");
-  parts.push("document.getElementById('gm-start-btn').onclick=function(){"+runFn+"(gmItems);};");
+  // شاشة البداية: العنوان + تعليماتٌ تُقرأ للطلاب + زر البدء
+  parts.push('var GM_HOWTO='+JSON.stringify(GM_TPL_HOWTO[tpl]||'')+';');
+  parts.push("function gmHome(){document.getElementById('gm-stage-body').innerHTML='<div class=\"gm-panel gm-end\" style=\"max-width:520px\"><h2 style=\"margin:6px 0\">'+"+JSON.stringify(title)+"+'</h2>'+(GM_HOWTO?'<p style=\"font-size:15.5px;line-height:1.8;opacity:.9;margin:4px 0 14px\">'+GM_HOWTO+'</p>':'')+'<button class=\"gm-btn\" style=\"font-size:18px;padding:14px 44px\" id=\"gm-start-btn\">ابدئي اللعب</button></div>';document.getElementById('gm-start-btn').onclick=function(){"+runFn+"(gmItems);};}");
+  parts.push("gmHome();");
+  parts.push("document.getElementById('gm-again-btn').onclick=function(){if(typeof gmQuizTimer!=='undefined')clearInterval(gmQuizTimer);if(typeof gmMemTimer!=='undefined')clearTimeout(gmMemTimer);document.getElementById('gm-stage-hud').innerHTML='';gmHome();};");
+  // ملء الشاشة: البروجكتر يريد الشاشة كلّها، والمفتاح F لمن تُقدّم من بعيد
+  parts.push("function gmFull(){if(document.fullscreenElement)document.exitFullscreen();else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});}");
+  parts.push("document.getElementById('gm-full-btn').onclick=gmFull;");
+  parts.push("document.addEventListener('keydown',function(e){if(e.key==='f'||e.key==='F')gmFull();});");
+  // الشاشة لا تنام واللعبة تعمل: المعلّمة تدير الصف ولا تلمس الجهاز
+  parts.push("function gmWake(){if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(function(){});}");
+  parts.push("document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')gmWake();});gmWake();");
   parts.push('</scr'+'ipt></body></html>');
   return new Blob(['﻿'+parts.join('\n')],{type:'text/html;charset=utf-8'});
 }
