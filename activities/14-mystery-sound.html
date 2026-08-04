@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>تحدي الصوت الغامض</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.snd{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.playbox{width:clamp(150px,22vw,240px);height:clamp(150px,22vw,240px);border-radius:50%;
+  border:5px solid var(--ink);background:var(--paper);box-shadow:var(--sh);margin:0 auto 16px;
+  display:grid;place-items:center;cursor:pointer;font-size:clamp(52px,8vw,96px);transition:transform .1s}
+.playbox:hover{transform:scale(1.04)}
+.playbox:active{transform:scale(.97)}
+.playbox.playing{animation:pulse 1s infinite}
+.waves{display:flex;gap:5px;justify-content:center;align-items:flex-end;height:44px;margin-bottom:14px}
+.waves i{width:9px;border-radius:99px;background:var(--a);opacity:.28;height:12px}
+.waves.on i{opacity:1}
+.waves.on i:nth-child(odd){animation:wv .7s infinite alternate}
+.waves.on i:nth-child(even){animation:wv .7s .25s infinite alternate}
+@keyframes wv{from{height:10px}to{height:42px}}
+.guesses{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));max-width:880px;margin:0 auto}
+.guesses .btn{font-size:clamp(16px,2vw,22px);min-height:66px}
+.guesses .btn .gf{font-size:1.5em;margin-inline-end:8px}
+.guesses .btn.right{background:var(--ok);color:#fff}
+.guesses .btn.off{opacity:.45;pointer-events:none}
+.reveal{margin-top:16px;background:var(--paper);border:3px solid var(--ink);border-radius:16px;
+  padding:16px 22px;font-size:clamp(16px,2vw,23px);animation:up .3s both}
+.reveal .bigf{font-size:clamp(48px,7vw,84px);display:block;line-height:1.2;margin-bottom:6px}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٤ — تحدي الصوت الغامض
+   الهدف: الانتباه والتمييز السمعي.
+   القيد التقني والحل: لا ملفات صوتٍ خارجية (وعد العمل دون اتصال) —
+   فالأصوات تُركَّب بـWebAudio: مطرٌ من ضجيجٍ مُرشَّح، جرسٌ من نغماتٍ
+   متضائلة… ولكل صوتٍ «تلميحٌ بصريّ» متحرّك يخدم من لا يسمع جيداً —
+   إنصافُ ضعاف السمع مبنيٌّ في النشاط لا خياراً لاحقاً.
+   ═══════════════════════════════════════════════════════════════════ */
+let AC = null;
+function ac(){ if(!AC){const C=window.AudioContext||window.webkitAudioContext; if(C) AC=new C();} if(AC&&AC.state==='suspended')AC.resume(); return AC; }
+function noiseBuf(c){ const b=c.createBuffer(1,c.sampleRate*2,c.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; return b; }
+
+/* كل صوتٍ دالّة تركيبٍ تُرجع stop() */
+const SOUNDS = [
+  {id:'rain', f:'🌧️', n:'المطر', fact:'قطرة المطر تسقط بسرعة تصل إلى ٢٥ كم/ساعة — ومع ذلك لا تؤذينا لصغر حجمها.',
+   dur:4, make(){ const c=ac(); if(!c)return null;
+     const src=c.createBufferSource(); src.buffer=noiseBuf(c); src.loop=true;
+     const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900;
+     const g=c.createGain(); g.gain.value=.16;
+     src.connect(f); f.connect(g); g.connect(c.destination); src.start();
+     return ()=>{ try{src.stop()}catch(e){} }; }},
+  {id:'birds', f:'🐦', n:'عصافير الصباح', fact:'تغرّد العصافير صباحاً أكثر لأن الهواء الهادئ ينقل صوتها أبعد.',
+   dur:4, make(){ const c=ac(); if(!c)return null; const stops=[]; let alive=true;
+     function chirp(t0){ const o=c.createOscillator(),g=c.createGain();
+       o.type='sine'; const f0=1800+Math.random()*900;
+       o.frequency.setValueAtTime(f0,t0); o.frequency.exponentialRampToValueAtTime(f0*1.5,t0+.07);
+       o.frequency.exponentialRampToValueAtTime(f0*.9,t0+.14);
+       g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(.12,t0+.02);
+       g.gain.exponentialRampToValueAtTime(.0001,t0+.16);
+       o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+.2); }
+     function loop(){ if(!alive)return; const t=c.currentTime;
+       chirp(t); if(Math.random()>.4)chirp(t+.2); if(Math.random()>.6)chirp(t+.45);
+       stops.push(setTimeout(loop,600+Math.random()*500)); }
+     loop(); return ()=>{ alive=false; stops.forEach(clearTimeout); }; }},
+  {id:'bell', f:'🔔', n:'جرس المدرسة', fact:'أول أجراس المدارس كانت أجراساً نحاسية حقيقية يقرعها الحارس بيده.',
+   dur:3.5, make(){ const c=ac(); if(!c)return null; const t0=c.currentTime;
+     [0,.8,1.6].forEach(dt=>{ const o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain();
+       o.frequency.value=880; o2.frequency.value=1320; o.type='triangle'; o2.type='sine';
+       g.gain.setValueAtTime(.0001,t0+dt); g.gain.exponentialRampToValueAtTime(.2,t0+dt+.02);
+       g.gain.exponentialRampToValueAtTime(.0001,t0+dt+.75);
+       o.connect(g); o2.connect(g); g.connect(c.destination);
+       o.start(t0+dt); o2.start(t0+dt); o.stop(t0+dt+.8); o2.stop(t0+dt+.8); });
+     return ()=>{}; }},
+  {id:'paper', f:'📄', n:'تقليب صفحات كتاب', fact:'صوت الورق يأتي من آلاف الألياف الدقيقة تنثني وتحتكّ معاً في لحظةٍ واحدة.',
+   dur:4, make(){ const c=ac(); if(!c)return null; const stops=[]; let alive=true;
+     function flip(){ if(!alive)return; const t0=c.currentTime;
+       const src=c.createBufferSource(); src.buffer=noiseBuf(c);
+       const f=c.createBiquadFilter(); f.type='highpass'; f.frequency.value=2400;
+       const g=c.createGain();
+       g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(.14,t0+.03);
+       g.gain.exponentialRampToValueAtTime(.0001,t0+.22);
+       src.connect(f); f.connect(g); g.connect(c.destination); src.start(t0); src.stop(t0+.3);
+       stops.push(setTimeout(flip,700+Math.random()*500)); }
+     flip(); return ()=>{ alive=false; stops.forEach(clearTimeout); }; }},
+  {id:'car', f:'🚗', n:'سيارة تمرّ', fact:'نعرف اقتراب السيارة من صوتها قبل رؤيتها — الأذن تسبق العين أحياناً!',
+   dur:4, make(){ const c=ac(); if(!c)return null; const t0=c.currentTime;
+     const src=c.createBufferSource(); src.buffer=noiseBuf(c); src.loop=true;
+     const f=c.createBiquadFilter(); f.type='lowpass';
+     f.frequency.setValueAtTime(160,t0); f.frequency.linearRampToValueAtTime(700,t0+1.8);
+     f.frequency.linearRampToValueAtTime(140,t0+3.6);
+     const g=c.createGain();
+     g.gain.setValueAtTime(.02,t0); g.gain.linearRampToValueAtTime(.22,t0+1.8);
+     g.gain.linearRampToValueAtTime(.015,t0+3.7);
+     const o=c.createOscillator(); o.type='sawtooth';
+     o.frequency.setValueAtTime(70,t0); o.frequency.linearRampToValueAtTime(130,t0+1.8);
+     o.frequency.linearRampToValueAtTime(60,t0+3.6);
+     const g2=c.createGain(); g2.gain.value=.05;
+     src.connect(f); f.connect(g); g.connect(c.destination);
+     o.connect(g2); g2.connect(c.destination); src.start(); o.start();
+     return ()=>{ try{src.stop();o.stop()}catch(e){} }; }},
+  {id:'sea', f:'🌊', n:'أمواج البحر', fact:'صوت الموج هو ملايين فقاعات الهواء الصغيرة تنفجر معاً حين يرتطم الماء بالشاطئ.',
+   dur:5, make(){ const c=ac(); if(!c)return null; const t0=c.currentTime;
+     const src=c.createBufferSource(); src.buffer=noiseBuf(c); src.loop=true;
+     const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=500;
+     const g=c.createGain();
+     g.gain.setValueAtTime(.03,t0);
+     [0,1,2,3,4].forEach(i=>{ g.gain.linearRampToValueAtTime(.2,t0+i+.6); g.gain.linearRampToValueAtTime(.04,t0+i+1); });
+     src.connect(f); f.connect(g); g.connect(c.destination); src.start();
+     return ()=>{ try{src.stop()}catch(e){} }; }},
+  {id:'clock', f:'⏰', n:'ساعة الحائط', fact:'«تكتكة» الساعة صوت تروسٍ صغيرة تقفز خطوةً واحدة كل ثانية — بدقّةٍ لا تملّ.',
+   dur:4, make(){ const c=ac(); if(!c)return null; const stops=[]; let alive=true; let hi=true;
+     function tick(){ if(!alive)return; const t0=c.currentTime;
+       const o=c.createOscillator(),g=c.createGain();
+       o.type='square'; o.frequency.value=hi?1400:1050; hi=!hi;
+       g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(.09,t0+.008);
+       g.gain.exponentialRampToValueAtTime(.0001,t0+.05);
+       o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+.07);
+       stops.push(setTimeout(tick,500)); }
+     tick(); return ()=>{ alive=false; stops.forEach(clearTimeout); }; }},
+  {id:'wind', f:'💨', n:'الريح', fact:'الريح نفسها بلا صوت — ما نسمعه هو احتكاكها بالأشجار والنوافذ وآذاننا!',
+   dur:4.5, make(){ const c=ac(); if(!c)return null; const t0=c.currentTime;
+     const src=c.createBufferSource(); src.buffer=noiseBuf(c); src.loop=true;
+     const f=c.createBiquadFilter(); f.type='bandpass'; f.Q.value=2;
+     f.frequency.setValueAtTime(400,t0); f.frequency.linearRampToValueAtTime(900,t0+1.5);
+     f.frequency.linearRampToValueAtTime(350,t0+3); f.frequency.linearRampToValueAtTime(800,t0+4.4);
+     const g=c.createGain(); g.gain.value=.14;
+     src.connect(f); f.connect(g); g.connect(c.destination); src.start();
+     return ()=>{ try{src.stop()}catch(e){} }; }},
+];
+const ROUNDS = 5;
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg14" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E2E8E4"/><stop offset="1" stop-color="#F2EEE0"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg14)"/>
+  <!-- موجات صوتية من الأطراف -->
+  <g stroke="#2F7D74" stroke-width="6" fill="none" opacity=".4" stroke-linecap="round">
+    <path d="M60 300q40 0 40 -40t40 -40M60 380q70 0 70 -60"/>
+    <path d="M1540 550q-40 0-40 40t-40 40M1540 470q-70 0-70 60"/>
+  </g>
+  <g stroke="#D9A93C" stroke-width="5" fill="none" opacity=".4" stroke-linecap="round">
+    <path d="M130 660q30 -18 60 0t60 0M160 710q30 -18 60 0"/>
+    <path d="M1330 180q30 -18 60 0t60 0M1360 230q30 -18 60 0"/>
+  </g>
+  <!-- سماعة رأس -->
+  <g stroke="#2A1503" stroke-width="6" fill="none">
+    <path d="M190 170a90 90 0 0 1 180 0" stroke-width="10"/>
+    <rect x="172" y="165" width="44" height="70" rx="16" fill="#4B5D6B"/>
+    <rect x="344" y="165" width="44" height="70" rx="16" fill="#4B5D6B"/>
+  </g>
+  <!-- عناصر طبيعة صغيرة -->
+  <g stroke="#2A1503" stroke-width="4">
+    <path d="M1420 720q0-40 34-40t34 40" fill="#5E9E52"/>
+    <circle cx="1310" cy="750" r="6" fill="#5F8FA8"/>
+    <path d="M1300 705q10 18 10 30t-10 12-10-12 10-30z" fill="#9FD4E8"/>
+  </g>
+  <rect y="820" width="1600" height="80" fill="#C4B694"/>
+  <path d="M0 820h1600" stroke="#2A1503" stroke-width="5"/>
+</svg>`;
+
+let K, teams, bag, round = 0, cur = null, stopFn = null, answered = false, playT = null;
+
+K = Kit.build({
+  title: 'تحدي الصوت الغامض',
+  accent: '#4B5D6B', accent2: '#35434E',
+  scene: SCENE,
+  onRestart: () => { stopAll(); home(); },
+  teacher: {
+    goal: 'الانتباه والتمييز السمعي: الإنصات الدقيق لصوتٍ ثم الاستدلال على مصدره — مع تلميحٍ بصري لمن لا يسمع جيداً.',
+    tools: 'الشاشة ومكبّر صوت. ارفعي الصوت قبل البدء وجرّبي زرّ التشغيل.',
+    groups: 'فريقان إلى أربعة يتناوبون، أو الصف كلّه برفع الأيدي.',
+    steps: [
+      'قولي: «أغمضوا العيون… وافتحوا الآذان!»',
+      'اضغطي زرّ الصوت الكبير — يُسمع الصوت بضع ثوانٍ.',
+      'أعيدي تشغيله مرّةً ثانية لمن فاته.',
+      'الفرق تتشاور ثم تختار من الاحتمالات.',
+      'بعد الكشف: اقرئي المعلومة العلمية القصيرة.',
+      'لمن لا يسمع جيداً: زرّ «تلميح بصري» يعرض حركة الموجات دون كشف الإجابة.',
+    ],
+    time: '١٠ إلى ١٥ دقيقة لخمس جولات.',
+    script: 'لُعبتنا اليوم بلا عيون! سنسمع صوتاً غامضاً… أنصتوا جيداً: هل هو سريع أم بطيء؟ قويٌّ أم خافت؟ متقطّع أم متواصل؟ هذه الأسئلة توصلكم للإجابة قبل التخمين.',
+    tips: 'علّميهم مفردات الوصف السمعي قبل التخمين — «متقطّع/متواصل، حادّ/غليظ» — فهي المهارة الحقيقية. وإن كان في الصف طالبٌ ضعيف سمع فالتلميح البصري يُشركه بكرامةٍ تامة.',
+    points: 'نقطة للتخمين الصحيح، ونقطة لأجمل وصفٍ للصوت قبل معرفة مصدره.',
+    levels: 'الأصغر: شغّلي الصوت ثلاث مرات واعرضي التلميح البصري دائماً. الأكبر: تشغيلةٌ واحدة وممنوع التلميح.',
+    close: [
+      'أيّ صوتٍ خدعكم؟ ولماذا؟',
+      'كيف وصفنا الصوت قبل أن نعرفه؟ أيّ الكلمات ساعدتنا؟',
+      'متى ينفعنا الإنصات الدقيق في يومنا؟',
+    ],
+  },
+});
+
+bag = K.Bag(SOUNDS);
+function stopAll(){ if(stopFn){ try{stopFn()}catch(e){} stopFn=null; } clearTimeout(playT); }
+
+function home() {
+  round = 0; stopAll();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M22 60V40h14L58 22v56L36 60z" fill="#4B5D6B" stroke="#2A1503" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M68 36q10 14 0 28M80 28q16 22 0 44" fill="none" stroke="#2A1503" stroke-width="5" stroke-linecap="round"/>
+      <text x="46" y="16" font-size="18" text-anchor="middle">❓</text>
+    </svg>
+    <h1>تحدي الصوت الغامض</h1>
+    <p class="sub">أغمضوا العيون وافتحوا الآذان… صوتٌ غامضٌ ينتظر من يكشفه!</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ١٥ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>التمييز السمعي</b></span>
+      <span class="chip">القيمة: <b>الإنصات</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function play() {
+  round++; answered = false; stopAll();
+  cur = bag.next();
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'snd');
+  wrap.innerHTML = `<div class="rowline" style="margin-bottom:12px">
+    <span class="chip">الجولة <b>${Kit.AR(round)} / ${Kit.AR(ROUNDS)}</b></span></div>`;
+
+  const box = K.el('div', 'playbox', '🔊');
+  box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'تشغيل الصوت');
+  const waves = K.el('div', 'waves');
+  for (let i = 0; i < 9; i++) waves.appendChild(K.el('i'));
+  wrap.append(box, waves);
+
+  box.onclick = () => {
+    stopAll();
+    box.classList.add('playing'); waves.classList.add('on');
+    stopFn = cur.make();
+    playT = setTimeout(() => {
+      stopAll(); box.classList.remove('playing'); waves.classList.remove('on');
+    }, cur.dur * 1000);
+  };
+
+  // احتمالات: الصحيح + ٣ أصوات أخرى
+  const others = Kit.shuffle(SOUNDS.filter(s => s.id !== cur.id)).slice(0, 3);
+  const g = K.el('div', 'guesses');
+  Kit.shuffle(others.concat([cur])).forEach(o => {
+    const b = K.el('button', 'btn', `<span class="gf">${o.f}</span>${Kit.esc(o.n)}`);
+    b.onclick = () => {
+      if (answered) return;
+      if (o.id === cur.id) {
+        answered = true; stopAll();
+        b.classList.add('right');
+        [...g.children].forEach(x => { if (x !== b) x.classList.add('off'); });
+        K.SFX.win(); K.praise();
+        const rv = K.el('div', 'reveal',
+          `<span class="bigf">${cur.f}</span><b>${Kit.esc(cur.n)}</b><br/>${Kit.esc(cur.fact)}`);
+        wrap.appendChild(rv);
+        const nx = K.el('button', 'btn p big', round < ROUNDS ? 'الصوت التالي ←' : 'ختام النشاط ←');
+        nx.style.marginTop = '14px';
+        nx.onclick = () => {
+          K.SFX.tap();
+          if (round < ROUNDS) play();
+          else { stopAll(); K.reflect({
+            value: 'الإنصات',
+            questions: [
+              'أيّ صوتٍ خدعنا؟ وما الذي جعله صعباً؟',
+              'أيّ كلمات الوصف ساعدتنا: متقطّع؟ حادّ؟ متواصل؟',
+              'متى يحتاج أصدقاؤنا منّا أن «نسمعهم» جيداً؟',
+            ],
+          }, home); }
+        };
+        wrap.appendChild(nx);
+      } else {
+        b.classList.add('shake'); K.SFX.soft(); K.encourage();
+        setTimeout(() => b.classList.remove('shake'), 420);
+      }
+    };
+    g.appendChild(b);
+  });
+  wrap.appendChild(g);
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '16px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'وصفٌ سمعيّ جميل'], [1, 'أنصت بتركيز'], [1, 'ساعد زميلاً'],
+  ]));
+
+  // تلميح بصري: حركة موجات توحي بإيقاع الصوت دون كشفه — لضعاف السمع
+  K.bottom.querySelectorAll('.round-tool').forEach(x => x.remove());
+  const hint = K.tool('👁️ تلميح بصري', 'تلميح بصري لمن لا يسمع جيداً', () => {
+    const hints = { rain:'نقاطٌ كثيرة تتساقط ⋯⋯⋯', birds:'نغماتٌ قصيرة تقفز ♪ ♪♪ ♪',
+      bell:'رنّاتٌ كبيرة متباعدة ◯ ◯ ◯', paper:'حفيفٌ خفيف متقطّع ~ ~ ~',
+      car:'يقترب ثم يبتعد ▁▂▅▂▁', sea:'يعلو ويهبط بتمهّل ∿∿∿', clock:'نبضٌ ثابت · · · ·', wind:'يشتدّ ويلين ≋≋' };
+    K.say(hints[cur.id] || '...', 'info');
+  }, 'g');
+  hint.classList.add('round-tool');
+  K.addTool(hint);
+}
+
+home();
+</script>
+</body>
+</html>

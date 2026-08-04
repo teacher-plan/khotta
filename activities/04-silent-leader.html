@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>القائد الصامت</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.steps3{display:grid;gap:13px;max-width:900px;width:100%;margin-bottom:18px}
+.steps3 .st{display:flex;gap:14px;align-items:center;background:var(--paper);
+  border:3px solid var(--ink);border-radius:16px;padding:14px 18px;
+  font-size:clamp(17px,2vw,23px);font-weight:700;text-align:start;animation:up .35s both}
+.steps3 .st b{flex:none;width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);
+  background:var(--a);color:#fff;display:grid;place-items:center;font-size:20px}
+.move{max-width:900px;width:100%;text-align:center}
+.move .mv{font-size:clamp(26px,4vw,50px);font-weight:800;background:var(--paper);
+  border:4px solid var(--ink);border-radius:22px;box-shadow:var(--sh);
+  padding:clamp(20px,3vw,42px);margin-bottom:16px;animation:pop .35s both}
+.move .mv .fig{font-size:clamp(48px,8vw,96px);display:block;margin-bottom:6px;line-height:1.15}
+.phase{display:inline-flex;margin-bottom:12px}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٤ — القائد الصامت
+   الهدف: التركيز والملاحظة الدقيقة.
+   طبيعة النشاط: اللعب الحقيقي يحدث في أجساد الطلاب لا في الشاشة —
+   فالشاشة هنا «مساعد إخراج»: تعرض القواعد، تقترح الحركة على القائد
+   بطريقةٍ لا يراها المحقّق (المعلّمة تريها له وحده)، وتضبط الوقت.
+   ═══════════════════════════════════════════════════════════════════ */
+const MOVES = [
+  {f:'👏', t:'تصفيقٌ بطيءٌ بإيقاعٍ ثابت'},
+  {f:'🖐️', t:'تحريك الأصابع كالعزف على بيانو'},
+  {f:'💪', t:'رفع الذراعين وتحريكهما كالموج'},
+  {f:'👂', t:'لمس الأذن ثم الكتف بالتناوب'},
+  {f:'🙆', t:'تشكيل دائرةٍ كبيرة بالذراعين فوق الرأس'},
+  {f:'🤝', t:'فرك الكفّين كأنّنا نتدفّأ'},
+  {f:'☝️', t:'رسم دوائر صغيرة في الهواء بإصبعٍ واحد'},
+  {f:'🫲', t:'قلب الكفّين للأعلى ثم للأسفل ببطء'},
+  {f:'🦶', t:'نقرٌ خفيف بالقدم على الأرض (جالسين)'},
+  {f:'🤲', t:'فتح اليدين وإغلاقهما كزهرةٍ تتفتّح'},
+  {f:'🧍', t:'هزّ الكتفين للأعلى والأسفل بلطف'},
+  {f:'👀', t:'وضع اليدين حول العينين كالمنظار'},
+];
+const GUESS_SECS = 60;
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E6E0EF"/><stop offset="1" stop-color="#F4EFE4"/></linearGradient>
+    <radialGradient id="spot"><stop offset="0" stop-color="#FFF3C8" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#FFF3C8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg4)"/>
+  <!-- ستائر المسرح -->
+  <g stroke="#2A1503" stroke-width="6" fill="#8B2635">
+    <path d="M0 0h260q-40 220-10 450t40 450H0z"/>
+    <path d="M1600 0h-260q40 220 10 450t-40 450h290z"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="4" fill="none" opacity=".5">
+    <path d="M90 60q-16 200 6 400t14 380"/><path d="M170 40q-20 220 0 440t18 380"/>
+    <path d="M1510 60q16 200-6 400t-14 380"/><path d="M1430 40q20 220 0 440t-18 380"/>
+  </g>
+  <rect x="240" width="1120" height="70" fill="#6B1F2B" stroke="#2A1503" stroke-width="6"/>
+  <ellipse cx="800" cy="560" rx="480" ry="300" fill="url(#spot)"/>
+  <rect y="770" width="1600" height="130" fill="#B08A5E"/>
+  <path d="M0 770h1600" stroke="#2A1503" stroke-width="6"/>
+  <path d="M300 790h1000M380 830h840" stroke="#2A1503" stroke-width="2" opacity=".3"/>
+</svg>`;
+
+let K, timer, phase = 'idle', cur = null, prev = null;
+
+K = Kit.build({
+  title: 'القائد الصامت',
+  accent: '#6B4E9E', accent2: '#4B3573',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التركيز والملاحظة الدقيقة: المقلّدون يتابعون بلا انقطاع، والمحقّق يستدلّ من أدقّ الإشارات — من يبدأ الحركة أولاً؟',
+    tools: 'الشاشة لعرض الحركات والوقت. اللعب نفسه بأجساد الطلاب في أماكنهم.',
+    groups: 'الصف كلّه: محقّقٌ واحد يخرج أو يُغمض عينيه، وقائدٌ سرّي، والبقيّة مقلّدون.',
+    steps: [
+      'اطلبي من المحقّق الخروج من الصف (أو إغماض عينيه وإدارة ظهره).',
+      'أشيري بصمتٍ إلى القائد السرّي — لا تنطقي اسمه.',
+      'اعرضي له حركة البداية من الشاشة (زر «حركة جديدة»)، والصف يقلّده.',
+      'أدخلي المحقّق وشغّلي المؤقّت: له تخمينان فقط قبل انتهاء الوقت.',
+      'القائد يغيّر الحركة كل ١٠–١٥ ثانية، والصف يتبعه بأسرع ما يمكن.',
+      'كُشف القائد أو انتهى الوقت؟ جولةٌ جديدة بمحقّقٍ وقائدٍ جديدين.',
+    ],
+    time: '١٠ إلى ١٥ دقيقة لثلاث جولاتٍ أو أربع.',
+    script: 'بيننا قائدٌ سرّي! كلّنا نُقلّد حركته… لكن بذكاء: لا تنظروا إليه مباشرةً وإلا كشفتموه! أيّها المحقّق: راقب جيداً — من يبدأ الحركة قبل الجميع؟',
+    tips: 'علّمي الصف «نظرة الجانب»: النظر لمنتصف الحلقة لا للقائد — هذا سرّ اللعبة كلّها ودرس الملاحظة الحقيقي. وبدّلي الأدوار حتى لا يحتكرها النشيطون.',
+    points: 'اللعبة جماعيةٌ بلا فرق. كافئي بالتصفيق: للمحقّق الذكي، وللقائد الذي بدّل بسلاسة، وللصف الذي حافظ على السرّ.',
+    levels: 'الأصغر: حركاتٌ كبيرة وبطيئة وثلاثة تخمينات. الأكبر: حركاتٌ دقيقة (أصابع، نظرات) وتخمينان و٤٥ ثانية.',
+    close: [
+      'كيف عرف المحقّق القائد؟ ما الذي كشفه؟',
+      'لماذا كان النظر المباشر للقائد خطأً؟',
+      'أين تفيدنا الملاحظة الدقيقة خارج اللعبة؟',
+    ],
+  },
+});
+
+function home() {
+  phase = 'idle';
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="30" r="14" fill="#6B4E9E" stroke="#2A1503" stroke-width="5"/>
+      <path d="M30 88V64a20 20 0 0 1 40 0v24" fill="#6B4E9E" stroke="#2A1503" stroke-width="5"/>
+      <path d="M20 46q10 8 20 6M80 46q-10 8-20 6" stroke="#2A1503" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M42 30h16" stroke="#F7EEE2" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <h1>القائد الصامت</h1>
+    <p class="sub">قائدٌ سرّي يقود الحركة، وصفٌّ يُقلّد بذكاء، ومحقّقٌ يراقب… من يكشف من؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ١٥ دقيقة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>التركيز والملاحظة</b></span>
+      <span class="chip">القيمة: <b>ضبط النفس وحفظ السرّ</b></span>
+    </div>`;
+  const st = K.el('div', 'steps3');
+  [['١', 'يخرج المحقّق، ونختار قائداً سرّياً بالإشارة لا بالكلام'],
+   ['٢', 'القائد يقود الحركات والصف يُقلّده — دون أن ينظر إليه أحدٌ مباشرة'],
+   ['٣', 'يعود المحقّق: له تخمينان قبل انتهاء الوقت ليكشف القائد'],
+  ].forEach(([n, t]) => st.appendChild(K.el('div', 'st', `<b>${n}</b><span>${t}</span>`)));
+  s.appendChild(st);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+}
+
+function newMove() {
+  let m; do { m = MOVES[Math.floor(Math.random() * MOVES.length)]; } while (m === prev);
+  prev = m; return m;
+}
+
+function play() {
+  phase = 'lead';
+  cur = newMove();
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'move');
+  wrap.innerHTML = `<span class="chip phase" id="ph">المرحلة: <b>اختيار القائد وعرض الحركة</b></span>
+    <div class="mv" id="mv"><span class="fig">${cur.f}</span>${Kit.esc(cur.t)}</div>`;
+
+  const row = K.el('div', 'rowline');
+  const nm = K.el('button', 'btn g big', '🎲 حركةٌ جديدة');
+  nm.onclick = () => {
+    cur = newMove(); K.SFX.tap();
+    const mv = document.getElementById('mv');
+    mv.innerHTML = `<span class="fig">${cur.f}</span>${Kit.esc(cur.t)}`;
+    mv.classList.remove('pop'); void mv.offsetWidth; mv.classList.add('pop');
+  };
+  row.appendChild(nm);
+  wrap.appendChild(row);
+
+  const tRow = K.el('div', 'rowline'); tRow.style.marginTop = '16px';
+  const ring = K.el('div', 'ring', '<i></i>');
+  const tim = K.el('div', 'timer'); tim.appendChild(ring);
+  const startB = K.el('button', 'btn p big', '🕵️ دخل المحقّق — ابدأ العدّ');
+  tRow.append(tim, startB);
+  wrap.appendChild(tRow);
+  K.stage.appendChild(wrap);
+
+  timer = K.Timer({ secs: GUESS_SECS, ring, onEnd: () => {
+    document.getElementById('ph').innerHTML = 'المرحلة: <b>انتهى الوقت!</b>';
+    K.say('انتهى الوقت — هل نجا القائد؟', 'info');
+  }});
+  timer.paint();
+  startB.onclick = () => {
+    timer.start(); K.SFX.ok();
+    document.getElementById('ph').innerHTML = 'المرحلة: <b>المحقّق يراقب…</b>';
+    startB.replaceWith(makeEndButtons());
+  };
+
+  function makeEndButtons() {
+    const g = K.el('div', 'rowline');
+    const found = K.el('button', 'btn p', '🎯 كُشف القائد!');
+    const safe = K.el('button', 'btn', '🛡️ نجا القائد');
+    found.onclick = () => endRound('كشف المحقّق القائد — ملاحظةٌ ثاقبة! 🎉');
+    safe.onclick = () => endRound('نجا القائد — صفٌّ حافظ على السرّ ببراعة! 🛡️');
+    g.append(found, safe);
+    return g;
+  }
+  function endRound(msg) {
+    timer.pause(); K.SFX.win(); K.say(msg, '');
+    const nx = K.el('div', 'rowline'); nx.style.marginTop = '14px';
+    const again = K.el('button', 'btn p big', 'جولةٌ جديدة ←');
+    again.onclick = () => { K.SFX.tap(); play(); };
+    const done = K.el('button', 'btn big', 'ختام النشاط');
+    done.onclick = () => K.reflect({
+      value: 'الملاحظة وضبط النفس',
+      questions: [
+        'ما الذي كشف القائد — أو ما الذي حماه؟',
+        'لماذا كان أصعب شيءٍ ألّا ننظر إليه مباشرة؟',
+        'متى نحتاج «نظرة الجانب» الذكية في حياتنا؟',
+      ],
+    }, home);
+    nx.append(again, done);
+    wrap.appendChild(nx);
+  }
+}
+
+home();
+</script>
+</body>
+</html>

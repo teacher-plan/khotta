@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>تحدي الدقيقة الواحدة</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.ch{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.ch .cat{display:inline-flex;margin-bottom:10px}
+.ch .task{font-size:clamp(26px,4vw,52px);font-weight:800;line-height:1.45;
+  background:var(--paper);border:4px solid var(--ink);border-radius:24px;
+  box-shadow:var(--sh);padding:clamp(22px,3.4vw,46px);margin-bottom:20px}
+.ch .ex{font-size:clamp(15px,1.8vw,20px);opacity:.75;margin-top:8px;font-weight:700}
+.bigring{display:flex;justify-content:center;margin-bottom:16px}
+.bigring .ring{width:clamp(120px,17vw,190px);height:clamp(120px,17vw,190px)}
+.bigring .ring i{font-size:clamp(34px,5vw,58px)}
+.count{display:inline-flex;align-items:center;gap:10px;background:var(--paper);
+  border:3px solid var(--ink);border-radius:99px;padding:8px 20px;font-weight:800;
+  font-size:clamp(16px,2vw,22px)}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٣ — تحدي الدقيقة الواحدة
+   الهدف: رفع الطاقة وسرعة التفكير — نشاطُ فاصلٍ لا نشاطُ حصّةٍ كاملة.
+   القرار التصميمي: المؤقّت هو بطل الشاشة. كل شيءٍ آخر صغير، لأن النشاط
+   يقوم على إحساس الزمن الجاري — والصف كلّه يجب أن يراه من آخر مقعد.
+   ═══════════════════════════════════════════════════════════════════ */
+const CHALLENGES = [
+  {c:'لغة',   t:'اذكروا كلماتٍ تبدأ بحرف الميم', ex:'مدرسة، مطر، ملعب…'},
+  {c:'لغة',   t:'اذكروا كلماتٍ تنتهي بحرف الراء', ex:'قمر، بحر، شجر…'},
+  {c:'لغة',   t:'اذكروا أسماء حيواناتٍ بحرف الجيم أو الحاء', ex:'جمل، حصان، حوت…'},
+  {c:'رياضيات', t:'ابحثوا حولكم عن أشكالٍ دائرية في الصف', ex:'الساعة، عجلة الكرسي…'},
+  {c:'رياضيات', t:'ابحثوا عن أشكالٍ مستطيلة في الصف', ex:'الباب، السبورة، الكتاب…'},
+  {c:'رياضيات', t:'اذكروا أعداداً زوجيةً بالترتيب من ٢', ex:'٢، ٤، ٦، ٨…'},
+  {c:'قيم',   t:'اذكروا طرقاً لمساعدة زميلٍ جديد في المدرسة', ex:'نُعرّفه بالصف، نجلس معه…'},
+  {c:'قيم',   t:'اذكروا طرقاً لجعل أمّهاتكم يبتسمن اليوم', ex:'أرتّب غرفتي، أقول شكراً…'},
+  {c:'بيئة',  t:'اذكروا أفكاراً لتوفير الماء في البيت', ex:'أغلق الصنبور، أسقي النبات بماء الغسيل…'},
+  {c:'بيئة',  t:'اذكروا أشياء يمكن إعادة استخدامها بدل رميها', ex:'العلب، الورق، الأكياس…'},
+  {c:'إبداع', t:'لو كان لديكم بساطٌ طائر، إلى أين تذهبون ولماذا؟', ex:'كل طالبٍ فكرةٌ واحدة سريعة'},
+  {c:'إبداع', t:'اذكروا استخداماتٍ غير عاديّة لمشبك الورق', ex:'خطّاف صغير، سلك، مؤشّر…'},
+  {c:'إبداع', t:'أكملوا القصة: «فتحتُ باب الصف فوجدت…»', ex:'كل طالبٍ يضيف جملة'},
+  {c:'حركة',  t:'قلّدوا معاً: طائرٌ يحلّق، ثم قطٌّ يتمطّى، ثم شجرةٌ في الريح', ex:'الكل واقفٌ بجانب مقعده'},
+  {c:'حركة',  t:'صفّقوا بإيقاعٍ تقوده المعلّمة ثم زيدوا السرعة', ex:'إيقاعٌ بسيط ثم أسرع'},
+  {c:'علوم',  t:'اذكروا أشياء تذوب في الماء وأشياء لا تذوب', ex:'السكّر يذوب، الحصى لا…'},
+  {c:'علوم',  t:'اذكروا حيواناتٍ تعيش في الماء واليابسة معاً', ex:'الضفدع، السلحفاة…'},
+  {c:'ذاكرة', t:'أغمضوا أعينكم: ما لون باب الصف؟ كم نافذة عندنا؟', ex:'أسئلة عن تفاصيل الصف'},
+];
+const DURS = [30, 60, 90];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FBE8D8"/><stop offset="1" stop-color="#F7EEE2"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg3)"/>
+  <g stroke="#2A1503" stroke-width="6" fill="#FFF9F0">
+    <circle cx="180" cy="230" r="86"/><path d="M180 230V172M180 230l40 24" stroke-linecap="round" stroke-width="8" fill="none"/>
+    <path d="M150 128h60M180 128v18" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="5" fill="#FFF9F0" opacity=".9">
+    <circle cx="1440" cy="640" r="64"/><path d="M1440 640v-42M1440 640l-28 18" stroke-linecap="round" stroke-width="6" fill="none"/>
+  </g>
+  <g fill="#D86048" stroke="#2A1503" stroke-width="4">
+    <path d="M1360 150l16 33 36 5-26 25 6 36-32-17-32 17 6-36-26-25 36-5z"/></g>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4" opacity=".8">
+    <path d="M540 90l12 25 27 4-19 19 4 27-24-13-24 13 4-27-19-19 27-4z"/>
+    <path d="M980 120l10 21 23 3-16 16 4 23-21-11-21 11 4-23-16-16 23-3z"/>
+    <path d="M280 720l10 21 23 3-16 16 4 23-21-11-21 11 4-23-16-16 23-3z"/></g>
+  <g stroke="#2A1503" stroke-width="4" fill="none" opacity=".5" stroke-linecap="round">
+    <path d="M620 760q30-26 60 0t60 0"/><path d="M900 790q30-26 60 0t60 0"/></g>
+  <rect y="828" width="1600" height="72" fill="#E0B98E"/>
+  <path d="M0 828h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, bag, timer, secs = 60, count = 0, running = false;
+
+K = Kit.build({
+  title: 'تحدي الدقيقة الواحدة',
+  accent: '#D86048', accent2: '#A8402C',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'رفع طاقة الصف وتنشيط سرعة التفكير والطلاقة اللغوية — فاصلٌ قصير يُعيد التركيز، لا حصّةٌ كاملة.',
+    tools: 'الشاشة فقط. للتحدّيات الحركية: مساحةٌ آمنة بجانب المقاعد.',
+    groups: 'الصف كلّه معاً، أو فريقان يتناوبان: فريقٌ يُجيب وفريقٌ يعدّ الإجابات.',
+    steps: [
+      'اختاري مدّة التحدّي (٣٠ / ٦٠ / ٩٠ ثانية).',
+      'اضغطي «تحدٍّ جديد» واقرئيه بصوتٍ عالٍ.',
+      'اضغطي «ابدأ» — وكل إجابةٍ صحيحة اضغطي «+» في العدّاد.',
+      'عند انتهاء الوقت: صفّقوا للعدد الذي وصلتم إليه.',
+      'كرّري بتحدٍّ جديد، أو أنهي بالتأمّل الختامي.',
+    ],
+    time: '٣ إلى ٥ دقائق لكل تحدٍّ — نشاطُ فاصلٍ مثالي.',
+    script: 'أمامنا دقيقةٌ واحدة فقط! سأقرأ التحدّي… وحين أقول «ابدأوا» أريد أفكاركم كلّها. لا توجد إجابةٌ سخيفة — المهم أن نحاول!',
+    tips: 'العدّاد للصف كلّه لا لطالبٍ واحد — هذا يجعل الخجول يُشارك لأن النجاح جماعي. وفي التحدّيات الحركية تأكّدي من خلوّ الممرّات.',
+    points: 'وضع الفرق اختياري: إن قسّمتِ الصف فريقين، احسبي إجابات كلٍّ في جولته. ونقطةُ قيمةٍ لمن شجّع زميلاً أو انتظر دوره.',
+    levels: 'الأصغر: ٩٠ ثانية وتحدّيات الحروف والأشكال. الأكبر: ٣٠ ثانية وتحدّيات الإبداع.',
+    close: [
+      'أيّ تحدٍّ كان الأصعب ولماذا؟',
+      'هل زادت أفكارنا حين تعاونّا؟',
+      'ماذا نفعل حين «تقف» أفكارنا فجأة؟',
+    ],
+  },
+});
+
+bag = K.Bag(CHALLENGES);
+let cur = null;
+
+function home() {
+  if (timer) timer.pause();
+  running = false;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="56" r="34" fill="#FFF9F0" stroke="#2A1503" stroke-width="5"/>
+      <path d="M50 56V34M50 56l16 10" stroke="#D86048" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M38 12h24M50 12v10" stroke="#2A1503" stroke-width="6" stroke-linecap="round"/>
+      <path d="M80 24l6 6" stroke="#2A1503" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+    <h1>تحدي الدقيقة الواحدة</h1>
+    <p class="sub">دقيقةٌ واحدة… وكل أفكار الصف. كم إجابةً نستطيع معاً؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٣ – ٥ دقائق للتحدّي</b></span>
+      <span class="chip">الصف كلّه أو <b>فريقان</b></span>
+      <span class="chip">المهارة: <b>سرعة التفكير والطلاقة</b></span>
+      <span class="chip">القيمة: <b>المثابرة والمشاركة</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">مدّة التحدّي</div><div id="dur" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ النشاط');
+  b1.onclick = () => { K.SFX.ok(); play(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  const pick = () => {
+    const host = opts.querySelector('#dur'); host.innerHTML = '';
+    DURS.forEach(v => {
+      const b = K.el('button', 'btn sm' + (secs === v ? ' p' : ''), Kit.AR(v) + ' ث');
+      b.onclick = () => { secs = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+}
+
+function play() {
+  cur = bag.next();
+  count = 0; running = false;
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+
+  const wrap = K.el('div', 'ch');
+  wrap.innerHTML = `<span class="chip cat">المجال: <b>${Kit.esc(cur.c)}</b></span>
+    <div class="task">${Kit.esc(cur.t)}<div class="ex">مثال: ${Kit.esc(cur.ex)}</div></div>`;
+
+  const br = K.el('div', 'bigring');
+  const ring = K.el('div', 'ring', '<i></i>');
+  const tim = K.el('div', 'timer'); tim.appendChild(ring); br.appendChild(tim);
+  wrap.appendChild(br);
+
+  const row = K.el('div', 'rowline');
+  const startB = K.el('button', 'btn p big', '▶ ابدأوا!');
+  const pauseB = K.el('button', 'btn', '⏸ إيقاف'); pauseB.disabled = true;
+  const counter = K.el('span', 'count', `الإجابات: <b id="cnt" style="font-size:1.4em">٠</b>`);
+  const plus = K.el('button', 'btn g', '+ إجابة');
+  row.append(startB, pauseB, plus, counter);
+  wrap.appendChild(row);
+  K.stage.appendChild(wrap);
+
+  timer = K.Timer({ secs, ring, onEnd: () => {
+    running = false; startB.disabled = false; startB.textContent = '▶ من جديد'; pauseB.disabled = true;
+    K.say(`انتهى الوقت — ${Kit.AR(count)} إجابة! صفّقوا لأنفسكم 👏`, '');
+    K.SFX.win();
+  }});
+  timer.paint();
+
+  startB.onclick = () => {
+    if (startB.textContent.includes('من جديد')) { timer.reset(secs); count = 0; paint(); }
+    timer.start(); running = true;
+    startB.disabled = true; pauseB.disabled = false; K.SFX.ok();
+  };
+  pauseB.onclick = () => { timer.pause(); running = false; startB.disabled = false; startB.textContent = '▶ متابعة'; pauseB.disabled = true; K.SFX.tap(); };
+  const paint = () => document.getElementById('cnt').textContent = Kit.AR(count);
+  plus.onclick = () => { count++; K.SFX.star(); paint(); };
+
+  K.bottom.querySelectorAll('.round-tool').forEach(x => x.remove());
+  const nw = K.tool('🎲 تحدٍّ جديد', 'تحدٍّ جديد', () => play(), '');
+  nw.classList.add('round-tool');
+  const done = K.tool('ختام النشاط ←', 'الختام', () => K.reflect({
+    value: 'المثابرة والمشاركة',
+    questions: [
+      'أيّ تحدٍّ أخرج أكثر أفكارنا؟',
+      'ماذا فعلنا حين توقّفت الأفكار فجأة؟',
+      'لماذا زاد العدد حين شارك الجميع؟',
+    ],
+  }, home), 'p');
+  done.classList.add('round-tool');
+  K.addTool(nw); K.addTool(done);
+}
+
+home();
+</script>
+</body>
+</html>

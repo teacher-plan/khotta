@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>سوق المهارات</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.stalls{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));max-width:1100px;width:100%}
+.stall{background:var(--paper);border:3px solid var(--ink);border-radius:16px;overflow:hidden;
+  cursor:pointer;transition:transform .12s;text-align:center}
+.stall:hover{transform:translateY(-4px)}
+.stall .awn{height:26px;background:repeating-linear-gradient(90deg,var(--c1) 0 22px,#FFF9F0 22px 44px);
+  border-bottom:3px solid var(--ink)}
+.stall .bd{padding:13px 15px}
+.stall .f{font-size:42px;display:block;margin-bottom:4px}
+.stall b{font-size:clamp(17px,2vw,22px)}
+.stall p{margin:5px 0 0;font-size:14.5px;opacity:.8;line-height:1.55}
+.stall.done{outline:5px solid var(--ok);outline-offset:-2px}
+.stall.done .tick2{display:inline-grid}
+.tick2{display:none;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ok);
+  color:#fff;font-weight:800;margin-inline-start:6px}
+.task{max-width:960px;width:100%;text-align:center;animation:up .35s both}
+.task .txt{font-size:clamp(19px,2.7vw,34px);font-weight:800;line-height:1.6;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,38px);margin-bottom:16px;text-align:start}
+.task .txt .hd2{text-align:center;display:block;margin-bottom:10px}
+.task .txt ul{margin:0;padding-inline-start:24px;font-weight:700;font-size:.85em}
+.task .txt li{margin-bottom:6px}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٠ — سوق المهارات
+   الهدف: اكتشاف نقاط القوّة وتقدير اختلاف القدرات.
+   القرار التربوي: كل «كشك» تحدٍّ يُنجزه الفريق فقط إذا استعمل المهارة
+   المعلنة — والفريق يزور الأكشاك الستّة كلّها، فيجرّب كل طالبٍ مهارةً
+   يتقنها وأخرى تصعب عليه. الدرس: الفريق الكامل يحتاجها كلّها.
+   ═══════════════════════════════════════════════════════════════════ */
+const STALLS = [
+  {id:'draw', f:'🎨', n:'كشك الرسم', c:'#D86048',
+   d:'التعبير بالخط والشكل',
+   task:'ارسموا معاً — كلٌّ يرسم جزءاً — شيئاً يدلّ على «الصباح» دون كتابة حرفٍ واحد، وليخمّنه باقي الصف.',
+   steps:['قرّروا الفكرة همساً','وزّعوا الأجزاء: من يرسم ماذا؟','دقيقتان للرسم','الصف يخمّن']},
+  {id:'explain', f:'🗣️', n:'كشك الشرح', c:'#487848',
+   d:'توصيل الفكرة بوضوح',
+   task:'يشرح أحدكم لزملائه كيف يُعدّ كوب عصيرٍ — خطوةً خطوة — والبقية يمثّلون الخطوات كما تُقال حرفياً!',
+   steps:['اختاروا الشارح','الشارح لا يستعمل يديه — كلامٌ فقط','الممثّلون ينفّذون ما يُقال حرفياً','هل وصل العصير سليماً؟']},
+  {id:'organize', f:'📋', n:'كشك التنظيم', c:'#2F7D74',
+   d:'الترتيب والتصنيف',
+   task:'رتّبوا أنفسكم صفاً واحداً حسب أوّل حرفٍ من أسمائكم (أ ثم ب ثم ت…) — بالهمس فقط وفي ٦٠ ثانية.',
+   steps:['تذكّروا: الهمس فقط','ابحثوا عن ترتيب الحروف','اصطفّوا','راجعوا الترتيب معاً قبل الإعلان']},
+  {id:'listen', f:'👂', n:'كشك الاستماع', c:'#6B4E9E',
+   d:'الإنصات الدقيق',
+   task:'يروي أحدكم ما فعله صباح اليوم في ثلاث جمل، ثم يعيدها زميلٌ آخر كما هي تماماً — بالتفاصيل نفسها.',
+   steps:['الراوي يتكلّم مرّةً واحدة فقط','الجميع يُنصت — لا أسئلة','المُعيد يكرّر ما سمع','الراوي يحكم: هل نقص شيء؟']},
+  {id:'create', f:'💡', n:'كشك الإبداع', c:'#D9A93C',
+   d:'توليد الأفكار الجديدة',
+   task:'قلمُ رصاصٍ عاديّ… اذكروا له — بالتناوب — عشرة استخداماتٍ غير الكتابة. الغريب مقبول، والمكرّر لا!',
+   steps:['بالتناوب: كلٌّ فكرة','ممنوع التكرار','عدّوا حتى عشرة','صفّقوا لأغرب فكرة']},
+  {id:'solve', f:'🧩', n:'كشك حلّ المشكلات', c:'#8B2635',
+   d:'إيجاد الحلول عند العقبات',
+   task:'مشكلة: كرة الصف علقت فوق الخزانة العالية، والقفز ممنوع. اقترحوا ثلاثة حلولٍ آمنة مختلفة واختاروا أفضلها ولماذا.',
+   steps:['كلٌّ يقترح حلاً','ناقشوا: ما الآمن؟ ما الأسرع؟','اختاروا حلاً واحداً','علّلوا اختياركم للصف']},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bgm" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F7E8CE"/><stop offset="1" stop-color="#F2E3C8"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bgm)"/>
+  <!-- أعلام مثلثة -->
+  <path d="M0 70q400 60 800 0t800 0" fill="none" stroke="#2A1503" stroke-width="4"/>
+  <g stroke="#2A1503" stroke-width="3">
+    <path d="M120 76l22 44 24-40z" fill="#D86048"/><path d="M330 92l22 44 24-40z" fill="#487848"/>
+    <path d="M560 84l22 44 24-40z" fill="#D9A93C"/><path d="M800 70l22 44 24-40z" fill="#2F7D74"/>
+    <path d="M1040 82l22 44 24-40z" fill="#8B2635"/><path d="M1270 92l22 44 24-40z" fill="#6B4E9E"/>
+    <path d="M1480 76l22 44 24-40z" fill="#D86048"/>
+  </g>
+  <!-- كشكان عند الطرفين -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="60" y="480" width="260" height="200" fill="#F5EAD3"/>
+    <path d="M40 480h300l-24-70H64z" fill="#D86048"/>
+    <path d="M40 480h300" stroke-width="6"/>
+    <rect x="90" y="560" width="200" height="60" fill="#C9A87C"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="1290" y="500" width="250" height="185" fill="#F5EAD3"/>
+    <path d="M1270 500h290l-24-66h-242z" fill="#2F7D74"/>
+    <path d="M1270 500h290" stroke-width="6"/>
+    <rect x="1320" y="575" width="190" height="56" fill="#C9A87C"/>
+  </g>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4" opacity=".7">
+    <path d="M700 180l12 25 27 4-19 19 4 27-24-13-24 13 4-27-19-19 27-4z"/>
+    <path d="M1000 210l10 21 23 3-16 16 4 23-21-11-21 11 4-23-16-16 23-3z"/></g>
+  <rect y="800" width="1600" height="100" fill="#DBC290"/>
+  <path d="M0 800h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, done = {};
+
+K = Kit.build({
+  title: 'سوق المهارات',
+  accent: '#8B2635', accent2: '#661A26',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'اكتشاف نقاط القوّة وتقدير اختلافها: الفريق يزور ستّة أكشاك، كلٌّ يختبر مهارةً مختلفة — فيكتشف كل طالبٍ ما يتقنه، ويرى أن الفريق يحتاج المهارات كلّها.',
+    tools: 'الشاشة. كشك الرسم يحتاج ورقاً وأقلاماً.',
+    groups: 'فرقٌ من ٤–٥ تتناوب على الأكشاك، أو الصف كلّه يزور الأكشاك بالترتيب.',
+    steps: [
+      'افتحي السوق واسألي: «ما المهارة؟ هل هي شيءٌ نولد به أم نتدرّب عليه؟»',
+      'يختار الفريق كشكاً ويقرأ تحدّيه وخطواته.',
+      'نفّذوا التحدّي فعلياً (معظمها بلا أدوات)، ثم «أنجزنا الكشك».',
+      'بعد كل كشك اسألي: «من وجد هذا سهلاً؟ من وجده صعباً؟» — الإجابتان طبيعيتان.',
+      'الهدف زيارة الأكشاك الستّة — لا الانتهاء سريعاً.',
+    ],
+    time: '٢٠ إلى ٣٠ دقيقة للأكشاك الستّة.',
+    script: 'أهلاً بكم في سوق المهارات! في كل كشكٍ تحدٍّ يحتاج مهارةً مختلفة: يدٌ ترسم، ولسانٌ يشرح، وأذنٌ تسمع، وعقلٌ يحلّ. لا أحد يتقنها كلّها — ولهذا نعمل فريقاً!',
+    tips: 'راقبي من «وجد نفسه» في كشكٍ ما وسمّي مهارته أمام الصف — هذه أثمن لحظة في النشاط. وامنعي السخرية ممّن تعثّر: قولي «هذا كشكٌ صعبٌ عليك وسهلٌ على غيرك، وذاك عكسه».',
+    points: 'نقطة لكل كشكٍ مُنجز، ونقطة لكل طالبٍ جرّب مهارةً صعبةً عليه ولم ينسحب.',
+    levels: 'الأصغر: اكتفي بأربعة أكشاك ونفّذي الأمثلة معهم. الأكبر: بعد كل كشكٍ يقترحون تحدّياً جديداً له.',
+    close: [
+      'أيّ كشكٍ شعرتَ فيه أنك «في بيتك»؟ تلك مهارتك!',
+      'أيّ كشكٍ كان صعباً؟ من في الفريق أتقنه؟',
+      'لماذا يحتاج الفريق الكامل المهارات الستّ كلّها؟',
+    ],
+  },
+});
+
+function home() {
+  done = {};
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="16" y="46" width="68" height="40" fill="#F5EAD3" stroke="#2A1503" stroke-width="5"/>
+      <path d="M10 46h80l-9-24H19z" fill="#8B2635" stroke="#2A1503" stroke-width="5"/>
+      <path d="M26 46v-20M42 46V24M58 46V24M74 46v-20" stroke="#FFF9F0" stroke-width="5"/>
+      <rect x="38" y="62" width="24" height="24" fill="#C9A87C" stroke="#2A1503" stroke-width="4"/>
+    </svg>
+    <h1>سوق المهارات</h1>
+    <p class="sub">ستّة أكشاك، وستّ مهارات… وفي كل كشكٍ يكتشف أحدنا موهبته.</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٢٠ – ٣٠ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>اكتشاف نقاط القوّة</b></span>
+      <span class="chip">القيمة: <b>تقدير اختلاف القدرات</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'افتحوا السوق');
+  b1.onclick = () => { K.SFX.ok(); market(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function market() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', '');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+  const dc = Object.keys(done).length;
+  wrap.appendChild(K.el('div', 'rowline',
+    `<span class="chip">الأكشاك المُنجزة: <b>${Kit.AR(dc)} / ${Kit.AR(STALLS.length)}</b></span>`));
+
+  const grid = K.el('div', 'stalls');
+  STALLS.forEach(st => {
+    const d = K.el('div', 'stall' + (done[st.id] ? ' done' : ''));
+    d.style.setProperty('--c1', st.c);
+    d.innerHTML = `<div class="awn"></div><div class="bd">
+      <span class="f">${st.f}</span><b>${Kit.esc(st.n)}<span class="tick2">✓</span></b>
+      <p>${Kit.esc(st.d)}</p></div>`;
+    d.onclick = () => { K.SFX.tap(); openStall(st); };
+    grid.appendChild(d);
+  });
+  wrap.appendChild(grid);
+
+  const teamsBox = K.el('div', 'teams'); wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'جرّب مهارةً صعبة'], [1, 'ساند زميلاً تعثّر'], [1, 'اكتشف موهبته'],
+  ]));
+
+  if (dc >= STALLS.length) {
+    const fin = K.el('button', 'btn p big', '🎪 زرنا السوق كلّه — الختام!');
+    fin.onclick = () => K.reflect({
+      value: 'تقدير اختلاف القدرات',
+      questions: [
+        'أيّ كشكٍ شعرتَ فيه أنك «في بيتك»؟ تلك موهبتك!',
+        'أيّ كشكٍ كان صعباً عليك وسهلاً على زميلك؟',
+        'لماذا لا ينجح فريقٌ كلُّ أفراده يتقنون المهارة نفسها؟',
+      ],
+    }, home);
+    wrap.insertBefore(fin, teamsBox);
+    K.SFX.win();
+  }
+}
+
+function openStall(st) {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'task');
+  wrap.innerHTML = `
+    <span class="chip" style="margin-bottom:10px;border-color:${st.c}">${st.f} ${Kit.esc(st.n)} — ${Kit.esc(st.d)}</span>
+    <div class="txt"><span class="hd2">${Kit.esc(st.task)}</span>
+      <ul>${st.steps.map(x => `<li>${Kit.esc(x)}</li>`).join('')}</ul></div>`;
+  const row = K.el('div', 'rowline');
+  const ok = K.el('button', 'btn p big', '✅ أنجزنا الكشك');
+  ok.onclick = () => { done[st.id] = true; K.SFX.win(); K.praise(); market(); };
+  const back = K.el('button', 'btn', '← العودة للسوق');
+  back.onclick = () => { K.SFX.tap(); market(); };
+  row.append(ok, back);
+  wrap.appendChild(row);
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

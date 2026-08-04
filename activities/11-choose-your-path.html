@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>اختر طريقك</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.story{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.story .scene-f{font-size:clamp(52px,8vw,100px);line-height:1.15;margin-bottom:8px}
+.story .txt{font-size:clamp(18px,2.4vw,28px);line-height:1.8;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,36px);margin-bottom:18px;text-align:start}
+.paths{display:grid;gap:12px;max-width:840px;margin:0 auto}
+.paths .btn{justify-content:flex-start;text-align:start;font-size:clamp(16px,2vw,23px);min-height:66px;gap:12px}
+.paths .btn .sig{flex:none;width:42px;height:42px;border-radius:50%;border:3px solid var(--ink);
+  background:var(--gold);display:grid;place-items:center;font-size:19px}
+.ending{background:var(--gold);border:4px solid var(--ink);border-radius:18px;padding:18px 24px;
+  font-size:clamp(17px,2.2vw,25px);font-weight:800;line-height:1.7;margin-top:16px;animation:pop .4s both}
+.trail{display:flex;gap:7px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.trail i{min-width:36px;height:10px;border-radius:99px;background:rgba(42,21,3,.15);border:1px solid var(--line)}
+.trail i.on{background:var(--a)}
+.storypick{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));max-width:1000px;width:100%}
+.spick{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:18px;cursor:pointer;
+  text-align:center;transition:transform .12s}
+.spick:hover{transform:translateY(-4px)}
+.spick .f{font-size:52px;display:block;margin-bottom:6px}
+.spick b{font-size:clamp(17px,2vw,22px)}
+.spick p{margin:6px 0 0;font-size:14.5px;opacity:.8;line-height:1.6}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١١ — اختر طريقك
+   الهدف: تعليم نتائج القرارات عبر قصصٍ تفاعلية متفرّعة.
+   القرار التصميمي: كل عقدةٍ نتيجةُ سابقتها بوضوح، وكل نهايةٍ — حتى
+   المتعثّرة — تفتح باب التصحيح: لا نهاية «خسرتَ»، بل نهاياتٌ تختلف
+   في ثمن الوصول. القرار الخاطئ يطيل الطريق ولا يقفله.
+   ═══════════════════════════════════════════════════════════════════ */
+const STORIES = [
+  {id:'trip', f:'🏕️', title:'رحلة الغابة المدرسية',
+   d:'رحلةٌ مع الصف… وقراراتٌ صغيرة تصنع يوماً كبيراً.',
+   value:'التفكير في العواقب',
+   start:'n1',
+   nodes:{
+    n1:{f:'🚌', t:'وصلت الحافلة إلى الغابة! قالت المعلّمة: «ابقوا مع مجموعاتكم». لمحتَ فراشةً نادرةً تطير نحو الأشجار البعيدة…',
+        c:[{t:'أتبع الفراشة قليلاً — لن يلاحظ أحد', go:'n2'},
+           {t:'أنادي مجموعتي: «تعالوا نشاهد الفراشة معاً!»', go:'n3'}]},
+    n2:{f:'🌲', t:'تبعت الفراشة… وحين التفتَّ لم تعد ترى مجموعتك! الأشجار متشابهة والأصوات بعيدة.',
+        c:[{t:'أبقى مكاني وأنادي بصوتٍ عالٍ', go:'n4'},
+           {t:'أركض بين الأشجار أبحث عنهم', go:'n5'}]},
+    n3:{f:'🦋', t:'جاءت المجموعة كلّها! شاهدتم الفراشة معاً، وصوّرتها المعلّمة، وقالت: «هذا اكتشاف اليوم — لأنكم بقيتم معاً رأيناه جميعاً».',
+        c:[{t:'نُكمل المسار ونسجّل ما نراه في دفتر الرحلة', go:'end_best'}]},
+    n4:{f:'📣', t:'قرارٌ حكيم! البقاء في المكان جعل صوتك يصل. سمعتك المعلّمة ووصلت خلال دقائق. قالت: «أحسنتَ أنك لم تتحرّك — هكذا وجدناك سريعاً».',
+        c:[{t:'أعتذر وأعود مع المجموعة وألتزم بها', go:'end_learn'}]},
+    n5:{f:'😰', t:'الركض جعلك أبعد! تعبتَ وجلستَ قرب صخرة. تذكّرتَ درس المرشد: «الضائع يقف مكانه». وقفتَ وناديت… وبعد وقتٍ طويل وجدك المرشد.',
+        c:[{t:'أشكر المرشد وأتعلّم الدرس', go:'end_hard'}]},
+    end_best:{end:true, f:'🌟', t:'نهاية رائعة: يومٌ جميل، اكتشافٌ مشترك، ومعلّمةٌ فخورة. قرارُك الأول — «معاً لا وحدي» — صنع اليوم كلّه.'},
+    end_learn:{end:true, f:'💡', t:'نهاية طيّبة بعد خوفٍ قصير: أخطأتَ باتباع الفراشة، لكن قرارك الثاني الحكيم — الوقوف والنداء — أصلح ما أفسده الأول. القرار الجيّد يُصلح ما قبله!'},
+    end_hard:{end:true, f:'🎒', t:'وصلتَ سالماً… بعد تعبٍ وخوفٍ كان يمكن تجنّبهما. قراران متسرّعان جعلا الطريق طويلاً. السلامة وصلت أخيراً — والدرس: قف، فكّر، ثم تحرّك.'},
+   }},
+  {id:'test', f:'📝', title:'يوم الاختبار الصعب',
+   d:'نسيتَ المراجعة… والاختبار اليوم. ماذا تفعل؟',
+   value:'الصدق والمسؤولية',
+   start:'n1',
+   nodes:{
+    n1:{f:'😨', t:'صباح الاختبار تذكّرتَ: نسيتَ مراجعة الدرس الأخير! زميلك المتفوّق يجلس بجانبك، وورقته قريبةٌ من عينيك…',
+        c:[{t:'أنظر إلى ورقته حين ينشغل المراقب', go:'n2'},
+           {t:'أحلّ ما أعرفه وأجتهد في الباقي', go:'n3'}]},
+    n2:{f:'👀', t:'نظرت إلى ورقته ونقلت إجابة… لكن قلبك ينبض بقوّة، ولا تعرف حتى إن كانت إجابته صحيحة. بعد الاختبار سألك المعلّم: «إجابتك تشبه إجابة زميلك تماماً — حتى في الخطأ!»',
+        c:[{t:'أعترف بصدقٍ وأعتذر', go:'n4'},
+           {t:'أنكر: «مصادفة!»', go:'n5'}]},
+    n3:{f:'✍️', t:'حللتَ ما تعرفه، وحاولت في الباقي بتفكيرك. النتيجة لم تكن الأعلى… لكن المعلّم كتب: «إجاباتك تدلّ على فهمك الحقيقي — لنقوِّ الدرس الأخير معاً».',
+        c:[{t:'أطلب من المعلّم خطةً للمراجعة', go:'end_best'}]},
+    n4:{f:'🤝', t:'اعترفتَ: «نقلتُ لأني لم أراجع، وأنا آسف». صمت المعلّم ثم قال: «خطأٌ كبير… وصدقٌ أكبر. ستعيد الاختبار وحدك، وأنا أثق أن هذا لن يتكرّر». أعدتَه ونجحت بجهدك.',
+        c:[{t:'أتعلّم: درجةٌ أقلّ بصدقٍ خيرٌ من أعلى بغشّ', go:'end_learn'}]},
+    n5:{f:'😔', t:'أنكرت… لكن المعلّم وضع الورقتين جنباً إلى جنب: الخطأ نفسه بالكلمات نفسها. صار الموقف أصعب: خطأ النقل وخطأ الإنكار معاً.',
+        c:[{t:'أعترف الآن وأتحمّل النتيجة', go:'end_hard'}]},
+    end_best:{end:true, f:'🌟', t:'نهاية مضيئة: درجةٌ حقيقية، وخطة مراجعة، ومعلّمٌ يثق بك. الاجتهاد الصادق — حتى الناقص — يبني ثقةً لا تشتريها أعلى الدرجات.'},
+    end_learn:{end:true, f:'💡', t:'نهاية الشجعان: أخطأتَ ثم ملكتَ شجاعة الاعتراف. الثقة التي كادت تنكسر أصلحها صدقك. الاعتراف بالخطأ بابُ الاحترام لا بابُ العقاب.'},
+    end_hard:{end:true, f:'🎒', t:'وصلتَ إلى الصدق أخيراً… بعد أن كلّفك الإنكار ثمناً إضافياً. الدرس الغالي: الاعتراف الأول أسهل الاعترافات — وكلّ تأخيرٍ يرفع الثمن.'},
+   }},
+  {id:'money', f:'💰', title:'النقود التي على الأرض',
+   d:'ورقةٌ نقديّة قرب باب الصف… ولا أحد يرى.',
+   value:'الأمانة',
+   start:'n1',
+   nodes:{
+    n1:{f:'💵', t:'قرب باب الصف وجدتَ ورقةً نقديّة! نظرتَ حولك: لا أحد. في المقصف حلوى تتمنّاها منذ أسبوع…',
+        c:[{t:'أشتري الحلوى — من يجد شيئاً يملكه!', go:'n2'},
+           {t:'أُسلّمها للمعلّمة', go:'n3'},
+           {t:'أسأل زملائي أولاً: من فقد نقوداً؟', go:'n4'}]},
+    n2:{f:'🍬', t:'اشتريت الحلوى… وفي الصف رأيتَ زميلك يبحث تحت المقاعد ويكاد يبكي: «نقود المقصف ضاعت منّي — أمّي أعطتني إيّاها صباحاً». الحلوى في جيبك فقدت طعمها فجأة.',
+        c:[{t:'أعترف له وأعوّضه من مصروفي', go:'end_learn'},
+           {t:'أصمت — لن يعرف أحد', go:'end_hard'}]},
+    n3:{f:'🤲', t:'سلّمتها للمعلّمة. بعد قليل دخل زميلك يسأل عن نقوده الضائعة — فأعطته إيّاها وقالت أمام الصف: «شكراً لأمينٍ بيننا ردّها». نظر إليك زميلك بامتنان.',
+        c:[{t:'أفرح بالشعور الجميل', go:'end_best'}]},
+    n4:{f:'🗣️', t:'سألت: «من فقد نقوداً؟» فقال ثلاثة: «أنا!». احترت — كيف تعرف صاحبها الحقيقي؟',
+        c:[{t:'أسأل كلاً: كم كانت؟ وأين سقطت؟', go:'n5'},
+           {t:'أرتبك… وأسلّمها للمعلّمة لتحكم', go:'n3'}]},
+    n5:{f:'🔎', t:'ذكاء! صاحبها الحقيقي وحده يعرف المبلغ ومكان سقوطه. أجاب أحدهم إجابةً مطابقة، فأعدتها إليه، واعتذر الاثنان الآخران عن «المزاح».',
+        c:[{t:'أتعلّم: الأمانة تحتاج ذكاءً أيضاً', go:'end_best'}]},
+    end_best:{end:true, f:'🌟', t:'نهاية مشرقة: النقود وصلت صاحبها، وأنت كسبت شيئاً أغلى منها — اسم «الأمين» بين زملائك. الأمانة أثقل من ورقةٍ نقدية وأبقى من حلوى.'},
+    end_learn:{end:true, f:'💡', t:'نهاية التصحيح: أخطأتَ ثم أصلحت بشجاعة. خسرتَ من مصروفك… وربحتَ راحة قلبك وصداقة زميلك. الخطأ الذي يُصلَح يصير درساً لا ذنباً.'},
+    end_hard:{end:true, f:'😞', t:'بقيت الحلوى سرّاً ثقيلاً… كلّما رأيت زميلك تذكّرت. لا أحد عرف — إلا أنت، وهذا أثقل الجميع. بعض «المكاسب» تكلّف أكثر ممّا تساوي.'},
+   }},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg11" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#DFEDDC"/><stop offset="1" stop-color="#F4EDD8"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg11)"/>
+  <!-- طرق متفرعة -->
+  <path d="M800 900V640q0-90-260-140T260 360" fill="none" stroke="#C9A87C" stroke-width="46" opacity=".7"/>
+  <path d="M800 900V640q0-90 260-140t280-140" fill="none" stroke="#C9A87C" stroke-width="46" opacity=".7"/>
+  <path d="M800 900V300" fill="none" stroke="#C9A87C" stroke-width="46" opacity=".7"/>
+  <g stroke="#2A1503" stroke-width="3" fill="none" opacity=".5">
+    <path d="M800 880V640q0-90-260-140" stroke-dasharray="4 18" stroke-width="5"/>
+    <path d="M800 880V640q0-90 260-140" stroke-dasharray="4 18" stroke-width="5"/></g>
+  <!-- لافتة اتجاهات -->
+  <g stroke="#2A1503" stroke-width="5">
+    <path d="M800 610V430" stroke-width="8"/>
+    <path d="M800 450h-160l-24 18 24 18h160z" fill="#D9A93C"/>
+    <path d="M800 510h160l24 18-24 18h-160z" fill="#487848"/>
+    <path d="M800 570h-130l-20 16 20 16h130z" fill="#D86048"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="5"><path d="M280 360v-50" fill="none"/>
+    <circle cx="280" cy="270" r="44" fill="#5E9E52"/></g>
+  <g stroke="#2A1503" stroke-width="5"><path d="M1330 330v-44" fill="none"/>
+    <circle cx="1330" cy="252" r="38" fill="#6FAE5E"/></g>
+  <g fill="#fff" opacity=".8"><ellipse cx="400" cy="110" rx="80" ry="30"/><ellipse cx="1150" cy="90" rx="90" ry="34"/></g>
+  <circle cx="1460" cy="130" r="54" fill="#FFD97A" stroke="#2A1503" stroke-width="5"/>
+</svg>`;
+
+let K, story = null, node = null, depth = 0;
+
+K = Kit.build({
+  title: 'اختر طريقك',
+  accent: '#6B4E9E', accent2: '#4B3573',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'تعليم نتائج القرارات: قصصٌ تتفرّع بقرارات الصف، وكل نهايةٍ تختلف في «ثمن الوصول» — القرار الخاطئ يطيل الطريق ولا يقفله، والقرار الجيّد يُصلح ما قبله.',
+    tools: 'الشاشة فقط.',
+    groups: 'الصف كلّه: تصويتٌ برفع الأيدي عند كل مفترق. أو فرقٌ تتناوب على القرارات.',
+    steps: [
+      'اختاروا قصّةً من الثلاث.',
+      'اقرئي المشهد بصوتٍ معبّر — أنتِ راوية القصة.',
+      'عند كل مفترق: صوّتوا قبل الضغط، واسألي فريقين مختلفين عن سبب اختيارهما.',
+      'اضغطي خيار الأغلبية وتابعوا.',
+      'في النهاية: قارنوا — «لو عدنا للمفترق الأول، ماذا نغيّر؟»',
+      'أعيدوا القصة نفسها بمسارٍ مختلف إن سمح الوقت — المقارنة أقوى درس.',
+    ],
+    time: '١٠ إلى ١٥ دقيقة للقصة الواحدة بمسارٍ واحد.',
+    script: 'هذه قصّتكم أنتم — أنا أرويها وأنتم تقرّرون! عند كل مفترقٍ سنصوّت، وكل قرارٍ يأخذنا لطريقٍ مختلف. ولا تخافوا من القرار الخاطئ… ففي القصص — كما في الحياة — يمكن للقرار الجيّد أن يُصلح ما قبله.',
+    tips: 'أعظم لحظات النشاط إعادةُ القصة بمسارٍ آخر: يرى الصف بعينه كيف غيّر قرارٌ واحدٌ كلّ شيء. خصّصي وقتاً لذلك ولو لقصةٍ واحدة.',
+    points: 'بلا نقاطٍ هنا — القصة رحلةٌ مشتركة. كافئي التعليل الجميل بالإشادة، ودوّني أفضل الأسباب على السبورة.',
+    levels: 'الأصغر: قصة «الرحلة» أولاً فهي الأبسط. الأكبر: قصة «الاختبار» ونقاشٌ أطول عند كل مفترق.',
+    close: [
+      'أيّ قرارٍ غيّر مجرى القصة كلّها؟',
+      'هل صادفنا نهايةً «سيئة»؟ أم فقط طرقاً أطول؟',
+      'ما القرار الذي واجهكم في الحياة وشبه قرارات القصة؟',
+    ],
+  },
+});
+
+function home() {
+  story = null; depth = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 92V52" stroke="#2A1503" stroke-width="7" stroke-linecap="round"/>
+      <path d="M50 52Q50 30 24 22M50 52q0-22 26-30" fill="none" stroke="#2A1503" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="22" cy="18" r="10" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="78" cy="18" r="10" fill="#487848" stroke="#2A1503" stroke-width="4"/>
+      <circle cx="50" cy="94" r="6" fill="#E8C34A" stroke="#2A1503" stroke-width="4"/>
+    </svg>
+    <h1>اختر طريقك</h1>
+    <p class="sub">قصصٌ أنتم أبطالها… وكل قرارٍ يفتح طريقاً مختلفاً. أيّ نهايةٍ ستصلون؟</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>١٠ – ١٥ دقيقة للقصة</b></span>
+      <span class="chip">الصف كلّه</span>
+      <span class="chip">المهارة: <b>توقّع العواقب</b></span>
+      <span class="chip">القيم: <b>المسؤولية · الصدق · الأمانة</b></span>
+    </div>
+    <h3 style="margin:0 0 12px">اختاروا قصّتكم:</h3>`;
+  const grid = K.el('div', 'storypick');
+  STORIES.forEach(st => {
+    const d = K.el('div', 'spick',
+      `<span class="f">${st.f}</span><b>${Kit.esc(st.title)}</b><p>${Kit.esc(st.d)}</p>
+       <p style="font-weight:800;color:var(--a2)">القيمة: ${Kit.esc(st.value)}</p>`);
+    d.onclick = () => { K.SFX.ok(); story = st; depth = 0; goNode(st.start); };
+    grid.appendChild(d);
+  });
+  s.appendChild(grid);
+  const tb = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  tb.style.marginTop = '18px';
+  tb.onclick = () => K.teacher.open();
+  s.appendChild(tb);
+  K.stage.appendChild(s);
+}
+
+function goNode(id) {
+  node = story.nodes[id];
+  depth++;
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'story');
+  const trail = K.el('div', 'trail');
+  for (let i = 0; i < Math.max(4, depth); i++) trail.appendChild(K.el('i', i < depth ? 'on' : ''));
+  wrap.appendChild(trail);
+  wrap.appendChild(K.el('div', 'rowline', `<span class="chip">${story.f} <b>${Kit.esc(story.title)}</b></span>`));
+  wrap.appendChild(K.el('div', 'scene-f', node.f));
+  wrap.appendChild(K.el('div', 'txt', Kit.esc(node.t)));
+
+  if (node.end) {
+    wrap.appendChild(K.el('div', 'ending', Kit.esc(node.t2 || '') || `💛 القيمة: ${Kit.esc(story.value)}`));
+    const row = K.el('div', 'rowline'); row.style.marginTop = '16px';
+    const again = K.el('button', 'btn g big', '🔀 نعيدها بمسارٍ مختلف');
+    again.onclick = () => { K.SFX.tap(); depth = 0; goNode(story.start); };
+    const other = K.el('button', 'btn', 'قصّةٌ أخرى');
+    other.onclick = () => { K.SFX.tap(); home(); };
+    const fin = K.el('button', 'btn p', 'ختام النشاط');
+    fin.onclick = () => K.reflect({
+      value: story.value,
+      questions: [
+        'أيّ قرارٍ في القصة غيّر كلّ ما بعده؟',
+        'هل كانت هناك نهاية «سيئة» — أم طرقٌ أطول للوصول؟',
+        'ما موقفٌ حقيقيّ يشبه مفترقات هذه القصة؟',
+      ],
+    }, home);
+    row.append(again, other, fin);
+    wrap.appendChild(row);
+    K.SFX.win();
+  } else {
+    const paths = K.el('div', 'paths');
+    node.c.forEach((c, i) => {
+      const b = K.el('button', 'btn', `<span class="sig">${['أ','ب','ج'][i]}</span><span>${Kit.esc(c.t)}</span>`);
+      b.onclick = () => { K.SFX.tap(); goNode(c.go); };
+      paths.appendChild(b);
+    });
+    wrap.appendChild(paths);
+  }
+  K.stage.appendChild(wrap);
+}
+
+home();
+</script>
+</body>
+</html>

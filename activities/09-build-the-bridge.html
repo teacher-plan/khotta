@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>تحدي بناء الجسر</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.roles{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));max-width:1000px;width:100%;margin-bottom:16px}
+.role{background:var(--paper);border:3px solid var(--ink);border-radius:15px;padding:14px 16px;text-align:center}
+.role .f{font-size:38px;display:block;margin-bottom:4px}
+.role b{font-size:clamp(16px,1.9vw,20px)}
+.role p{margin:5px 0 0;font-size:14.5px;opacity:.8;line-height:1.55}
+.phasebar{display:flex;gap:0;max-width:900px;width:100%;margin-bottom:16px;border:3px solid var(--ink);
+  border-radius:99px;overflow:hidden;background:var(--paper)}
+.phasebar div{flex:1;text-align:center;padding:11px 6px;font-weight:800;font-size:clamp(13px,1.6vw,17px);
+  border-inline-start:2px solid var(--line)}
+.phasebar div:first-child{border-inline-start:0}
+.phasebar div.on{background:var(--a);color:#fff}
+.phasebar div.done{background:#DFF0E2}
+.ph{max-width:960px;width:100%;text-align:center;animation:up .35s both}
+.ph .desc{font-size:clamp(17px,2.2vw,25px);background:var(--paper);border:3px solid var(--ink);
+  border-radius:18px;box-shadow:var(--sh);padding:clamp(16px,2.6vw,32px);margin-bottom:16px;line-height:1.75;text-align:start}
+.ph .desc ul{margin:8px 0 0;padding-inline-start:24px}
+.ph .desc li{margin-bottom:6px}
+.mats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:0 0 16px}
+.mat{background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:9px 16px;
+  font-weight:800;font-size:clamp(14.5px,1.7vw,18px)}
+.mat .f{margin-inline-end:6px}
+.testq{display:grid;gap:10px;max-width:760px;margin:0 auto 8px}
+.testq button{border:3px solid var(--ink);border-radius:13px;background:var(--paper);padding:13px 17px;
+  font-family:inherit;font-weight:800;font-size:clamp(15.5px,1.9vw,20px);cursor:pointer;
+  display:flex;align-items:center;gap:11px;min-height:56px}
+.testq button.on{background:var(--ok);color:#fff}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ٩ — تحدي بناء الجسر
+   الهدف: التخطيط قبل العمل، والتعاون بأدوارٍ موزّعة.
+   طبيعة النشاط: البناء الحقيقي يحدث على الطاولات بموادّ حقيقية —
+   الشاشة تدير المراحل والوقت والأدوار. القرار التربوي: مرحلة التخطيط
+   إلزامية بمؤقّتٍ خاص، ولا يفتح البناء قبلها — التخطيط هو الدرس.
+   ═══════════════════════════════════════════════════════════════════ */
+const ROLES = [
+  {f:'📐', n:'المخطّط',      d:'يرسم فكرة الجسر ويشرحها لفريقه قبل البناء'},
+  {f:'🧱', n:'البنّاء',      d:'يداه وحدهما تلمسان المواد أثناء البناء'},
+  {f:'⏱️', n:'مراقب الوقت',  d:'يُخبر الفريق بالوقت المتبقّي كل دقيقة'},
+  {f:'🎤', n:'المتحدّث',     d:'يعرض الجسر أمام الصف ويشرح كيف بُني'},
+];
+const MATERIALS = [
+  {f:'📄', n:'١٠ أوراق'}, {f:'🥤', n:'٤ أكواب ورقية'}, {f:'📎', n:'٦ مشابك'},
+  {f:'🧻', n:'شريط لاصق (ذراع واحدة)'}, {f:'✏️', n:'قلمان'},
+];
+const PHASES = [
+  {id:'plan',  n:'التخطيط',  secs:180},
+  {id:'build', n:'البناء',   secs:420},
+  {id:'test',  n:'الاختبار', secs:0},
+  {id:'reflect', n:'التأمّل', secs:0},
+];
+const TEST_CRITERIA = [
+  'الجسر يقف وحده دون أن يُمسكه أحد',
+  'يعبر فجوةً بعرض كتابٍ مفتوح (~٣٠ سم)',
+  'يحمل قلماً واحداً دون أن ينهار',
+  'يحمل علبة ألوان (التحدّي الكبير!)',
+  'الفريق كلّه شارك — كلٌّ بدوره',
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="bg9" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F5E7D3"/><stop offset="1" stop-color="#EFE3CB"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#bg9)"/>
+  <!-- مخطط أزرق -->
+  <g transform="rotate(-4 260 220)">
+    <rect x="120" y="120" width="290" height="200" rx="8" fill="#3D6B8E" stroke="#2A1503" stroke-width="5"/>
+    <path d="M150 260q70-90 115-90t115 90M150 260h230" stroke="#fff" stroke-width="3" fill="none" stroke-dasharray="7 5"/>
+    <path d="M195 260v-52M265 260v-78M335 260v-52" stroke="#fff" stroke-width="3" stroke-dasharray="7 5"/>
+  </g>
+  <!-- أدوات -->
+  <g stroke="#2A1503" stroke-width="5">
+    <path d="M1310 180l130 90-24 34-130-90z" fill="#D9A93C"/>
+    <path d="M1330 168l-20 40" fill="none"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="4" fill="#8FA8B8">
+    <path d="M1420 620l90 0 0 26-90 0z" transform="rotate(-18 1465 633)"/>
+    <circle cx="1416" cy="646" r="17" fill="#6B8296"/>
+  </g>
+  <g stroke="#2A1503" stroke-width="5" fill="none" opacity=".8">
+    <circle cx="220" cy="680" r="42" fill="#D9A93C"/><circle cx="220" cy="680" r="14" fill="#F5E7D3"/>
+    <g transform="translate(310 660)"><circle r="30" fill="#B0721A"/><circle r="10" fill="#F5E7D3"/></g>
+  </g>
+  <!-- جسر صغير في الأفق -->
+  <g stroke="#2A1503" stroke-width="5" fill="none" opacity=".55">
+    <path d="M620 260q180-130 360 0" stroke-width="7"/>
+    <path d="M620 260h360M675 260v-38M800 260v-64M925 260v-38" stroke-width="5"/>
+  </g>
+  <rect y="810" width="1600" height="90" fill="#D9C193"/>
+  <path d="M0 810h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, timer, phase = -1, checks = 0;
+
+K = Kit.build({
+  title: 'تحدي بناء الجسر',
+  accent: '#B0721A', accent2: '#8A5713',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التخطيط قبل التنفيذ والتعاون بأدوارٍ محدّدة: كل فريقٍ يبني جسراً ورقياً حقيقياً يعبر فجوةً ويحمل وزناً — والشاشة تضبط المراحل والوقت.',
+    tools: 'لكل فريق: ١٠ أوراق، ٤ أكواب ورقية، ٦ مشابك، ذراع شريطٍ لاصق، قلمان. وكتابان لصنع الفجوة.',
+    groups: 'فرقٌ من أربعة، ولكل فردٍ دورٌ واحد: المخطّط، البنّاء، مراقب الوقت، المتحدّث. الأدوار تُعرض على الشاشة.',
+    steps: [
+      'وزّعي المواد واعرضي الأدوار — كل طالبٍ يعرف دوره قبل البدء.',
+      'مرحلة التخطيط (٣ دقائق): رسمٌ ونقاش، ممنوع لمس المواد!',
+      'مرحلة البناء (٧ دقائق): البنّاء وحده يلمس المواد، والبقية يوجّهون.',
+      'الاختبار: كل فريقٍ يضع جسره بين كتابين، والمتحدّث يشرح، والصف يشاهد.',
+      'علّمي معايير النجاح على الشاشة لكل فريق.',
+      'التأمّل: ماذا نجح؟ ماذا نغيّر لو أعدنا البناء؟',
+    ],
+    time: '٢٥ إلى ٣٥ دقيقة — حصّة نشاطٍ كاملة.',
+    script: 'مهندسو المستقبل! مهمّتكم بناء جسرٍ من الورق يعبر فجوةً ويحمل وزناً. لكن انتبهوا: أفضل المهندسين لا يبدأون بالبناء… بل بالتخطيط! في مرحلة التخطيط ممنوعٌ لمس المواد — فكّروا وارسموا أولاً.',
+    tips: 'قاعدة «البنّاء وحده يلمس المواد» هي ما يصنع التعاون الحقيقي — ذكّري بها بلطفٍ عند الحماس. وامدحي الجسر المنهار الذي خطّط أصحابه جيداً أكثر من جسرٍ قويٍّ بُني فوضى.',
+    points: 'نقطة لكل معيار نجاحٍ يتحقّق، ونقطتان لأفضل التزامٍ بالأدوار. الانهيار ليس فشلاً — اسألي: «ماذا تعلّمنا من السقوط؟»',
+    levels: 'الأصغر: فجوةٌ أضيق (٢٠ سم) وبناءٌ ٩ دقائق. الأكبر: قيدٌ إضافي — الجسر يجب أن يكون له سياج!',
+    close: [
+      'ماذا أعطتنا مرحلة التخطيط التي منعناكم فيها من البناء؟',
+      'كيف عمل الفريق ويدُ واحدةٍ فقط تبني؟',
+      'ماذا ستغيّرون لو أعدتم البناء غداً؟',
+    ],
+  },
+});
+
+function home() {
+  phase = -1; checks = 0;
+  if (timer) timer.pause();
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M10 72q40-46 80 0" fill="none" stroke="#B0721A" stroke-width="7"/>
+      <path d="M10 72h80" stroke="#2A1503" stroke-width="6" stroke-linecap="round"/>
+      <path d="M26 72V56M50 72V49M74 72V56" stroke="#2A1503" stroke-width="5"/>
+      <path d="M36 26l14-12 14 12" fill="none" stroke="#2A1503" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="30" r="7" fill="#D86048" stroke="#2A1503" stroke-width="4"/>
+    </svg>
+    <h1>تحدي بناء الجسر</h1>
+    <p class="sub">ورقٌ وأكوابٌ ومشابك… وجسرٌ يجب أن يقف ويحمل. لكن أولاً: خطّطوا!</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٢٥ – ٣٥ دقيقة</b></span>
+      <span class="chip">فرقٌ من <b>٤</b></span>
+      <span class="chip">المهارة: <b>التخطيط والتعاون</b></span>
+      <span class="chip">القيمة: <b>التفكير قبل العمل</b></span>
+    </div>`;
+  const mats = K.el('div', 'mats');
+  mats.innerHTML = '<div style="width:100%;font-weight:800;margin-bottom:4px">📦 موادّ كل فريق:</div>' +
+    MATERIALS.map(m => `<span class="mat"><span class="f">${m.f}</span>${m.n}</span>`).join('');
+  s.appendChild(mats);
+  const roles = K.el('div', 'roles');
+  ROLES.forEach(r => roles.appendChild(K.el('div', 'role',
+    `<span class="f">${r.f}</span><b>${r.n}</b><p>${r.d}</p>`)));
+  s.appendChild(roles);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'ابدأ التحدّي');
+  b1.onclick = () => { K.SFX.ok(); phase = 0; show(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+}
+
+function phaseBar() {
+  const bar = K.el('div', 'phasebar');
+  PHASES.forEach((p, i) => {
+    bar.appendChild(K.el('div', i < phase ? 'done' : (i === phase ? 'on' : ''), p.n));
+  });
+  return bar;
+}
+
+function show() {
+  if (timer) timer.pause();
+  const p = PHASES[phase];
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'ph');
+  wrap.appendChild(phaseBar());
+
+  if (p.id === 'plan') {
+    wrap.appendChild(K.el('div', 'desc', `
+      <b>📐 مرحلة التخطيط — ممنوع لمس المواد!</b>
+      <ul>
+        <li>المخطّط يرسم فكرة الجسر على ورقة.</li>
+        <li>الفريق كلّه يقترح: كيف نجعله قوياً؟ ما الذي سيحمله؟</li>
+        <li>قرّروا: ما دور كل قطعةٍ من موادّكم؟</li>
+        <li>مراقب الوقت: أعلن الوقت المتبقّي كل دقيقة.</li>
+      </ul>`));
+    addTimer(wrap, p.secs, 'ابدأوا التخطيط', () => { K.say('انتهى التخطيط — إلى البناء!', 'info'); });
+  } else if (p.id === 'build') {
+    wrap.appendChild(K.el('div', 'desc', `
+      <b>🧱 مرحلة البناء — البنّاء وحده يلمس المواد!</b>
+      <ul>
+        <li>البنّاء ينفّذ، والمخطّط يوجّه بالمخطّط الذي رسمتموه.</li>
+        <li>البقيّة أعينٌ تراقب: «هذا الطرف يميل!» — التوجيه مسموح، اللمس لا.</li>
+        <li>مراقب الوقت: كل دقيقةٍ أعلن المتبقّي.</li>
+        <li>انتهيتم مبكّراً؟ اختبروا جسركم سرّاً قبل العرض!</li>
+      </ul>`));
+    addTimer(wrap, p.secs, 'ابدأوا البناء', () => { K.say('انتهى البناء — ارفعوا الأيدي عن الجسور!', 'info'); });
+  } else if (p.id === 'test') {
+    wrap.appendChild(K.el('div', 'desc', `
+      <b>🔬 مرحلة الاختبار — كل فريقٍ يعرض جسره</b>
+      <ul>
+        <li>ضعوا الجسر بين كتابين متباعدين.</li>
+        <li>المتحدّث يشرح: كيف بنيناه؟ وما أصعب ما واجهنا؟</li>
+        <li>ثم الاختبار أمام الجميع — علّموا كل معيارٍ يتحقّق:</li>
+      </ul>`));
+    const tq = K.el('div', 'testq');
+    TEST_CRITERIA.forEach(c => {
+      const b = K.el('button', '', '☐ ' + c);
+      b.onclick = () => {
+        b.classList.toggle('on');
+        b.textContent = (b.classList.contains('on') ? '☑ ' : '☐ ') + c;
+        if (b.classList.contains('on')) { checks++; K.SFX.star(); } else checks--;
+      };
+      tq.appendChild(b);
+    });
+    wrap.appendChild(tq);
+    const nx = K.el('button', 'btn p big', 'إلى التأمّل ←');
+    nx.style.marginTop = '12px';
+    nx.onclick = () => { K.SFX.tap(); phase++; show(); };
+    wrap.appendChild(nx);
+  } else {
+    K.reflect({
+      value: 'التفكير قبل العمل',
+      questions: [
+        'ماذا أعطتنا دقائق التخطيط الثلاث التي «ضاعت» بلا بناء؟',
+        'كيف شعر من لم يكن بنّاءً؟ وكيف ساهم رغم ذلك؟',
+        'الجسر الذي انهار — ماذا علّمنا سقوطه؟',
+      ],
+    }, home);
+    return;
+  }
+  K.stage.appendChild(wrap);
+}
+
+function addTimer(wrap, secs, label, onEnd) {
+  const tRow = K.el('div', 'rowline');
+  const ring = K.el('div', 'ring', '<i></i>');
+  const tim = K.el('div', 'timer'); tim.appendChild(ring);
+  const startB = K.el('button', 'btn p big', '▶ ' + label);
+  const addB = K.el('button', 'btn g hide-present', '+ دقيقة');
+  tRow.append(tim, startB, addB);
+  wrap.appendChild(tRow);
+  timer = K.Timer({ secs, ring, onEnd });
+  timer.paint();
+  startB.onclick = () => { timer.start(); startB.disabled = true; K.SFX.ok(); };
+  addB.onclick = () => { timer.add(60); K.say('أُضيفت دقيقة', 'info'); };
+  const nx = K.el('button', 'btn big', 'المرحلة التالية ←');
+  nx.style.marginTop = '14px';
+  nx.onclick = () => { K.SFX.tap(); phase++; show(); };
+  wrap.appendChild(nx);
+}
+
+home();
+</script>
+</body>
+</html>

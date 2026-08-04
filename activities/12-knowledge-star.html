@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>من سيربح نجمة المعرفة؟</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.roundbar{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.roundbar .r{border:3px solid var(--ink);border-radius:99px;background:var(--paper);
+  padding:9px 18px;font-weight:800;font-size:clamp(13.5px,1.6vw,17px);opacity:.55}
+.roundbar .r.on{opacity:1;background:var(--gold)}
+.roundbar .r.done{opacity:1;background:#DFF0E2}
+.qq{max-width:1000px;width:100%;text-align:center;animation:up .35s both}
+.qq .txt{font-size:clamp(21px,3.1vw,40px);font-weight:800;line-height:1.55;background:var(--paper);
+  border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,38px);margin-bottom:16px}
+.aa{display:grid;gap:11px;grid-template-columns:1fr 1fr;max-width:860px;margin:0 auto}
+@media(max-width:640px){.aa{grid-template-columns:1fr}}
+.aa .btn{font-size:clamp(16px,2vw,23px);min-height:64px}
+.aa .btn.right{background:var(--ok);color:#fff}
+.aa .btn.off{opacity:.45;pointer-events:none}
+.doing{background:var(--paper);border:4px solid var(--ink);border-radius:20px;box-shadow:var(--sh);
+  padding:clamp(18px,2.8vw,38px);font-size:clamp(18px,2.4vw,30px);font-weight:800;line-height:1.7;margin-bottom:16px}
+.star-award{font-size:clamp(60px,10vw,120px);line-height:1.1;animation:pop .5s both}
+.rowline{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   النشاط ١٢ — من سيربح نجمة المعرفة؟
+   الهدف: مراجعةٌ عامّة ممتعة بأربع جولاتٍ مختلفة الطبيعة.
+   تمايزه عن لعبة المليونير الموجودة في المنصة: ليس تدرّجَ أسئلةٍ
+   بوسائل مساعدة، بل أربع جولاتٍ تختلف طبيعتها — معرفة سريعة، لغز
+   تفكير، موقف قيم، ومفاجأة حركية — وكل الفرق تلعب كلَّ جولة.
+   ═══════════════════════════════════════════════════════════════════ */
+const ROUNDS_DEF = [
+  {id:'know', n:'⚡ جولة المعرفة', kind:'mc',
+   pool:[
+    {t:'كم عدد قارات العالم؟', o:['خمس','سبع','تسع','عشر'], a:1},
+    {t:'ما عاصمة سلطنة عُمان؟', o:['صلالة','نزوى','مسقط','صحار'], a:2},
+    {t:'أيّها ليس من الحواسّ الخمس؟', o:['السمع','التذوّق','التفكير','اللمس'], a:2},
+    {t:'ماذا تحتاج النبتة لتنمو؟', o:['ماء وضوء وهواء','حلوى وماء','ضوء فقط','تراب فقط'], a:0},
+    {t:'كم دقيقةً في الساعة الواحدة؟', o:['٣٠','٦٠','٩٠','١٠٠'], a:1},
+    {t:'أيّ الحيوانات يضع بيضاً؟', o:['القطة','الدجاجة','البقرة','الخروف'], a:1},
+   ]},
+  {id:'think', n:'🧩 جولة التفكير', kind:'mc',
+   pool:[
+    {t:'أنا أخفّ من الريشة، ولا يستطيع أقوى رجلٍ حملي طويلاً. من أنا؟', o:['الحجر','النَّفَس','الورقة','الظلّ'], a:1},
+    {t:'ما الذي يملأ الغرفة ولا يشغل مكاناً؟', o:['الأثاث','الضوء','الماء','الرمل'], a:1},
+    {t:'أخي رابع أبناء أبي: الأول ربيع والثاني صيف والثالث خريف — فما اسم الرابع؟', o:['شتاء','مطر','برد','غيم'], a:0},
+    {t:'إذا كان قبل يومين هو السبت، فما يوم الغد؟', o:['الثلاثاء','الاثنين','الأربعاء','الأحد'], a:0},
+    {t:'شيءٌ كلّما أخذتَ منه كبُر. ما هو؟', o:['الجبل','الحفرة','البيت','الكتاب'], a:1},
+    {t:'ثلاثة أطفال تقاسموا ٦ تفاحاتٍ بالتساوي — كم لكلٍّ منهم؟', o:['واحدة','اثنتان','ثلاث','أربع'], a:1},
+   ]},
+  {id:'value', n:'💛 جولة القيم', kind:'mc',
+   pool:[
+    {t:'رأيتَ صغيراً يبكي في الساحة لأنه أضاع صفّه. ما الأفضل؟', o:['أتجاهله فليس من صفّي','أصحبه للمعلّمة المناوبة','أضحك على بكائه','أقول له: ابحث وحدك'], a:1},
+    {t:'فاز فريقك — كيف يتصرّف الفائز الرياضي؟', o:['نسخر من الخاسرين','نصافحهم ونقول: لعبتم جيداً','نتفاخر طوال اليوم','نطالب بجائزةٍ أكبر'], a:1},
+    {t:'زميلك يتلعثم في القراءة والبعض يضحك. ما موقفك؟', o:['أضحك معهم','أطلب بهدوء أن يتوقّفوا وأشجّعه','أنظر بعيداً','أقلّده لاحقاً'], a:1},
+    {t:'انكسرت مسطرة زميلك معك دون قصد. ماذا تفعل؟', o:['أعيدها مكسورة بصمت','أخبره وأعرض التعويض','أخفيها','أقول: ليست أنا'], a:1},
+    {t:'أيّ العبارات تصف «الاحترام»؟', o:['أسمع فقط من أحبّهم','أعامل الجميع بأدبٍ حتى المختلفين عنّي','أحترم الكبار فقط','أحترم من يحترمني أولاً'], a:1},
+   ]},
+  {id:'surprise', n:'🎁 جولة المفاجأة', kind:'do',
+   pool:[
+    {t:'تحدّي التمثال! يقف الفريق بلا حراكٍ تامّ ٣٠ ثانية — ابتسامةٌ مسموحة، حركةٌ لا!'},
+    {t:'تحدّي الهمهمة! همهموا لحناً لنشيدٍ يعرفه الصف — وعلى الفرق الأخرى معرفته.'},
+    {t:'تحدّي المرآة! يقف اثنان من الفريق وجهاً لوجه: أحدهما يتحرّك ببطءٍ والآخر مرآته تماماً.'},
+    {t:'تحدّي العدّ الأعمى! يعدّ الفريق من ١ إلى ١٠ — كل رقمٍ بصوت عضوٍ مختلف دون اتفاق، والتصادم يُعيدهم للبداية.'},
+    {t:'تحدّي القصّة الدائرية! كلُّ عضوٍ يضيف جملةً واحدة لقصةٍ تبدأ بـ«في صباحٍ غريب…».'},
+   ]},
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="bg12" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E2440"/><stop offset="1" stop-color="#4A3A60"/></linearGradient>
+    <radialGradient id="st12"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#FFE9A8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg12)"/>
+  <ellipse cx="800" cy="480" rx="520" ry="330" fill="url(#st12)" opacity=".35"/>
+  <g fill="#E8C34A" stroke="#2A1503" stroke-width="4">
+    <path d="M180 140l16 33 36 5-26 25 6 36-32-17-32 17 6-36-26-25 36-5z"/>
+    <path d="M1420 180l13 27 30 4-22 21 5 30-26-14-26 14 5-30-22-21 30-4z"/>
+    <path d="M1250 90l9 19 21 3-15 15 3 21-18-10-18 10 3-21-15-15 21-3z" opacity=".8"/>
+    <path d="M350 720l9 19 21 3-15 15 3 21-18-10-18 10 3-21-15-15 21-3z" opacity=".8"/>
+  </g>
+  <g opacity=".5" fill="#FFF9F0">
+    <circle cx="500" cy="120" r="4"/><circle cx="700" cy="70" r="3"/><circle cx="960" cy="110" r="4"/>
+    <circle cx="1120" cy="60" r="3"/><circle cx="260" cy="320" r="3"/><circle cx="1360" cy="380" r="4"/>
+  </g>
+  <!-- منصات -->
+  <g stroke="#2A1503" stroke-width="5">
+    <rect x="120" y="620" width="240" height="180" rx="14" fill="#6B4E9E"/>
+    <rect x="1240" y="620" width="240" height="180" rx="14" fill="#2F7D74"/>
+    <rect x="100" y="600" width="280" height="34" rx="10" fill="#8B6BC4"/>
+    <rect x="1220" y="600" width="280" height="34" rx="10" fill="#43A398"/>
+  </g>
+  <rect y="790" width="1600" height="110" fill="#241B33"/>
+  <path d="M0 790h1600" stroke="#2A1503" stroke-width="6"/>
+</svg>`;
+
+let K, teams, bags = {}, roundIdx = 0, qInRound = 0, answered = false;
+const Q_PER_ROUND = 3;
+
+K = Kit.build({
+  title: 'من سيربح نجمة المعرفة؟',
+  accent: '#D9A93C', accent2: '#B0721A',
+  scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'مراجعةٌ عامّة بأربع جولاتٍ مختلفة الطبيعة: معرفة سريعة، ألغاز تفكير، مواقف قيم، وتحدّيات مفاجأة حركية — فلا يتفوّق نمطُ ذكاءٍ واحد.',
+    tools: 'الشاشة. جولة المفاجأة تحتاج مساحةً للوقوف.',
+    groups: 'فريقان إلى أربعة. تُوجَّه الأسئلة للفرق بالتناوب، والفرق الأخرى تصمت — السرقة ممنوعة، فالهدف أن يفكّر كل فريقٍ بأمان.',
+    steps: [
+      'كل جولةٍ ثلاثة أسئلة أو تحدّيات تتوزّع على الفرق بالتناوب.',
+      'في أسئلة الاختيار: الفريق يتشاور ١٥ ثانية ثم يُجيب المتحدّث باسمه.',
+      'في جولة المفاجأة: التحدّي حركيٌّ يُنفَّذ أمام الصف — والفرق الأخرى جمهورٌ مشجّع.',
+      'انتقلي بين الجولات بزر «الجولة التالية».',
+      'في الختام تُمنح نجمة المعرفة — وتُذكر قوّة كل فريق.',
+    ],
+    time: '٢٠ إلى ٢٥ دقيقة للجولات الأربع.',
+    script: 'مرحباً بكم في استوديو نجمة المعرفة! أربع جولاتٍ مختلفة: معرفةٌ سريعة، وألغازٌ محيّرة، ومواقف قيم، ومفاجآتٌ حركية. كلُّ فريقٍ سيجد جولته المفضّلة — فالنجوم أنواع!',
+    tips: 'بدّلي المتحدّث باسم الفريق في كل جولة كي لا يحتكر طالبٌ الإجابات. وفي الختام سمّي قوّة كلّ فريق: «أسرع فريقٍ في المعرفة»، «أذكى حلٍّ للّغز» — النجمة تتّسع للجميع.',
+    points: 'نقطة لكل إجابةٍ صحيحة أو تحدٍّ مُنجز. ونقاط القيم بالأزرار: للتشاور الهادئ وللجمهور المشجّع.',
+    levels: 'الأصغر: احذفي جولة التفكير أو اقرئي ألغازها مرّتين. الأكبر: زيدي أسئلة كل جولةٍ من الزر «سؤالٌ إضافي».',
+    close: [
+      'أيّ الجولات الأربع أحببتم أكثر؟ لماذا؟',
+      'هل تفوّق الفريق نفسه في كل الجولات؟ ماذا يعني ذلك؟',
+      'ما «نوع النجومية» الذي اكتشفه كل فريقٍ في نفسه؟',
+    ],
+  },
+});
+
+ROUNDS_DEF.forEach(r => bags[r.id] = K.Bag(r.pool));
+
+function home() {
+  roundIdx = 0; qInRound = 0;
+  K.stage.innerHTML = '';
+  const s = K.el('div', 'start');
+  s.innerHTML = `
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 8l12 25 28 4-20 20 5 28-25-13-25 13 5-28-20-20 28-4z" fill="#E8C34A" stroke="#2A1503" stroke-width="5"/>
+      <circle cx="50" cy="44" r="10" fill="#FFF9F0" stroke="#2A1503" stroke-width="4"/>
+      <path d="M30 88h40M38 96h24" stroke="#2A1503" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+    <h1>من سيربح نجمة المعرفة؟</h1>
+    <p class="sub">أربع جولاتٍ مختلفة… ولكل فريقٍ جولةٌ يتألّق فيها. النجوم أنواع!</p>
+    <div class="meta">
+      <span class="chip">العمر: <b>٧ – ١٠ سنوات</b></span>
+      <span class="chip">الزمن: <b>٢٠ – ٢٥ دقيقة</b></span>
+      <span class="chip">الفرق: <b>٢ – ٤</b></span>
+      <span class="chip">المهارة: <b>مراجعةٌ متعدّدة الأنماط</b></span>
+      <span class="chip">القيمة: <b>المنافسة الشريفة</b></span>
+    </div>`;
+  const opts = K.el('div', 'card');
+  opts.style.cssText = 'margin-bottom:22px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap';
+  opts.innerHTML = `<div style="font-weight:800">عدد الفرق</div><div id="tc" style="display:flex;gap:8px"></div>`;
+  s.appendChild(opts);
+  const go = K.el('div', 'go');
+  const b1 = K.el('button', 'btn p big', 'إلى الاستوديو!');
+  b1.onclick = () => { K.SFX.ok(); nextQ(); };
+  const b2 = K.el('button', 'btn big', 'تعليمات المعلّمة');
+  b2.onclick = () => K.teacher.open();
+  go.append(b1, b2); s.appendChild(go);
+  K.stage.appendChild(s);
+
+  let n = 2;
+  const pick = () => {
+    const host = opts.querySelector('#tc'); host.innerHTML = '';
+    [2, 3, 4].forEach(v => {
+      const b = K.el('button', 'btn sm' + (n === v ? ' p' : ''), Kit.AR(v));
+      b.onclick = () => { n = v; K.SFX.tap(); pick(); };
+      host.appendChild(b);
+    });
+  };
+  pick();
+  home.teamCount = () => n;
+}
+
+function roundBar() {
+  const bar = K.el('div', 'roundbar');
+  ROUNDS_DEF.forEach((r, i) => {
+    bar.appendChild(K.el('div', 'r' + (i < roundIdx ? ' done' : i === roundIdx ? ' on' : ''), r.n));
+  });
+  return bar;
+}
+
+function nextQ() {
+  if (qInRound >= Q_PER_ROUND) { qInRound = 0; roundIdx++; }
+  if (roundIdx >= ROUNDS_DEF.length) { finale(); return; }
+  const rd = ROUNDS_DEF[roundIdx];
+  const item = bags[rd.id].next();
+  qInRound++; answered = false;
+
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'qq');
+  wrap.appendChild(roundBar());
+  wrap.appendChild(K.el('div', 'rowline',
+    `<span class="chip">السؤال <b>${Kit.AR(qInRound)} / ${Kit.AR(Q_PER_ROUND)}</b> — دور الفريق التالي بالتناوب</span>`));
+
+  if (rd.kind === 'mc') {
+    wrap.appendChild(K.el('div', 'txt', Kit.esc(item.t)));
+    const aa = K.el('div', 'aa');
+    item.o.forEach((o, i) => {
+      const b = K.el('button', 'btn', Kit.esc(o));
+      b.onclick = () => {
+        if (answered) return;
+        if (i === item.a) {
+          answered = true;
+          b.classList.add('right');
+          [...aa.children].forEach(x => { if (x !== b) x.classList.add('off'); });
+          K.SFX.win(); K.praise();
+          showNext(wrap);
+        } else {
+          b.classList.add('shake'); K.SFX.soft(); K.encourage();
+          setTimeout(() => b.classList.remove('shake'), 420);
+        }
+      };
+      aa.appendChild(b);
+    });
+    wrap.appendChild(aa);
+  } else {
+    wrap.appendChild(K.el('div', 'doing', '🎁 ' + Kit.esc(item.t)));
+    const okB = K.el('button', 'btn p big', '✅ أنجزوه — نقطة!');
+    okB.onclick = () => { if (answered) return; answered = true; K.SFX.win(); K.praise(); showNext(wrap); };
+    wrap.appendChild(okB);
+  }
+
+  const teamsBox = K.el('div', 'teams'); teamsBox.style.marginTop = '16px';
+  wrap.appendChild(teamsBox);
+  K.stage.appendChild(wrap);
+  if (!teams) teams = K.Teams(teamsBox, home.teamCount ? home.teamCount() : 2);
+  else teams.mount(teamsBox);
+  wrap.appendChild(K.valuesRow(teams, [
+    [1, 'تشاورٌ هادئ'], [1, 'جمهورٌ مشجّع'], [1, 'روحٌ رياضية'],
+  ]));
+}
+
+function showNext(wrap) {
+  const last = roundIdx === ROUNDS_DEF.length - 1 && qInRound === Q_PER_ROUND;
+  const nx = K.el('button', 'btn p big', last ? '⭐ لحظة النجمة!' :
+    (qInRound === Q_PER_ROUND ? ROUNDS_DEF[roundIdx + 1].n + ' ←' : 'السؤال التالي ←'));
+  nx.style.marginTop = '14px';
+  nx.onclick = () => { K.SFX.tap(); nextQ(); };
+  wrap.insertBefore(nx, wrap.querySelector('.teams'));
+}
+
+function finale() {
+  K.stage.innerHTML = '';
+  const wrap = K.el('div', 'qq');
+  const list = teams ? teams.list : [];
+  const top = Math.max.apply(null, list.map(t => t.score));
+  const winners = list.filter(t => t.score === top).map(t => t.name);
+  wrap.innerHTML = `<div class="star-award">⭐</div>
+    <div class="txt">نجمة المعرفة من نصيب: <b>${winners.map(Kit.esc).join(' و')}</b> 🎉<br/>
+    <span style="font-size:.65em;font-weight:700;opacity:.85">ولكلّ فريقٍ نجوميّته — سمّي المعلّمة قوّة كلّ فريق: أسرع معرفة، أذكى لغز، أجمل قيمة، أمتع مفاجأة!</span></div>`;
+  const fin = K.el('button', 'btn p big', 'ختام النشاط ←');
+  fin.onclick = () => K.reflect({
+    value: 'المنافسة الشريفة',
+    questions: [
+      'أيّ الجولات كانت الأقرب لقلبكم؟',
+      'كيف عاملنا الفريق الذي لم يفز؟',
+      'ما «نوع النجومية» الذي اكتشفتَه في نفسك اليوم؟',
+    ],
+  }, home);
+  wrap.appendChild(fin);
+  K.stage.appendChild(wrap);
+  K.SFX.win();
+}
+
+home();
+</script>
+</body>
+</html>
