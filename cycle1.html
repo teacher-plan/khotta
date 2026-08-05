@@ -1669,7 +1669,12 @@ body:has(#page-fahim.active){overflow:hidden}
 .ach-add-cta{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:11px;padding:11px 20px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(216,96,72,.3);transition:transform .15s}
 .ach-add-cta:hover{transform:translateY(-2px)}
 .ach-timeline{display:flex;flex-direction:column;gap:14px}
-.ach-item{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:box-shadow .15s}
+/* قوائمُ تطول بطول سنة المعلّمة: أربعون إنجازاً كلّفت رسمَ ٥٣٧ms وأغلبها
+   خارج الشاشة. content-visibility يؤجّل رسم غير المرئي حتى يُمرَّر إليه،
+   وcontain-intrinsic-size يحجز ارتفاعاً تقريبياً فيبقى شريط التمرير ثابتاً
+   ولا يقفز المحتوى. القيمة تقريبية عمداً — تُصحَّح فور دخول العنصر الشاشة. */
+.ach-item{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:box-shadow .15s;
+  content-visibility:auto;contain-intrinsic-size:auto 180px}
 .ach-item:hover{box-shadow:0 6px 20px rgba(48,24,0,.1)}
 .ach-item-head{padding:15px 17px;display:flex;align-items:flex-start;gap:13px}
 .ach-badge{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;background:linear-gradient(135deg,rgba(216,96,72,.16),rgba(200,160,60,.16));border:1.5px solid rgba(200,160,60,.3);color:var(--red-d)}
@@ -1736,7 +1741,8 @@ body:has(#page-fahim.active){overflow:hidden}
 .sh-tab.on{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
 .sh-unit{margin-bottom:20px}
 .sh-unit-t{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;padding-inline-start:2px}
-.sh-lesson{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:13px;margin-bottom:10px}
+.sh-lesson{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:13px;margin-bottom:10px;
+  content-visibility:auto;contain-intrinsic-size:auto 120px}
 .sh-lesson-t{font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .sh-lesson-t .n{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 9px;font-size:10.5px;color:var(--muted)}
 .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
@@ -1769,7 +1775,8 @@ body:has(#page-fahim.active){overflow:hidden}
 .msg-row .mb{font-size:12.5px;color:var(--ink);opacity:.85;margin-top:7px;line-height:1.8;white-space:pre-wrap}
 .msg-row .md{font-size:11px;color:var(--muted);margin-top:9px}
 .msg-empty{text-align:center;color:var(--muted);font-size:13px;padding:36px 12px}
-.srv-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+.srv-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px;
+  content-visibility:auto;contain-intrinsic-size:auto 160px}
 .srv-q{font-weight:800;font-size:14px;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .srv-closed-tag{font-size:10px;font-weight:800;background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:2px 9px}
 .srv-opts{display:flex;flex-direction:column;gap:8px}
@@ -2051,7 +2058,13 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-tbox:not(:disabled):hover{transform:scale(1.06)}
 .gm-tbox.open{background:linear-gradient(160deg,#FFFDF7,#F1E7D8);border-color:rgba(42,21,3,.15);color:#2A1503;font-size:13px;font-weight:700;box-shadow:none;padding:5px;line-height:1.5}
 .gm-theme-grid{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px}
-.gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:inherit}
+/* content-visibility: البطاقات شريطٌ أفقيّ يظهر منه ثلاثٌ أو أربع، والباقي
+   خارج الشاشة. وكل مصغّرة خلفيّتها مشهد SVG كامل بالبيانات — فرسمُ الثمانية
+   دفعةً واحدة كلّف ٢٠٨ms على معالجٍ ضعيف، وهو حجبٌ يُحسّ عند فتح الاستوديو.
+   هذه الخاصيّة تجعل المتصفّح يتخطّى رسم ما هو خارج الشاشة حتى يُمرَّر إليه،
+   وcontain-intrinsic-size يحجز مقاسها سلفاً فلا يقفز الشريط عند التمرير. */
+.gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:inherit;
+  content-visibility:auto;contain-intrinsic-size:104px 84px}
 .gm-theme-card:hover{border-color:var(--red);transform:translateY(-2px)}
 .gm-theme-card.on{border-color:var(--olive-d);box-shadow:0 0 0 2px rgba(72,120,72,.3)}
 .gm-theme-card .thumb{height:56px;background:linear-gradient(135deg,#2a1f4d,#1c1730) center/cover}
@@ -3322,6 +3335,16 @@ async function driveDelete(fileId){
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* ══ مُنسّقات التاريخ ══
+   toLocaleDateString تُنشئ مُنسّق Intl جديداً في كل نداء، وهو من أغلى ما
+   يُنشأ في المتصفّح. وكانت تُستدعى داخل حلقاتٍ تبني قوائم — مُنسّقٌ لكل
+   عنصر. هذه تُنشأ مرّةً واحدة وتُعاد الاستعمال، فيهبط الثمن إلى الصفر. */
+const _fmtD=new Intl.DateTimeFormat('ar');
+const _fmtDL=new Intl.DateTimeFormat('ar',{year:'numeric',month:'long',day:'numeric'});
+const _fmtT=new Intl.DateTimeFormat('ar',{hour:'2-digit',minute:'2-digit'});
+function c1Date(d){try{const x=new Date(d);return isNaN(x)?'':_fmtD.format(x);}catch(e){return '';}}
+function c1DateLong(d){try{const x=new Date(d);return isNaN(x)?'':_fmtDL.format(x);}catch(e){return '';}}
+function c1Time(d){try{const x=new Date(d);return isNaN(x)?'':_fmtT.format(x);}catch(e){return '';}}
 // داخل value="…" لا تكفي escHtml: علامة اقتباسٍ واحدة في النصّ تُنهي السمة
 // فينكسر الحقل ويضيع ما بعده.
 function escAttr(s){return escHtml(s).replace(/"/g,'&quot;');}
@@ -7065,7 +7088,7 @@ function stuOpenFile(classId,idx){
   if(!log.length){list.innerHTML='<div class="plan-empty-card">لا سجل بعد لهذا الطالب</div>';}
   else list.innerHTML=log.map(e=>{
     const d=new Date(e.date);
-    const dt=d.toLocaleDateString('ar')+' '+d.toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
+    const dt=c1Date(d)+' '+c1Time(d);
     const kind=e.kind==='star'?'star':(e.kind==='part'?'part':'viol');
     const label=e.kind==='star'?'نجمة':(e.kind==='part'?'مشاركة إيجابية':escHtml(e.type||'مخالفة'));
     return `<div class="beh-file-item ${kind}"><span class="dot"></span><span class="tp">${label}</span><span class="dt">${dt}</span>
@@ -8951,7 +8974,11 @@ async function gmLoadThemes(){
     sel.innerHTML='<option value=""></option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
     if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
     gmApplyForcedTheme();
-    gmRenderThemeGrid();
+    /* شبكة الثيمات آخر ما تُرسم: ثماني مصغّراتٍ خلفيّاتُها مشاهد SVG كاملة،
+       ورسمها في مسار فتح القسم يحجب الخيط. تأجيلها إطاراً واحداً يجعل
+       الاستوديو يظهر فوراً ثم تكتمل الشبكة — والمعلّمة لا تصل إليها قبل
+       أن تختار الدرس أصلاً. */
+    requestAnimationFrame(()=>{try{gmRenderThemeGrid()}catch(e){}});
   }catch(e){}
 }
 function gmRenderThemeGrid(){
@@ -10473,7 +10500,7 @@ async function fhHistory(){
     if(!data||!data.length){list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:10px">لا توجد محادثات محفوظة بعد</div>';return;}
     list.innerHTML=data.map(c=>`<div class="fh-hist-item ${c.id===fhChatId?'sel':''}" data-id="${c.id}">
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(c.title||'محادثة')}</span>
-      <span style="font-size:10px;color:var(--muted);flex:none">${new Date(c.updated_at).toLocaleDateString('ar')}</span>
+      <span style="font-size:10px;color:var(--muted);flex:none">${c1Date(c.updated_at)}</span>
       <button class="fh-del" data-id="${c.id}" title="حذف هذه المحادثة" aria-label="حذف هذه المحادثة"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 3h6l1 1h4v2H4V4h4l1-1zM6 7h12l-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7zm3 3v9h2v-9H9zm4 0v9h2v-9h-2z"/></svg></button>
     </div>`).join('');
     list.querySelectorAll('.fh-hist-item').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('.fh-del'))return;fhOpenChat(el.dataset.id);}));
@@ -10575,7 +10602,7 @@ function achRender(){
   empty.classList.add('hidden');
   const sorted=items.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   tl.innerHTML=sorted.map(it=>{
-    const ds=it.date?new Date(it.date).toLocaleDateString('ar',{year:'numeric',month:'long',day:'numeric'}):'';
+    const ds=it.date?c1DateLong(it.date):'';
     const files=it.attachments||[];
     const filesHtml=files.length?`<div class="ach-files"><div class="ach-files-lbl">المرفقات (${egArNum(files.length)})</div>${
       files.map(a=>`<div class="ach-file-row"><span class="ach-file-nm">${escHtml(a.name)}</span><span class="ach-file-sz">${achFmtSize(a.size)}</span><button class="ach-file-open" onclick="window.open('${a.viewLink||a.previewLink}','_blank')">${ACH_PAPERCLIP}</button></div>`).join('')
@@ -11021,7 +11048,7 @@ async function libRenderItems(){
         <div class="lib-card-title">${escHtml(it.title)}</div>
         <div class="lib-card-meta">
           <span class="lib-type-tag t-${it.file_type||'other'}">${typeLbl[it.file_type]||'ملف'}</span>
-          <span>${escHtml(it.uploader_name||'معلمة')} · ${new Date(it.created_at).toLocaleDateString('ar')}</span>
+          <span>${escHtml(it.uploader_name||'معلمة')} · ${c1Date(it.created_at)}</span>
         </div>
       </div>
       ${libRateBadgeHtml(it.id,idx)}
@@ -11205,7 +11232,7 @@ function msgsMsgHtml(m){
   return `<div class="msg-row${m.target_user_id?' private':''}${clickable?' clickable':''}" ${clickable?`onclick="msgsOpenLibraryItem('${escJs(m.target_subject)}','${escJs(m.item_id)}')"`:''}>
     <div class="mt">${escHtml(m.title)}<span class="mtag">${tag}</span></div>
     <div class="mb">${escHtml(m.body)}</div>
-    <div class="md">${new Date(m.created_at).toLocaleDateString('ar')}${clickable?' · اضغطي لفتح الملف':''}</div>
+    <div class="md">${c1Date(m.created_at)}${clickable?' · اضغطي لفتح الملف':''}</div>
   </div>`;
 }
 function msgsSrvHtml(s,resp){
@@ -11229,7 +11256,7 @@ function msgsSrvHtml(s,resp){
   return `<div class="srv-card" data-sid="${s.id}">
     <div class="srv-q">${escHtml(s.question)}<span class="mtag">استبيان</span>${s.closed?'<span class="srv-closed-tag">مغلق</span>':''}</div>
     ${body}
-    <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''} · ${new Date(s.created_at).toLocaleDateString('ar')}</div>
+    <div class="srv-foot">${total} إجابة${showResults&&!mine?' · لم تشاركي رأيك (الاستبيان مغلق)':''} · ${c1Date(s.created_at)}</div>
   </div>`;
 }
 let _msgsFeedAt=0;
