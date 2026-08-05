@@ -530,9 +530,6 @@ body.inapp #c1-notif-btn{display:flex}
 @media(hover:none){.task-delete{opacity:.75}}
 .task-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none}
 .task-input:focus{border-color:var(--red)}
-.undo-toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:12.5px;display:flex;align-items:center;gap:12px;transition:transform .25s;z-index:260}
-.undo-toast.show{transform:translateX(-50%) translateY(0)}
-.undo-toast button{background:none;border:none;color:var(--red-d);font-weight:800;font-size:12.5px;cursor:pointer;filter:brightness(1.6)}
 
 /* ── قسم الخطة ── */
 .plan-tabs,.plan-subj-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
@@ -3017,10 +3014,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     </div>
   </div>
 </div>
-<div class="undo-toast" id="beh-undo-toast">
-  <span id="beh-undo-msg">تراجع؟</span>
-  <button onclick="behUndo()">تراجع</button>
-</div>
 
 <div class="c1-modal" id="cert-modal" onclick="if(event.target===this)certClose()">
   <div class="c1-mbox cert-box">
@@ -3078,10 +3071,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <div class="star-stage-cnt" id="star-stage-cnt"></div>
     <div class="star-stage-hint">اضغطي في أي مكان للمتابعة</div>
   </div>
-</div>
-<div class="undo-toast" id="star-undo-toast">
-  <span id="star-undo-msg">تراجع عن آخر نجمة؟</span>
-  <button onclick="starUndo()">تراجع</button>
 </div>
 
 <!-- وضع الحصة الحية -->
@@ -3166,10 +3155,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button class="c1-mbtn go" onclick="saveEvent()">حفظ</button>
     </div>
   </div>
-</div>
-<div class="undo-toast" id="task-undo-toast">
-  <span id="task-undo-msg">حُذفت المهمة</span>
-  <button onclick="undoDeleteTask()">تراجع</button>
 </div>
 
 <!-- منتقي خلية الجدول — كل خيار يمثل شعبة+مادة، ضغطة واحدة تحفظ مباشرة -->
@@ -4531,27 +4516,10 @@ async function toggleTask(idx){
   await cy1Save({user_tasks:tasks},'يحدّث المهمة');
   renderTasks();
 }
-let _lastDeletedTask=null,_lastDeletedTaskIdx=null,_taskUndoTimer=null;
 async function deleteTask(idx){
-  const cur=profile.user_tasks||[];
-  _lastDeletedTask=cur[idx];_lastDeletedTaskIdx=idx;
-  const tasks=cur.filter((_,i)=>i!==idx);
+  const tasks=(profile.user_tasks||[]).filter((_,i)=>i!==idx);
   await cy1Save({user_tasks:tasks},'يحذف المهمة');
   renderTasks();
-  const toastEl=document.getElementById('task-undo-toast');
-  toastEl.classList.add('show');
-  clearTimeout(_taskUndoTimer);
-  _taskUndoTimer=setTimeout(()=>toastEl.classList.remove('show'),4000);
-}
-async function undoDeleteTask(){
-  if(_lastDeletedTask){
-    const tasks=[...(profile.user_tasks||[])];
-    tasks.splice(_lastDeletedTaskIdx,0,_lastDeletedTask);
-    _lastDeletedTask=null;
-    await cy1Save({user_tasks:tasks},'يستعيد المهمة');
-    renderTasks();
-  }
-  document.getElementById('task-undo-toast').classList.remove('show');
 }
 
 // ═══════════ قسم الجدول — مركز قيادة اليوم ═══════════
@@ -6950,7 +6918,7 @@ function starConfetti(){
   })(t0);
 }
 const STAR_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg>';
-let starGrade=null,starClass=null,_starLast=null,_starUndoTimer=null,_starSaveTimer=null;
+let starGrade=null,starClass=null,_starSaveTimer=null;
 function starClassesOf(g){const gr=(profile.grades||[]).find(x=>x.num===g);return gr?(gr.classes||[]):[];}
 function starArr(classId){
   const cls=starClassObj(classId)||{};
@@ -8313,17 +8281,8 @@ function stuLogPush(classId,idx,entry){
   log[idx]=[...(log[idx]||[]),entry];
   profile.beh_log={...(profile.beh_log||{}),[classId]:log};
 }
-// حذف آخر نجمة من السجل (عند الإنقاص أو التراجع) حتى يبقى السجل مطابقاً للعدّاد
-function stuLogPopStar(classId,idx){
-  const log=behArr(classId).map(a=>a.slice());
-  const arr=log[idx]||[];
-  for(let i=arr.length-1;i>=0;i--){if(arr[i].kind==='star'){arr.splice(i,1);break;}}
-  log[idx]=arr;
-  profile.beh_log={...(profile.beh_log||{}),[classId]:log};
-}
 function starTap(classId,idx){
   const arr=starArr(classId).slice();
-  _starLast={classId,idx,prev:arr[idx]};
   arr[idx]++;
   profile.stars={...(profile.stars||{}),[classId]:arr};
   stuLogPush(classId,idx,{kind:'star',date:new Date().toISOString()});
@@ -8332,24 +8291,6 @@ function starTap(classId,idx){
   const milestone=arr[idx]>0&&arr[idx]%5===0;
   if(milestone){starBig();starStageOpen(classId,idx,arr[idx]);}
   else starDing();
-  starShowUndo();
-}
-function starShowUndo(){
-  const t=document.getElementById('star-undo-toast');
-  t.classList.add('show');
-  clearTimeout(_starUndoTimer);
-  _starUndoTimer=setTimeout(()=>t.classList.remove('show'),4000);
-}
-function starUndo(){
-  if(!_starLast)return;
-  const{classId,idx,prev}=_starLast;
-  const arr=starArr(classId).slice();arr[idx]=prev;
-  profile.stars={...(profile.stars||{}),[classId]:arr};
-  stuLogPopStar(classId,idx);
-  starSaveDebounced();
-  if(classId===starClass)starRenderBoard();
-  _starLast=null;
-  document.getElementById('star-undo-toast').classList.remove('show');
 }
 function starStageOpen(classId,idx,count){
   const cls=starClassesOf(starGrade).find(c=>c.id===classId);
@@ -10145,9 +10086,9 @@ function gmRunGroups(items){
 
 
 // ═══════════ سجل السلوك — مخالفات الطلاب (يُعرض داخل قسم طلابي) ═══════════
-// المخالفة بضغطة تفتح الأنواع فتُسجَّل بالضغطة الثانية، وكل تسجيل قابل للتراجع.
+// المخالفة بضغطة تفتح الأنواع فتُسجَّل بالضغطة الثانية.
 // السجل نفسه يحمل النجوم أيضاً (kind:'star') ليكون ملف الطالب موحّداً.
-let behTypes=[],behTypesLoaded=false,_behCtx=null,_behLast=null,_behUndoT=null;
+let behTypes=[],behTypesLoaded=false,_behCtx=null;
 function behArr(classId){
   const cls=starClassObj(classId)||{};
   const n=(cls.students||[]).length;
@@ -10170,31 +10111,10 @@ function behIsToday(iso){
   const d=new Date(iso),n=new Date();
   return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
 }
-// تسجيل مخالفة + تمكين التراجع الفوري
 async function behPush(classId,idx,entry,busyMsg){
   stuLogPush(classId,idx,entry);
-  _behLast={classId,idx,at:entry.date};
   if(classId===starClass)starRenderBoard();
-  behShowUndo('سُجّلت مخالفة');
   await cy1Save({beh_log:profile.beh_log},busyMsg);
-}
-function behShowUndo(msg){
-  const t=document.getElementById('beh-undo-toast');
-  document.getElementById('beh-undo-msg').textContent=msg;
-  t.classList.add('show');
-  clearTimeout(_behUndoT);
-  _behUndoT=setTimeout(()=>t.classList.remove('show'),4500);
-}
-async function behUndo(){
-  if(!_behLast)return;
-  const{classId,idx,at}=_behLast;
-  const arr=behArr(classId).map(a=>a.slice());
-  arr[idx]=(arr[idx]||[]).filter(e=>e.date!==at);
-  profile.beh_log={...(profile.beh_log||{}),[classId]:arr};
-  _behLast=null;
-  document.getElementById('beh-undo-toast').classList.remove('show');
-  if(classId===starClass)starRenderBoard();
-  await cy1Save({beh_log:profile.beh_log},'يتراجع');
 }
 async function behOpenAdd(classId,idx){
   await behLoadTypes();
@@ -10747,7 +10667,7 @@ const C1_GUIDE={
   studio:{ds:'مصنع الألعاب والملخصات البصرية. تختارين الدرس والقالب فتُبنى اللعبة من محتوى الكتاب، ولك أن تعدّلي أسئلتها وتُبدّلي شكلها.',
     tip:'ما تُنشئينه هنا يرتبط ببطاقة درسه في الخطة تلقائياً.'},
   students:{ds:'التحفيز والسلوك في مكان واحد. نجمة بضغطة لكل مشاركة مميزة، ومخالفة بضغطة عند الحاجة. البطاقة تتلوّن تنبيهاً عند تكرار المخالفات، وملف كل طالبة يجمع نجومها وملاحظاتها.',
-    tip:'كل تسجيل قابل للتراجع فوراً، فلا تخشي ضغطة خاطئة.'},
+    tip:'ملف الطالبة يجمع نجومها وملاحظاتها — اضغطي اسمها لتريه كاملاً.'},
   shared:{ds:'مخزن الحلقة المشترك: ما جهّزته زميلاتك من خطط وملخصات وعروض وألعاب. أنتِ تستفيدين منه دون أن تفتحيه — فزر «إنشاء التحضير» يسحب منه تلقائياً. وتفتحينه هنا لتصفّحي الألعاب والملخصات وتأخذي ما يعجبك من صفوف أخرى.',
     tip:'كل لعبة أو ملخص تُنشئينه يظهر هنا لزميلاتك تلقائياً باسمك — ولك أن تُلغي مشاركة أيٍّ منها من زر ✕ على بطاقته.'},
   fahim:{ds:'مساعدٌ ذكيٌّ عامّ داخل المنصة — كأي مساعدٍ ذكيّ تستخدمينه اليوم. اسأليه عن معلومةٍ أو شرحٍ أو كتابةٍ أو ترجمةٍ أو حسابٍ أو تقنيةٍ أو طبخٍ أو سفرٍ أو تنظيم وقت. والتدريس واحدٌ من مجالاته: حين يكون سؤالكِ تعليمياً يجيب من واقع شعبكِ وموادّها.'},
