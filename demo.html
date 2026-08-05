@@ -21,6 +21,29 @@
    ثلاثة ألوان فقط: القشدي (الخلفية) + الأحمر (الأساس) + الزيتوني (النجاح)
    البنية مطابقة لصفحة المعلم — تُبنى الأقسام قسماً تلو الآخر
 ══════════════════════════════════════════════════════════ */
+
+/* ══ سلوك اللمس والتمرير على الهاتف ══
+   ثلاث قواعدٍ تُصلح ما يبدو «بطئاً» وهو ليس بطئاً في الحقيقة:
+
+   ١) overscroll-behavior: بلا هذه، تمريرُ لوحةٍ أو نافذةٍ يبلغ طرفها فيُسلّم
+      التمرير للصفحة تحتها — فتتحرّك الخلفية والمعلّمة تظنّ الواجهة «تقفز».
+      أربعٌ وثلاثون حاوية تمريرٍ كانت بلا عزل.
+   ٢) touch-action:manipulation على ما يُنقر: يُلغي انتظار المتصفّح ٣٠٠ms
+      ليعرف أهي نقرةٌ أم نقرتان للتكبير — وهذا بالضبط «اللمس متأخّر».
+   ٣) tap-highlight الشفاف: المربّع الرماديّ الافتراضي يُشعر بالبطء.
+
+   لا شيء منها يمسّ سطح المكتب: overscroll لا أثر له بلا لمس، وtouch-action
+   لا معنى له لمؤشّر الفأرة. */
+*{-webkit-tap-highlight-color:transparent}
+button,a,[onclick],label,summary,input,select,textarea,
+.c1-card,.rs-card,.gm-tpl-btn,.eg-mode-btn{touch-action:manipulation}
+[style*="overflow:auto"],[style*="overflow-y:auto"],
+.c1-modal,#c1-board,#c1-mbox,#c1-notif-panel,#c1-select-panel,#wk-sheet,
+#fh-body,#fhp-side,#gm-stage-body,#gm-theme-grid,#tt-scroll,#tt-day-tabs,
+#tasks-list,#rs-grid,.rs-grid,#gm-editor,.fhp-main{
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
 :root{
   /* خطّان بدورين: Baloo للعناوين (شخصية) وCairo للنصّ (وضوح).
      تعميمُ Baloo على النصّ كان سيُتعب القراءة — عريضٌ مستديرٌ صُمّم
@@ -136,6 +159,20 @@ body.inapp #c1-notif-btn{display:flex}
 .page{display:none;padding:28px 14px 80px}
 .page.active{display:block;animation:pgIn .25s ease}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* ══ استثناءان من حركة الدخول ══
+   العنصر المُحوَّل (transform) يصير المرجعَ لكلّ position:fixed بداخله. فصفحةٌ
+   تتحرّك ٨px ربعَ ثانية تكسر كلّ عنصرٍ مثبّتٍ فيها تلك المدّة.
+
+   ١) صفحة المحادثة مثبّتةٌ هي نفسها (position:fixed;inset:0)، فالحركة تزحزحها
+      عن الشاشة ٨px — يخرج شريط الكتابة أسفل الحافّة عند كل دخول.
+   ٢) على الهاتف: تحريك صفحةٍ كاملة يُنشئ طبقةً بحجم الشاشة ويُعيد رسمها في
+      كل تنقّل — وهو ثمنٌ يُحسّ على معالجٍ ضعيف. الشفافية وحدها تكفي وهي
+      أرخص بكثير. سطح المكتب يحتفظ بالحركة كما هي. */
+#page-fahim.active{animation-name:pgFade}
+@keyframes pgFade{from{opacity:0}to{opacity:1}}
+@media(max-width:760px){
+  .page.active{animation-name:pgFade}
+}
 .wrap{max-width:1100px;margin:0 auto;padding-top:52px}
 
 /* ترويسة الصباح */
@@ -1452,8 +1489,16 @@ body.demo #sl2-chip,body.demo #sl2-ready{bottom:calc(var(--db-h,56px) + 12px)}
 /* المساعد: صفحة مستقلة تملأ الشاشة كاملة — لا تمرير ولا خلفية خلفها (نفس مبدأ صفحة المعلم) */
 body:has(#page-fahim.active){overflow:hidden}
 #page-fahim.active{position:fixed;inset:0;z-index:6;overflow:hidden;background:var(--bg);padding:0}
-#page-fahim.active .wrap{max-width:none;margin:0;padding-top:0;height:100dvh}
-#page-fahim.active .fhp-card{max-width:none;height:100%;border-radius:0;border:none;box-shadow:none}
+/* ارتفاع المحادثة: --vvh يضبطها JS من visualViewport، و100dvh احتياطٌ لمن
+   لا يدعمه. السبب: dvh يحسب شريط عنوان المتصفّح ولا يحسب لوحة المفاتيح —
+   ففي iOS تبقى الصفحة بطول الشاشة كاملاً حين تُفتح اللوحة، فينزلق شريط
+   الكتابة تحتها ولا تُرى المعلّمة ما تكتب. */
+#page-fahim.active .wrap{max-width:none;margin:0;padding-top:0;height:var(--vvh,100dvh)}
+/* min-height:0 هنا ضرورة لا تجميل: البطاقة تحمل min-height:480px للوضع
+   العادي، وهو يمنعها أن تصغر حين تُفتح لوحة المفاتيح فتترك ٣٦٤px فقط —
+   فتبقى ٤٨٠px ويخرج شريط الكتابة أسفل اللوحة. تجاوزُ height وحده لا يكفي:
+   min-height يغلب height دائماً. */
+#page-fahim.active .fhp-card{max-width:none;height:100%;min-height:0;border-radius:0;border:none;box-shadow:none}
 /* رأس المساعد يفسح لربع الدائرة (يمين) وأيقونة الحساب (يسار) بالوضع الكامل */
 #page-fahim.active #fh-head{padding-inline-start:78px;padding-inline-end:122px}
 @media(max-width:480px){#page-fahim.active #fh-head{padding-inline-start:60px;padding-inline-end:104px;flex-wrap:wrap}}
@@ -1475,7 +1520,11 @@ body:has(#page-fahim.active){overflow:hidden}
 .fh-hero-it b{display:block;font-size:12.5px;color:var(--ink);margin-bottom:3px}
 .fh-hero-it span{font-size:11.5px;line-height:1.7;color:var(--muted)}
 .fhp-row{flex:1;display:flex;min-height:0}
-.fhp-main{flex:1;display:flex;flex-direction:column;min-width:0}
+/* min-height:0 ليس تجميلاً: عنصرُ فليكس افتراضُه min-height:auto فلا يصغر
+   دون محتواه. بدونه ينمو هذا العمود ليسع كلّ الرسائل، فلا يصير #fh-body
+   حاوية تمريرٍ أبداً — تُمرَّر الصفحة كلّها ويهرب شريط الكتابة مع التمرير.
+   هذا كان سبب «الشريط السفلي يختفي» و«المحادثة تتحرّك كتلةً واحدة». */
+.fhp-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 #fhp-side{width:260px;flex:none;border-inline-start:1.5px solid var(--border);background:var(--card);display:flex;flex-direction:column;overflow:hidden}
 .fhp-side-head{padding:12px 14px;font-size:12.5px;font-weight:800;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex:none}
 #fhp-hist-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
@@ -3334,6 +3383,9 @@ function c1Go(id){
   if(id==='students')starRender();
   if(id==='reserve')rsRender();
   if(id==='fahim'){fhRender();fhHistory();qChip('fahim-quota','text');}
+  // مزامنة ارتفاع المحادثة عند كل تنقّل: الدخول يضبط --vvh، والخروج يمسحه
+  // فلا يبقى ارتفاعٌ محسوبٌ للوحة مفاتيحَ أُغلقت مؤثّراً في قسمٍ آخر
+  if(typeof fhViewportSync==='function')fhViewportSync();
   if(id==='ach')achRender();
   if(id==='shared')shRender();
   if(id==='lib')libRender();
@@ -3708,7 +3760,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='c75ed9a';
+const KH_BUILD='87fc849';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10264,6 +10316,37 @@ function fhContext(){
     return parts.join('\n').slice(0,3200-rule.length)+rule;
   }catch(e){return'';}
 }
+/* ══ لوحة المفاتيح على الهاتف ══
+   iOS لا يُقلّص dvh حين تُفتح اللوحة — يُقلّص visualViewport وحده. فنقيسه
+   ونكتبه في --vvh. بلا هذا ينزلق شريط الكتابة تحت اللوحة فلا ترى المعلّمة
+   ما تكتب، وهو أشهر عطبٍ في محادثات الويب على الآيفون.
+
+   ويُثبَّت في إطارٍ واحد (rAF) لا عند كل حدث: المتصفّح يُطلق resize عشرات
+   المرّات أثناء انزلاق اللوحة، وكتابةُ متغيّرٍ في كلٍّ منها تُجبر إعادة
+   تخطيطٍ متزامنة تُشعر بالتقطّع. */
+(function fhKeyboard(){
+  const vv=window.visualViewport;
+  if(!vv)return;                       // متصفّحٌ قديم: يبقى 100dvh احتياطاً
+  let queued=false;
+  function apply(){
+    queued=false;
+    const page=document.getElementById('page-fahim');
+    if(!page||!page.classList.contains('active')){
+      document.documentElement.style.removeProperty('--vvh');
+      return;
+    }
+    document.documentElement.style.setProperty('--vvh',Math.round(vv.height)+'px');
+    // أبقِ آخر رسالةٍ مرئيةً بعد أن تُزيح اللوحة نصف الشاشة
+    const body=document.getElementById('fh-body');
+    if(body&&body.scrollHeight-body.scrollTop-body.clientHeight<160)
+      body.scrollTop=body.scrollHeight;
+  }
+  function onChange(){ if(!queued){queued=true;requestAnimationFrame(apply);} }
+  vv.addEventListener('resize',onChange);
+  vv.addEventListener('scroll',onChange);
+  window.fhViewportSync=onChange;      // يُستدعى عند فتح القسم وإغلاقه
+})();
+
 function fhRender(){
   const body=document.getElementById('fh-body');if(!body)return;
   if(!fhMsgs.length){
