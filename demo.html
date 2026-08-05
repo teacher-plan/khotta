@@ -1585,6 +1585,13 @@ body:has(#page-fahim.active){overflow:hidden}
 .fh-msg.bot{align-self:flex-start;background:linear-gradient(170deg,#FFFDF9,var(--surface));color:var(--ink);
   border-bottom-right-radius:7px;border:1px solid rgba(42,21,3,.09);
   box-shadow:0 3px 12px rgba(42,21,3,.08),0 1px 2px rgba(42,21,3,.05)}
+/* عناصر التنسيق الخفيف داخل ردّ المساعد */
+.fh-msg .fh-h{display:block;font-size:1.06em;margin:6px 0 2px;color:var(--red-d)}
+.fh-msg .fh-li{display:block;padding-inline-start:16px;position:relative}
+.fh-msg .fh-li::before{content:'•';position:absolute;inset-inline-start:2px;color:var(--red);font-weight:800}
+.fh-msg .fh-ic{background:rgba(42,21,3,.07);border-radius:5px;padding:1px 5px;font-size:.94em;font-family:ui-monospace,Menlo,Consolas,monospace}
+.fh-msg .fh-code{background:rgba(42,21,3,.07);border-radius:9px;padding:9px 11px;margin:6px 0;overflow-x:auto;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;line-height:1.7;white-space:pre;direction:ltr;text-align:left}
 .fh-msg.bot::before{content:'';position:absolute;top:15px;bottom:15px;inset-inline-end:0;width:3px;
   border-radius:99px;background:linear-gradient(180deg,var(--red),var(--red-deep));opacity:.55}
 .fh-msg.user img{border-radius:11px}
@@ -3782,7 +3789,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='0cf3764';
+const KH_BUILD='e8caf90';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10357,17 +10364,52 @@ function fhContext(){
       document.documentElement.style.removeProperty('--vvh');
       return;
     }
-    document.documentElement.style.setProperty('--vvh',Math.round(vv.height)+'px');
-    // أبقِ آخر رسالةٍ مرئيةً بعد أن تُزيح اللوحة نصف الشاشة
-    const body=document.getElementById('fh-body');
-    if(body&&body.scrollHeight-body.scrollTop-body.clientHeight<160)
-      body.scrollTop=body.scrollHeight;
+    /* ⚠ visualViewport.height يتقلّص لسببين لا سببٍ واحد: لوحة مفاتيحٍ
+       فُتحت، أو صفحةٌ كُبِّرت بالإصبعين. والثاني ليس لوحة مفاتيح — فإن
+       عاملناه معاملتها قصصنا المحادثة بلا سبب وتعلّق شريط الكتابة في
+       منتصف الشاشة، وهو ما شكت منه المعلّمة فعلاً.
+
+       فنشترط ثلاثة شروط قبل القصّ:
+       ١) لا تكبير (scale≈1) — وهذا هو الحارس الذي كان ناقصاً.
+       ٢) الفرق معتبَر (>120px) — لوحة المفاتيح لا تقلّ عن ذلك، وشريطُ
+          عنوانٍ ينزلق ليس لوحة مفاتيح.
+       ٣) الناتج معقول — لا نقبل ارتفاعاً أقلّ من ٢٠٠px بحال. */
+    const scale=vv.scale||1;
+    const shrink=window.innerHeight-vv.height;
+    const kbOpen = scale<=1.02 && shrink>120 && vv.height>=200;
+    if(kbOpen){
+      document.documentElement.style.setProperty('--vvh',Math.round(vv.height)+'px');
+      // أبقِ آخر رسالةٍ مرئيةً بعد أن تُزيح اللوحة نصف الشاشة
+      const body=document.getElementById('fh-body');
+      if(body&&body.scrollHeight-body.scrollTop-body.clientHeight<160)
+        body.scrollTop=body.scrollHeight;
+    }else{
+      // لا لوحة مفاتيح (أو الصفحة مكبَّرة): تعود المحادثة لارتفاع الشاشة
+      document.documentElement.style.removeProperty('--vvh');
+    }
   }
   function onChange(){ if(!queued){queued=true;requestAnimationFrame(apply);} }
   vv.addEventListener('resize',onChange);
   vv.addEventListener('scroll',onChange);
   window.fhViewportSync=onChange;      // يُستدعى عند فتح القسم وإغلاقه
 })();
+
+/* تنسيقٌ خفيف لردّ المساعد: النماذج تكتب **عريضاً** و«•» و«###» بطبعها،
+   وكان الردّ يُعرض نصّاً خاماً فتقرأ المعلّمة النجمتين كما هما — وهو ما
+   يجعل الجواب يبدو مكسوراً.
+
+   الأمان أولاً: نهرّب HTML قبل أي تحويل، فلا يصل وسمٌ من المساعد إلى
+   الصفحة مهما كان مصدر النصّ. ثم نحوّل ما هرّبناه — لا العكس. */
+function fhMd(s){
+  let t=escHtml(String(s==null?'':s));
+  t=t.replace(/```([\s\S]*?)```/g,(m,c)=>'<pre class="fh-code">'+c.trim()+'</pre>');
+  t=t.replace(/`([^`\n]+)`/g,'<code class="fh-ic">$1</code>');
+  t=t.replace(/^\s{0,3}#{1,6}\s*(.+)$/gm,'<b class="fh-h">$1</b>');
+  t=t.replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+  t=t.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s.,!?)]|$)/g,'$1<i>$2</i>');
+  t=t.replace(/^\s*[-*•]\s+(.+)$/gm,'<span class="fh-li">$1</span>');
+  return t;
+}
 
 function fhRender(){
   const body=document.getElementById('fh-body');if(!body)return;
@@ -10381,7 +10423,7 @@ function fhRender(){
   }
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
     ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
-    :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${escHtml(m.content)}</div>`).join('');
+    :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${fhMd(m.content)}</div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
