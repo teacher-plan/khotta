@@ -3776,7 +3776,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='656a8b1';
+const KH_BUILD='09c07b1';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10724,22 +10724,46 @@ function shSwitch(what,val){
   else shKind=val;
   shRender();
 }
+/* ══ عرضٌ فوريّ ثم تحديثٌ بالخلفية (stale-while-revalidate) ══
+   كان كل دخولٍ للقسم يمسح المحتوى ويكتب «يجري التحميل» وينتظر الشبكة —
+   فتبدو المنصّة «معلّقة» عند التنقّل السريع، وهي في الحقيقة تنتظر ردّاً.
+
+   الآن: ما رأته المعلّمة آخر مرّة يظهر فوراً بلا انتظار، والتحديث يجري
+   خلفه صامتاً. ولا تُعاد الكتابة إلا إن اختلفت البيانات فعلاً — فمقارنة
+   البصمة تمنع وميضاً لا داعي له.
+
+   لا مؤقّت دوريّ: التحديث يقع عند كل دخولٍ للقسم (وهو أدقّ من دورةٍ
+   عمياء)، وعند كل إضافةٍ أو حذفٍ من المعلّمة نفسها. */
+const _shCache={};
+function _shKey(){return shGrade+'|'+shSubject+'|'+shKind;}
+function shCacheDrop(){for(const k in _shCache)delete _shCache[k];}
+
 async function shLoad(){
   const box=document.getElementById('sh-list');
   if(!shSubject){box.innerHTML='<div class="plan-empty-card">لا مواد معدّة لهذا الصف</div>';return;}
-  box.innerHTML='<div class="plan-empty-card">يجري تحميل المحفوظات...</div>';
+  const key=_shKey(),hit=_shCache[key];
+  // ١) القديم فوراً — لا شاشة انتظار إن كان عندنا شيء
+  if(hit){shItems=hit.items;shRenderList();}
+  else box.innerHTML='<div class="plan-empty-card">يجري تحميل المحفوظات...</div>';
+  // ٢) التحديث بالخلفية
   try{
     let q=sb.from('c1_shared_assets').select('*').eq('subject',shSubject).eq('grade',String(shGrade));
     if(shKind!=='all')q=q.eq('kind',shKind);
     const{data,error}=await q.order('created_at',{ascending:false}).limit(200);
     if(error)throw error;
-    shItems=data||[];
+    const items=data||[];
+    // المعلّمة قد تكون انتقلت لمادةٍ أخرى أثناء الانتظار — لا نكتب فوق شاشتها
+    if(_shKey()!==key)return;
+    const sig=items.map(x=>x.id+':'+(x.updated_at||x.created_at||'')).join(',');
+    const changed=!hit||hit.sig!==sig;
+    _shCache[key]={at:Date.now(),items,sig};
+    shItems=items;
+    if(changed)shRenderList();
   }catch(e){
-    // الجدول غير مُنشأ بعد أو انقطع الاتصال — نُخبر بلا لبس بدل إظهار فراغ مضلّل
+    // عندنا نسخةٌ معروضة؟ نتركها ولا نُفزع المعلّمة بخطأٍ لا يخصّها
+    if(hit)return;
     box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المحفوظات — تحققي من الاتصال</div>';
-    return;
   }
-  shRenderList();
 }
 function shRenderList(){
   const box=document.getElementById('sh-list');
@@ -10839,6 +10863,7 @@ async function shUnshare(id){
     const{error}=await sb.from('c1_shared_assets').delete().eq('id',id);
     if(error)throw error;
     shItems=shItems.filter(x=>x.id!==id);
+    shCacheDrop();          // وإلا عاد المحذوف من الكاش عند أوّل تنقّل
     shRenderList();
     toast('أُلغيت المشاركة','ok');
   }catch(e){toast('تعذّر الإلغاء',true);}
@@ -10867,7 +10892,9 @@ function shAutoPublish(o){
     if(!o.content)return;
     row.content=o.content;
   }
-  sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'}).then(()=>{},()=>{});
+  // إسقاط الكاش بعد النشر: عمل المعلّمة نفسها يجب أن يظهر لها فوراً
+  sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'})
+    .then(()=>{try{shCacheDrop()}catch(e){}},()=>{});
 }
 // نشر ملخص: نلتقط اسم الدرس ووحدته من خطة المعلمة عبر المعرّف الثابت
 function shPublishInfo(lessonId,grade,subject,imageUrl){
@@ -10956,17 +10983,27 @@ let _libCacheMap={};
 async function libLoadItems(force){
   const box=document.getElementById('lib-items'),empty=document.getElementById('lib-empty');
   empty.classList.add('hidden');
-  // مكتبة المادة نفسها لا تُعاد من الخادم قبل دقيقة (إلا بعد إضافة/حذف/تقييم)
+  // القديم فوراً ثم تحديثٌ بالخلفية. كان الكاش يمنع أيّ استعلامٍ لدقيقة
+  // كاملة — فما تُضيفه زميلةٌ الآن لا تراه المعلّمة إلا بعد دقيقة. الآن
+  // ترى القديم بلا انتظار، ويصلها الجديد حين يصل.
   const cached=_libCacheMap[libSubject];
-  if(!force&&cached&&Date.now()-cached.at<60000){libItemsCache=cached.items;libRenderItems();return;}
-  box.innerHTML='<div class="plan-empty-card">يحمّل مكتبة '+escHtml(libSubject)+'…</div>';
+  const sub=libSubject;
+  if(cached){libItemsCache=cached.items;libRenderItems();}
+  else box.innerHTML='<div class="plan-empty-card">يحمّل مكتبة '+escHtml(libSubject)+'…</div>';
   try{
-    const{data,error}=await sb.from('c1_library_items').select('*').eq('subject',libSubject).order('created_at',{ascending:false});
+    const{data,error}=await sb.from('c1_library_items').select('*').eq('subject',sub).order('created_at',{ascending:false});
     if(error)throw error;
-    libItemsCache=data||[];
-    _libCacheMap[libSubject]={at:Date.now(),items:libItemsCache};
-    await libRenderItems();
-  }catch(e){box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';}
+    if(libSubject!==sub)return;      // بدّلت المادة أثناء الانتظار
+    const items=data||[];
+    const sig=items.map(x=>x.id+':'+(x.updated_at||x.created_at||'')).join(',');
+    const changed=!cached||cached.sig!==sig;
+    libItemsCache=items;
+    _libCacheMap[sub]={at:Date.now(),items,sig};
+    if(changed)await libRenderItems();
+  }catch(e){
+    if(cached)return;                // نسخةٌ معروضة تكفي
+    box.innerHTML='<div class="plan-empty-card">تعذّر تحميل المكتبة — تحققي من الاتصال.</div>';
+  }
 }
 async function libRenderItems(){
   const box=document.getElementById('lib-items'),empty=document.getElementById('lib-empty');
