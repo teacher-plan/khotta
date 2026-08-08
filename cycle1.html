@@ -785,6 +785,12 @@ body.inapp #c1-notif-btn{display:flex}
   max-width:min(400px,90vw);text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
 #qhelp-bg .card h3{margin:0 0 10px;font-size:16px;color:var(--ink)}
 #qhelp-bg .card p{margin:0 0 16px;font-size:13.5px;line-height:1.9;color:var(--muted)}
+#stu-add-bg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(20,12,6,.55)}
+#stu-add-bg.on{display:flex}
+#stu-add-bg .card{background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:22px 22px 18px;
+  max-width:min(400px,90vw);width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+#stu-add-bg .card h3{margin:0 0 14px;font-size:16px;color:var(--ink)}
+#stu-add-bg .row{display:flex;gap:8px;justify-content:center;margin-top:14px}
 .acct-wa{display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;
   background:#25D366;color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:13px}
 .acct-wa:hover{background:#1EBE5A}
@@ -965,7 +971,8 @@ body.demo #sl2-chip,body.demo #sl2-ready{bottom:calc(var(--db-h,56px) + 12px)}
 .star-stage-burst svg{width:64px;height:64px;filter:drop-shadow(0 0 24px rgba(255,255,255,.6));animation:starPop .6s cubic-bezier(.3,1.6,.4,1)}
 @keyframes starPop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 .star-stage-nm{font-size:28px;font-weight:800;margin-bottom:6px;text-shadow:0 3px 14px rgba(0,0,0,.3)}
-.star-stage-cnt{font-size:16px;font-weight:700;opacity:.92;margin-bottom:26px}
+.star-stage-cnt{font-size:16px;font-weight:700;opacity:.92;margin-bottom:6px}
+.star-stage-clap{font-size:15px;font-weight:800;opacity:.95;margin-bottom:26px}
 .star-stage-hint{font-size:12px;opacity:.75}
 @media(prefers-reduced-motion:reduce){.star-stage-burst svg{animation:none}}
 
@@ -1117,6 +1124,15 @@ body.demo #sl2-chip,body.demo #sl2-ready{bottom:calc(var(--db-h,56px) + 12px)}
 .beh-sort button.on{background:var(--surface);color:var(--red-d);box-shadow:0 1px 4px rgba(48,24,0,.1)}
 /* auto-fit لا auto-fill: مع شعبة صغيرة تتمدّد البطاقات بدل ترك فراغ جانبي */
 .stu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-top:14px}
+.beh-view{display:flex;gap:5px;background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:3px}
+.beh-view button{border:none;background:none;border-radius:8px;padding:7px 10px;font-family:inherit;font-size:14px;color:var(--muted);cursor:pointer;display:flex;align-items:center}
+.beh-view button.on{background:var(--surface);color:var(--red-d);box-shadow:0 1px 4px rgba(48,24,0,.1)}
+.stu-grid.list-view{grid-template-columns:1fr;gap:6px}
+.stu-grid.list-view .stu-card{display:flex;align-items:center;gap:10px;padding:8px 12px;text-align:start}
+.stu-grid.list-view .stu-cert{position:static;flex:none}
+.stu-grid.list-view .stu-nm{flex:1;min-height:auto;justify-content:flex-start;margin:0;padding:0}
+.stu-grid.list-view .stu-btns{display:flex;gap:8px;flex:none}
+.stu-grid.list-view .stu-b{flex-direction:row;padding:6px 10px;gap:5px}
 .beh-del-e{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 6px;font-family:inherit;flex:none}
 .beh-del-e:hover{color:var(--red-d)}
 
@@ -2421,6 +2437,10 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
         <button data-s="star" onclick="stuSort('star')">الأعلى نجوماً</button>
         <button data-s="note" onclick="stuSort('note')">الأكثر مخالفات</button>
       </div>
+      <div class="beh-view">
+        <button data-v="grid" class="on" onclick="stuSetView('grid')" title="عرض أيقونات">▦</button>
+        <button data-v="list" onclick="stuSetView('list')" title="عرض قوائم">☰</button>
+      </div>
       <button class="beh-cert-btn" onclick="certOpenClass()" title="شهادات تقدير لطلاب الشعبة">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 2.5 9.33V14l-2.5-1.2L9.5 14v-2.67A5 5 0 0 1 12 2zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM8.6 15.1 6 22l6-2.6L18 22l-2.6-6.9-3.4 1.63-3.4-1.63z"/></svg>
         شهادات الشعبة
@@ -2452,6 +2472,17 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <h3>ما هذا الرصيد؟</h3>
     <p>رصيدٌ خاصّ باستخدام خدمات الذكاء الاصطناعي في المنصة، ويتجدّد تلقائياً مطلع كل شهر.</p>
     <button class="c1-mbtn go" onclick="qhelpClose()">حسناً</button>
+  </div>
+</div>
+
+<div id="stu-add-bg" onclick="if(event.target===this)stuAddClose()">
+  <div class="card">
+    <h3>إضافة طالب جديد</h3>
+    <input type="text" id="stu-add-input" class="star-add-input" style="width:100%" placeholder="اسم الطالب" onkeypress="if(event.key==='Enter')stuAddSave()"/>
+    <div class="row">
+      <button class="c1-mbtn no" onclick="stuAddClose()">إلغاء</button>
+      <button class="c1-mbtn go" onclick="stuAddSave()">حفظ</button>
+    </div>
   </div>
 </div>
 
@@ -2517,7 +2548,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       </label>
     </div>
     <div class="eg-row" style="margin-top:12px">
-      <div style="flex:1"><label class="eg-lbl">عدد العناصر</label><select id="gm-count" class="c1-select" style="max-width:none;width:100%"><option value="5">٥</option><option value="6" selected>٦</option><option value="7">٧</option><option value="8">٨</option><option value="9">٩</option><option value="10">١٠</option><option value="11">١١</option><option value="12">١٢</option><option value="13">١٣</option><option value="14">١٤</option><option value="15">١٥</option><option value="16">١٦</option><option value="17">١٧</option><option value="18">١٨</option><option value="19">١٩</option><option value="20">٢٠</option></select></div>
+      <div style="flex:1"><label class="eg-lbl">عدد العناصر</label><select id="gm-count" class="c1-select" style="max-width:none;width:100%"><option value="5">٥</option><option value="6">٦</option><option value="7">٧</option><option value="8">٨</option><option value="9">٩</option><option value="10">١٠</option><option value="11">١١</option><option value="12" selected>١٢</option><option value="13">١٣</option><option value="14">١٤</option><option value="15">١٥</option><option value="16">١٦</option><option value="17">١٧</option><option value="18">١٨</option><option value="19">١٩</option><option value="20">٢٠</option></select></div>
     </div>
     <label class="eg-lbl">الثيم</label>
     <select id="gm-theme" class="hidden"><option value=""></option></select>
@@ -3082,6 +3113,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <div class="star-stage-burst" id="star-stage-burst"></div>
     <div class="star-stage-nm" id="star-stage-nm"></div>
     <div class="star-stage-cnt" id="star-stage-cnt"></div>
+    <div class="star-stage-clap" id="star-stage-clap"></div>
     <div class="star-stage-hint">اضغطي في أي مكان للمتابعة</div>
   </div>
 </div>
@@ -4061,7 +4093,9 @@ function cy1Save(partial,busyText){
   Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));
   profile={...profile,...partial,updated_at:new Date().toISOString()};
   _cy1Dirty=true;
-  cyBusy(busyText||'يحفظ');
+  // بلا busyText صريح: حفظٌ خلفيٌّ (كالنجوم) يُحدَّث محلياً فوراً بلا حجب الشاشة،
+  // فتضغط المعلمة نجمةً بعد نجمةٍ بسرعة دون أن يعترضها مؤشر تحميل
+  if(busyText)cyBusy(busyText);
   clearTimeout(_cy1FlushTimer);
   _cy1FlushTimer=setTimeout(cy1Flush,900);
   return new Promise(res=>_cy1Waiters.push(res));
@@ -6951,6 +6985,13 @@ function starArr(classId){
   return arr;
 }
 let stuSortBy='name';
+let stuView=localStorage.getItem('c1_stu_view')||'grid';
+function stuSetView(v){
+  stuView=v;
+  localStorage.setItem('c1_stu_view',v);
+  document.querySelectorAll('.beh-view button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  starRenderBoard();
+}
 function starRender(){
   const grades=planGradesList();
   const empty=document.getElementById('stu-empty'),body=document.getElementById('stu-body');
@@ -6979,6 +7020,7 @@ function starRender(){
   localStorage.setItem('c1_star_c',starClass);
   behLoadTypes();
   starRenderClassTabs();
+  document.querySelectorAll('.beh-view button').forEach(b=>b.classList.toggle('on',b.dataset.v===stuView));
   starRenderBoard();
 }
 function stuSwitchGrade(g){starGrade=g;starClass=null;starRender();}
@@ -7007,18 +7049,43 @@ function starClassObj(classId){
   }
   return null;
 }
-async function starAddStudent(classId){
-  const input=document.getElementById('star-add-input');
-  const name=(input.value||'').trim();
-  if(!name)return;
+let _stuAddClassId=null;
+function stuAddOpen(classId){
+  _stuAddClassId=classId;
+  const input=document.getElementById('stu-add-input');
+  if(input)input.value='';
+  document.getElementById('stu-add-bg').classList.add('on');
+  if(input)setTimeout(()=>input.focus(),50);
+}
+function stuAddClose(){
+  document.getElementById('stu-add-bg').classList.remove('on');
+  _stuAddClassId=null;
+}
+// إدراجٌ أبجديٌّ عربيٌّ لا إلحاق: الاسم الجديد يُدرَج في موضعه الصحيح بين
+// الأسماء القائمة، فتبقى القائمة مرتّبة دوماً بلا حاجة لإعادة فرزٍ لاحقة.
+// المصفوفات الموازية (نجوم كل طالب وسجل سلوكه) مفهرسةٌ بنفس ترتيب cls.students،
+// فيُدرَج فيها عنصرٌ افتراضيٌّ في نفس الموضع حفاظاً على التطابق — لا إزاحة
+// لبيانات الطالبات الأخريات، فقط إدراج عنصرٍ جديد في مكانه.
+async function stuAddSave(){
+  const classId=_stuAddClassId;
+  const input=document.getElementById('stu-add-input');
+  const name=(input&&input.value||'').trim();
+  if(!name||!classId)return;
   const cls=starClassObj(classId);
   if(!cls)return;
   if(!cls.students)cls.students=[];
-  cls.students.push(name);
-  input.value='';
-  await cy1Save({grades:profile.grades},'يحفظ الطالب');
+  const starsArr=starArr(classId);
+  const behArrV=behArr(classId);
+  let idx=cls.students.findIndex(nm=>name.localeCompare(nm,'ar')<0);
+  if(idx<0)idx=cls.students.length;
+  cls.students.splice(idx,0,name);
+  starsArr.splice(idx,0,0);
+  behArrV.splice(idx,0,[]);
+  profile.stars=profile.stars||{};profile.stars[classId]=starsArr;
+  profile.beh_log=profile.beh_log||{};profile.beh_log[classId]=behArrV;
+  stuAddClose();
+  await cy1Save({grades:profile.grades,stars:profile.stars,beh_log:profile.beh_log},'يحفظ الطالب');
   starRenderBoard();
-  input.focus();
 }
 // البطاقة الموحّدة: نجمة (إيجابي) + مخالفة (سلبي) + ملف الطالب — كلها في مكان واحد
 function starRenderBoard(){
@@ -7028,8 +7095,7 @@ function starRenderBoard(){
   const students=cls.students||[];
   const addRow=`<div class="star-current" style="--sc:${cls.color}">أنتِ الآن في شعبة <b>${escHtml(cls.name)}</b></div>
     <div class="star-add-row">
-      <input type="text" id="star-add-input" class="star-add-input" placeholder="اسم طالب جديد" onkeypress="if(event.key==='Enter')starAddStudent('${cls.id}')"/>
-      <button class="star-add-btn" onclick="starAddStudent('${cls.id}')">إضافة</button>
+      <button class="star-add-btn" onclick="stuAddOpen('${cls.id}')">إضافة طالب جديد</button>
     </div>`;
   if(!students.length){
     sum.innerHTML='';
@@ -7054,7 +7120,7 @@ function starRenderBoard(){
   if(stuSortBy==='star')rows.sort((a,b)=>b.s-a.s);
   else if(stuSortBy==='note')rows.sort((a,b)=>b.n-a.n);
   if(!rows.length){board.innerHTML=addRow+'<div class="plan-empty-card">لا نتائج مطابقة للبحث</div>';lb.innerHTML='';return;}
-  board.innerHTML=addRow+'<div class="stu-grid">'+rows.map(r=>`
+  board.innerHTML=addRow+`<div class="stu-grid ${stuView==='list'?'list-view':''}">`+rows.map(r=>`
     <div class="stu-card ${r.n>=3?'alert':(r.n?'warn':'')}">
       <button class="stu-cert" onclick="certOpen('${cls.id}',${r.i})" title="شهادة تقدير">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 2.5 9.33V14l-2.5-1.2L9.5 14v-2.67A5 5 0 0 1 12 2zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM8.6 15.1 6 22l6-2.6L18 22l-2.6-6.9-3.4 1.63-3.4-1.63z"/></svg>
@@ -7168,6 +7234,16 @@ function certDateLine(){
   return hij?(hij+' — '+g):g;
 }
 
+// حجم خطّ اسم الطالب يتقلّص تلقائياً بحسب طوله — اسمٌ ثلاثيّ أو رباعيّ لا
+// يفيض عن إطار الشهادة كما كان يحدث بحجمٍ ثابت لكل الأسماء
+function certNameSize(name){
+  const n=(name||'').trim().length;
+  if(n>26)return'7.5mm';
+  if(n>20)return'9mm';
+  if(n>14)return'11.5mm';
+  if(n>9)return'13mm';
+  return'15mm';
+}
 // صفحة شهادة واحدة. الهوية: مربّعات الشعار — مربّعات مائلة متداخلة في الأركان
 function certPageHtml(it){
   const t=CERT_TYPES[it.type]||CERT_TYPES.thanks;
@@ -7186,7 +7262,7 @@ function certPageHtml(it){
     <div class="rule"><i></i><span>${t.mark}</span><i></i></div>
     <p class="pre">تُهدي المعلمة هذه الشهادة بكل فخر واعتزاز</p>
     <p class="to">${escHtml(w.to)}</p>
-    <div class="nmwrap"><div class="nm">${escHtml(it.name)}</div><div class="nmline"></div></div>
+    <div class="nmwrap"><div class="nm" style="font-size:${certNameSize(it.name)}">${escHtml(it.name)}</div><div class="nmline"></div></div>
     <p class="why">${escHtml(it.why)}</p>
     ${stars}
     <p class="bless">${escHtml(w.bless)}</p>
@@ -7482,8 +7558,12 @@ async function certToPng(item){
   await new Promise(r=>setTimeout(r,450));
   const el=d.querySelector('.cert');
   if(!el)throw new Error('cert element missing');
+  // foreignObjectRendering:true يُنتج أحياناً صورةً متراكبة الطبقات مشوّهة —
+  // عطلٌ معروفٌ في html2canvas مع تصاميم بطبقاتٍ absolute كثيرة كهذه الشهادة
+  // (المربّعات المائلة والشريط والإطار كلّها فوق بعضها). التقاط DOM العادي
+  // (بلا foreignObjectRendering) أبطأ قليلاً لكنه المطابق فعلياً للمعاينة.
   const cv=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,
-    backgroundColor:'#FDF8F0',width:el.offsetWidth,height:el.offsetHeight,foreignObjectRendering:true});
+    backgroundColor:'#FDF8F0',width:el.offsetWidth,height:el.offsetHeight,foreignObjectRendering:false});
   return cv.toDataURL('image/png');
 }
 
@@ -8322,6 +8402,7 @@ function starStageOpen(classId,idx,count){
   document.getElementById('star-stage-nm').textContent=nm;
   document.getElementById('star-stage-cnt').textContent=
     rsCountAr(count,'نجمة','نجوم','نجمتان')+' — أحسنتِ!';
+  document.getElementById('star-stage-clap').textContent='قوموا بالتصفيق لـ '+nm+' 👏';
   document.getElementById('star-stage').classList.add('on');
   starConfetti();
 }
@@ -8329,14 +8410,14 @@ function starStageClose(){document.getElementById('star-stage').classList.remove
 
 // ═══════════ وضع الحصة الحية — لوحة تحكم ثابتة + مساحة عرض المرفقات ═══════════
 let liveCtx=null,liveTimerSec=300,liveTimerRunning=false,liveTimerHandle=null,_liveShuffleT=null;
-let _liveBook=null,_liveBookAt=-1,_liveBookLoading=false;
+let _liveBook=null,_liveBookAt=-1,_liveBookLoading=false,_liveBookError=false;
 function liveOpenFromBtn(btn){liveOpen(btn.dataset.c,btn.dataset.s);}
 function liveOpen(classId,subject,lessonId){
   const cls=starClassObj(classId);
   if(!cls)return;
   const g=c1GradeOf(classId);
   liveCtx={classId,subject,lessonId:lessonId||null,grade:(g&&g.num)||planGrade};
-  _liveBook=null;_liveBookAt=-1;_liveBookLoading=false;
+  _liveBook=null;_liveBookAt=-1;_liveBookLoading=false;_liveBookError=false;
   const l=lessonId?planFindLesson(lessonId):null;
   document.getElementById('live-cls-nm').textContent=cls.name+' · '+subject;
   document.getElementById('live-lesson-nm').textContent=(l&&l.name)||'';
@@ -8389,14 +8470,24 @@ async function liveLoadBook(){
   if(!liveCtx||!liveCtx.lessonId||_liveBookLoading)return;
   const l=planFindLesson(liveCtx.lessonId);
   if(!l)return;
-  _liveBookLoading=true;
+  _liveBookLoading=true;_liveBookError=false;
   const forLesson=liveCtx.lessonId;
   try{
     const imgs=await c1LessonBookImages(liveCtx.grade,liveCtx.subject,l.unit,l.name);
-    if(liveCtx&&liveCtx.lessonId===forLesson){_liveBook=imgs||[];liveRenderLauncher();}
-  }catch(e){_liveBook=[];}
+    if(liveCtx&&liveCtx.lessonId===forLesson){
+      _liveBook=imgs||[];
+      // فشلٌ صامت سابقاً: لا صفحات ولا رسالة، فتظنّ المعلمة أن المرفق ما يزال يُحضَّر إلى الأبد.
+      // الآن كل فشلٍ (مصدرٌ ناقص/خطأ شبكة) يظهر برسالةٍ صريحة بدل الاختفاء بصمت.
+      if(!_liveBook.length)_liveBookError=true;
+      liveRenderLauncher();
+    }
+  }catch(e){
+    if(liveCtx&&liveCtx.lessonId===forLesson){_liveBook=[];_liveBookError=true;liveRenderLauncher();}
+  }
   finally{_liveBookLoading=false;}
 }
+// إعادة محاولة تحميل صفحات الكتاب من زر رسالة الخطأ في لوحة المرفقات
+function liveRetryBook(){_liveBookError=false;liveLoadBook();liveRenderLauncher();}
 
 // ── شاشة المرفقات: كل ما جُهّز لهذا الدرس في مكان واحد ──
 const LV_IC={
@@ -8415,6 +8506,7 @@ function liveRenderLauncher(){
     const st=planGet(id);
     if(_liveBook&&_liveBook.length)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:egArNum(_liveBook.length)+' صفحة من كتاب الطالب',fn:'liveOpenBook()'});
     else if(_liveBookLoading)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:'يجري تحضيرها…',dis:true});
+    else if(_liveBookError)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:'تعذّر تحضيرها — اضغطي لإعادة المحاولة',fn:'liveRetryBook()'});
     if(c1Asset(id).slides)tiles.push({c:'#3E8E7E',ic:'slides',nm:'العرض التقديمي',mt:'شرائح الدرس التفاعلية',fn:'liveOpenSlides()'});
     if(st.info_url)tiles.push({c:'#C8A03C',ic:'info',nm:'ملخص الدرس',mt:'إنفوجرافيك بمقاس الشاشة',fn:'liveOpenInfo()'});
     if(st.game_id)tiles.push({c:'#8b5cf6',ic:'game',nm:'اللعبة التعليمية',mt:'تفتح بملء المساحة',fn:'liveOpenGame()'});

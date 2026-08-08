@@ -67,6 +67,24 @@
     else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
   }
 
+  /* زرّ خروجٍ صغير أعلى يسار الشاشة، لا يظهر إلا فعلياً داخل وضع ملء
+     الشاشة (لا وضع العرض وحده) — يُبنى مرّةً واحدة ويُشارَك بين كل الأنشطة
+     الواحد والعشرين عبر هذا الملف المشترك، بلا لمس كل ملفّ على حدة. */
+  let exitFsBtn = null;
+  function ensureExitFsBtn() {
+    if (exitFsBtn) return exitFsBtn;
+    exitFsBtn = el('button', 'kit-exit-fs', '✕ خروج من ملء الشاشة');
+    exitFsBtn.type = 'button';
+    exitFsBtn.title = 'الخروج من وضع ملء الشاشة';
+    exitFsBtn.setAttribute('aria-label', 'الخروج من وضع ملء الشاشة');
+    exitFsBtn.onclick = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+    document.body.appendChild(exitFsBtn);
+    document.addEventListener('fullscreenchange', () => {
+      exitFsBtn.classList.toggle('on', !!document.fullscreenElement);
+    });
+    return exitFsBtn;
+  }
+
   /* ── التغذية الراجعة ──
      لا عبارة إحباطٍ واحدة في القسم كلّه: الخطأ يُقابَل بدعوةٍ للتفكير لا
      بحكمٍ على الطالبة. */
@@ -281,6 +299,7 @@
       if (e.key === 'F' || e.key === 'f') fullToggle();
       else if (e.key === 'Escape' && document.body.classList.contains('present')) pBtn.click();
     });
+    ensureExitFsBtn();
     wakeOn();
     return api;
   }
