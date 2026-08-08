@@ -7591,7 +7591,11 @@ function certSaveDataUrl(url,name){
 // فيها تختار المعلمة فعلياً أين تُحفظ. على الحاسوب والأندرويد <a download>
 // يعمل فعلياً فنبقى عليه هناك بدل تعقيد واجهة لا داعي له.
 async function certSaveImage(dataUrl,name){
-  const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent);
+  // آيباد بسفاري الحديث يُقدّم نفسه بترويسة Mac كاملة (بلا كلمة iPad إطلاقاً)
+  // ليتصرّف الموقع معه كحاسوب — فحص user agent وحده يُخطئه فيسقط لتنزيلٍ
+  // لا يعمل فعلياً على iPadOS. لمس الشاشة مع منصّة Mac كاذبة = آيباد فعلياً.
+  const isIPadDesktopUA=/Mac/.test(navigator.platform)&&navigator.maxTouchPoints>1;
+  const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||isIPadDesktopUA;
   if(isIOS&&navigator.share&&navigator.canShare){
     try{
       const file=certDataUrlToFile(dataUrl,name);
