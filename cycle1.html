@@ -7503,7 +7503,10 @@ function certPrint(){
   const items=certItems();
   if(!items.length){toast('اختاري طالباً واحداً على الأقل',true);return;}
   const f=document.createElement('iframe');
-  f.style.cssText='position:fixed;inset:0;width:0;height:0;border:none;opacity:0';
+  // إطارٌ بحجمٍ حقيقي خارج الشاشة، لا صفري الحجم — سفاري على الآيفون يفشل
+  // بصمتٍ أحياناً في طباعة iframe صفري الأبعاد ويطبع الصفحة الأساسية بدلاً
+  // منه، وهذا بالضبط ما كانت تُظهره الشهادات: صفحة «طلابي» لا الشهادة
+  f.style.cssText='position:fixed;top:0;left:-20000px;width:1123px;height:794px;border:none;opacity:0';
   f.srcdoc=certDocHtml(items);
   f.onload=()=>{
     // مهلة قصيرة تكفي لتحميل الخطوط قبل الطباعة، وإلا طُبعت بخط بديل
@@ -7567,10 +7570,40 @@ async function certToPng(item){
   return cv.toDataURL('image/png');
 }
 
+function certDataUrlToFile(dataUrl,name){
+  const [head,b64]=dataUrl.split(',');
+  const bin=atob(b64);
+  const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  return new File([arr],name,{type:'image/png'});
+}
+
 function certSaveDataUrl(url,name){
   const a=document.createElement('a');
   a.href=url;a.download=name;
   document.body.appendChild(a);a.click();a.remove();
+}
+
+// آيفون/آيباد: <a download> مع data URL لا يحفظ شيئاً فعلياً في المعرض ولا
+// الملفات رغم عدم رمي أي خطأ — سفاري ببساطة يتجاهله. الطريقة الوحيدة
+// الموثوقة هناك هي ورقة المشاركة (Web Share API) وخيار «حفظ الصورة» فيها،
+// فيها تختار المعلمة فعلياً أين تُحفظ. على الحاسوب والأندرويد <a download>
+// يعمل فعلياً فنبقى عليه هناك بدل تعقيد واجهة لا داعي له.
+async function certSaveImage(dataUrl,name){
+  const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent);
+  if(isIOS&&navigator.share&&navigator.canShare){
+    try{
+      const file=certDataUrlToFile(dataUrl,name);
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:name});
+        return 'shared';
+      }
+    }catch(e){
+      if(e&&e.name==='AbortError')return 'cancelled'; // المعلمة أغلقت ورقة المشاركة بنفسها
+    }
+  }
+  certSaveDataUrl(dataUrl,name);
+  return 'downloaded';
 }
 
 async function certDownload(){
@@ -7586,21 +7619,23 @@ async function certDownload(){
   }
   const many=items.length>1;
   uiBusy(many?('يجهّز '+rsCountAr(items.length,'شهادة','شهادات')+'…'):'يجهّز الشهادة…');
-  let done=0,failed=0;
+  let done=0,failed=0,shared=0,cancelled=0;
   try{
     for(const it of items){
       try{
         const png=await certToPng(it);
         const t=(CERT_TYPES[it.type]||CERT_TYPES.thanks).ttl;
-        certSaveDataUrl(png,certSafeName(it.name+' - '+t)+'.png');
-        done++;
+        const res=await certSaveImage(png,certSafeName(it.name+' - '+t)+'.png');
+        if(res==='cancelled')cancelled++;else{done++;if(res==='shared')shared++;}
         // فاصلٌ بين التنزيلات: المتصفحات تحجب الدفعات المتلاحقة
         if(many)await new Promise(r=>setTimeout(r,350));
       }catch(e){failed++;}
     }
   }finally{uiBusyDone();}
+  if(cancelled&&!done&&!failed)return; // أغلقت ورقة المشاركة بنفسها — لا داعي لأي رسالة
   if(!done)toast('تعذّر تجهيز الصور — جرّبي الطباعة',true);
   else if(failed)toast('حُفظت '+rsCountAr(done,'صورة','صور')+'، وتعذّرت '+egArNum(failed),true);
+  else if(shared)toast(shared>1?'اختاري «حفظ الصورة» لكل شهادة من قائمة المشاركة':'اختاري «حفظ الصورة» من قائمة المشاركة لحفظها في المعرض','ok');
   else toast('⬇ حُفظت '+rsCountAr(done,'صورة','صور')+' باسم كل طالب','ok');
 }
 
