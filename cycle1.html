@@ -11383,9 +11383,15 @@ function shAutoPublish(o){
     if(!o.content)return;
     row.content=o.content;
   }
-  // إسقاط الكاش بعد النشر: عمل المعلّمة نفسها يجب أن يظهر لها فوراً
+  // إسقاط الكاش بعد النشر: عمل المعلّمة نفسها يجب أن يظهر لها فوراً.
+  // معالج الرفض كان فارغاً — فأخفى شهوراً أن قيد c1sa_kind في الإنتاج لا
+  // يقبل 'prep' ولا 'slides'، فلم تُشارَك خطةُ درسٍ ولا عرضٌ قط. النشر
+  // مساعدةٌ خلفية لا يُعطَّل عملُ المعلّمة لفشلها، لكنه يُسجَّل ليُرى.
   sb.from('c1_shared_assets').upsert(row,{onConflict:'user_id,kind,lesson_id'})
-    .then(()=>{try{shCacheDrop()}catch(e){}},()=>{});
+    .then(({error})=>{
+      if(error){console.error('تعذّر نشر '+o.kind+' للمخزن المشترك:',error.message||error);return;}
+      try{shCacheDrop()}catch(e){}
+    },(e)=>{console.error('تعذّر نشر '+o.kind+' للمخزن المشترك:',e);});
 }
 // نشر ملخص: نلتقط اسم الدرس ووحدته من خطة المعلمة عبر المعرّف الثابت
 function shPublishInfo(lessonId,grade,subject,imageUrl){
