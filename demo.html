@@ -1926,8 +1926,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .eg-export{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border:none}
 
 /* ── العرض التقديمي الهجين (dk-*) ──
-   النص يُركَّب فوق الخلفية بنسبٍ مئوية مطابقة تماماً للمنطقة التي طُلب من
-   نموذج الصور تركها فارغة، فيتطابق الموضعان بلا اجتهادٍ من النموذج. */
+   كل شريحة صورةٌ كاملة بنصّها من نموذج الصور — لا طبقة نصٍّ فوقها. */
 .dk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:4px}
 .dk-thumb{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--card);cursor:pointer}
 .dk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -1938,10 +1937,6 @@ body:has(#page-fahim.active){overflow:hidden}
 #dk-stage.on{display:block}
 #dk-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 #dk-slide .dk-canvas{position:relative;width:min(100%,calc(100vh * 16 / 9));aspect-ratio:16/9;background:#fff center/cover no-repeat}
-.dk-txt{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:.6em;padding:1.6% 2%}
-.dk-txt h3{font-size:clamp(17px,3.1vw,40px);font-weight:800;color:#26170c;line-height:1.45;margin:0}
-.dk-txt ul{margin:0;padding-inline-start:1.05em;display:flex;flex-direction:column;gap:.45em}
-.dk-txt li{font-size:clamp(12px,1.85vw,23px);font-weight:600;color:#3a2a1c;line-height:1.65}
 #dk-nav{position:absolute;inset-block-end:14px;inset-inline:0;display:flex;justify-content:center;align-items:center;gap:14px;z-index:2}
 #dk-nav button{background:rgba(255,255,255,.93);border:none;border-radius:11px;padding:9px 17px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:44px;color:#26170c}
 #dk-nav .dk-pos{color:#fff;font-weight:800;font-size:13px;min-width:56px;text-align:center}
@@ -3916,7 +3911,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='fc02d6c';
+const KH_BUILD='08fc800';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -8937,23 +8932,15 @@ async function studioJumpTo(grade,subject,lessonName,mode){
   studioSetMode(mode||'game');
 }
 
-// ═══════════ العرض التقديمي الهجين — قوالب تخطيط ثابتة ═══════════
-// المشكلة التي تحلّها هذه البنية: صورةٌ تُولَّد توليدياً لا تلتزم بإحداثيات
-// دقيقة مهما طُلب منها، فترك النموذج يقرّر أين «يفرغ» مكاناً للنص يعني
-// تراكب نصٍّ فوق رسمة في بعض الشرائح حتماً. هنا الإحداثيات معروفةٌ للكود
-// سلفاً: النموذج النصّي يختار قالباً من هذه القائمة فحسب، ونموذج الصور
-// يُطالَب بترك تلك المنطقة بعينها فارغة، والواجهة تضع النص فوقها بالضبط.
-const DK_LAYOUTS={
-  // box: نسب مئوية [يمين، أعلى، عرض، ارتفاع] — «يمين» لأن الاتجاه RTL
-  'right-text':{box:[4,10,44,80],  empty:'النصف الأيمن من الصورة (٥٠٪ الأيمن) خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في النصف الأيسر'},
-  'left-text' :{box:[52,10,44,80], empty:'النصف الأيسر من الصورة (٥٠٪ الأيسر) خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في النصف الأيمن'},
-  'top-text'  :{box:[6,7,88,34],   empty:'الثلث العلوي من الصورة خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في الثلثين السفليين'},
-  'bottom-text':{box:[6,56,88,37], empty:'الثلث السفلي من الصورة خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في الثلثين العلويين'},
-};
-const DK_LAYOUT_IDS=Object.keys(DK_LAYOUTS);
+// ═══════════ العرض التقديمي — شريحة كاملة يرسمها نموذج الصور ═══════════
+// جُرّب نهجان: هجينٌ يرسم خلفيةً بمنطقةٍ محجوزة ويضع الواجهةُ النصَّ فوقها،
+// ونهجٌ يرسم فيه النموذج الشريحة كاملةً بنصّها. المقارنة على الشريحة نفسها
+// حسمت الأمر: الهجين يُخرج رسمةً بجانبها صندوق نص، بينما الكامل يُخرج
+// مخططاً تعليمياً يشرح المفهوم (أوعية متعددة، ميزان، أسهم رابطة) — أي أن
+// الصورة تُعلّم لا تُزيّن. الثمن أن صحة النص العربي لم تعد مضمونة كما كانت
+// في الهجين، فهي رهن النموذج؛ وهو ثمنٌ مقبول مقابل فارق القيمة التعليمية.
+// النموذج النصّي يبقى: هو من يقرأ الكتاب ويكتب محتوىً مطابقاً للمنهج.
 let deckSlides=[],deckAt=0,deckLessonId=null,deckBusy=false;
-
-function deckLayoutOf(s){return DK_LAYOUTS[s&&s.layout]||DK_LAYOUTS['right-text'];}
 
 function deckRenderPreview(){
   const card=document.getElementById('studio-deck-result-card');
@@ -8967,14 +8954,9 @@ function deckRenderPreview(){
     +`<span class="dk-t">${escHtml(s.title||'')}</span></div>`).join('')+'</div>';
 }
 
-// تركيب النص فوق الخلفية بنفس نسب القالب المستخدَم في توليدها
+// الشريحة صورةٌ كاملة بنصّها — لا طبقة نصٍّ فوقها
 function deckSlideHtml(s){
-  const L=deckLayoutOf(s),[r,t,w,h]=L.box;
-  const pts=(s.bullets||[]).map(b=>`<li>${escHtml(b)}</li>`).join('');
-  return `<div class="dk-canvas" style="background-image:url('${escAttr(s.img||'')}')">`
-    +`<div class="dk-txt" style="inset-inline-start:${r}%;inset-block-start:${t}%;width:${w}%;height:${h}%">`
-    +`<h3>${escHtml(s.title||'')}</h3>`+(pts?`<ul>${pts}</ul>`:'')
-    +`</div></div>`;
+  return `<div class="dk-canvas" style="background-image:url('${escAttr(s.img||'')}')"></div>`;
 }
 function deckPresent(i){
   if(!deckSlides.length){toast('ولّدي العرض أولاً',true);return;}
@@ -9006,7 +8988,7 @@ function deckClose(){
   if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
 }
 
-// ── التوليد: نداءٌ نصّي واحد يقرأ الدرس ويوزّع القوالب، ثم صورة لكل شريحة ──
+// ── التوليد: نداءٌ نصّي واحد يقرأ الدرس ويكتب محتواه، ثم شريحةٌ مرسومة لكلٍّ ──
 async function deckGenerate(){
   if(deckBusy){toast('التوليد جارٍ بالفعل',true);return;}
   const lessons=studioSelectedLessons();
@@ -9027,10 +9009,10 @@ async function deckGenerate(){
     // c1BookSummary بـnull فوراً فوُلِّد العرض بلا محتوى الكتاب أصلاً
     const lId=deckLessonId||c1LessonIdByName(studioGrade,subject,lesson.unit,lesson.name);
     const bookContext=await c1BookSummary(lId,studioGrade,subject,lesson.unit,lesson.name);
-    // (٢) النموذج النصّي: عناوين ونقاط + اختيار قالب تخطيط لكل شريحة
+    // (٢) النموذج النصّي: عناوين ونقاط مبنيّة على محتوى الكتاب الفعلي
     const _r=await sb.functions.invoke('generate-deck-plan',{
       body:{grade,subject,unit:lesson.unit||'',lesson:lesson.name,slideCount:count,
-            teacherPrompt,bookContext:bookContext||'',layouts:DK_LAYOUT_IDS}
+            teacherPrompt,bookContext:bookContext||''}
     });
     const{data,error}=_r;
     if(error||!data||!Array.isArray(data.slides)||!data.slides.length){
@@ -9051,10 +9033,9 @@ async function deckGenerate(){
   try{
     for(let i=0;i<plan.length;i++){
       const s=plan[i];
-      const layout=DK_LAYOUTS[s.layout]?s.layout:'right-text';
       cyBusyLight(`يرسم الشريحة ${egToArabic(i+1)} من ${egToArabic(plan.length)}…`);
-      const r=await deckOneImage(s,layout,grade,subject,i+1,plan.length);
-      if(r&&r.url){out.push({title:s.title||'',bullets:(s.bullets||[]).slice(0,4),layout,img:r.url});continue;}
+      const r=await deckOneImage(s,grade,subject,i+1,plan.length);
+      if(r&&r.url){out.push({title:s.title||'',bullets:(s.bullets||[]).slice(0,4),img:r.url});continue;}
       lastErr=(r&&r.err)||'fail';
       // نفاد الرصيد أو تعطيل المولّد لا يُصلحه إكمالُ الحلقة: كل شريحةٍ
       // تالية ستفشل بالسبب نفسه، فنتوقّف بدل إطالة الانتظار بلا طائل
@@ -9083,13 +9064,13 @@ async function deckGenerate(){
 
 // تُعيد {url} عند النجاح أو {err} بسببٍ مميَّز — لا null مبهماً: ابتلاع
 // السبب هنا جعل فشل رفعٍ بالتخزين يُعرَض على المعلّمة كأنه نفادُ رصيد
-async function deckOneImage(s,layout,grade,subject,no,total){
+async function deckOneImage(s,grade,subject,no,total){
   try{
+    // النموذج يرسم الشريحة كاملةً بعنوانها ونقاطها — لا طبقة نصٍّ بعدها
     const _r=await sb.functions.invoke('generate-slide-image',{
-      body:{grade,subject,title:s.title||'',bullets:[],slideNo:no,slideTotal:total,
+      body:{grade,subject,title:s.title||'',bullets:(s.bullets||[]).slice(0,4),
+            slideNo:no,slideTotal:total,
             kind:no===1?'cover':(no===total?'closing':'content'),
-            // المفتاح كله: المنطقة المحجوزة تُوصف للنموذج بنفس نسب القالب
-            reserveText:DK_LAYOUTS[layout].empty,
             imagePrompt:s.imagePrompt||''}
     });
     const{data,error}=_r;
