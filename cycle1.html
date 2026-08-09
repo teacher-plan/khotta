@@ -6582,7 +6582,10 @@ async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
       return{err:/quota_exceeded|no_credit|disabled/.test(reason)?('stop:'+reason):(reason||'fail')};
     }
     const blob=await c1CompressInfo(data.image);
-    const path=`c1-slides/${currentUser.id}/${id}-${idx}-${Date.now().toString(36)}.jpg`;
+    // بادئة c1-preps/<uid>/ حصراً: سياسات التخزين لا تسمح للمعلّمة إلا بها
+    // وبـc1-library/ وexams/. كانت البادئة c1-slides/ فكان كل رفعٍ يُرفض —
+    // فتُولَّد الصورة وتُخصم من الحصة ثم تُرمى، وهذا أحد سببَي فشل العروض دوماً.
+    const path=`c1-preps/${currentUser.id}/slide-${id}-${idx}-${Date.now().toString(36)}.jpg`;
     const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
     if(upErr)return{err:'upload'};
     return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
@@ -9037,21 +9040,32 @@ async function deckGenerate(){
 
   // (٣) الرسم شريحةً شريحة — تسليمٌ جزئيّ مقبول عمداً: كل صورةٍ نجحت
   // مدفوعةٌ من الحصة، فإلغاء العرض كلّه لأجل واحدةٍ فاشلة يُهدر ما دُفع
-  const out=[];
+  const out=[];let lastErr='';
   try{
     for(let i=0;i<plan.length;i++){
       const s=plan[i];
       const layout=DK_LAYOUTS[s.layout]?s.layout:'right-text';
       cyBusyLight(`يرسم الشريحة ${egToArabic(i+1)} من ${egToArabic(plan.length)}…`);
-      const img=await deckOneImage(s,layout,grade,subject,i+1,plan.length);
-      if(img)out.push({title:s.title||'',bullets:(s.bullets||[]).slice(0,4),layout,img});
+      const r=await deckOneImage(s,layout,grade,subject,i+1,plan.length);
+      if(r&&r.url){out.push({title:s.title||'',bullets:(s.bullets||[]).slice(0,4),layout,img:r.url});continue;}
+      lastErr=(r&&r.err)||'fail';
+      // نفاد الرصيد أو تعطيل المولّد لا يُصلحه إكمالُ الحلقة: كل شريحةٍ
+      // تالية ستفشل بالسبب نفسه، فنتوقّف بدل إطالة الانتظار بلا طائل
+      if(/quota_exceeded|no_credit|disabled/.test(lastErr))break;
     }
   }finally{
     deckBusy=false;cyBusyLightDone();
     if(btn){btn.disabled=false;btn.textContent='ولّدي العرض';}
   }
 
-  if(!out.length){toast('تعذّر رسم أي شريحة — تحقّقي من رصيد الصور وأعيدي المحاولة',true);return;}
+  if(!out.length){
+    // السبب يُقال كما هو: عرضُ فشلِ رفعٍ على أنه نفاد رصيد يُرسل المعلّمة
+    // لتنتظر تجديد حصةٍ لم تنفد أصلاً
+    toast(lastErr==='upload'
+      ? 'رُسمت الشرائح لكن تعذّر حفظ صورها — تحقّقي من الاتصال وأعيدي المحاولة'
+      : c1ErrMsg(lastErr,'تعذّر رسم الشرائح — أعيدي المحاولة بعد قليل.'),true);
+    return;
+  }
   deckSlides=out;deckAt=0;
   deckRenderPreview();
   qChip('studio-quota','img');
@@ -9060,6 +9074,8 @@ async function deckGenerate(){
     : 'جهز العرض التقديمي','ok');
 }
 
+// تُعيد {url} عند النجاح أو {err} بسببٍ مميَّز — لا null مبهماً: ابتلاع
+// السبب هنا جعل فشل رفعٍ بالتخزين يُعرَض على المعلّمة كأنه نفادُ رصيد
 async function deckOneImage(s,layout,grade,subject,no,total){
   try{
     const _r=await sb.functions.invoke('generate-slide-image',{
@@ -9070,13 +9086,14 @@ async function deckOneImage(s,layout,grade,subject,no,total){
             imagePrompt:s.imagePrompt||''}
     });
     const{data,error}=_r;
-    if(error||!data||!data.image)return null;
+    if(error||!data||!data.image)return{err:(await c1FnErr(_r))||'gen'};
     const blob=await c1CompressInfo(data.image);
-    const path=`c1-deck/${currentUser.id}/${Date.now().toString(36)}-${no}.jpg`;
+    // بادئة c1-preps/<uid>/ حصراً — لا تسمح سياسات التخزين بغيرها للمعلّمة
+    const path=`c1-preps/${currentUser.id}/deck-${Date.now().toString(36)}-${no}.jpg`;
     const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
-    if(upErr)return null;
-    return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
-  }catch(e){return null;}
+    if(upErr){console.error('فشل رفع شريحة العرض:',upErr.message||upErr);return{err:'upload'};}
+    return{url:sb.storage.from('library-files').getPublicUrl(path).data.publicUrl};
+  }catch(e){console.error('فشل رسم شريحة العرض:',e);return{err:'fail'};}
 }
 
 async function deckSaveToLesson(){
