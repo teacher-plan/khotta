@@ -1925,6 +1925,28 @@ body:has(#page-fahim.active){overflow:hidden}
 .eg-export,.eg-regen{flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;min-height:44px}
 .eg-export{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border:none}
 
+/* ── العرض التقديمي الهجين (dk-*) ──
+   النص يُركَّب فوق الخلفية بنسبٍ مئوية مطابقة تماماً للمنطقة التي طُلب من
+   نموذج الصور تركها فارغة، فيتطابق الموضعان بلا اجتهادٍ من النموذج. */
+.dk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:4px}
+.dk-thumb{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--card);cursor:pointer}
+.dk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.dk-thumb .dk-n{position:absolute;inset-block-start:6px;inset-inline-start:6px;background:rgba(0,0,0,.62);color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
+.dk-thumb .dk-t{position:absolute;inset-inline:0;inset-block-end:0;background:linear-gradient(transparent,rgba(0,0,0,.78));color:#fff;font-size:11.5px;font-weight:700;padding:14px 8px 6px;line-height:1.5}
+/* مسرح العرض ملء الشاشة */
+#dk-stage{position:fixed;inset:0;z-index:960;background:#100c14;display:none}
+#dk-stage.on{display:block}
+#dk-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#dk-slide .dk-canvas{position:relative;width:min(100%,calc(100vh * 16 / 9));aspect-ratio:16/9;background:#fff center/cover no-repeat}
+.dk-txt{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:.6em;padding:1.6% 2%}
+.dk-txt h3{font-size:clamp(17px,3.1vw,40px);font-weight:800;color:#26170c;line-height:1.45;margin:0}
+.dk-txt ul{margin:0;padding-inline-start:1.05em;display:flex;flex-direction:column;gap:.45em}
+.dk-txt li{font-size:clamp(12px,1.85vw,23px);font-weight:600;color:#3a2a1c;line-height:1.65}
+#dk-nav{position:absolute;inset-block-end:14px;inset-inline:0;display:flex;justify-content:center;align-items:center;gap:14px;z-index:2}
+#dk-nav button{background:rgba(255,255,255,.93);border:none;border-radius:11px;padding:9px 17px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:44px;color:#26170c}
+#dk-nav .dk-pos{color:#fff;font-weight:800;font-size:13px;min-width:56px;text-align:center}
+#dk-x{position:absolute;inset-block-start:12px;inset-inline-end:12px;z-index:3;background:rgba(255,255,255,.93);border:none;border-radius:50%;width:40px;height:40px;font-size:19px;cursor:pointer;color:#26170c}
+
 /* ── محرك الألعاب (gm-*) — منقول حرفياً ── */
 @keyframes gmShake{25%{transform:translateX(5px)}75%{transform:translateX(-5px)}}
 @keyframes gmPop{0%{transform:scale(.5)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
@@ -2514,6 +2536,10 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 12h10l-3.2-4.2-2.3 2.9L9.8 12 7 16z"/></svg></span>
       <span class="eg-mode-lbl">إنفوجرافيك</span><span class="eg-mode-sub">صورة تعليمية مرسومة بالكامل</span>
     </button>
+    <button type="button" class="eg-mode-btn" data-mode="deck" onclick="studioSetMode('deck')">
+      <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M3 3h18a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-7.6l3.3 3.9-1.5 1.3L12 17.6l-3.2 3.6-1.5-1.3L10.6 16H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 3v7h14V6H5z"/></svg></span>
+      <span class="eg-mode-lbl">عرض تقديمي</span><span class="eg-mode-sub">شرائح مرسومة بنصٍّ فوقها</span>
+    </button>
   </div>
 
   <div class="eg-card" id="studio-game-options-card">
@@ -2601,7 +2627,50 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     </div>
   </div>
 
+  <!-- ═══ العرض التقديمي الهجين ═══
+       النموذج النصّي يختار قالب تخطيط من قائمة ثابتة معروفة الإحداثيات،
+       ونانو بنانا يرسم داخل حدودها تاركاً منطقة النص فارغة. الكود — لا
+       النموذج — هو من يضع النص فوق الإحداثيات، فلا يقع تراكبٌ أبداً. -->
+  <div class="eg-card hidden" id="studio-deck-options-card">
+    <div class="eg-step-title">توليد العرض التقديمي</div>
+    <div class="eg-pick-row">
+      <div style="flex:1;min-width:150px">
+        <label class="eg-lbl" for="deck-count">عدد الشرائح</label>
+        <select id="deck-count" class="c1-select">
+          <option value="4">٤ شرائح</option>
+          <option value="6" selected>٦ شرائح</option>
+          <option value="8">٨ شرائح</option>
+        </select>
+      </div>
+    </div>
+    <label class="eg-lbl" for="deck-prompt">توجيه إضافي (اختياري)</label>
+    <textarea id="deck-prompt" class="c1-select" rows="2" style="resize:vertical;font-family:inherit" placeholder="مثلاً: ركّزي على الأمثلة العملية من بيئة الطالب"></textarea>
+    <div class="eg-hint">تُقرأ صفحات الدرس مرّةً واحدة، ثم تُرسم كل شريحة بخلفيةٍ تعليمية يُكتب النص فوقها بمكانٍ محجوزٍ سلفاً. كل شريحة تُحسب صورةً من حصتك الشهرية.</div>
+    <button class="eg-generate" onclick="deckGenerate()">ولّدي العرض</button>
+  </div>
+
+  <div class="eg-card hidden" id="studio-deck-result-card">
+    <div class="eg-step-title">العرض المُولّد</div>
+    <div id="deck-preview"></div>
+    <div class="eg-result-actions">
+      <button class="eg-export" onclick="deckPresent()">اعرضيه ملء الشاشة</button>
+      <button class="eg-regen" onclick="deckSaveToLesson()">حفظ في بطاقة الدرس</button>
+      <button class="eg-regen" onclick="deckGenerate()">إعادة التوليد</button>
+    </div>
+  </div>
+
 </div></div>
+
+<!-- مسرح العرض التقديمي (ملء الشاشة) -->
+<div id="dk-stage">
+  <button id="dk-x" onclick="deckClose()" aria-label="إغلاق">✕</button>
+  <div id="dk-slide"></div>
+  <div id="dk-nav">
+    <button onclick="deckGo(-1)">السابقة</button>
+    <span class="dk-pos" id="dk-pos"></span>
+    <button onclick="deckGo(1)">التالية</button>
+  </div>
+</div>
 
 <!-- ساحة اللعب (ملء الشاشة) -->
 <div id="gm-stage-bg" style="display:none">
@@ -5522,25 +5591,33 @@ async function c1AssetsLoad(){
   _c1AssetsLoading=(async()=>{
     c1Assets={};
     try{
-      const{data}=await sb.from('c1_lesson_assets').select('lesson_id,slides,book_summary').eq('user_id',currentUser.id);
+      const{data,error}=await sb.from('c1_lesson_assets').select('lesson_id,slides,book_summary').eq('user_id',currentUser.id);
+      // supabase-js لا يرمي استثناءً عند فشل الاستعلام بل يُعيد {data:null,error}،
+      // فـcatch وحده لا يكشف شيئاً. تجاهُل error هنا أخفى شهوراً أن جدول الأصول
+      // غير موجود أصلاً: العروض تُولَّد (بحصة ست صور) ثم تُفقد بلا أثر ولا رسالة.
+      if(error)console.error('c1_lesson_assets تعذّرت قراءته:',error.message||error);
       (data||[]).forEach(r=>{c1Assets[r.lesson_id]={slides:r.slides||null,book_summary:r.book_summary||null};});
-    }catch(e){}
+    }catch(e){console.error('c1_lesson_assets تعذّرت قراءته:',e);}
     c1MigrateHeavyState();
     return c1Assets;
   })();
   return _c1AssetsLoading;
 }
 function c1Asset(id){return (c1Assets&&c1Assets[id])||{};}
+// تُعيد true عند نجاح الحفظ فعلياً — المستدعي يحتاج أن يعرف، فالفشل هنا
+// يعني ضياع عملٍ كلّف المعلمة من حصتها
 async function c1AssetSet(id,partial){
   await c1AssetsLoad();
   const next={...(c1Assets[id]||{}),...partial};
   c1Assets[id]=next;
   try{
-    await sb.from('c1_lesson_assets').upsert(
+    const{error}=await sb.from('c1_lesson_assets').upsert(
       {user_id:currentUser.id,lesson_id:id,slides:next.slides||null,book_summary:next.book_summary||null,updated_at:new Date().toISOString()},
       {onConflict:'user_id,lesson_id'}
     );
-  }catch(e){}
+    if(error){console.error('c1_lesson_assets تعذّر حفظه:',error.message||error);return false;}
+    return true;
+  }catch(e){console.error('c1_lesson_assets تعذّر حفظه:',e);return false;}
 }
 // ترحيل صامت لمرة واحدة: نقل ما خُزّن سابقاً داخل ملف المعلمة إلى الجدول الجديد
 async function c1MigrateHeavyState(){
@@ -5880,6 +5957,10 @@ function slSlideHtml(slide,i,uid){
 // العروض المولَّدة قبل هذا التحديث نصّية تفاعلية ولا تزال محفوظة عند المعلّمات،
 // فنُبقي عارضها العامل بدل أن نُبطلها عليهنّ.
 function slOpenWith(slidesData,title,subject){
+  // v3: العرض الهجين — خلفيةٌ مرسومة بمنطقةٍ محجوزة ونصٌّ يُركَّب فوقها
+  if(slidesData&&slidesData.v===3&&Array.isArray(slidesData.slides)&&slidesData.slides.length){
+    deckSlides=slidesData.slides;deckAt=0;deckPresent(0);return;
+  }
   if(slidesData&&slidesData.v===2)return sl2Open(slidesData,title);
   const slides=(slidesData&&slidesData.slides)||[];
   if(!slides.length){toast('لا يوجد عرض بعد',true);return;}
@@ -6202,16 +6283,13 @@ async function planSlidesBtn(id){
   if(existing){slOpenWith(existing,(planFindLesson(id)||{}).name,planSubject);return;}
   const l=planFindLesson(id);if(!l)return;
   if(sl2Jobs[id]){toast('العرض يُجهَّز الآن — سنُعلمكِ حالما يكتمل');return;}
-  // نتحقّق من الرصيد قبل البدء: بدء عرضٍ برصيدٍ لا يكفيه ينفق ما تبقّى على
-  // شرائح ناقصة ثم يفشل — وهو ما استهلك حصّة الصور كاملةً في جلسة واحدة.
-  const left=await sl2ImgsLeft();
-  if(left!=null&&left<SL2_IMGS){
-    toast(left>0
-      ? `رصيد الصور المتبقّي ${slArNum(left)} والعرض يحتاج ${slArNum(SL2_IMGS)} — يتجدّد مطلع الشهر`
-      : 'نفد رصيد الصور الشهري — يتجدّد مطلع الشهر القادم',true);
-    return;
-  }
-  sl2Start(id,planGrade,planSubject,l.unit,l.name);
+  // بدل توليدٍ خلفيٍّ فوريّ من البطاقة، ننقل إلى قسم العروض بالاستوديو والصف
+  // والمادة والدرس محدّدةٌ سلفاً — نفس نمط زرّ «إنشاء لعبة»: المعلّمة ترى ما
+  // ستدفع مقابله وتختار عدد الشرائح قبل أن تبدأ
+  deckLessonId=id;todayAttachLessonId=id;
+  deckSlides=[];deckAt=0;
+  deckRenderPreview();
+  await studioJumpTo(planGrade,planSubject,l.name,'deck');
 }
 // ═ التجهيز في الخلفية ═
 // كان التوليد يحجب الشاشة دقيقتين فتقف المعلّمة عاجزةً عن أي عمل، وأيّ تعثّر
@@ -6299,7 +6377,14 @@ function sl2Start(id,grade,subject,unitName,lessonName){
         toast(sl2ResumeMsg(id),true);return;}
       if(!built){delete sl2Jobs[id];sl2Chip();
         toast(sl2ResumeMsg(id),true);return;}
-      await c1AssetSet(id,built);
+      // الحفظ آخر خطوة وأخطرها: ستّ صور مدفوعة من حصة المعلمة تضيع كلها إن
+      // فشل، فلا يجوز أن يمرّ صامتاً ولا أن يُعلَن نجاحٌ لم يقع
+      const saved=await c1AssetSet(id,built);
+      if(!saved){
+        delete sl2Jobs[id];sl2Chip();
+        toast('جهزت الشرائح لكن تعذّر حفظها — تحقّقي من الاتصال ثم أعيدي المحاولة',true);
+        return;
+      }
       shPublishSlides(id,grade,subject,built.slides);
       delete sl2Jobs[id];sl2Chip();
       planRenderUnits();
@@ -8830,12 +8915,187 @@ function studioSetMode(m){
   document.getElementById('studio-game-result-card').classList.toggle('hidden',m!=='game'||!gmItems.length);
   document.getElementById('studio-info-options-card').classList.toggle('hidden',m!=='info');
   document.getElementById('eg-info-result-card').classList.toggle('hidden',m!=='info'||!infoImage);
+  document.getElementById('studio-deck-options-card').classList.toggle('hidden',m!=='deck');
+  document.getElementById('studio-deck-result-card').classList.toggle('hidden',m!=='deck'||!deckSlides.length);
+  if(m==='deck')qChip('studio-quota','img');
 }
-async function studioJumpTo(grade,subject,lessonName){
+// mode اختياري: زرّ العرض في بطاقة الدرس ينقل إلى نمط العروض لا الألعاب
+async function studioJumpTo(grade,subject,lessonName,mode){
   studioGrade=grade;studioSubject=subject;studioLessonName=lessonName;
   c1Go('studio');
   await studioRenderLessons();
-  studioSetMode('game');
+  studioSetMode(mode||'game');
+}
+
+// ═══════════ العرض التقديمي الهجين — قوالب تخطيط ثابتة ═══════════
+// المشكلة التي تحلّها هذه البنية: صورةٌ تُولَّد توليدياً لا تلتزم بإحداثيات
+// دقيقة مهما طُلب منها، فترك النموذج يقرّر أين «يفرغ» مكاناً للنص يعني
+// تراكب نصٍّ فوق رسمة في بعض الشرائح حتماً. هنا الإحداثيات معروفةٌ للكود
+// سلفاً: النموذج النصّي يختار قالباً من هذه القائمة فحسب، ونموذج الصور
+// يُطالَب بترك تلك المنطقة بعينها فارغة، والواجهة تضع النص فوقها بالضبط.
+const DK_LAYOUTS={
+  // box: نسب مئوية [يمين، أعلى، عرض، ارتفاع] — «يمين» لأن الاتجاه RTL
+  'right-text':{box:[4,10,44,80],  empty:'النصف الأيمن من الصورة (٥٠٪ الأيمن) خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في النصف الأيسر'},
+  'left-text' :{box:[52,10,44,80], empty:'النصف الأيسر من الصورة (٥٠٪ الأيسر) خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في النصف الأيمن'},
+  'top-text'  :{box:[6,7,88,34],   empty:'الثلث العلوي من الصورة خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في الثلثين السفليين'},
+  'bottom-text':{box:[6,56,88,37], empty:'الثلث السفلي من الصورة خلفيةٌ لونية هادئة فارغة تماماً بلا أي رسم أو خط أو تفصيل، والرسم كله في الثلثين العلويين'},
+};
+const DK_LAYOUT_IDS=Object.keys(DK_LAYOUTS);
+let deckSlides=[],deckAt=0,deckLessonId=null,deckBusy=false;
+
+function deckLayoutOf(s){return DK_LAYOUTS[s&&s.layout]||DK_LAYOUTS['right-text'];}
+
+function deckRenderPreview(){
+  const card=document.getElementById('studio-deck-result-card');
+  const box=document.getElementById('deck-preview');
+  if(!deckSlides.length){card.classList.add('hidden');box.innerHTML='';return;}
+  card.classList.remove('hidden');
+  box.innerHTML='<div class="dk-grid">'+deckSlides.map((s,i)=>
+    `<div class="dk-thumb" onclick="deckPresent(${i})" role="button" tabindex="0">`
+    +(s.img?`<img src="${escAttr(s.img)}" alt="">`:'')
+    +`<span class="dk-n">${egToArabic(i+1)}</span>`
+    +`<span class="dk-t">${escHtml(s.title||'')}</span></div>`).join('')+'</div>';
+}
+
+// تركيب النص فوق الخلفية بنفس نسب القالب المستخدَم في توليدها
+function deckSlideHtml(s){
+  const L=deckLayoutOf(s),[r,t,w,h]=L.box;
+  const pts=(s.bullets||[]).map(b=>`<li>${escHtml(b)}</li>`).join('');
+  return `<div class="dk-canvas" style="background-image:url('${escAttr(s.img||'')}')">`
+    +`<div class="dk-txt" style="inset-inline-start:${r}%;inset-block-start:${t}%;width:${w}%;height:${h}%">`
+    +`<h3>${escHtml(s.title||'')}</h3>`+(pts?`<ul>${pts}</ul>`:'')
+    +`</div></div>`;
+}
+function deckPresent(i){
+  if(!deckSlides.length){toast('ولّدي العرض أولاً',true);return;}
+  deckAt=Math.min(Math.max(0,i|0),deckSlides.length-1);
+  document.getElementById('dk-stage').classList.add('on');
+  document.body.style.overflow='hidden';
+  deckPaint();
+  document.addEventListener('keydown',deckKey);
+}
+function deckPaint(){
+  document.getElementById('dk-slide').innerHTML=deckSlideHtml(deckSlides[deckAt]);
+  document.getElementById('dk-pos').textContent=egToArabic(deckAt+1)+' / '+egToArabic(deckSlides.length);
+}
+function deckGo(d){
+  const n=deckAt+d;
+  if(n<0||n>=deckSlides.length)return;
+  deckAt=n;deckPaint();
+}
+function deckKey(e){
+  if(e.key==='Escape')deckClose();
+  // في RTL يقدّم السهم الأيسر ويؤخّر الأيمن — الاتجاه البصري لا المنطقي
+  else if(e.key==='ArrowLeft')deckGo(1);
+  else if(e.key==='ArrowRight')deckGo(-1);
+}
+function deckClose(){
+  document.getElementById('dk-stage').classList.remove('on');
+  document.body.style.overflow='';
+  document.removeEventListener('keydown',deckKey);
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+}
+
+// ── التوليد: نداءٌ نصّي واحد يقرأ الدرس ويوزّع القوالب، ثم صورة لكل شريحة ──
+async function deckGenerate(){
+  if(deckBusy){toast('التوليد جارٍ بالفعل',true);return;}
+  const lessons=studioSelectedLessons();
+  if(!lessons.length){toast('اختاري درساً أولاً',true);return;}
+  const grade=String(studioGrade||''),subject=studioSubject||'';
+  const lesson=lessons[0];
+  const count=parseInt(document.getElementById('deck-count').value)||6;
+  const teacherPrompt=(document.getElementById('deck-prompt')?.value||'').trim();
+  const btn=document.querySelector('#studio-deck-options-card .eg-generate');
+
+  deckBusy=true;
+  if(btn){btn.disabled=true;btn.textContent='⏳ يجري التوليد...';}
+  cyBusyLight('يقرأ الدرس ويكتب الشرائح…');
+  let plan=null;
+  try{
+    // (١) قراءة الدرس مرّة واحدة — يُعاد استخدام الملخص المحفوظ إن وُجد
+    const bookContext=await c1BookSummary(deckLessonId||'',studioGrade,subject,lesson.unit,lesson.name);
+    // (٢) النموذج النصّي: عناوين ونقاط + اختيار قالب تخطيط لكل شريحة
+    const _r=await sb.functions.invoke('generate-deck-plan',{
+      body:{grade,subject,unit:lesson.unit||'',lesson:lesson.name,slideCount:count,
+            teacherPrompt,bookContext:bookContext||'',layouts:DK_LAYOUT_IDS}
+    });
+    const{data,error}=_r;
+    if(error||!data||!Array.isArray(data.slides)||!data.slides.length){
+      const reason=await c1FnErr(_r);
+      toast(c1ErrMsg(reason,'تعذّر تجهيز محتوى العرض — أعيدي المحاولة.'),true);
+      return;
+    }
+    plan=data.slides.slice(0,count);
+  }catch(e){
+    toast('تعذّر تجهيز محتوى العرض',true);return;
+  }finally{
+    if(!plan){deckBusy=false;cyBusyLightDone();if(btn){btn.disabled=false;btn.textContent='ولّدي العرض';}}
+  }
+
+  // (٣) الرسم شريحةً شريحة — تسليمٌ جزئيّ مقبول عمداً: كل صورةٍ نجحت
+  // مدفوعةٌ من الحصة، فإلغاء العرض كلّه لأجل واحدةٍ فاشلة يُهدر ما دُفع
+  const out=[];
+  try{
+    for(let i=0;i<plan.length;i++){
+      const s=plan[i];
+      const layout=DK_LAYOUTS[s.layout]?s.layout:'right-text';
+      cyBusyLight(`يرسم الشريحة ${egToArabic(i+1)} من ${egToArabic(plan.length)}…`);
+      const img=await deckOneImage(s,layout,grade,subject,i+1,plan.length);
+      if(img)out.push({title:s.title||'',bullets:(s.bullets||[]).slice(0,4),layout,img});
+    }
+  }finally{
+    deckBusy=false;cyBusyLightDone();
+    if(btn){btn.disabled=false;btn.textContent='ولّدي العرض';}
+  }
+
+  if(!out.length){toast('تعذّر رسم أي شريحة — تحقّقي من رصيد الصور وأعيدي المحاولة',true);return;}
+  deckSlides=out;deckAt=0;
+  deckRenderPreview();
+  qChip('studio-quota','img');
+  toast(out.length<plan.length
+    ? `جهزت ${egToArabic(out.length)} من ${egToArabic(plan.length)} شرائح — أعيدي التوليد لإكمال الباقي`
+    : 'جهز العرض التقديمي','ok');
+}
+
+async function deckOneImage(s,layout,grade,subject,no,total){
+  try{
+    const _r=await sb.functions.invoke('generate-slide-image',{
+      body:{grade,subject,title:s.title||'',bullets:[],slideNo:no,slideTotal:total,
+            kind:no===1?'cover':(no===total?'closing':'content'),
+            // المفتاح كله: المنطقة المحجوزة تُوصف للنموذج بنفس نسب القالب
+            reserveText:DK_LAYOUTS[layout].empty,
+            imagePrompt:s.imagePrompt||''}
+    });
+    const{data,error}=_r;
+    if(error||!data||!data.image)return null;
+    const blob=await c1CompressInfo(data.image);
+    const path=`c1-deck/${currentUser.id}/${Date.now().toString(36)}-${no}.jpg`;
+    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
+    if(upErr)return null;
+    return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
+  }catch(e){return null;}
+}
+
+async function deckSaveToLesson(){
+  if(!deckSlides.length){toast('ولّدي العرض أولاً',true);return;}
+  const id=deckLessonId||todayAttachLessonId||deckFindLessonId();
+  if(!id){toast('افتحي العرض من بطاقة الدرس ليُحفظ فيها',true);return;}
+  cyBusyLight('يحفظ العرض…');
+  const payload={v:3,lesson:studioLessonName||'',subject:studioSubject||'',slides:deckSlides};
+  const ok=await c1AssetSet(id,{slides:payload});
+  cyBusyLightDone();
+  if(!ok){toast('تعذّر حفظ العرض — تحقّقي من الاتصال وأعيدي المحاولة',true);return;}
+  try{shPublishSlides(id,studioGrade,studioSubject,payload);}catch(e){}
+  try{await planSetState(id,{slides:true,slides_at:new Date().toISOString()});planRenderUnits();}catch(e){}
+  toast('حُفظ العرض في بطاقة الدرس','ok');
+}
+// استنتاج معرّف الدرس من الخطة حين لم تصل المعلمة من بطاقةٍ بعينها
+function deckFindLessonId(){
+  try{
+    const units=(profile.plan_units||{})[planKey(studioGrade,studioSubject)]||[];
+    for(const u of units)for(const l of (u.lessons||[]))if(l.name===studioLessonName)return l.id;
+  }catch(e){}
+  return null;
 }
 
 // ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل ══
