@@ -3848,7 +3848,7 @@ function acctRenderRoster(){
   if(!acctCls||!cls.some(c=>c.id===acctCls))acctCls=cls[0].id;
   tabs.innerHTML=cls.map(c=>{
     const n=(acctRoster[c.id]||[]).length;
-    return `<button type="button" class="su-gt ${c.id===acctCls?'on':''}" onclick="acctTab('${escHtml(c.id)}')">${escHtml(c.name||'')}${n?`<span class="ok">${n}</span>`:''}</button>`;
+    return `<button type="button" class="su-gt ${c.id===acctCls?'on':''}" onclick="acctTab('${escJs(c.id)}')">${escHtml(c.name||'')}${n?`<span class="ok">${n}</span>`:''}</button>`;
   }).join('');
   const list=acctRoster[acctCls]||[];
   box.innerHTML=(list.length?list.map((s,i)=>
@@ -4264,7 +4264,7 @@ async function ywRenderNowCard(){
     <div class="rail-bar"><i style="width:${pct}%"></i></div>
     <div class="rail-now-btns">
       <button class="solid" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">ابدئي الحصة</button>
-      <button onclick="prepOpen('${st.v.c}','${escHtml(st.v.s)}')">تحضير الحصة</button>
+      <button onclick="prepOpen('${escJs(st.v.c)}','${escJs(st.v.s)}')">تحضير الحصة</button>
     </div>
   </div>`;
 }
@@ -6300,7 +6300,7 @@ function sl2Chip(){
   el.innerHTML=`<span class="sp"></span><span>${escHtml(j.step)} — ${escHtml(j.lesson)}${more}</span>`
     +(j.total?`<b>${slArNum(j.done)}/${slArNum(j.total)}</b>`:'')
     +(mins?`<b class="mn">${slArNum(mins)}د</b>`:'')
-    +`<button class="cx" onclick="sl2Cancel('${escHtml(id)}')" title="إلغاء">&times;</button>`;
+    +`<button class="cx" onclick="sl2Cancel('${escJs(id)}')" title="إلغاء">&times;</button>`;
   clearTimeout(sl2ChipTick);
   sl2ChipTick=setTimeout(sl2Chip,20000);
 }
@@ -6473,11 +6473,6 @@ async function sl2OneImage(id,grade,subject,lessonName,slide,idx,bookContext){
     if(upErr)return{err:'upload'};
     return sb.storage.from('library-files').getPublicUrl(path).data.publicUrl;
   }catch(e){return{err:'fail'};}
-}
-function shPublishSlides(lessonId,grade,subject,content){
-  const units=(profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[];
-  for(const u of units)for(const l of u.lessons)if(l.id===lessonId)
-    return shAutoPublish({kind:'slides',lessonId,grade,subject,unit:u.name,lesson:l.name,content});
 }
 
 // زر اللعبة: تشغيل مباشر إن كانت جاهزة، وإلا انتقال للاستوديو بالدرس محدداً
@@ -9121,7 +9116,7 @@ function gmRenderThemeGrid(){
   if(!grid||!sel)return;
   const forced=gmForcedTheme(gmTpl);
   const cur=sel.value;
-  const card=(id,name,bg)=>`<button type="button" class="gm-theme-card ${cur===id?'on':''} ${forced&&forced.id!==id?'locked':''}" data-id="${escHtml(id)}" onclick="gmGridPick('${escHtml(id)}')">
+  const card=(id,name,bg)=>`<button type="button" class="gm-theme-card ${cur===id?'on':''} ${forced&&forced.id!==id?'locked':''}" data-id="${escAttr(id)}" onclick="gmGridPick('${escJs(id)}')">
     <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div>
     <div class="nm">${escHtml(name)}</div></button>`;
   grid.innerHTML=gmThemes.map(t=>card(t.id,t.name,t.bg_url)).join('');
