@@ -117,13 +117,14 @@ async function checkDatabaseHealth(sb: any): Promise<HealthCheckResult[]> {
       });
     }
 
-    // التحقق من حجم التخزين
-    const { data: stats } = await sb.rpc("database_size");
-    if (stats && stats.database_size_mb > 4500) {
+    // التحقق من حجم التخزين — دالة RPC تُرجع مصفوفة صف واحد
+    const { data: statsRows } = await sb.rpc("database_size");
+    const sizeMb = statsRows?.[0]?.database_size_mb;
+    if (sizeMb != null && sizeMb > 4500) {
       results.push({
         component: "database:storage",
         status: "warning",
-        error: `Storage: ${stats.database_size_mb}MB / 5000MB`,
+        error: `Storage: ${sizeMb}MB / 5000MB`,
         severity: 2,
       });
     } else {

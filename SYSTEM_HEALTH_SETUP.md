@@ -54,13 +54,23 @@ supabase functions deploy file-processor-monitor
 ### الخطوة 3: جدولة المهام
 
 ```sql
+-- يتطلب pg_cron و pg_net (اطلبيهما مفعّلين من Database → Extensions)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
 -- فحص الصحة كل 5 دقائق
-SELECT cron.schedule('system-health-5min', '*/5 * * * *', 
-  'SELECT http_post(''https://YOUR_PROJECT.supabase.co/functions/v1/system-health-check'')');
+SELECT cron.schedule('system-health-5min', '*/5 * * * *',
+  $$SELECT net.http_post(
+      url:='https://YOUR_PROJECT.supabase.co/functions/v1/system-health-check',
+      headers:='{"Authorization":"Bearer YOUR_ANON_KEY","Content-Type":"application/json"}'::jsonb
+    )$$);
 
 -- مراقبة الملفات كل ساعة
-SELECT cron.schedule('file-monitor-hourly', '0 * * * *', 
-  'SELECT http_post(''https://YOUR_PROJECT.supabase.co/functions/v1/file-processor-monitor'')');
+SELECT cron.schedule('file-monitor-hourly', '0 * * * *',
+  $$SELECT net.http_post(
+      url:='https://YOUR_PROJECT.supabase.co/functions/v1/file-processor-monitor',
+      headers:='{"Authorization":"Bearer YOUR_ANON_KEY","Content-Type":"application/json"}'::jsonb
+    )$$);
 ```
 
 ### الخطوة 4: اختبار

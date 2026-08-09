@@ -35,22 +35,32 @@ supabase db push
 ```bash
 supabase functions deploy daily-summary
 supabase functions deploy credit-monitor
+supabase functions deploy telegram-webhook
+```
+
+بعد نشر `telegram-webhook`، اربطيه بالبوت (مرة واحدة فقط):
+```bash
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  -d "url=https://YOUR_PROJECT_ID.supabase.co/functions/v1/telegram-webhook"
 ```
 
 ## ٤. جدولة المهام (Cron)
 
-قم بتشغيل هذا SQL في PostgreSQL:
+قم بتشغيل هذا SQL في SQL Editor بلوحة Supabase (يتطلب تفعيل `pg_cron` و`pg_net` من Database → Extensions):
 
 ```sql
--- تفعيل extension pg_cron
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
--- جدولة الملخص اليومي الساعة 5 مساءً (17:00)
-SELECT cron.schedule('daily-summary-5pm', '0 17 * * *', 
-  'SELECT http_post(''https://YOUR_PROJECT_ID.supabase.co/functions/v1/daily-summary'')');
-
--- أو استخدم Cloud Tasks (Google Cloud) إذا كنت تفضل
+-- جدولة الملخص اليومي الساعة 5 مساءً (17:00 بتوقيت UTC — عدّلي حسب فرق التوقيت)
+SELECT cron.schedule('daily-summary-5pm', '0 17 * * *',
+  $$SELECT net.http_post(
+      url:='https://YOUR_PROJECT_ID.supabase.co/functions/v1/daily-summary',
+      headers:='{"Authorization":"Bearer YOUR_ANON_KEY","Content-Type":"application/json"}'::jsonb
+    )$$);
 ```
+
+⚠️ ملاحظة: جدولة `pg_cron` تعمل بتوقيت UTC وليس توقيت الرياض. الساعة 5 مساءً بتوقيت الرياض (UTC+3) تعني `0 14 * * *` في تعبير cron.
 
 ## ٥. اختبار يدوي
 
