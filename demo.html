@@ -3354,8 +3354,11 @@ async function storeDriveRefreshToken(session){
   try{
     const rt=session&&session.provider_refresh_token;
     if(!rt||!currentUser)return;
-    await sb.from('drive_tokens').upsert({user_id:currentUser.id,refresh_token:rt,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-  }catch(e){}
+    // الفشل هنا لا يُعطّل الجلسة (الرمز يبقى صالحاً حتى انتهائها)، لكنه
+    // يعني انقطاع ربط Drive عند الدخول القادم بلا سببٍ ظاهر — يُسجَّل ليُرى
+    const{error}=await sb.from('drive_tokens').upsert({user_id:currentUser.id,refresh_token:rt,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+    if(error)console.error('تعذّر حفظ رمز Drive:',error.message||error);
+  }catch(e){console.error('تعذّر حفظ رمز Drive:',e);}
 }
 async function getFreshDriveToken(){
   try{
@@ -3625,7 +3628,10 @@ async function c1ResetData(){
   if(!await c1Confirm('تأكيد أخير — الحذف نهائي ولا يمكن التراجع عنه. متابعة؟'))return;
   cyBusy('يحذف بياناتك');
   try{
-    await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
+    // إعلانُ حذفٍ لم يقع أسوأ من الفشل نفسه: المعلّمة تمضي ظانّةً أن حسابها
+    // نظيف، ثم تجد بياناتها كما هي عند الدخول القادم
+    const{error}=await sb.from('cycle1_profiles').upsert({id:currentUser.id,email:currentUser.email||'',data:{},updated_at:new Date().toISOString()});
+    if(error)throw error;
     c1CacheClear();
     cyBusyDone();
     toast('حُذفت بياناتك — نبدأ من جديد');
@@ -9762,7 +9768,13 @@ async function gmOpenSaved(id){
 }
 async function gmDeleteSaved(id,btn){
   if(!(await uiConfirm('حذف اللعبة؟')))return;
-  try{await sb.from('games').delete().eq('id',id);btn.closest('.gm-row').remove();}catch(e){toast('تعذّر الحذف',true);}
+  // فحص error لازم: supabase-js لا يرمي عند فشل الاستعلام، فكان الصف
+  // يُزال من الشاشة وقد يبقى في القاعدة — فيعود عند إعادة التحميل
+  try{
+    const{error}=await sb.from('games').delete().eq('id',id);
+    if(error)throw error;
+    btn.closest('.gm-row').remove();
+  }catch(e){toast('تعذّر الحذف — تحقّقي من الاتصال',true);}
 }
 function gmPlay(){
   const items=gmReadEditor(false);
@@ -10989,7 +11001,8 @@ async function fhOpenChat(id){
 async function fhDelChat(id){
   if(!confirm('حذف هذه المحادثة نهائياً؟'))return;
   try{
-    await sb.from('ai_chats').delete().eq('id',id);
+    const{error}=await sb.from('ai_chats').delete().eq('id',id);
+    if(error)throw error;
     if(fhChatId===id)fhNewChat();
     fhHistory();toast('حُذفت المحادثة','ok');
   }catch(e){toast('تعذّر الحذف',true);}
@@ -11000,7 +11013,8 @@ async function fhDelAllChats(){
     if(!data||!data.length){toast('لا توجد محادثات محفوظة',true);return;}
     if(!confirm('حذف كل المحادثات المحفوظة ('+egArNum(data.length)+') نهائياً؟'))return;
     // ترشيحٌ صريح بالمعرّفات: حذفٌ بلا شرطٍ يرفضه سوبابيز حمايةً من المحو الشامل
-    await sb.from('ai_chats').delete().in('id',data.map(c=>c.id));
+    const{error:delErr}=await sb.from('ai_chats').delete().in('id',data.map(c=>c.id));
+    if(delErr)throw delErr;
     fhNewChat();fhHistory();toast('حُذفت كل المحادثات','ok');
   }catch(e){toast('تعذّر الحذف',true);}
 }
@@ -11855,9 +11869,10 @@ async function commSend(){
 }
 async function commDelete(id){
   try{
-    await sb.from('c1_community_messages').delete().eq('id',id);
+    const{error}=await sb.from('c1_community_messages').delete().eq('id',id);
+    if(error)throw error;
     commLoad(true);
-  }catch(e){toast('تعذّر الحذف',true);}
+  }catch(e){toast('تعذّر الحذف — تحقّقي من الاتصال',true);}
 }
 
 // نفتح ملفات HTML عبر Blob بنوع MIME صحيح مضمون من جهة العميل — يتجاوز أي رأس Content-Type
@@ -11968,7 +11983,13 @@ async function libSave(){
 }
 async function libDelete(id){
   if(!await c1Confirm('حذف هذه المشاركة نهائياً؟'))return;
-  try{await sb.from('c1_library_items').delete().eq('id',id);libLoadItems(true);}catch(e){toast('تعذّر الحذف',true);}
+  // ملاحظة: العزل الفعلي هنا من سياسة c1lib_delete_own في القاعدة، لا من
+  // إخفاء الزرّ بالواجهة — ففشل الحذف قد يعني محاولة حذف ملف زميلة
+  try{
+    const{error}=await sb.from('c1_library_items').delete().eq('id',id);
+    if(error)throw error;
+    libLoadItems(true);
+  }catch(e){toast('تعذّر الحذف — تحقّقي من الاتصال',true);}
 }
 
 // ── تصدير صورة ──
