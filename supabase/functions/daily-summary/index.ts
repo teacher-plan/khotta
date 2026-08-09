@@ -19,18 +19,28 @@ function json(body: unknown, status = 200) {
 
 async function getCreditSummary(sb: any): Promise<string> {
   try {
-    const { data: profiles } = await sb.from("profiles").select("id, full_name");
-    const { data: settings } = await sb.from("ai_settings").select("user_id, key, value");
+    const month = new Date().toISOString().slice(0, 7);
+    const { data: settingsRows } = await sb.from("ai_settings").select("key, value");
+    const settings: Record<string, string> = {};
+    settingsRows?.forEach((r: { key: string; value: string }) => (settings[r.key] = r.value));
+    const limits: Record<string, number> = {
+      text: parseInt(settings.quota_text || "") || 300,
+      img: parseInt(settings.quota_img || "") || 200,
+      search: parseInt(settings.quota_search || "") || 20,
+    };
 
-    if (!profiles || !settings) return "❌ خطأ في جلب بيانات الرصيد";
+    const { data: usageRows } = await sb
+      .from("ai_usage")
+      .select("user_id, kind, count")
+      .eq("month", month);
+
+    if (!usageRows) return "💰 <b>الرصيد:</b> لا بيانات متوفرة";
 
     let critical = 0, warning = 0;
-
-    profiles.forEach((p: { id: string; full_name: string }) => {
-      const used = parseInt(settings.find((s: any) => s.user_id === p.id && s.key === "usage_text")?.value || "0");
-      const limit = parseInt(settings.find((s: any) => s.user_id === p.id && s.key === "limit_text")?.value || "1");
-      const percentage = (used / limit) * 100;
-
+    usageRows.forEach((r: { kind: string; count: number }) => {
+      const limit = limits[r.kind];
+      if (!limit) return;
+      const percentage = (r.count / limit) * 100;
       if (percentage > 80) critical++;
       else if (percentage > 50) warning++;
     });
@@ -47,7 +57,7 @@ async function getLibrarySummary(sb: any): Promise<string> {
     today.setHours(0, 0, 0, 0);
 
     const { data: files } = await sb
-      .from("c1_library")
+      .from("c1_library_items")
       .select("id, created_at")
       .gte("created_at", today.toISOString());
 

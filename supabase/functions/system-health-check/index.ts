@@ -17,6 +17,12 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Telegram parse_mode HTML يفسّر < و > و & كوسوم — رسائل أخطاء Deno الحقيقية
+// تحتوي غالباً "<anonymous>" أو مسارات بأقواس، فتكسر الرسالة كاملة بلا وصول.
+function escHtml(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 interface HealthCheckResult {
   component: string;
   status: "healthy" | "warning" | "critical";
@@ -58,7 +64,10 @@ async function checkEdgeFunctions(
       );
       const duration = Date.now() - start;
 
-      if (response.status === 200 || response.status === 201) {
+      // 401 هنا متوقّع للدوال المحمية: نستدعيها بمفتاح anon بلا JWT مستخدم
+      // حقيقي، فرفضها بـ401 يعني أنها تعمل وتتحقق من الهوية بشكل صحيح —
+      // وليس عطلاً. العطل الحقيقي هو 5xx أو انقطاع الاتصال.
+      if (response.status === 200 || response.status === 201 || response.status === 401) {
         results.push({
           component: `function:${fn}`,
           status: "healthy",
@@ -256,10 +265,10 @@ async function processHealthResults(
       const alertMessage = `
 🚨 <b>تنبيه حرج من نظام الصحة</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>المشكلة:</b> ${issue.component}
+<b>المشكلة:</b> ${escHtml(issue.component)}
 <b>الخطورة:</b> ${issue.severity}/5
-<b>الخطأ:</b> ${issue.error || "غير معروف"}
-<b>الإجراء:</b> ${getActionForComponent(issue.component, issue.error)}
+<b>الخطأ:</b> ${escHtml(issue.error || "غير معروف")}
+<b>الإجراء:</b> ${escHtml(getActionForComponent(issue.component, issue.error))}
 
 ⏰ الوقت: ${new Date().toLocaleString("ar-SA")}
       `.trim();

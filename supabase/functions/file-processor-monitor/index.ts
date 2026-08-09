@@ -17,6 +17,12 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Telegram parse_mode HTML يفسّر < و > و & كوسوم — اسم ملف رفعته معلمة أو
+// نص مقارنة ثابت (>2 ساعات) يكسر الرسالة كاملة برفض 400 بلا وصول إطلاقاً.
+function escHtml(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -29,12 +35,11 @@ Deno.serve(async (req) => {
     console.log("📁 بدء مراقبة معالجة الملفات...");
 
     // جلب الملفات قيد المعالجة
+    // ملاحظة: uploaded_by يشير إلى auth.users لا public.profiles، فلا يمكن
+    // لـ PostgREST حلّ علاقة embed تلقائية بينهما — نكتفي بأعمدة الجدول نفسه
     const { data: processingFiles, error: fetchError } = await sb
       .from("file_processing_status")
-      .select(
-        `*,
-         profiles:uploaded_by(full_name, email)`
-      )
+      .select("*")
       .eq("status", "processing");
 
     if (fetchError) {
@@ -72,10 +77,10 @@ Deno.serve(async (req) => {
       });
 
       if (stuck.length > 0) {
-        summaryMessage += `   🚨 <b>عالقة (>2 ساعات):</b>\n`;
+        summaryMessage += `   🚨 <b>عالقة (أكثر من ساعتين):</b>\n`;
         stuck.forEach((f: any) => {
           const elapsed = Math.round((Date.now() - new Date(f.updated_at).getTime()) / 1000 / 60);
-          summaryMessage += `      • ${f.file_name} (${elapsed} دقيقة)\n`;
+          summaryMessage += `      • ${escHtml(f.file_name)} (${elapsed} دقيقة)\n`;
         });
       }
 
@@ -100,7 +105,7 @@ Deno.serve(async (req) => {
     if (failedFiles && failedFiles.length > 0) {
       summaryMessage += `\n❌ <b>فشل المعالجة (آخر 24 ساعة):</b> ${failedFiles.length} ملف\n`;
       failedFiles.slice(0, 3).forEach((f: any) => {
-        summaryMessage += `   • ${f.file_name}: ${f.error_message || "خطأ غير معروف"}\n`;
+        summaryMessage += `   • ${escHtml(f.file_name)}: ${escHtml(f.error_message || "خطأ غير معروف")}\n`;
       });
     }
 
@@ -160,7 +165,7 @@ Deno.serve(async (req) => {
 ${stuckFiles
   .map((f: any) => {
     const elapsed = Math.round((Date.now() - new Date(f.updated_at).getTime()) / 1000 / 60 / 60);
-    return `❌ ${f.file_name} (عالقة ${elapsed} ساعات)`;
+    return `❌ ${escHtml(f.file_name)} (عالقة ${elapsed} ساعات)`;
   })
   .join("\n")}
 
