@@ -112,12 +112,35 @@ Deno.serve(async (req) => {
       return json({ ok: editResult.ok });
     }
 
-    // استقبال رسائل نصية (للاستبيانات وغيرها)
+    // استقبال رسائل نصية (للاستبيانات وأوامر الطلب الفوري)
     if (body.message && body.message.text) {
-      const text = body.message.text;
+      const text = body.message.text.trim();
       const userId = body.message.from?.id;
 
       console.log(`💬 Message received: "${text}" from user ${userId}`);
+
+      // طلب فوري للملخص الشامل بدل انتظار الموعد المجدول (5 مساءً)
+      if (text === "/ملخص" || text === "/summary" || text === "/report") {
+        await sendTelegram("⏳ جاري تجهيز الملخص الآن...");
+
+        const fnResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/daily-summary`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+          }
+        );
+
+        if (!fnResponse.ok) {
+          await sendTelegram("❌ تعذّر تجهيز الملخص الآن — حاول لاحقاً.");
+        }
+
+        return json({ ok: fnResponse.ok });
+      }
 
       // معالجة الردود على الاستبيانات
       if (text.match(/^[1-5]$/)) {
