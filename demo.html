@@ -344,6 +344,13 @@ body.inapp #c1-notif-btn{display:flex}
 #cy-busy .loader-squares{width:60px;height:60px;margin-bottom:10px}
 #cy-busy-txt{color:#fff;font-weight:800;font-size:13.5px}
 
+/* مؤشّر تحميل غير حاجب — لا يمنع التصفّح أثناء التوليد (مثل الإنفوجرافيك) */
+#cy-busy-light{position:fixed;inset-inline-end:14px;bottom:14px;z-index:998;background:#2b1d10;color:#fff;border-radius:14px;padding:10px 16px;display:none;align-items:center;gap:10px;box-shadow:0 10px 24px rgba(0,0,0,.28);font-size:13px;font-weight:700;max-width:calc(100vw - 28px);pointer-events:none}
+#cy-busy-light.on{display:flex}
+#cy-busy-light .cbl-spin{width:16px;height:16px;flex:none;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:cblSpin .8s linear infinite}
+@keyframes cblSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#cy-busy-light .cbl-spin{animation:none}}
+
 /* ══ قسم الجدول — مركز قيادة اليوم ══ */
 .tt-now{background:linear-gradient(120deg,var(--red-d),var(--red) 70%,#E8926E);border-radius:18px;padding:18px 20px;color:#fff;box-shadow:0 12px 30px rgba(168,48,48,.3);margin-bottom:14px;position:relative;overflow:hidden}
 .tt-now .lbl{font-size:11px;opacity:.85;font-weight:700;letter-spacing:.5px}
@@ -2019,7 +2026,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .rsb-note{margin:12px 0 2px;padding:10px 13px;border-radius:12px;background:rgba(72,120,72,.08);
   border:1.5px solid rgba(72,120,72,.28);font-size:13px;line-height:1.85;color:var(--muted);font-weight:600}
 .rs-pick{display:inline-flex;align-items:center;justify-content:center;padding:0;width:34px;flex:none}
-#gm-pick-bg{position:fixed;top:58px;inset-inline-start:10px;z-index:40;width:240px;max-width:calc(100vw - 20px)}
+#gm-pick-bg{position:fixed;top:58px;inset-inline-start:10px;z-index:4001;width:240px;max-width:calc(100vw - 20px)}
 .gm-pick-panel{background:rgba(255,252,245,.96);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.4);font-family:inherit;border:1.5px solid rgba(192,168,72,.55)}
 .gm-pick-slot{height:52px;border-radius:11px;background:#fff;overflow:hidden;position:relative;box-shadow:inset 0 8px 12px rgba(0,0,0,.16),inset 0 -8px 12px rgba(0,0,0,.16);border:2px solid rgba(192,168,72,.5)}
 .gm-pick-strip{position:absolute;inset-inline:0;top:0}
@@ -2198,6 +2205,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   <div class="loader-squares" role="img" aria-label="يحفظ"><div class="lsq lsq-1"></div><div class="lsq lsq-2"></div><div class="lsq lsq-3"></div><div class="lsq lsq-4"></div><div class="lsq lsq-5"></div><div class="lsq lsq-6"></div><div class="lsq lsq-7"></div><div class="lsq lsq-8"></div><div class="lsq lsq-9"></div></div>
   <div id="cy-busy-txt">يحفظ</div>
 </div>
+<div id="cy-busy-light" role="status"><div class="cbl-spin"></div><span id="cy-busy-light-txt"></span></div>
 <button id="c1-corner" onclick="c1Board(true)" title="التنقل بين الأقسام" aria-label="التنقل"></button>
 <button id="c1-notif-btn" onclick="c1NotifToggle()" title="الإشعارات" aria-label="الإشعارات">
   <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .8-.3 1.6-.8 2.2L4 15.5V17h16v-1.5l-1.2-1.7c-.5-.6-.8-1.4-.8-2.2V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/></svg>
@@ -3142,6 +3150,8 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 3.5A1.5 1.5 0 1 0 8 9.5a1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-8 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4-4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg><span class="lbl">قرعة</span></button>
     <button class="lb-btn" id="lb-stars-btn" onclick="lbPop('stars')" title="نجوم سريعة">
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg><span class="lbl">نجوم</span></button>
+    <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm16 0h-2v4h-4v2h6v-6z"/></svg><span class="lbl">ملء الشاشة</span></button>
   </div>
   <button class="lb-btn end" onclick="liveClose()" title="إنهاء الحصة">
     <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm5.6 3.6L14.2 8l3 3H8v2h9.2l-3 3 1.4 1.4L21 12l-5.4-5.4z"/></svg><span class="lbl">إنهاء الحصة</span></button>
@@ -3971,6 +3981,16 @@ function cyBusy(text){
 function cyBusyDone(){
   const el=document.getElementById('cy-busy');if(el)el.classList.remove('on');
 }
+// نسخة غير حاجبة: شارة صغيرة زاوية الشاشة بدل حجب كامل، للعمليات التي يجب
+// أن تسمح للمعلّمة بمواصلة التصفّح أثناءها (توليد الإنفوجرافيك بالاستوديو)
+function cyBusyLight(text){
+  const el=document.getElementById('cy-busy-light');if(!el)return;
+  document.getElementById('cy-busy-light-txt').textContent=text||'';
+  el.classList.add('on');
+}
+function cyBusyLightDone(){
+  const el=document.getElementById('cy-busy-light');if(el)el.classList.remove('on');
+}
 let cy1SaveQueue=Promise.resolve();
 // ⚡ حفظ مدموج: التعديل يُطبَّق محلياً فوراً، والرفع للخادم يتجمّع في دفعة واحدة
 // بعد سكون قصير (٩٠٠م.ث) — ٣٠ نجمة متتالية في حصة نشطة = رفعة واحدة بدل ٣٠.
@@ -4612,7 +4632,7 @@ async function ttTimes(){
 }
 
 // ── معالج الإعداد — مطابق لبنية صفحة المعلم: الفصل ← الصفوف ← مواد وشعب كل صف ──
-let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='',suPhone='',suRosters={},suRActive=null;
+let suStep=1,suSem='',suGrades=[],suData={},suActive=null,suName='',suPhone='',suSchool='',suRosters={},suRActive=null;
 const SUBJ_COLORS={'الهوية والمواطنة':['#8A5030','#6B3A1F'],'ديني حياتي':['#487848','#35603A'],'أحب لغتي':['#A83030','#7A2020'],'اللغة الإنجليزية':['#5F8A8B','#44686A'],'الرياضيات':['#C0A848','#A08830'],'العلوم':['#2F6B6D','#1F4B4D'],'عالمي الرقمي':['#4F6D8A','#3A5268']};
 function c1AllClasses(){
   const out=[];
@@ -4625,7 +4645,7 @@ let ttTickTimer=null;
 function ttRenderSetup(){
   const el=document.getElementById('tt-setup');
   el.classList.remove('hidden');
-  if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suPhone=profile.phone||'';suGrades=[];suData={};}
+  if(!suData||!Object.keys(suData).length){suStep=1;suSem=profile.semester||'';suName=profile.display_name||'';suPhone=profile.phone||'';suSchool=(profile.ach_profile&&profile.ach_profile.school)||'';suGrades=[];suData={};}
   suRender();
 }
 function suRender(){
@@ -4640,6 +4660,10 @@ function suRender(){
       +'<div class="fld"><label for="su-phone">رقم الهاتف</label>'
       +'<input type="tel" inputmode="tel" id="su-phone" dir="ltr" style="text-align:right" placeholder="9XXXXXXX" maxlength="20" oninput="suPhone=this.value" value="'+escAttr(suPhone)+'"/>'
       +'<small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">لتتواصل معكِ الإدارة عند الحاجة. مثال: ٩١٢٣٤٥٦٧</small></div>'
+      // كانت الشهادة تُصدَّر باسم مدرسة فارغ لأنه لم يُطلب هنا إطلاقاً — كان
+      // موجوداً فقط بقسمٍ اختياري منفصل («إنجازاتك ومبادراتك») لا تفتحه كل معلّمة
+      +'<div class="fld"><label for="su-school">اسم المدرسة</label><input type="text" id="su-school" oninput="suSchool=this.value" value="'+escAttr(suSchool)+'"/>'
+      +'<small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">يظهر في شهادات الطالبات المصدَّرة</small></div>'
       +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
       +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
       +'</div></div>'
@@ -4887,6 +4911,8 @@ function suNext1(){
   // لا سبيل لاستدراكها إلا بمطاردة كل معلّمة على حدة.
   suPhone=acctDigits(document.getElementById('su-phone').value);
   if(suPhone.length<8||suPhone.length>15){toast('اكتبي رقم هاتفكِ',true);return;}
+  suSchool=(document.getElementById('su-school').value||'').trim();
+  if(!suSchool){toast('اكتبي اسم المدرسة',true);return;}
   if(!suSem){toast('اختاري الفصل الدراسي',true);return;}
   suStep=2;suRender();
 }
@@ -4911,7 +4937,10 @@ async function suFinish(){
   const flat=suBuildClasses();
   if(!flat.length){toast('اختاري شعبة واحدة على الأقل',true);return;}
   const grades=suGrades.map(g=>({num:g,classes:flat.filter(c=>c.g===g).map(c=>({id:c.id,name:c.name,num:c.num,color:c.color,subjects:c.subjects,students:(suRosters[c.id]||[]).filter(Boolean)}))})).filter(g=>g.classes.length);
-  await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true},'يحفظ إعدادك');
+  // اسم المدرسة يُخزَّن ضمن ach_profile نفسه الذي تقرأ منه الشهادة (certItemFor)
+  // حتى لا نُحدث مصدرين مختلفين لنفس المعطى
+  const ap={...achProfile(),school:suSchool};
+  await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap},'يحفظ إعدادك');
   document.getElementById('c1-menu-name').textContent=suName;
   suData={};suRosters={};window._suFocus=null;suRActive=null;
   renderYawmi();
@@ -8481,6 +8510,14 @@ function liveClose(){
   liveTimerPause();
   clearInterval(_liveShuffleT);
   liveCtx=null;
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+}
+// ملء الشاشة يخفي شريط عنوان/أدوات المتصفح — مفيدٌ حين يُعرض الجهاز على
+// شاشة الصف. يعمل على عنصر الصفحة كلّه (documentElement) لا live-stage
+// وحدها، فيغطّي أيضاً المسرح والمرفقات المفتوحة فوقه بنفس الطلب
+function liveFullscreenToggle(){
+  if(document.fullscreenElement){document.exitFullscreen().catch(()=>{});return;}
+  document.documentElement.requestFullscreen().catch(()=>{toast('تعذّر تفعيل ملء الشاشة على هذا الجهاز',true);});
 }
 // ── لوحات البار المنسدلة (مؤقّت/قرعة/نجوم) — واحدة فقط في كل مرة ──
 function lbPopCloseAll(){
@@ -8511,11 +8548,18 @@ async function liveLoadBook(){
   _liveBookLoading=true;_liveBookError=false;
   const forLesson=liveCtx.lessonId;
   try{
-    const imgs=await c1LessonBookImages(liveCtx.grade,liveCtx.subject,l.unit,l.name);
+    // مهلة ١٢ ثانية: بدونها، طلبٌ يتجمّد بلا استجابة ولا خطأ (شبكة مدرسية
+    // ضعيفة) يُبقي _liveBookLoading=true إلى الأبد — فتظل البلاطة عالقة على
+    // "يجري تحضيرها" ولا حتى زر إعادة المحاولة يقدر يكسر القفل (سطر أعلاه:
+    // return مبكر طالما _liveBookLoading صحيح)
+    const imgs=await Promise.race([
+      c1LessonBookImages(liveCtx.grade,liveCtx.subject,l.unit,l.name),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))
+    ]);
     if(liveCtx&&liveCtx.lessonId===forLesson){
       _liveBook=imgs||[];
       // فشلٌ صامت سابقاً: لا صفحات ولا رسالة، فتظنّ المعلمة أن المرفق ما يزال يُحضَّر إلى الأبد.
-      // الآن كل فشلٍ (مصدرٌ ناقص/خطأ شبكة) يظهر برسالةٍ صريحة بدل الاختفاء بصمت.
+      // الآن كل فشلٍ (مصدرٌ ناقص/خطأ شبكة/مهلة) يظهر برسالةٍ صريحة بدل الاختفاء بصمت.
       if(!_liveBook.length)_liveBookError=true;
       liveRenderLauncher();
     }
@@ -8657,6 +8701,18 @@ function liveTimerDone(){
   starBig();
   const bar=document.getElementById('live-bar');
   if(bar){bar.classList.add('tick-flash');setTimeout(()=>bar.classList.remove('tick-flash'),1500);}
+  liveAnnounce('انتهى الوقت يا طلاب');
+}
+// نطقٌ عبر قارئ المتصفح المدمج (Web Speech API) — بلا أي استدعاء ذكاءٍ
+// اصطناعي، فلا يُحسب على حصة المعلمة الشهرية ولا يحتاج اتصالاً بالخادم
+function liveAnnounce(text){
+  try{
+    if(!('speechSynthesis' in window))return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ar-SA';u.rate=0.95;
+    speechSynthesis.speak(u);
+  }catch(e){}
 }
 function liveQuiet(){
   const ov=document.getElementById('live-quiet-flash');
@@ -8727,6 +8783,9 @@ function studioRender(){
   studioRenderSubjects();
   gmLoadThemes();
   gmLoadMyGames();
+  // تهيئة موسيقى الألعاب مبكراً عند فتح الاستوديو، لا عند فتح لعبة فعلياً —
+  // بلا هذا يبدأ تحميل وفكّ ترميز الملف فقط لحظة الضغط فتُسمع الموسيقى متأخرة
+  gmMusicInit();
 }
 function studioRenderSubjects(){
   const subs=studioGrade?planSubjectsFor(studioGrade):[];
@@ -8848,7 +8907,9 @@ async function infoGenerate(){
   const teacherPrompt=(document.getElementById('info-prompt')?.value||'').trim();
   const btn=document.querySelector('#studio-info-options-card .eg-generate');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري رسم الإنفوجرافيك... (قد يستغرق دقيقة)';}
-  uiBusy('يرسم الإنفوجرافيك… قد يستغرق دقيقة');
+  // مؤشّر غير حاجب: التوليد قد يستغرق دقيقة، ولا داعي لمنع المعلّمة من
+  // تصفّح باقي المنصة أثناء الانتظار
+  cyBusyLight('يرسم الإنفوجرافيك… قد يستغرق دقيقة');
   let img=null,reason='';
   try{
     const _r=await sb.functions.invoke('generate-infographic',{
@@ -8860,7 +8921,7 @@ async function infoGenerate(){
       reason=(await c1FnErr(_r))||'خطأ في الاتصال';
     }
   }catch(e){reason=String(e);}
-  uiBusyDone();
+  cyBusyLightDone();
   if(btn){btn.disabled=false;btn.textContent='ولّدي الإنفوجرافيك';}
   if(!img){
     toast(c1ErrMsg(reason,'تعذّر توليد الإنفوجرافيك — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
@@ -9500,6 +9561,9 @@ function gmStart(){gmSound('pop');gmMusicApply();if(gmRunCurrent)gmRunCurrent();
 function gmClose(){
   clearInterval(gmQuizTimer);clearInterval(gmMemTimer);gmMusicStop();
   try{gmLiveSnd.forEach(a=>{a.pause();a.currentTime=0;});gmLiveSnd=[];}catch(e){}
+  // صوت العجلة (spin) يُشغَّل من نسخته الأصلية مباشرة بلا استنساخ ولا تسجيل في
+  // gmLiveSnd (انظر gmSound)، فلا تعرف الحلقة أعلاه إيقافه — يُوقَف صراحة هنا
+  try{const sp=(gmSfxT[gmTpl]||{}).spin||gmSfx.spin;if(sp){sp.pause();sp.currentTime=0;}}catch(e){}
   const bg=document.getElementById('gm-stage-bg');
   bg.style.display='none';
   document.getElementById('gm-stage-body').innerHTML='';
