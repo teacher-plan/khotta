@@ -9013,8 +9013,11 @@ async function deckGenerate(){
   cyBusyLight('يقرأ الدرس ويكتب الشرائح…');
   let plan=null;
   try{
-    // (١) قراءة الدرس مرّة واحدة — يُعاد استخدام الملخص المحفوظ إن وُجد
-    const bookContext=await c1BookSummary(deckLessonId||'',studioGrade,subject,lesson.unit,lesson.name);
+    // (١) قراءة الدرس مرّة واحدة — يُعاد استخدام الملخص المحفوظ إن وُجد.
+    // المعرّف يُستنتج من الاسم حين لم تأتِ المعلمة من بطاقة درس، وإلا عاد
+    // c1BookSummary بـnull فوراً فوُلِّد العرض بلا محتوى الكتاب أصلاً
+    const lId=deckLessonId||c1LessonIdByName(studioGrade,subject,lesson.unit,lesson.name);
+    const bookContext=await c1BookSummary(lId,studioGrade,subject,lesson.unit,lesson.name);
     // (٢) النموذج النصّي: عناوين ونقاط + اختيار قالب تخطيط لكل شريحة
     const _r=await sb.functions.invoke('generate-deck-plan',{
       body:{grade,subject,unit:lesson.unit||'',lesson:lesson.name,slideCount:count,
@@ -9079,7 +9082,8 @@ async function deckOneImage(s,layout,grade,subject,no,total){
 
 async function deckSaveToLesson(){
   if(!deckSlides.length){toast('ولّدي العرض أولاً',true);return;}
-  const id=deckLessonId||todayAttachLessonId||deckFindLessonId();
+  const l=(studioSelectedLessons()[0])||{};
+  const id=deckLessonId||todayAttachLessonId||c1LessonIdByName(studioGrade,studioSubject,l.unit,l.name);
   if(!id){toast('افتحي العرض من بطاقة الدرس ليُحفظ فيها',true);return;}
   cyBusyLight('يحفظ العرض…');
   const payload={v:3,lesson:studioLessonName||'',subject:studioSubject||'',slides:deckSlides};
@@ -9090,15 +9094,6 @@ async function deckSaveToLesson(){
   try{await planSetState(id,{slides:true,slides_at:new Date().toISOString()});planRenderUnits();}catch(e){}
   toast('حُفظ العرض في بطاقة الدرس','ok');
 }
-// استنتاج معرّف الدرس من الخطة حين لم تصل المعلمة من بطاقةٍ بعينها
-function deckFindLessonId(){
-  try{
-    const units=(profile.plan_units||{})[planKey(studioGrade,studioSubject)]||[];
-    for(const u of units)for(const l of (u.lessons||[]))if(l.name===studioLessonName)return l.id;
-  }catch(e){}
-  return null;
-}
-
 // ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل ══
 let infoImage=null,infoImageRaw=null,infoImagePrevRaw=null;
 async function infoShowRaw(raw){
