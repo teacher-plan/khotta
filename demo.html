@@ -1925,8 +1925,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .eg-export,.eg-regen{flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;min-height:44px}
 .eg-export{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff;border:none}
 
-/* ── العرض التقديمي الهجين (dk-*) ──
-   كل شريحة صورةٌ كاملة بنصّها من نموذج الصور — لا طبقة نصٍّ فوقها. */
+/* ── العرض التقديمي (dk-*) ── كل شريحة صورةٌ كاملة بنصّها من نموذج الصور */
 .dk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:4px}
 .dk-thumb{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--card);cursor:pointer}
 .dk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -2622,10 +2621,9 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     </div>
   </div>
 
-  <!-- ═══ العرض التقديمي الهجين ═══
-       النموذج النصّي يختار قالب تخطيط من قائمة ثابتة معروفة الإحداثيات،
-       ونانو بنانا يرسم داخل حدودها تاركاً منطقة النص فارغة. الكود — لا
-       النموذج — هو من يضع النص فوق الإحداثيات، فلا يقع تراكبٌ أبداً. -->
+  <!-- ═══ العرض التقديمي ═══
+       نموذجٌ نصّي يقرأ الدرس ويكتب محتوى كل شريحة، ونانو بنانا يرسمها
+       كاملةً بنصّها اعتماداً على إعداداته الطبيعية. -->
   <div class="eg-card hidden" id="studio-deck-options-card">
     <div class="eg-step-title">توليد العرض التقديمي</div>
     <div class="eg-pick-row">
@@ -3911,7 +3909,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='08fc800';
+const KH_BUILD='00e7fca';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5959,7 +5957,7 @@ function slSlideHtml(slide,i,uid){
 // العروض المولَّدة قبل هذا التحديث نصّية تفاعلية ولا تزال محفوظة عند المعلّمات،
 // فنُبقي عارضها العامل بدل أن نُبطلها عليهنّ.
 function slOpenWith(slidesData,title,subject){
-  // v3: العرض الهجين — خلفيةٌ مرسومة بمنطقةٍ محجوزة ونصٌّ يُركَّب فوقها
+  // v3: كل شريحة صورةٌ كاملة بنصّها من نموذج الصور
   if(slidesData&&slidesData.v===3&&Array.isArray(slidesData.slides)&&slidesData.slides.length){
     deckSlides=slidesData.slides;deckAt=0;deckPresent(0);return;
   }
@@ -8933,13 +8931,9 @@ async function studioJumpTo(grade,subject,lessonName,mode){
 }
 
 // ═══════════ العرض التقديمي — شريحة كاملة يرسمها نموذج الصور ═══════════
-// جُرّب نهجان: هجينٌ يرسم خلفيةً بمنطقةٍ محجوزة ويضع الواجهةُ النصَّ فوقها،
-// ونهجٌ يرسم فيه النموذج الشريحة كاملةً بنصّها. المقارنة على الشريحة نفسها
-// حسمت الأمر: الهجين يُخرج رسمةً بجانبها صندوق نص، بينما الكامل يُخرج
-// مخططاً تعليمياً يشرح المفهوم (أوعية متعددة، ميزان، أسهم رابطة) — أي أن
-// الصورة تُعلّم لا تُزيّن. الثمن أن صحة النص العربي لم تعد مضمونة كما كانت
-// في الهجين، فهي رهن النموذج؛ وهو ثمنٌ مقبول مقابل فارق القيمة التعليمية.
-// النموذج النصّي يبقى: هو من يقرأ الكتاب ويكتب محتوىً مطابقاً للمنهج.
+// نموذجٌ نصّي يقرأ الدرس ويكتب عنوان ونقاط كل شريحة (المحتوى المطابق
+// للمنهج)، ونانو بنانا يرسم الشريحة كاملةً بنصّها اعتماداً على إعداداته
+// الطبيعية — بلا قيودٍ تفصيلية من الكود على الأسلوب أو مقدار النص.
 let deckSlides=[],deckAt=0,deckLessonId=null,deckBusy=false;
 
 function deckRenderPreview(){
