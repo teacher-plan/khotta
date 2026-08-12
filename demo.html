@@ -2322,10 +2322,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 12h10l-3.2-4.2-2.3 2.9L9.8 12 7 16z"/></svg></span>
       <span class="eg-mode-lbl">إنفوجرافيك</span><span class="eg-mode-sub">صورة تعليمية مرسومة بالكامل</span>
     </button>
-    <button type="button" class="eg-mode-btn" data-mode="worksheet" onclick="studioSetMode('worksheet')">
-      <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM16 18H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L19.5 9H13z"/></svg></span>
-      <span class="eg-mode-lbl">ورقة عمل</span><span class="eg-mode-sub">أنشطة وتمارين قابلة للطباعة</span>
-    </button>
   </div>
 
   <div class="eg-card" id="studio-game-options-card">
@@ -2410,31 +2406,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button class="eg-export" onclick="infoDownload()">تنزيل الصورة (PNG)</button>
       <button class="eg-regen" onclick="infoSaveToLesson()">حفظ في بطاقة الدرس</button>
       <button class="eg-regen" onclick="infoGenerate()">إعادة التوليد</button>
-    </div>
-  </div>
-
-  <div class="eg-card hidden" id="studio-worksheet-options-card">
-    <div class="eg-step-title">توليد ورقة عمل</div>
-    <label class="eg-lbl">تعليمات إضافية (اختياري)</label>
-    <textarea id="worksheet-prompt" class="c1-select" style="max-width:none;width:100%;min-height:60px" placeholder="مثلاً: ركّزي على تمارين العد... أو نشاطات تفاعلية..."></textarea>
-    <div class="eg-hint">ستُولّد ورقة عمل A4 قابلة للطباعة بالأبيض والأسود مع رسومات SVG بسيطة.</div>
-    <button class="eg-generate" onclick="worksheetGenerate()">ولّدي ورقة العمل</button>
-  </div>
-
-  <div class="eg-card hidden" id="studio-worksheet-result-card">
-    <div class="eg-step-title">ورقة العمل المُولّدة</div>
-    <div id="worksheet-preview" style="text-align:center;margin:14px 0"></div>
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:12px">
-      <label class="eg-lbl">اطلبي تعديلاً على الورقة</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input type="text" id="worksheet-edit-prompt" class="c1-select" style="flex:1" placeholder="اكتبي التعديل المطلوب...">
-        <button class="eg-regen" id="worksheet-edit-btn" onclick="worksheetEdit()">نفّذي التعديل</button>
-      </div>
-    </div>
-    <div class="eg-result-actions">
-      <button class="eg-export" onclick="worksheetPrint()">🖨 طباعة</button>
-      <button class="eg-regen" onclick="worksheetDownload()">تنزيل (HTML)</button>
-      <button class="eg-regen" onclick="worksheetGenerate()">إعادة التوليد</button>
     </div>
   </div>
 
@@ -3635,7 +3606,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='e510503';
+const KH_BUILD='16f1198';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -7693,8 +7664,6 @@ function studioSetMode(m){
   document.getElementById('studio-game-result-card').classList.toggle('hidden',m!=='game'||!gmItems.length);
   document.getElementById('studio-info-options-card').classList.toggle('hidden',m!=='info');
   document.getElementById('eg-info-result-card').classList.toggle('hidden',m!=='info'||!infoImage);
-  document.getElementById('studio-worksheet-options-card').classList.toggle('hidden',m!=='worksheet');
-  document.getElementById('studio-worksheet-result-card').classList.toggle('hidden',m!=='worksheet'||!worksheetHtml);
 }
 async function studioJumpTo(grade,subject,lessonName){
   studioGrade=grade;studioSubject=subject;studioLessonName=lessonName;
@@ -10599,111 +10568,6 @@ async function libDelete(id){
     document.body.appendChild(el);
   }
 })();
-
-// ═══ أوراق العمل — متغيرات وحالة ═══
-let worksheetHtml='';
-let worksheetEditHistory=[];
-
-async function worksheetGenerate(){
-  const lessons=studioSelectedLessons();
-  if(!lessons.length){toast('اختاري درساً أولاً',true);return;}
-  const grade=String(studioGrade||''),subject=studioSubject||'';
-  const prompt=(document.getElementById('worksheet-prompt')?.value||'').trim();
-  const btn=document.querySelector('#studio-worksheet-options-card .eg-generate');
-  if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد ورقة العمل...';}
-  uiBusy('يولّد ورقة عمل من الدرس…');
-  let html='',reason='';
-  try{
-    const lId=c1LessonIdByName(grade,subject,lessons[0].unit,lessons[0].name);
-    const bookContext=await c1BookSummary(lId,grade,subject,lessons[0].unit,lessons[0].name);
-    const _r=await sb.functions.invoke('generate-worksheet',{
-      body:{grade,subject,lessonNames:lessons.map(l=>l.name),bookContext:bookContext||'',instructions:prompt}
-    });
-    const{data,error}=_r;
-    if(!error&&data&&data.html){html=data.html;}else{reason=(await c1FnErr(_r))||'خطأ في الاتصال';}
-  }catch(e){reason=String(e);}
-  uiBusyDone();
-  if(btn){btn.disabled=false;btn.textContent='ولّدي ورقة العمل';}
-  if(!html){
-    toast(c1ErrMsg(reason,'تعذّر توليد ورقة العمل — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
-    return;
-  }
-  worksheetHtml=html;
-  worksheetEditHistory=[html];
-  worksheetRenderPreview();
-  document.getElementById('studio-worksheet-result-card').classList.remove('hidden');
-  document.getElementById('studio-worksheet-result-card').scrollIntoView({behavior:'smooth'});
-  toast('✅ تم توليد ورقة العمل — اطبعيها أو عدّليها','ok');
-}
-
-// المعاينة داخل iframe معزول لا داخل الصفحة: ورقة العمل تحمل <style> خاصاً بها
-// يضبط body والخطوط و«svg *»، فحقنه في الصفحة يتسرّب إلى التطبيق كله فيفسد
-// تنسيقه. والعزل يُظهرها أيضاً كما تُطبع تماماً بلا تأثّرٍ بسمة المنصة.
-function worksheetRenderPreview(){
-  const preview=document.getElementById('worksheet-preview');
-  if(!preview)return;
-  preview.innerHTML='';
-  if(!worksheetHtml)return;
-  const fr=document.createElement('iframe');
-  fr.style.cssText='width:100%;height:70vh;border:1px solid var(--border);border-radius:10px;background:#fff';
-  fr.setAttribute('title','معاينة ورقة العمل');
-  // sandbox بلا allow-scripts: الورقة مخرَجٌ من نموذج، فلا تُمنح تنفيذاً.
-  fr.setAttribute('sandbox','');
-  fr.srcdoc='<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8">'+worksheetHtml;
-  preview.appendChild(fr);
-}
-
-async function worksheetEdit(){
-  const editPrompt=(document.getElementById('worksheet-edit-prompt')?.value||'').trim();
-  if(!editPrompt){toast('اكتبي التعديل المطلوب',true);return;}
-  const btn=document.getElementById('worksheet-edit-btn');
-  if(btn){btn.disabled=true;btn.textContent='⏳ جاري التعديل...';}
-  uiBusy('يعدّل ورقة العمل…');
-  let newHtml='',reason='';
-  try{
-    const _r=await sb.functions.invoke('generate-worksheet',{
-      body:{edit:true,currentHtml:worksheetHtml,editRequest:editPrompt}
-    });
-    const{data,error}=_r;
-    if(!error&&data&&data.html){newHtml=data.html;}else{reason=(await c1FnErr(_r))||'خطأ';}
-  }catch(e){reason=String(e);}
-  uiBusyDone();
-  if(btn){btn.disabled=false;btn.textContent='نفّذي التعديل';}
-  if(!newHtml){
-    toast(c1ErrMsg(reason,'تعذّر تطبيق التعديل'),true);
-    return;
-  }
-  worksheetEditHistory.push(worksheetHtml);
-  worksheetHtml=newHtml;
-  worksheetRenderPreview();
-  document.getElementById('worksheet-edit-prompt').value='';
-  toast('✅ تم تطبيق التعديل','ok');
-}
-
-function worksheetPrint(){
-  if(!worksheetHtml){toast('لا توجد ورقة للطباعة',true);return;}
-  const w=window.open('','','width=900,height=700');
-  if(!w){toast('المتصفح منع النافذة — اسمحي بالنوافذ المنبثقة',true);return;}
-  // charset صراحةً: بدونه تُقرأ العربية بترميزٍ خاطئ فتُطبع رموزاً مشوّهة.
-  w.document.write('<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8"><title>ورقة عمل</title>'+worksheetHtml);
-  w.document.close();
-  // الطباعة بعد اكتمال الرسم: نداؤها فور الكتابة يطبع صفحةً بيضاء أحياناً.
-  // المؤقّت احتياطٌ لو لم يُطلق onload بعد document.write — والحارس يمنع
-  // فتح صندوق الطباعة مرتين حين يعمل الاثنان.
-  let done=false;
-  const go=()=>{if(done)return;done=true;try{w.focus();w.print();}catch(_){}};
-  w.onload=go;
-  setTimeout(go,700);
-}
-
-function worksheetDownload(){
-  const a=document.createElement('a');
-  const blob=new Blob([worksheetHtml],{type:'text/html;charset=utf-8'});
-  a.href=URL.createObjectURL(blob);
-  a.download='ورقة-عمل.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
 
 // ══ Service Worker ══
 // sw.js مسجَّل بنطاق «/» من الصفحة الرئيسية، فيتحكم بهذه الصفحة أصلاً متى دخلت
