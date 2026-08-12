@@ -69,7 +69,7 @@ function keyFault(status: number) {
 //  ٤ الإدارة: تقطيع الكتب والاختبارات وكشوف الأسماء — عملٌ ثقيل يجري مرّةً
 //    واحدة، ولا يصحّ أن يستهلك رصيد الصفّ اليومي.
 const KEY_GROUP: Record<string, number> = {
-  plan: 1, plan_vision: 1, chat: 1, chat_vision: 1, game: 1, game_vision: 1, summary: 1, worksheet: 1,
+  plan: 1, plan_vision: 1, chat: 1, chat_vision: 1, game: 1, game_vision: 1, summary: 1,
   infographic: 2,
   slides: 3, slide_image: 3, presentation: 3,
   extract: 4, segment: 4, exam: 4, exam_vision: 4, game_theme: 4, roster: 4,
