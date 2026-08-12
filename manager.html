@@ -2239,6 +2239,7 @@ input,textarea,select{font-size:16px !important;}
   <button class="nav-btn admin-only" data-page="aimanage" onclick="showPage('aimanage',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> إدارة مولّد الاختبارات</button>
   <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
   <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
+  <button class="nav-btn admin-only" onclick="mgrBackToGate()" title="العودة لقائمة اختيار الجناح"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm0 4.2 5 1.9V11c0 3.6-2.2 7-5 8.3C9.2 18 7 14.6 7 11V8.1l5-1.9z"/></svg></span> قائمة الاختيار</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
     <img id="ub-img" src="" alt=""/>
     <span class="user-badge-name" id="ub-name">—</span>
@@ -6346,14 +6347,18 @@ function segSetScope(c1only){
   gs.value=nums.includes(Number(cur))?cur:'';
   segReloadSubjects();
 }
-try{if(sessionStorage.getItem('mgrWing')==='c1')document.addEventListener('DOMContentLoaded',()=>{});}catch(e){}
-
 function showApp(data){
-  // 🚪 بوابة الجناحين — تظهر مرة كل جلسة
-  try{if(!sessionStorage.getItem('mgrWing'))document.getElementById('mgr-gate').classList.add('open');}catch(e){}
+  // 🚪 بوابة الجناحين — تظهر مرة فقط عند أول دخول للجلسة.
+  // وإلا فتحديث الصفحة يُعيد المشرف لنفس الجناح الذي كان فيه — كان دائماً
+  // يُسقطه في جناح الحلقة الثانية الافتراضي حتى لو كان في الإحالات
+  // أو إدارة الحلقة الأولى، لأن الحالة لم تكن تُستعاد إطلاقاً هنا.
+  let savedWing=null;
+  try{savedWing=sessionStorage.getItem('mgrWing');}catch(e){}
+  if(!savedWing)document.getElementById('mgr-gate').classList.add('open');
   document.getElementById('main-nav').style.display='flex';
   document.body.classList.add('lp'); // 🚀 وضع لوحة الانطلاق
   document.querySelectorAll('.page')[0].classList.add('active');
+  if(savedWing==='c1'||savedWing==='ref')mgrEnter(savedWing);
   showUserBadge();
   try{const u=document.getElementById('ub-img');const l=document.getElementById('lp-user-img');if(u&&l&&u.src)l.src=u.src;}catch(e){}
   try{const ab=document.querySelector('#main-nav .nav-btn.active');if(ab)lpUpdatePill(ab);}catch(e){}
@@ -7000,8 +7005,6 @@ function updateAdminButtons(){
   
   
   if(show){
-    // عرض شارة المشرف الكبيرة في رأس الصفحة
-    showAdminBanner();
     // إن كان المشرف على صفحة مخفية، انقله للخطة
     setTimeout(()=>{
       const currentActive=document.querySelector('.nav-btn.active:not([style*="display: none"])');
@@ -7029,17 +7032,6 @@ function updateAdminButtons(){
     loadAdminCurriculumSummary();
     loadAdminTemplates();
   }
-}
-
-// شارة مرئية تؤكد للمشرف أنه في وضع المشرف
-function showAdminBanner(){
-  if(document.getElementById('admin-mode-banner'))return;
-  const banner=document.createElement('div');
-  banner.id='admin-mode-banner';
-  banner.style.cssText='position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;text-align:center;padding:6px 10px;font-size:11.5px;font-weight:800;z-index:200;font-family:Cairo,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3)';
-  banner.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg> وضع المشرف — لديك صلاحيات إدارية كاملة</span>';
-  document.body.appendChild(banner);
-  document.body.style.paddingTop='28px';
 }
 
 // ملخص محتوى المناهج المرفوع (للمشرف)
