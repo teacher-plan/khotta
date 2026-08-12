@@ -10635,14 +10635,21 @@ async function worksheetGenerate(){
   toast('✅ تم توليد ورقة العمل — اطبعيها أو عدّليها','ok');
 }
 
+// المعاينة داخل iframe معزول لا داخل الصفحة: ورقة العمل تحمل <style> خاصاً بها
+// يضبط body والخطوط و«svg *»، فحقنه في الصفحة يتسرّب إلى التطبيق كله فيفسد
+// تنسيقه. والعزل يُظهرها أيضاً كما تُطبع تماماً بلا تأثّرٍ بسمة المنصة.
 function worksheetRenderPreview(){
   const preview=document.getElementById('worksheet-preview');
-  if(!worksheetHtml){preview.innerHTML='';return;}
-  const sandbox=document.createElement('div');
-  sandbox.style.cssText='border:1px solid var(--border);border-radius:10px;padding:20px;background:var(--surface);overflow-x:auto;direction:rtl';
-  sandbox.innerHTML=worksheetHtml.substring(0,5000);
+  if(!preview)return;
   preview.innerHTML='';
-  preview.appendChild(sandbox);
+  if(!worksheetHtml)return;
+  const fr=document.createElement('iframe');
+  fr.style.cssText='width:100%;height:70vh;border:1px solid var(--border);border-radius:10px;background:#fff';
+  fr.setAttribute('title','معاينة ورقة العمل');
+  // sandbox بلا allow-scripts: الورقة مخرَجٌ من نموذج، فلا تُمنح تنفيذاً.
+  fr.setAttribute('sandbox','');
+  fr.srcdoc='<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8">'+worksheetHtml;
+  preview.appendChild(fr);
 }
 
 async function worksheetEdit(){
@@ -10673,10 +10680,19 @@ async function worksheetEdit(){
 }
 
 function worksheetPrint(){
+  if(!worksheetHtml){toast('لا توجد ورقة للطباعة',true);return;}
   const w=window.open('','','width=900,height=700');
-  w.document.write(worksheetHtml);
+  if(!w){toast('المتصفح منع النافذة — اسمحي بالنوافذ المنبثقة',true);return;}
+  // charset صراحةً: بدونه تُقرأ العربية بترميزٍ خاطئ فتُطبع رموزاً مشوّهة.
+  w.document.write('<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8"><title>ورقة عمل</title>'+worksheetHtml);
   w.document.close();
-  w.print();
+  // الطباعة بعد اكتمال الرسم: نداؤها فور الكتابة يطبع صفحةً بيضاء أحياناً.
+  // المؤقّت احتياطٌ لو لم يُطلق onload بعد document.write — والحارس يمنع
+  // فتح صندوق الطباعة مرتين حين يعمل الاثنان.
+  let done=false;
+  const go=()=>{if(done)return;done=true;try{w.focus();w.print();}catch(_){}};
+  w.onload=go;
+  setTimeout(go,700);
 }
 
 function worksheetDownload(){
