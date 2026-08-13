@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     const model = pickVisionModel(st, "roster", "google/gemini-2.5-pro");
 
     const b = await req.json().catch(() => ({}));
-    const files: { name?: string; data?: string }[] =
+    const files: { name?: string; data?: string; text?: string }[] =
       Array.isArray(b.files) ? b.files.slice(0, MAX_FILES) : [];
     if (!files.length) return refund({ error: "no_files" }, 400);
 
@@ -81,7 +81,19 @@ Deno.serve(async (req) => {
       text: 'استخرج أسماء الطالبات من هذا الكشف بهذا الشكل حصراً (JSON): {"names":["الاسم الأول","الاسم الثاني"]}',
     }];
 
+    // ملفّات Word/Excel/CSV تصل نصّاً مفكوكاً من المتصفّح: النموذج لا يقرأ
+    // docx/xlsx فهما ZIP، والفكّ في الخادم يستدعي مكتبةً لخطوةٍ يفعلها
+    // المتصفّح مجّاناً. ويبقى دور النموذج هنا قائماً — فالنصّ المفكوك يحمل
+    // ترويسات الجدول وأرقام التسلسل والأعمدة المجاورة، وتنقيتُها هي المهمّة.
     for (const f of files) {
+      const txt = String(f?.text || "").slice(0, 20000).trim();
+      if (txt) {
+        content.push({
+          type: "text",
+          text: `محتوى الملف «${String(f?.name || "قائمة").slice(0, 80)}»:\n${txt}`,
+        });
+        continue;
+      }
       const url = String(f?.data || "");
       if (!url.startsWith("data:")) continue;
       if (url.length > MAX_BYTES * 1.4) return refund({ error: "file_too_large" }, 413);
@@ -99,7 +111,7 @@ Deno.serve(async (req) => {
     // التعليمات مكتوبةٌ حول ما يُفسد الكشف عملياً: الترقيم، والعناوين،
     // وأرقام الجلوس، والأعمدة المجاورة — لا حول «استخرج الأسماء» فحسب.
     const system = [
-      "أنت مساعد يستخرج أسماء الطالبات من كشفٍ مدرسيّ عُماني (صورة أو PDF).",
+      "أنت مساعد يستخرج أسماء الطالبات من كشفٍ مدرسيّ عُماني (صورة أو PDF أو نصٍّ مستخرَج من ملف Word أو Excel).",
       "أعد الأسماء فقط، كلَّ اسمٍ كاملاً كما هو مكتوب حرفياً بالعربية.",
       "احذف أرقام التسلسل، وأرقام الجلوس، وأرقام الهوية، والعناوين، وأسماء الصفوف والشعب والمواد، وأسماء المعلّمات، وأي عمودٍ غير عمود الأسماء (كالدرجات والغياب والملاحظات).",
       "لا تُصلح اسماً ولا تُغيّر إملاءه ولا تُضِف ألقاباً، وأبقِ «بنت» و«بن» كما وردت.",

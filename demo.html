@@ -4506,9 +4506,9 @@ function suRender(){
         // كتابة ثلاثين اسماً بيدها لكل شعبة أطولُ خطوةٍ في الإعداد وأكثرها
         // مدعاةً للتوقّف. والكشف عندها أصلاً من المدرسة.
         +'<div class="su-roster-tools">'
-        +'<input type="file" id="su-roster-file" accept="image/*,application/pdf" multiple hidden onchange="suRosterExtract(this)"/>'
-        +'<button type="button" class="su-roster-btn" id="su-roster-btn" onclick="document.getElementById(\'su-roster-file\').click()">📎 استخراج الأسماء من كشف</button>'
-        +'<span class="su-roster-hint" id="su-roster-msg">صورة الكشف أو ملف PDF — تُضاف الأسماء إلى القائمة أدناه</span>'
+        +'<input type="file" id="su-roster-file" accept="image/*,application/pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="suRosterExtract(this)"/>'
+        +'<button type="button" class="su-roster-btn" id="su-roster-btn" onclick="document.getElementById(\'su-roster-file\').click()">📎 رفع قائمة الطلاب</button>'
+        +'<span class="su-roster-hint" id="su-roster-msg">صورة · PDF · Word · Excel — تُضاف الأسماء إلى القائمة أدناه</span>'
         +'</div>'
         +'<textarea id="su-roster-ta" rows="8" placeholder="اسم في كل سطر" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical" oninput="suRSave()">'+escHtml(txt)+'</textarea></div>')
         :'<div class="d">لا توجد شعب محددة</div>')
@@ -4581,6 +4581,70 @@ function readAsDataUrl(f){
     r.readAsDataURL(f);
   });
 }
+
+/* ── قراءة Word وExcel ──────────────────────────────────────────────
+   نموذج الرؤية يقرأ الصور وPDF ولا يقرأ docx/xlsx إطلاقاً: هذان ملفّا ZIP
+   يحويان XML، فإرسالهما كما هما يعود بلا شيء. فنفكّهما هنا ونرسل نصّاً.
+
+   بلا مكتبةٍ خارجية: DecompressionStream مبنيٌّ في المتصفّح منذ 2023، ومكتبةُ
+   فكٍّ كاملة تزيد الصفحة مئاتِ الكيلوبايتات لأجل خطوةٍ تقع مرّةً في الفصل. */
+function _u16(v,o){return v.getUint16(o,true);} function _u32(v,o){return v.getUint32(o,true);}
+async function khZipEntries(buf){
+  const v=new DataView(buf), n=buf.byteLength, out={};
+  // نقرأ الفهرس المركزي لا الترويسات المحلية: الترويسة المحلية قد تحمل أطوالاً
+  // صفرية حين يُكتب الملف تدفّقاً (بت الوصف المؤجَّل)، والفهرس دائماً صحيح.
+  let eo=-1;
+  for(let i=n-22;i>=0&&i>n-65558;i--){if(_u32(v,i)===0x06054b50){eo=i;break;}}
+  if(eo<0)throw new Error('zip');
+  let p=_u32(v,eo+16); const cnt=_u16(v,eo+10);
+  for(let k=0;k<cnt&&p+46<=n;k++){
+    if(_u32(v,p)!==0x02014b50)break;
+    const method=_u16(v,p+10), csize=_u32(v,p+20);
+    const nl=_u16(v,p+28), el=_u16(v,p+30), cl=_u16(v,p+32), lho=_u32(v,p+42);
+    const name=new TextDecoder().decode(new Uint8Array(buf,p+46,nl));
+    out[name]={method,csize,lho};
+    p+=46+nl+el+cl;
+  }
+  return out;
+}
+async function khZipRead(buf,e){
+  const v=new DataView(buf);
+  if(_u32(v,e.lho)!==0x04034b50)throw new Error('zip');
+  const start=e.lho+30+_u16(v,e.lho+26)+_u16(v,e.lho+28);
+  const raw=new Uint8Array(buf,start,e.csize);
+  if(e.method===0)return new TextDecoder().decode(raw);
+  if(typeof DecompressionStream!=='function')throw new Error('nodecomp');
+  const ds=new DecompressionStream('deflate-raw');
+  const blob=await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer();
+  return new TextDecoder().decode(new Uint8Array(blob));
+}
+const _xmlText=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
+                   .replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,d)=>String.fromCharCode(+d))
+                   .replace(/&amp;/g,'&');
+async function khOfficeText(file){
+  const buf=await file.arrayBuffer();
+  const ents=await khZipEntries(buf);
+  const grab=async n=>ents[n]?await khZipRead(buf,ents[n]):'';
+  // Word: كل <w:t> نصّ، و</w:p> نهاية فقرة — والفقرة هنا سطرُ اسم.
+  if(ents['word/document.xml']){
+    const xml=await grab('word/document.xml');
+    return xml.replace(/<\/w:p>/g,'\n').replace(/<[^>]+>/g,'')
+              .split('\n').map(x=>_xmlText(x).trim()).filter(Boolean).join('\n');
+  }
+  // Excel: النصوص في sharedStrings، والأرقام في الأوراق ولا تعنينا هنا.
+  // نضمّ ما في الأوراق من نصٍّ مباشر (inlineStr) احتياطاً لملفّاتٍ تكتبه هكذا.
+  if(ents['xl/workbook.xml']||ents['xl/sharedStrings.xml']){
+    let xml=await grab('xl/sharedStrings.xml');
+    for(const k of Object.keys(ents))if(/^xl\/worksheets\/sheet\d+\.xml$/.test(k))xml+=await grab(k);
+    const outv=[];
+    for(const m of xml.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)){
+      const t=_xmlText(m[1].replace(/<[^>]+>/g,'')).trim();
+      if(t)outv.push(t);
+    }
+    return [...new Set(outv)].join('\n');
+  }
+  throw new Error('unsupported');
+}
 async function suRosterExtract(input){
   const files=[...(input.files||[])].slice(0,4);
   input.value='';                       // كي يعمل اختيار الملف نفسه ثانيةً
@@ -4594,7 +4658,23 @@ async function suRosterExtract(input){
   say('قد يستغرق نصف دقيقة — لا تُغلقي الصفحة');
   try{
     const payload=[];
-    for(const f of files)payload.push({name:f.name,data:await readAsDataUrl(f)});
+    for(const f of files){
+      const nm=(f.name||'').toLowerCase();
+      // Word/Excel/CSV يُفكّان هنا ويُرسلان نصّاً؛ الصور وPDF تذهب كما هي
+      // إلى نموذج الرؤية. والقديمان .doc و.xls صيغتان ثنائيتان لا تُفكّان
+      // بلا مكتبة — نقولها صراحةً بدل إرسالٍ يعود فارغاً بلا سبب.
+      if(/\.(docx|xlsx)$/.test(nm)){
+        const t=await khOfficeText(f);
+        if(!t||!t.trim())throw new Error('empty_office');
+        payload.push({name:f.name,text:t.slice(0,20000)});
+      }else if(/\.(csv|txt)$/.test(nm)){
+        payload.push({name:f.name,text:(await f.text()).slice(0,20000)});
+      }else if(/\.(doc|xls)$/.test(nm)){
+        throw new Error('old_office');
+      }else{
+        payload.push({name:f.name,data:await readAsDataUrl(f)});
+      }
+    }
     const{data,error}=await sb.functions.invoke('extract-roster',{body:{files:payload}});
     let why=(data&&data.error)||'';
     if(error&&!why)why=error.message||'';
@@ -4620,7 +4700,12 @@ async function suRosterExtract(input){
   }catch(e){
     const m=String(e&&e.message||'');
     say(m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
-      :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورةً أو PDF'
+      :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورة أو PDF أو Word أو Excel'
+      // الصيغتان القديمتان ثنائيّتان لا تُفكّان في المتصفّح. نرشدها إلى مخرجٍ
+      // تملكه: «حفظ باسم» في وورد أو إكسل، أو تصوير الكشف.
+      :m==='old_office'?'الصيغة القديمة (doc/xls) غير مدعومة — احفظيه بصيغة docx أو xlsx، أو صوّري الكشف'
+      :m==='empty_office'?'لم أجد نصّاً في الملف — تأكّدي أن الأسماء مكتوبةٌ فيه لا صورةً بداخله'
+      :m==='nodecomp'?'متصفّحك قديم ولا يفكّ هذا النوع — حدّثيه، أو أرفقي صورةً أو PDF'
       :m==='no_files'?'لم يُرفَق ملف'
       // رصيدٌ نافد لا يُصلحه تكرار المحاولة: نقولها صريحةً ونوجّهها للإدارة
       // بدل أن تُعيد الرفع مراراً وتظنّ العطل في كشفها.
