@@ -3925,7 +3925,7 @@ input,textarea,select{font-size:16px !important;}
       <div class="price-row">
         <label>💰 سعر الاشتراك (ر.ع):</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <span id="sub-price-display" style="font-size:18px;font-weight:700;color:var(--green)">15</span>
+          <span id="sub-price-display" style="font-size:18px;font-weight:700;color:var(--green)">…</span>
           <button class="btn-gold" style="padding:6px 12px;font-size:12px" onclick="ref_openChangePriceDialog()">✏️ تغيير</button>
         </div>
       </div>
@@ -12738,9 +12738,10 @@ function ref_renderOverviewTab(){
 let ref_refInited=false;
 async function ref_initReferralsPage(){
   ref_loadMyPhone();
-  ref_loadSubPrice();
   ref_syncScopeUI();
-  await Promise.all([ref_loadFriends(),ref_loadRegistrations()]);
+  // السعر يُنتظر مع البقية لا بعدها: رسالة واتساب في جدول المسجّلات تحمله،
+  // فلو رُسم الجدول قبل وصوله لبقيت الروابط تطلب السعر الافتراضي صامتةً.
+  await Promise.all([ref_loadSubPrice(),ref_loadFriends(),ref_loadRegistrations()]);
   ref_renderDataTab();
   ref_renderFinanceTab();
   ref_renderOverviewTab();
