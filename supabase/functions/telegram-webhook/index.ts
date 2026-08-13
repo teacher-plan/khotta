@@ -142,6 +142,49 @@ Deno.serve(async (req) => {
         return json({ ok: fnResponse.ok });
       }
 
+      // عدد المسجّلات في الحلقة الأولى — سؤالٌ يتكرّر أثناء حملة الترويج،
+      // وفتحُ لوحة Supabase على الهاتف لأجله متعبٌ. الأسماء الخمسة الأخيرة
+      // تكفي للاطمئنان دون إغراق الرسالة بقائمةٍ تطول كل يوم.
+      if (text === "/تسجيلات" || text === "/registrations" || text === "/count") {
+        const sb = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+
+        const { count: total } = await sb.from("pre_registrations")
+          .select("id", { count: "exact", head: true }).eq("stage", "cycle1");
+
+        // بداية يوم مسقط (UTC+4) محسوبةً بالإزاحة: لا توقيت صيفي فالإزاحة ثابتة.
+        const since = new Date(Date.now() + 4 * 3600 * 1000);
+        since.setUTCHours(0, 0, 0, 0);
+        const dayStart = new Date(since.getTime() - 4 * 3600 * 1000).toISOString();
+
+        const { count: today } = await sb.from("pre_registrations")
+          .select("id", { count: "exact", head: true })
+          .eq("stage", "cycle1").gte("created_at", dayStart);
+
+        const { data: latest } = await sb.from("pre_registrations")
+          .select("name,created_at").eq("stage", "cycle1")
+          .order("created_at", { ascending: false }).limit(5);
+
+        const esc = (s: string) => String(s ?? "")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        const lines = [
+          "📊 <b>تسجيلات الحلقة الأولى</b>",
+          "",
+          `👥 الإجمالي: <b>${total ?? 0}</b>`,
+          `📅 اليوم: <b>${today ?? 0}</b>`,
+        ];
+        if (latest?.length) {
+          lines.push("", "<b>آخر المسجّلات:</b>");
+          for (const r of latest) lines.push(`• ${esc(r.name || "بلا اسم")}`);
+        }
+
+        await sendTelegram(lines.join("\n"));
+        return json({ ok: true });
+      }
+
       // معالجة الردود على الاستبيانات
       if (text.match(/^[1-5]$/)) {
         // تقييم من 1-5

@@ -90,15 +90,25 @@ function buildMessage(r: Reg, rank: number | null): string {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
-  // 🔒 حارس: الوكيل يكتب في تلغرامك مباشرةً، فمسلكٌ مفتوح يعني أن أي أحدٍ
-  // يستطيع إغراقك بحجوزاتٍ ملفّقة. مفتاح الخدمة هو ما يرسله خطّاف قاعدة
-  // البيانات أصلاً، فلا يحتاج سرّاً جديداً.
-  const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const auth = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
-  if (!svc || auth !== svc) return json({ error: "unauthorized" }, 401);
-
   const started = Date.now();
+  const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, svc);
+
+  // 🔒 حارس: الوكيل يكتب في تلغرامك مباشرةً، فمسلكٌ مفتوح يعني أن أي أحدٍ
+  // يستطيع إغراقك بحجوزاتٍ ملفّقة.
+  //
+  // لا نطابق نصّ المفتاح: المشروع يملك صيغتين لصلاحية الخدمة نفسها — الـJWT
+  // القديم و«sb_secret_…» الجديد — والمُشغِّل يرسل ما في الخزانة بينما البيئة
+  // تحقن الأخرى، فتفشل المطابقة النصّية على مفتاحين صحيحين كليهما. نتحقّق من
+  // الصلاحية لا من الحروف: أي حاملٍ دورُه service_role يُقبل.
+  const auth = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
+  const isServiceRole = auth === svc || (() => {
+    try {
+      const [, payload] = auth.split(".");
+      return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))).role === "service_role";
+    } catch { return false; }
+  })();
+  if (!auth || !isServiceRole) return json({ error: "unauthorized" }, 401);
 
   try {
     const body = await req.json().catch(() => ({}));
