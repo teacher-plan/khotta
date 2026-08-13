@@ -387,10 +387,27 @@ function checkForm(){
 }
 
 // ══ التقاط كود الإحالة من الرابط (?ref=code) وحفظه طوال الجلسة ══
+/* الإحالة في localStorage لا sessionStorage: الثاني يموت بإغلاق التبويب،
+   والمعلّمة تفتح الرابط في متصفّح إنستغرام المدمج ثم تعود لتسجّل من متصفّحها
+   بعد ساعات — فتضيع نسبة الإحالة وعمولة الشريكة معها. وينتهي بعد ثلاثين
+   يوماً حتى لا يُنسب تسجيلٌ متأخّر إلى منشورٍ قديم. */
+const KH_REF_TTL = 30*24*3600*1000;
+function khRefSet(code){
+  try{ localStorage.setItem('kh_ref_code', JSON.stringify({c:code, t:Date.now()})); }catch(e){}
+}
+function khRefGet(){
+  try{
+    const raw = localStorage.getItem('kh_ref_code'); if(!raw) return null;
+    if(raw[0] !== '{') return raw.trim() || null;   // صيغةٌ قديمة نصّية
+    const o = JSON.parse(raw);
+    if(!o || !o.c || Date.now()-o.t > KH_REF_TTL){ localStorage.removeItem('kh_ref_code'); return null; }
+    return o.c;
+  }catch(e){ return null; }
+}
 (function captureReferral(){
   const params=new URLSearchParams(location.search);
   const ref=params.get('ref');
-  if(ref)sessionStorage.setItem('kh_ref_code',ref.trim());
+  if(ref)khRefSet(ref.trim());
 })();
 
 // ══ عداد المعلمين المسجّلين (عبر دالة آمنة، بدون كشف أي بيانات شخصية) ══
@@ -436,7 +453,7 @@ async function submitRegistration(){
   const btn=document.getElementById('submit-btn');
   btn.disabled=true;btn.textContent='⏳ جاري الاشتراك...';
   try{
-    const{error}=await sb.from('pre_registrations').insert({name,phone,email,stage:selectedStage,referred_by:sessionStorage.getItem('kh_ref_code')||null});
+    const{error}=await sb.from('pre_registrations').insert({name,phone,email,stage:selectedStage,referred_by:khRefGet()});
     if(error){showMsg('حدث خطأ، حاول مجدداً',true);btn.disabled=false;btn.textContent='🚀 اشترك الآن';return;}
     // التوجيه حسب الحلقة (رابط الدفع لكل حلقة يُملأ لاحقاً في CYCLE_LINKS)
     const link=CYCLE_LINKS[selectedStage];

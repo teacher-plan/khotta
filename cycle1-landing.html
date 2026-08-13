@@ -725,7 +725,27 @@ function goReg(){
   document.getElementById('reg').scrollIntoView({behavior:'smooth',block:'start'});
   setTimeout(()=>{const el=document.getElementById('r-name');if(el)el.focus({preventScroll:true});},650);
 }
-try{const r=new URLSearchParams(location.search).get('ref');if(r)sessionStorage.setItem('kh_ref_code',r.trim());}catch(e){}
+/* كود الإحالة: يُحفظ في localStorage لا sessionStorage — هذا يموت بإغلاق
+   التبويب، ومدخل جمهور إنستغرام هو المتصفّح المدمج في التطبيق: تقرأ المعلّمة
+   الصفحة فيه ثم تُغلقه، وتعود لتسجّل من متصفّحها بعد ساعات. فتضيع الإحالة،
+   ولا تنال الشريكة عمولتها ولا نعرف نحن أن قناتها تعمل.
+   وبختم تاريخٍ ينتهي في ثلاثين يوماً، فلا تُنسب معلّمةٌ سجّلت بعد نصف عام
+   إلى منشورٍ قديم. */
+const KH_REF_TTL = 30*24*3600*1000;
+function khRefSet(code){
+  try{ localStorage.setItem('kh_ref_code', JSON.stringify({c:code, t:Date.now()})); }catch(e){}
+}
+function khRefGet(){
+  try{
+    const raw = localStorage.getItem('kh_ref_code'); if(!raw) return null;
+    // الصيغة القديمة كانت نصّاً صريحاً: تُقبل مرّةً ثم تُهجر.
+    if(raw[0] !== '{') return raw.trim() || null;
+    const o = JSON.parse(raw);
+    if(!o || !o.c || Date.now()-o.t > KH_REF_TTL){ localStorage.removeItem('kh_ref_code'); return null; }
+    return o.c;
+  }catch(e){ return null; }
+}
+try{const r=new URLSearchParams(location.search).get('ref');if(r)khRefSet(r.trim());}catch(e){}
 
 /* ══ جولة الأقسام: بطاقاتٌ تُبدّل اللقطة بدل صفٍّ طويل من الصور ══
    تتقدّم وحدها كلّ ٦ ثوانٍ حتى تلمس المعلمة شيئاً، فتتوقّف ويصير التحكّم لها. */
@@ -878,7 +898,7 @@ async function submitReg(){
   try{
     const{error}=await sb.rpc('register_teacher',{
       p_name:name,p_phone:normPhone(phone),p_email:email,p_stage:'cycle1',
-      p_referred_by:sessionStorage.getItem('kh_ref_code')||null});
+      p_referred_by:khRefGet()});
     if(error)throw error;
     document.getElementById('form-card').style.display='none';
     document.getElementById('done').style.display='block';
