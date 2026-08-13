@@ -67,9 +67,11 @@ Deno.serve(async (req) => {
       return json(body, status);
     };
 
-    // gemini-2.5-pro لا flash: الأسماء العربية بخطّ اليد أو بمسحٍ رديء هي
-    // بالضبط ما يفرّق فيه النموذج القوي.
-    const model = pickVisionModel(st, "roster", "google/gemini-2.5-pro");
+    // النموذج نفسه الذي يقرأ صفحات الكتاب: كان هنا gemini-2.5-pro بحجّة خطّ
+    // اليد، والحجّة لا تصمد — الكشف يأتي المعلّمة من المدرسة مطبوعاً أو ملفَّ
+    // Word، وملفّات Word وExcel تصل نصّاً مفكوكاً فلا رؤية فيها أصلاً. وما
+    // بقي كشفٌ مطبوع، وهو أسهل من صفحة كتابٍ بجداولها وأشكالها.
+    const model = pickVisionModel(st, "roster", "google/gemini-2.5-flash");
 
     const b = await req.json().catch(() => ({}));
     const files: { name?: string; data?: string; text?: string }[] =
