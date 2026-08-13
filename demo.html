@@ -3619,7 +3619,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='5b0f4fa';
+const KH_BUILD='f0563f6';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5238,6 +5238,7 @@ async function planRenderUnits(){
       ${ready}
       <div class="plan-cls-row">${clsChips}</div>
       <div class="pl-btnrow">
+        <button class="pl-btn ${st.prep?'ready':''}" onclick="planPrepBtn('${l.id}')"><span class="d" style="background:var(--red,#D86048)"></span>${st.prep?'عرض التحضير':'إنشاء التحضير'}</button>
         <button class="pl-btn ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')"><span class="d" style="background:#8b5cf6"></span>${st.game_id?'تشغيل اللعبة':'إنشاء لعبة'}</button>
         <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
         <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
@@ -5534,6 +5535,62 @@ function imgFullOpen(url,title){
 function imgFullClose(){
   document.getElementById('img-full').classList.remove('on');
   document.getElementById('imgf-img').removeAttribute('src');
+}
+/* ══ تحضير الدرس من بطاقته ══
+   كان المولِّد يُنادى من زرٍّ داخل «بطاقة اليوم»، وحُذفت البطاقة فبقي المولِّد
+   بلا مدخل — لا سبيل في التطبيق كلّه إلى توليد خطة درس. وهو أهمّ ما تدفع
+   المعلّمة لأجله.
+   وربطُه ببطاقة الدرس أصحّ من ربطه بـ«اليوم» أصلاً: المعلّمة تُحضّر لدرسٍ
+   تختاره متى شاءت، لا لدرس اليوم وحده — وزرّا اللعبة والانفوجرافيك هنا. */
+async function planPrepBtn(id){
+  const st=planGet(id);
+  if(st.prep){planShowPrep(id);return;}
+  const l=planFindLesson(id);if(!l)return;
+  try{
+    // ① الجاهز عند الزميلات أولاً: أسرع وأرخص، ولا يمسّ حصّتها الشهرية.
+    cyBusy('يبحث عمّا جهّزته زميلاتك...');
+    const found=await shPoolFetch(id,['prep']);
+    if((await shAdopt(id,found)).includes('prep')){
+      cyBusyDone();
+      toast('أخذنا لكِ خطةً مما جهّزته زميلاتك لهذا الدرس','ok');
+      planRenderUnits();planShowPrep(id);return;
+    }
+    cyBusy('يقرأ الدرس من الكتاب...');
+    const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name)||'';
+    cyBusy('يُعِدّ خطة الدرس... قد يستغرق دقيقة');
+    const res=await sb.functions.invoke('generate-lesson-plan',{
+      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,images:[],bookContext}
+    });
+    const{data,error}=res;
+    if(error||!data||!data.plan){
+      toast(c1ErrMsg(await c1FnErr(res),'تعذّر إعداد الخطة — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
+      return;
+    }
+    await planSetState(id,{prep:data.plan,prep_at:new Date().toISOString()});
+    shAutoPublish({kind:'prep',lessonId:id,grade:planGrade,subject:planSubject,unit:l.unit,lesson:l.name,content:data.plan});
+    planRenderUnits();planShowPrep(id);
+    toast('جهزت خطة الدرس','ok');
+  }catch(e){toast('تعذّر إعداد الخطة — أعيدي المحاولة',true);}
+  finally{cyBusyDone();}
+}
+// إعادة التوليد تتجاهل الجاهز: تُمسح الخطة المتبنّاة أولاً كي تُبنى من جديد
+async function planPrepRegen(id){
+  if(!confirm('إعادة إعداد الخطة تستبدل الحالية — هل تريدين المتابعة؟'))return;
+  await planSetState(id,{prep:null,prep_at:null,prep_from:null});
+  todayModalClose();
+  await planPrepBtn(id);
+}
+function planShowPrep(id){
+  const st=planGet(id),l=planFindLesson(id);
+  if(!st.prep)return;
+  document.getElementById('today-modal-title').textContent='خطة الدرس — '+((l&&l.name)||'');
+  document.getElementById('today-modal-body').innerHTML=
+    (st.prep_from?`<div class="plan-empty-card" style="margin-bottom:10px">هذه خطةٌ جهّزتها ${escHtml(st.prep_from)} — اضغطي «نسخة خاصة» لتوليد واحدةٍ من عندكِ</div>`:'')
+    +renderPrepHtml(st.prep)
+    +`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="pl-btn" onclick="planPrepRegen('${id}')">${st.prep_from?'نسخة خاصة':'إعادة الإعداد'}</button>
+      </div>`;
+  document.getElementById('today-modal').classList.add('open');
 }
 function planShowInfo(id){
   const st=planGet(id);if(!st.info_url)return;
