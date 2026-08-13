@@ -122,7 +122,11 @@ Deno.serve(async (req) => {
         }),
       }, { st, task: "game_theme" });
 
-    let orResp = await call({ aspect_ratio: "16:9", image_size: "1K" });
+    // 2K لا 1K: السمة خلفيةٌ تُمَدّ ملء شاشة العرض في الصفّ، و1K عليها يلين
+    // ويتحبّب. وهي تُولَّد من لوحة الإشراف مرّةً وتُشارَك بين كل المعلّمات —
+    // فالفرق سنتاتٌ تُدفع دفعةً واحدة مقابل صورةٍ تبقى تُعرض أعواماً.
+    // ولا نرفعها إلى 4K: لا تُرى على بروجكتر ١٠٨٠p، وتُثقل التحميل في المدرسة.
+    let orResp = await call({ aspect_ratio: "16:9", image_size: "2K" });
     let or = await orResp.json();
     if (!orResp.ok) { orResp = await call({ aspect_ratio: "16:9" }); or = await orResp.json(); }
     if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
