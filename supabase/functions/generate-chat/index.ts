@@ -190,7 +190,11 @@ Deno.serve(async (req) => {
                ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))]
             : userMsg },
         ],
-        ...(wantImage ? { modalities: ["image", "text"], image_config: { aspect_ratio: "16:9", image_size: "1K" } } : {}),
+        // 2K كالانفوجرافيك: ما تسمّيه المعلّمة تجربةً يصير مخرَجاً نهائياً بضغطة
+        // تنزيل — تعرضه على البروجكتر أو تطبعه ورقةَ نشاط. و1K يُمَدّ ×1.43 على
+        // شاشة ١٠٨٠p فتذوب أسنان الحروف العربية ونقاطها، ويعطي ١١٥ نقطة/بوصة
+        // على A4 وهي دون حدّ الطباعة المقبول.
+        ...(wantImage ? { modalities: ["image", "text"], image_config: { aspect_ratio: "16:9", image_size: "2K" } } : {}),
         temperature: 0.6,
         max_tokens: images.length ? 1400 : 900,
         // OpenRouter يوزّع الطلب على عدة مزوّدين للنموذج نفسه، وترتيبه
