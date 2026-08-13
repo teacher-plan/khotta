@@ -1,5 +1,6 @@
 // دالة مساعدة لإرسال الرسائل عبر Telegram
 // تُستخدم من جميع الوكلاء
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface TelegramButton {
   text: string;
@@ -11,12 +12,40 @@ interface TelegramOptions {
   inline_keyboard?: TelegramButton[][];
 }
 
+async function getTelegramSecrets() {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID") || "";
+
+  if (token && chatId) return { token, chatId };
+
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const { data: botTokenData } = await sb
+    .from("vault.decrypted_secrets")
+    .select("decrypted_secret")
+    .eq("name", "telegram_bot_token")
+    .maybeSingle();
+
+  const { data: chatIdData } = await sb
+    .from("vault.decrypted_secrets")
+    .select("decrypted_secret")
+    .eq("name", "telegram_chat_id")
+    .maybeSingle();
+
+  return {
+    token: botTokenData?.decrypted_secret || "",
+    chatId: chatIdData?.decrypted_secret || "",
+  };
+}
+
 export async function sendTelegram(
   message: string,
   options?: TelegramOptions
 ): Promise<{ ok: boolean; message_id?: number; error?: string }> {
-  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  const { token, chatId } = await getTelegramSecrets();
 
   if (!token || !chatId) {
     console.error("❌ Telegram configuration missing");
@@ -63,8 +92,7 @@ export async function editTelegram(
   message: string,
   options?: TelegramOptions
 ): Promise<{ ok: boolean; error?: string }> {
-  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  const { token, chatId } = await getTelegramSecrets();
 
   if (!token || !chatId) {
     return { ok: false, error: "Missing configuration" };
