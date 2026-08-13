@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
     const subject = String(b.subject || "");
     const unit = String(b.unit || "");
     const lesson = String(b.lesson || "");
-    const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 16) : [];
+    // عشرون صفحةً لا ستّ عشرة: الدرس ثلاث صفحاتٍ وسطياً، لكنّ دروس المراجعة
+    // وآخر الوحدة تطول — وما يزيد كان يُقصّ صامتاً فيُلخَّص الدرس ناقصاً بلا
+    // أن يُلحظ، ويُبنى على الملخّص الناقص خطةٌ وانفوجرافيك ولعبةٌ وأسئلة.
+    const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 20) : [];
     if (!images.length) return json({ error: "no_images" }, 400);
 
     const model = ensureVision(st.model_summary || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");

@@ -5227,7 +5227,9 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
       if(end<start)end=start;
       const pub=sheet=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
       const images=[],seen={};
-      for(let bp=start;bp<=end&&images.length<16;bp++){
+      // عشرون: الحدّ نفسه في summarize-lesson-pages. لو زاد أحدهما عن الآخر
+      // قُصّت الصفحات في الطرف الأضيق صامتةً وخرج الملخّص ناقصاً بلا إشارة.
+      for(let bp=start;bp<=end&&images.length<20;bp++){
         const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
         const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
       }

@@ -3619,7 +3619,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='a62a6e3';
+const KH_BUILD='84145cc';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5228,7 +5228,9 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
       if(end<start)end=start;
       const pub=sheet=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
       const images=[],seen={};
-      for(let bp=start;bp<=end&&images.length<16;bp++){
+      // عشرون: الحدّ نفسه في summarize-lesson-pages. لو زاد أحدهما عن الآخر
+      // قُصّت الصفحات في الطرف الأضيق صامتةً وخرج الملخّص ناقصاً بلا إشارة.
+      for(let bp=start;bp<=end&&images.length<20;bp++){
         const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
         const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
       }
