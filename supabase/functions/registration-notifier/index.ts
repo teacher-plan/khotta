@@ -90,15 +90,22 @@ function buildMessage(r: Reg, rank: number | null): string {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
+  const started = Date.now();
+  const adminKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, adminKey);
+
   // 🔒 حارس: الوكيل يكتب في تلغرامك مباشرةً، فمسلكٌ مفتوح يعني أن أي أحدٍ
   // يستطيع إغراقك بحجوزاتٍ ملفّقة. مفتاح الخدمة هو ما يرسله خطّاف قاعدة
-  // البيانات أصلاً، فلا يحتاج سرّاً جديداً.
-  const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  // البيانات أصلاً، فيُقرأ من الخزانة ويُقارن بـ Authorization.
+  const { data: vaultData } = await sb
+    .from("vault.decrypted_secrets")
+    .select("decrypted_secret")
+    .eq("name", "service_role_key")
+    .maybeSingle();
+
+  const svc = vaultData?.decrypted_secret || "";
   const auth = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
   if (!svc || auth !== svc) return json({ error: "unauthorized" }, 401);
-
-  const started = Date.now();
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, svc);
 
   try {
     const body = await req.json().catch(() => ({}));
