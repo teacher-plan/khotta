@@ -1435,6 +1435,16 @@ body:has(#page-fahim.active){overflow:hidden}
   background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
 #fh-web:hover{border-color:var(--olive-d);color:var(--olive-d)}
 #fh-web.on{background:var(--olive-d);border-color:var(--olive-d);color:#fff;box-shadow:0 0 0 3px rgba(72,120,72,.22)}
+#fh-draw{width:38px;height:38px;flex:none;border:1.5px solid var(--border);border-radius:50%;
+  background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+#fh-draw:hover{border-color:var(--gold-d,#b8860b);color:var(--gold-d,#b8860b)}
+#fh-draw.on{background:var(--gold-d,#b8860b);border-color:var(--gold-d,#b8860b);color:#fff;box-shadow:0 0 0 3px rgba(184,134,11,.22)}
+/* الصورة المولَّدة داخل الفقاعة: عرضٌ كامل وحدٌّ أقصى للارتفاع كي لا تدفع
+   الفقاعةُ بقيّةَ المحادثة خارج الشاشة على الجوال */
+.fh-genimg{display:block;width:100%;max-width:520px;max-height:60vh;object-fit:contain;
+  border-radius:12px;margin:2px 0 8px;background:rgba(0,0,0,.04)}
+.fh-imgdl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;
+  border:1px solid var(--border);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--text)}
 .fh-webtag{display:inline-flex;align-items:center;gap:4px;background:rgba(72,120,72,.12);color:var(--olive-d);
   border:1px solid rgba(72,120,72,.3);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;
   margin-bottom:7px;white-space:nowrap}
@@ -2454,6 +2464,9 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
           </button>
           <button id="fh-web" onclick="fhToggleWeb()" title="البحث في الويب — للأخبار والأسعار والمعلومات الحديثة" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.95a15.6 15.6 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.9 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14A7.9 7.9 0 0 1 4 12c0-.69.1-1.36.26-2h3.38a16.5 16.5 0 0 0 0 4H4.26zm.84 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.1 16zm2.95-8H5.1a7.99 7.99 0 0 1 4.33-3.56A15.6 15.6 0 0 0 8.05 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4zm.23 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.5 16.5 0 0 0 0-4h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+          </button>
+          <button id="fh-draw" onclick="fhToggleDraw()" title="ارسمي صورة — يولّد المساعد صورةً بدل النصّ" aria-pressed="false" aria-label="توليد صورة">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1-.24-.27-.39-.62-.39-1 0-.83.67-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3.5 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
           </button>
           <textarea id="fh-input" rows="1" placeholder="اكتبي رسالتكِ…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
           <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
@@ -3606,7 +3619,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='16f1198';
+const KH_BUILD='a62a6e3';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5342,7 +5355,11 @@ async function c1MigrateHeavyState(){
 function c1ErrMsg(code,fallback){
   const c=String(code||'');
   if(c.includes('no_credit'))return 'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. لا تُعيدي المحاولة الآن.';
+  // قبل الفحص العامّ: quota_exceeded_img يحتويه نصّاً، ورسالةٌ تقول «حدّ
+  // استخدامك» بلا تحديد تُوهمها أن المحادثة كلّها أُقفلت وهي مفتوحة.
+  if(c.includes('quota_exceeded_img'))return 'وصلتِ حدّ الصور هذا الشهر — المحادثة النصّية ما زالت متاحة.';
   if(c.includes('quota_exceeded'))return 'وصلتِ حدّ استخدامك الشهري — يتجدّد مطلع الشهر القادم.';
+  if(c.includes('no_image'))return 'تعذّر رسم الصورة — لم تُخصم من حصّتك. أعيدي المحاولة بوصفٍ أوضح.';
   if(c.includes('busy'))return 'الخدمة مزدحمة الآن — أعيدي المحاولة بعد دقيقة.';
   if(c.includes('disabled'))return 'التوليد موقوفٌ مؤقتاً من الإدارة.';
   if(c.includes('server_not_configured'))return 'إعدادات الخدمة ناقصة — راسلي الإدارة.';
@@ -9234,6 +9251,21 @@ function fhToggleWeb(){
   }
   fhWeb=!fhWeb;fhWebApply();
 }
+/* وضع الرسم: تضغطه المعلّمة فتصير رسالتها القادمة طلبَ صورةٍ لا سؤالاً.
+   لا نستنبطه من نصّها: «اشرحي لي هذه الصورة» تُقرأ طلبَ رسمٍ فتدفع ثمن صورة
+   لم تُرَد، و«أريد ما يوضّح الدرس» تُقرأ سؤالاً فتأتيها فقرةٌ وهي تنتظر رسماً.
+   ويُطفأ بعد كل إرسال: الصورة تكلّف مئات أضعاف الرسالة، فبقاؤه شغّالاً
+   نسياناً يحوّل كل سؤالٍ تالٍ إلى صورة. */
+let fhDraw=false;
+function fhDrawApply(){
+  const b=document.getElementById('fh-draw');
+  if(b){b.classList.toggle('on',fhDraw);b.setAttribute('aria-pressed',fhDraw?'true':'false');}
+  const t=document.getElementById('fh-input');
+  if(t)t.placeholder=fhDraw?'صفي الصورة التي تريدينها…':'اكتبي رسالتكِ…';
+}
+function fhToggleDraw(){fhDraw=!fhDraw;fhDrawApply();
+  if(fhDraw)toast('🎨 وضع الرسم — رسالتك القادمة تُرسَم صورةً','ok');}
+
 function fhWebTipNo(){document.getElementById('fhweb-bg').classList.remove('on');}
 function fhWebTipYes(){
   localStorage.setItem('fhWebTip','1');
@@ -9404,7 +9436,10 @@ function fhRender(){
   }
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
     ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
-    :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${fhMd(m.content)}</div>`).join('');
+    :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${
+        m.img?`<img class="fh-genimg" src="${m.img}" alt="صورة مولَّدة"/>`
+             +`<a class="fh-imgdl" href="${m.img}" download="khotta-${Date.now()}.png">⬇︎ تنزيل الصورة</a>`:''
+      }${m.content?fhMd(m.content):''}</div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
@@ -9455,9 +9490,13 @@ async function fhSend(){
   const msg=(inp.value||'').trim();
   if(!msg&&!fhImgs.length)return;
   const imgs=fhImgs.slice();
+  // يُلتقط الوضع ويُطفأ فوراً: الصورة تكلّف مئات أضعاف الرسالة، وبقاؤه
+  // شغّالاً نسياناً يحوّل كل سؤالٍ تالٍ إلى صورة تُخصم من حصّتها.
+  const _draw=fhDraw;
+  if(fhDraw){fhDraw=false;fhDrawApply();}
   fhImgs=[];fhThumbs();
   inp.value='';
-  fhMsgs.push({role:'user',content:msg||'',imgs});
+  fhMsgs.push({role:'user',content:msg||'',imgs,draw:_draw});
   fhRender();
   const body=document.getElementById('fh-body');
   body.insertAdjacentHTML('beforeend','<div class="fh-msg bot" id="fh-typing"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div>');
@@ -9468,24 +9507,27 @@ async function fhSend(){
     // بلا حساب لاستنزفه أيُّ زائر. ونقول ذلك صراحةً بدل إيهامها بأنه يعمل.
     await new Promise(r=>setTimeout(r,900));
     document.getElementById('fh-typing')?.remove();
-    fhMsgs.push({role:'assistant',content:demoFahimReply(msg)});
+    // في التجربة لا نرسم: الصورة مدفوعةٌ فعلاً ولا تُحاكى بردٍّ مكتوب.
+    fhMsgs.push({role:'assistant',content:_draw
+      ?'رسم الصور متاحٌ في الحساب الكامل — في التجربة نعرض الردود النصّية فقط.'
+      :demoFahimReply(msg)});
     fhBusy=false;document.getElementById('fh-send').disabled=false;
     fhRender();return;
   }
   try{
     const _chatRes=await sb.functions.invoke('generate-chat',{body:{
-      chatId:fhChatId,message:msg,images:imgs,
+      chatId:fhChatId,message:msg,images:imgs,makeImage:_draw,
       // السجلّ نصٌّ فقط: إعادة إرسال الصور كل دور تُضاعف الكلفة بلا فائدة
       history:fhMsgs.slice(0,-1).slice(-8).map(m=>({role:m.role,content:m.content})),
       context:fhContext(),web:fhWeb
     }});
     const{data,error}=_chatRes;
     document.getElementById('fh-typing')?.remove();
-    if(error||!data||!data.reply){
+    if(error||!data||(_draw?!data.image:!data.reply)){
       const reason=await c1FnErr(_chatRes);
-      fhMsgs.push({role:'assistant',content:c1ErrMsg(reason,'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
+      fhMsgs.push({role:'assistant',content:c1ErrMsg(reason,_draw?'عذراً، تعذّر رسم الصورة. حاولي مرة أخرى.':'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
     }else{
-      fhMsgs.push({role:'assistant',content:data.reply,web:data.webUsed===true});
+      fhMsgs.push({role:'assistant',content:data.reply||'',img:data.image||null,web:data.webUsed===true});
       // طلبت البحث ولم يجرِ: حصتها منه نفدت. تُخبَر صراحةً كي لا تحسب
       // جوابها مبنيّاً على مصدرٍ حديث وهو من ذاكرة النموذج
       if(fhWeb&&data.webUsed!==true)toast('نفدت حصة البحث هذا الشهر — أُجيبَ سؤالك بلا بحث',true);

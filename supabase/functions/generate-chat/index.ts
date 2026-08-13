@@ -75,9 +75,11 @@ Deno.serve(async (req) => {
     // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
     // على توليدٍ لم تستلمه.
     let webOn = false;
+    let imgOn = false;
     const refund = async (body: Record<string, unknown>, status: number) => {
       await refundQuota(admin, user.id, user.email || "", "text");
       if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
+      if (imgOn) await refundQuota(admin, user.id, user.email || "", "img");
       return json(body, status);
     };
 
@@ -110,9 +112,28 @@ Deno.serve(async (req) => {
       .slice(0, 4) as string[];
     if (!userMsg && !images.length) return json({ error: "no_message" }, 400);
 
+    // ═ طلب رسم صورة ═
+    // ترسله الواجهة صريحاً بزرٍّ تضغطه المعلّمة، ولا نستنبطه من نصّها:
+    // الاستنباط يخطئ في الاتجاهين، وكلا خطأيه مكلف. «اشرحي لي الصورة»
+    // تُقرأ طلبَ رسم فتدفع ثمن صورةٍ لم تُرَد، و«أريد شيئاً يوضّح الدرس»
+    // تُقرأ سؤالاً فتأتيها فقرةُ نصٍّ وهي تنتظر رسماً. والزرّ لا يلتبس.
+    const wantImage = b.makeImage === true;
+    const imageModel = st.model_chat_image || st.model_infographic || st.slide_model
+                    || "google/gemini-3.1-flash-image-preview";
+
+    // الصورة تُخصم من حصّة الصور لا من حصّة النصّ: ثمنها يقارب ثلاثمئة رسالة،
+    // فخصمها رسالةً واحدة يجعل حصّة النصّ بابَ إنفاقٍ لا سقفاً له.
+    if (wantImage) {
+      const iq = await takeQuota(admin, user.id, user.email || "", "img", st);
+      if (!iq.ok) return refund({ error: "quota_exceeded_img", used: iq.used, limit: iq.limit }, 429);
+      imgOn = true;
+    }
+
     // مع صورة نحتاج نموذج رؤية مضموناً: النموذج النصي يُسقط الصور بصمت
     // فتظن المعلمة أنه قرأها وهو يجيب من فراغ.
-    const model = images.length
+    const model = wantImage
+      ? imageModel
+      : images.length
       ? ensureVision(st.model_chat_vision || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash")
       : (st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash-lite");
 
@@ -120,6 +141,17 @@ Deno.serve(async (req) => {
     // أن «يعود إليه كلما أمكن»، فيَجُرّ الأسئلة العامة إلى الصفّ ويحشر
     // المدرسة في جوابٍ لا يخصّها — فتنصرف المعلّمة إلى مساعدٍ عامٍّ آخر.
     // معرفته بصفوفها ميزةٌ إضافية تُستدعى عند الحاجة، لا هُويّةٌ تحكم كل ردّ.
+    // توجيهُ الرسم: يُبنى حول طلب المعلّمة لا يستبدله. والهوية العُمانية
+    // مذكورةٌ صراحةً لأن نماذج الصور تميل إلى خليجيّاتٍ أخرى حين تُترك،
+    // فتخرج الطالبة بزيٍّ ليس زيّ مدرستها.
+    const imagePrompt = [
+      userMsg || "ارسم صورةً تعليمية جميلة تصلح للعرض في صفٍّ ابتدائي.",
+      images.length ? "الصور المرفقة مرجعٌ للرسم — احتفظ بأسلوبها وموضوعها." : "",
+      "الصورة للعرض أمام طالباتٍ في الصفوف الأولى: واضحة، بألوانٍ مبهجة، بلا تفاصيل مزدحمة.",
+      "إن كتبت أي نصٍّ داخل الصورة فليكن بعربيةٍ فصيحةٍ سليمة الحروف والاتصال، قليلاً وكبيراً مقروءاً من آخر الصف.",
+      "إن رسمت أشخاصاً أو مبانيَ أو بيئة فالهوية العُمانية حصراً (الزي المدرسي العُماني، الكمّة والدشداشة) — لا غترة ولا عقال ولا هوية خليجية أخرى.",
+    ].filter(Boolean).join("\n");
+
     const system = [
       "أنت «خُطّة AI» — مساعدٌ ذكيٌّ عامّ داخل منصة «خطتي الفصلية». تخدم مستخدمك في أي شيء يسأل عنه، تماماً كأي مساعدٍ ذكيٍّ عامّ.",
       "شخصيتك: ودود، عملي، مختصر، صادق — تجيب كزميلٍ واسع الاطلاع لا كموسوعة.",
@@ -143,7 +175,14 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        messages: [
+        // نموذج الصور لا يأخذ نظاماً ولا تاريخاً: النظام يصفه مساعداً نصّياً
+        // فيخرج بنصٍّ بدل الصورة، والتاريخ يشوّش الموضوع بدروسٍ سابقة. تُرسل
+        // الصور المرفقة إن وُجدت — فطلب «عدّلي هذه» يحتاج الأصل بين يديه.
+        messages: wantImage
+          ? [{ role: "user", content: images.length
+                ? [{ type: "text", text: imagePrompt }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))]
+                : imagePrompt }]
+          : [
           { role: "system", content: system },
           ...history,
           { role: "user", content: images.length
@@ -151,6 +190,7 @@ Deno.serve(async (req) => {
                ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))]
             : userMsg },
         ],
+        ...(wantImage ? { modalities: ["image", "text"], image_config: { aspect_ratio: "16:9", image_size: "1K" } } : {}),
         temperature: 0.6,
         max_tokens: images.length ? 1400 : 900,
         // OpenRouter يوزّع الطلب على عدة مزوّدين للنموذج نفسه، وترتيبه
@@ -168,14 +208,29 @@ Deno.serve(async (req) => {
       console.error(`openrouter ${orResp.status} في generate-chat: ${_m}`);
       return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
     }
-    const reply = or?.choices?.[0]?.message?.content || "";
-    if (!reply) return refund({ error: "no_reply" }, 502);
+    const _msg = or?.choices?.[0]?.message || {};
+    // نماذج الصور تعيدها في images[].image_url.url، وبعضها يضعها في content
+    // كـdata URI. نقبل الصيغتين حتى لا يتوقّف الأمر على مزوّدٍ بعينه.
+    const genImage: string = wantImage
+      ? (_msg?.images?.[0]?.image_url?.url
+         || (typeof _msg?.content === "string" && /^data:image\//.test(_msg.content) ? _msg.content : "")
+         || "")
+      : "";
+    const reply = typeof _msg?.content === "string" && !/^data:image\//.test(_msg.content) ? _msg.content : "";
+
+    // طلبت صورةً فلم تأتِ: لا نُسلّمها نصّاً اعتذارياً وقد خُصمت حصّتها —
+    // نستردّ ونصرّح بالفشل لتعيد المحاولة.
+    if (wantImage && !genImage) return refund({ error: "no_image" }, 502);
+    if (!wantImage && !reply) return refund({ error: "no_reply" }, 502);
 
     // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) ═
     // سقف حجم المحادثة المحفوظة — لا تنمو بلا حد
-    const askedText = userMsg || "(صورة مرفقة)";
-    // نحفظ نص السؤال لا الصور: تخزين data URI يضخّم الصف ويُعاد إرساله كل دور
-    const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: reply }].slice(-60);
+    const askedText = userMsg || (wantImage ? "(طلب رسم صورة)" : "(صورة مرفقة)");
+    // نحفظ نص السؤال لا الصور: تخزين data URI يضخّم الصف ويُعاد إرساله كل دور.
+    // والصورة المولَّدة كذلك: يُحفظ أثرها نصّاً، فالمعلّمة تنزّلها إن أرادتها
+    // باقيةً، وحفظُ عشرات الصور في صفٍّ واحد يُبطئ فتح المحادثة على الجوال.
+    const savedReply = wantImage ? "🖼️ (صورة مولَّدة)" : reply;
+    const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: savedReply }].slice(-60);
     const title = (history.find((m) => m.role === "user")?.content || askedText).slice(0, 60);
     let savedId = chatId;
     const doSave = async () => {
@@ -203,7 +258,7 @@ Deno.serve(async (req) => {
 
     // webUsed يُخبر الواجهة إن جرى البحث فعلاً: من نفدت حصتها تُجاب بلا بحث
     // وينبغي أن ترى ذلك، لا أن تظنّ جوابها مبنيّاً على مصدرٍ حديث
-    return json({ reply, chatId: savedId, model, webUsed: webOn, usage: or?.usage || null });
+    return json({ reply, image: genImage || null, chatId: savedId, model, webUsed: webOn, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);
