@@ -3691,13 +3691,27 @@ async function khQuota(force){
   // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
   const q=await cap(sb.from('ai_usage').select('kind,count').eq('month',month),null);
   if(!q||q.error)throw new Error('usage');
+  // للبحث حصّةٌ مستقلّة على الخادم، فعدُّه مع النصّ يُظهر الشريط أقلّ ممّا هو
   let text=0,img=0;
-  (q.data||[]).forEach(r=>{if(r.kind==='img')img+=r.count||0;else text+=r.count||0;});
-  // نفس افتراضات الخادم، كي لا يعرض العدّاد حدّاً يخالف ما يفرضه فعلاً
+  (q.data||[]).forEach(r=>{
+    if(r.kind==='img')img+=r.count||0;
+    else if(r.kind==='text')text+=r.count||0;
+  });
+  // نفس افتراضات الخادم حرفياً (quota.ts): نصّ ٣٠٠ وصور ٨٠. كان المكتوب هنا
+  // ٢٠٠ للصور بينما يفرض الخادم ٨٠ — فلو خلا الإعداد يوماً لرأت المعلّمة
+  // شريطاً في ثلثه وهي ممنوعةٌ من التوليد أصلاً.
   const qT=parseInt(await cap(c1Setting('quota_text'),'')||'')||300;
-  const qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||200;
+  const qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||80;
   _khQuota={text,img,qT,qI};_khQuotaAt=Date.now();
   return _khQuota;
+}
+/* بعد كل توليدٍ ناجح: يُبطَل الخزن ويُعاد رسم الشريط الظاهر.
+   بدونه يبقى الشريط على حاله دقيقةً كاملة بعد استهلاك عشر صور — والمعلّمة
+   تحسب رصيدها وافراً وهو ينفد. */
+function qBump(){
+  _khQuota=null;_khQuotaAt=0;
+  if(document.getElementById('studio-quota'))qChip('studio-quota','img');
+  if(document.getElementById('fahim-quota'))qChip('fahim-quota','text');
 }
 function qhelpOpen(){document.getElementById('qhelp-bg').classList.add('on');}
 function qhelpClose(){document.getElementById('qhelp-bg').classList.remove('on');}
@@ -5519,6 +5533,7 @@ async function planInfoBtn(id){
     if(upErr)throw upErr;
     const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
     await planSetState(id,{info_url:url,info_at:new Date().toISOString()});
+    qBump();
     shPublishInfo(id,planGrade,planSubject,url);
     planRenderUnits();
     toast('جهز ملخص الدرس','ok');
@@ -5566,6 +5581,7 @@ async function planPrepBtn(id){
       return;
     }
     await planSetState(id,{prep:data.plan,prep_at:new Date().toISOString()});
+    qBump();
     shAutoPublish({kind:'prep',lessonId:id,grade:planGrade,subject:planSubject,unit:l.unit,lesson:l.name,content:data.plan});
     planRenderUnits();planShowPrep(id);
     toast('جهزت خطة الدرس','ok');
@@ -7884,7 +7900,7 @@ async function infoEdit(){
   const ub=document.getElementById('info-undo-btn');if(ub)ub.classList.remove('hidden');
   await infoShowRaw(img);
   document.getElementById('info-edit-prompt').value='';
-  toast('✅ تم تطبيق التعديل','ok');
+  toast('✅ تم تطبيق التعديل','ok');qBump();
 }
 function infoUndo(){
   if(!infoImagePrevRaw){toast('لا توجد نسخة سابقة',true);return;}
@@ -7925,7 +7941,7 @@ async function infoGenerate(){
   const _ep=document.getElementById('info-edit-prompt');if(_ep)_ep.value='';
   await infoShowRaw(img);
   document.getElementById('eg-info-result-card').scrollIntoView({behavior:'smooth'});
-  toast('✅ تم توليد الإنفوجرافيك','ok');
+  toast('✅ تم توليد الإنفوجرافيك','ok');qBump();
 }
 async function infoDownload(){
   if(!infoImage){toast('ولّدي الإنفوجرافيك أولاً',true);return;}
@@ -9671,6 +9687,7 @@ async function fhSend(){
       fhMsgs.push({role:'assistant',content:c1ErrMsg(reason,_draw?'عذراً، تعذّر رسم الصورة. حاولي مرة أخرى.':'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply||'',img:data.image||null,web:data.webUsed===true});
+      qBump();
       // طلبت البحث ولم يجرِ: حصتها منه نفدت. تُخبَر صراحةً كي لا تحسب
       // جوابها مبنيّاً على مصدرٍ حديث وهو من ذاكرة النموذج
       if(fhWeb&&data.webUsed!==true)toast('نفدت حصة البحث هذا الشهر — أُجيبَ سؤالك بلا بحث',true);
