@@ -15204,14 +15204,22 @@ const LT_MAX=40000; // سقف نصّ الدرس الواحد
 let _ltBookFile=null;
 // اختيار ملف الكتاب (المرحلة التالية: تخزينه + استخراج نطاقات الفهرس)
 // رسم صفحة PDF إلى Blob صورة (JPEG مضغوطة)
+/* تُحرَّر لوحة الرسم وصفحة الـPDF بعد كل صفحة — بدونها يترك كتابٌ من ١٧٦ صفحة
+   نحو ٧٠٠ ميغابايت في الذاكرة فيقتل سفاري على الآيباد التبويب. وتصفير الأبعاد
+   لازمٌ لأن iOS لا يستردّ ذاكرة اللوحة بمجرّد انتهاء المرجع. */
 async function ltRenderPageBlob(pdf,pageNum,maxW,quality){
   const page=await pdf.getPage(pageNum);
   const base=page.getViewport({scale:1});
   const scale=Math.max(0.5,Math.min(2,maxW/base.width));
   const vp=page.getViewport({scale});
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
-  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-  return await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality||0.6));
+  try{
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+    return await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality||0.6));
+  }finally{
+    canvas.width=0;canvas.height=0;
+    try{page.cleanup();}catch(e){}
+  }
 }
 
 function ltInit(){
