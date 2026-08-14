@@ -649,8 +649,12 @@ body.inapp #c1-notif-btn{display:flex}
   border:1.5px dashed var(--border);background:transparent;color:var(--muted);
   font-family:inherit;font-size:12.5px;font-weight:800}
 .acct-add:hover{border-color:var(--red);color:var(--red)}
-.qchip{display:inline-flex;align-items:center;gap:9px;border:1.5px solid var(--border);background:var(--surface);
-  border-radius:999px;padding:6px 8px 6px 14px;font-size:12.5px;font-weight:800;color:var(--muted)}
+/* الشريحة تحمل الآن رقماً إلى جانب الشريط، فتحتاج التفافاً على الشاشة الضيّقة
+   كي لا تُخرج القسم عن عرضه أو يُقصّ الشريط */
+.qchip{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;
+  max-width:100%;border:1.5px solid var(--border);background:var(--surface);
+  border-radius:999px;padding:6px 10px 6px 14px;font-size:12.5px;font-weight:800;color:var(--muted)}
+.qchip b{font-size:15px}
 .qchip .qbar{width:96px;height:8px;border-radius:99px;background:var(--border);overflow:hidden;flex:none}
 .qchip .qbar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
 .qchip .qq{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);background:transparent;
@@ -2296,7 +2300,11 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 <div id="qhelp-bg" onclick="if(event.target===this)qhelpClose()">
   <div class="card">
     <h3>ما هذا الرصيد؟</h3>
-    <p>رصيدٌ خاصّ باستخدام خدمات الذكاء الاصطناعي في المنصة، ويتجدّد تلقائياً مطلع كل شهر.</p>
+    <p>رصيدُ استخدامك لخدمات الذكاء الاصطناعي، <b>ويتجدّد كاملاً مطلع كل شهر</b>.</p>
+    <p style="margin-top:8px">رصيدان منفصلان لا يقتطع أحدهما من الآخر:</p>
+    <p style="margin-top:4px">🖼️ <b>الصور</b> — كل إنفوجرافيك تولّدينه، وكل صورةٍ ترسمينها في المحادثة.</p>
+    <p style="margin-top:4px">📝 <b>الطلبات النصّية</b> — التحضير، وقراءة صفحات الدرس، ومحتوى الألعاب، ورسائل المحادثة.</p>
+    <p style="margin-top:8px;opacity:.85">وما تأخذينه جاهزاً مما حضّرته زميلاتك <b>لا يُخصم من رصيدك إطلاقاً</b> — فابحثي في «المشترك» قبل التوليد.</p>
     <button class="c1-mbtn go" onclick="qhelpClose()">حسناً</button>
   </div>
 </div>
@@ -3722,11 +3730,16 @@ async function qChip(boxId,kind){
   try{
     const q=await khQuota();
     const used=kind==='img'?q.img:q.text, lim=kind==='img'?q.qI:q.qT;
-    const pct=lim?Math.max(0,lim-used)/lim:1;
+    const left=Math.max(0,lim-used);
+    const pct=lim?left/lim:1;
     const col=pct<=.1?'#C9453B':pct<=.3?'#D98B2B':'#2F7D74';
-    // شريطٌ بلا رقم: المعلّمة تحتاج أن تعرف أنّ الرصيد يقارب النفاد، لا أن
-    // تحصي ما بقي منه — والرقم العاري يدعو إلى التقتير قبل أوانه
-    box.innerHTML=`<span class="qchip">الرصيد المتبقّي
+    // الرقم مع الشريط: الشريط يُقرأ بلمحة، والرقم يُمكّن من التخطيط — «بقيت
+    // لي عشرون صورة» قرارٌ، و«الشريط في ثلثه» إحساس. و«هذا الشهر» مذكورةٌ
+    // صراحةً كي لا تُحسب رصيداً أبدياً فتُقتّر وهو يتجدّد بعد أيام.
+    const unit=kind==='img'?'صورة':'طلب';
+    box.innerHTML=`<span class="qchip">متبقٍّ هذا الشهر
+      <b style="color:${col};font-variant-numeric:tabular-nums">${egArNum(left)}</b>
+      <span style="opacity:.65;font-size:.92em">من ${egArNum(lim)} ${unit}</span>
       <span class="qbar"><i style="width:${(pct*100).toFixed(0)}%;background:${col}"></i></span>
       <button type="button" class="qq" onclick="qhelpOpen()" title="ما هذا الرصيد؟" aria-label="ما هذا الرصيد؟">؟</button></span>`;
   }catch(e){box.innerHTML='';}
