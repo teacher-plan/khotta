@@ -16609,23 +16609,66 @@ async function segUploadAndSegment(file){
   const bookLabel=segIsFirstCycle?(' — الكتاب '+['الأول','الثاني','الثالث'][bookNo-1]):'';
   if(!await uiConfirm('سيُرفع الكتاب ('+egToArabic(N)+' صفحة) لـ'+subject+bookLabel+' — '+libGradeName(Number(grade))+' — '+semester+'، ثم يقطّعه الذكاء تلقائياً.\nقد يستغرق عدة دقائق. متابعة؟'))return;
   const base='books/'+stableLessonId(semester,subject,String(grade),'BOOK','')+(bookNo>1?'-b'+bookNo:'');
-  for(let p=1;p<=N;p++){
+
+  /* الصفحات الموجودة مسبقاً تُتخطّى: محاولةٌ سابقة توقّفت عند صفحةٍ ما تركت ما
+     قبلها مرفوعاً، وإعادةُ رسمها ورفعها من الأول تكلّف دقائق بلا فائدة. */
+  let already=new Set();
+  try{
+    const{data}=await sb.storage.from('library-files').list(base,{limit:1000});
+    for(const f of (data||[])){const m=/^p(\d+)\.jpg$/.exec(f.name||'');if(m&&(f.metadata?.size||0)>0)already.add(+m[1]);}
+  }catch(e){}
+  if(already.size)st.textContent='↻ وُجدت '+egToArabic(already.size)+' صفحة مرفوعة سابقاً — تُتخطّى.';
+
+  /* صفحةٌ تتعثّر لا تُسقط الكتاب كلّه: تُجمَّع وتُعاد في جولةٍ ثانية، وما بقي
+     منها يُعرض ليُعاد وحده. رفع مئةٍ وستٍّ وسبعين صفحةً مرّتين لأجل واحدةٍ
+     انقطعت عندها الشبكة هدرٌ في الوقت وفي الاتصال. */
+  const failed=[];
+  const putPage=async(p,tries)=>{
+    if(already.has(p))return true;
     let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
-    if(!blob){st.textContent='⛔ فشل تجهيز الصفحة '+egToArabic(p)+' — أعد المحاولة.';return;}
-    let ok=false,lastErr='';
-    for(let a=1;a<=3&&!ok;a++){
-      st.textContent='⬆️ رفع الصفحة '+egToArabic(p)+' من '+egToArabic(N)+(a>1?' (محاولة '+egToArabic(a)+')':'')+'...';
-      try{const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});if(error)lastErr=error.message;else ok=true;}
-      catch(e){lastErr=String(e&&e.message||e);}
-      if(!ok&&a<3)await new Promise(r=>setTimeout(r,1200*a));
+    if(!blob)return false;
+    for(let a=1;a<=tries;a++){
+      try{
+        const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});
+        if(!error)return true;
+      }catch(e){}
+      if(a<tries)await new Promise(r=>setTimeout(r,1200*a));
     }
-    if(!ok){st.textContent='⛔ فشل رفع الصفحة '+egToArabic(p)+': '+(lastErr||'اتصال')+' — أُوقفت العملية.';return;}
+    return false;
+  };
+
+  for(let p=1;p<=N;p++){
+    st.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+(failed.length?' — متعثّرة: '+egToArabic(failed.length):'')+'...';
+    if(!await putPage(p,3))failed.push(p);
   }
-  st.textContent='⏳ تسجيل مصدر الكتاب…';
+  // جولةٌ ثانية للمتعثّرات: أكثرها انقطاعٌ لحظيّ يزول بعد ثوانٍ
+  if(failed.length){
+    const again=failed.splice(0,failed.length);
+    for(let i=0;i<again.length;i++){
+      st.textContent='↻ إعادة المتعثّرات '+egToArabic(i+1)+' من '+egToArabic(again.length)+'...';
+      if(!await putPage(again[i],4))failed.push(again[i]);
+    }
+  }
+  if(failed.length){
+    // نُسجّل الكتاب رغم النقص: الصفحات المرفوعة تُستعمل فعلاً، وإخفاؤها يعني
+    // ضياع العمل كلّه. ونقول ما نقص صراحةً ليُعاد الرفع فيُكمل ما بقي وحده.
+    st.textContent='⚠️ تعذّر رفع '+egToArabic(failed.length)+' صفحة: '
+      +failed.slice(0,12).map(egToArabic).join('، ')+(failed.length>12?'…':'')
+      +' — سُجّل الكتاب بما رُفع. أعد الرفع لإكمال الناقص وحده.';
+  }else{
+    st.textContent='⏳ تسجيل مصدر الكتاب…';
+  }
   try{
     const{error}=await sb.from('book_sources').upsert([{grade:String(grade),subject,semester,book_no:bookNo,offset_pages:offset,page_count:N,base_path:base,updated_by:(currentUser&&currentUser.email)||'',updated_at:new Date().toISOString()}],{onConflict:'grade,subject,semester,book_no'});
     if(error)throw error;
   }catch(e){st.textContent='فشل تسجيل المصدر: '+(e.message||'خطأ');return;}
+  // لا نُقطّع كتاباً ناقصاً: التقطيع يقرأ الصفحات ليستخرج الدروس وأرقامها،
+  // وصفحةٌ غائبة تعني درساً يُنسب إلى الصفحة الخطأ أو يسقط صامتاً — ثم تُبنى
+  // عليه خطةُ كل معلّمة. الإكمال أولاً، ثم التقطيع.
+  if(failed.length){
+    st.textContent+=' (لم يُشغَّل التقطيع — أكملي الصفحات الناقصة أولاً)';
+    return;
+  }
   // مباشرةً: التقطيع الذكي (segRun يقرأ نفس المختارات ويجد الكتاب المسجّل)
   await segRun();
 }
