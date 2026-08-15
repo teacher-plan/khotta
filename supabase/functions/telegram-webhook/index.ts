@@ -305,14 +305,6 @@ Deno.serve(async (req) => {
 
       console.log(`💬 Message received: "${text}" from user ${userId}`);
 
-      // تشخيصٌ مؤقّت — يُحذف فور القراءة.
-      if (text === "/diagquota") {
-        const sbD = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-        const { data } = await sbD.from("ai_settings").select("key,value")
-          .in("key", ["quota_img", "quota_text", "quota_search"]);
-        return json({ diag: true, rows: data });
-      }
-
       // طلب فوري للملخص الشامل بدل انتظار الموعد المجدول (5 مساءً)
       if (text === "/ملخص" || text === "/summary" || text === "/report") {
         await sendTelegram("⏳ جاري تجهيز الملخص الآن...");
