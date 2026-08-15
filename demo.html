@@ -3666,7 +3666,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='b2dfd1c';
+const KH_BUILD='c230c3f';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -3811,10 +3811,13 @@ async function acctSave(){
     beh[c.id]=kept.map(s=>s.si>=0?(oldB[s.si]||[]):[]);
     return{...c,students:kept.map(s=>s.nm.trim())};
   })}));
-  await cy1Save({display_name:nm,phone:ph,grades,stars,beh_log:beh},'يحفظ الإعدادات');
+  const _ok=await cy1Save({display_name:nm,phone:ph,grades,stars,beh_log:beh},'يحفظ الإعدادات');
   profile.stars=stars;profile.beh_log=beh;
   const el=document.getElementById('c1-menu-name');
   if(el)el.textContent=(KH_DEMO?'أ. ':'')+nm;
+  // لا نُغلق النافذة ولا نقول «حُفظت» إن لم يُحفظ: إغلاقُها كان يُخفي
+  // الكشفَ المعدَّل عن عينها بينما لم يصل الخادمَ منه شيء.
+  if(!_ok)return;
   acctClose();toast('حُفظت إعدادات حسابكِ');
   const cur=(document.querySelector('.page.active')||{}).id||'';
   if(cur==='page-students')starRender();
@@ -3902,15 +3905,34 @@ function cy1Merge(remote,mine,base,touched){
   return out;
 }
 
+// ⚠️ عقدُ هذه الدالة: المنتظِرون يُوقَظون بـ true عند النجاح وبـ false عند
+// الفشل. كانوا يُوقَظون في finally بلا قيمة — فكلُّ ‹await cy1Save(...)› يمضي
+// في مسار النجاح ولو فشل الرفع، فتظهر «حُفظت» فوق «تعذّر الحفظ» بثانية،
+// وتمشي المعلّمة مطمئنّةً وقد ضاع كشفُها.
+let _cy1RetryTimer=null;
 function cy1Flush(){
   clearTimeout(_cy1FlushTimer);_cy1FlushTimer=null;
-  if(!_cy1Dirty||!currentUser){const w=_cy1Waiters;_cy1Waiters=[];w.forEach(r=>r());return cy1SaveQueue;}
+  if(!_cy1Dirty||!currentUser){const w=_cy1Waiters;_cy1Waiters=[];w.forEach(r=>r(true));return cy1SaveQueue;}
   _cy1Dirty=false;
   const waiters=_cy1Waiters;_cy1Waiters=[];
+  let ok=true;
   // نسلسل عمليات الحفظ (لا نرسلها بالتوازي) حتى لا تُفقَد آخر تعديل إذا وصلت استجابة أبطأ متأخرة بعد استجابة أحدث
   cy1SaveQueue=cy1SaveQueue.then(()=>cy1Push(0))
-    .catch(()=>{toast('تعذّر الحفظ — تحققي من الاتصال',true);})
-    .finally(()=>{cyBusyDone();waiters.forEach(r=>r());});
+    .catch((e)=>{
+      ok=false;
+      // يبقى متّسخاً: تصفيرُه قبل التأكّد كان يجعل التطبيق يظنّ نفسه محفوظاً،
+      // فتموت التعديلات في الذاكرة عند أول تحديثٍ للصفحة.
+      _cy1Dirty=true;
+      const m=String((e&&e.message)||e||'');
+      // تشخيصٌ صادق: انتهاءُ الجلسة ليس ضعفَ اتصال، والمعلّمة كانت تُعيد
+      // المحاولة على شبكةٍ سليمة بلا فائدة لأن الرسالة أرشدتها خطأً.
+      toast(/session|expired|jwt|not authenticated|401/i.test(m)
+        ? 'انتهت جلستكِ — سجّلي الدخول ثم أعيدي المحاولة'
+        : 'تعذّر الحفظ — سنعيد المحاولة تلقائياً',true);
+      clearTimeout(_cy1RetryTimer);
+      _cy1RetryTimer=setTimeout(()=>{if(_cy1Dirty&&currentUser)cy1Flush();},5000);
+    })
+    .finally(()=>{cyBusyDone();waiters.forEach(r=>r(ok));});
   return cy1SaveQueue;
 }
 
@@ -3954,12 +3976,14 @@ async function cy1Push(attempt){
   return cy1Push(attempt+1);
 }
 
+// تُرجع Promise<boolean>: true حُفِظ فعلاً، false لم يُحفَظ.
+// من يعرض رسالة نجاحٍ بعدها فعليه أن يفحص القيمة.
 function cy1Save(partial,busyText){
-  if(!currentUser)return Promise.resolve();
+  if(!currentUser)return Promise.resolve(false);
   // في التجربة لا خادم ولا ما يُحفظ: نُحدّث الملف محلياً ونخرج فوراً.
   // بدونها كانت كلُّ ضغطةٍ تفتح شاشة «يحفظ» ثم تنتظر ردّاً لا يأتي،
   // فتبقى الشاشة مفتوحةً تحجب كلَّ ضغطةٍ بعدها.
-  if(KH_DEMO){profile={...profile,...partial};return Promise.resolve();}
+  if(KH_DEMO){profile={...profile,...partial};return Promise.resolve(true);}
   // نُسجّل ما مسّه هذا الجهاز — عليه يقوم الدمج عند التعارض
   Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));
   profile={...profile,...partial,updated_at:new Date().toISOString()};
@@ -3974,6 +3998,14 @@ function cy1Save(partial,busyText){
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')cy1Flush();});
 window.addEventListener('pagehide',()=>{cy1Flush();});
+// حاجزُ المغادرة: الحفظ مؤجَّلٌ ٩٠٠ مللي، ومعلّمةٌ تمنح نجمةً ثم تُغلق
+// اللسان فوراً كانت تفقدها بلا أثر. المتصفّح يعرض تحذيره القياسيّ ولا يظهر
+// إلا إن كان ثمّة ما لم يُحفَظ فعلاً، فلا يزعج في الحالة العادية.
+window.addEventListener('beforeunload',(e)=>{
+  if(!_cy1Dirty||!currentUser||KH_DEMO)return;
+  cy1Flush();
+  e.preventDefault();e.returnValue='';return '';
+});
 
 // ══ ذاكرة البيانات المرجعية ══
 // جداول يديرها المشرف ولا تخص معلمة بعينها (المناهج، الأوقات، الثيمات، أنواع المخالفات).
@@ -4875,7 +4907,10 @@ async function suFinish(){
   // اسم المدرسة يُخزَّن ضمن ach_profile نفسه الذي تقرأ منه الشهادة (certItemFor)
   // حتى لا نُحدث مصدرين مختلفين لنفس المعطى
   const ap={...achProfile(),school:suSchool};
-  await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap},'يحفظ إعدادك');
+  const _ok=await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap},'يحفظ إعدادك');
+  // أخطرُ حفظٍ في التطبيق: مسحُ suData/suRosters يمحو كلَّ ما أدخلته في
+  // الإعداد. لو لم يصل الخادمَ لضاع عملُ ربع ساعةٍ بلا رجعة.
+  if(!_ok)return;
   document.getElementById('c1-menu-name').textContent=suName;
   suData={};suRosters={};window._suFocus=null;suRActive=null;
   renderYawmi();
@@ -10160,7 +10195,7 @@ async function achSaveProfile(){
     years:document.getElementById('ach-pyears').value||'',
     bio:(document.getElementById('ach-pbio').value||'').trim(),
   };
-  await cy1Save({ach_profile:p},'يحفظ النبذة');
+  if(!await cy1Save({ach_profile:p},'يحفظ النبذة'))return;
   toast('تم حفظ النبذة','ok');
 }
 async function achPhotoChange(e){
@@ -10263,9 +10298,9 @@ async function achSave(){
   const items=[...achList(),{id,type:achType,title,date,desc,attachments}];
   achAddClose();
   btn.disabled=false;btn.textContent='حفظ';
-  await cy1Save({achievements:items},'يحفظ إنجازك');
+  const _ok=await cy1Save({achievements:items},'يحفظ إنجازك');
   achRender();
-  toast('حُفظ في سجلّكِ المهني','ok');
+  if(_ok)toast('حُفظ في سجلّكِ المهني','ok');
 }
 async function achDelete(id){
   if(!await c1Confirm('حذف هذا العنصر من سجلّك؟'))return;
