@@ -15,7 +15,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # حارسٌ يسبق النشر. كان فحصُ البنية يعمل في سير عملٍ مستقلّ يُطلقه نفس
+  # الدفع، فيمضيان متوازيين: يفشل الفحص وينجح النشر، فتصل الصفحة المكسورة
+  # إلى المعلّمات ويبقى ✗ أحمرُ لا يمنع شيئاً. الآن النشر يتوقّف عليه.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node tools/check-html.mjs
+
   deploy:
+    needs: check
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
