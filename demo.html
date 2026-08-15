@@ -654,9 +654,16 @@ body.inapp #c1-notif-btn{display:flex}
 .qchip{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;
   max-width:100%;border:1.5px solid var(--border);background:var(--surface);
   border-radius:999px;padding:6px 10px 6px 14px;font-size:12.5px;font-weight:800;color:var(--muted)}
-.qchip b{font-size:15px}
-.qchip .qbar{width:96px;height:8px;border-radius:99px;background:var(--border);overflow:hidden;flex:none}
-.qchip .qbar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+/* حلقة الرصيد: النسبة داخلها والحلقة حولها — الشكل الدائري يُقرأ ممتلئاً أو
+   شبه فارغ بلمحةٍ واحدة، أوضح من شريطٍ يحتاج مقارنةَ طولٍ بطول. */
+.qring{position:relative;width:46px;height:46px;flex:none}
+.qring svg{width:46px;height:46px;transform:rotate(-90deg)}   /* البدء من الأعلى */
+.qring circle{fill:none;stroke-width:5;stroke-linecap:round}
+.qring .qr-t{stroke:var(--border)}
+.qring .qr-v{transition:stroke-dasharray .6s ease,stroke .4s ease}
+.qring .qr-n{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@media(prefers-reduced-motion:reduce){.qring .qr-v{transition:none}}
 .qchip .qq{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);background:transparent;
   color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center;flex:none;transition:.15s}
@@ -3732,15 +3739,21 @@ async function qChip(boxId,kind){
     const used=kind==='img'?q.img:q.text, lim=kind==='img'?q.qI:q.qT;
     const left=Math.max(0,lim-used);
     const pct=lim?left/lim:1;
-    const col=pct<=.1?'#C9453B':pct<=.3?'#D98B2B':'#2F7D74';
-    // الرقم مع الشريط: الشريط يُقرأ بلمحة، والرقم يُمكّن من التخطيط — «بقيت
-    // لي عشرون صورة» قرارٌ، و«الشريط في ثلثه» إحساس. و«هذا الشهر» مذكورةٌ
-    // صراحةً كي لا تُحسب رصيداً أبدياً فتُقتّر وهو يتجدّد بعد أيام.
+    // أربع درجاتٍ لا ثلاث: الانتقال من الأخضر إلى الأحمر مباشرةً يُفزع، والدرجة
+    // الوسطى تُنبّه قبل الحاجة بوقتٍ يكفي لتغيير الخطّة.
+    const col=pct<=.1?'#C9453B':pct<=.25?'#D9662B':pct<=.5?'#D9A62B':'#2F7D74';
     const unit=kind==='img'?'صورة':'طلب';
-    box.innerHTML=`<span class="qchip">متبقٍّ هذا الشهر
-      <b style="color:${col};font-variant-numeric:tabular-nums">${egArNum(left)}</b>
-      <span style="opacity:.65;font-size:.92em">من ${egArNum(lim)} ${unit}</span>
-      <span class="qbar"><i style="width:${(pct*100).toFixed(0)}%;background:${col}"></i></span>
+    const R=18, C=2*Math.PI*R;                       // محيط الحلقة
+    box.innerHTML=`<span class="qchip">
+      <span class="qring" role="img" aria-label="المتبقّي ${Math.round(pct*100)} بالمئة من ${lim} ${unit}">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <circle class="qr-t" cx="23" cy="23" r="${R}"></circle>
+          <circle class="qr-v" cx="23" cy="23" r="${R}"
+                  style="stroke:${left?col:'none'};stroke-dasharray:${(pct*C).toFixed(1)} ${C.toFixed(1)}"></circle>
+        </svg>
+        <span class="qr-n" style="color:${col}">${egArNum(Math.round(pct*100))}٪</span>
+      </span>
+      <span>متبقٍّ هذا الشهر <span style="opacity:.65">من ${egArNum(lim)} ${unit}</span></span>
       <button type="button" class="qq" onclick="qhelpOpen()" title="ما هذا الرصيد؟" aria-label="ما هذا الرصيد؟">؟</button></span>`;
   }catch(e){box.innerHTML='';}
 }
