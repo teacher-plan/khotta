@@ -912,7 +912,11 @@ body.inapp #c1-notif-btn{display:flex}
 .lv-spread img{max-width:50%;max-height:100%;width:auto;object-fit:contain;border-radius:0;
   background:#fff;-webkit-user-drag:none;user-select:none}
 .lv-spread.one img{max-width:100%}
-/* الخيط الفاصل بين الصفحتين — كعب الكتاب */
+/* كتاب الإنجليزية يُفتح من اليسار: الحاوية ترث rtl من الصفحة فينقلب ترتيبها،
+   وltr يعيده. وبهذا يبقى ترتيب العناصر في الكود واحداً للكتابين. */
+.lv-spread.ltr{direction:ltr}
+/* الخيط الفاصل بين الصفحتين — كعب الكتاب. والظلّ يقع في الوسط دائماً،
+   فلا يتأثّر باتجاه الكتاب: الصفحة اليسرى تُظلّل يمينها والعكس. */
 .lv-spread:not(.one) img:first-child{box-shadow:inset -8px 0 14px -10px rgba(0,0,0,.45)}
 .lv-spread:not(.one) img:last-child{box-shadow:inset 8px 0 14px -10px rgba(0,0,0,.45)}
 .lv-vbody.zoomed{align-items:flex-start;justify-content:flex-start;cursor:grab}
@@ -7946,6 +7950,10 @@ function liveOpenFile(fi){
    الطالبة التي تتابع في نسختها. */
 let _liveBookZoom=1;
 const LV_ZOOMS=[1,1.5,2,3];
+/* كتاب الإنجليزية يُفتح من اليسار كسائر الكتب اللاتينية، فأولى صفحتيه على
+   اليسار وتقليبُه إلى الأمام يسار — عكس بقيّة المواد. ولولا هذا الاستثناء
+   لعُرض مقلوباً أمام الطالبة التي تتابع في نسختها الورقية. */
+function _lvLtr(){return /إنجليز|english/i.test((liveCtx&&liveCtx.subject)||'');}
 function liveOpenBook(){
   if(!_liveBook||!_liveBook.length)return;
   _liveBookAt=0;_liveBookZoom=1;
@@ -7959,9 +7967,10 @@ function liveBookRender(){
   const total=_liveBook.length;
   const one=b>=total;                                    // آخر صفحةٍ فردية: وحدها
   const img=(i)=>`<img src="${_liveBook[i]}" alt="صفحة ${i+1}" draggable="false">`;
-  // ترتيب DOM: اليسار ثم اليمين — والأولى على اليمين لأن الكتاب عربيّ
-  body.innerHTML=`<div class="lv-spread${one?' one':''}" style="--z:${_liveBookZoom}">`
-    +(one?img(a):img(b)+img(a))+`</div>`;
+  // الترتيب واحدٌ في الحالتين (الأقدم أولاً)، والاتجاه هو ما يقلبه: الحاوية
+  // ترث rtl من الصفحة فيظهر أوّلُ عنصرٍ يميناً، و.ltr تجعله يساراً.
+  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()?' ltr':''}" style="--z:${_liveBookZoom}">`
+    +(one?img(a):img(a)+img(b))+`</div>`;
   body.classList.toggle('zoomed',_liveBookZoom>1);
   document.getElementById('lv-page-n').textContent=
     one?egArNum(a+1)+' / '+egArNum(total)
@@ -7992,8 +8001,8 @@ function liveBookZoom(d){
   _liveBookZoom=LV_ZOOMS[n];liveBookRender();
 }
 /* السحب والمفاتيح: المعلّمة واقفةٌ أمام صفٍّ ويدها على اللوح أو الجهاز —
-   البحثُ عن زرٍّ صغير يقطع الدرس. والاتجاه معكوس لأن الكتاب عربيّ:
-   السحب إلى اليمين يرجع، وإلى اليسار يتقدّم. */
+   البحثُ عن زرٍّ صغير يقطع الدرس. والاتجاه يتبع اتجاه الكتاب: في العربي
+   السحب يميناً يرجع، وفي الإنجليزي يتقدّم — كما تُقلَّب الورقة بيدها. */
 (function lvBookGestures(){
   const body=document.getElementById('lv-vbody');
   if(!body)return;
@@ -8009,12 +8018,12 @@ function liveBookZoom(d){
     const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
     x0=null;
     if(Math.abs(dx)<55||Math.abs(dy)>Math.abs(dx))return;         // سحبٌ أفقيّ صريح فقط
-    liveBookGo(dx>0?-1:1);
+    liveBookGo((dx>0)===_lvLtr()?1:-1);
   },{passive:true});
   document.addEventListener('keydown',e=>{
     if(!active())return;
-    if(e.key==='ArrowRight')liveBookGo(-1);        // اليمين يرجع — الكتاب عربيّ
-    else if(e.key==='ArrowLeft')liveBookGo(1);
+    if(e.key==='ArrowRight')liveBookGo(_lvLtr()?1:-1);
+    else if(e.key==='ArrowLeft')liveBookGo(_lvLtr()?-1:1);
     else if(e.key==='+'||e.key==='=')liveBookZoom(1);
     else if(e.key==='-')liveBookZoom(-1);
   });
