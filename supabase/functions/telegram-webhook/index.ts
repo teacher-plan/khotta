@@ -96,6 +96,84 @@ async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?:
   return { ok: sent.ok, listed: page.length, error: sent.error };
 }
 
+// ── قائمة متابعة الدفع ────────────────────────────────────────────────
+// مثل قائمة الترحيب تماماً — خمسٌ في كل مرّة، وزرٌّ يفتح واتساب برسالة
+// الدفع جاهزةً، وزرُّ «تابعتُ» يُسجّل المتابعة ويجلب الدفعة التالية.
+// عمود welcomed_at وحده لا يكفي معياراً هنا: قد تُرحَّب المعلّمة وتظلّ لم
+// تدفع أياماً، فتحتاج متابعةً لاحقةً منفصلة عن الترحيب الأول.
+let _payNum = 76787595; // احتياطي إن تعذّر جلب الرقم من app_settings
+function _payWaNum(p: string): string {
+  let d = String(p || "").replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  return d ? (d.length === 8 ? "968" + d : d) : "";
+}
+function _payText(n: string, price: number): string {
+  const nm = String(n || "").trim();
+  return [
+    nm ? `مرحباً ${nm} 🌸` : "مرحباً 🌸", "",
+    "أهلاً بكِ في منصة «خُطّتي الفصلية» — سعدنا بتسجيلكِ.", "",
+    `لتفعيل حسابك يتبقّى تحويل مبلغ ${price} ريالاً عُمانياً، وهو اشتراك الفصل الدراسي كاملاً.`, "",
+    "طريقة الدفع:",
+    `• تحويل على الرقم: ${_payNum}`, "",
+    "وبعد التحويل أرسلي صورة الإيصال هنا ليُفعَّل حسابك 🌷",
+  ].join("\n");
+}
+async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?: string }> {
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const { data: priceRow } = await sb.from("app_settings")
+    .select("value").eq("key", "subscription_price").maybeSingle();
+  const price = Number(priceRow?.value) || 15;
+
+  // خلافاً للترحيب، المتابعة تتكرّر: من تابعناها اليوم قد تحتاج متابعةً
+  // ثانيةً بعد أيام لو لم تدفع بعد. فالترتيب يضع من لم تُتابَع قطّ أولاً،
+  // ومن تابعناها ينتقلن لآخر الطابور بدل أن يختفين نهائياً كالترحيب.
+  const { data, error } = await sb.from("pre_registrations")
+    .select("id,name,phone")
+    .eq("stage", "cycle1").eq("payment_status", "pending")
+    .order("payment_followup_at", { ascending: true, nullsFirst: true })
+    .order("created_at", { ascending: true })
+    .limit(60);
+
+  if (error) {
+    console.error("sendPaymentList query failed:", error.message);
+    await sendTelegram(`⚠️ تعذّر جلب القائمة: ${error.message}`);
+    return { ok: false, listed: 0, error: error.message };
+  }
+
+  const esc = (x: string) => String(x ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  if (!data || !data.length) {
+    await sendTelegram("✅ لا أحد بانتظار الدفع — الجميع مُفعَّلات أو رُوسِلن بالفعل.");
+    return { ok: true, listed: 0 };
+  }
+
+  const page = data.filter((r: { phone?: string }) => _payWaNum(r.phone || "")).slice(0, PEND_PAGE);
+  const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
+  for (const r of page) {
+    rows.push([{ text: `💳 ${(r.name || "بلا اسم").slice(0, 26)}`,
+      url: `https://wa.me/${_payWaNum(r.phone || "")}?text=${encodeURIComponent(_payText(r.name || "", price))}` }]);
+  }
+  if (page.length) {
+    rows.push([{ text: `✅ تابعتُ هؤلاء (${page.length})`,
+      callback_data: "pay:done:" + page.map((r: { id: number }) => r.id).join(",") }]);
+  }
+
+  const head = [`💳 <b>بانتظار الدفع: ${data.length}</b>`, "",
+    "اضغط اسم المعلّمة ليُفتح واتساب ورسالةُ الدفع مكتوبةٌ فيه."];
+  if (data.length > page.length) head.push("", `<i>تُعرض ${page.length} — وبعد الضغط على «تابعتُ هؤلاء» تظهر التالية.</i>`);
+  const noPhone = data.filter((r: { phone?: string }) => !_payWaNum(r.phone || ""));
+  if (noPhone.length) head.push("", `⚠️ بلا رقم هاتف: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
+
+  const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
+  if (!sent.ok) console.error("payment list failed:", sent.error);
+  return { ok: sent.ok, listed: page.length, error: sent.error };
+}
+
 // معالجات الأزرار
 async function handleCallbackQuery(
   callbackData: string,
@@ -192,6 +270,19 @@ Deno.serve(async (req) => {
         return json({ ok: true, marked: ids.length });
       }
 
+      // «تابعتُ هؤلاء» في قائمة الدفع: يُسجَّل وقت المتابعة (لا حذفٌ من
+      // القائمة، فمن لم تدفع بعد تعود لآخر الطابور لا خارجه).
+      if (callbackData.startsWith("pay:done:")) {
+        const ids = callbackData.slice(9).split(",").map((x) => Number(x)).filter(Boolean);
+        if (ids.length) {
+          await sb.from("pre_registrations")
+            .update({ payment_followup_at: new Date().toISOString() }).in("id", ids);
+        }
+        await editTelegram(messageId, `✅ سُجّلت متابعة الدفع لـ${ids.length} معلّمة.`);
+        await sendPaymentList();
+        return json({ ok: true, marked: ids.length });
+      }
+
       // معالجة الضغطة
       const responseText = await handleCallbackQuery(callbackData, messageId, sb);
 
@@ -284,7 +375,13 @@ Deno.serve(async (req) => {
       // البوت لا يراسل المعلّمة بنفسه (تلغرام يمنع البوتات من بدء محادثةٍ مع
       // من لم يبدأها)، لكنه يختصر الطريق إلى ضغطةٍ واحدة من الهاتف.
       if (text === "/pending" || text === "/انتظار" || text === "/المتبقيات") {
-        await sendPendingList(0);
+        await sendPendingList();
+        return json({ ok: true });
+      }
+
+      // متابعة من سجّلن ولم تدفع بعد — نفس فكرة /pending برسالة الدفع بدل الترحيب.
+      if (text === "/payment" || text === "/دفع" || text === "/متابعة_الدفع") {
+        await sendPaymentList();
         return json({ ok: true });
       }
 
