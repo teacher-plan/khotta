@@ -185,6 +185,48 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
+      // من لم تُفعَّل بعد — مع رابط ترحيبٍ جاهز لكلٍّ منهنّ.
+      // البوت لا يراسل المعلّمة بنفسه (تلغرام يمنع البوتات من بدء محادثةٍ مع
+      // من لم يبدأها)، لكنه يختصر الطريق إلى ضغطةٍ واحدة من الهاتف.
+      if (text === "/pending" || text === "/انتظار" || text === "/المتبقيات") {
+        const sb = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+        const { data } = await sb.from("pre_registrations")
+          .select("name,phone,created_at")
+          .eq("stage", "cycle1").eq("payment_status", "pending")
+          .order("created_at", { ascending: false }).limit(20);
+
+        const esc = (s: string) => String(s ?? "")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const wa = (p: string) => {
+          let d = String(p || "").replace(/\D/g, "");
+          if (d.startsWith("00")) d = d.slice(2);
+          return d ? `https://wa.me/${d.length === 8 ? "968" + d : d}` : "";
+        };
+        const welcome = (n: string) => [
+          n ? `أهلاً بكِ ${n} 🌸` : "أهلاً بكِ 🌸", "",
+          "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.", "",
+          "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.", "",
+          "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
+        ].join("\n");
+
+        if (!data || !data.length) {
+          await sendTelegram("✅ لا حجوزات في الانتظار — كلّهنّ مُفعَّلات.");
+          return json({ ok: true });
+        }
+        const lines = [`⏳ <b>في انتظار التفعيل: ${data.length}</b>`, ""];
+        for (const r of data) {
+          const u = wa(r.phone || "");
+          const nm = esc(r.name || "بلا اسم");
+          lines.push(u ? `• ${nm} — <a href="${u}?text=${encodeURIComponent(welcome(r.name || ""))}">🌸 ترحيب</a>`
+                       : `• ${nm} — لا رقم`);
+        }
+        await sendTelegram(lines.join("\n"));
+        return json({ ok: true });
+      }
+
       // معالجة الردود على الاستبيانات
       if (text.match(/^[1-5]$/)) {
         // تقييم من 1-5

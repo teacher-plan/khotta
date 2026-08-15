@@ -62,6 +62,21 @@ function waLink(phone: string): string {
   return `https://wa.me/${d.length === 8 ? "968" + d : d}`;
 }
 
+// رسالة الترحيب — نصّها نفسه المستعمل في لوحة الإدارة، فلا تختلف صياغتان
+// لمعلّمتين حسب المكان الذي أُرسلت منه.
+function welcomeText(name: string): string {
+  const n = String(name || "").trim();
+  return [
+    n ? `أهلاً بكِ ${n} 🌸` : "أهلاً بكِ 🌸",
+    "",
+    "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.",
+    "",
+    "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.",
+    "",
+    "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
+  ].join("\n");
+}
+
 function buildMessage(r: Reg, rank: number | null): string {
   const name = escHtml(r.name || "بلا اسم");
   const phone = escHtml(r.phone || "—");
@@ -83,6 +98,16 @@ function buildMessage(r: Reg, rank: number | null): string {
   const tail = [when ? `🕐 ${when} (مسقط)` : "", rank ? `📊 التسجيل رقم ${rank}` : ""]
     .filter(Boolean).join("  ·  ");
   if (tail) lines.push(tail);
+
+  // زرُّ الترحيب: يفتح واتساب والرسالةُ مكتوبةٌ فيه، فلا يبقى إلا الإرسال.
+  // البوت لا يستطيع مراسلة المعلّمة بنفسه — تلغرام يمنع البوتات من بدء
+  // محادثةٍ مع من لم يبدأها، ولا يعرفها برقم هاتفها. فأقصرُ طريقٍ ممكن:
+  // يصلك الإشعار وأنت في أي مكان، فتضغط ضغطةً واحدة وتُرسل الترحيب فوراً
+  // بدل أن تنتظر حتى تفتح لوحة الإدارة على الحاسوب.
+  if (wa) {
+    lines.push("");
+    lines.push(`<a href="${wa}?text=${encodeURIComponent(welcomeText(r.name || ""))}">🌸 إرسال الترحيب</a>`);
+  }
 
   return lines.join("\n");
 }
