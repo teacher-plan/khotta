@@ -216,15 +216,30 @@ Deno.serve(async (req) => {
           await sendTelegram("✅ لا حجوزات في الانتظار — كلّهنّ مُفعَّلات.");
           return json({ ok: true });
         }
-        const lines = [`⏳ <b>في انتظار التفعيل: ${data.length}</b>`, ""];
-        for (const r of data) {
+        // الروابط في أزرارٍ لا في نصّ الرسالة: رابط واتساب برسالةٍ مكتوبة
+        // يقارب ١٤٠٠ حرف، وأربعَ عشرة منها تتجاوز حدّ النصّ (٤٠٩٦) خمسة
+        // أضعاف فتُرفض الرسالة كلّها. وروابطُ الأزرار لا تُحسب على ذلك الحدّ.
+        // وثمانية أزرارٍ في المرّة: قائمةٌ أطول تصير جداراً لا يُقرأ.
+        const rows = data.slice(0, 8).map((r: { name?: string; phone?: string }) => {
           const u = wa(r.phone || "");
-          const nm = esc(r.name || "بلا اسم");
-          lines.push(u ? `• ${nm} — <a href="${u}?text=${encodeURIComponent(welcome(r.name || ""))}">🌸 ترحيب</a>`
-                       : `• ${nm} — لا رقم`);
+          const nm = (r.name || "بلا اسم").slice(0, 26);
+          return u ? [{ text: `🌸 ${nm}`, url: `${u}?text=${encodeURIComponent(welcome(r.name || ""))}` }] : [];
+        }).filter((r: unknown[]) => r.length);
+
+        const head = [`⏳ <b>في انتظار التفعيل: ${data.length}</b>`, "",
+          "اضغطي اسم المعلّمة ليُفتح واتساب ورسالةُ الترحيب مكتوبةٌ فيه."];
+        if (data.length > rows.length) head.push("", `<i>تُعرض ${rows.length} — أعيدي الأمر بعد إرسالها.</i>`);
+        const noPhone = data.filter((r: { phone?: string }) => !wa(r.phone || ""));
+        if (noPhone.length) head.push("", `⚠️ بلا رقم: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
+
+        const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
+        // الفشل لا يُبتلع: كان يُرجَع ok وقد رفض تلغرام الرسالة، فيظنّ المشرف
+        // أنّ الأمر لم يصل أصلاً ويعيده مراراً بلا أثر.
+        if (!sent.ok) {
+          console.error("pending list failed:", sent.error);
+          return json({ ok: false, error: sent.error }, 502);
         }
-        await sendTelegram(lines.join("\n"));
-        return json({ ok: true });
+        return json({ ok: true, listed: rows.length });
       }
 
       // معالجة الردود على الاستبيانات

@@ -1,9 +1,13 @@
 // دالة مساعدة لإرسال الرسائل عبر Telegram
 // تُستخدم من جميع الوكلاء
 
+// إمّا زرُّ ردٍّ (callback_data) أو زرُّ رابط (url). وزرُّ الرابط يسع روابط
+// طويلة لا تُحسب على حدّ نصّ الرسالة (٤٠٩٦ حرفاً) — وهو ما يجعله الطريق
+// الوحيد لقائمةٍ فيها رابط واتساب برسالةٍ مكتوبة لكل صفّ.
 interface TelegramButton {
   text: string;
-  callback_data: string;
+  callback_data?: string;
+  url?: string;
 }
 
 interface TelegramOptions {
