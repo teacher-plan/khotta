@@ -74,5 +74,9 @@ jobs:
           verify "select policyname from pg_policies where tablename='ai_settings' order by 1;"
           echo "— هل بقيت السياسة المفتوحة على allowed_emails؟ (يجب أن تكون فارغة)"
           verify "select policyname from pg_policies where tablename='allowed_emails' and policyname='anyone_can_check';"
+          echo "— حياةُ الوكلاء: آخر فحص صحّة (يثبت أن cron ينادي بمفتاح الخزانة)"
+          verify "select max(checked_at) as last_check, count(*) filter (where checked_at > now() - interval '15 minutes') as last_15min from health_checks;"
+          echo "— آخر تشغيلٍ سجّله pg_cron لكل وكيل"
+          verify "select j.jobname, max(r.end_time) as last_run, (array_agg(r.status order by r.end_time desc))[1] as last_status from cron.job j left join cron.job_run_details r on r.jobid=j.jobid where j.jobname like 'agent-%' group by j.jobname order by 1;"
 
           exit $fail
