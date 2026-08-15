@@ -16027,6 +16027,40 @@ window.addEventListener('DOMContentLoaded',()=>{
     }
   })();
 });
+
+/* ══ حاجز الضغط المكرّر ══════════════════════════════════════════════
+   المشرف يضغط الزرّ ثانيةً حين لا يرى أثراً فورياً — والعملية جاريةٌ في
+   الخلفية. فيتضاعف العمل: تقطيعُ كتابٍ كاملاً مرّتين، أو صفٌّ مكرّر في
+   قاعدة البيانات، أو رسالةٌ تُنشر نسختين.
+
+   لا نحجب الضغط في كل مكان: النجوم والألعاب والمؤقّت تحتاج ضغطاً سريعاً
+   متتابعاً، وحجبها يُفسد استعمالها. فنُحكم القيد على الدوال المكشوفة
+   وحدها — كلٌّ منها تُرفض إعادة ندائها ما دام ندئها الأول جارياً.
+
+   والرفض ليس صامتاً: صمتُه يدفع المشرف إلى ضغطةٍ ثالثة. */
+(function(){
+  const RISKY = ['segRun','segImportFromUrl','segUploadAndSegment','loadOrBalance','dpPrepareAll','dpSaveEdits','dpRate','saveTemplateFromEditor','saveGradeTemplate','saveAnnouncement','publishSurvey','submitSurvey','addViolationType','gcfgSave','reactivateSurvey','deactivateSurvey','moveViolationType','toggleViolationTypeActive','fhDelChat','segApprove','toggleUserAccess'];
+  for (const name of RISKY) {
+    const fn = window[name];
+    if (typeof fn !== 'function') continue;
+    let running = false;
+    window[name] = function(...args){
+      if (running) {
+        try { toast('العملية جارية — انتظري انتهاءها', true); } catch(e) {}
+        return;
+      }
+      running = true;
+      let out;
+      try { out = fn.apply(this, args); }
+      catch (e) { running = false; throw e; }
+      // الدوال غير المتزامنة تُعيد وعداً: نفكّ القيد عند انتهائه لا قبله.
+      if (out && typeof out.then === 'function') out.then(()=>{running=false;}, ()=>{running=false;});
+      else running = false;
+      return out;
+    };
+  }
+})();
+
 </script>
 <!-- مودال معاينة السلوك -->
 <div id="bprev-modal" class="bprev-modal" style="display:none" onclick="closeBehaviorPreview(event)">
