@@ -143,9 +143,18 @@ Deno.serve(async (req) => {
       return json({ error: "allow_failed", detail: aErr.message }, 502);
     }
 
-    await admin.from("pre_registrations")
-      .update({ account_email: email, account_password: password })
+    // ⚠️ لا تُكتب كلمة المرور هنا. كانت تُحفظ نصّاً صريحاً في
+    // account_password رغم أنّ 20260711_security_hardening.sql أسقط العمود
+    // عمداً — إصلاحٌ نُقض من حيث لا يُدرى. والحفظ لا داعي له أصلاً: الكلمة
+    // تصل المعلّمة بالبريد وتُرجَع للمشرف في الردّ، ونسيانُها بابُه
+    // reset-teacher-password لا قراءةُ نصٍّ مخزَّن.
+    //
+    // وفحصُ الخطأ لازم: كتابةٌ إلى عمودٍ محذوف تُفشل العبارة كلَّها، فكان
+    // account_email يضيع معها بصمت — والمشرف يرى «فُعِّل» بلا بريدٍ مسجَّل.
+    const { error: uErr } = await admin.from("pre_registrations")
+      .update({ account_email: email })
       .eq("id", regId);
+    if (uErr) console.error("activate-teacher: تعذّر حفظ account_email:", uErr.message);
 
     const link = cycle === "cycle1" ? "https://khotati.com/cycle1.html" : "https://khotati.com/";
     const mail = await sendMail(email, "تفعيل حسابكِ في منصّة خُطّة", mailHtml(reg.name || "معلّمتنا", email, password, link));

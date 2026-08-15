@@ -1,7 +1,7 @@
 // v2026.07.09 ════════════════════════════════════════════════════════════════
 // Edge Function: reset-teacher-password
 // تُولّد كلمة مرور جديدة لحساب معلم وتحدّثها في Supabase Auth
-// مباشرة (auth.admin.updateUserById) + في عمود account_password.
+// مباشرة (auth.admin.updateUserById) — ولا تُخزَّن نصّاً في أي عمود.
 // السماحية: فقط مستخدم مصادَق بنفس بريد المشرف (ADMIN_EMAIL).
 // service_role key لا يصل أبداً لكود المتصفح — يبقى على الخادم فقط.
 //

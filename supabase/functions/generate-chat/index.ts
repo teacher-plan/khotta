@@ -71,7 +71,11 @@ Deno.serve(async (req) => {
 
     // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
     const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
-    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
+    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
+    if (!quota.ok) return quota.error === "quota_unavailable"
+      ? json({ error: "quota_unavailable" }, 503)
+      : json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
     // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
     // على توليدٍ لم تستلمه.
     let webOn = false;
@@ -125,7 +129,9 @@ Deno.serve(async (req) => {
     // فخصمها رسالةً واحدة يجعل حصّة النصّ بابَ إنفاقٍ لا سقفاً له.
     if (wantImage) {
       const iq = await takeQuota(admin, user.id, user.email || "", "img", st);
-      if (!iq.ok) return refund({ error: "quota_exceeded_img", used: iq.used, limit: iq.limit }, 429);
+      if (!iq.ok) return iq.error === "quota_unavailable"
+        ? refund({ error: "quota_unavailable" }, 503)
+        : refund({ error: "quota_exceeded_img", used: iq.used, limit: iq.limit }, 429);
       imgOn = true;
     }
 

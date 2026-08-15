@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
+import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,9 @@ function escHtml(s: string): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  // 🔒 وكيلٌ إداريّ: يقرأ uploaded_by وأسماء الملفات ورسائل الأخطاء.
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   try {
     const sb = createClient(

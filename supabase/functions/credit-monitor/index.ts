@@ -7,6 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
+import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +47,9 @@ const QUOTA_DEFAULTS: Record<string, number> = { text: 300, img: 200, search: 20
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  // 🔒 وكيلٌ إداريّ: يقرأ بريد كل معلّمة واستهلاكها ويكتب في تلجرام.
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   try {
     const sb = createClient(

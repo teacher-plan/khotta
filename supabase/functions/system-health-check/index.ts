@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
+import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -304,6 +305,11 @@ function getActionForComponent(component: string, error?: string): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  // 🔒 وكيلٌ إداريّ: يسبر دوالَّ أخرى ويكتب في تلجرام نيابةً عن المشرف.
+  // ملاحظة: سبرُه للدوال يبقى بمفتاح anon، و401 عنده = صحّة (سطر ٧١)،
+  // فإقفالُ daily-summary وcredit-monitor لا يجعلهما «معطوبتين» عنده.
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   try {
     const sb = createClient(

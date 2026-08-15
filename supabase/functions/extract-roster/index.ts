@@ -61,7 +61,11 @@ Deno.serve(async (req) => {
     // رفعٌ متكرّر واحد كان يستنزف بلا أن يُحسب على أحد. تُحسَب على حصة الصور
     // لأن مدخلها صورٌ لا نصّ.
     const quota = await takeQuota(admin, user.id, user.email || "", "img", st);
-    if (!quota.ok) return json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
+    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
+    if (!quota.ok) return quota.error === "quota_unavailable"
+      ? json({ error: "quota_unavailable" }, 503)
+      : json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
     const refund = async (body: Record<string, unknown>, status: number) => {
       await refundQuota(admin, user.id, user.email || "", "img");
       return json(body, status);
