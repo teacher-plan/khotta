@@ -1,0 +1,78 @@
+# تطبيقُ هجرات قاعدة البيانات — بيدٍ لا تلقائياً.
+#
+# لماذا يدويّ: تعديلُ المخطّط وسياسات الأمان ليس كنشر صفحة. الدفعُ إلى main
+# لا يجوز أن يُغيّر سياسةَ RLS من تلقاء نفسه، فتُقفَل معلّمةٌ خارج بياناتها
+# بلا أن ينوي أحد. فالتشغيل بضغطةٍ واعية من تبويب Actions.
+#
+# لماذا الـManagement API لا مفتاح الخدمة: مفتاح الخدمة يُصادِق على
+# PostgREST، وليس فيه مسلكٌ لـ CREATE POLICY ولا ALTER TABLE إطلاقاً.
+# وهذا المسلك يستعمل السرّ الموجود أصلاً (SUPABASE_ACCESS_TOKEN) فلا
+# يحتاج بيانَ اعتمادٍ جديداً ولا يمرّ مفتاحٌ في محادثة.
+#
+# الهجرات كلُّها متعادلة (idempotent): إعادةُ تشغيلها لا تضرّ.
+name: Apply DB migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      pattern:
+        description: 'نمطُ أسماء الملفات (مثال: 20260816_p0_*)'
+        required: true
+        default: '20260816_p0_*'
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تطبيق الهجرات بالترتيب
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          PATTERN: ${{ inputs.pattern }}
+        run: |
+          set -uo pipefail
+          fail=0
+          # الترتيب أبجديّ، وأسماء الملفات مُرقَّمة بالتاريخ فيوافق الترتيبَ المقصود.
+          # عدا واحدة: جدولة الوكلاء يجب أن تكون الأخيرة، فتُؤجَّل صراحةً.
+          files=$(ls supabase/migrations/$PATTERN.sql 2>/dev/null | grep -v agent_cron || true)
+          cron=$(ls supabase/migrations/$PATTERN.sql 2>/dev/null | grep agent_cron || true)
+          all="$files $cron"
+          if [ -z "$(echo $all | tr -d ' ')" ]; then echo "::error::لا ملفات تطابق $PATTERN"; exit 1; fi
+
+          for f in $all; do
+            echo "──────── $f ────────"
+            # jq -Rs يُهرّب النصّ كاملاً إلى JSON بأمان: علاماتُ الاقتباس
+            # والأسطر الجديدة والعربية تمرّ كما هي بلا كسر الحمولة.
+            body=$(jq -Rs '{query: .}' < "$f")
+            code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              --data-binary "$body")
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "✅ نُفِّذ ($code)"
+            else
+              echo "❌ فشل ($code)"; cat /tmp/resp.json; echo
+              fail=1
+            fi
+          done
+
+          echo "════════ التحقّق ════════"
+          verify() {
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")"
+            echo
+          }
+          echo "— الدوالّ المتوقَّعة:"
+          verify "select proname from pg_proc where proname in ('take_quota','refund_quota','call_agent') order by 1;"
+          echo "— جدولة الوكلاء:"
+          verify "select jobname, schedule from cron.job where jobname like 'agent-%' order by 1;"
+          echo "— سياسات ai_settings:"
+          verify "select policyname from pg_policies where tablename='ai_settings' order by 1;"
+          echo "— هل بقيت السياسة المفتوحة على allowed_emails؟ (يجب أن تكون فارغة)"
+          verify "select policyname from pg_policies where tablename='allowed_emails' and policyname='anyone_can_check';"
+
+          exit $fail
