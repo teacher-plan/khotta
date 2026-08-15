@@ -902,11 +902,34 @@ body.inapp #c1-notif-btn{display:flex}
 .lv-vx:hover{border-color:var(--red);background:var(--surface)}
 .lv-vbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;padding:10px;background:#151009}
 .lv-vbody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block}
+/* نشرة الكتاب: صفحتان متلاصقتان بخيطٍ فاصل يوحي بكعب الكتاب.
+   والحشو يُلغى في وضع الكتاب: الصفحتان تحتاجان كل بكسلٍ على شاشة العرض. */
+.lv-vbody:has(.lv-spread){padding:4px;align-items:center}
+.lv-spread{display:flex;gap:2px;align-items:stretch;justify-content:center;
+  max-width:100%;max-height:100%;transform:scale(var(--z,1));transform-origin:center center;
+  transition:transform .25s ease;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 10px 34px rgba(0,0,0,.5)}
+.lv-spread img{max-width:50%;max-height:100%;width:auto;object-fit:contain;border-radius:0;
+  background:#fff;-webkit-user-drag:none;user-select:none}
+.lv-spread.one img{max-width:100%}
+/* الخيط الفاصل بين الصفحتين — كعب الكتاب */
+.lv-spread:not(.one) img:first-child{box-shadow:inset -8px 0 14px -10px rgba(0,0,0,.45)}
+.lv-spread:not(.one) img:last-child{box-shadow:inset 8px 0 14px -10px rgba(0,0,0,.45)}
+.lv-vbody.zoomed{align-items:flex-start;justify-content:flex-start;cursor:grab}
+@media(prefers-reduced-motion:reduce){.lv-spread{transition:none}}
 .lv-vbody iframe{width:100%;height:100%;border:none;background:#fff;border-radius:8px}
 .lv-pages{display:flex;align-items:center;justify-content:center;gap:11px;padding:9px;background:var(--surface);border-top:1.5px solid var(--border);flex:none}
 .lv-pages button{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 15px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
 .lv-pages button:hover:not(:disabled){border-color:var(--red);color:var(--red-d)}
 .lv-pages button:disabled{opacity:.35;cursor:default}
+.lv-pages .lv-sep{width:1.5px;height:22px;background:var(--border);flex:none;margin:0 3px}
+.lv-pages button.z{padding:8px 12px;min-width:42px}
+.lv-pages .n.z{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+@media(max-width:560px){
+  .lv-pages{gap:6px;padding:7px 5px;flex-wrap:wrap}
+  .lv-pages button{padding:7px 11px;font-size:12px}
+  .lv-pages button.z{min-width:38px;padding:7px 9px}
+}
 .lv-pages .n{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:78px;text-align:center}
 /* اللعبة تُزاح تحت البار ليبقى تحكّم المعلمة ظاهراً أثناء التشغيل */
 #gm-stage-bg.live-embed{top:var(--live-bar-h)}
@@ -2984,6 +3007,11 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button onclick="liveBookGo(-1)" id="lv-page-prev">السابقة</button>
       <span class="n" id="lv-page-n"></span>
       <button onclick="liveBookGo(1)" id="lv-page-next">التالية</button>
+      <span class="lv-sep"></span>
+      <button class="z" onclick="liveBookZoom(-1)" id="lv-zoom-out" title="تصغير" aria-label="تصغير">−</button>
+      <span class="n z" id="lv-zoom-lbl">١٠٠٪</span>
+      <button class="z" onclick="liveBookZoom(1)" id="lv-zoom-in" title="تكبير" aria-label="تكبير">+</button>
+      <button class="z" onclick="liveFullscreenToggle()" title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button>
     </div>
   </div>
 </div>
@@ -7912,26 +7940,86 @@ function liveOpenFile(fi){
   else if(u.includes('id=')){const m=u.match(/id=([^&]+)/);if(m)u='https://drive.google.com/file/d/'+m[1]+'/preview';}
   liveViewOpen(f.name,`<iframe src="${u}" allow="autoplay"></iframe>`,false);
 }
+/* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
+   المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
+   صفحتين، فعرضُ واحدةٍ يقطع التمرين عن نصّه والسؤال عن صورته.
+   والأولى على اليمين: الكتاب العربيّ يُفتح من اليمين، وعكسُها يربك
+   الطالبة التي تتابع في نسختها. */
+let _liveBookZoom=1;
+const LV_ZOOMS=[1,1.5,2,3];
 function liveOpenBook(){
   if(!_liveBook||!_liveBook.length)return;
-  _liveBookAt=0;
+  _liveBookAt=0;_liveBookZoom=1;
   liveViewOpen('صفحات الكتاب','',true);
   liveBookRender();
 }
+function _lvSpreadOf(i){return Math.floor(i/2)*2;}      // أول صفحةٍ في النشرة
 function liveBookRender(){
-  document.getElementById('lv-vbody').innerHTML=`<img src="${_liveBook[_liveBookAt]}" alt="صفحة من الكتاب">`;
-  document.getElementById('lv-page-n').textContent=egArNum(_liveBookAt+1)+' / '+egArNum(_liveBook.length);
-  document.getElementById('lv-page-prev').disabled=_liveBookAt<=0;
-  document.getElementById('lv-page-next').disabled=_liveBookAt>=_liveBook.length-1;
-  // نحمّل الصفحة التالية مسبقاً حتى ينتقل التصفّح بلا انتظار أمام الطلاب
-  const nx=_liveBook[_liveBookAt+1];if(nx){const im=new Image();im.src=nx;}
+  const body=document.getElementById('lv-vbody');
+  const a=_lvSpreadOf(_liveBookAt), b=a+1;
+  const total=_liveBook.length;
+  const one=b>=total;                                    // آخر صفحةٍ فردية: وحدها
+  const img=(i)=>`<img src="${_liveBook[i]}" alt="صفحة ${i+1}" draggable="false">`;
+  // ترتيب DOM: اليسار ثم اليمين — والأولى على اليمين لأن الكتاب عربيّ
+  body.innerHTML=`<div class="lv-spread${one?' one':''}" style="--z:${_liveBookZoom}">`
+    +(one?img(a):img(b)+img(a))+`</div>`;
+  body.classList.toggle('zoomed',_liveBookZoom>1);
+  document.getElementById('lv-page-n').textContent=
+    one?egArNum(a+1)+' / '+egArNum(total)
+       :egArNum(a+1)+'–'+egArNum(b+1)+' / '+egArNum(total);
+  document.getElementById('lv-page-prev').disabled=a<=0;
+  document.getElementById('lv-page-next').disabled=b>=total-1;
+  const zl=document.getElementById('lv-zoom-lbl');
+  if(zl)zl.textContent=egArNum(Math.round(_liveBookZoom*100))+'٪';
+  const zo=document.getElementById('lv-zoom-out');if(zo)zo.disabled=_liveBookZoom<=LV_ZOOMS[0];
+  const zi=document.getElementById('lv-zoom-in');if(zi)zi.disabled=_liveBookZoom>=LV_ZOOMS[LV_ZOOMS.length-1];
+  // نحمّل النشرة التالية مسبقاً حتى ينتقل التصفّح بلا انتظار أمام الطالبات
+  for(const n of [b+1,b+2]){const u=_liveBook[n];if(u){const im=new Image();im.src=u;}}
 }
 function liveBookGo(d){
   if(!_liveBook)return;
-  const n=_liveBookAt+d;
+  const n=_lvSpreadOf(_liveBookAt)+d*2;
   if(n<0||n>=_liveBook.length)return;
-  _liveBookAt=n;liveBookRender();
+  _liveBookAt=n;_liveBookZoom=1;liveBookRender();
+  document.getElementById('lv-vbody').scrollTo({top:0,left:0});
 }
+/* التكبير يمسّ الصفحتين وحدهما لا الصفحة كلّها: تكبيرُ المتصفّح يُضخّم
+   الأزرار والشريط معها فيضيع مكان الضغط، والمعلّمة أمام صفٍّ لا وقت
+   لديها لتصحيح ذلك. */
+function liveBookZoom(d){
+  const i=LV_ZOOMS.indexOf(_liveBookZoom);
+  const n=Math.min(LV_ZOOMS.length-1,Math.max(0,(i<0?0:i)+d));
+  if(LV_ZOOMS[n]===_liveBookZoom)return;
+  _liveBookZoom=LV_ZOOMS[n];liveBookRender();
+}
+/* السحب والمفاتيح: المعلّمة واقفةٌ أمام صفٍّ ويدها على اللوح أو الجهاز —
+   البحثُ عن زرٍّ صغير يقطع الدرس. والاتجاه معكوس لأن الكتاب عربيّ:
+   السحب إلى اليمين يرجع، وإلى اليسار يتقدّم. */
+(function lvBookGestures(){
+  const body=document.getElementById('lv-vbody');
+  if(!body)return;
+  let x0=null,y0=null;
+  const active=()=>!document.getElementById('lv-pages')?.classList.contains('hidden')
+                 && document.getElementById('live-view')?.classList.contains('on');
+  body.addEventListener('touchstart',e=>{
+    if(!active()||e.touches.length!==1||_liveBookZoom>1)return;   // مكبَّرةً: السحب تصفّحُ الصورة
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY;
+  },{passive:true});
+  body.addEventListener('touchend',e=>{
+    if(x0==null)return;
+    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
+    x0=null;
+    if(Math.abs(dx)<55||Math.abs(dy)>Math.abs(dx))return;         // سحبٌ أفقيّ صريح فقط
+    liveBookGo(dx>0?-1:1);
+  },{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(!active())return;
+    if(e.key==='ArrowRight')liveBookGo(-1);        // اليمين يرجع — الكتاب عربيّ
+    else if(e.key==='ArrowLeft')liveBookGo(1);
+    else if(e.key==='+'||e.key==='=')liveBookZoom(1);
+    else if(e.key==='-')liveBookZoom(-1);
+  });
+})();
 function liveOpenGame(){
   document.getElementById('gm-stage-bg').classList.add('live-embed');
   planPlayGame(liveCtx.lessonId);
