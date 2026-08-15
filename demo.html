@@ -3634,7 +3634,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='ff3ed79';
+const KH_BUILD='a237454';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5577,6 +5577,237 @@ function imgFullClose(){
   document.getElementById('img-full').classList.remove('on');
   document.getElementById('imgf-img').removeAttribute('src');
 }
+/* ══ توليد ملفّ وورد لخطة الدرس ══════════════════════════════════ */
+// مولّد ملفّ وورد لخطة الدرس — النصّ نفسه يعمل في المتصفّح وفي node.
+// OOXML خامٌ بلا مكتبة: القالب ثابت والمحتوى يُحقن، والتنسيق داخل الفقرات
+// نفسها (rPr/pPr) لا في styles.xml — فيسقط جزءٌ من الملفّ ولا ينهار الباقي.
+
+const INK = '301800', RED = 'A83030', REDL = 'D86048', PAPER = 'FFF6E6', MUTED = '7A6350';
+const FONT = 'Sakkal Majalla';   // خطٌّ عربيّ شائع في وورد؛ يسقط إلى Arial إن غاب
+
+const esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+// فقرة: نصّ عربيّ من اليمين، بحجمٍ ولونٍ ووزن
+function P(text, o = {}) {
+  const sz = (o.size || 12) * 2, col = o.color || INK;
+  const spB = o.after == null ? 60 : o.after, spT = o.before || 0;
+  const ind = o.indent ? `<w:ind w:right="${o.indent}"/>` : '';
+  const runs = String(text ?? '').split('\n').map((line, i) =>
+    `${i ? '<w:r><w:br/></w:r>' : ''}<w:r><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>` +
+    `<w:b w:val="${o.bold ? 1 : 0}"/><w:bCs w:val="${o.bold ? 1 : 0}"/>` +
+    `<w:color w:val="${col}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rtl/></w:rPr>` +
+    `<w:t xml:space="preserve">${esc(line)}</w:t></w:r>`).join('');
+  // ترتيب عناصر pPr مفروضٌ في مخطّط OOXML (shd ثم bidi ثم spacing ثم ind ثم jc)
+  // ووورد يرفض الملفّ كلّه إن اختلّ — لا يتساهل كما يتساهل قارئ XML عامّ.
+  return `<w:p><w:pPr>${o.shade ? `<w:shd w:val="clear" w:fill="${o.shade}"/>` : ''}` +
+    `<w:bidi/><w:spacing w:before="${spT}" w:after="${spB}" w:line="300" w:lineRule="auto"/>${ind}` +
+    `<w:jc w:val="${o.align || 'right'}"/></w:pPr>${runs}</w:p>`;
+}
+
+// عنوان قسم: شريطٌ ملوّن بعرض الصفحة
+function H(text) {
+  return `<w:p><w:pPr>` +
+    `<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="2" w:color="${REDL}"/>` +
+    `<w:right w:val="single" w:sz="18" w:space="4" w:color="${RED}"/></w:pBdr>` +
+    `<w:shd w:val="clear" w:fill="${PAPER}"/><w:bidi/>` +
+    `<w:spacing w:before="220" w:after="90"/><w:ind w:right="80"/>` +
+    `<w:jc w:val="right"/></w:pPr>` +
+    `<w:r><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/><w:b/><w:bCs/>` +
+    `<w:color w:val="${RED}"/><w:sz w:val="26"/><w:szCs w:val="26"/><w:rtl/></w:rPr>` +
+    `<w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+}
+
+function cell(content, wPct, shade) {
+  // ترتيب tcPr مفروضٌ أيضاً: tcW ثم shd ثم tcMar ثم vAlign
+  return `<w:tc><w:tcPr><w:tcW w:w="${wPct}" w:type="dxa"/>` +
+    (shade ? `<w:shd w:val="clear" w:fill="${shade}"/>` : '') +
+    `<w:tcMar><w:top w:w="70" w:type="dxa"/><w:left w:w="110" w:type="dxa"/>` +
+    `<w:bottom w:w="70" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tcMar>` +
+    `<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
+}
+
+function table(rows, widths, opts = {}) {
+  const b = (n) => `<w:${n} w:val="single" w:sz="6" w:space="0" w:color="D9C9B0"/>`;
+  const body = rows.map((r, ri) => {
+    const head = ri === 0 && opts.header;
+    return `<w:tr>${r.map((c, ci) => cell(
+      typeof c === 'string'
+        ? P(c, { size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
+        : c, widths[ci], head ? PAPER : (opts.zebra && ri % 2 ? 'FFFDF9' : null)
+    )).join('')}</w:tr>`;
+  }).join('');
+  return `<w:tbl><w:tblPr><w:bidiVisual/><w:tblW w:w="0" w:type="auto"/><w:jc w:val="right"/>` +
+    `<w:tblBorders>${b('top')}${b('left')}${b('bottom')}${b('right')}${b('insideH')}${b('insideV')}</w:tblBorders>` +
+    `<w:tblLayout w:type="fixed"/></w:tblPr>` +
+    `<w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${body}</w:tbl>` +
+    P('', { size: 4, after: 40 });
+}
+
+const ar = (n) => String(n ?? '').replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]);
+const bullets = (arr, dot = '•') => (arr || []).filter(Boolean)
+  .map(x => P(`${dot}  ${typeof x === 'string' ? x : (x.text || '')}`, { indent: 160 })).join('');
+
+function planDocx(plan, meta = {}) {
+  const p = plan || {};
+  const m = { subject: '', grade: '', unit: '', lesson: '', teacher: '', date: '', ...meta };
+
+  const body = [];
+
+  // ── الترويسة ──
+  body.push(P('خُطّتي الفصلية', { size: 10, color: MUTED, align: 'center', after: 20 }));
+  body.push(P('خطة الدرس', { size: 20, bold: true, color: RED, align: 'center', after: 140 }));
+
+  body.push(table([
+    ['المادة', m.subject || '—', 'الصف', m.grade ? `الصف ${ar(m.grade)}` : '—'],
+    ['الوحدة', m.unit || '—', 'الدرس', m.lesson || '—'],
+    ['المعلّمة', m.teacher || '—', 'التاريخ', m.date || '—'],
+  ], [1700, 5850, 1700, 5850]));
+
+  // ── المخرجات ──
+  if ((p.outcomes || []).length) {
+    body.push(H('المخرجات التعليمية'));
+    body.push(table(
+      [['المخرج', 'مستوى بلوم'], ...p.outcomes.map(o => [o.text || '', o.level || ''])],
+      [11400, 3700], { header: true, zebra: true }));
+  }
+
+  // ── الاستراتيجيات · المصادر · المفاهيم ──
+  const trio = [
+    ['استراتيجيات التدريس', p.strategies],
+    ['المصادر والوسائل', p.resources],
+    ['المفاهيم الأساسية', p.concepts],
+  ].filter(([, v]) => (v || []).length);
+  if (trio.length) {
+    body.push(H('الاستراتيجيات والمصادر والمفاهيم'));
+    body.push(table([
+      trio.map(([t]) => t),
+      trio.map(([, v]) => v.map(x => P('•  ' + x, { size: 11, after: 30 })).join('')),
+    ], trio.map(() => Math.floor(15100 / trio.length)), { header: true }));
+  }
+
+  // ── التهيئة ──
+  if (p.warmup) { body.push(H('التهيئة والتمهيد')); body.push(P(p.warmup, { indent: 100 })); }
+
+  // ── الإجراءات ──
+  if ((p.procedures || []).length) {
+    body.push(H('إجراءات تنفيذ الدرس'));
+    body.push(table([
+      ['الخطوة', 'الزمن', 'سير الإجراء'],
+      ...p.procedures.map((s, i) => [
+        `${ar(i + 1)}. ${s.title || ''}`,
+        s.minutes ? `${ar(s.minutes)} د` : '—',
+        s.detail || '',
+      ]),
+    ], [2700, 1000, 11400], { header: true, zebra: true }));
+  }
+
+  // ── التقويم ──
+  if (p.formative) { body.push(H('التقويم التكويني')); body.push(P(p.formative, { indent: 100 })); }
+  if ((p.summative || []).length) {
+    body.push(H('التقويم الختامي'));
+    body.push(table([
+      ['السؤال', 'الإجابة النموذجية', 'المخرج المقيس'],
+      ...p.summative.map(s => [s.q || '', s.a || '', s.outcome || '']),
+    ], [5700, 5700, 3700], { header: true, zebra: true }));
+  }
+
+  if (p.homework) { body.push(H('الواجب المنزلي')); body.push(P(p.homework, { indent: 100 })); }
+  if (p.tip) {
+    body.push(H('نصيحة تربوية'));
+    body.push(P(p.tip, { indent: 100, color: MUTED }));
+  }
+
+  // ── التوقيعات ──
+  body.push(P('', { size: 8, after: 200 }));
+  body.push(table([
+    ['توقيع المعلّمة', 'توقيع المشرفة'],
+    [P('', { size: 14, after: 200 }), P('', { size: 14, after: 200 })],
+  ], [7550, 7550], { header: true }));
+
+  const document =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+${body.join('\n')}
+<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>
+<w:pgMar w:top="720" w:right="850" w:bottom="720" w:left="850" w:header="420" w:footer="420" w:gutter="0"/>
+<w:bidi/></w:sectPr></w:body></w:document>`;
+
+  return {
+    '[Content_Types].xml':
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`,
+    '_rels/.rels':
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`,
+    'word/document.xml': document,
+  };
+}
+
+/* ══ كاتب ZIP مصغّر — لتوليد ملفّ وورد في المتصفّح ═════════════════════
+   ملفّ .docx أرشيف ZIP فيه XML. ومكتبةُ ضغطٍ كاملة تزيد الصفحة مئات
+   الكيلوبايتات لأجل ملفٍّ لا يتجاوز ستّين كيلوبايت، فنكتبه بلا ضغط
+   (طريقة store) — ووورد يقبله، والفرق في الحجم لا يُلحَظ. */
+function _crc32(buf){
+  let c, t=_crc32.t;
+  if(!t){ t=_crc32.t=new Uint32Array(256);
+    for(let n=0;n<256;n++){ c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } }
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++) crc=(crc>>>8)^t[(crc^buf[i])&0xFF];
+  return (crc^0xFFFFFFFF)>>>0;
+}
+function khZipBlob(files){
+  const enc=new TextEncoder(), parts=[], central=[];
+  let offset=0;
+  const u16=v=>[v&255,(v>>8)&255];
+  const u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  for(const [name,text] of Object.entries(files)){
+    const nb=enc.encode(name), db=enc.encode(text), crc=_crc32(db);
+    const local=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(db.length),...u32(db.length),
+      ...u16(nb.length),...u16(0)]);
+    parts.push(local,nb,db);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(db.length),...u32(db.length),
+      ...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset)]),nb);
+    offset+=local.length+nb.length+db.length;
+  }
+  const cdSize=central.reduce((s,a)=>s+a.length,0);
+  const eocd=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),
+    ...u16(Object.keys(files).length),...u16(Object.keys(files).length),
+    ...u32(cdSize),...u32(offset),...u16(0)]);
+  return new Blob([...parts,...central,eocd],
+    {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+
+/* تنزيل خطة الدرس ملفَّ وورد — دفترُ التحضير يُسلَّم ورقاً أو ملفاً يُوقَّع،
+   فالمعاينة على الشاشة تُنهي نصف العمل وتترك النصف الآخر نسخاً باليد. */
+function planPrepDocx(id){
+  const st=planGet(id), l=planFindLesson(id);
+  if(!st||!st.prep){toast('لا توجد خطة لتنزيلها',true);return;}
+  try{
+    const d=new Date();
+    const meta={subject:planSubject||'', grade:planGrade||'',
+      unit:(l&&l.unit)||'', lesson:(l&&l.name)||'',
+      teacher:profile.display_name||'',
+      date:d.toLocaleDateString('ar-OM',{year:'numeric',month:'long',day:'numeric'})};
+    const blob=khZipBlob(planDocx(st.prep,meta));
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`خطة الدرس — ${(meta.lesson||'درس').replace(/[\\/:*?"<>|]/g,'')}.docx`;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+    toast('نُزِّل ملفّ الوورد','ok');
+  }catch(e){toast('تعذّر تجهيز الملف',true);}
+}
+
 /* ══ تحضير الدرس من بطاقته ══
    كان المولِّد يُنادى من زرٍّ داخل «بطاقة اليوم»، وحُذفت البطاقة فبقي المولِّد
    بلا مدخل — لا سبيل في التطبيق كلّه إلى توليد خطة درس. وهو أهمّ ما تدفع
@@ -5630,6 +5861,7 @@ function planShowPrep(id){
     (st.prep_from?`<div class="plan-empty-card" style="margin-bottom:10px">هذه خطةٌ جهّزتها ${escHtml(st.prep_from)} — اضغطي «نسخة خاصة» لتوليد واحدةٍ من عندكِ</div>`:'')
     +renderPrepHtml(st.prep)
     +`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="pl-btn ready" onclick="planPrepDocx('${id}')"><span class="d" style="background:var(--olive-d)"></span>تنزيل ملف Word</button>
         <button class="pl-btn" onclick="planPrepRegen('${id}')">${st.prep_from?'نسخة خاصة':'إعادة الإعداد'}</button>
       </div>`;
   document.getElementById('today-modal').classList.add('open');
