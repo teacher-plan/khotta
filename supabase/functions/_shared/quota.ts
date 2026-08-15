@@ -48,6 +48,33 @@ export async function takeQuota(
     return { ok: row.allowed, used: row.used ?? 0, limit: row.lim ?? limit };
   } catch (e) {
     const msg = String((e as { message?: string })?.message || e);
+
+    // مرحلةٌ انتقالية: الدوال تُنشر تلقائياً عند الدفع، والهجرة تُنفَّذ يدوياً.
+    // فبين اللحظتين لا وجود لـ take_quota، ولو أغلقنا هنا لتوقّف كلُّ توليدٍ
+    // عند كلِّ معلّمة — انقطاعٌ كامل ثمناً لإصلاح. فنسقط إلى المسلك القديم
+    // (غيرِ الذرّي) في هذه الحالة وحدها: لا أسوأ من اليوم، ويصير ذرّيّاً
+    // لحظةَ تنفيذ الهجرة. يُحذف هذا الفرع بعد التأكّد من تنفيذها.
+    if (/does not exist|42883|Could not find the function|schema cache/i.test(msg)) {
+      console.error("⚠️ take_quota غير موجودة — نفّذ 20260816_p0_quota_atomic.sql. مسلكٌ مؤقّت غير ذرّي.");
+      try {
+        const { data, error } = await admin.from("ai_usage").select("count")
+          .eq("user_id", userId).eq("month", month).eq("kind", kind).maybeSingle();
+        if (error) throw error;
+        const used = data?.count || 0;
+        if (used >= limit) return { ok: false, used, limit };
+        if (data) {
+          await admin.from("ai_usage").update({ count: used + 1 })
+            .eq("user_id", userId).eq("month", month).eq("kind", kind);
+        } else {
+          await admin.from("ai_usage").insert({ user_id: userId, month, kind, count: 1 });
+        }
+        return { ok: true, used: used + 1, limit };
+      } catch (e2) {
+        console.error("legacy quota path failed (fail-closed):", String(e2));
+        return { ok: false, used: 0, limit, error: "quota_unavailable" };
+      }
+    }
+
     console.error("quota check failed (fail-closed):", msg);
     // مغلقٌ عند الفشل: لا نداءَ للذكاء الاصطناعي ما لم نتأكّد من وجود رصيد.
     return { ok: false, used: 0, limit, error: "quota_unavailable" };
