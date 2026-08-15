@@ -206,6 +206,31 @@ Deno.serve(async (req) => {
 
       console.log(`💬 Message received: "${text}" from user ${userId}`);
 
+      // تشخيصٌ مؤقّت — يُحذف بعد التحقّق من سبب رسالة «رُحِّب بالجميع» الخاطئة.
+      if (text === "/diagpend") {
+        const sbD = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { count: totalC } = await sbD.from("pre_registrations")
+          .select("id", { count: "exact", head: true }).eq("stage", "cycle1");
+        const { count: pendingPay } = await sbD.from("pre_registrations")
+          .select("id", { count: "exact", head: true }).eq("stage", "cycle1").eq("payment_status", "pending");
+        const { count: welcomedNull } = await sbD.from("pre_registrations")
+          .select("id", { count: "exact", head: true }).eq("stage", "cycle1").is("welcomed_at", null);
+        const { count: both } = await sbD.from("pre_registrations")
+          .select("id", { count: "exact", head: true }).eq("stage", "cycle1")
+          .eq("payment_status", "pending").is("welcomed_at", null);
+        const { data: statuses } = await sbD.from("pre_registrations")
+          .select("payment_status").eq("stage", "cycle1");
+        const byStatus: Record<string, number> = {};
+        for (const r of statuses || []) {
+          const k = String((r as any).payment_status ?? "null");
+          byStatus[k] = (byStatus[k] || 0) + 1;
+        }
+        return json({ diag: true, totalC, pendingPay, welcomedNull, both, byStatus });
+      }
+
       // طلب فوري للملخص الشامل بدل انتظار الموعد المجدول (5 مساءً)
       if (text === "/ملخص" || text === "/summary" || text === "/report") {
         await sendTelegram("⏳ جاري تجهيز الملخص الآن...");
