@@ -1284,6 +1284,22 @@ body.lp .fhp-card #fh-body{padding-inline:max(20px,calc((100% - 900px)/2));}
 .teacher-idcard .teacher-sub{font-size:12px;color:var(--muted);font-weight:700;margin-top:1px;}
 .tic-ornament{color:var(--gold);opacity:.5;font-size:18px;flex:none;}
 /* ⏳ مؤشر الانشغال العام */
+/* معاينة صفحة الدرس عند التقطيع.
+   كانت ٤٤×٦٠ بكسل — لا يُقرأ منها عنوانُ درسٍ ولا يُميَّز شكل صفحة، فكانت
+   زينةً لا أداةَ تحقّق، والتحقّق هو غرضها الوحيد: أن يرى المشرف أن الدرس
+   يبدأ حيث قال الذكاء الاصطناعي. وcontain لا cover كي تظهر الصفحة كاملةً
+   لا مقصوصةَ الحواشي حيث العناوين غالباً. */
+.seg-thumb{width:104px;height:142px;object-fit:contain;background:#fff;border-radius:8px;
+  border:1px solid var(--border);flex:none;cursor:zoom-in;transition:transform .15s,box-shadow .15s}
+.seg-thumb:hover{transform:scale(1.04);box-shadow:0 6px 18px rgba(20,14,40,.18)}
+@media(max-width:520px){.seg-thumb{width:76px;height:104px}}
+/* وحتى ١٠٤ بكسل لا تكفي لقراءة نصّ الصفحة — فضغطةٌ تفتحها بملء الشاشة */
+/* ٩٩٩٩ كبقيّة النوافذ الملء-شاشة في اللوحة — ٧٣٠٠ كان يضعه تحتها */
+#seg-zoom{position:fixed;inset:0;z-index:9999;background:rgba(20,14,40,.82);
+  display:none;align-items:center;justify-content:center;padding:18px;cursor:zoom-out}
+#seg-zoom.on{display:flex}
+#seg-zoom img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;
+  background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 #ui-busy{position:fixed;inset:0;z-index:7000;background:rgba(20,14,40,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;}
 .ui-busy-box{background:var(--bg);border:1.5px solid var(--gold);border-radius:16px;padding:22px 30px;text-align:center;box-shadow:0 16px 50px rgba(0,0,0,.4);min-width:220px;animation:fhPanelIn .2s;}
 /* 🎮 زر إنشاء لعبة — بارز جداً */
@@ -3172,6 +3188,7 @@ input,textarea,select{font-size:16px !important;}
 </div></div>
 
 <!-- ══ ⏳ مؤشر انشغال عام — يبقى ظاهراً حتى تنتهي العملية فعلاً ══ -->
+<div id="seg-zoom" onclick="this.classList.remove('on')"><img alt="صفحة الكتاب"></div>
 <div id="ui-busy" style="display:none">
   <div class="ui-busy-box">
     <div class="loader-squares" style="width:54px;height:54px;gap:4px;margin:0 auto 10px"><div class="lsq lsq-1"></div><div class="lsq lsq-2"></div><div class="lsq lsq-3"></div><div class="lsq lsq-4"></div><div class="lsq lsq-5"></div><div class="lsq lsq-6"></div><div class="lsq lsq-7"></div><div class="lsq lsq-8"></div><div class="lsq lsq-9"></div></div>
@@ -16738,9 +16755,19 @@ async function segRun(){
   st.textContent='✅ اكتشف '+egToArabic(clean.length)+' درساً'+(failed?(' (تعذرت '+egToArabic(failed)+' دفعات — قد تنقص دروس)'):'')+' — راجع وصحح ثم اعتمد:';
   segRenderReview(clean);
 }
+function segZoom(src){
+  if(!src)return;
+  const z=document.getElementById('seg-zoom');if(!z)return;
+  z.querySelector('img').src=src;z.classList.add('on');
+}
+// Esc يُغلق: الفأرة قد تكون بعيدةً والصورة تملأ الشاشة
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.getElementById('seg-zoom')?.classList.remove('on');
+});
 function segRowHtml(l,thumb){
   return `<div class="seg-row" style="display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px" data-unit="${escHtml(l.unit||'')}">
-      <img src="${l.page?thumb(l.page):''}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none" onerror="this.style.visibility='hidden'">
+      <img src="${l.page?thumb(l.page):''}" class="seg-thumb" title="اضغط للتكبير"
+           onclick="segZoom(this.src)" onerror="this.style.visibility='hidden'">
       <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:110px">
         <input class="seg-lesson" value="${escHtml(l.lesson||'')}" placeholder="اسم الدرس" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px;font-family:'Cairo',sans-serif;font-size:12px;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:4px">
