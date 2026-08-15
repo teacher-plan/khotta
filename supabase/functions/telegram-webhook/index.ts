@@ -17,6 +17,77 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// ── قائمة المنتظِرات للترحيب ──────────────────────────────────────────
+// البوت لا يراسل المعلّمة بنفسه (تلغرام يمنع البوتات من بدء محادثةٍ مع من
+// لم يبدأها)، لكنه يختصر الطريق إلى ضغطتين: زرُّ اسمها يفتح واتساب
+// والرسالةُ مكتوبة، وزرُّ «تمّ» يُسجّل أنها رُحّب بها فتخرج من القائمة.
+//
+// ولولا التسجيل لظلّت الخمسُ أنفسهنّ تظهر أبداً: إرسالُ واتساب يقع خارج
+// المنصّة فلا سبيل إلى معرفته إلا بإقرارٍ منك.
+const PEND_PAGE = 5;
+
+function _waNum(p: string): string {
+  let d = String(p || "").replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  return d ? (d.length === 8 ? "968" + d : d) : "";
+}
+function _welcomeText(n: string): string {
+  const nm = String(n || "").trim();
+  return [
+    nm ? `أهلاً بكِ ${nm} 🌸` : "أهلاً بكِ 🌸", "",
+    "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.", "",
+    "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.", "",
+    "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
+  ].join("\n");
+}
+async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?: string }> {
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data } = await sb.from("pre_registrations")
+    .select("id,name,phone")
+    .eq("stage", "cycle1").eq("payment_status", "pending")
+    .is("welcomed_at", null)
+    .order("created_at", { ascending: true })      // الأقدم أولاً: هي أطولهنّ انتظاراً
+    .limit(60);
+
+  const esc = (x: string) => String(x ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  if (!data || !data.length) {
+    await sendTelegram("✅ لا أحد ينتظر الترحيب — رُحِّب بالجميع.");
+    return { ok: true, listed: 0 };
+  }
+
+  // الروابط في أزرارٍ لا في نصّ الرسالة: رابط واتساب برسالةٍ مكتوبة يقارب
+  // ١٤٠٠ حرف، وأربعَ عشرة منها تتجاوز حدّ النصّ (٤٠٩٦) خمسة أضعاف.
+  // وللأزرار حدُّها أيضاً: قِيس على واجهة تلغرام — ستّة أزرار (٨٨٤٧ حرفاً)
+  // تمرّ وسبعة (١٠٢٦٩) تُرفض. فخمسةٌ في المرّة بهامشِ زرٍّ كامل.
+  const page = data.filter((r: { phone?: string }) => _waNum(r.phone || "")).slice(0, PEND_PAGE);
+  const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
+  for (const r of page) {
+    rows.push([{ text: `🌸 ${(r.name || "بلا اسم").slice(0, 26)}`,
+      url: `https://wa.me/${_waNum(r.phone || "")}?text=${encodeURIComponent(_welcomeText(r.name || ""))}` }]);
+  }
+  if (page.length) {
+    rows.push([{ text: `✅ رحّبتُ بهؤلاء (${page.length})`,
+      callback_data: "pend:done:" + page.map((r: { id: number }) => r.id).join(",") }]);
+  }
+
+  const head = [`⏳ <b>في انتظار الترحيب: ${data.length}</b>`, "",
+    "اضغط اسم المعلّمة ليُفتح واتساب ورسالةُ الترحيب مكتوبةٌ فيه."];
+  if (data.length > page.length) head.push("", `<i>تُعرض ${page.length} — وبعد الضغط على «رحّبتُ بهؤلاء» تظهر التالية.</i>`);
+  const noPhone = data.filter((r: { phone?: string }) => !_waNum(r.phone || ""));
+  if (noPhone.length) head.push("", `⚠️ بلا رقم هاتف: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
+
+  const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
+  // الفشل لا يُبتلع: كان يُرجَع ok وقد رفض تلغرام الرسالة، فيظنّ المشرف أنّ
+  // الأمر لم يصل أصلاً ويعيده مراراً بلا أثر.
+  if (!sent.ok) console.error("pending list failed:", sent.error);
+  return { ok: sent.ok, listed: page.length, error: sent.error };
+}
+
 // معالجات الأزرار
 async function handleCallbackQuery(
   callbackData: string,
@@ -96,6 +167,22 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
+
+      // «رحّبتُ بهؤلاء»: يُعلّم المعروضات ثم يعرض الدفعة التالية.
+      // يُعالَج قبل المعالج العامّ لأن ذاك يستبدل نصّ الرسالة، ونحن نريد
+      // إبقاءها سجلّاً لمن رُحّب بهنّ وإرسال قائمةٍ جديدة تحتها.
+      if (callbackData.startsWith("pend:done:")) {
+        const ids = callbackData.slice(10).split(",").map((x) => Number(x)).filter(Boolean);
+        if (ids.length) {
+          await sb.from("pre_registrations")
+            .update({ welcomed_at: new Date().toISOString() }).in("id", ids);
+        }
+        // نُزيل الأزرار من الرسالة القديمة كي لا تُضغط مرّتين فتُعلَّم دفعةٌ
+        // رُحِّب بها فعلاً، أو يُفتح واتساب لمن انتهى أمرها.
+        await editTelegram(messageId, `✅ سُجّل الترحيب بـ${ids.length} معلّمة.`);
+        await sendPendingList();
+        return json({ ok: true, marked: ids.length });
+      }
 
       // معالجة الضغطة
       const responseText = await handleCallbackQuery(callbackData, messageId, sb);
@@ -189,60 +276,8 @@ Deno.serve(async (req) => {
       // البوت لا يراسل المعلّمة بنفسه (تلغرام يمنع البوتات من بدء محادثةٍ مع
       // من لم يبدأها)، لكنه يختصر الطريق إلى ضغطةٍ واحدة من الهاتف.
       if (text === "/pending" || text === "/انتظار" || text === "/المتبقيات") {
-        const sb = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-        );
-        const { data } = await sb.from("pre_registrations")
-          .select("name,phone,created_at")
-          .eq("stage", "cycle1").eq("payment_status", "pending")
-          .order("created_at", { ascending: false }).limit(20);
-
-        const esc = (s: string) => String(s ?? "")
-          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const wa = (p: string) => {
-          let d = String(p || "").replace(/\D/g, "");
-          if (d.startsWith("00")) d = d.slice(2);
-          return d ? `https://wa.me/${d.length === 8 ? "968" + d : d}` : "";
-        };
-        const welcome = (n: string) => [
-          n ? `أهلاً بكِ ${n} 🌸` : "أهلاً بكِ 🌸", "",
-          "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.", "",
-          "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.", "",
-          "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
-        ].join("\n");
-
-        if (!data || !data.length) {
-          await sendTelegram("✅ لا حجوزات في الانتظار — كلّهنّ مُفعَّلات.");
-          return json({ ok: true });
-        }
-        // الروابط في أزرارٍ لا في نصّ الرسالة: رابط واتساب برسالةٍ مكتوبة
-        // يقارب ١٤٠٠ حرف، وأربعَ عشرة منها تتجاوز حدّ النصّ (٤٠٩٦) خمسة
-        // أضعاف فتُرفض الرسالة كلّها. وروابطُ الأزرار لا تُحسب على ذلك الحدّ.
-        //
-        // لكنّ للأزرار حدّها: قِيس بالتجربة على واجهة تلغرام — ستّة أزرار
-        // (٨٨٤٧ حرفاً) تمرّ وسبعة (١٠٢٦٩) تُرفض. فخمسةٌ في المرّة، وهامشُ
-        // زرٍّ كامل يحتمل الأسماء الطويلة دون أن تسقط الرسالة.
-        const rows = data.slice(0, 5).map((r: { name?: string; phone?: string }) => {
-          const u = wa(r.phone || "");
-          const nm = (r.name || "بلا اسم").slice(0, 26);
-          return u ? [{ text: `🌸 ${nm}`, url: `${u}?text=${encodeURIComponent(welcome(r.name || ""))}` }] : [];
-        }).filter((r: unknown[]) => r.length);
-
-        const head = [`⏳ <b>في انتظار التفعيل: ${data.length}</b>`, "",
-          "اضغطي اسم المعلّمة ليُفتح واتساب ورسالةُ الترحيب مكتوبةٌ فيه."];
-        if (data.length > rows.length) head.push("", `<i>تُعرض ${rows.length} — أعيدي الأمر بعد إرسالها.</i>`);
-        const noPhone = data.filter((r: { phone?: string }) => !wa(r.phone || ""));
-        if (noPhone.length) head.push("", `⚠️ بلا رقم: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
-
-        const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
-        // الفشل لا يُبتلع: كان يُرجَع ok وقد رفض تلغرام الرسالة، فيظنّ المشرف
-        // أنّ الأمر لم يصل أصلاً ويعيده مراراً بلا أثر.
-        if (!sent.ok) {
-          console.error("pending list failed:", sent.error);
-          return json({ ok: false, error: sent.error }, 502);
-        }
-        return json({ ok: true, listed: rows.length });
+        await sendPendingList(0);
+        return json({ ok: true });
       }
 
       // معالجة الردود على الاستبيانات
