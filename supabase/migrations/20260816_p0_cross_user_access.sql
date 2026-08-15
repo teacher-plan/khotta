@@ -53,6 +53,9 @@ CREATE TRIGGER c1notif_stamp
 -- والإدراج يبقى مسموحاً للمصادَقات (وإلّا تعطّلت الميزتان)، لكنه صار
 -- منسوباً. ويُمنع أن تدّعي معلّمةٌ أن التنبيه من النظام.
 DROP POLICY IF EXISTS "c1notif_insert_any" ON public.c1_notifications;
+-- واسمُ السياسة الجديدة يُسقَط أيضاً: بلا هذا السطر يفشل تشغيلٌ ثانٍ
+-- بـ 42710 «موجودةٌ سلفاً»، فتتعطّل إعادةُ التطبيق التي يقوم عليها التعافي.
+DROP POLICY IF EXISTS "c1notif_insert_attributable" ON public.c1_notifications;
 CREATE POLICY "c1notif_insert_attributable" ON public.c1_notifications
   FOR INSERT TO authenticated WITH CHECK (true);
 
