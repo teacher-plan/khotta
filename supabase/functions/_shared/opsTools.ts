@@ -130,7 +130,11 @@ export async function get_database_health(admin: any) {
   const start = Date.now();
   const { error } = await admin.from("profiles").select("count", { count: "exact" });
   const responseMs = Date.now() - start;
-  const { data: sizeRows } = await admin.rpc("database_size").catch(() => ({ data: null }));
+  // rpc() يُعيد "thenable" لا Promise كاملاً (لا .catch() عليه مباشرةً —
+  // هذا بالضبط ما كسر الأداة: TypeError عند تسلسل .catch()). النمط الصحيح
+  // نفسه المستعمَل في system-health-check: await مباشرةً، ثم تجاهُل الخطأ
+  // بأمان عبر optional chaining على data.
+  const { data: sizeRows } = await admin.rpc("database_size");
   return {
     response_ms: responseMs,
     status: error ? "critical" : responseMs > 2000 ? "warning" : "healthy",
