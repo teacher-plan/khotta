@@ -7697,7 +7697,11 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
   try{
     const{data:profiles,error}=await sb.from('profiles').select('id,data');
     if(error){console.error(error);toast('❌ خطأ في جلب الملفات: '+(error.message||''),true);return;}
-    let affected=0;
+    // حساب التحديثات محلياً أولاً (بلا اتصال) ثم إرسالها معاً — كانت
+    // ترسَل معلّمةً معلّمةً بالتتابع، فعند ١٠٠ معلّمة متأثّرة يصير حذف
+    // عمودٍ واحد مئة رحلة شبكةٍ متتالية تحجب لوحة الإدارة طوال ذلك.
+    // كل تحديثٍ يخصّ صفَّ معلّمةٍ مختلفة، فلا تعارض بينها بالتوازي.
+    const jobs=[];
     for(const p of (profiles||[])){
       const d=p.data;
       if(!d||!d.teacher_config||!Array.isArray(d.teacher_config.grades))continue;
@@ -7722,12 +7726,19 @@ async function cascadeDeleteTemplateColumns(subject,grade,nameSet){
         }
       });
       const newData={...d,grade_types:newGradeTypes,grades:gradesObj,updated_at:new Date().toISOString()};
-      const{error:upErr}=await sb.from('profiles').update({data:newData,updated_at:new Date().toISOString()}).eq('id',p.id);
-      if(upErr){console.error('cascade update failed for',p.id,upErr);toast(`❌ فشل تحديث ملف ${p.id}: ${upErr.message||upErr.code||''}`,true);continue;}
+      jobs.push({id:p.id,newData,newGradeTypes,gradesObj});
+    }
+    let affected=0;
+    const results=await Promise.all(jobs.map(async j=>{
+      const{error:upErr}=await sb.from('profiles').update({data:j.newData,updated_at:new Date().toISOString()}).eq('id',j.id);
+      return{job:j,upErr};
+    }));
+    for(const{job,upErr}of results){
+      if(upErr){console.error('cascade update failed for',job.id,upErr);toast(`❌ فشل تحديث ملف ${job.id}: ${upErr.message||upErr.code||''}`,true);continue;}
       affected++;
       // إن كان الملف الحالي هو ملف المشرف نفسه، حدّث الحالة المحلية فوراً
-      if(currentUser&&p.id===currentUser.id){
-        gradeTypes=newGradeTypes;grades=gradesObj;
+      if(currentUser&&job.id===currentUser.id){
+        gradeTypes=job.newGradeTypes;grades=job.gradesObj;
         if(typeof renderGradesTable==='function'&&document.getElementById('page-grades')?.classList.contains('active'))renderGradesTable();
       }
     }
