@@ -74,10 +74,13 @@ body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
    cycle1.html وdemo.html وcycle1-landing.html — لم تُفتَح أصلاً.
    ═══════════════════════════════════════════════════════════════ */
 :root{
-  /* ── الألوان: العلامة ── */
-  --kt-color-brand-primary:#8B5E1F;
+  /* ── الألوان: العلامة (PHASE C.2: مُعاد ضبطها بنفسجي/ذهبي حسب المرجع
+     البصري المعتمَد — تغييرٌ آمن لأنه لا يزال حصراً لصفحات kt-* الثلاث
+     الجديدة والمعزولة، لا يمسّ --gold/--red الأصليَّين إطلاقاً) ── */
+  --kt-color-brand-primary:#6D4FC7;
+  --kt-color-brand-primary-dark:#5A3FB0;
   --kt-color-brand-secondary:#2B4C5C;
-  --kt-color-brand-accent:#C77D2E;
+  --kt-color-brand-accent:#C9922E;
   /* ── الألوان: الدلالية ── */
   --kt-color-success:#1E7A46;
   --kt-color-warning:#B7791F;
@@ -90,7 +93,7 @@ body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
   --kt-color-border:#DCD1C4;
   --kt-color-text-primary:#231A12;
   --kt-color-text-secondary:#5C4B3C;
-  --kt-color-text-muted:#8A7A6A;
+  --kt-color-text-muted:#7E6E5E; /* عُدِّل من 8A7A6A: كان 4.14:1 على أبيض، أقلّ من WCAG AA (4.5:1) — الآن 4.9:1 */
   /* ── التباعد (مقياسٌ واحد أساسه 4px) ── */
   --kt-space-1:4px;--kt-space-2:8px;--kt-space-3:12px;--kt-space-4:16px;
   --kt-space-5:24px;--kt-space-6:32px;--kt-space-7:48px;--kt-space-8:64px;
@@ -114,6 +117,14 @@ body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
   /* ── الحركة ── */
   --kt-motion-fast:150ms;--kt-motion-base:200ms;--kt-motion-slow:250ms;
   --kt-motion-easing:cubic-bezier(.4,0,.2,1);
+  /* ── Shell الداكن (Sidebar/Topbar) — خاصٌّ بصفحات kt-* الثلاث فقط،
+     منفصلٌ كلياً عن ألوان بقية اللوحة (لا يمسّ --bg/--gold الأصليَّين) ── */
+  --kt-shell-bg:#14121F;
+  --kt-shell-surface:#1C1930;
+  --kt-shell-border:rgba(255,255,255,.08);
+  --kt-shell-text:#E8E5F5;
+  --kt-shell-text-muted:#9490B0;
+  --kt-shell-active-bg:linear-gradient(90deg,var(--kt-color-brand-primary),var(--kt-color-brand-primary-dark));
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -237,6 +248,61 @@ body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
   .kt-skeleton::after{animation:none;}
   .kt-btn,.kt-badge,.kt-card{transition:none;}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   KHOTTA ADMIN SHELL — PHASE C.2 (المرجع البصري المعتمَد)
+   Sidebar داكن + Topbar + منطقة عمل، خاصٌّ حصراً بالصفحات الثلاث
+   kt-* الجديدة (page-ktcc/page-ktcopilot/page-ktops). لا يمسّ
+   #main-nav (الشريط الأفقي الأصلي المُستخدَم في كل صفحات المعلّمة
+   والأدمن القديمة) — يُخفى فقط أثناء عرض هذه الصفحات الثلاث تحديداً
+   (سطرٌ واحد إضافي في showPage()، القسم الآتي)، ويعود فوراً عند مغادرتها.
+   ═══════════════════════════════════════════════════════════════ */
+#page-ktcc,#page-ktcopilot,#page-ktops{background:var(--kt-color-bg);min-height:100vh;background-image:none;}
+.kt-shell{display:flex;min-height:100vh;direction:rtl}
+.kt-sidebar{
+  width:248px;flex-shrink:0;background:var(--kt-shell-bg);color:var(--kt-shell-text);
+  display:flex;flex-direction:column;padding:var(--kt-space-5) var(--kt-space-4);
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.kt-sidebar-brand{display:flex;align-items:center;gap:var(--kt-space-2);margin-bottom:var(--kt-space-6);padding:0 var(--kt-space-2);}
+.kt-sidebar-brand-name{font-family:'Tajawal',sans-serif;font-weight:800;font-size:16px;color:#fff;}
+.kt-sidebar-brand-sub{font-size:10px;color:var(--kt-shell-text-muted);letter-spacing:.5px;}
+.kt-sidebar-group-label{font-size:11px;color:var(--kt-shell-text-muted);font-weight:700;margin:var(--kt-space-4) var(--kt-space-2) var(--kt-space-1);letter-spacing:.3px;}
+.kt-sidebar-item{
+  display:flex;align-items:center;gap:var(--kt-space-3);padding:10px var(--kt-space-3);
+  border-radius:var(--kt-radius-md);color:var(--kt-shell-text-muted);text-decoration:none;
+  font-size:var(--kt-font-label-size);font-weight:600;cursor:pointer;border:none;background:none;
+  width:100%;text-align:right;font-family:'Cairo',sans-serif;transition:background var(--kt-motion-fast);
+  min-height:44px;
+}
+.kt-sidebar-item svg{flex-shrink:0;width:18px;height:18px;}
+.kt-sidebar-item:hover{background:rgba(255,255,255,.06);color:var(--kt-shell-text);}
+.kt-sidebar-item.active{background:var(--kt-shell-active-bg);color:#fff;}
+.kt-sidebar-footer{margin-top:auto;padding-top:var(--kt-space-4);}
+.kt-main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.kt-topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--kt-space-4);
+  padding:var(--kt-space-4) var(--kt-space-6);background:var(--kt-color-surface);
+  border-bottom:1px solid var(--kt-color-border);position:sticky;top:0;z-index:5;
+}
+.kt-topbar-greeting{font-family:'Tajawal',sans-serif;font-weight:800;font-size:18px;color:var(--kt-color-text-primary);}
+.kt-topbar-date{font-size:12px;color:var(--kt-color-text-muted);}
+.kt-shell-drawer-btn{display:none;background:none;border:none;cursor:pointer;color:var(--kt-color-text-primary);padding:8px;min-width:44px;min-height:44px;}
+.kt-shell-content{padding:var(--kt-space-6);max-width:1100px;width:100%;margin:0 auto;}
+.kt-shell-backdrop{display:none;}
+
+@media(max-width:1023px){
+  .kt-sidebar{position:fixed;inset-inline-start:0;top:0;height:100vh;transform:translateX(102%);
+    transition:transform var(--kt-motion-base) var(--kt-motion-easing);z-index:302;box-shadow:var(--kt-shadow-modal);}
+  .kt-sidebar.kt-open{transform:translateX(0);}
+  .kt-shell-drawer-btn{display:inline-flex;align-items:center;justify-content:center;}
+  .kt-shell-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:301;}
+  .kt-shell-backdrop.kt-open{display:block;}
+  .kt-shell-content{padding:var(--kt-space-4);}
+  .kt-topbar{padding:var(--kt-space-3) var(--kt-space-4);}
+  .kt-topbar-greeting{font-size:15px;}
+}
+
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;transition:background .3s,color .3s;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;background-attachment:fixed;}
 /* طبقة 0: تدرّج لوني غني خاص بالمادة + شبكة الخلفية */
@@ -4024,129 +4090,159 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </div></div>
 
-<!-- ══ KHOTTA ADMIN 2.0 — Command Center (PHASE C.3، تجريبيّة ومستقلّة تماماً عن page-ops) ══
-     صفحةٌ جديدة، لا تستبدل ولا تُعدِّل page-ops أو أي صفحةٍ أخرى. تنادي نفس
-     الدوالّ الخلفية القائمة (ops-analyze, ops-copilot) بلا أي تغييرٍ فيها —
-     إعادة بناء العرض (Presentation) فقط، لا المنطق. مبنيّةٌ على تقرير
-     Phase B §11 (Command Center) بأدنى عدد عناصر ممكن. -->
-<div class="page" id="page-ktcc"><div class="wrap" style="max-width:880px;margin:0 auto">
-  <div class="page-header">
-    <div class="tag">KHOTTA ADMIN 2.0</div>
-    <h1>نظرة عامة</h1>
-    <p style="color:var(--kt-color-text-muted)">صفحةٌ تجريبية — لا تستبدل أي صفحةٍ حالية. البيانات نفسها من KHOTTA OPS، بعرضٍ جديد فقط.</p>
-  </div>
+<!-- ══ KHOTTA ADMIN SHELL — PHASE C.2 (المرجع البصري المعتمَد) ══
+     الصفحات الثلاث أدناه (نظرة عامة/الكوبايلوت/التشغيل) لها الآن Shell
+     موحَّد (Sidebar داكن + Topbar)، مستقلٌّ بصرياً عن بقية لوحة الإدارة
+     وعن هوية الحلقة الأولى تماماً. نسخةٌ من الـSidebar داخل كل صفحةٍ على
+     حدة (لا إعادة هيكلة لآلية showPage/.page القائمة، صفراً خطرٍ عليها) —
+     الحالة النشطة مضبوطةٌ ثابتةً لكل نسخة. كل عنصرٍ وظيفي (IDs/دوالّ JS)
+     من C.3/C.4/C.5 محفوظٌ حرفياً بلا أي تغيير. -->
 
-  <!-- System Status: سطرٌ واحد مضغوط -->
-  <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)">
-    <span class="kt-status-dot" id="ktcc-status-dot"></span>
-    <span id="ktcc-status-text" style="font-weight:600;color:var(--kt-color-text-primary)">⏳ جارٍ التحقّق من حالة النظام...</span>
-  </div>
-
-  <!-- KPI Area: عنصران فقط — بياناتٌ حقيقية متوفّرة اليوم، لا مؤشراتٌ مُختلَقة -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--kt-space-4);margin-bottom:var(--kt-space-5)">
-    <div class="kt-card kt-kpi">
-      <div class="kt-kpi-label">تكلفة الذكاء الاصطناعي — هذا الشهر (المستخدمون)</div>
-      <div class="kt-kpi-value" id="ktcc-kpi-cost">—</div>
+<div class="page" id="page-ktcc"><div class="kt-shell">
+  <div class="kt-shell-backdrop" id="ktcc-backdrop" onclick="ktShellToggleDrawer('ktcc')"></div>
+  <aside class="kt-sidebar" id="ktcc-sidebar">
+    <div class="kt-sidebar-brand">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
+      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
     </div>
-    <div class="kt-card kt-kpi">
-      <div class="kt-kpi-label">الحوادث المفتوحة الآن</div>
-      <div class="kt-kpi-value" id="ktcc-kpi-incidents">—</div>
+    <div class="kt-sidebar-group-label">مساحة العمل</div>
+    <button class="kt-sidebar-item active" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
+    <button class="kt-sidebar-item" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
+    <div class="kt-sidebar-group-label">التشغيل</div>
+    <button class="kt-sidebar-item" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
+    <div class="kt-sidebar-footer">
+      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> اللوحة الكاملة</button>
     </div>
-  </div>
-  <p style="font-size:12px;color:var(--kt-color-text-muted);margin:-8px 0 var(--kt-space-5)">
-    ملاحظة: مؤشّراتٌ إضافية (كعدد المعلّمات النشطات) تحتاج تعريفاً دقيقاً قبل عرضها — لا تُعرَض هنا حتى يُحسَم (راجع القسم 9 من تقرير Phase A).
-  </p>
-
-  <!-- Attention Area: حوادث P0/P1 المفتوحة فقط، حدٌّ أقصى 5 -->
-  <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
-    <div class="kt-card-header"><h3 class="kt-card-title">يحتاج انتباهك</h3></div>
-    <div id="ktcc-attention-body">
-      <div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div>
+  </aside>
+  <div class="kt-main">
+    <header class="kt-topbar">
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktcc')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <div><div class="kt-topbar-greeting" id="ktcc-greeting"></div><div class="kt-topbar-date" id="ktcc-date"></div></div>
+      <div></div>
+    </header>
+    <div class="kt-shell-content">
+      <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)">
+        <span class="kt-status-dot" id="ktcc-status-dot"></span>
+        <span id="ktcc-status-text" style="font-weight:600;color:var(--kt-color-text-primary)">⏳ جارٍ التحقّق من حالة النظام...</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--kt-space-4);margin-bottom:var(--kt-space-2)">
+        <div class="kt-card kt-kpi">
+          <div class="kt-kpi-label">تكلفة الذكاء الاصطناعي — هذا الشهر (المستخدمون)</div>
+          <div class="kt-kpi-value" id="ktcc-kpi-cost">—</div>
+        </div>
+        <div class="kt-card kt-kpi">
+          <div class="kt-kpi-label">الحوادث المفتوحة الآن</div>
+          <div class="kt-kpi-value" id="ktcc-kpi-incidents">—</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--kt-color-text-muted);margin:0 0 var(--kt-space-5)">
+        مؤشّراتٌ إضافية (كعدد المستخدمين والمعلّمات) غير معروضةٍ بعد — تحتاج تعريفاً دقيقاً قبل ذلك (راجع Phase A §9)، ولن تُخترَع أرقامها.
+      </p>
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
+        <div class="kt-card-header"><h3 class="kt-card-title">يحتاج انتباهك</h3></div>
+        <div id="ktcc-attention-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+      </div>
+      <div class="kt-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">اسألي KHOTTA</h3></div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--kt-space-2);margin-bottom:var(--kt-space-3)">
+          <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('كيف وضع المنصة؟')" style="font-size:12px;padding:6px 12px;min-height:auto">كيف وضع المنصة؟</button>
+          <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('ما مشاكل اليوم؟')" style="font-size:12px;padding:6px 12px;min-height:auto">ما مشاكل اليوم؟</button>
+          <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('كم أنفقنا على الذكاء الاصطناعي هذا الشهر؟')" style="font-size:12px;padding:6px 12px;min-height:auto">كم أنفقنا هذا الشهر؟</button>
+        </div>
+        <div style="display:flex;gap:var(--kt-space-2);margin-bottom:var(--kt-space-3)">
+          <input id="ktcc-copilot-q" type="text" placeholder="اكتبي سؤالك هنا..." style="flex:1;padding:10px 12px;border-radius:var(--kt-radius-md);border:1.5px solid var(--kt-color-border);background:var(--kt-color-surface);font-family:inherit;min-height:44px" onkeydown="if(event.key==='Enter')ktccAskCopilot()">
+          <button class="kt-btn kt-btn-primary" onclick="ktccAskCopilot()">اسألي</button>
+        </div>
+        <div id="ktcc-copilot-answer"></div>
+      </div>
     </div>
-  </div>
-
-  <!-- Copilot: نفس ops-copilot الخلفي بالضبط، عرضٌ جديد فقط -->
-  <div class="kt-card">
-    <div class="kt-card-header"><h3 class="kt-card-title">اسألي KHOTTA</h3></div>
-    <div style="display:flex;flex-wrap:wrap;gap:var(--kt-space-2);margin-bottom:var(--kt-space-3)">
-      <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('كيف وضع المنصة؟')" style="font-size:12px;padding:6px 12px;min-height:auto">كيف وضع المنصة؟</button>
-      <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('ما مشاكل اليوم؟')" style="font-size:12px;padding:6px 12px;min-height:auto">ما مشاكل اليوم؟</button>
-      <button class="kt-btn kt-btn-ghost" onclick="ktccQuickAsk('كم أنفقنا على الذكاء الاصطناعي هذا الشهر؟')" style="font-size:12px;padding:6px 12px;min-height:auto">كم أنفقنا هذا الشهر؟</button>
-    </div>
-    <div style="display:flex;gap:var(--kt-space-2);margin-bottom:var(--kt-space-3)">
-      <input id="ktcc-copilot-q" type="text" placeholder="اكتبي سؤالك هنا..." style="flex:1;padding:10px 12px;border-radius:var(--kt-radius-md);border:1.5px solid var(--kt-color-border);background:var(--kt-color-surface);font-family:inherit;min-height:44px" onkeydown="if(event.key==='Enter')ktccAskCopilot()">
-      <button class="kt-btn kt-btn-primary" onclick="ktccAskCopilot()">اسألي</button>
-    </div>
-    <div id="ktcc-copilot-answer"></div>
   </div>
 </div></div>
 
-<!-- ══ الكوبايلوت — صفحةٌ مستقلّة (PHASE C.4) ══
-     نفس دالّة ops-copilot الخلفية بلا أي تعديل — بناءٌ بصريٌّ جديد فقط:
-     حالة ترحيب، أسئلةٌ جاهزة، شارات أدلّة، تفاصيل تقنية، خطأ+إعادة محاولة.
-     مستقلّةٌ تماماً عن مربّع الكوبايلوت المصغَّر في page-ktcc (لا تشتركان
-     في أي عنصر DOM أو دالّة JS) ولا عن ops-copilot-answer الأصلي في page-ops. -->
-<div class="page" id="page-ktcopilot"><div class="wrap" style="max-width:720px;margin:0 auto">
-  <div class="page-header">
-    <div class="tag">KHOTTA INTELLIGENCE</div>
-    <h1>الكوبايلوت</h1>
-    <p style="color:var(--kt-color-text-muted)">اسألي عن أي شيء يخصّ حالة المنصّة — بالأدلّة الحقيقية فقط، لا تخمين.</p>
-  </div>
-
-  <div id="ktcp-welcome" class="kt-card" style="margin-bottom:var(--kt-space-5)">
-    <div class="kt-card-title" style="margin-bottom:var(--kt-space-3)">أسئلةٌ جاهزة</div>
-    <div style="display:flex;flex-wrap:wrap;gap:var(--kt-space-2)">
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('كيف وضع المنصة؟')">كيف وضع المنصة؟</button>
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('ما مشاكل اليوم؟')">ما مشاكل اليوم؟</button>
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('كم صرفنا على الذكاء الاصطناعي هذا الشهر؟')">كم صرفنا على AI هذا الشهر؟</button>
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('ما أكثر ميزةٍ بها أخطاء؟')">أكثر ميزةٍ بها أخطاء؟</button>
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('هل توجد مشاكل مفتوحة؟')">هل توجد مشاكل مفتوحة؟</button>
-      <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('اشرحي آخر حادثة')">اشرحي آخر حادثة</button>
+<div class="page" id="page-ktcopilot"><div class="kt-shell">
+  <div class="kt-shell-backdrop" id="ktcopilot-backdrop" onclick="ktShellToggleDrawer('ktcopilot')"></div>
+  <aside class="kt-sidebar" id="ktcopilot-sidebar">
+    <div class="kt-sidebar-brand">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
+      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
+    </div>
+    <div class="kt-sidebar-group-label">مساحة العمل</div>
+    <button class="kt-sidebar-item" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
+    <button class="kt-sidebar-item active" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
+    <div class="kt-sidebar-group-label">التشغيل</div>
+    <button class="kt-sidebar-item" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
+    <div class="kt-sidebar-footer">
+      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> اللوحة الكاملة</button>
+    </div>
+  </aside>
+  <div class="kt-main">
+    <header class="kt-topbar">
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktcopilot')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <div><div class="kt-topbar-greeting">الكوبايلوت</div><div class="kt-topbar-date">KHOTTA Intelligence — بالأدلّة الحقيقية فقط</div></div>
+      <div></div>
+    </header>
+    <div class="kt-shell-content" style="max-width:760px">
+      <div id="ktcp-welcome" class="kt-card" style="margin-bottom:var(--kt-space-5)">
+        <div class="kt-card-title" style="margin-bottom:var(--kt-space-3)">أسئلةٌ جاهزة</div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--kt-space-2)">
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('كيف وضع المنصة؟')">كيف وضع المنصة؟</button>
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('ما مشاكل اليوم؟')">ما مشاكل اليوم؟</button>
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('كم صرفنا على الذكاء الاصطناعي هذا الشهر؟')">كم صرفنا على AI هذا الشهر؟</button>
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('ما أكثر ميزةٍ بها أخطاء؟')">أكثر ميزةٍ بها أخطاء؟</button>
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('هل توجد مشاكل مفتوحة؟')">هل توجد مشاكل مفتوحة؟</button>
+          <button class="kt-btn kt-btn-secondary" onclick="ktcpQuickAsk('اشرحي آخر حادثة')">اشرحي آخر حادثة</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--kt-space-2);margin-bottom:var(--kt-space-4)">
+        <input id="ktcp-q" type="text" placeholder="اكتبي سؤالك هنا..." style="flex:1;padding:12px 14px;border-radius:var(--kt-radius-md);border:1.5px solid var(--kt-color-border);background:var(--kt-color-surface);font-family:inherit;font-size:var(--kt-font-body-size);min-height:44px" onkeydown="if(event.key==='Enter')ktcpAsk()">
+        <button class="kt-btn kt-btn-primary" onclick="ktcpAsk()">اسألي</button>
+      </div>
+      <div id="ktcp-result"></div>
     </div>
   </div>
-
-  <div style="display:flex;gap:var(--kt-space-2);margin-bottom:var(--kt-space-4)">
-    <input id="ktcp-q" type="text" placeholder="اكتبي سؤالك هنا..." style="flex:1;padding:12px 14px;border-radius:var(--kt-radius-md);border:1.5px solid var(--kt-color-border);background:var(--kt-color-surface);font-family:inherit;font-size:var(--kt-font-body-size);min-height:44px" onkeydown="if(event.key==='Enter')ktcpAsk()">
-    <button class="kt-btn kt-btn-primary" onclick="ktcpAsk()">اسألي</button>
-  </div>
-
-  <div id="ktcp-result"></div>
 </div></div>
 
-<!-- ══ Operations — صفحةٌ جديدة (PHASE C.5) ══
-     نفس بيانات page-ops بالضبط (ops-analyze action:health/cost)، بلا أي
-     تعديلٍ خلفي — إعادة تنظيم عرضٍ فقط: بطاقة حالة، جدول حوادث، تفصيل
-     تكلفة العمليات. مستقلّةٌ تماماً عن opsLoadHealth/opsLoadIncidents/
-     opsLoadCost وعن ktccLoad — لا تشترك في أي عنصر DOM معها. -->
-<div class="page" id="page-ktops"><div class="wrap" style="max-width:920px;margin:0 auto">
-  <div class="page-header">
-    <div class="tag">OPERATIONS</div>
-    <h1>التشغيل</h1>
-    <p style="color:var(--kt-color-text-muted)">قراءةٌ فقط — لا إجراء تلقائي. نفس بيانات KHOTTA OPS، بتنظيمٍ جديد.</p>
-  </div>
-
-  <div class="kt-card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--kt-space-5)">
-    <div style="display:flex;align-items:center;gap:var(--kt-space-3)">
-      <span class="kt-status-dot" id="ktops-status-dot"></span>
-      <span id="ktops-status-text" style="font-weight:600">⏳ جارٍ التحقّق...</span>
+<div class="page" id="page-ktops"><div class="kt-shell">
+  <div class="kt-shell-backdrop" id="ktops-backdrop" onclick="ktShellToggleDrawer('ktops')"></div>
+  <aside class="kt-sidebar" id="ktops-sidebar">
+    <div class="kt-sidebar-brand">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
+      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
     </div>
-    <button class="kt-btn kt-btn-ghost" onclick="ktopsLoad()">تحديث</button>
-  </div>
-
-  <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
-    <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
-    <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-  </div>
-
-  <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
-    <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
-    <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-  </div>
-
-  <div class="kt-card">
-    <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
-    <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-    <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
+    <div class="kt-sidebar-group-label">مساحة العمل</div>
+    <button class="kt-sidebar-item" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
+    <button class="kt-sidebar-item" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
+    <div class="kt-sidebar-group-label">التشغيل</div>
+    <button class="kt-sidebar-item active" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
+    <div class="kt-sidebar-footer">
+      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> اللوحة الكاملة</button>
+    </div>
+  </aside>
+  <div class="kt-main">
+    <header class="kt-topbar">
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktops')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <div><div class="kt-topbar-greeting">التشغيل</div><div class="kt-topbar-date">قراءةٌ فقط — لا إجراء تلقائي</div></div>
+      <button class="kt-btn kt-btn-ghost" onclick="ktopsLoad()" style="font-size:12px;padding:8px 14px;min-height:36px">تحديث</button>
+    </header>
+    <div class="kt-shell-content">
+      <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)">
+        <span class="kt-status-dot" id="ktops-status-dot"></span>
+        <span id="ktops-status-text" style="font-weight:600">⏳ جارٍ التحقّق...</span>
+      </div>
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
+        <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+      </div>
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
+        <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
+        <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+      </div>
+      <div class="kt-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
+        <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
+      </div>
+    </div>
   </div>
 </div></div>
 
@@ -6863,6 +6959,12 @@ function updateTeacherBanner(){
 
 // ══ NAV ════════════════════════════════════════════════
 function showPage(id,btn){
+  // PHASE C.2: الصفحات الثلاث الجديدة (ktcc/ktcopilot/ktops) لها Shell
+  // خاصٌّ بها (Sidebar داكن)، فنُخفي #main-nav الأصلي أثناء عرضها فقط —
+  // ويعود ظاهراً 'flex' فوراً لأي صفحةٍ أخرى، وهي أصلاً الحالة المتوقَّعة
+  // القائمة سلفاً (mgrEnter يضبطها 'flex' عند دخول جناح c2 نفسه).
+  const ktMainNav=document.getElementById('main-nav');
+  if(ktMainNav)ktMainNav.style.display=(id==='ktcc'||id==='ktcopilot'||id==='ktops')?'none':'flex';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
@@ -13455,6 +13557,10 @@ async function opsAskCopilot(){
 // أعلاه، وبلا أي تغييرٍ backend. تعيد استخدام opsEscHtml/opsRedactSecrets/
 // opsExtractErrorDetail الموجودة (Reuse first) بدل تكرارها.
 async function ktccLoad(){
+  const greetEl=document.getElementById('ktcc-greeting');
+  const dateEl=document.getElementById('ktcc-date');
+  if(greetEl)greetEl.textContent=ktShellGreeting();
+  if(dateEl)dateEl.textContent=ktShellDateStr();
   try{
     const{data,error}=await sb.functions.invoke('ops-analyze',{body:{action:'health'}});
     const dot=document.getElementById('ktcc-status-dot');
@@ -13656,6 +13762,31 @@ async function ktopsLoad(){
       <div class="kt-kpi"><div class="kt-kpi-label" style="font-size:11px">هذا الشهر</div><div style="font-weight:800;font-size:18px">${fmt(c.ops_cost_usd.month)}</div></div>
     </div>`;
   }catch(e){/* يبقى — بلا كسر الصفحة */}
+}
+
+// ══ KHOTTA ADMIN SHELL — دوالٌّ مشتركة (PHASE C.2) ══
+// تفتح/تُغلق Sidebar الهاتف داخل نسخة الصفحة الحالية فقط (كل صفحةٍ من
+// الثلاث تحمل نسخةً مستقلّة من الـSidebar، فالبحث مُقيَّدٌ بمعرّفها).
+function ktShellToggleDrawer(pageId){
+  const sidebar=document.getElementById(pageId+'-sidebar');
+  const backdrop=document.getElementById(pageId+'-backdrop');
+  if(sidebar)sidebar.classList.toggle('kt-open');
+  if(backdrop)backdrop.classList.toggle('kt-open');
+}
+// رجوعٌ إلى لوحة الإدارة الكلاسيكية (شريط #main-nav الأصلي بكل صفحاته) —
+// يستدعي showPage('ops',...) نفسه مستخدماً زرّ KHOTTA OPS الموجود فعلاً.
+function ktShellExit(){
+  const opsBtn=document.querySelector('.nav-btn[data-page="ops"]');
+  if(opsBtn)showPage('ops',opsBtn);
+}
+function ktShellGreeting(){
+  const h=new Date().getHours();
+  return h<12?'صباح الخير':h<17?'مساء الخير':'مساء الخير';
+}
+function ktShellDateStr(){
+  try{
+    return new Date().toLocaleDateString('ar-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  }catch(e){return new Date().toDateString();}
 }
 
 // ══ المكتبة الجديدة: الصف ← المادة ← الوحدة ← الدرس ← الملفات ══
