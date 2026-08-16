@@ -78,5 +78,7 @@ jobs:
           verify "select max(checked_at) as last_check, count(*) filter (where checked_at > now() - interval '15 minutes') as last_15min from health_checks;"
           echo "— آخر تشغيلٍ سجّله pg_cron لكل وكيل"
           verify "select j.jobname, max(r.end_time) as last_run, (array_agg(r.status order by r.end_time desc))[1] as last_status from cron.job j left join cron.job_run_details r on r.jobid=j.jobid where j.jobname like 'agent-%' group by j.jobname order by 1;"
+          echo "— فهارس P2 الموجودة فعلاً على القاعدة:"
+          verify "select indexname, tablename from pg_indexes where indexname like 'idx_%' order by 1;"
 
           exit $fail
