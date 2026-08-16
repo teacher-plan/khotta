@@ -6,7 +6,7 @@
 // في ai_usage (user_id, month, kind, count).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendTelegram } from "../_shared/telegram.ts";
+import { sendTelegramOps as sendTelegram } from "../_shared/telegram.ts";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
 
 const cors = {

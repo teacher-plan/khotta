@@ -15,16 +15,19 @@ interface TelegramOptions {
   inline_keyboard?: TelegramButton[][];
 }
 
-export async function sendTelegram(
+// ═══ بوتان منفصلان: التسجيل/الترحيب/الدفع (الأصلي) وفحوصٌ دورية (جديد) ═══
+// نفس منطق الإرسال، توكن ووجهة مختلفان فقط — فصلٌ يمنع اختلاط تنبيهات
+// المراقبة التشغيلية برسائل التواصل مع المعلّمات، بلا أي تغييرٍ في محتوى
+// أو منطق أيٍّ من الرسالتين.
+async function sendVia(
+  token: string | undefined,
+  chatId: string | undefined,
   message: string,
-  options?: TelegramOptions
+  options?: TelegramOptions,
 ): Promise<{ ok: boolean; message_id?: number; error?: string }> {
-  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
-
   if (!token || !chatId) {
     console.error("❌ Telegram configuration missing");
-    return { ok: false, error: "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID" };
+    return { ok: false, error: "Missing bot token or chat id" };
   }
 
   const body: Record<string, unknown> = {
@@ -62,14 +65,13 @@ export async function sendTelegram(
   }
 }
 
-export async function editTelegram(
+async function editVia(
+  token: string | undefined,
+  chatId: string | undefined,
   messageId: number,
   message: string,
-  options?: TelegramOptions
+  options?: TelegramOptions,
 ): Promise<{ ok: boolean; error?: string }> {
-  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
-
   if (!token || !chatId) {
     return { ok: false, error: "Missing configuration" };
   }
@@ -100,4 +102,22 @@ export async function editTelegram(
   } catch (error) {
     return { ok: false, error: String(error) };
   }
+}
+
+// ── البوت الأصلي: التسجيل والترحيب ومتابعة الدفع (registration-notifier،
+//    telegram-webhook) — بلا أي تغيير في التوقيع أو السلوك ──
+export function sendTelegram(message: string, options?: TelegramOptions) {
+  return sendVia(Deno.env.get("TELEGRAM_BOT_TOKEN"), Deno.env.get("TELEGRAM_CHAT_ID"), message, options);
+}
+export function editTelegram(messageId: number, message: string, options?: TelegramOptions) {
+  return editVia(Deno.env.get("TELEGRAM_BOT_TOKEN"), Deno.env.get("TELEGRAM_CHAT_ID"), messageId, message, options);
+}
+
+// ── البوت الجديد: الفحوصات الدورية (system-health-check، credit-monitor،
+//    daily-summary، file-processor-monitor) ──
+export function sendTelegramOps(message: string, options?: TelegramOptions) {
+  return sendVia(Deno.env.get("TELEGRAM_BOT_TOKEN_OPS"), Deno.env.get("TELEGRAM_CHAT_ID_OPS"), message, options);
+}
+export function editTelegramOps(messageId: number, message: string, options?: TelegramOptions) {
+  return editVia(Deno.env.get("TELEGRAM_BOT_TOKEN_OPS"), Deno.env.get("TELEGRAM_CHAT_ID_OPS"), messageId, message, options);
 }
