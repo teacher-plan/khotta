@@ -2,7 +2,7 @@
 // عندما يضغط المستخدم على زر، Telegram ترسل callback هنا
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendTelegram, editTelegram } from "../_shared/telegram.ts";
+import { sendTelegram, editTelegram, sendTelegramOps } from "../_shared/telegram.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -235,6 +235,9 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    // بوت الفحص الدوري يسجّل رابط Webhook بمعامل ?bot=ops مميَّز — لا سبيل
+    // آخر لتمييز مصدر التحديث لأن حمولة Telegram نفسها لا تحمل هوية البوت.
+    const isOpsBot = new URL(req.url).searchParams.get("bot") === "ops";
 
     // استقبال callback من Telegram
     if (body.callback_query) {
@@ -305,9 +308,11 @@ Deno.serve(async (req) => {
 
       console.log(`💬 Message received: "${text}" from user ${userId}`);
 
-      // طلب فوري للملخص الشامل بدل انتظار الموعد المجدول (5 مساءً)
-      if (text === "/ملخص" || text === "/summary" || text === "/report") {
-        await sendTelegram("⏳ جاري تجهيز الملخص الآن...");
+      // طلب فوري للملخص الشامل بدل انتظار الموعد المجدول (5 مساءً) —
+      // نُقل بالكامل إلى بوت الفحص الدوري (isOpsBot) بناءً على طلبٍ صريح؛
+      // البوت القديم (الترحيب/الدفع) لم يعد يستجيب لهذا الأمر إطلاقاً.
+      if (isOpsBot && (text === "/ملخص" || text === "/summary" || text === "/report")) {
+        await sendTelegramOps("⏳ جاري تجهيز الملخص الآن...");
 
         const fnResponse = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/daily-summary`,
@@ -322,7 +327,7 @@ Deno.serve(async (req) => {
         );
 
         if (!fnResponse.ok) {
-          await sendTelegram("❌ تعذّر تجهيز الملخص الآن — حاول لاحقاً.");
+          await sendTelegramOps("❌ تعذّر تجهيز الملخص الآن — حاول لاحقاً.");
         }
 
         return json({ ok: fnResponse.ok });
