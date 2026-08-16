@@ -66,7 +66,11 @@ Deno.serve(async (req) => {
     // صفحات الدرس من الكتاب المقطّع (مرجع محتوى)
     const bookImages: string[] = Array.isArray(b.images) ? b.images.slice(0, 10) : [];
     const bookContext = String(b.bookContext || "").slice(0, 4000);
-    const size = ["1K", "2K", "4K"].includes(b.size) ? b.size : "2K";
+    // الدقة ثابتةٌ من الخادم لا من العميل: لا موضعٌ في الواجهة يرسل size
+    // إطلاقاً (تحقّقٌ بمسح شامل لكل نداءات هذه الدالة)، فقبولها من العميل
+    // كان يسمح لمن يستدعي الدالة مباشرةً (بلا واجهة) بطلب 4K — الأغلى —
+    // بنفس نقطة الرصيد الواحدة التي تُخصم قبل قراءة هذا السطر.
+    const size = "2K";
     const aspect = ["9:16", "3:4", "1:1", "16:9", "21:9", "2:3", "4:3"].includes(b.aspect) ? b.aspect : "9:16";
     // وضع التعديل: صورة موجودة + تعليمات تغيير موضعي
     const editPrompt = String(b.editPrompt || "").slice(0, 1000);
