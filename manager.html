@@ -327,6 +327,17 @@ body{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
   .kt-topbar-greeting{font-size:15px;}
 }
 
+/* الشريط العلوي الدائم للغلاف — زرّ فتح القائمة على الجوّال فقط؛ على
+   الشاشات الكبيرة الشريط الجانبي ظاهرٌ أصلاً فلا حاجة له، ويبقى الأمر
+   لعنوان كل صفحةٍ الخاصّ بها (page-header) دون تكرار. */
+.adm-shell-mobile-topbar{display:none;}
+@media(max-width:1023px){.adm-shell-mobile-topbar{display:flex;}}
+/* نظرة عامة/الكوبايلوت/التشغيل تملك شريطها العلوي الخاص أصلاً (بعنوانٍ
+   ديناميكي) — إخفاء الشريط العامّ عندها تفادياً لازدواج زرّ القائمة. */
+body:has(#page-ktcc.active) .adm-shell-mobile-topbar,
+body:has(#page-ktcopilot.active) .adm-shell-mobile-topbar,
+body:has(#page-ktops.active) .adm-shell-mobile-topbar{display:none;}
+
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;transition:background .3s,color .3s;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:36px 36px;background-attachment:fixed;}
 /* طبقة 0: تدرّج لوني غني خاص بالمادة + شبكة الخلفية */
@@ -424,6 +435,9 @@ body{background-image:var(--subject-glow,none),linear-gradient(var(--grid-color)
 
 /* ══ NAV ══ */
 .nav{position:sticky;top:0;z-index:100;background:var(--bg);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;padding:8px 14px;padding-top:max(8px,env(safe-area-inset-top));overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;transition:background .3s;white-space:nowrap;flex-wrap:nowrap;}
+/* الشريط القديم متقاعدٌ نهائياً — الشريط الجانبي الدائم (#adm-shell) هو
+   طريق التنقّل الوحيد الآن، فلا يظهر هذا الشريط تحت أي ظرف. */
+#main-nav{display:none!important}
 .nav::-webkit-scrollbar{display:none;}
 .nav-btn{padding:9px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;display:inline-flex;align-items:center;justify-content:center;gap:5px;flex-shrink:0;min-width:118px;text-align:center;}
 .nav-btn:hover{border-color:var(--gold);color:var(--gold);}
@@ -1389,8 +1403,7 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 /* 🚀 وضع لوحة الانطلاق: القسم بكامل الصفحة + تنقل ببطاقات */
 body.lp .nav{display:none!important}
 /* زر التنقل: ربع دائرة ذهبية في زاوية البداية العليا — بلا نص، تنبض وتلمع */
-#lp-bar{position:fixed;top:0;inset-inline-start:0;z-index:210;display:none}
-body.lp #lp-bar{display:block}
+#lp-bar{display:none!important}
 #lp-pill{position:relative;width:64px;height:64px;padding:0;border:none;cursor:pointer;overflow:hidden;
   border-radius:0;border-end-end-radius:100%;
   background:linear-gradient(135deg,#8a6508,#c8940d 55%,#f0b429);
@@ -2425,6 +2438,52 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </div>
 
+<div class="kt-shell" id="adm-shell">
+  <div class="kt-shell-backdrop" id="adm-shell-backdrop" onclick="ktShellToggleDrawer('adm-shell')"></div>
+  <aside class="kt-sidebar" id="adm-shell-sidebar">
+    <div class="kt-sidebar-brand">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
+      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
+    </div>
+    <div class="kt-sidebar-group-label">مساحة العمل</div>
+    <button class="kt-sidebar-item" data-page="ktcc" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
+    <button class="kt-sidebar-item" data-page="ktcopilot" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
+    <div class="kt-sidebar-group-label">التشغيل</div>
+    <button class="kt-sidebar-item" data-page="ktops" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
+    <button class="kt-sidebar-item" data-page="analytics" onclick="showPage('analytics',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> تحليلات المنصة</button>
+    <button class="kt-sidebar-item" data-page="ops" onclick="showPage('ops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> حالة المنصّة (النسخة القديمة)</button>
+
+    <div class="kt-sidebar-group-label">الأكاديمي</div>
+    <div class="kt-sidebar-group-label" style="margin:4px 8px 0;opacity:.65;font-size:10px">الحلقة الأولى</div>
+    <button class="kt-sidebar-item" onclick="ktGoC1('teachers')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
+    <button class="kt-sidebar-item" onclick="ktGoC1('curric')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
+    <button class="kt-sidebar-item" onclick="ktGoC1('live')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
+    <div class="kt-sidebar-group-label" style="margin:6px 8px 0;opacity:.65;font-size:10px">الحلقة الثانية</div>
+    <button class="kt-sidebar-item" data-page="schools" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
+    <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
+
+    <div class="kt-sidebar-group-label">التواصل</div>
+    <button class="kt-sidebar-item" data-page="announcements" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
+    <button class="kt-sidebar-item" data-page="surveys" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
+    <button class="kt-sidebar-item" onclick="ktGoC1('msgs')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
+
+    <div class="kt-sidebar-group-label">المالية</div>
+    <button class="kt-sidebar-item" data-page="referrals" onclick="showPage('referrals',this);ref_initReferralsPage();"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
+
+    <div class="kt-sidebar-group-label">الإعدادات</div>
+    <button class="kt-sidebar-item" data-page="aimanage" onclick="showPage('aimanage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg> إدارة مولّد الاختبارات</button>
+
+    <div class="kt-sidebar-footer">
+      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> الرئيسية</button>
+    </div>
+  </aside>
+  <div class="kt-main">
+    <header class="kt-topbar adm-shell-mobile-topbar">
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('adm-shell')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <div class="kt-topbar-greeting" style="font-size:15px">KHOTTA ADMIN</div>
+      <div></div>
+    </header>
+    <div class="kt-shell-content" id="adm-shell-content" style="max-width:none">
 <!-- ══ TIMETABLE ══ -->
 <div class="page active" id="page-timetable"><div class="wrap">
 
@@ -3379,48 +3438,9 @@ input,textarea,select{font-size:16px !important;}
      الحالة النشطة مضبوطةٌ ثابتةً لكل نسخة. كل عنصرٍ وظيفي (IDs/دوالّ JS)
      من C.3/C.4/C.5 محفوظٌ حرفياً بلا أي تغيير. -->
 
-<div class="page" id="page-ktcc"><div class="kt-shell">
-  <div class="kt-shell-backdrop" id="ktcc-backdrop" onclick="ktShellToggleDrawer('ktcc')"></div>
-  <aside class="kt-sidebar" id="ktcc-sidebar">
-    <div class="kt-sidebar-brand">
-      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
-      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
-    </div>
-    <div class="kt-sidebar-group-label">مساحة العمل</div>
-    <button class="kt-sidebar-item active" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
-    <button class="kt-sidebar-item" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
-    <div class="kt-sidebar-group-label">التشغيل</div>
-    <button class="kt-sidebar-item" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
-    <button class="kt-sidebar-item" onclick="showPage('analytics',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> تحليلات المنصة</button>
-    <button class="kt-sidebar-item" onclick="showPage('ops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> حالة المنصّة (النسخة القديمة)</button>
-
-    <div class="kt-sidebar-group-label">الأكاديمي</div>
-    <div class="kt-sidebar-group-label" style="margin:4px 8px 0;opacity:.65;font-size:10px">الحلقة الأولى</div>
-    <button class="kt-sidebar-item" onclick="ktGoC1('teachers')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('curric')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('live')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
-    <div class="kt-sidebar-group-label" style="margin:6px 8px 0;opacity:.65;font-size:10px">الحلقة الثانية</div>
-    <button class="kt-sidebar-item" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
-    <button class="kt-sidebar-item" onclick="showPage('violtypes',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
-
-    <div class="kt-sidebar-group-label">التواصل</div>
-    <button class="kt-sidebar-item" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('msgs')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
-
-    <div class="kt-sidebar-group-label">المالية</div>
-    <button class="kt-sidebar-item" onclick="mgrEnter('ref')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
-
-    <div class="kt-sidebar-group-label">الإعدادات</div>
-    <button class="kt-sidebar-item" onclick="showPage('aimanage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg> إدارة مولّد الاختبارات</button>
-
-    <div class="kt-sidebar-footer">
-      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> الرئيسية</button>
-    </div>
-  </aside>
-  <div class="kt-main">
+<div class="page" id="page-ktcc">
     <header class="kt-topbar">
-      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktcc')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('adm-shell')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
       <div><div class="kt-topbar-greeting" id="ktcc-greeting"></div><div class="kt-topbar-date" id="ktcc-date"></div></div>
       <div></div>
     </header>
@@ -3460,51 +3480,11 @@ input,textarea,select{font-size:16px !important;}
         <div id="ktcc-copilot-answer"></div>
       </div>
     </div>
-  </div>
-</div></div>
+</div>
 
-<div class="page" id="page-ktcopilot"><div class="kt-shell">
-  <div class="kt-shell-backdrop" id="ktcopilot-backdrop" onclick="ktShellToggleDrawer('ktcopilot')"></div>
-  <aside class="kt-sidebar" id="ktcopilot-sidebar">
-    <div class="kt-sidebar-brand">
-      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
-      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
-    </div>
-    <div class="kt-sidebar-group-label">مساحة العمل</div>
-    <button class="kt-sidebar-item" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
-    <button class="kt-sidebar-item active" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
-    <div class="kt-sidebar-group-label">التشغيل</div>
-    <button class="kt-sidebar-item" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
-    <button class="kt-sidebar-item" onclick="showPage('analytics',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> تحليلات المنصة</button>
-    <button class="kt-sidebar-item" onclick="showPage('ops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> حالة المنصّة (النسخة القديمة)</button>
-
-    <div class="kt-sidebar-group-label">الأكاديمي</div>
-    <div class="kt-sidebar-group-label" style="margin:4px 8px 0;opacity:.65;font-size:10px">الحلقة الأولى</div>
-    <button class="kt-sidebar-item" onclick="ktGoC1('teachers')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('curric')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('live')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
-    <div class="kt-sidebar-group-label" style="margin:6px 8px 0;opacity:.65;font-size:10px">الحلقة الثانية</div>
-    <button class="kt-sidebar-item" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
-    <button class="kt-sidebar-item" onclick="showPage('violtypes',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
-
-    <div class="kt-sidebar-group-label">التواصل</div>
-    <button class="kt-sidebar-item" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('msgs')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
-
-    <div class="kt-sidebar-group-label">المالية</div>
-    <button class="kt-sidebar-item" onclick="mgrEnter('ref')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
-
-    <div class="kt-sidebar-group-label">الإعدادات</div>
-    <button class="kt-sidebar-item" onclick="showPage('aimanage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg> إدارة مولّد الاختبارات</button>
-
-    <div class="kt-sidebar-footer">
-      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> الرئيسية</button>
-    </div>
-  </aside>
-  <div class="kt-main">
+<div class="page" id="page-ktcopilot">
     <header class="kt-topbar">
-      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktcopilot')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('adm-shell')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
       <div><div class="kt-topbar-greeting">الكوبايلوت</div><div class="kt-topbar-date">KHOTTA Intelligence — بالأدلّة الحقيقية فقط</div></div>
       <div></div>
     </header>
@@ -3526,51 +3506,11 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div id="ktcp-result"></div>
     </div>
-  </div>
-</div></div>
+</div>
 
-<div class="page" id="page-ktops"><div class="kt-shell">
-  <div class="kt-shell-backdrop" id="ktops-backdrop" onclick="ktShellToggleDrawer('ktops')"></div>
-  <aside class="kt-sidebar" id="ktops-sidebar">
-    <div class="kt-sidebar-brand">
-      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="var(--kt-color-brand-primary)"/></svg>
-      <div><div class="kt-sidebar-brand-name">KHOTTA ADMIN</div><div class="kt-sidebar-brand-sub">MANAGEMENT SYSTEM</div></div>
-    </div>
-    <div class="kt-sidebar-group-label">مساحة العمل</div>
-    <button class="kt-sidebar-item" onclick="showPage('ktcc',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> نظرة عامة</button>
-    <button class="kt-sidebar-item" onclick="showPage('ktcopilot',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg> الكوبايلوت</button>
-    <div class="kt-sidebar-group-label">التشغيل</div>
-    <button class="kt-sidebar-item active" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
-    <button class="kt-sidebar-item" onclick="showPage('analytics',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> تحليلات المنصة</button>
-    <button class="kt-sidebar-item" onclick="showPage('ops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> حالة المنصّة (النسخة القديمة)</button>
-
-    <div class="kt-sidebar-group-label">الأكاديمي</div>
-    <div class="kt-sidebar-group-label" style="margin:4px 8px 0;opacity:.65;font-size:10px">الحلقة الأولى</div>
-    <button class="kt-sidebar-item" onclick="ktGoC1('teachers')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('curric')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('live')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
-    <div class="kt-sidebar-group-label" style="margin:6px 8px 0;opacity:.65;font-size:10px">الحلقة الثانية</div>
-    <button class="kt-sidebar-item" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
-    <button class="kt-sidebar-item" onclick="showPage('violtypes',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
-
-    <div class="kt-sidebar-group-label">التواصل</div>
-    <button class="kt-sidebar-item" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" onclick="ktGoC1('msgs')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
-
-    <div class="kt-sidebar-group-label">المالية</div>
-    <button class="kt-sidebar-item" onclick="mgrEnter('ref')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
-
-    <div class="kt-sidebar-group-label">الإعدادات</div>
-    <button class="kt-sidebar-item" onclick="showPage('aimanage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg> إدارة مولّد الاختبارات</button>
-
-    <div class="kt-sidebar-footer">
-      <button class="kt-sidebar-item" onclick="ktShellExit()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zM4 3h8v2H5v14h7v2H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" transform="scale(-1,1) translate(-24,0)"/></svg> الرئيسية</button>
-    </div>
-  </aside>
-  <div class="kt-main">
+<div class="page" id="page-ktops">
     <header class="kt-topbar">
-      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('ktops')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+      <button class="kt-shell-drawer-btn" onclick="ktShellToggleDrawer('adm-shell')" aria-label="فتح القائمة"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
       <div><div class="kt-topbar-greeting">التشغيل</div><div class="kt-topbar-date">قراءةٌ فقط — لا إجراء تلقائي</div></div>
       <button class="kt-btn kt-btn-ghost" onclick="ktopsLoad()" style="font-size:12px;padding:8px 14px;min-height:36px">تحديث</button>
     </header>
@@ -3593,12 +3533,11 @@ input,textarea,select{font-size:16px !important;}
         <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
       </div>
     </div>
-  </div>
-</div></div>
+</div>
 
 <!-- ══ الإحالات والعمولات (مدمجة من referrals.html) — جناحٌ ثالث مستقل بجانب الحلقة الأولى والثانية ══ -->
 <div class="page" id="page-referrals">
-  <button class="mgr-c1-back" onclick="mgrBackToGate()">→ رجوع للاختيار</button>
+  <button class="mgr-c1-back" onclick="ktShellExit()">→ الرئيسية</button>
   <div class="page-header"><div class="tag">💰 الإدارة المالية</div><h1>الإحالات والعمولات</h1><p>روابط الأصدقاء والمسجّلون والعمولات وتفعيل حسابات المعلمين</p></div>
   <div class="tabs-bar">
     <button class="active" onclick="ref_switchTab('overview',this)">📊 نظرة عامة</button>
@@ -4072,6 +4011,9 @@ input,textarea,select{font-size:16px !important;}
   </div>
 </footer>
 
+    </div>
+  </div>
+</div>
 <script>
 // ══ SUPABASE + GOOGLE DRIVE (سحابي حقيقي) ══════════════════
 // ─── الإعدادات (علنية - آمنة) ───
@@ -6177,13 +6119,11 @@ function showApp(data){
   // فرعية (c1/ref) قبل التحديث، نُعيده لمكانه؛ وإلا فدائماً kt.
   let savedWing=null;
   try{savedWing=sessionStorage.getItem('mgrWing');}catch(e){}
-  document.getElementById('main-nav').style.display='flex';
   document.body.classList.add('lp'); // 🚀 وضع لوحة الانطلاق
   document.querySelectorAll('.page')[0].classList.add('active');
   mgrEnter((savedWing==='c1'||savedWing==='ref'||savedWing==='kt')?savedWing:'kt');
   showUserBadge();
   try{const u=document.getElementById('ub-img');const l=document.getElementById('lp-user-img');if(u&&l&&u.src)l.src=u.src;}catch(e){}
-  try{const ab=document.querySelector('#main-nav .nav-btn.active');if(ab)lpUpdatePill(ab);}catch(e){}
   loadActiveViolationTypes();
 
   if(data){
@@ -6319,27 +6259,17 @@ function updateTeacherBanner(){
 
 // ══ NAV ════════════════════════════════════════════════
 function showPage(id,btn){
-  // PHASE C.2: الصفحات الثلاث الجديدة (ktcc/ktcopilot/ktops) لها Shell
-  // خاصٌّ بها (Sidebar داكن)، فنُخفي #main-nav الأصلي أثناء عرضها فقط —
-  // ويعود ظاهراً 'flex' فوراً لأي صفحةٍ أخرى، وهي أصلاً الحالة المتوقَّعة
-  // القائمة سلفاً (mgrEnter يضبطها 'flex' عند دخول جناح c2 نفسه).
-  const ktIsShell=(id==='ktcc'||id==='ktcopilot'||id==='ktops');
-  const ktMainNav=document.getElementById('main-nav');
-  if(ktMainNav)ktMainNav.style.display=ktIsShell?'none':'flex';
-  // الحبّة الدائرية العائمة (lp-bar/lp-pill) — "لوحة الانطلاق" القديمة —
-  // جزءٌ من الهوية القديمة نفسها التي طُلب الانسلاخ منها هنا تحديداً؛
-  // تُخفى فقط داخل الصفحات الثلاث ذات الـShell الجديد، وتبقى كما هي
-  // تماماً (بلا أي تغيير) لكل صفحات المعلّمة والأدمن الأخرى — لا مساس
-  // بتجربة المعلّمة إطلاقاً.
-  const ktLpBar=document.getElementById('lp-bar');
-  if(ktLpBar)ktLpBar.style.display=ktIsShell?'none':'';
+  // كل الصفحات الآن داخل غلافٍ واحدٍ دائم (#adm-shell) بشريطٍ جانبيٍّ
+  // واحد — لا شريط تنقّلٍ قديم (#main-nav) ولا "لوحة انطلاق" (lp-bar)
+  // بعد اليوم؛ كلاهما مخفيّان نهائياً بلا أي منطق تبديلٍ هنا.
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
+  document.querySelectorAll('.nav-btn,.kt-sidebar-item').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
-  btn.classList.add('active','ripple');
-  try{lpUpdatePill(btn);}catch(e){}
+  if(btn)btn.classList.add('active','ripple');
+  const sideBtn=document.querySelector('.kt-sidebar-item[data-page="'+id+'"]');
+  if(sideBtn)sideBtn.classList.add('active');
   try{localStorage.setItem('lastPage',id);}catch(e){}
-  setTimeout(()=>btn.classList.remove('ripple'),600);
+  if(btn)setTimeout(()=>btn.classList.remove('ripple'),600);
   if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
