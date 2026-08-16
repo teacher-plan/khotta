@@ -5652,10 +5652,20 @@ async function planPlayGame(id){
   finally{cyBusyDone();}
 }
 // زر الملخص: معاينة إن كان جاهزاً، وإلا توليد إنفوجرافيك للدرس الآن
+// حارسُ التزامن لتوليد الدرس: حصّةٌ ذرّية على الخادم (P0) تمنع تجاوز الحدّ،
+// لكنّ نافذتين للتطبيق (جهازان، أو لسانان) تضغطان زرّ الدرس نفسه معاً
+// كانتا تُنفقان توليدين بثمن توليدٍ واحد رغم عدم تجاوز أي حدّ — والحارسُ
+// السابق (cyBusy) شاشةٌ في اللسان نفسه لا تحمي من هذا. المفتاح هو الدرس
+// لا الصفحة: توليد درسٍ لا يمنع توليد درسٍ آخر بالتوازي.
+const _c1GenBusy=new Set();
+function _c1GenLock(id){if(_c1GenBusy.has(id))return false;_c1GenBusy.add(id);return true;}
+function _c1GenUnlock(id){_c1GenBusy.delete(id);}
+
 async function planInfoBtn(id){
   const st=planGet(id);
   if(st.info_url){planShowInfo(id);return;}
   const l=planFindLesson(id);if(!l)return;
+  if(!_c1GenLock(id)){toast('التوليد جارٍ بالفعل لهذا الدرس',true);return;}
   cyBusy('يقرأ الدرس ويرسم ملخصه... قد يستغرق دقيقة');
   try{
     const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name);
@@ -5679,7 +5689,7 @@ async function planInfoBtn(id){
     planRenderUnits();
     toast('جهز ملخص الدرس','ok');
   }catch(e){toast('تعذّر توليد الملخص',true);}
-  finally{cyBusyDone();}
+  finally{cyBusyDone();_c1GenUnlock(id);}
 }
 // الملخص يُعرض بملء الشاشة — مقاسه العريض لا يظهر في نافذة ضيّقة
 function imgFullOpen(url,title){
@@ -5932,6 +5942,7 @@ async function planPrepBtn(id){
   const st=planGet(id);
   if(st.prep){planShowPrep(id);return;}
   const l=planFindLesson(id);if(!l)return;
+  if(!_c1GenLock(id)){toast('التوليد جارٍ بالفعل لهذا الدرس',true);return;}
   try{
     // ① الجاهز عند الزميلات أولاً: أسرع وأرخص، ولا يمسّ حصّتها الشهرية.
     cyBusy('يبحث عمّا جهّزته زميلاتك...');
@@ -5958,7 +5969,7 @@ async function planPrepBtn(id){
     planRenderUnits();planShowPrep(id);
     toast('جهزت خطة الدرس','ok');
   }catch(e){toast('تعذّر إعداد الخطة — أعيدي المحاولة',true);}
-  finally{cyBusyDone();}
+  finally{cyBusyDone();_c1GenUnlock(id);}
 }
 // إعادة التوليد تتجاهل الجاهز: تُمسح الخطة المتبنّاة أولاً كي تُبنى من جديد
 async function planPrepRegen(id){
