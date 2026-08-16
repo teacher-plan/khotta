@@ -2430,6 +2430,7 @@ input,textarea,select{font-size:16px !important;}
   <button class="nav-btn admin-only" data-page="ops" onclick="showPage('ops',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg></span> KHOTTA OPS</button>
   <button class="nav-btn admin-only" data-page="ktcc" onclick="showPage('ktcc',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg></span> Admin 2.0 (تجريبي)</button>
   <button class="nav-btn admin-only" data-page="ktcopilot" onclick="showPage('ktcopilot',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-7 9.5a1 1 0 0 1 1-1h1.05a5.98 5.98 0 0 0 9.9 0H18a1 1 0 0 1 1 1c0 3.6-2.6 6.6-6 7.42V21a1 1 0 1 1-2 0v-2.08c-3.4-.82-6-3.82-6-7.42z"/></svg></span> الكوبايلوت</button>
+  <button class="nav-btn admin-only" data-page="ktops" onclick="showPage('ktops',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg></span> التشغيل</button>
   <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
   <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
   <button class="nav-btn admin-only" onclick="mgrBackToGate()" title="العودة لقائمة اختيار الجناح"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm0 4.2 5 1.9V11c0 3.6-2.2 7-5 8.3C9.2 18 7 14.6 7 11V8.1l5-1.9z"/></svg></span> قائمة الاختيار</button>
@@ -4110,6 +4111,43 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <div id="ktcp-result"></div>
+</div></div>
+
+<!-- ══ Operations — صفحةٌ جديدة (PHASE C.5) ══
+     نفس بيانات page-ops بالضبط (ops-analyze action:health/cost)، بلا أي
+     تعديلٍ خلفي — إعادة تنظيم عرضٍ فقط: بطاقة حالة، جدول حوادث، تفصيل
+     تكلفة العمليات. مستقلّةٌ تماماً عن opsLoadHealth/opsLoadIncidents/
+     opsLoadCost وعن ktccLoad — لا تشترك في أي عنصر DOM معها. -->
+<div class="page" id="page-ktops"><div class="wrap" style="max-width:920px;margin:0 auto">
+  <div class="page-header">
+    <div class="tag">OPERATIONS</div>
+    <h1>التشغيل</h1>
+    <p style="color:var(--kt-color-text-muted)">قراءةٌ فقط — لا إجراء تلقائي. نفس بيانات KHOTTA OPS، بتنظيمٍ جديد.</p>
+  </div>
+
+  <div class="kt-card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--kt-space-5)">
+    <div style="display:flex;align-items:center;gap:var(--kt-space-3)">
+      <span class="kt-status-dot" id="ktops-status-dot"></span>
+      <span id="ktops-status-text" style="font-weight:600">⏳ جارٍ التحقّق...</span>
+    </div>
+    <button class="kt-btn kt-btn-ghost" onclick="ktopsLoad()">تحديث</button>
+  </div>
+
+  <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
+    <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
+    <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+  </div>
+
+  <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
+    <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
+    <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+  </div>
+
+  <div class="kt-card">
+    <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
+    <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+    <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
+  </div>
 </div></div>
 
 <!-- ══ الإحالات والعمولات (مدمجة من referrals.html) — جناحٌ ثالث مستقل بجانب الحلقة الأولى والثانية ══ -->
@@ -6845,6 +6883,7 @@ function showPage(id,btn){
   if(id==='ops'){opsLoadHealth();opsLoadIncidents();opsLoadCost();}
   if(id==='ktcc'){ktccLoad();}
   if(id==='ktcopilot'){ktcpReset();}
+  if(id==='ktops'){ktopsLoad();}
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')loadAnalytics();
@@ -13554,6 +13593,69 @@ function ktcpRetry(){
   const input=document.getElementById('ktcp-q');
   if(input&&ktcpLastQuestion)input.value=ktcpLastQuestion;
   ktcpAsk();
+}
+
+// ══ Operations — صفحةٌ مستقلّة (PHASE C.5) ══
+// نفس ops-analyze action:health/cost بلا أي تعديل — إعادة عرضٍ فقط.
+// مستقلّةٌ عن opsLoadHealth/opsLoadIncidents/opsLoadCost وktccLoad —
+// نداءاتٌ منفصلة، عناصر DOM منفصلة، لا تشارك حالةً مع أيٍّ منها.
+async function ktopsLoad(){
+  try{
+    const{data,error}=await sb.functions.invoke('ops-analyze',{body:{action:'health'}});
+    const dot=document.getElementById('ktops-status-dot');
+    const txt=document.getElementById('ktops-status-text');
+    const compBody=document.getElementById('ktops-components-body');
+    const incBody=document.getElementById('ktops-incidents-body');
+    if(error||!data||data.error){
+      if(txt)txt.textContent='تعذّر تحميل حالة النظام.';
+      return;
+    }
+    const sevClass=data.status==='healthy'?'success':data.status==='degraded'?'warning':'error';
+    const sevLabel=data.status==='healthy'?'سليمة':data.status==='degraded'?'مُتدهورة':'حادثة';
+    if(dot)dot.className='kt-status-dot '+sevClass;
+    if(txt)txt.textContent=sevLabel+' — '+(data.summary||'');
+
+    if(compBody){
+      const comps=data.affected_components||[];
+      compBody.innerHTML=comps.length
+        ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${comps.map(c=>`<span class="kt-badge kt-badge-${sevClass}">${opsEscHtml(c)}</span>`).join('')}</div>`
+        : '<div class="kt-state"><div class="kt-state-text">لا مكوّناتٍ متأثّرة الآن.</div></div>';
+    }
+    if(incBody){
+      const list=data.open_incidents||[];
+      if(!list.length){
+        incBody.innerHTML='<div class="kt-state"><div class="kt-state-text">لا حوادث مسجَّلة حالياً.</div></div>';
+      }else{
+        incBody.innerHTML=`<div class="kt-table-wrap"><table class="kt-table kt-table-cards"><thead><tr>
+          <th>الخطورة</th><th>المكوّن</th><th>الحالة</th><th>الوصف</th></tr></thead><tbody>`+
+          list.map(i=>{
+            const cls=(i.severity==='P0'||i.severity==='P1')?'error':(i.severity==='P2'?'warning':'info');
+            return `<tr>
+              <td data-label="الخطورة"><span class="kt-badge kt-badge-${cls}">${opsEscHtml(i.severity)}</span></td>
+              <td data-label="المكوّن">${opsEscHtml(i.component)}</td>
+              <td data-label="الحالة">${opsEscHtml(i.status)}${i.occurrence_count>1?' × '+i.occurrence_count:''}</td>
+              <td data-label="الوصف">${opsEscHtml(i.summary)}</td>
+            </tr>`;
+          }).join('')+`</tbody></table></div>`;
+      }
+    }
+  }catch(e){
+    const txt=document.getElementById('ktops-status-text');
+    if(txt)txt.textContent='تعذّر تحميل حالة النظام.';
+  }
+  try{
+    const{data,error}=await sb.functions.invoke('ops-analyze',{body:{action:'cost'}});
+    const box=document.getElementById('ktops-cost-body');
+    if(!box)return;
+    if(error||!data||data.error||!data.cost){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل بيانات التكلفة.</div></div>';return;}
+    const c=data.cost;
+    const fmt=v=>'$'+Number(v||0).toFixed(4);
+    box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--kt-space-4)">
+      <div class="kt-kpi"><div class="kt-kpi-label" style="font-size:11px">اليوم</div><div style="font-weight:800;font-size:18px">${fmt(c.ops_cost_usd.today)}</div></div>
+      <div class="kt-kpi"><div class="kt-kpi-label" style="font-size:11px">هذا الأسبوع</div><div style="font-weight:800;font-size:18px">${fmt(c.ops_cost_usd.week)}</div></div>
+      <div class="kt-kpi"><div class="kt-kpi-label" style="font-size:11px">هذا الشهر</div><div style="font-weight:800;font-size:18px">${fmt(c.ops_cost_usd.month)}</div></div>
+    </div>`;
+  }catch(e){/* يبقى — بلا كسر الصفحة */}
 }
 
 // ══ المكتبة الجديدة: الصف ← المادة ← الوحدة ← الدرس ← الملفات ══
