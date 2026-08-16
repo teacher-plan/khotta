@@ -111,15 +111,40 @@ Deno.serve(async (req) => {
     const regId = b.regId;
     if (!regId) return json({ error: "no_reg" }, 400);
 
-    const { data: reg, error: regErr } = await admin.from("pre_registrations")
+    const { data: reg0, error: regErr } = await admin.from("pre_registrations")
       .select("id,name,email,stage,account_email").eq("id", regId).maybeSingle();
-    if (regErr || !reg) return json({ error: "reg_not_found" }, 404);
-    if (reg.account_email) return json({ error: "already_active", email: reg.account_email }, 409);
+    if (regErr || !reg0) return json({ error: "reg_not_found" }, 404);
+    if (reg0.account_email) return json({ error: "already_active", email: reg0.account_email }, 409);
+
+    // ⚠️ حجزٌ ذرّي قبل أي عمل: كان الفحص أعلاه (قراءة ثم لاحقاً كتابة)
+    // يترك نافذةً — نقرتا تفعيلٍ على نفس التسجيل في اللحظة نفسها تريان
+    // account_email فارغاً معاً، فتُنشئان حسابَي Auth لبريدٍ واحد، ويفشل
+    // الثاني بعد أن استهلك رمز مرورٍ ولّده. عبارةُ UPDATE واحدة يحرسها
+    // الشرط داخلها تجعل الحجز فوزاً لطلبٍ واحد فقط — نفس نمط take_quota.
+    const claimMark = "__activating__";
+    const { data: claimed, error: claimErr } = await admin.from("pre_registrations")
+      .update({ account_email: claimMark })
+      .eq("id", regId).is("account_email", null)
+      .select("id,name,email,stage").maybeSingle();
+    if (claimErr) return json({ error: "server_error", detail: claimErr.message }, 500);
+    if (!claimed) {
+      // لم يُرجَع صفّ = طلبٌ آخر (أو تفعيلٌ سابق) سبقنا إلى الحجز
+      const { data: now } = await admin.from("pre_registrations")
+        .select("account_email").eq("id", regId).maybeSingle();
+      return json({ error: "already_active", email: now?.account_email || null }, 409);
+    }
+    const reg = claimed;
+
+    // من هنا فصاعداً: أي خروجٍ بخطأ يجب أن يُعيد account_email إلى NULL
+    // وإلا بقي الصفّ محجوزاً للأبد بعلامةٍ لا معلّمة تملكها ولا يقبلها
+    // فحص البريد — تسجيلٌ ميت لا يستطيع أحدٌ إعادة تفعيله.
+    const release = () => admin.from("pre_registrations")
+      .update({ account_email: null }).eq("id", regId).then(() => {});
 
     const email = String(reg.email || "").trim().toLowerCase();
     // بريدها هو اسم دخولها: بريدٌ مولَّد لا تعرفه يعني أنها لا تستطيع
     // استرجاع كلمة مرورها بنفسها أبداً، وكل نسيانٍ يمرّ بالإدارة.
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "bad_email" }, 400);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await release(); return json({ error: "bad_email" }, 400); }
 
     const cycle = reg.stage === "cycle1" ? "cycle1" : "main";
     const password = genPassword();
@@ -130,6 +155,7 @@ Deno.serve(async (req) => {
       email, password, email_confirm: true,
     });
     if (cErr || !created?.user) {
+      await release();
       const m = String(cErr?.message || "");
       if (/already|exists|registered/i.test(m)) return json({ error: "email_in_use" }, 409);
       return json({ error: "create_failed", detail: m }, 502);
@@ -140,6 +166,7 @@ Deno.serve(async (req) => {
     // بدل أن نترك حساباً معطّلاً لا تفسير له.
     if (aErr) {
       await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
+      await release();
       return json({ error: "allow_failed", detail: aErr.message }, 502);
     }
 

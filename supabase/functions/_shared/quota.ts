@@ -21,6 +21,11 @@ const DEF: Record<string, number> = { img: 65, search: 125, text: 600 };
 
 export interface QuotaResult { ok: boolean; used: number; limit: number; error?: string }
 
+// دفاعٌ إضافي فوق الحصة الشهرية: نداءان من المستخدمة نفسها أقرب من هذه
+// المهلة يُرفض ثانيهما بصرف النظر عن الحصة المتبقية — يمنع ذروةً لحظية
+// من ضغطةٍ متكررة أو تبويباتٍ متعددة، لا يستبدل take_quota.
+const RATE_LIMIT_MS = 2000;
+
 // deno-lint-ignore no-explicit-any
 export async function takeQuota(
   admin: any,
@@ -30,6 +35,17 @@ export async function takeQuota(
   st: Record<string, string>,
 ): Promise<QuotaResult> {
   if ((email || "").toLowerCase() === ADMIN_EMAIL) return { ok: true, used: 0, limit: 0 };
+
+  try {
+    const { data: allowed, error: rlErr } = await admin.rpc("check_ai_rate_limit", {
+      p_user: userId, p_min_ms: RATE_LIMIT_MS,
+    });
+    // الدالة قد لا تكون منشورةً بعد (مرحلة انتقالية كما في take_quota) —
+    // عطلٌ هنا لا يمنع التوليد، فهذه طبقةٌ إضافية لا حارسٌ وحيد.
+    if (!rlErr && allowed === false) {
+      return { ok: false, used: 0, limit: 0, error: "rate_limited" };
+    }
+  } catch (_e) { /* طبقةٌ إضافية: تجاهل عطلها ولا نمنع التوليد بسببه */ }
 
   const month = new Date().toISOString().slice(0, 7);
   const limit = parseInt(st[QK[kind]] || "") || DEF[kind];
