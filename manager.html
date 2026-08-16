@@ -4320,8 +4320,11 @@ async function loginWithPassword(){
     toast('❌ تعذّر تسجيل الدخول: '+error.message,true);
   }
 }
+// خروجٌ مقصود — تُميّزه العلامةُ عن انتهاء الجلسة، وهما يصلان بالحدث نفسه.
+let _mgrSigningOut=false;
 async function signOut(){
   if(!await uiConfirm('تسجيل الخروج؟ بياناتك محفوظة في حسابك السحابي.'))return;
+  _mgrSigningOut=true;
   // مسح كل الكاش (الرئيسي + المستقل)
   try{
     const k=getCacheKey();if(k)localStorage.removeItem(k);
@@ -5066,7 +5069,16 @@ async function bootApp(session){
       await storeDriveRefreshToken(session);
       if(session.provider_refresh_token)toast('✅ تم ربط حساب Google — يمكنك الآن رفع الملفات','ok');
     }
-    if(event==='SIGNED_OUT'){currentUser=null;googleAccessToken=null;driveTokenExpiry=0;stopBellPolling();}
+    // انتهاءُ الجلسة كان يُبقي اللوحة معروضةً كاملةً وكأنّ المشرف داخل:
+    // كلُّ زرٍّ بعدها يفشل صامتاً أو يُظهر خطأ Postgres خاماً، والبيانات
+    // المعروضة من جلسةٍ ماتت. الآن تُقفَل البوابة ويُقال السبب.
+    if(event==='SIGNED_OUT'){
+      currentUser=null;googleAccessToken=null;driveTokenExpiry=0;stopBellPolling();
+      if(!_mgrSigningOut){
+        try{showAuthGate();showAuthState('auth-login');}catch(e){}
+        try{toast('انتهت جلستك — سجّل الدخول للمتابعة',true);}catch(e){}
+      }
+    }
   });
 })();
 

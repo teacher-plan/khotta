@@ -3465,8 +3465,11 @@ async function pwSave(){
   }
 }
 
+// خروجٌ مقصود — تُميّزه العلامةُ عن انتهاء الجلسة، وهما يصلان بالحدث نفسه.
+let _cy1SigningOut=false;
 async function confirmSignOut(){
   if(!await c1Confirm('تسجيل الخروج؟'))return;
+  _cy1SigningOut=true;
   await cy1Flush();                    // لا نترك تعديلاً غير مرفوع
   c1CacheClear();                      // لا نُبقي بيانات على جهاز قد تشاركه معلمة أخرى
   sb.auth.signOut().then(()=>location.reload());
@@ -4404,8 +4407,32 @@ c1SelectEnhanceAll();
   else showLogin();
   sb.auth.onAuthStateChange(async(event,s)=>{
     if(event==='PASSWORD_RECOVERY'&&s){pwOpen({recovery:true,email:(s.user&&s.user.email)||''});return;}
-    if(event==='SIGNED_IN'&&s&&!currentUser&&!pwRecovery)await afterAuth(s);
-    if(event==='SIGNED_OUT'){currentUser=null;location.reload();}
+    if(event==='SIGNED_IN'&&s&&!currentUser&&!pwRecovery){
+      // إن بقي تعديلٌ معلّق من جلسةٍ انتهت، يُرفع الآن قبل كل شيء:
+      // afterAuth يُعيد تحميل الملف من الخادم ويكتبه فوق ما في الذاكرة،
+      // فلولا هذا السطر لضاع التعديل رغم وعدِنا لها بأن الدخول يحفظه.
+      if(_cy1Dirty){
+        currentUser=s.user;
+        try{await cy1Flush();}catch(e){console.error('flush بعد عودة الجلسة:',e);}
+      }
+      await afterAuth(s);
+    }
+    // انتهاءُ الجلسة يصل بالحدث نفسه الذي يصل به الخروج المقصود. وكان
+    // كلاهما يُعالَج بـ location.reload() — فمعلّمةٌ تركت التطبيق مفتوحاً
+    // ليلاً تُقذَف صباحاً إلى شاشة الدخول بلا كلمةٍ واحدة تشرح، ويضيع معها
+    // كلُّ تعديلٍ لم يُرفع بعد.
+    if(event==='SIGNED_OUT'){
+      if(_cy1SigningOut){currentUser=null;location.reload();return;}
+      currentUser=null;
+      // لا إعادةَ تحميل: تمحو ما في الذاكرة. نُبقي الصفحة ونشرح.
+      const pending=_cy1Dirty;
+      showLogin(pending
+        ? 'انتهت جلستكِ ولم يُرفع آخر تعديل — سجّلي الدخول من هذه الصفحة ليُحفظ.'
+        : 'انتهت جلستكِ — سجّلي الدخول للمتابعة.');
+      return;
+    }
+    // عودةُ الجلسة بعد انتهائها: نرفع ما بقي معلّقاً قبل أيّ شيء.
+    if(event==='TOKEN_REFRESHED'&&s&&currentUser&&_cy1Dirty)cy1Flush();
     if(event==='SIGNED_IN'&&s&&currentUser){
       if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
       storeDriveRefreshToken(s);
