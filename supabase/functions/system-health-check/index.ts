@@ -287,6 +287,76 @@ async function processHealthResults(
   );
 }
 
+// ═══ KHOTTA Autonomous Management — Phase 3: تجميع الحوادث ═══
+// إضافةٌ بعد processHealthResults بلا تعديل حرفٍ فيها — نفس النتائج التي
+// كانت تُكتب في health_checks وemergency_alerts وتلجرام كما هي تماماً،
+// وفوقها الآن تجميعٌ في ops_incidents: تكرار عطل المكوّن نفسه ضمن نافذةٍ
+// مفتوحة يزيد occurrence_count بدل صفٍّ وتنبيهٍ جديدين لكل فحصٍ فاشل.
+// P0/P1 فقط يُرسِل تلجرام هنا (المُشكِلات الحرجة) — P2 (تحذيرات) تُسجَّل
+// دون تنبيهٍ جديد، فلا ازدواج مع تنبيه processHealthResults الحرج أعلاه،
+// ولا ضجيجٌ لكل تحذيرٍ عابر؛ تبقى مرئيةً عبر ops-analyze/الـcopilot.
+async function processIncidents(
+  results: HealthCheckResult[],
+  sb: any
+): Promise<void> {
+  try {
+    const critical = results.filter((r) => r.status === "critical");
+    const warning = results.filter((r) => r.status === "warning");
+    const problematic = new Set([...critical, ...warning].map((r) => r.component));
+
+    for (const issue of [...critical, ...warning]) {
+      const severity = issue.status === "critical" ? "P1" : "P2";
+      const { data: existing } = await sb
+        .from("ops_incidents")
+        .select("id,occurrence_count")
+        .eq("dedup_key", issue.component)
+        .neq("status", "RESOLVED")
+        .order("last_seen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        await sb.from("ops_incidents").update({
+          occurrence_count: (existing.occurrence_count || 1) + 1,
+          last_seen_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+        continue; // تكرارٌ لحادثةٍ مفتوحة — لا صفّ جديد ولا تنبيهٌ جديد
+      }
+
+      const { data: created } = await sb.from("ops_incidents").insert({
+        dedup_key: issue.component,
+        severity,
+        status: "DETECTED",
+        component: issue.component,
+        summary: `${issue.component}: ${issue.error || issue.status}`,
+        evidence: [{ source: "system-health-check", data: issue }],
+        confidence: "VERIFIED", // من فحصٍ حيّ مباشر، لا استنتاج
+      }).select("id").maybeSingle();
+
+      // P1 فقط يُنبَّه فوراً (P0 يتطلّب إشارةً أمنية/بياناتٍ لا يُصدرها هذا
+      // الفحص — لا تُدَّعى بلا دليل). processHealthResults أرسل تنبيهاً
+      // مسبقاً لهذا الفحص الحرج نفسه (منطقٌ منفصل غير مُعدَّل)؛ هذا سجلٌّ
+      // تراكميّ إضافي في ops_incidents لا تنبيهاً ثانياً مكرَّراً.
+      if (severity === "P1" && created) {
+        console.log(`ops_incidents: حادثةٌ جديدة #${created.id} (${issue.component})`);
+      }
+    }
+
+    // إغلاقٌ تلقائي: حادثةٌ مفتوحة لمكوّنٍ عاد سليماً الآن.
+    const healthyNow = results.filter((r) => r.status === "healthy" && !problematic.has(r.component));
+    for (const ok of healthyNow) {
+      await sb.from("ops_incidents")
+        .update({ status: "RESOLVED", resolved_at: new Date().toISOString() })
+        .eq("dedup_key", ok.component)
+        .neq("status", "RESOLVED");
+    }
+  } catch (e) {
+    // تراكم الحوادث تحليليٌّ إضافي — فشله لا يُسقط الفحص الصحّي نفسه
+    // ولا التنبيهات الحرجة القائمة (processHealthResults أعلاه مستقل تماماً).
+    console.error("ops_incidents: فشل التجميع:", String(e));
+  }
+}
+
 function getActionForComponent(component: string, error?: string): string {
   if (component.includes("function:")) {
     return "قم بفحص logs الدالة وأعد تشغيلها إذا لزم الأمر";
@@ -342,8 +412,10 @@ Deno.serve(async (req) => {
       ...fileChecks,
     ];
 
-    // معالجة النتائج وإرسال التنبيهات
+    // معالجة النتائج وإرسال التنبيهات — بلا تعديل
     await processHealthResults(allResults, sb);
+    // Phase 3: تجميع الحوادث فوق النتائج نفسها — إضافةٌ لا تُغيّر ما سبق
+    await processIncidents(allResults, sb);
 
     return json({
       ok: true,

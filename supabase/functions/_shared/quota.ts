@@ -108,12 +108,16 @@ export async function takeQuota(
 // أو refundQuota — هاتان تعملان قبل نداء المزوّد ولا تريان استجابته إطلاقاً.
 // فشل التسجيل هنا لا يُرجع خطأً ولا يُلقي استثناءً: توليد الذكاء الاصطناعي
 // أولى بالنجاح من هذا السجل التحليليّ — نكتفي بـconsole.error لرصد العطل.
+// ⚠️ Phase 2: kind تضمّ الآن 'ops' — نداءات ops-analyze/ops-copilot
+// التحليلية، لا تخصّ معلّمةً بعينها. get_ai_cost() يفرزها بمعزلٍ عن
+// تكلفة المستخدمين بهذه القيمة تحديداً — لا تُستعمَل 'ops' لغير ذلك.
+// userId قد يكون null لنداءٍ تُطلقه وكيلٌ مجدولة بلا مستخدمٍ محدَّد.
 // deno-lint-ignore no-explicit-any
 export async function logAiCost(
   admin: any,
-  userId: string,
+  userId: string | null,
   functionName: string,
-  kind: "text" | "img" | "search",
+  kind: "text" | "img" | "search" | "ops",
   model: string | null | undefined,
   usage: unknown,
 ): Promise<void> {
