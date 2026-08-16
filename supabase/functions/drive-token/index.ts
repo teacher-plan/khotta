@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
     if (!resp.ok || !g.access_token) {
       // refresh_token قد يكون أُبطل (المستخدم ألغى الإذن) — يحتاج إعادة ربط
       console.error("drive-token: refresh_failed", JSON.stringify(g).slice(0, 300));
-      return json({ error: "refresh_failed", detail: g }, 400);
+      // ردّ جوجل الخام لا يصل العميل: كائنٌ غير مضمون الشكل من طرفٍ ثالث،
+      // وإرساله كاملاً بابٌ لتسريب تفاصيل لا نتحكّم بها لاحقاً.
+      return json({ error: "refresh_failed", detail: String(g?.error || "") }, 400);
     }
 
     return json({ access_token: g.access_token, expires_in: g.expires_in });
