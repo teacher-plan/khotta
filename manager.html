@@ -13091,6 +13091,34 @@ async function opsLoadCost(){
   }catch(e){box.textContent='تعذّر تحميل بيانات التكلفة.';}
 }
 
+// تشخيصٌ صرف: تحجب أي نمطٍ يشبه سرّاً (مفتاحاً/رمزاً) قبل عرضه، فلا يُكتفى
+// بثقة الخادم أنه لن يُرسل سرّاً — طبقة دفاعٍ ثانية على الواجهة أيضاً.
+function opsRedactSecrets(s){
+  return String(s==null?'':s)
+    .replace(/sb_secret_[A-Za-z0-9_-]+/g,'[محجوب]')
+    .replace(/sk-[A-Za-z0-9_-]{10,}/g,'[محجوب]')
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi,'Bearer [محجوب]')
+    .replace(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g,'[محجوب]');
+}
+// يستخرج نصّ الخطأ الفعلي من ردّ ops-copilot مهما كان شكل الفشل: خطأ شبكة/
+// invoke (بلا body مقروء مباشرة عند supabase-js v2 — يلزم قراءة error.context)،
+// أو جسمٌ منظَّم من الخادم نفسه ({error,detail,tool}). تشخيصٌ فقط، لا سرّ يُعرض.
+async function opsExtractErrorDetail(error, data){
+  if(data && (data.error || data.detail || data.tool)){
+    return [data.error, data.tool?('الأداة: '+data.tool):null, data.detail]
+      .filter(Boolean).join(' — ');
+  }
+  if(error && error.context && typeof error.context.json==='function'){
+    try{
+      const body=await error.context.clone().json();
+      if(body && (body.error || body.detail || body.tool)){
+        return [body.error, body.tool?('الأداة: '+body.tool):null, body.detail]
+          .filter(Boolean).join(' — ');
+      }
+    }catch(_e){/* الجسم ليس JSON أو تعذّرت قراءته — نكمل بالرسالة العامة */}
+  }
+  return (error && error.message) ? String(error.message) : 'خطأ غير معروف الشكل';
+}
 async function opsAskCopilot(){
   const input=document.getElementById('ops-copilot-q');
   const box=document.getElementById('ops-copilot-answer');
@@ -13099,15 +13127,20 @@ async function opsAskCopilot(){
   box.innerHTML='⏳ جاري التفكير...';
   try{
     const{data,error}=await sb.functions.invoke('ops-copilot',{body:{question:q}});
-    if(error||!data){box.textContent='تعذّر الحصول على إجابة.';return;}
-    if(data.error){box.textContent='تعذّر الحصول على إجابة.';return;}
+    if(error||!data||data.error){
+      const detail=opsRedactSecrets(await opsExtractErrorDetail(error,data));
+      box.innerHTML=`<div>تعذّر الحصول على إجابة.</div><details style="margin-top:6px" open><summary style="cursor:pointer;color:var(--muted);font-size:12px">تفاصيل تقنية (تشخيصٌ مؤقّت)</summary><div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${opsEscHtml(detail)}</div></details>`;
+      return;
+    }
     let html=`<div style="font-weight:700;margin-bottom:6px">${opsEscHtml(data.manager_summary)}</div>`;
     if(data.technical_details){
       html+=`<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted);font-size:12px">تفاصيل تقنية</summary><div style="font-size:12px;color:var(--muted);margin-top:6px">${opsEscHtml(data.technical_details)}</div></details>`;
     }
     html+=`<div style="font-size:11px;color:var(--muted);margin-top:6px">مستوى الثقة: ${opsEscHtml(data.confidence||'—')}</div>`;
     box.innerHTML=html;
-  }catch(e){box.textContent='تعذّر الحصول على إجابة.';}
+  }catch(e){
+    box.innerHTML=`<div>تعذّر الحصول على إجابة.</div><details style="margin-top:6px" open><summary style="cursor:pointer;color:var(--muted);font-size:12px">تفاصيل تقنية (تشخيصٌ مؤقّت)</summary><div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${opsEscHtml(opsRedactSecrets(String(e&&e.message||e)))}</div></details>`;
+  }
 }
 
 // ══ المكتبة الجديدة: الصف ← المادة ← الوحدة ← الدرس ← الملفات ══

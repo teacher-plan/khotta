@@ -78,10 +78,20 @@ Deno.serve(async (req) => {
     if (cat.incidents) jobs.incidents = get_recent_incidents(admin, 15);
     if (cat.deploy) jobs.deployments = get_recent_deployments();
 
+    // تشخيصٌ مؤقّت: نفصل جمع الأدلّة عن نداء الذكاء الاصطناعي بخطأٍ بنيوي
+    // مسمّى — فلو رمت أداةٌ استثناءً نعرف أيّها بالضبط، لا رسالةً عامة تُشبه
+    // فشل الصلاحية أو فشل المزوّد. لا تغييرٌ في التفويض أو المزوّد أو الحصص.
     const keys = Object.keys(jobs);
-    const values = await Promise.all(Object.values(jobs));
+    const settled = await Promise.allSettled(Object.values(jobs));
+    const failedTools = keys.filter((_, i) => settled[i].status === "rejected");
+    if (failedTools.length) {
+      const detail = failedTools
+        .map((k) => `${k}: ${String((settled[keys.indexOf(k)] as PromiseRejectedResult).reason)}`)
+        .join(" | ");
+      return json({ error: "tool_failed", tool: failedTools.join(","), detail }, 500);
+    }
     const evidence: Record<string, unknown> = {};
-    keys.forEach((k, i) => { evidence[k] = values[i]; });
+    keys.forEach((k, i) => { evidence[k] = (settled[i] as PromiseFulfilledResult<unknown>).value; });
 
     const system = [
       "أنت مساعد عمليات KHOTTA — تجيب مدير المنصّة (غير تقنيّ بالضرورة) بالعربية الفصحى.",
