@@ -10,7 +10,7 @@
 //   (SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY متوفّران تلقائياً)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 
@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
       return refund({ error: "bad_ai_output", detail: arr.reason }, 502);
     }
 
+    await logAiCost(admin, user.id, "generate-exam", "text", model, or?.usage);
     return json({ questions: arr.items, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

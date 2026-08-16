@@ -9,7 +9,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
     }
     const summary = (or?.choices?.[0]?.message?.content || "").trim();
     if (!summary) return refund({ error: "no_summary" }, 502);
+    await logAiCost(admin, user.id, "summarize-lesson-pages", "text", model, or?.usage);
     return json({ summary, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

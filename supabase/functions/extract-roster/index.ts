@@ -13,7 +13,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { orFetch, pickVisionModel } from "../_shared/ai.ts";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 
 const cors = {
@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
       .filter((n) => n.length >= 2 && n.length <= 80)
       .filter((n) => { const k = n.replace(/\s+/g, " "); if (seen.has(k)) return false; seen.add(k); return true; });
 
+    await logAiCost(admin, user.id, "extract-roster", "img", model, or?.usage);
     return json({ names, model, usage: or?.usage || null });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);

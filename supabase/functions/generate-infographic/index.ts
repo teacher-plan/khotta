@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
       const msg = or?.choices?.[0]?.message;
       const outImg = msg?.images?.[0]?.image_url?.url || "";
       if (!outImg) return refund({ error: "no_image", detail: msg?.content || null }, 502);
+      await logAiCost(admin, user.id, "generate-infographic", "img", model, or?.usage);
       return json({ image: outImg, model, usage: or?.usage || null, edited: true });
     }
 
@@ -219,6 +220,7 @@ Deno.serve(async (req) => {
       img = r.img;
     }
 
+    await logAiCost(admin, user.id, "generate-infographic", "img", model, usage);
     return json({ image: img, model, usage });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

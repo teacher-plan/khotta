@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
     if (!_p.ok) return refund({ error: "bad_output", detail: _p.raw }, 502);
     const _arr = requireArray(_p.value, "items");
     if (!_arr.ok) return refund({ error: "bad_output", detail: _arr.reason }, 502);
+    await logAiCost(admin, user.id, "generate-game-content", "text", model, or?.usage);
     return json({ items: _arr.items, groupNames: _p.value.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

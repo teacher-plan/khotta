@@ -7,7 +7,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
       }
       return refund({ error: "bad_output", detail: attempt.detail }, 502);
     }
+    await logAiCost(admin, user.id, "generate-lesson-plan", "text", model, attempt.usage);
     return json({ plan: attempt.plan, model, usage: attempt.usage });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

@@ -97,6 +97,42 @@ export async function takeQuota(
   }
 }
 
+// ═══ KHOTTA Autonomous Management — Phase 0 ═══
+// تسجيل تكلفة النداء الحقيقية — قراءةٌ صرفة، لا تمسّ الحصة ولا التقييد.
+// المصدر الوحيد للتكلفة هو usage.cost القادم من OpenRouter نفسه؛ لا تقدير
+// ولا جدول أسعار محليّ. NULL صراحةً إن غاب الرقم أو كان غير صالح — لا
+// نخترع صفراً ولا أي قيمةٍ بديلة.
+//
+// ⚠️ استقلاليةٌ متعمَّدة: يُستدعى بعد نجاح استجابة الذكاء الاصطناعي
+// (المكان الوحيد الذي يُعرَف فيه usage.cost أصلاً)، لا من داخل takeQuota
+// أو refundQuota — هاتان تعملان قبل نداء المزوّد ولا تريان استجابته إطلاقاً.
+// فشل التسجيل هنا لا يُرجع خطأً ولا يُلقي استثناءً: توليد الذكاء الاصطناعي
+// أولى بالنجاح من هذا السجل التحليليّ — نكتفي بـconsole.error لرصد العطل.
+// deno-lint-ignore no-explicit-any
+export async function logAiCost(
+  admin: any,
+  userId: string,
+  functionName: string,
+  kind: "text" | "img" | "search",
+  model: string | null | undefined,
+  usage: unknown,
+): Promise<void> {
+  try {
+    const u = usage as { cost?: unknown } | null | undefined;
+    const cost = u && typeof u.cost === "number" && isFinite(u.cost) ? u.cost : null;
+    const { error } = await admin.from("ai_cost_log").insert({
+      user_id: userId,
+      function_name: functionName,
+      kind,
+      model: model || null,
+      cost_usd: cost,
+    });
+    if (error) console.error(`ai_cost_log: تعذّر التسجيل (${functionName}):`, error.message);
+  } catch (e) {
+    console.error(`ai_cost_log: استثناءٌ أثناء التسجيل (${functionName}):`, String(e));
+  }
+}
+
 // إعادةُ ما خُصم عند فشل التوليد.
 // الخصم يقع قبل النداء كي لا يُتجاوز الحدّ بطلباتٍ متوازية، لكن المعلمة كانت
 // تُحاسَب على توليدٍ لم تستلمه: ست محاولاتٍ فاشلة لعرضٍ واحد تلتهم ستّاً من

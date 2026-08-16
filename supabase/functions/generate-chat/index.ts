@@ -8,7 +8,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -268,6 +268,7 @@ Deno.serve(async (req) => {
 
     // webUsed يُخبر الواجهة إن جرى البحث فعلاً: من نفدت حصتها تُجاب بلا بحث
     // وينبغي أن ترى ذلك، لا أن تظنّ جوابها مبنيّاً على مصدرٍ حديث
+    await logAiCost(admin, user.id, "generate-chat", wantImage ? "img" : "text", model, or?.usage);
     return json({ reply, image: genImage || null, chatId: savedId, model, webUsed: webOn, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
