@@ -11,6 +11,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -173,17 +174,22 @@ Deno.serve(async (req) => {
     }
 
     const content = or?.choices?.[0]?.message?.content || "";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch (_) {
-      // بعض النماذج تحيط JSON بنص — نحاول استخراج أول كائن
-      const m = content.match(/\{[\s\S]*\}/);
-      parsed = m ? JSON.parse(m[0]) : { questions: [] };
+    // كان التحليلُ الاحتياطيّ خارج try فيرمي ٥٠٠ بعد خصم الحصّة، وكان
+    // ‏?.questions || []‏ يُرجع ٢٠٠ وصفرَ أسئلة حين يردّ النموذج بشكلٍ آخر —
+    // فتدفع المعلّمة وتستلم اختباراً فارغاً بلا تفسير. الآن يُستردّ ما خُصم
+    // ويُقال لها إنّ المحاولة أخفقت.
+    const p = parseAiJson(content);
+    if (!p.ok) {
+      console.error(`generate-exam: تعذّر تحليل ردّ النموذج (${p.reason})`, p.raw);
+      return refund({ error: "bad_ai_output", detail: p.raw }, 502);
+    }
+    const arr = requireArray(p.value, "questions");
+    if (!arr.ok) {
+      console.error(`generate-exam: ${arr.reason}`);
+      return refund({ error: "bad_ai_output", detail: arr.reason }, 502);
     }
 
-    const questions = (parsed as { questions?: unknown[] })?.questions || [];
-    return json({ questions, model, usage: or?.usage || null });
+    return json({ questions: arr.items, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);

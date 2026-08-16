@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
+import { parseAiJson } from "../_shared/aiJson.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -120,10 +121,11 @@ Deno.serve(async (req) => {
     }
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: { lessons?: unknown[]; units?: unknown[]; lastUnit?: string } | null = null;
-    try { parsed = JSON.parse(text); }
-    catch (_) { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
-    if (!parsed) return json({ error: "bad_output", detail: text.slice(0, 300) }, 502);
+    // كان التحليلُ الاحتياطيّ خارج try، فردٌّ مقطوعٌ عند حدّ الرموز يرمي ٥٠٠
+    // في منتصف تقطيع كتابٍ من ١٧٦ صفحة بدل رسالةٍ مفهومة.
+    const _p = parseAiJson<{ lessons?: unknown[]; units?: unknown[]; lastUnit?: string }>(text);
+    if (!_p.ok) return json({ error: "bad_output", detail: _p.raw }, 502);
+    const parsed = _p.value;
 
     if (mode === "index") {
       // تسطيح بنية الوحدات إلى قائمة دروس مرتبة

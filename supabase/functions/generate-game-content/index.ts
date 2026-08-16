@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -143,13 +144,13 @@ Deno.serve(async (req) => {
     }
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: { items?: unknown[]; groupNames?: string[] } | null = null;
-    try { parsed = JSON.parse(text); }
-    catch (_) { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
-    if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) {
-      return refund({ error: "bad_output", detail: text.slice(0, 300) }, 502);
-    }
-    return json({ items: parsed.items, groupNames: parsed.groupNames || null, structure, grounded, model, usage: or?.usage || null });
+    // هذه الدالة كانت تفحص شكلَ الناتج فعلاً (خلافاً لأخواتها)، وما نقصها
+    // إلّا أن التحليل الاحتياطيّ كان خارج try فيرمي ٥٠٠ على ردٍّ مشوَّه.
+    const _p = parseAiJson<{ items?: unknown[]; groupNames?: string[] }>(text);
+    if (!_p.ok) return refund({ error: "bad_output", detail: _p.raw }, 502);
+    const _arr = requireArray(_p.value, "items");
+    if (!_arr.ok) return refund({ error: "bad_output", detail: _arr.reason }, 502);
+    return json({ items: _arr.items, groupNames: _p.value.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);

@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -151,9 +152,10 @@ Deno.serve(async (req) => {
       // «bad_output» فيُقرأ عطلاً في المحتوى لا في الحساب
       if (!r.ok) return { ok: false as const, detail: j, status: r.status, msg: String(j?.error?.message || j?.message || "") };
       const text = j?.choices?.[0]?.message?.content || "";
-      let plan: unknown;
-      try { plan = JSON.parse(text); }
-      catch (_) { const m = text.match(/\{[\s\S]*\}/); try { plan = m ? JSON.parse(m[0]) : null; } catch (_2) { plan = null; } }
+      // هذه وحدها كانت تحرس التحليلين معاً وتفحص الشكل — بقي أن نُبدّل
+      // الـregex الجشع بمسحٍ متوازنٍ يحترم النصوص، فلا يُهزم بشرحٍ فيه قوس.
+      const _pp = parseAiJson(text);
+      const plan: unknown = _pp.ok ? _pp.value : null;
       const pl = plan as { procedures?: unknown[]; outcomes?: unknown[]; phases?: unknown[] } | null;
       if (!pl || !(pl.procedures || pl.phases)) return { ok: false as const, detail: text.slice(0, 300) };
       return { ok: true as const, plan, usage: j?.usage || null };

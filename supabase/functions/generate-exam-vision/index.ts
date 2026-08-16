@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
 const cors = {
@@ -134,11 +135,14 @@ Deno.serve(async (req) => {
     }
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: unknown;
-    try { parsed = JSON.parse(text); }
-    catch (_) { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : { questions: [] }; }
-    const questions = (parsed as { questions?: unknown[] })?.questions || [];
-    return json({ questions, model, usage: or?.usage || null });
+    const p = parseAiJson(text);
+    if (!p.ok) {
+      console.error(`generate-exam-vision: تعذّر التحليل (${p.reason})`, p.raw);
+      return refund({ error: "bad_ai_output", detail: p.raw }, 502);
+    }
+    const arr = requireArray(p.value, "questions");
+    if (!arr.ok) return refund({ error: "bad_ai_output", detail: arr.reason }, 502);
+    return json({ questions: arr.items, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     return json({ error: "server_error", detail: String(e) }, 500);

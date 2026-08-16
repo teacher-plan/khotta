@@ -14,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { orFetch, pickVisionModel } from "../_shared/ai.ts";
 import { takeQuota, refundQuota } from "../_shared/quota.ts";
+import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -160,18 +161,18 @@ Deno.serve(async (req) => {
     }
 
     const text = or?.choices?.[0]?.message?.content || "";
-    let parsed: { names?: unknown[] };
-    try {
-      parsed = JSON.parse(text);
-    } catch (_) {
-      const m = text.match(/\{[\s\S]*\}/);
-      parsed = m ? JSON.parse(m[0]) : { names: [] };
+    const p = parseAiJson<{ names?: unknown[] }>(text);
+    if (!p.ok) {
+      console.error(`extract-roster: تعذّر التحليل (${p.reason})`, p.raw);
+      return refund({ error: "bad_ai_output", detail: p.raw }, 502);
     }
+    const arr = requireArray(p.value, "names");
+    if (!arr.ok) return refund({ error: "bad_ai_output", detail: arr.reason }, 502);
 
     // تنظيفٌ أخير على الخادم: النموذج قد يُبقي ترقيماً أو نقطاً رغم النهي،
     // وتصحيحها هنا أضمن من تركها تصل إلى كشف المعلّمة.
     const seen = new Set<string>();
-    const names = (parsed?.names || [])
+    const names = arr.items
       .map((n) => String(n ?? "").replace(/^[\s\d.\-–—)(:،]+/, "").trim())
       .filter((n) => n.length >= 2 && n.length <= 80)
       .filter((n) => { const k = n.replace(/\s+/g, " "); if (seen.has(k)) return false; seen.add(k); return true; });
