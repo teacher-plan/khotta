@@ -14,6 +14,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -135,10 +136,15 @@ Deno.serve(async (req) => {
   })();
   if (!auth || !isServiceRole) return json({ error: "unauthorized" }, 401);
 
+  // Phase 1.5: DB_WEBHOOK إن حملت حمولةً (record لاحقاً)، وإلا مسحٌ احتياطي
+  // (ON_DEMAND/CRON خارجي — لا جدولة pg_cron مؤكَّدة له، انظر التقرير).
+  let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
+
   try {
     const body = await req.json().catch(() => ({}));
     // حمولة خطّاف Supabase: { type, table, record }. غيابها = مسحٌ احتياطيّ.
     const hooked: Reg | null = body?.record ?? null;
+    run = await startRun(sb, "registration-notifier", hooked ? "WEBHOOK" : "ON_DEMAND");
 
     let rows: Reg[] = [];
     if (hooked && hooked.id != null) {
@@ -197,6 +203,14 @@ Deno.serve(async (req) => {
       data_collected: { sent, failed: failed.length, total: total ?? null },
     });
 
+    await finishRun(sb, run, {
+      status: failed.length ? "PARTIAL" : "SUCCESS",
+      resultSummary: `أُرسل ${sent}، فشل ${failed.length}`,
+      error: failed.length ? `تعذّر الإرسال عن: ${failed.join(", ")}` : undefined,
+      recordsRead: rows.length,
+      recordsWritten: sent,
+    });
+
     return json({ ok: true, sent, failed: failed.length });
   } catch (error) {
     console.error("❌ registration-notifier:", error);
@@ -207,6 +221,7 @@ Deno.serve(async (req) => {
       error_message: String(error),
       execution_time_ms: Date.now() - started,
     }).then(() => {}, () => {});
+    await finishRun(sb, run, { status: "FAILED", error: String(error) });
     return json({ error: String(error) }, 500);
   }
 });

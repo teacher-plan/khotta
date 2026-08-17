@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegramOps as sendTelegram } from "../_shared/telegram.ts";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -51,13 +52,15 @@ Deno.serve(async (req) => {
   // 🔒 وكيلٌ إداريّ: يقرأ بريد كل معلّمة واستهلاكها ويكتب في تلجرام.
   if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
-  try {
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  try {
     console.log("📊 بدء مراقبة الرصيد...");
+    run = await startRun(sb, "credit-monitor", "CRON");
 
     const month = new Date().toISOString().slice(0, 7);
 
@@ -68,6 +71,7 @@ Deno.serve(async (req) => {
 
     if (settingsError) {
       console.error("❌ Error fetching ai_settings:", settingsError);
+      await finishRun(sb, run, { status: "FAILED", error: settingsError.message });
       return json({ error: "Failed to fetch settings" }, 500);
     }
 
@@ -88,11 +92,13 @@ Deno.serve(async (req) => {
 
     if (usageError) {
       console.error("❌ Error fetching ai_usage:", usageError);
+      await finishRun(sb, run, { status: "FAILED", error: usageError.message });
       return json({ error: "Failed to fetch usage" }, 500);
     }
 
     if (!usageRows || usageRows.length === 0) {
-      await sendTelegram("📊 <b>ملخص الرصيد اليومي</b>\n━━━━━━━━━━━━━━━━━━━━━━\nلا يوجد استهلاك مسجّل لهذا الشهر بعد.");
+      const sent = await sendTelegram("📊 <b>ملخص الرصيد اليومي</b>\n━━━━━━━━━━━━━━━━━━━━━━\nلا يوجد استهلاك مسجّل لهذا الشهر بعد.");
+      await finishRun(sb, run, { status: "SUCCESS", resultSummary: "لا استهلاك مسجَّل هذا الشهر", recordsRead: 0, error: sent.ok ? undefined : sent.error });
       return json({ ok: true, message: "No usage this month" });
     }
 
@@ -195,9 +201,18 @@ Deno.serve(async (req) => {
       },
     });
 
+    await finishRun(sb, run, {
+      status: result.ok ? "SUCCESS" : "FAILED",
+      resultSummary: `${critical.length} حرجة، ${warning.length} تحذير، ${healthyCount} سليمة`,
+      error: result.ok ? undefined : result.error,
+      recordsRead: usageRows.length,
+      recordsWritten: result.ok ? 1 : 0,
+    });
+
     return json({ ok: true, message: "Credit monitor completed" });
   } catch (error) {
     console.error("❌ Unexpected error:", error);
+    await finishRun(sb, run, { status: "FAILED", error: String(error) });
     return json({ error: String(error) }, 500);
   }
 });
