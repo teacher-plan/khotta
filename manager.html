@@ -3503,6 +3503,12 @@ input,textarea,select{font-size:16px !important;}
         <div id="ktops-agents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
         <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">الصحة مُحتسَبةٌ من تشغيلات agent_runs الفعلية آخر 24 ساعة، لا قيمةٌ ثابتة. وكيلٌ بلا تشغيلاتٍ مسجَّلة بعد يظهر "غير معروف" لا "سليم".</p>
       </div>
+      <!-- Phase 2 — القسم 26/27: التشخيصات النشطة + سجلّ الإجراءات الآمنة -->
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-diag-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">التشخيصات النشطة (Active Diagnoses)</h3></div>
+        <div id="ktops-diag-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">لا تنفيذ تلقائي هنا — كل إجراءٍ من سجلّ الإجراءات الآمنة فقط، وبموافقتك إن كانت الخطورة تتطلّبها.</p>
+      </div>
       <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
         <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
         <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
@@ -12440,7 +12446,7 @@ async function ktopsLoad(){
         incBody.innerHTML='<div class="kt-state"><div class="kt-state-text">لا حوادث مسجَّلة حالياً.</div></div>';
       }else{
         incBody.innerHTML=`<div class="kt-table-wrap"><table class="kt-table kt-table-cards"><thead><tr>
-          <th>الخطورة</th><th>المكوّن</th><th>الحالة</th><th>الوصف</th></tr></thead><tbody>`+
+          <th>الخطورة</th><th>المكوّن</th><th>الحالة</th><th>الوصف</th><th>Phase 2</th></tr></thead><tbody>`+
           list.map(i=>{
             const cls=(i.severity==='P0'||i.severity==='P1')?'error':(i.severity==='P2'?'warning':'info');
             return `<tr>
@@ -12448,6 +12454,7 @@ async function ktopsLoad(){
               <td data-label="المكوّن">${opsEscHtml(i.component)}</td>
               <td data-label="الحالة">${opsEscHtml(i.status)}${i.occurrence_count>1?' × '+i.occurrence_count:''}</td>
               <td data-label="الوصف">${opsEscHtml(i.summary)}</td>
+              <td data-label="Phase 2"><button class="kt-btn kt-btn-ghost" style="font-size:11px;padding:6px 10px;min-height:36px" onclick="ktopsDiagnose('${i.id}')">🔎 تشخيص</button></td>
             </tr>`;
           }).join('')+`</tbody></table></div>`;
       }
@@ -12514,6 +12521,95 @@ async function ktopsLoad(){
       <div class="kt-kpi"><div class="kt-kpi-label" style="font-size:11px">هذا الشهر</div><div style="font-weight:800;font-size:18px">${fmt(c.ops_cost_usd.month)}</div></div>
     </div>`;
   }catch(e){/* يبقى — بلا كسر الصفحة */}
+  ktopsLoadDiagnoses();
+}
+
+// ══ Phase 2 — القسم 26/27: التشخيصات النشطة + بطاقات الإجراء ══
+// بطاقاتٌ (لا جداول عريضة) — نفس نمط Agent Control Center الهاتفي، عمودٌ
+// واحد قابلٌ للطيّ بلا تمرير أفقي ولا تفاعلاتٍ تعتمد hover. زرّان فقط لكل
+// حالة: [تنفيذ] إن لم تلزم موافقة، أو [موافقة]/[رفض] إن لزمت.
+async function ktopsLoadDiagnoses(){
+  const box=document.getElementById('ktops-diag-body');
+  if(!box)return;
+  try{
+    const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'list_diagnoses',limit:15}});
+    if(error||!data||data.error){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل التشخيصات.</div></div>';return;}
+    const diagnoses=data.diagnoses||[], approvals=data.approvals||[], executions=data.executions||[];
+    if(!diagnoses.length){box.innerHTML='<div class="kt-state"><div class="kt-state-text">لا تشخيصات مسجَّلة بعد — تُبنى تلقائياً عند تحليل حادثةٍ عبر ops-actions.</div></div>';return;}
+
+    const statusLbl={PENDING:'قيد الانتظار',COLLECTING_EVIDENCE:'يجمع الأدلّة',ANALYZING:'يحلّل',COMPLETED:'مكتمل',LOW_CONFIDENCE:'ثقةٌ منخفضة',FAILED:'فشل'};
+    const riskCls=r=>r==='LOW'?'success':r==='MEDIUM'?'warning':r==='HIGH'||r==='CRITICAL'?'error':'info';
+    const riskLbl={LOW:'منخفضة',MEDIUM:'متوسّطة',HIGH:'عالية',CRITICAL:'حرجة'};
+
+    box.innerHTML=diagnoses.map(d=>{
+      const inc=d.ops_incidents||{};
+      const pendingAppr=approvals.find(a=>a.diagnosis_id===d.diagnosis_id&&a.status==='PENDING');
+      const lastExec=executions.find(e=>e.diagnosis_id===d.diagnosis_id);
+      let actionsHtml='';
+      if(d.recommended_action_id&&!lastExec){
+        if(d.requires_human&&!pendingAppr){
+          actionsHtml=`<button class="kt-btn kt-btn-ghost" style="min-height:40px" onclick="ktopsRequestAction('${opsEscHtml(d.recommended_action_id)}','${opsEscHtml(d.incident_id)}','${opsEscHtml(d.diagnosis_id)}')">طلب موافقة</button>`;
+        }else if(pendingAppr){
+          actionsHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="kt-btn kt-btn-primary" style="min-height:40px" onclick="ktopsApprove('${pendingAppr.approval_id}','${opsEscHtml(d.recommended_action_id)}','${opsEscHtml(d.incident_id)}','${opsEscHtml(d.diagnosis_id)}')">✅ موافقة وتنفيذ</button>
+            <button class="kt-btn kt-btn-ghost" style="min-height:40px" onclick="ktopsReject('${pendingAppr.approval_id}')">❌ رفض</button>
+          </div>`;
+        }else{
+          actionsHtml=`<button class="kt-btn kt-btn-primary" style="min-height:40px" onclick="ktopsExecute('${opsEscHtml(d.recommended_action_id)}','${opsEscHtml(d.incident_id)}','${opsEscHtml(d.diagnosis_id)}',null)">⚙️ تنفيذ</button>`;
+        }
+      }else if(lastExec){
+        const vLbl={PENDING:'بانتظار التحقّق',RUNNING:'يتحقّق الآن',PASSED:'✅ تحقّقٌ ناجح',FAILED:'❌ فشل التحقّق',INCONCLUSIVE:'⚠️ غير حاسم'};
+        actionsHtml=`<div style="font-size:12px;color:var(--kt-color-text-muted)">آخر تنفيذ: ${lastExec.execution_status==='SUCCEEDED'?'✅ نجح':'❌ فشل'} — ${vLbl[lastExec.verification_status]||lastExec.verification_status}${lastExec.escalated?' — 🔺 صُعِّد للمشرف':''}</div>`;
+      }
+      return `<div class="kt-card" style="margin-bottom:var(--kt-space-3);border:1px solid var(--kt-color-border)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;flex-wrap:wrap">
+          <div style="font-weight:700;font-size:14px">${opsEscHtml(inc.component||'—')}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="kt-badge kt-badge-info">${statusLbl[d.diagnosis_status]||d.diagnosis_status}</span>
+            ${d.risk_level?`<span class="kt-badge kt-badge-${riskCls(d.risk_level)}">خطورة: ${riskLbl[d.risk_level]||d.risk_level}</span>`:''}
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--kt-color-text-muted);margin:6px 0">${opsEscHtml(inc.summary||'')}</div>
+        <div style="font-size:13px;margin:8px 0"><b>السبب المُرجَّح:</b> ${d.suspected_root_cause?opsEscHtml(d.suspected_root_cause):'<span style="color:var(--kt-color-text-muted)">أدلّةٌ غير كافية (INSUFFICIENT EVIDENCE)</span>'}</div>
+        ${d.confidence!=null?`<div style="font-size:12px;color:var(--kt-color-text-muted)">الثقة: ${d.confidence}% — ${opsEscHtml(d.confidence_reasoning||'')}</div>`:''}
+        ${d.recommended_action_id?`<div style="font-size:12px;margin-top:6px"><b>الإجراء المقترح:</b> ${opsEscHtml(d.recommended_action_id)} — ${d.requires_human?'يتطلّب موافقتك':'لا يتطلّب موافقة إضافية'}</div>`:'<div style="font-size:12px;margin-top:6px;color:var(--kt-color-text-muted)">لا إجراءٌ آمنٌ مطابق — توصيةٌ يدوية فقط.</div>'}
+        <div style="margin-top:10px">${actionsHtml}</div>
+      </div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل التشخيصات.</div></div>';}
+}
+async function ktopsDiagnose(incidentId){
+  const btn=event&&event.target;
+  if(btn){btn.disabled=true;btn.textContent='⏳ يشخّص...';}
+  try{
+    const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'diagnose',incident_id:incidentId}});
+    if(error||!data||data.error){alert('تعذّر التشخيص: '+(data&&data.error||'')); return;}
+    ktopsLoadDiagnoses();
+  }finally{ if(btn){btn.disabled=false;btn.textContent='🔎 تشخيص';} }
+}
+async function ktopsRequestAction(actionId,incidentId,diagnosisId){
+  const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'request_action',action_id:actionId,incident_id:incidentId,diagnosis_id:diagnosisId}});
+  if(error||!data){alert('تعذّر طلب الإجراء.');return;}
+  if(!data.matched){alert(data.message||'لا توجد عملية آمنة مسجَّلة لهذا النوع من المشاكل.');return;}
+  ktopsLoadDiagnoses();
+}
+async function ktopsApprove(approvalId,actionId,incidentId,diagnosisId){
+  if(!confirm('تأكيد الموافقة على تنفيذ هذا الإجراء؟'))return;
+  const{data:appr,error:e1}=await sb.functions.invoke('ops-actions',{body:{action:'approve',approval_id:approvalId}});
+  if(e1||!appr||!appr.approval){alert('تعذّرت الموافقة.');return;}
+  await ktopsExecute(actionId,incidentId,diagnosisId,approvalId);
+}
+async function ktopsReject(approvalId){
+  const{error}=await sb.functions.invoke('ops-actions',{body:{action:'reject',approval_id:approvalId}});
+  if(error){alert('تعذّر الرفض.');return;}
+  ktopsLoadDiagnoses();
+}
+async function ktopsExecute(actionId,incidentId,diagnosisId,approvalId){
+  const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'execute',action_id:actionId,incident_id:incidentId,diagnosis_id:diagnosisId,approval_id:approvalId}});
+  if(error||!data){alert('تعذّر التنفيذ.');return;}
+  if(data.error){alert('تعذّر التنفيذ: '+data.error);ktopsLoadDiagnoses();return;}
+  alert(data.incident_resolved?'✅ نُفِّذ الإجراء وتحقّقنا من نجاحه — الحادثة مُغلَقة.':(data.escalated?'⚠️ نُفِّذ الإجراء لكن التحقّق لم ينجح — صُعِّدت الحادثة للمشرف.':'تمّ التنفيذ.'));
+  ktopsLoadDiagnoses();
 }
 
 // ══ KHOTTA ADMIN SHELL — دوالٌّ مشتركة (PHASE C.2) ══

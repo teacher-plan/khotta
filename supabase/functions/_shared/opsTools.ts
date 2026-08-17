@@ -340,3 +340,77 @@ export async function get_agent_status_summary(admin: any, hours = 24) {
       : undefined,
   };
 }
+
+// ═══ Autonomous Operations 2.0 — Phase 2: أدوات جمع الأدلّة (Evidence
+// Collector) لمحرّك التشخيص — قراءةٌ صرفة كسابقاتها، مُسمّاةٌ وضيّقة، لا
+// SQL حرّ. القسم 21 من المواصفة: أدواتٌ محدَّدة فقط، لا وصول DB عام.
+
+// آخر تشغيلاتٍ لوكيلٍ بعينه — التشخيص الحتمي الأول لأي حادثة (متى نجح
+// آخر مرة، كم فشلاً متتالياً، ما نصّ الخطأ، هل المدّة الزمنية شاذّة).
+export async function get_recent_agent_runs(admin: any, agentId: string, limit = 10) {
+  const { data } = await admin
+    .from("agent_runs")
+    .select("run_id,status,trigger,started_at,completed_at,duration_ms,error,result_summary,correlation_id")
+    .eq("agent_id", agentId)
+    .order("started_at", { ascending: false })
+    .limit(limit);
+  const rows = data || [];
+  const lastSuccess = rows.find((r: any) => r.status === "SUCCESS");
+  let consecutiveFailures = 0;
+  for (const r of rows) { if (r.status === "FAILED" || r.status === "TIMEOUT") consecutiveFailures++; else break; }
+  const durations = rows.filter((r: any) => typeof r.duration_ms === "number").map((r: any) => r.duration_ms);
+  const avgDurationMs = durations.length ? Math.round(durations.reduce((s: number, d: number) => s + d, 0) / durations.length) : null;
+  const lastDurationMs = rows[0]?.duration_ms ?? null;
+  return {
+    agent_id: agentId,
+    runs: rows,
+    last_success_at: lastSuccess?.started_at ?? null,
+    consecutive_failures: consecutiveFailures,
+    avg_duration_ms: avgDurationMs,
+    last_duration_ms: lastDurationMs,
+    duration_anomaly: (avgDurationMs && lastDurationMs && lastDurationMs > avgDurationMs * 3) ? true : false,
+    distinct_errors: [...new Set(rows.filter((r: any) => r.error).map((r: any) => String(r.error).slice(0, 200)))],
+  };
+}
+
+// حوادث سابقة لنفس المكوّن — يميّز عطلاً متكرّراً معروفاً عن أول ظهورٍ له.
+export async function get_related_incidents(admin: any, component: string, limit = 10) {
+  const { data } = await admin
+    .from("ops_incidents")
+    .select("id,severity,status,summary,root_cause,confidence,occurrence_count,first_seen_at,last_seen_at,resolved_at")
+    .eq("component", component)
+    .order("detected_at", { ascending: false })
+    .limit(limit);
+  const rows = data || [];
+  return {
+    component,
+    count: rows.length,
+    incidents: rows,
+    had_prior_resolution: rows.some((r: any) => r.status === "RESOLVED"),
+  };
+}
+
+// صحة دالّة حافة بعينها (يُستدعى مع اسمٍ محدَّد بدل كل الدوالّ — سياقٌ أضيق
+// لنداء تشخيصٍ عن مكوّنٍ بعينه).
+export async function get_function_health(admin: any, functionName: string) {
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data } = await admin
+    .from("health_checks")
+    .select("component_name,status,response_time_ms,error_message,checked_at")
+    .eq("component_name", `function:${functionName}`)
+    .gte("checked_at", since)
+    .order("checked_at", { ascending: false })
+    .limit(20);
+  return { function_name: functionName, checks: data || [] };
+}
+
+// سجلّ agent_schedules الحالي لوكيلٍ بعينه — يكشف تغييرات جدولةٍ حديثة
+// كسببٍ محتمَل (contributing factor) لتشغيلٍ فائتٍ أو متأخّر.
+export async function get_agent_schedule(admin: any, agentName: string) {
+  const { data } = await admin
+    .from("agent_schedules")
+    .select("*")
+    .eq("agent_name", agentName)
+    .maybeSingle();
+  return { agent_name: agentName, schedule: data || null, found: !!data };
+}
