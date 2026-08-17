@@ -25,7 +25,7 @@ import {
   get_ai_usage, get_ai_cost, get_quota_status, get_database_health,
   get_edge_function_health, get_recent_deployments, get_recent_incidents,
   get_database_capacity, get_agent_registry, get_agent_runs_summary,
-  get_agent_status_summary,
+  get_agent_status_summary, get_latest_agent_message,
 } from "../_shared/opsTools.ts";
 
 const cors = {
@@ -94,6 +94,10 @@ Deno.serve(async (req) => {
         database_capacity: dbCapacity, // منفصلٌ صراحةً عن AI cost وSupabase Storage
         agent_runs_summary: agentRuns,
         agent_status_summary: await get_agent_status_summary(admin, 24),
+        // لم يعد daily-summary/file-processor-monitor يُرسلان تلغرام
+        // تلقائياً — هذا هو ما تعرضه لوحة التشغيل بدله.
+        latest_daily_summary: await get_latest_agent_message(admin, "daily-summary"),
+        latest_files_summary: await get_latest_agent_message(admin, "file-processor-monitor"),
         generated_at: new Date().toISOString(),
       });
     }

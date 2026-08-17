@@ -160,6 +160,13 @@ Deno.serve(async (req) => {
   );
   let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  // manual=true (أمر /ملخص من تلغرام، أو زرّ «تحديث الآن») يُرسل فعلياً
+  // إلى تلغرام. تشغيلة pg_cron اليومية العادية لا manual في جسمها، فتكتفي
+  // بحفظ الملخّص في agent_messages ليظهر في لوحة التشغيل — تلغرام فقط عند
+  // الطلب الصريح، لا تلقائياً كل يوم.
+  const body = await req.json().catch(() => ({}));
+  const manual = body?.manual === true;
+
   try {
     console.log("📊 بدء إنشاء الملخص اليومي...");
     run = await startRun(sb, "daily-summary", "CRON");
@@ -204,18 +211,19 @@ Deno.serve(async (req) => {
       ],
     ];
 
-    // إرسال الرسالة
-    const result = await sendTelegram(message, { inline_keyboard: buttons });
+    // إرسال الرسالة فقط عند طلبٍ صريح (manual) — التشغيلة اليومية المجدولة
+    // تكتفي بحفظه لعرضه في لوحة التشغيل، بلا رسالة تلغرام تلقائية.
+    const result = manual
+      ? await sendTelegram(message, { inline_keyboard: buttons })
+      : { ok: true as const, message_id: null as number | null, error: undefined as string | undefined };
 
-    if (result.ok) {
-      // تسجيل الرسالة
-      await sb.from("agent_messages").insert({
-        message_id: `summary-${result.message_id}`,
-        agent_name: "daily-summary",
-        message_text: message,
-        telegram_message_id: result.message_id,
-      });
-    }
+    // تسجيل الملخّص دوماً — هذا هو المصدر الذي تقرأ منه لوحة التشغيل آخر ملخّص.
+    await sb.from("agent_messages").insert({
+      message_id: `summary-${manual && result.ok && result.message_id ? result.message_id : Date.now()}`,
+      agent_name: "daily-summary",
+      message_text: message,
+      telegram_message_id: manual && result.ok ? result.message_id : null,
+    });
 
     // تسجيل السجل
     await sb.from("agent_logs").insert({

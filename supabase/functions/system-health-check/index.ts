@@ -263,6 +263,19 @@ async function processHealthResults(
         action_required: getActionForComponent(issue.component, issue.error),
       });
 
+      // منع التكرار: هذا الفحص يعمل كل ٥ دقائق — إن كانت نفس المشكلة
+      // مفتوحةً بالفعل في ops_incidents (لم تُحلّ بعد) فهذا تنبيهٌ متكرّرٌ
+      // لمشكلةٍ معروفة سلفاً، لا مشكلةٍ جديدة. نُرسل فقط عند الظهور الأول،
+      // أو عند عودة المشكلة بعد أن كانت قد حُلّت — لا في كل دورة فحصٍ لاحقة.
+      const { data: existingIncident } = await sb
+        .from("ops_incidents")
+        .select("id")
+        .eq("dedup_key", issue.component)
+        .neq("status", "RESOLVED")
+        .limit(1)
+        .maybeSingle();
+      if (existingIncident) continue;
+
       // إرسال تنبيه فوري عبر Telegram
       const alertMessage = `
 🚨 <b>تنبيه حرج من نظام الصحة</b>

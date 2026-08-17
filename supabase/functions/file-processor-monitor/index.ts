@@ -37,6 +37,13 @@ Deno.serve(async (req) => {
   );
   let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  // manual=true (نداءٌ صريح، مثل أمر تلغرام عند الحاجة) يُرسل الملخّص فعلياً
+  // إلى تلغرام. تشغيلة pg_cron العادية (كل ٣٠ دقيقة) لا manual في جسمها،
+  // فتكتفي بحفظ الملخّص في agent_messages ليظهر في لوحة التشغيل — بلا أي
+  // رسالة تلغرام تلقائية، حتى لو لم يوجد شيءٌ يستحقّ الذكر أصلاً.
+  const body = await req.json().catch(() => ({}));
+  const manual = body?.manual === true;
+
   try {
     console.log("📁 بدء مراقبة معالجة الملفات...");
     run = await startRun(sb, "file-processor-monitor", "CRON");
@@ -130,18 +137,20 @@ Deno.serve(async (req) => {
       ],
     ];
 
-    // إرسال الملخص
-    const result = await sendTelegram(summaryMessage, { inline_keyboard: buttons });
+    // إرسال الملخص فقط عند طلبٍ صريح (manual) — التشغيلة المجدولة تكتفي
+    // بحفظه لعرضه في لوحة التشغيل، بلا إزعاج تلغرام كل ٣٠ دقيقة.
+    const result = manual
+      ? await sendTelegram(summaryMessage, { inline_keyboard: buttons })
+      : { ok: true as const, message_id: null as number | null, error: undefined as string | undefined };
 
-    if (result.ok) {
-      // تسجيل الرسالة
-      await sb.from("agent_messages").insert({
-        message_id: `files-${result.message_id}`,
-        agent_name: "file-processor-monitor",
-        message_text: summaryMessage,
-        telegram_message_id: result.message_id,
-      });
-    }
+    // تسجيل الملخّص دوماً (وليس فقط عند الإرسال) — هذا هو المصدر الذي
+    // تقرأ منه لوحة التشغيل آخر حالة معالجة الملفات.
+    await sb.from("agent_messages").insert({
+      message_id: `files-${manual && result.ok && result.message_id ? result.message_id : Date.now()}`,
+      agent_name: "file-processor-monitor",
+      message_text: summaryMessage,
+      telegram_message_id: manual && result.ok ? result.message_id : null,
+    });
 
     // تسجيل السجل
     await sb.from("agent_logs").insert({

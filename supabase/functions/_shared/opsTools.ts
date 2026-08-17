@@ -517,3 +517,22 @@ export async function get_self_healing_controls(admin: any) {
   const { data } = await admin.from("self_healing_controls").select("*").eq("control_id", "global").maybeSingle();
   return { controls: data || null };
 }
+
+// آخر ملخّصٍ حفظه وكيلٌ في agent_messages — daily-summary/file-processor-
+// monitor لم يعودا يُرسلان تلغرام تلقائياً (يكتفيان بالحفظ هنا)؛ هذه
+// الدالّة هي كيف تعرضهما لوحة التشغيل بدل انتظار رسالةٍ في تلغرام.
+export async function get_latest_agent_message(admin: any, agentName: string) {
+  const { data } = await admin.from("agent_messages")
+    .select("message_text,sent_at,telegram_message_id")
+    .eq("agent_name", agentName)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return { found: false };
+  return {
+    found: true,
+    message_text: data.message_text,
+    sent_at: data.sent_at,
+    was_pushed_to_telegram: data.telegram_message_id != null,
+  };
+}

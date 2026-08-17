@@ -3497,6 +3497,14 @@ input,textarea,select{font-size:16px !important;}
         <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث مفتوحة</div><div class="kt-kpi-value" id="ktops-cnt-incidents">—</div></div>
         <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث حرجة</div><div class="kt-kpi-value" id="ktops-cnt-critical">—</div></div>
       </div>
+      <!-- الملخّصات الدورية — daily-summary/file-processor-monitor لم يعودا
+           يُرسلان تلغرام تلقائياً، هذا مكان عرضهما بدل ذلك. تلغرام يبقى
+           للطلب الصريح فقط (/ملخص، /ملفات). -->
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-summaries-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">آخر الملخّصات الدورية</h3></div>
+        <div id="ktops-summaries-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">تُحفَظ هذه الملخّصات تلقائياً بجدولتها المعتادة بلا إرسال تلغرام — استخدم أمرَي /ملخص و/ملفات في تلغرام إن أردت إرسالها فعلياً عند الحاجة.</p>
+      </div>
       <!-- Phase 1.5 — القسم 11: AGENT CONTROL CENTER — من agent_runs الحقيقية عبر get_agent_status_summary -->
       <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-agents-card">
         <div class="kt-card-header"><h3 class="kt-card-title">مركز التحكّم بالوكلاء (Agent Control Center)</h3></div>
@@ -12507,6 +12515,22 @@ async function ktopsLoad(){
             </tr>`;
           }).join('')+`</tbody></table></div>`;
       }
+    }
+    const sumBody=document.getElementById('ktops-summaries-body');
+    if(sumBody){
+      const fmtTime=t=>t?new Date(t).toLocaleString('ar-OM',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'—';
+      const renderOne=(label,s)=>{
+        if(!s||!s.found)return `<div style="margin-bottom:10px"><b>${label}</b><div style="font-size:12px;color:var(--kt-color-text-muted)">لا ملخّصٌ محفوظٌ بعد.</div></div>`;
+        const pushed=s.was_pushed_to_telegram?'<span class="kt-badge kt-badge-info" style="font-size:10px">أُرسل لتلغرام أيضاً</span>':'';
+        return `<div style="margin-bottom:14px;padding:10px;border:1px solid var(--kt-color-border);border-radius:var(--kt-radius-md)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+            <b>${label}</b>
+            <span style="font-size:11px;color:var(--kt-color-text-muted)">${fmtTime(s.sent_at)} ${pushed}</span>
+          </div>
+          <pre style="white-space:pre-wrap;font-family:inherit;font-size:12px;margin:0;line-height:1.8">${opsEscHtml((s.message_text||'').replace(/<[^>]+>/g,''))}</pre>
+        </div>`;
+      };
+      sumBody.innerHTML=renderOne('📊 الملخّص اليومي',data.latest_daily_summary)+renderOne('📁 ملخّص معالجة الملفات',data.latest_files_summary);
     }
     const capBody=document.getElementById('ktops-capacity-body');
     if(capBody){

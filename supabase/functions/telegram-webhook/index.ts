@@ -407,20 +407,50 @@ Deno.serve(async (req) => {
       if (isOpsBot && (text === "/ملخص" || text === "/summary" || text === "/report")) {
         await sendTelegramOps("⏳ جاري تجهيز الملخص الآن...");
 
+        // manual:true — التشغيلة اليومية المجدولة لا تُرسل تلغرام تلقائياً
+        // بعد الآن (تكتفي بحفظ الملخّص للوحة التشغيل)؛ هذا الأمر الصريح
+        // وحده هو ما يطلب الإرسال الفعلي الآن.
         const fnResponse = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/daily-summary`,
           {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+              // daily-summary يتحقّق من isServiceRoleRequest — كان هذا
+              // النداء يستخدم مفتاح anon خطأً (لا يجتاز ذلك التحقّق أبداً)؛
+              // صُحِّح هنا إلى مفتاح الخدمة الصحيح.
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify({ manual: true }),
           }
         );
 
         if (!fnResponse.ok) {
           await sendTelegramOps("❌ تعذّر تجهيز الملخص الآن — حاول لاحقاً.");
+        }
+
+        return json({ ok: fnResponse.ok });
+      }
+
+      // ملخّص معالجة الملفات عند الطلب فقط — التشغيلة كل ٣٠ دقيقة لم تعد
+      // تُرسل تلغرام تلقائياً (انظر ملاحظة manual أعلاه لنفس السبب).
+      if (isOpsBot && (text === "/ملفات" || text === "/files")) {
+        await sendTelegramOps("⏳ جاري تجهيز ملخّص الملفات الآن...");
+
+        const fnResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/file-processor-monitor`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ manual: true }),
+          }
+        );
+
+        if (!fnResponse.ok) {
+          await sendTelegramOps("❌ تعذّر تجهيز ملخّص الملفات الآن — حاول لاحقاً.");
         }
 
         return json({ ok: fnResponse.ok });
