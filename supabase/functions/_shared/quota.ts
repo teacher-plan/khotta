@@ -120,6 +120,10 @@ export async function logAiCost(
   kind: "text" | "img" | "search" | "ops",
   model: string | null | undefined,
   usage: unknown,
+  // Phase 1.5 — القسم 8: run_id اختياري يربط سطر التكلفة بتشغيلة agent_runs
+  // (ops-analyze/ops-copilot فقط، لهما agent_runs الآن) — undefined/null لا
+  // يغيّر أي سلوكٍ قائم، فيبقى استدعاء generate-* وغيرها بلا هذا المعامل صحيحاً.
+  runId?: string | null,
 ): Promise<void> {
   try {
     const u = usage as { cost?: unknown } | null | undefined;
@@ -130,6 +134,7 @@ export async function logAiCost(
       kind,
       model: model || null,
       cost_usd: cost,
+      run_id: runId ?? null,
     });
     if (error) console.error(`ai_cost_log: تعذّر التسجيل (${functionName}):`, error.message);
   } catch (e) {

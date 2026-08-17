@@ -266,3 +266,77 @@ export async function get_database_capacity(admin: any) {
     resource_kind: "database_storage", // ليس Supabase Storage ولا تكلفة AI
   };
 }
+
+// ═══ Phase 1.5 — القسم 13: أداةٌ جديدة لتلخيص حالة كل وكيل صراحةً ═══
+// تجيب مباشرةً على أسئلة الكوبايلوت الشائعة: "هل كل الوكلاء يعملون؟"،
+// "أي وكيل فشل آخر مرة؟"، "هل هناك وكيل متوقف؟" — من agent_registry
+// (الهوية/الحالة المُعلَنة) مدموجةً بـagent_runs (الصحة المُشتقّة الفعلية،
+// نفس منطق get_agent_runs_summary أعلاه). قراءةٌ صرفة، لا كتابة.
+export async function get_agent_status_summary(admin: any, hours = 24) {
+  const { data: registry } = await admin
+    .from("agent_registry")
+    .select("agent_id,display_name,agent_type,status,schedule_cron,trigger_kind,autonomy_level")
+    .order("agent_id");
+
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const { data: runs } = await admin
+    .from("agent_runs")
+    .select("agent_id,status,started_at,completed_at,duration_ms,error")
+    .gte("started_at", since)
+    .order("started_at", { ascending: false })
+    .limit(1000);
+  const rows = runs || [];
+
+  const agents = (registry || []).map((a: any) => {
+    const agentRuns = rows.filter((r: any) => r.agent_id === a.agent_id);
+    const lastRun = agentRuns[0]; // الأحدث (مرتَّبةٌ تنازلياً أصلاً)
+    const lastSuccess = agentRuns.find((r: any) => r.status === "SUCCESS");
+    const lastFailed = agentRuns.find((r: any) => r.status === "FAILED");
+    let consecutiveFailures = 0;
+    for (const r of agentRuns) { if (r.status === "FAILED") consecutiveFailures++; else break; }
+    const successCount = agentRuns.filter((r: any) => r.status === "SUCCESS").length;
+    const successRate = agentRuns.length ? Math.round((successCount / agentRuns.length) * 1000) / 10 : null;
+    const durations = agentRuns.filter((r: any) => typeof r.duration_ms === "number").map((r: any) => r.duration_ms);
+    const avgDurationMs = durations.length ? Math.round(durations.reduce((s: number, d: number) => s + d, 0) / durations.length) : null;
+
+    // صحةٌ محسوبةٌ من بياناتٍ حقيقية، لا قيمةٌ ثابتة/تجميلية (القسم 2).
+    let health: string;
+    if (a.status !== "ACTIVE") health = "DISABLED";
+    else if (!agentRuns.length) health = "UNKNOWN"; // لا تشغيلاتٍ بعد ضمن النافذة
+    else if (consecutiveFailures >= 3) health = "FAILED";
+    else if (lastRun?.status === "FAILED") health = "DEGRADED";
+    else if (consecutiveFailures > 0 || (successRate !== null && successRate < 90)) health = "WARNING";
+    else health = "HEALTHY";
+
+    return {
+      agent_id: a.agent_id, display_name: a.display_name, agent_type: a.agent_type,
+      registered_status: a.status, schedule_cron: a.schedule_cron, trigger_kind: a.trigger_kind,
+      health,
+      last_run_at: lastRun?.started_at ?? null,
+      last_run_status: lastRun?.status ?? null,
+      last_success_at: lastSuccess?.started_at ?? null,
+      last_failed_at: lastFailed?.started_at ?? null,
+      last_error: lastFailed?.error ?? null,
+      consecutive_failures: consecutiveFailures,
+      success_rate_percent: successRate,
+      avg_duration_ms: avgDurationMs,
+      runs_in_window: agentRuns.length,
+    };
+  });
+
+  const healthyCount = agents.filter((a) => a.health === "HEALTHY").length;
+  const failedCount = agents.filter((a) => a.health === "FAILED" || a.health === "DEGRADED").length;
+  const unknownCount = agents.filter((a) => a.health === "UNKNOWN").length;
+
+  return {
+    window_hours: hours,
+    total_agents: agents.length,
+    healthy: healthyCount,
+    failed_or_degraded: failedCount,
+    unknown: unknownCount,
+    agents,
+    note: agents.every((a) => a.runs_in_window === 0)
+      ? "لا تشغيلاتٍ مسجَّلة في agent_runs بعد ضمن هذه النافذة لأيّ وكيل — يلزم انتظار دورةٍ واحدة على الأقل بعد نشر Phase 1.5."
+      : undefined,
+  };
+}

@@ -18,11 +18,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { authorizeOps, unauthorized } from "../_shared/adminGuard.ts";
 import { orFetch } from "../_shared/ai.ts";
 import { logAiCost } from "../_shared/quota.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 import {
   get_system_health, get_recent_errors, get_emergency_alerts,
   get_ai_usage, get_ai_cost, get_quota_status, get_database_health,
   get_edge_function_health, get_recent_deployments, get_recent_incidents,
   get_database_capacity, get_agent_registry, get_agent_runs_summary,
+  get_agent_status_summary,
 } from "../_shared/opsTools.ts";
 
 const cors = {
@@ -66,6 +68,10 @@ Deno.serve(async (req) => {
     const question = String(b.question || "").trim().slice(0, 500);
     if (!question) return json({ error: "no_question" }, 400);
 
+    // Phase 1.5 — القسم 8: تشغيلةٌ في agent_runs لكل سؤال، فتصير Agent →
+    // Run → Model → Tokens → Cost قابلةً للتتبّع عبر run_id في ai_cost_log.
+    const run = await startRun(admin, "ops-copilot", "ON_DEMAND");
+
     const cat = classify(question);
     // حزمةٌ ثابتة صغيرة دائماً (حالة النظام) + ما صنّفه السؤال فقط.
     const jobs: Record<string, Promise<unknown>> = {
@@ -83,6 +89,7 @@ Deno.serve(async (req) => {
     if (cat.capacity) jobs.databaseCapacity = get_database_capacity(admin);
     if (cat.agents) jobs.agentRegistry = get_agent_registry(admin);
     if (cat.agents) jobs.agentRuns = get_agent_runs_summary(admin, 24);
+    if (cat.agents || cat.health) jobs.agentStatus = get_agent_status_summary(admin, 24);
 
     // تشخيصٌ مؤقّت: نفصل جمع الأدلّة عن نداء الذكاء الاصطناعي بخطأٍ بنيوي
     // مسمّى — فلو رمت أداةٌ استثناءً نعرف أيّها بالضبط، لا رسالةً عامة تُشبه
@@ -94,6 +101,7 @@ Deno.serve(async (req) => {
       const detail = failedTools
         .map((k) => `${k}: ${String((settled[keys.indexOf(k)] as PromiseRejectedResult).reason)}`)
         .join(" | ");
+      await finishRun(admin, run, { status: "FAILED", error: detail, resultSummary: `فشلت أدواتٌ: ${failedTools.join(",")}` });
       return json({ error: "tool_failed", tool: failedTools.join(","), detail }, 500);
     }
     const evidence: Record<string, unknown> = {};
@@ -107,6 +115,9 @@ Deno.serve(async (req) => {
       "إن كان استنتاجك احتمالياً لا مؤكَّداً من الأدلّة صراحةً، قل «السبب المحتمل…» ولا تقل «السبب هو» أبداً إلا مع دليلٍ قاطع.",
       "أسئلة سعة قاعدة البيانات (الحجم/النسبة/النمو/التوقّع): إن كانت البيانات في الأدلّة \"INSUFFICIENT_DATA\" أو \"NOT_AVAILABLE\" فقل ذلك حرفياً، ولا تحسب أو تقدّر رقماً غير موجود في الأدلّة إطلاقاً.",
       "لا تقترح أي إجراءٍ تنفيذي تلقائي — توصيةٌ للمشرف يقرّرها هو، لا تنفيذ.",
+      // Phase 1.5 — القسم 13: تعزيزٌ صريح لرفض أي طلبٍ يستبطن تنفيذاً —
+      // أنت أداة قراءة/تحليل/شرح فقط، لا صلاحية تنفيذ لديك إطلاقاً مهما طُلب.
+      "إن طلب المشرف تنفيذ إجراءٍ صراحةً (مثل: أصلح المشكلة، احذف البيانات، أعد نشر التطبيق، غيّر قاعدة البيانات، أعد تشغيل الخادم) فاعتذر صراحةً واشرح أنك أداة قراءةٍ وتحليلٍ فقط ولا تملك صلاحية تنفيذ أي إجراء، واقترح عليه الإجراء اليدوي المناسب إن كان معروفاً من الأدلّة.",
       "لا تخترع أسماء مستخدمين أو أرقاماً أو تواريخ غير موجودة في الأدلّة.",
       "أعد الناتج JSON فقط بالشكل التالي:",
       JSON.stringify({
@@ -137,17 +148,22 @@ Deno.serve(async (req) => {
     }, { task: "ops" });
 
     const or = await r.json();
-    await logAiCost(admin, auth.userId || null, "ops-copilot", "ops", "deepseek/deepseek-chat", or?.usage);
+    await logAiCost(admin, auth.userId || null, "ops-copilot", "ops", "deepseek/deepseek-chat", or?.usage, run.runId);
 
-    if (!r.ok) return json({ manager_summary: "تعذّر الوصول إلى مساعد التحليل الآن.", technical_details: null, confidence: "INSUFFICIENT_DATA" });
+    if (!r.ok) {
+      await finishRun(admin, run, { status: "FAILED", error: "llm_request_failed" });
+      return json({ manager_summary: "تعذّر الوصول إلى مساعد التحليل الآن.", technical_details: null, confidence: "INSUFFICIENT_DATA" });
+    }
 
     const text = or?.choices?.[0]?.message?.content || "";
     let parsed: Record<string, unknown> | null = null;
     try { parsed = JSON.parse(text); } catch { /* يبقى null */ }
 
     if (!parsed || typeof parsed.manager_summary !== "string") {
+      await finishRun(admin, run, { status: "FAILED", error: "llm_output_unparseable" });
       return json({ manager_summary: "لا أملك بيانات كافية للإجابة على هذا السؤال.", technical_details: null, confidence: "INSUFFICIENT_DATA" });
     }
+    await finishRun(admin, run, { status: "SUCCESS", resultSummary: question.slice(0, 200), actionsTaken: [{ action: "answer_question", evidence_categories: keys }] });
     return json({
       manager_summary: parsed.manager_summary,
       technical_details: parsed.technical_details || null,
