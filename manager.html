@@ -12446,7 +12446,7 @@ async function ktopsLoad(){
         incBody.innerHTML='<div class="kt-state"><div class="kt-state-text">لا حوادث مسجَّلة حالياً.</div></div>';
       }else{
         incBody.innerHTML=`<div class="kt-table-wrap"><table class="kt-table kt-table-cards"><thead><tr>
-          <th>الخطورة</th><th>المكوّن</th><th>الحالة</th><th>الوصف</th></tr></thead><tbody>`+
+          <th>الخطورة</th><th>المكوّن</th><th>الحالة</th><th>الوصف</th><th>Phase 2</th></tr></thead><tbody>`+
           list.map(i=>{
             const cls=(i.severity==='P0'||i.severity==='P1')?'error':(i.severity==='P2'?'warning':'info');
             return `<tr>
@@ -12454,6 +12454,7 @@ async function ktopsLoad(){
               <td data-label="المكوّن">${opsEscHtml(i.component)}</td>
               <td data-label="الحالة">${opsEscHtml(i.status)}${i.occurrence_count>1?' × '+i.occurrence_count:''}</td>
               <td data-label="الوصف">${opsEscHtml(i.summary)}</td>
+              <td data-label="Phase 2"><button class="kt-btn kt-btn-ghost" style="font-size:11px;padding:6px 10px;min-height:36px" onclick="ktopsDiagnose('${i.id}')">🔎 تشخيص</button></td>
             </tr>`;
           }).join('')+`</tbody></table></div>`;
       }
@@ -12576,6 +12577,15 @@ async function ktopsLoadDiagnoses(){
       </div>`;
     }).join('');
   }catch(e){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل التشخيصات.</div></div>';}
+}
+async function ktopsDiagnose(incidentId){
+  const btn=event&&event.target;
+  if(btn){btn.disabled=true;btn.textContent='⏳ يشخّص...';}
+  try{
+    const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'diagnose',incident_id:incidentId}});
+    if(error||!data||data.error){alert('تعذّر التشخيص: '+(data&&data.error||'')); return;}
+    ktopsLoadDiagnoses();
+  }finally{ if(btn){btn.disabled=false;btn.textContent='🔎 تشخيص';} }
 }
 async function ktopsRequestAction(actionId,incidentId,diagnosisId){
   const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'request_action',action_id:actionId,incident_id:incidentId,diagnosis_id:diagnosisId}});
