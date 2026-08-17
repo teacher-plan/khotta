@@ -3425,6 +3425,10 @@ input,textarea,select{font-size:16px !important;}
           <div class="kt-kpi-label">الحوادث المفتوحة الآن</div>
           <div class="kt-kpi-value" id="ktcc-kpi-incidents">—</div>
         </div>
+        <div class="kt-card kt-kpi">
+          <div class="kt-kpi-label">الوكلاء السليمة</div>
+          <div class="kt-kpi-value" id="ktcc-kpi-agents">—</div>
+        </div>
       </div>
       <p style="font-size:12px;color:var(--kt-color-text-muted);margin:0 0 var(--kt-space-5)">
         مؤشّراتٌ إضافية (كعدد المستخدمين والمعلّمات) غير معروضةٍ بعد — تحتاج تعريفاً دقيقاً قبل ذلك (راجع Phase A §9)، ولن تُخترَع أرقامها.
@@ -3485,6 +3489,19 @@ input,textarea,select{font-size:16px !important;}
       <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)">
         <span class="kt-status-dot" id="ktops-status-dot"></span>
         <span id="ktops-status-text" style="font-weight:600">⏳ جارٍ التحقّق...</span>
+      </div>
+      <!-- Phase 1.5 — القسم 11: عدّادات حالة النظام أعلى صفحة التشغيل -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)" id="ktops-counts-row">
+        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ سليمة</div><div class="kt-kpi-value" id="ktops-cnt-healthy">—</div></div>
+        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ بتحذير/فشل</div><div class="kt-kpi-value" id="ktops-cnt-failed">—</div></div>
+        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث مفتوحة</div><div class="kt-kpi-value" id="ktops-cnt-incidents">—</div></div>
+        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث حرجة</div><div class="kt-kpi-value" id="ktops-cnt-critical">—</div></div>
+      </div>
+      <!-- Phase 1.5 — القسم 11: AGENT CONTROL CENTER — من agent_runs الحقيقية عبر get_agent_status_summary -->
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-agents-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">مركز التحكّم بالوكلاء (Agent Control Center)</h3></div>
+        <div id="ktops-agents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">الصحة مُحتسَبةٌ من تشغيلات agent_runs الفعلية آخر 24 ساعة، لا قيمةٌ ثابتة. وكيلٌ بلا تشغيلاتٍ مسجَّلة بعد يظهر "غير معروف" لا "سليم".</p>
       </div>
       <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
         <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
@@ -12254,6 +12271,13 @@ async function ktccLoad(){
 
     const list=data.open_incidents||[];
     if(kpiInc)kpiInc.textContent=list.length;
+    // Phase 1.5 — القسم 14: مؤشّرٌ واحدٌ غير تقني "الوكلاء السليمة X/Y" —
+    // من agent_status_summary الحقيقي المُرفَق الآن في نفس ردّ action:health.
+    const kpiAg=document.getElementById('ktcc-kpi-agents');
+    if(kpiAg){
+      const st=data.agent_status_summary;
+      kpiAg.textContent=st&&st.total_agents?`${st.healthy}/${st.total_agents}`:'—';
+    }
     if(attn){
       if(!list.length){
         attn.innerHTML='<div class="kt-state"><div class="kt-state-text">لا شيء يحتاج انتباهك الآن.</div></div>';
@@ -12403,6 +12427,13 @@ async function ktopsLoad(){
         ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${comps.map(c=>`<span class="kt-badge kt-badge-${sevClass}">${opsEscHtml(c)}</span>`).join('')}</div>`
         : '<div class="kt-state"><div class="kt-state-text">لا مكوّناتٍ متأثّرة الآن.</div></div>';
     }
+    // Phase 1.5 — القسم 11: عدّادات الحوادث أعلى الصفحة (من نفس البيانات
+    // المعروضة أسفل في قسم "الحوادث" — لا استعلامٌ إضافي، عرضٌ مختصرٌ فقط).
+    const openIncidents=data.open_incidents||[];
+    const criticalIncidents=openIncidents.filter(i=>i.severity==='P0'||i.severity==='P1').length;
+    const cntInc=document.getElementById('ktops-cnt-incidents'); if(cntInc)cntInc.textContent=String(openIncidents.length);
+    const cntCrit=document.getElementById('ktops-cnt-critical'); if(cntCrit)cntCrit.textContent=String(criticalIncidents);
+
     if(incBody){
       const list=data.open_incidents||[];
       if(!list.length){
@@ -12417,6 +12448,36 @@ async function ktopsLoad(){
               <td data-label="المكوّن">${opsEscHtml(i.component)}</td>
               <td data-label="الحالة">${opsEscHtml(i.status)}${i.occurrence_count>1?' × '+i.occurrence_count:''}</td>
               <td data-label="الوصف">${opsEscHtml(i.summary)}</td>
+            </tr>`;
+          }).join('')+`</tbody></table></div>`;
+      }
+    }
+    // Phase 1.5 — القسم 11: مركز التحكّم بالوكلاء — من agent_status_summary
+    // الحقيقي (agent_registry × agent_runs)، لا بيانات تجريبية.
+    const agBody=document.getElementById('ktops-agents-body');
+    if(agBody){
+      const st=data.agent_status_summary;
+      if(!st||!st.agents||!st.agents.length){
+        agBody.innerHTML='<div class="kt-state"><div class="kt-state-text">لا وكلاء مسجَّلون بعد.</div></div>';
+      }else{
+        const cntH=document.getElementById('ktops-cnt-healthy'); if(cntH)cntH.textContent=String(st.healthy);
+        const cntF=document.getElementById('ktops-cnt-failed'); if(cntF)cntF.textContent=String(st.failed_or_degraded);
+        const healthCls=h=>h==='HEALTHY'?'success':h==='UNKNOWN'||h==='DISABLED'?'info':h==='WARNING'?'warning':'error';
+        const healthLbl={HEALTHY:'سليم',DEGRADED:'مُتدهور',WARNING:'تحذير',FAILED:'فاشل',DISABLED:'مُعطَّل',UNKNOWN:'غير معروف'};
+        const fmtTime=t=>t?new Date(t).toLocaleString('ar-OM',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'—';
+        agBody.innerHTML=`<div class="kt-table-wrap"><table class="kt-table kt-table-cards"><thead><tr>
+          <th>الوكيل</th><th>الحالة</th><th>آخر تشغيلة</th><th>معدّل النجاح</th><th>آخر خطأ</th><th>الاستقلالية</th></tr></thead><tbody>`+
+          st.agents.map(a=>{
+            const cls=healthCls(a.health);
+            const lastErr=a.last_error?opsEscHtml(String(a.last_error)).slice(0,80):'—';
+            const rate=a.success_rate_percent==null?'—':a.success_rate_percent+'%';
+            return `<tr>
+              <td data-label="الوكيل"><b>${opsEscHtml(a.display_name||a.agent_id)}</b><div style="font-size:11px;color:var(--kt-color-text-muted)">${opsEscHtml(a.agent_type||'')} · ${opsEscHtml(a.trigger_kind||'')}</div></td>
+              <td data-label="الحالة"><span class="kt-badge kt-badge-${cls}">${healthLbl[a.health]||a.health}</span>${a.consecutive_failures>0?` <span style="font-size:11px;color:var(--kt-color-error)">(×${a.consecutive_failures} متتالٍ)</span>`:''}</td>
+              <td data-label="آخر تشغيلة">${fmtTime(a.last_run_at)}</td>
+              <td data-label="معدّل النجاح">${rate}</td>
+              <td data-label="آخر خطأ">${lastErr}</td>
+              <td data-label="الاستقلالية">Level ${a.autonomy_level!=null?a.autonomy_level:'?'}</td>
             </tr>`;
           }).join('')+`</tbody></table></div>`;
       }
