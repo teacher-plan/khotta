@@ -84,12 +84,37 @@ function classify(q: string) {
   };
 }
 
+// ═══ Phase 3.5-B (المتابعة) — القسم "Copilot في تلغرام" ═══
+// مسارٌ ثانٍ ضيّقٌ ومنفصل تماماً عن authorizeOps: بوت تلغرام الخاص
+// بالعمليات (ops) وحده — لا أي وكيلٍ آخر بمفتاح الخدمة العام — يستطيع
+// استدعاء الكوبايلوت، عبر ترويسةٍ داخلية بسرٍّ مخصَّص (OPS_COPILOT_
+// INTERNAL_SECRET، ليس مفتاح الخدمة نفسه ولا سرّ تلغرام — سرٌّ ثالثٌ
+// مستقلّ، أقلّ صلاحيةً ممكنة لهذا الغرض وحده).
+//
+// لماذا آمنٌ رغم كونه "مفتاح خدمة" فعلياً: الكوبايلوت قراءةٌ صرفة —
+// لا أداة كتابةٍ واحدة هنا، ولا مسار تنفيذٍ (fixIntent أعلاه يُعيد نصّاً
+// توجيهياً فقط، لا ينفّذ شيئاً بصرف النظر عن هوية المستدعي). فالمخاطرة
+// الوحيدة هي "من يستطيع قراءة نفس الأدلّة التي يراها المشرف على لوحة
+// الإدارة أصلاً" — لا فتح أي قدرة تنفيذٍ جديدة.
+//
+// افتراضيّاً مرفوض: إن لم يُضبَط OPS_COPILOT_INTERNAL_SECRET بعد كسرٍّ في
+// بيئة الدالّة، هذا المسار مغلقٌ تماماً (لا "تنازلٌ آمن" كسرّ تلغرام —
+// هذا سرٌّ صلاحيةٍ جديد، فالافتراض الآمن هو الرفض حتى يُضبَط صراحةً).
+function isAuthorizedTelegramOpsCaller(req: Request): boolean {
+  const expected = Deno.env.get("OPS_COPILOT_INTERNAL_SECRET") || "";
+  if (!expected) return false;
+  const got = req.headers.get("X-Ops-Copilot-Internal-Secret") || "";
+  return got.length > 0 && got === expected;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const auth = await authorizeOps(req);
-    // الـcopilot للمشرف البشري حصراً — لا مفتاح الخدمة، ولا مستخدمٍ غير مشرف.
-    if (!auth.ok || auth.isService) return unauthorized(cors);
+    const isTelegramOpsCaller = isAuthorizedTelegramOpsCaller(req);
+    // الـcopilot للمشرف البشري حصراً، أو بوت تلغرام الداخلي المصادَق أعلاه.
+    // لا مفتاح الخدمة العام، ولا مستخدمٍ غير مشرف.
+    if (!isTelegramOpsCaller && (!auth.ok || auth.isService)) return unauthorized(cors);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,

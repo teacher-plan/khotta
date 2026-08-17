@@ -229,6 +229,49 @@ async function invokeAgentNow(fnName: string): Promise<{ ok: boolean; error?: st
   }
 }
 
+// ═══ Copilot عبر تلغرام (بوت العمليات فقط) ═══
+// يستدعي ops-copilot عبر مسارٍ داخليٍّ ضيّق (X-Ops-Copilot-Internal-Secret،
+// منفصلٌ عن مفتاح الخدمة العام — انظر التوثيق في ops-copilot/index.ts).
+// قراءةٌ فقط دوماً — لا تنفيذ إطلاقاً مهما كان نصّ السؤال. إن لم يُضبَط
+// السرّ بعد في بيئة الدالّة، يفشل بأمانٍ برسالةٍ واضحة بدل صمتٍ محيّر.
+async function askCopilotAndReply(question: string): Promise<void> {
+  const secret = Deno.env.get("OPS_COPILOT_INTERNAL_SECRET") || "";
+  if (!secret) {
+    await sendTelegramOps("⚠️ المساعد (Copilot) غير مُفعَّلٍ من تلغرام بعد — يحتاج ضبط سرٍّ داخلي أولاً.");
+    return;
+  }
+  await sendTelegramOps("⏳ جارٍ التحليل...");
+  try {
+    const r = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/ops-copilot`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "X-Ops-Copilot-Internal-Secret": secret,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question }),
+      },
+    );
+    const data = await r.json().catch(() => null);
+    if (!r.ok || !data || !data.manager_summary) {
+      await sendTelegramOps("❌ تعذّر الحصول على إجابةٍ الآن — حاول لاحقاً.");
+      return;
+    }
+    const esc = (x: string) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const confLabel: Record<string, string> = {
+      VERIFIED: "✅ موثّق", LIKELY: "🟡 محتمل", UNKNOWN: "⚪ غير مؤكَّد", INSUFFICIENT_DATA: "⚪ بياناتٌ غير كافية",
+    };
+    let reply = esc(String(data.manager_summary));
+    if (data.technical_details) reply += `\n\n<i>${esc(String(data.technical_details).slice(0, 600))}</i>`;
+    reply += `\n\n${confLabel[data.confidence] || esc(String(data.confidence || ""))}`;
+    await sendTelegramOps(reply, { parse_mode: "HTML" });
+  } catch (e) {
+    await sendTelegramOps(`❌ خطأ: ${String(e)}`);
+  }
+}
+
 // معالجات الأزرار
 async function handleCallbackQuery(
   callbackData: string,
@@ -510,6 +553,21 @@ Deno.serve(async (req) => {
       // متابعة من سجّلن ولم تدفع بعد — نفس فكرة /pending برسالة الدفع بدل الترحيب.
       if (text === "/payment" || text === "/دفع" || text === "/متابعة_الدفع") {
         await sendPaymentList();
+        return json({ ok: true });
+      }
+
+      // ═══ Copilot عبر تلغرام — بوت العمليات (ops) فقط ═══
+      // "/تقرير" سؤالٌ ثابت جاهز، وأي نصٍّ حرٍّ آخر في بوت العمليات يُمرَّر
+      // كسؤالٍ مباشر للكوبايلوت — نفس مسار "ما الذي كان Self-Healing
+      // سيصلحه؟" و"لماذا لم يُصلَح هذا؟" المُبنيَّان مسبقاً، لكن من تلغرام
+      // مباشرة. قراءةٌ فقط دوماً — لا تنفيذ إطلاقاً مهما كان نصّ السؤال
+      // (الكوبايلوت نفسه يرفض أي طلب تنفيذٍ صراحةً، انظر fixIntent أعلاه).
+      if (isOpsBot && text === "/تقرير") {
+        await askCopilotAndReply("لخّص حالة النظام الآن، وما الذي كان الإصلاح الذاتي سيُصلحه خلال آخر 24 ساعة؟");
+        return json({ ok: true });
+      }
+      if (isOpsBot && !text.startsWith("/")) {
+        await askCopilotAndReply(text);
         return json({ ok: true });
       }
 
