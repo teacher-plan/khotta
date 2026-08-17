@@ -23,6 +23,7 @@ import {
   get_system_health, get_recent_errors, get_emergency_alerts,
   get_ai_usage, get_ai_cost, get_quota_status, get_database_health,
   get_edge_function_health, get_recent_deployments, get_recent_incidents,
+  get_database_capacity, get_agent_registry, get_agent_runs_summary,
 } from "../_shared/opsTools.ts";
 
 const cors = {
@@ -50,13 +51,15 @@ Deno.serve(async (req) => {
 
     // ═ action:"health" — بلا ذكاء اصطناعي، قواعدٌ حتمية فقط ═
     if (action === "health") {
-      const [health, errors, alerts, dbHealth, fnHealth, incidents] = await Promise.all([
+      const [health, errors, alerts, dbHealth, fnHealth, incidents, dbCapacity, agentRuns] = await Promise.all([
         get_system_health(admin),
         get_recent_errors(admin, 1),
         get_emergency_alerts(admin),
         get_database_health(admin),
         get_edge_function_health(admin),
         get_recent_incidents(admin, 5),
+        get_database_capacity(admin),
+        get_agent_runs_summary(admin, 24),
       ]);
 
       const severity =
@@ -77,6 +80,8 @@ Deno.serve(async (req) => {
           { source: "get_recent_errors", data: errors, confidence: "VERIFIED" },
           { source: "get_emergency_alerts", data: alerts, confidence: "VERIFIED" },
           { source: "get_edge_function_health", data: fnHealth, confidence: "VERIFIED" },
+          { source: "get_database_capacity", data: dbCapacity, confidence: dbCapacity.available ? "VERIFIED" : "UNKNOWN" },
+          { source: "get_agent_runs_summary", data: agentRuns, confidence: "VERIFIED" },
         ],
         likely_causes: [],   // حتميّ فقط — لا استنتاج بلا استدعاء analyze صريح
         confidence: 1,
@@ -84,6 +89,8 @@ Deno.serve(async (req) => {
         affected_users: null,
         recommendations: status === "healthy" ? [] : ["استدعِ action:\"analyze\" لتحليلٍ أعمق بالذكاء الاصطناعي إن استمرّت المشكلة."],
         open_incidents: incidents.incidents,
+        database_capacity: dbCapacity, // منفصلٌ صراحةً عن AI cost وSupabase Storage
+        agent_runs_summary: agentRuns,
         generated_at: new Date().toISOString(),
       });
     }
@@ -92,6 +99,14 @@ Deno.serve(async (req) => {
     if (action === "cost") {
       const cost = await get_ai_cost(admin);
       return json({ cost, generated_at: new Date().toISOString() });
+    }
+
+    // ═ action:"capacity" — بلا ذكاء اصطناعي: سعة قاعدة البيانات + سجلّ الوكلاء ═
+    if (action === "capacity") {
+      const [dbCapacity, agentRegistry, agentRuns] = await Promise.all([
+        get_database_capacity(admin), get_agent_registry(admin), get_agent_runs_summary(admin, 24),
+      ]);
+      return json({ database_capacity: dbCapacity, agent_registry: agentRegistry, agent_runs_summary: agentRuns, generated_at: new Date().toISOString() });
     }
 
     // ═ action:"analyze" — شذوذٌ فعليّ فقط: جمع أدلّة ثم نداءٌ واحد ═

@@ -3494,6 +3494,11 @@ input,textarea,select{font-size:16px !important;}
         <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
         <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
       </div>
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-capacity-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">سعة قاعدة البيانات</h3></div>
+        <div id="ktops-capacity-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">حجم قاعدة بيانات Postgres فقط — منفصلٌ عن Supabase Storage (الملفات) وعن تكلفة الذكاء الاصطناعي أدناه. النمو/التوقّع يظهران فقط بعد تراكم تاريخ قياسات كافٍ من database-capacity-monitor.</p>
+      </div>
       <div class="kt-card">
         <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
         <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
@@ -12414,6 +12419,21 @@ async function ktopsLoad(){
               <td data-label="الوصف">${opsEscHtml(i.summary)}</td>
             </tr>`;
           }).join('')+`</tbody></table></div>`;
+      }
+    }
+    const capBody=document.getElementById('ktops-capacity-body');
+    if(capBody){
+      const cap=data.database_capacity;
+      if(!cap||!cap.available){
+        capBody.innerHTML=`<div class="kt-state"><div class="kt-state-text">${opsEscHtml((cap&&cap.reason)||'لا بيانات سعة بعد.')}</div></div>`;
+      }else{
+        const usage=(cap.usage_percent==='NOT_AVAILABLE'||cap.usage_percent==null)?'غير متاحة (الحدّ الأقصى للخطة غير مؤكَّد)':cap.usage_percent+'%';
+        const growth=cap.growth&&cap.growth.status==='OK'?(cap.growth.mb_per_day+' MB/يوم تقريباً'):'بيانات غير كافية بعد (INSUFFICIENT DATA)';
+        capBody.innerHTML=`<div style="font-size:13px;line-height:1.9">
+          <div>الحجم الحالي: <b>${opsEscHtml(String(cap.database_size_mb))} MB</b></div>
+          <div>نسبة الاستهلاك: <b>${opsEscHtml(usage)}</b></div>
+          <div>معدّل النمو: <b>${opsEscHtml(growth)}</b></div>
+        </div>`;
       }
     }
   }catch(e){

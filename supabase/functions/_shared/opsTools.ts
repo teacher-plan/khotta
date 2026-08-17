@@ -170,8 +170,99 @@ export function get_recent_deployments() {
 export async function get_recent_incidents(admin: any, limit = 10) {
   const { data } = await admin
     .from("ops_incidents")
-    .select("id,severity,status,component,summary,confidence,occurrence_count,first_seen_at,last_seen_at,resolved_at")
+    .select("id,severity,status,component,summary,confidence,occurrence_count,first_seen_at,last_seen_at,resolved_at,source_agent,requires_human_attention")
     .order("detected_at", { ascending: false })
     .limit(limit);
   return { incidents: data || [] };
+}
+
+// ═══ Autonomous Operations 2.0 — Phase 1: أدوات الوكلاء/السعة (قراءة فقط) ═══
+
+export async function get_agent_registry(admin: any) {
+  const { data } = await admin
+    .from("agent_registry")
+    .select("agent_id,display_name,agent_type,status,schedule_cron,trigger_kind,autonomy_level,permission_level,notes")
+    .order("agent_id");
+  return { agents: data || [] };
+}
+
+// صحة الوكيل مُشتَقّة من بيانات حقيقية (agent_runs إن وُجدت تشغيلات، وإلا
+// agent_logs القديمة) — لا حالة ثابتة/تجميلية أبداً.
+export async function get_agent_runs_summary(admin: any, hours = 24) {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const { data: runs } = await admin
+    .from("agent_runs")
+    .select("agent_id,status,started_at,completed_at,duration_ms,error")
+    .gte("started_at", since)
+    .order("started_at", { ascending: false })
+    .limit(500);
+  const rows = runs || [];
+  const byAgent: Record<string, { total: number; success: number; failed: number; last_status: string; last_run_at: string; health: string }> = {};
+  for (const r of rows) {
+    const k = r.agent_id;
+    if (!byAgent[k]) byAgent[k] = { total: 0, success: 0, failed: 0, last_status: r.status, last_run_at: r.started_at, health: "UNKNOWN" };
+    byAgent[k].total++;
+    if (r.status === "SUCCESS") byAgent[k].success++;
+    if (r.status === "FAILED") byAgent[k].failed++;
+  }
+  for (const k of Object.keys(byAgent)) {
+    const a = byAgent[k];
+    // مُشتَقّةٌ من نسبة النجاح الفعلية في النافذة، لا رقمٌ ثابت.
+    a.health = a.total === 0 ? "UNKNOWN"
+      : a.last_status === "FAILED" && a.failed / a.total > 0.5 ? "FAILED"
+      : a.last_status === "FAILED" ? "DEGRADED"
+      : a.failed > 0 ? "WARNING"
+      : "HEALTHY";
+  }
+  return {
+    window_hours: hours,
+    total_runs: rows.length,
+    by_agent: byAgent,
+    note: rows.length === 0 ? "لا تشغيلات مسجَّلة في agent_runs بعد ضمن هذه النافذة — الوكلاء القديمة (قبل Phase 1) لا تكتب هنا إلا بعد التحديث التدريجي." : undefined,
+  };
+}
+
+// سعة قاعدة البيانات — يفرّق صراحةً عن Supabase Storage/تكلفة الذكاء
+// الاصطناعي (أدواتٌ منفصلة). يتدهور بأمان إلى INSUFFICIENT_DATA/NOT
+// AVAILABLE بدل اختلاق نمو/توقّع بلا تاريخٍ كافٍ.
+export async function get_database_capacity(admin: any) {
+  const { data: latest } = await admin
+    .from("db_capacity_history")
+    .select("measured_at,size_mb,limit_mb,usage_percent,top_tables")
+    .order("measured_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!latest) {
+    return {
+      available: false,
+      reason: "لا قياسات بعد — database-capacity-monitor لم يُشغَّل مرةً بعد أو لم يمرّ دورة كاملة.",
+      database_size_mb: null, usage_percent: "NOT_AVAILABLE", top_tables: [], growth: "INSUFFICIENT_DATA",
+    };
+  }
+
+  const { data: history } = await admin
+    .from("db_capacity_history")
+    .select("measured_at,size_mb")
+    .order("measured_at", { ascending: false })
+    .limit(30);
+  const points = (history || []).slice().reverse();
+  let growthNote = "INSUFFICIENT_DATA";
+  let mbPerDay: number | null = null;
+  if (points.length >= 4) {
+    const first = points[0]; const last = points[points.length - 1];
+    const hours = (new Date(last.measured_at).getTime() - new Date(first.measured_at).getTime()) / 3_600_000;
+    if (hours >= 24) { mbPerDay = Math.round(((last.size_mb - first.size_mb) / hours) * 24 * 100) / 100; growthNote = "OK"; }
+  }
+
+  return {
+    available: true,
+    measured_at: latest.measured_at,
+    database_size_mb: latest.size_mb,
+    limit_mb: latest.limit_mb,
+    usage_percent: latest.usage_percent ?? "NOT_AVAILABLE",
+    top_tables: latest.top_tables || [],
+    growth: growthNote === "OK" ? { status: "OK", mb_per_day: mbPerDay } : { status: "INSUFFICIENT_DATA" },
+    resource_kind: "database_storage", // ليس Supabase Storage ولا تكلفة AI
+  };
 }

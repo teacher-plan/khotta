@@ -22,6 +22,7 @@ import {
   get_system_health, get_recent_errors, get_emergency_alerts,
   get_ai_usage, get_ai_cost, get_quota_status, get_database_health,
   get_edge_function_health, get_recent_deployments, get_recent_incidents,
+  get_database_capacity, get_agent_registry, get_agent_runs_summary,
 } from "../_shared/opsTools.ts";
 
 const cors = {
@@ -44,6 +45,8 @@ function classify(q: string) {
     incidents: /حادث|incident|مشكل|خلل/.test(s),
     users: /مستخدم|معلم|user|استهلاك/.test(s),
     deploy: /نشر|deploy|تحديث|آخر تغيير/.test(s),
+    capacity: /حجم|سعة|تخزين|قاعدة البيانات|capacity|storage|database size|مساحة|نمو/.test(s),
+    agents: /وكيل|وكلاء|agent|جدولة|autonomy|استقلال/.test(s),
   };
 }
 
@@ -77,6 +80,9 @@ Deno.serve(async (req) => {
     if (cat.cost) jobs.quota = get_quota_status(admin);
     if (cat.incidents) jobs.incidents = get_recent_incidents(admin, 15);
     if (cat.deploy) jobs.deployments = get_recent_deployments();
+    if (cat.capacity) jobs.databaseCapacity = get_database_capacity(admin);
+    if (cat.agents) jobs.agentRegistry = get_agent_registry(admin);
+    if (cat.agents) jobs.agentRuns = get_agent_runs_summary(admin, 24);
 
     // تشخيصٌ مؤقّت: نفصل جمع الأدلّة عن نداء الذكاء الاصطناعي بخطأٍ بنيوي
     // مسمّى — فلو رمت أداةٌ استثناءً نعرف أيّها بالضبط، لا رسالةً عامة تُشبه
@@ -99,6 +105,7 @@ Deno.serve(async (req) => {
       "إن لم تكفِ الأدلّة للإجابة، قل حرفياً: «لا أملك بيانات كافية للإجابة على هذا السؤال».",
       "إن كانت الأدلّة جزئية، ابدأ بـ«بناءً على البيانات المتاحة…».",
       "إن كان استنتاجك احتمالياً لا مؤكَّداً من الأدلّة صراحةً، قل «السبب المحتمل…» ولا تقل «السبب هو» أبداً إلا مع دليلٍ قاطع.",
+      "أسئلة سعة قاعدة البيانات (الحجم/النسبة/النمو/التوقّع): إن كانت البيانات في الأدلّة \"INSUFFICIENT_DATA\" أو \"NOT_AVAILABLE\" فقل ذلك حرفياً، ولا تحسب أو تقدّر رقماً غير موجود في الأدلّة إطلاقاً.",
       "لا تقترح أي إجراءٍ تنفيذي تلقائي — توصيةٌ للمشرف يقرّرها هو، لا تنفيذ.",
       "لا تخترع أسماء مستخدمين أو أرقاماً أو تواريخ غير موجودة في الأدلّة.",
       "أعد الناتج JSON فقط بالشكل التالي:",
