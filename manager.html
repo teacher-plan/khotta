@@ -6093,7 +6093,6 @@ function showApp(data){
   applySubjectTheme(teacherConfig);
   renderTimetable();
   renderLegend();
-  buildTracker();
   applyFilter();
   update();
   // مزامنة دروس المعلم تلقائياً مع المنهج (تطابق ما يرفعه المشرف من قارئ الفهرس)
@@ -6234,7 +6233,7 @@ function toggleEditMode(){
   renderClassConfig();renderTimetable();
 }
 async function cancelEdit(){if(!await uiConfirm('إلغاء التعديلات؟'))return;timetableConfig=ttBackup.timetableConfig;classConfig=ttBackup.classConfig;exitEditMode();}
-function saveTimetable(){exitEditMode();buildTracker();applyFilter();update();toast('✅ تم حفظ الجدول','ok');scheduleSave();}
+function saveTimetable(){exitEditMode();applyFilter();update();toast('✅ تم حفظ الجدول','ok');scheduleSave();}
 function exitEditMode(){
   ttEditing=false;ttBackup=null;
   document.getElementById('tt-edit').style.display='inline-flex';
@@ -7695,10 +7694,9 @@ async function refreshLessonsFromDB(opts){
     await dbSave({teacher_config:teacherConfig});
     
     // إعادة بناء الواجهة
-    buildTracker();
     applyFilter();
     update();
-    
+
     if(silent)return;
     if(issues.length){
       alert(`تم التحديث:\n✅ ${updatedGrades} مادة-صف تم تحديثها\n📚 ${totalLessons} درس إجمالاً\n\nملاحظات:\n${issues.join('\n')}`);
@@ -7756,6 +7754,8 @@ async function deleteLessonFile(lessonId,fileId,driveId){
 let currentFilter='all';
 function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');try{applyFilter();}catch(e){console.error('applyFilter error:',e);toast('❌ خطأ في الفلتر: '+(e.message||''),true);}}
 function applyFilter(){
+  // عنصر "لا توجد دروس" (#empty) عاش في صفحة "الخطة" المحذوفة أيضاً.
+  if(!document.getElementById('empty'))return;
   let vis=0;
   document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
   document.querySelectorAll('#page-tracker .section').forEach(sec=>{
@@ -7785,6 +7785,9 @@ function applyFilter(){
   else{emptyEl.style.display='none';}
 }
 function update(){
+  // عناصر دائرة التقدّم عاشت في صفحة "الخطة" المحذوفة — لا وجود لها بعد
+  // الآن؛ الدالة تبقى (تُستدعى من أماكن عديدة) لكن بلا أثرٍ إن غابت.
+  if(!document.getElementById('arc'))return;
   const all=allLessons(),total=all.length,done=all.filter(l=>get(l.id).done).length,pct=total?Math.round(done/total*100):0;
   const C=2*Math.PI*42;
   document.getElementById('arc').style.strokeDashoffset=C-(pct/100)*C;
@@ -14316,7 +14319,7 @@ function dpMarkDone(i){
   const it=(window._dpItems||[])[i];if(!it)return;
   const cur=get(it.lessonId);cur.done=true;state[it.lessonId]=cur;
   scheduleSave();
-  try{applyFilter();update();buildTracker();}catch(e){}
+  try{applyFilter();update();}catch(e){}
   toast('✅ أنجزت — أجهّز الدرس التالي الآن ✨','ok');
   setTimeout(async()=>{
     await renderDailyPrep();
