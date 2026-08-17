@@ -3509,6 +3509,25 @@ input,textarea,select{font-size:16px !important;}
         <div id="ktops-diag-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
         <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">لا تنفيذ تلقائي هنا — كل إجراءٍ من سجلّ الإجراءات الآمنة فقط، وبموافقتك إن كانت الخطورة تتطلّبها.</p>
       </div>
+      <!-- Phase 3 — القسم 30/31: الإصلاح الذاتي (Self-Healing) — كل Playbook
+           SHADOW MODE فقط اليوم. بطاقاتٌ بنفس نمط Agent Control Center/
+           Active Diagnoses، عمودٌ واحد قابلٌ للطيّ. -->
+      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-heal-card">
+        <div class="kt-card-header"><h3 class="kt-card-title">الإصلاح الذاتي (Self-Healing)</h3></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:var(--kt-space-3);padding:10px;border:1px solid var(--kt-color-border);border-radius:var(--kt-radius-md)">
+          <div style="font-size:13px" id="ktops-heal-global-text">⏳ جارٍ التحميل...</div>
+          <div style="display:flex;gap:8px">
+            <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(true)">تفعيل الكلّ</button>
+            <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(false)">⛔ إيقافٌ طارئٌ للكلّ</button>
+          </div>
+        </div>
+        <div id="ktops-heal-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        <div style="margin-top:var(--kt-space-3)">
+          <div class="kt-card-header" style="padding:0 0 8px 0"><h4 style="font-size:13px;margin:0">آخر تقييمات الإصلاح الذاتي</h4></div>
+          <div id="ktops-heal-executions-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        </div>
+        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">كل الـPlaybooks بوضع SHADOW MODE فقط — النظام يُقيِّم ويسجِّل «كان سيُصلِح تلقائياً» بلا أي تنفيذٍ فعلي. تفعيل وضع AUTO قرارٌ بشريٌّ محجوزٌ لمرحلةٍ لاحقة، غير متاحٍ من هذه اللوحة.</p>
+      </div>
       <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
         <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
         <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
@@ -12522,6 +12541,111 @@ async function ktopsLoad(){
     </div>`;
   }catch(e){/* يبقى — بلا كسر الصفحة */}
   ktopsLoadDiagnoses();
+  ktopsLoadSelfHealing();
+}
+
+// ══ Phase 3 — القسم 30/31: الإصلاح الذاتي — بطاقات Playbook + تنفيذاتٌ
+// أخيرة + تحكّم الإيقاف الطارئ (عام/لوكيل). قراءةٌ من ops-actions حصراً،
+// نفس نمط ktopsLoadDiagnoses أعلاه. ══
+async function ktopsLoadSelfHealing(){
+  const globalTxt=document.getElementById('ktops-heal-global-text');
+  const box=document.getElementById('ktops-heal-body');
+  const execBox=document.getElementById('ktops-heal-executions-body');
+  if(!box)return;
+  try{
+    const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'list_playbooks'}});
+    if(error||!data||data.error){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل Playbooks.</div></div>';return;}
+    const playbooks=data.playbooks||[], ctl=data.controls;
+    if(globalTxt){
+      const on=ctl&&ctl.self_healing_enabled!==false;
+      globalTxt.innerHTML=on
+        ?'✅ الإصلاح الذاتي مُفعَّلٌ عامّاً (كل Playbook حسب وضعه الخاصّ)'
+        :`⛔ الإصلاح الذاتي مُعطَّلٌ عامّاً${ctl&&ctl.disabled_reason?' — '+opsEscHtml(ctl.disabled_reason):''}`;
+    }
+    if(!playbooks.length){box.innerHTML='<div class="kt-state"><div class="kt-state-text">لا Playbooks مسجَّلة.</div></div>';return;}
+
+    const modeLbl={SHADOW:'🌗 SHADOW MODE',AUTO:'⚡ AUTO MODE',PAUSED:'⏸️ متوقّف',DISABLED:'🚫 معطَّل'};
+    const modeCls={SHADOW:'info',AUTO:'success',PAUSED:'warning',DISABLED:'error'};
+    const riskLbl={LOW:'منخفضة',MEDIUM:'متوسّطة',HIGH:'عالية',CRITICAL:'حرجة'};
+
+    box.innerHTML=playbooks.map(p=>{
+      const disabledForAgents=(ctl&&ctl.disabled_agents||[]);
+      const agentsBlocked=(p.allowed_agents||[]).filter(a=>disabledForAgents.includes(a));
+      return `<div class="kt-card" style="margin-bottom:var(--kt-space-3);border:1px solid var(--kt-color-border)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;flex-wrap:wrap">
+          <div style="font-weight:700;font-size:14px">${opsEscHtml(p.name)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="kt-badge kt-badge-${modeCls[p.mode]||'info'}">${modeLbl[p.mode]||p.mode}</span>
+            ${p.circuit_state==='OPEN'?'<span class="kt-badge kt-badge-error">🔴 قاطعٌ مفتوح</span>':''}
+            <span class="kt-badge kt-badge-${p.risk_level==='LOW'?'success':'warning'}">خطورة: ${riskLbl[p.risk_level]||p.risk_level}</span>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--kt-color-text-muted);margin:6px 0">${opsEscHtml(p.description||'')}</div>
+        <div style="font-size:12px;line-height:1.9;margin-top:8px">
+          <div>عتبة الثقة: <b>${p.minimum_confidence}%+</b> — النطاق: <b>${opsEscHtml(p.affected_scope)}</b></div>
+          <div>سقف المحاولات: <b>0/${p.max_attempts}</b> (لكل حادثة) — التهدئة: <b>${p.cooldown_minutes} دقيقة</b></div>
+          <div>التحقّق: <b>مفعَّل</b> — التراجع: <b>${opsEscHtml(p.rollback_strategy).slice(0,90)}${p.rollback_strategy.length>90?'…':''}</b></div>
+          ${agentsBlocked.length?`<div style="color:var(--kt-color-danger)">⛔ إصلاحٌ ذاتيٌّ معطَّلٌ للوكيل: ${agentsBlocked.map(opsEscHtml).join('، ')}</div>`:''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${p.mode!=='PAUSED'?`<button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsSetPlaybookMode('${p.playbook_id}','PAUSED')">⏸️ إيقاف</button>`:`<button class="kt-btn kt-btn-primary" style="min-height:36px;font-size:12px" onclick="ktopsSetPlaybookMode('${p.playbook_id}','SHADOW')">▶️ استئناف (Shadow)</button>`}
+          ${p.mode!=='DISABLED'?`<button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsSetPlaybookMode('${p.playbook_id}','DISABLED')">🚫 تعطيل كامل</button>`:''}
+          ${p.circuit_state==='OPEN'?`<button class="kt-btn kt-btn-primary" style="min-height:36px;font-size:12px" onclick="ktopsResumeCircuit('${p.playbook_id}')">🔁 إعادة إغلاق القاطع</button>`:''}
+          <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsDryRun('${p.playbook_id}')">👁️ Dry Run</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل الإصلاح الذاتي.</div></div>';}
+
+  if(execBox){
+    try{
+      const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'list_repair_executions',limit:15}});
+      if(error||!data||data.error){execBox.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل السجلّ.</div></div>';return;}
+      const rows=data.executions||[];
+      if(!rows.length){execBox.innerHTML='<div class="kt-state"><div class="kt-state-text">لا تقييمات إصلاحٍ ذاتي مسجَّلة بعد.</div></div>';return;}
+      const stLbl={WOULD_AUTO_HEAL:'🌗 كان سيُصلِح تلقائياً (Shadow)',DRY_RUN_LOGGED:'👁️ Dry Run',PRECONDITION_FAILED:'⚠️ شرطٌ لم يتحقّق',RISK_BLOCKED:'🔒 خطورةٌ محجوبة',RATE_LIMITED:'🚫 تجاوز السقف',COOLDOWN_ACTIVE:'⏳ ضمن التهدئة',CIRCUIT_OPEN:'🔴 قاطعٌ مفتوح',DISABLED:'🚫 معطَّل',NO_PLAYBOOK_MATCH:'❓ لا Playbook مطابق',SUCCEEDED:'✅ نجح',FAILED:'❌ فشل',VERIFICATION_FAILED:'❌ فشل التحقّق',ESCALATED:'🔺 صُعِّد'};
+      execBox.innerHTML=rows.map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--kt-color-border);font-size:12px">
+        <div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap">
+          <b>${opsEscHtml(r.playbook_id)}</b>
+          <span class="kt-badge kt-badge-info" style="font-size:10px">⚙️ AUTOMATED ACTION</span>
+        </div>
+        <div>${stLbl[r.status]||opsEscHtml(r.status)}${r.escalation_reason?' — '+opsEscHtml(r.escalation_reason):''}</div>
+        <div style="color:var(--kt-color-text-muted);font-size:11px">${new Date(r.started_at).toLocaleString('ar-OM')}${r.status==='ESCALATED'||r.status==='WOULD_AUTO_HEAL'?` <button class="kt-btn kt-btn-ghost" style="font-size:10px;padding:2px 8px;min-height:auto" onclick="ktopsForceEscalate('${r.repair_id}')">تصعيدٌ يدوي</button>`:''}</div>
+      </div>`).join('');
+    }catch(e){execBox.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر تحميل السجلّ.</div></div>';}
+  }
+}
+async function ktopsSetPlaybookMode(playbookId,mode){
+  if(mode==='DISABLED'&&!confirm('تعطيل هذا الـPlaybook بالكامل؟ لن يُقيَّم إطلاقاً حتى تُعيدي تفعيله.'))return;
+  const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'set_playbook_mode',playbook_id:playbookId,mode}});
+  if(error||!data||data.error){alert('تعذّر التحديث: '+((data&&data.message)||''));return;}
+  ktopsLoadSelfHealing();
+}
+async function ktopsResumeCircuit(playbookId){
+  if(!confirm('إعادة إغلاق القاطع لهذا الـPlaybook؟ سيُستأنَف تقييمه.'))return;
+  const{error}=await sb.functions.invoke('ops-actions',{body:{action:'resume_circuit_breaker',playbook_id:playbookId}});
+  if(error){alert('تعذّر التحديث.');return;}
+  ktopsLoadSelfHealing();
+}
+async function ktopsDryRun(playbookId){
+  const{data,error}=await sb.functions.invoke('ops-actions',{body:{action:'dry_run_playbook',playbook_id:playbookId}});
+  if(error||!data||data.error){alert('تعذّر Dry Run.');return;}
+  alert('سيُنفَّذ: '+(data.dry_run.would_execute||[]).join('، ')+'\n\nالتراجع: '+data.dry_run.rollback_strategy);
+}
+async function ktopsForceEscalate(repairId){
+  const reason=prompt('سبب التصعيد اليدوي (اختياري):','تصعيدٌ يدويٌّ من المشرف');
+  if(reason===null)return;
+  const{error}=await sb.functions.invoke('ops-actions',{body:{action:'force_escalate_repair',repair_id:repairId,reason}});
+  if(error){alert('تعذّر التصعيد.');return;}
+  ktopsLoadSelfHealing();
+}
+async function ktopsHealGlobalToggle(enabled){
+  let reason=null;
+  if(!enabled){reason=prompt('سبب الإيقاف الطارئ العام (سيظهر في اللوحة):','إيقافٌ يدويٌّ من المشرف');if(reason===null)return;}
+  if(!confirm(enabled?'تفعيل الإصلاح الذاتي عامّاً؟':'⛔ إيقاف الإصلاح الذاتي عامّاً لكل Playbook؟ (المراقبة تستمر كالمعتاد)'))return;
+  const{error}=await sb.functions.invoke('ops-actions',{body:{action:'set_self_healing_global',enabled,reason}});
+  if(error){alert('تعذّر التحديث.');return;}
+  ktopsLoadSelfHealing();
 }
 
 // ══ Phase 2 — القسم 26/27: التشخيصات النشطة + بطاقات الإجراء ══
