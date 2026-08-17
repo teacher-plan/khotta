@@ -420,12 +420,15 @@ export async function get_agent_schedule(admin: any, agentName: string) {
 // self_healing_controls الحقيقية حصراً — لا اختلاق أرقام إن كانت الجداول
 // فارغةً (كل شيءٍ يبدأ في Shadow Mode، فقد لا توجد بياناتٌ بعد). ═══
 
-// "أي Playbook استُخدم؟" / "كم عملية Self-Healing تمّت؟" اليوم.
+// "أي Playbook استُخدم؟" / "كم عملية Self-Healing تمّت؟" اليوم — ولماذا لم
+// يُصلَح كذا تحديداً. كل الحقول من repair_executions الحقيقية حصراً —
+// preconditions_result/confidence_at_decision/blast_radius موجودةٌ سلفاً في
+// الجدول (Phase 3)، لم تكن تُقرَأ هنا قبل Phase 3.5-B Observability.
 export async function get_self_healing_summary(admin: any, hours = 24) {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   const { data } = await admin
     .from("repair_executions")
-    .select("repair_id,playbook_id,status,mode,started_at,escalation_reason")
+    .select("repair_id,incident_id,playbook_id,status,mode,started_at,escalation_reason,confidence_at_decision,preconditions_result,error")
     .gte("started_at", since)
     .order("started_at", { ascending: false })
     .limit(200);
@@ -433,18 +436,65 @@ export async function get_self_healing_summary(admin: any, hours = 24) {
   const would_auto_heal = rows.filter((r: any) => r.status === "WOULD_AUTO_HEAL").length;
   const succeeded = rows.filter((r: any) => r.status === "SUCCEEDED").length;
   const failed = rows.filter((r: any) => ["FAILED", "VERIFICATION_FAILED"].includes(r.status)).length;
-  const escalated = rows.filter((r: any) => ["ESCALATED", "PRECONDITION_FAILED", "RISK_BLOCKED", "RATE_LIMITED", "COOLDOWN_ACTIVE", "CIRCUIT_OPEN", "DISABLED"].includes(r.status)).length;
+  const blockedStatuses = ["ESCALATED", "PRECONDITION_FAILED", "RISK_BLOCKED", "RATE_LIMITED", "COOLDOWN_ACTIVE", "CIRCUIT_OPEN", "DISABLED", "NO_PLAYBOOK_MATCH", "CLAIM_FAILED", "DUPLICATE_EXECUTION_BLOCKED", "ACTION_VALIDATION_FAILED", "INVALID_INCIDENT", "INVALID_DIAGNOSIS"];
+  const escalated = rows.filter((r: any) => blockedStatuses.includes(r.status)).length;
   const circuit_open = rows.filter((r: any) => r.status === "CIRCUIT_OPEN").length;
   const by_playbook: Record<string, number> = {};
   for (const r of rows) by_playbook[r.playbook_id] = (by_playbook[r.playbook_id] || 0) + 1;
+  const by_status: Record<string, number> = {};
+  for (const r of rows) by_status[r.status] = (by_status[r.status] || 0) + 1;
+  // "لماذا لم يُصلَح هذا؟" — تفاصيل كل تقييمٍ محجوب (لا نجاح)، مع السبب
+  // الحقيقي المُخزَّن (escalation_reason/preconditions_result/error) — لا
+  // إعادة صياغةٍ أو تخمين. حتى 30 صفّاً — كافٍ لسؤالٍ عن حادثةٍ بعينها.
+  const blocked_details = rows
+    .filter((r: any) => blockedStatuses.includes(r.status))
+    .slice(0, 30)
+    .map((r: any) => ({
+      incident_id: r.incident_id, playbook_id: r.playbook_id, status: r.status,
+      confidence_at_decision: r.confidence_at_decision, escalation_reason: r.escalation_reason,
+      failed_preconditions: r.preconditions_result || null, error: r.error,
+    }));
   return {
     window_hours: hours,
     total_evaluations: rows.length,
     would_auto_heal_shadow_mode: would_auto_heal,     // لا "إصلاحاتٍ فعلية" — كل شيءٍ Shadow اليوم
     actual_auto_heals_executed: succeeded,             // يبقى 0 بالضرورة ما دام لا Playbook في AUTO
     failed, escalated, circuit_breaker_triggered: circuit_open,
-    by_playbook,
+    by_playbook, by_status, blocked_details,
     note: rows.length ? null : "لا تقييمات Self-Healing مسجَّلة بعد في هذه النافذة الزمنية.",
+  };
+}
+
+// "كم دورة جدولةٍ عملت؟ كم متوسّط زمنها؟" — من scheduler_runs الحقيقي
+// (Phase 3.5-B) حصراً. لا تُختلَق إن كان الجدول فارغاً أو غير موجود.
+export async function get_scheduler_runs_summary(admin: any, hours = 24) {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const { data, error } = await admin
+    .from("scheduler_runs")
+    .select("run_id,started_at,completed_at,status,incidents_scanned,incidents_claimed,incidents_evaluated,shadow_would_repair,escalated,errors,duration_ms")
+    .gte("started_at", since)
+    .order("started_at", { ascending: false })
+    .limit(500);
+  if (error) return { available: false, note: "جدول scheduler_runs غير متاحٍ بعد." };
+  const rows = data || [];
+  const completed = rows.filter((r: any) => r.status === "COMPLETED");
+  const failedRuns = rows.filter((r: any) => r.status === "FAILED").length;
+  const durations = rows.filter((r: any) => typeof r.duration_ms === "number").map((r: any) => r.duration_ms as number);
+  const avg_duration_ms = durations.length ? Math.round(durations.reduce((a: number, b: number) => a + b, 0) / durations.length) : null;
+  const sum = (key: string) => rows.reduce((acc: number, r: any) => acc + (r[key] || 0), 0);
+  return {
+    window_hours: hours,
+    total_runs: rows.length,
+    completed_runs: completed.length,
+    failed_runs: failedRuns,
+    avg_duration_ms,
+    total_incidents_scanned: sum("incidents_scanned"),
+    total_incidents_claimed: sum("incidents_claimed"),
+    total_incidents_evaluated: sum("incidents_evaluated"),
+    total_would_auto_heal: sum("shadow_would_repair"),
+    total_escalated: sum("escalated"),
+    total_errors: sum("errors"),
+    note: rows.length ? null : "لا دورات جدولةٍ مسجَّلة بعد في هذه النافذة الزمنية.",
   };
 }
 
