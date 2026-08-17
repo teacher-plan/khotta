@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegramOps as sendTelegram } from "../_shared/telegram.ts";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -297,7 +298,8 @@ async function processHealthResults(
 // ولا ضجيجٌ لكل تحذيرٍ عابر؛ تبقى مرئيةً عبر ops-analyze/الـcopilot.
 async function processIncidents(
   results: HealthCheckResult[],
-  sb: any
+  sb: any,
+  correlationId: string | null = null, // Phase 1.5: لربط الحادثة بتشغيلتها
 ): Promise<void> {
   try {
     const critical = results.filter((r) => r.status === "critical");
@@ -331,6 +333,8 @@ async function processIncidents(
         summary: `${issue.component}: ${issue.error || issue.status}`,
         evidence: [{ source: "system-health-check", data: issue }],
         confidence: "VERIFIED", // من فحصٍ حيّ مباشر، لا استنتاج
+        source_agent: "system-health-check",
+        correlation_id: correlationId,
       }).select("id").maybeSingle();
 
       // P1 فقط يُنبَّه فوراً (P0 يتطلّب إشارةً أمنية/بياناتٍ لا يُصدرها هذا
@@ -381,16 +385,22 @@ Deno.serve(async (req) => {
   // فإقفالُ daily-summary وcredit-monitor لا يجعلهما «معطوبتين» عنده.
   if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
-  try {
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  // Phase 1.5: مُعرَّفةٌ خارج try كي يستطيع catch إغلاق التشغيلة بـFAILED
+  // عند استثناءٍ غير مُلتقَط، لا فقط عند اكتمال الفحص بنجاح.
+  let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  try {
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     console.log("🔍 بدء فحص صحة النظام...");
+
+    // Phase 1.5: بدء تشغيلة تتبّع (إضافي — لا يوقف الفحص إن فشل التسجيل)
+    run = await startRun(sb, "system-health-check", "CRON");
 
     // تشغيل جميع الفحوصات بالتوازي
     const [
@@ -415,19 +425,35 @@ Deno.serve(async (req) => {
     // معالجة النتائج وإرسال التنبيهات — بلا تعديل
     await processHealthResults(allResults, sb);
     // Phase 3: تجميع الحوادث فوق النتائج نفسها — إضافةٌ لا تُغيّر ما سبق
-    await processIncidents(allResults, sb);
+    // Phase 1.5: يمرَّر run.correlationId فتُصبح الحوادث الناتجة قابلةً
+    // للتتبّع إلى تشغيلتها (القسم 9: Incident → Source Agent → Run).
+    await processIncidents(allResults, sb, run.correlationId);
+
+    const critical = allResults.filter((r) => r.status === "critical").length;
+    const warnings = allResults.filter((r) => r.status === "warning").length;
+    // SUCCESS فقط إن لم يفشل جزءٌ جوهري من الفحص نفسه (استثناءٌ غير
+    // ملتقَط) — وجود مكوّناتٍ حرجة/تحذيرية هو نتيجة فحصٍ ناجح لا فشلاً
+    // في الوكيل نفسه، فيبقى SUCCESS مع تفاصيل النتيجة في result_summary.
+    await finishRun(sb, run, {
+      status: "SUCCESS",
+      resultSummary: `${allResults.length} فحصاً — ${critical} حرج، ${warnings} تحذير`,
+      recordsRead: allResults.length,
+      recordsWritten: allResults.length,
+    });
 
     return json({
       ok: true,
       timestamp: new Date().toISOString(),
       totalChecks: allResults.length,
       healthy: allResults.filter((r) => r.status === "healthy").length,
-      warnings: allResults.filter((r) => r.status === "warning").length,
-      critical: allResults.filter((r) => r.status === "critical").length,
+      warnings,
+      critical,
       results: allResults,
+      run_id: run.runId,
     });
   } catch (error) {
     console.error("❌ Health check error:", error);
+    await finishRun(sb, run, { status: "FAILED", error: String(error) });
     return json({ error: String(error) }, 500);
   }
 });

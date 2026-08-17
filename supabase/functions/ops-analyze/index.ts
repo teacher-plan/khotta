@@ -19,11 +19,13 @@ import { authorizeOps, unauthorized } from "../_shared/adminGuard.ts";
 import { orFetch } from "../_shared/ai.ts";
 import { logAiCost } from "../_shared/quota.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 import {
   get_system_health, get_recent_errors, get_emergency_alerts,
   get_ai_usage, get_ai_cost, get_quota_status, get_database_health,
   get_edge_function_health, get_recent_deployments, get_recent_incidents,
   get_database_capacity, get_agent_registry, get_agent_runs_summary,
+  get_agent_status_summary,
 } from "../_shared/opsTools.ts";
 
 const cors = {
@@ -91,6 +93,7 @@ Deno.serve(async (req) => {
         open_incidents: incidents.incidents,
         database_capacity: dbCapacity, // منفصلٌ صراحةً عن AI cost وSupabase Storage
         agent_runs_summary: agentRuns,
+        agent_status_summary: await get_agent_status_summary(admin, 24),
         generated_at: new Date().toISOString(),
       });
     }
@@ -103,14 +106,19 @@ Deno.serve(async (req) => {
 
     // ═ action:"capacity" — بلا ذكاء اصطناعي: سعة قاعدة البيانات + سجلّ الوكلاء ═
     if (action === "capacity") {
-      const [dbCapacity, agentRegistry, agentRuns] = await Promise.all([
-        get_database_capacity(admin), get_agent_registry(admin), get_agent_runs_summary(admin, 24),
+      const [dbCapacity, agentRegistry, agentRuns, agentStatus] = await Promise.all([
+        get_database_capacity(admin), get_agent_registry(admin), get_agent_runs_summary(admin, 24), get_agent_status_summary(admin, 24),
       ]);
-      return json({ database_capacity: dbCapacity, agent_registry: agentRegistry, agent_runs_summary: agentRuns, generated_at: new Date().toISOString() });
+      return json({ database_capacity: dbCapacity, agent_registry: agentRegistry, agent_runs_summary: agentRuns, agent_status_summary: agentStatus, generated_at: new Date().toISOString() });
     }
 
     // ═ action:"analyze" — شذوذٌ فعليّ فقط: جمع أدلّة ثم نداءٌ واحد ═
     if (action === "analyze") {
+      // Phase 1.5 — القسم 8: هذا المسار الوحيد في ops-analyze الذي يستدعي
+      // LLM فعلاً (health/cost/capacity حتميّةٌ صرفة بلا تتبّعٍ هنا عمداً —
+      // تُستدعى من كل تحميل صفحةٍ إدارية، وتتبّعها في agent_runs يعني كتابة
+      // صفٍّ لكل فتح لوحة، وهذا تضخّمٌ كتابيّ غير مبرَّر — القسم 19).
+      const run = await startRun(admin, "ops-analyze", "ON_DEMAND");
       const component = String(b.component || "").slice(0, 100);
       const hint = String(b.hint || "").slice(0, 500);
 
@@ -171,9 +179,11 @@ Deno.serve(async (req) => {
       const or = await r.json();
       // تكلفة العمليات تُسجَّل بمعزلٍ عن تكلفة المستخدمين (kind='ops')،
       // ولا تُخصَم من حصة أي معلّمة — لا نداء takeQuota هنا إطلاقاً.
-      await logAiCost(admin, auth.userId || null, "ops-analyze", "ops", "deepseek/deepseek-chat", or?.usage);
+      // Phase 1.5: run.runId يربط سطر التكلفة بتشغيلته (القسم 8).
+      await logAiCost(admin, auth.userId || null, "ops-analyze", "ops", "deepseek/deepseek-chat", or?.usage, run.runId);
 
       if (!r.ok) {
+        await finishRun(admin, run, { status: "FAILED", error: "llm_request_failed" });
         return json({ status: "unknown", severity: "P3", summary: "تعذّر تحليل الذكاء الاصطناعي — الأدلّة الخام متاحة دون تفسير.",
           evidence: [{ source: "raw", data: evidence, confidence: "VERIFIED" }], likely_causes: [], confidence: 0,
           affected_components: [], affected_users: null, recommendations: [], llm_error: true }, 200);
@@ -181,10 +191,12 @@ Deno.serve(async (req) => {
       const text = or?.choices?.[0]?.message?.content || "";
       const parsed = parseAiJson(text);
       if (!parsed.ok) {
+        await finishRun(admin, run, { status: "FAILED", error: "llm_output_unparseable" });
         return json({ status: "unknown", severity: "P3", summary: "تعذّر تفسير مخرجات الذكاء الاصطناعي.",
           evidence: [{ source: "raw", data: evidence, confidence: "VERIFIED" }], likely_causes: [], confidence: 0,
           affected_components: [], affected_users: null, recommendations: [], llm_error: true }, 200);
       }
+      await finishRun(admin, run, { status: "SUCCESS", resultSummary: (parsed.value as any)?.summary?.slice?.(0, 200) });
       return json({ ...(parsed.value as Record<string, unknown>), raw_evidence: evidence, generated_at: new Date().toISOString() });
     }
 

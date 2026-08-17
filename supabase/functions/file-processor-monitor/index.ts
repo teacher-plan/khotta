@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegramOps as sendTelegram } from "../_shared/telegram.ts";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
+import { startRun, finishRun } from "../_shared/agentRun.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -30,13 +31,15 @@ Deno.serve(async (req) => {
   // 🔒 وكيلٌ إداريّ: يقرأ uploaded_by وأسماء الملفات ورسائل الأخطاء.
   if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
-  try {
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  try {
     console.log("📁 بدء مراقبة معالجة الملفات...");
+    run = await startRun(sb, "file-processor-monitor", "CRON");
 
     // جلب الملفات قيد المعالجة
     // ملاحظة: uploaded_by يشير إلى auth.users لا public.profiles، فلا يمكن
@@ -48,6 +51,7 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       console.error("❌ Error fetching files:", fetchError);
+      await finishRun(sb, run, { status: "FAILED", error: fetchError.message });
       return json({ error: "Failed to fetch files" }, 500);
     }
 
@@ -179,6 +183,14 @@ ${stuckFiles
       await sendTelegram(emergencyMessage);
     }
 
+    await finishRun(sb, run, {
+      status: result.ok ? "SUCCESS" : "FAILED",
+      resultSummary: `قيد المعالجة ${processingFiles?.length || 0}، عالقة ${stuckFiles.length}، مكتملة ${completedFiles?.length || 0}، فاشلة ${failedFiles?.length || 0}`,
+      error: result.ok ? undefined : result.error,
+      recordsRead: (processingFiles?.length || 0) + (completedFiles?.length || 0) + (failedFiles?.length || 0),
+      recordsWritten: result.ok ? 1 : 0,
+    });
+
     return json({
       ok: true,
       message: "File monitor completed",
@@ -191,6 +203,7 @@ ${stuckFiles
     });
   } catch (error) {
     console.error("❌ Error:", error);
+    await finishRun(sb, run, { status: "FAILED", error: String(error) });
     return json({ error: String(error) }, 500);
   }
 });

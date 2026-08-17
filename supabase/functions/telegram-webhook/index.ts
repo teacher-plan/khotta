@@ -4,6 +4,34 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram, editTelegram, sendTelegramOps } from "../_shared/telegram.ts";
 
+// ═══ Phase 1.5 — القسم 3: تحقّق X-Telegram-Bot-Api-Secret-Token ═══
+// تلغرام يرسل هذا الترويسة مع كل تحديث webhook حين يُضبَط secret_token عند
+// تسجيل setWebhook (راجع: https://core.telegram.org/bots/api#setwebhook).
+// قبل هذا التعديل: لا تحقّقٌ إطلاقاً — أي طرفٍ يعرف رابط الدالّة (عامّ،
+// بلا JWT) يستطيع انتحال تحديثات تلغرام وتشغيل أي معالج زرٍّ/أمرٍ نصّي.
+//
+// السرّ مُخزَّنٌ في متغيّر بيئة الدالّة فقط (TELEGRAM_WEBHOOK_SECRET) —
+// نفس نمط بقية أسرار تلغرام في هذا المشروع (Deno.env.get، لا شيء في
+// الواجهة). بوتٌ واحد أو بوتان: السرّ نفسه يُستعمَل لكلا الرابطين
+// (الأصلي و?bot=ops) ما لم يُضبَط سرٌّ منفصل TELEGRAM_WEBHOOK_SECRET_OPS.
+//
+// ⚠️ حالة النشر الحالية: هذا التحقّق مكتوبٌ في الكود لكنه BLOCKED عملياً
+// حتى تُنفَّذ خطوتان خارجيتان لا تستطيعهما هذه الوكالة (انظر تقرير Phase
+// 1.5 القسم 6 للأوامر الدقيقة):
+//   ١) توليد قيمة سرّية عشوائية وتخزينها: supabase secrets set TELEGRAM_WEBHOOK_SECRET=...
+//   ٢) تسجيلها لدى تلغرام عبر setWebhook مع secret_token بنفس القيمة.
+// إلى أن يُضبَط TELEGRAM_WEBHOOK_SECRET كسرٍّ في بيئة الدالّة، isSecretConfigured
+// تكون false والتحقّق "يتنازل بأمان" (يسمح بالمرور كسابق عهده) بدل أن
+// يقفل webhook تلغرام الحيّ فجأةً بلا تنسيقٍ مسبق — هذا مقصودٌ صراحةً؛
+// إبقاء البوت يعمل أولويةٌ حتى يضبط المدير السرّ فعلياً في الخطوتين أعلاه.
+function verifyTelegramSecret(req: Request): { ok: boolean; configured: boolean } {
+  const expected = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") || "";
+  if (!expected) return { ok: true, configured: false }; // لا سرّ مضبوط بعد — NOT YET DEPLOYED
+  const got = req.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
+  // لا نُسجّل got أو expected أبداً في أي console.log/سجلّ — القسم 3 صراحةً.
+  return { ok: got.length > 0 && got === expected, configured: true };
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -174,6 +202,33 @@ async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?:
   return { ok: sent.ok, listed: page.length, error: sent.error };
 }
 
+// ═══ Phase 1.5 — القسم 5: تدقيق أزرار "إعادة المحاولة" ═══
+// قاعدةٌ صارمة: لا يجوز لزرٍّ أن يدّعي إنجاز شيءٍ لم يحدث فعلاً. الأزرار
+// أدناه كانت (قبل هذا التعديل) تُعيد نصّ نجاحٍ ثابتاً بلا أي كود تنفيذيٍّ
+// خلفه (credit:reschedule، summary:refresh) أو تسقط على المعالج الافتراضي
+// "✅ تم معالجة الطلب" رغم عدم وجود معالجٍ إطلاقاً (files:retry_failed) —
+// وهذا بالضبط ما تحظره المواصفة. "إعادة المحاولة" هنا تعني حصراً: إعادة
+// تشغيل نفس العملية المعروفة فوراً (نداء دالّة الحافة نفسها) — لا تشخيصاً
+// ولا إصلاحاً تلقائياً.
+async function invokeAgentNow(fnName: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/${fnName}`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    return { ok: r.ok, error: r.ok ? undefined : `HTTP ${r.status}` };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 // معالجات الأزرار
 async function handleCallbackQuery(
   callbackData: string,
@@ -187,21 +242,28 @@ async function handleCallbackQuery(
   switch (module) {
     case "credit":
       if (action === "detailed") {
-        return "💰 <b>تقرير الرصيد المفصل</b>\n\nقيد التحديث...";
+        // لا تقرير مفصّل مبنيّ فعلاً بعد — "قيد التحديث" لا تدّعي اكتمالاً،
+        // فتبقى صادقة (PRESENT BUT NOT ACTIVE، موثَّقة صراحةً لا مخفيّة).
+        return "💰 <b>تقرير الرصيد المفصل</b>\n\nهذه الميزة قيد التطوير ولم تُفعَّل بعد.";
       } else if (action === "reschedule") {
-        return "⏰ تم إعادة جدولة وكيل الرصيد للتشغيل الآن";
+        // إعادة تشغيلٍ حقيقية: نداء credit-monitor الآن فعلياً، لا ادّعاءٌ فارغ.
+        const r = await invokeAgentNow("credit-monitor");
+        return r.ok
+          ? "🔄 أُعيد تشغيل مراقب الرصيد الآن — انتظر رسالة الملخص التالية."
+          : `❌ تعذّرت إعادة التشغيل الآن (${r.error}). حاول لاحقاً.`;
       }
       break;
 
     case "library":
       if (action === "detailed") {
-        return "📚 <b>الملفات الجديدة</b>\n\nقيد التحديث...";
+        return "📚 <b>الملفات الجديدة</b>\n\nهذه الميزة قيد التطوير ولم تُفعَّل بعد.";
       }
       break;
 
     case "summary":
       if (action === "reschedule") {
-        // تحديث جدول الجدولة
+        // تحديث جدول الجدولة — كتابةٌ حقيقية على agent_schedules (سلوكٌ
+        // أصلي، لم يُعدَّل هنا؛ مذكورٌ في تقرير Phase 1.5 كإجراءٍ حقيقي).
         await sb.from("agent_schedules").update({
           scheduled_hour: new Date().getHours(),
           scheduled_minute: new Date().getMinutes(),
@@ -209,7 +271,11 @@ async function handleCallbackQuery(
 
         return "⏰ تم تحديث وقت الملخص!\nسيتم التشغيل كل يوم في هذا الوقت";
       } else if (action === "refresh") {
-        return "🔄 جاري تحديث الملخص...";
+        // إعادة تشغيلٍ حقيقية: نداء daily-summary الآن، لا ادّعاءٌ فارغ.
+        const r = await invokeAgentNow("daily-summary");
+        return r.ok
+          ? "🔄 أُعيد إنشاء الملخص — ستصلك رسالةٌ جديدة الآن."
+          : `❌ تعذّر تحديث الملخص الآن (${r.error}). حاول لاحقاً.`;
       }
       break;
 
@@ -219,11 +285,22 @@ async function handleCallbackQuery(
       }
       break;
 
+    case "files":
+      // Phase 1.5: "❌ إعادة محاولة" (files:retry_failed) كانت تسقط على
+      // المعالج الافتراضي فتُعيد "✅ تم معالجة الطلب" رغم عدم وجود أي كود
+      // إعادة معالجةٍ خلفها إطلاقاً — أخطر حالات الادّعاء الكاذب في هذا
+      // التدقيق. لا تنفيذ آمناً وموثوقاً لإعادة معالجة ملفٍ فاشل جاهزاً
+      // اليوم (يتطلّب تصميماً أكبر: أي معالجٍ لأي نوع ملف، وبأي حدود إعادة
+      // محاولة) — الزرّ الآن يصرّح بذلك بدل الادّعاء.
+      return "⚠️ إعادة المعالجة التلقائية غير مُفعَّلة بعد — راجعي الملفات العالقة يدوياً من لوحة الإدارة.";
+
     default:
       return "❓ أمر غير معروف";
   }
 
-  return "✅ تم معالجة الطلب";
+  // لم يعد هناك مسارٌ صامت يصل إلى هنا بادّعاء نجاحٍ عام؛ أي زرٍّ غير
+  // مُعرَّف صراحةً أعلاه يُعيد رسالة "أمر غير معروف" الآن (القسم 5).
+  return "❓ أمر غير معروف — لا إجراء مرتبط بهذا الزرّ.";
 }
 
 Deno.serve(async (req) => {
@@ -233,6 +310,22 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
+  // Phase 1.5 — القسم 3: رفض التحديثات بلا سرٍّ صحيح، فقط إن كان السرّ
+  // مضبوطاً فعلاً في بيئة الدالّة (configured=true). طالما لم يُضبَط بعد
+  // (البوت الحيّ لا يرسل الترويسة إطلاقاً اليوم) نستمرّ كسابق عهدنا —
+  // BLOCKED حتى تُنجَز خطوتا الضبط الخارجيتان أعلاه.
+  const secretCheck = verifyTelegramSecret(req);
+  if (secretCheck.configured && !secretCheck.ok) {
+    console.error("telegram-webhook: رُفض طلبٌ — X-Telegram-Bot-Api-Secret-Token غائبٌ أو خاطئ");
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  // Phase 1.5 — القسم 1: telegram-webhook NOT_INTEGRATED مع agent_runs عمداً
+  // في هذه المرحلة: عشرات مسارات return مبكرة (كل زرّ/أمرٍ نصّي) تجعل
+  // إغلاق كل تشغيلةٍ بأمانٍ عند كل مخرجٍ عملاً كبيراً يخاطر بترك صفوف
+  // RUNNING معلَّقة إن نُسي مخرجٌ واحد — يبقى التتبّع الحالي عبر agent_logs/
+  // agent_messages (موجودٌ مسبقاً) كافياً هنا؛ التكامل الكامل مع agent_runs
+  // موصًى به كخطوةٍ لاحقة (انظر التقرير، القسم 4 وقسم "المشاكل المعروفة").
   try {
     const body = await req.json();
     // بوت الفحص الدوري يسجّل رابط Webhook بمعامل ?bot=ops مميَّز — لا سبيل
