@@ -28,3 +28,17 @@ jobs:
           exit 1
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # وعي النشر لـPhase 3.2 self-healing preconditions: تسجيلٌ بسيطٌ بعد
+      # نجاح النشر، بنفس السرّ الموجود أصلاً (SUPABASE_ACCESS_TOKEN) عبر
+      # Management API — لا سرّ جديد، لا صلاحيةٌ إضافية.
+      - name: Record deployment in deployment_log
+        run: |
+          q="insert into public.deployment_log (function_name, commit_sha, workflow_run_id) values ('ALL', '${{ github.sha }}', '${{ github.run_id }}');"
+          body=$(jq -Rs '{query: .}' <<< "$q")
+          curl -s -X POST "https://api.supabase.com/v1/projects/mkdsnnfkkdwdkywnwnjh/database/query" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data-binary "$body"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

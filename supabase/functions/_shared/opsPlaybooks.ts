@@ -82,10 +82,26 @@ export async function checkPreconditions(
   });
 
   // لا حادثةٌ مشابهة مفتوحة/مُصعَّدة لنفس المكوّن آخر cooldown_minutes.
+  //
+  // إصلاحٌ (Phase 3.2): كان هذا الاستعلام يستعمل عمود created_at غير
+  // الموجود إطلاقاً في ops_incidents (تحقّقٌ حيّ أثبت غيابه — انظر تقرير
+  // Phase 3.1)، فيفشل بخطإٍ حقيقي عند التنفيذ الفعلي، لا بنتيجةٍ منطقية.
+  // العمود الصحيح: first_seen_at — يُضبَط مرّةً واحدة فقط عند إدراج
+  // الحادثة (DEFAULT now()، لا يُعاد كتابته أبداً؛ processIncidents في
+  // system-health-check/index.ts يُحدِّث last_seen_at فقط عند التكرار) —
+  // فهو المطابق فعلياً لدلالة "created_at" لا last_seen_at.
+  //
+  // كذلك كانت القيمة 'OPEN' مستعملةً في .in("status", …) رغم أنها لم
+  // توجد إطلاقاً في أي نسخةٍ من قيد ops_incidents_status_check عبر كل
+  // المهاجرات (القيم الفعلية: DETECTED/INVESTIGATING/IDENTIFIED/
+  // RECOMMENDATION/RESOLVED/ESCALATED) — فكان هذا الشطر ميتاً بنيوياً
+  // دوماً. الدلالة الصحيحة لـ"حادثةٍ لا تزال مفتوحة" في هذا المخطّط هي
+  // status <> 'RESOLVED' (system-health-check يُدرِج status:'DETECTED'
+  // ابتداءً، ولا حالة أخرى تعني إغلاقاً سوى RESOLVED).
   const since = new Date(Date.now() - pb.cooldown_minutes * 60 * 1000).toISOString();
   const { data: recentIncidents } = await admin.from("ops_incidents")
-    .select("id,status").eq("component", ctx.incidentComponent).gte("created_at", since)
-    .in("status", ["OPEN", "ESCALATED"]);
+    .select("id,status").eq("component", ctx.incidentComponent).gte("first_seen_at", since)
+    .neq("status", "RESOLVED");
   const similarOpenCount = (recentIncidents || []).length;
   out.push({
     name: "no_similar_incident_open_recently",
@@ -93,15 +109,24 @@ export async function checkPreconditions(
     detail: `${similarOpenCount} حادثةٍ مفتوحة/مُصعَّدة لنفس المكوّن آخر ${pb.cooldown_minutes} دقيقة.`,
   });
 
-  // لا مصدر بيانات نشرٍ حقيقي في المشروع (موثَّقٌ سابقاً في opsTools.ts:
-  // get_recent_deployments لا يملك رمز GitHub) — الشرط يُعلَّم دوماً غير
-  // قابلٍ للتحقّق آلياً بصدق، لا يُفترَض ناجحاً تلقائياً (القسم 4/38: عدم
-  // كفاية الأدلّة ⇒ لا إصلاح آلي).
-  out.push({
-    name: "no_recent_deployment_change",
-    passed: false,
-    detail: "لا مصدر بياناتٍ حقيقيّ لسجلّ عمليات النشر بعد (get_recent_deployments غير متّصلٍ بـGitHub) — لا يمكن التحقّق آلياً، فالشرط يُعتبَر غير مُحقَّقٍ صراحةً بدل افتراض النجاح.",
-  });
+  // Phase 3.2: مصدر بياناتٍ حقيقيٌّ الآن (deployment_log، يكتبه
+  // deploy-functions.yml بعد كل نشرٍ ناجح فعلياً). إن لم يوجد أي سجلٍّ
+  // إطلاقاً، أو حدث نشرٌ ضمن نافذة cooldown_minutes نفسها، يُعتبَر الشرط
+  // غير مُحقَّقٍ صراحةً — لا يُفترَض ناجحاً أبداً بلا دليل (القسم 4/38).
+  const { data: lastDeploy } = await admin.from("deployment_log")
+    .select("deployed_at").order("deployed_at", { ascending: false }).limit(1).maybeSingle();
+  let deploymentPassed = false;
+  let deploymentDetail: string;
+  if (!lastDeploy) {
+    deploymentDetail = "لا سجلّ نشرٍ متاحٌ بعد في deployment_log — لا يمكن التحقّق، فالشرط غير مُحقَّقٍ صراحةً (NOT_AVAILABLE)، لا افتراض نجاح.";
+  } else {
+    const minutesSinceDeploy = (Date.now() - new Date(lastDeploy.deployed_at).getTime()) / 60000;
+    deploymentPassed = minutesSinceDeploy > pb.cooldown_minutes;
+    deploymentDetail = deploymentPassed
+      ? `آخر نشرٍ كان منذ ${Math.round(minutesSinceDeploy)} دقيقة — أقدم من نافذة cooldown (${pb.cooldown_minutes} دقيقة)، فالسياق مستقرّ.`
+      : `آخر نشرٍ كان منذ ${Math.round(minutesSinceDeploy)} دقيقة فقط — ضمن نافذة cooldown (${pb.cooldown_minutes} دقيقة)، قد يكون السياق تغيَّر.`;
+  }
+  out.push({ name: "no_recent_deployment_change", passed: deploymentPassed, detail: deploymentDetail });
 
   out.push({
     name: "agent_permitted_for_playbook",
