@@ -12,7 +12,7 @@ BEGIN
     dedup_key, severity, status, component, summary, evidence,
     confidence, first_seen_at, last_seen_at, detected_at, source_agent
   ) VALUES (
-    'PHASE3_5A_IDEMPOTENCY_TEST_TEMP', 'LOW', 'DETECTED', 'test-component',
+    'PHASE3_5A_IDEMPOTENCY_TEST_TEMP', 'P3', 'DETECTED', 'test-component',
     'PHASE3_5A test incident (self-rollback, never persisted)', '{}'::jsonb,
     'VERIFIED', now(), now(), now(), 'phase3_5a_validation'
   ) RETURNING id INTO v_incident_id;
