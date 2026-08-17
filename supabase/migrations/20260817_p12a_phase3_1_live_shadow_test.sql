@@ -21,7 +21,7 @@ INSERT INTO public.ops_incidents (
   summary, evidence, source_agent, occurrence_count, first_seen_at, last_seen_at
 ) VALUES (
   '__phase3_1_test__credit-monitor',
-  'credit-monitor', 'P2', 'ACTION_REQUIRED', 'VERIFIED',
+  'credit-monitor', 'P2', 'DETECTED', 'VERIFIED',
   '[اختبارٌ آمن Phase 3.1] فشلٌ متكرّرٌ اصطناعي لغرض التحقّق الحيّ فقط',
   jsonb_build_array(jsonb_build_object('source','phase3_1_test','detail','3 فشلاتٍ اصطناعية بنفس رسالة الخطأ: TimeoutError')),
   'credit-monitor', 3, now() - interval '10 minutes', now()
@@ -45,12 +45,13 @@ BEGIN
   SELECT id INTO v_incident_id FROM public.ops_incidents WHERE dedup_key = '__phase3_1_test__credit-monitor';
 
   -- محاكاةٌ حرفية لاستعلام checkPreconditions الحقيقي في opsPlaybooks.ts —
-  -- بما فيها قيمتا الحالة 'OPEN'/'ESCALATED' كما وردتا في الكود المنشور
-  -- فعلياً، رغم أن قيد ops_incidents.status (p5) لا يسمح بهما إطلاقاً
-  -- (القيم الصالحة: DETECTED/INVESTIGATING/IDENTIFIED/RECOMMENDATION/
-  -- RESOLVED/ACTION_REQUIRED/FAILED/IGNORED) — هذا الاستعلام سيُعيد صفراً
-  -- دوماً بنيوياً، وهذا بالضبط ما يجب توثيقه كخللٍ حقيقي مكتشَفٍ بالاختبار
-  -- الحيّ لا نظرياً (انظر تقرير Phase 3.1، قسم Known Issues).
+  -- بما فيها قيمتا الحالة 'OPEN'/'ESCALATED'. تحقّقٌ حيٌّ (هذا الملف) أثبت
+  -- أن قيد ops_incidents_status_check الفعلي الحالي (آخر نسخةٍ منه، من
+  -- p8) يسمح بـ: DETECTED/INVESTIGATING/IDENTIFIED/RECOMMENDATION/
+  -- RESOLVED/ESCALATED فقط — 'OPEN' غير موجودةٍ إطلاقاً في أي نسخةٍ من
+  -- القيد عبر كل المهاجرات (p5 ولا p8)، فهذا الشطر من الاستعلام ميتٌ
+  -- بنيوياً دوماً. أما 'ESCALATED' فصالحةٌ فعلاً. خللٌ حقيقيٌّ جزئي
+  -- مكتشَفٌ بالاختبار الحيّ لا نظرياً (انظر تقرير Phase 3.1، Known Issues).
   -- ملاحظة: الكود الحقيقي يستعلم بعمود created_at — وهو عمودٌ غير موجودٍ
   -- إطلاقاً في ops_incidents (تحقّقٌ حيّ عبر information_schema، انظر
   -- التقرير) — فيفشل هذا الاستعلام في الكود المنشور فعلياً بخطإ "عمودٌ
