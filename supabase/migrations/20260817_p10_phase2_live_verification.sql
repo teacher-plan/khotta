@@ -45,10 +45,11 @@ BEGIN
   BEGIN
     INSERT INTO public.safe_action_registry
       (action_id, name, description, category, risk_level, allowed_agents, required_permission,
-       input_schema, output_schema, reversible, requires_human_approval, enabled)
+       input_schema, output_schema, reversible, rollback_strategy, verification_strategy,
+       requires_human_approval, enabled)
     VALUES
-      ('execute_sql', 'محاولة اختبار', 'يجب أن تُرفض', 'test', 'CRITICAL', ARRAY['test'], 'ADMIN_ACTION',
-       '{}'::jsonb, '{}'::jsonb, false, true, false);
+      ('execute_sql', 'محاولة اختبار', 'يجب أن تُرفض', 'NOTIFY_ONLY', 'CRITICAL', '["test"]'::jsonb, 'ADMIN_ACTION',
+       '{}'::jsonb, '{}'::jsonb, false, 'n/a', 'n/a', true, false);
     v_check_test := 'FAIL — تم الإدخال رغم أنه محظور!';
   EXCEPTION WHEN check_violation THEN
     v_check_test := 'PASS — قيد CHECK رفض إدخال execute_sql فعلياً: ' || SQLERRM;
