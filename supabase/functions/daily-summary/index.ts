@@ -116,6 +116,38 @@ async function getAnalyticsSummary(_sb: any): Promise<string> {
   return `🤖 <b>التحليلات:</b> البيانات غير متوفرة حالياً (لا مصدر بياناتٍ حقيقي لهذا المؤشر بعد)`;
 }
 
+// Phase 3 — القسم 29: قسم "ملخّص الإصلاح الذاتي" — من repair_executions
+// الحقيقي حصراً (آخر ٢٤ ساعة). كل الـPlaybooks تعمل بوضع Shadow Mode فقط
+// اليوم، فالأعداد الحقيقية غالباً صفرٌ أو قليلة — هذا متوقَّعٌ وصحيح، لا
+// خطأً يُخفى. لو الجدول فارغاً تماماً (لا صفٍّ إطلاقاً في هذه النافذة):
+// "البيانات غير متوفرة حالياً" حرفياً كما يطلب القسم 4/29 — لا اختلاق صفرٍ
+// موهوم يُقرأ وكأنه فحصٌ فعلي تمّ (نفس درس Phase 1.5: peakHours/analytics).
+async function getSelfHealingSummary(sb: any): Promise<string> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await sb
+      .from("repair_executions")
+      .select("status")
+      .gte("started_at", since);
+    if (error) return `🩹 <b>ملخّص الإصلاح الذاتي:</b> البيانات غير متوفرة حالياً (تعذّر القراءة)`;
+    if (!data || !data.length) {
+      return `🩹 <b>ملخّص الإصلاح الذاتي:</b> البيانات غير متوفرة حالياً (لا تقييمات Self-Healing مسجَّلة آخر ٢٤ ساعة)`;
+    }
+    const wouldAutoHeal = data.filter((r: { status: string }) => r.status === "WOULD_AUTO_HEAL").length;
+    const succeeded = data.filter((r: { status: string }) => r.status === "SUCCEEDED").length;
+    const failed = data.filter((r: { status: string }) => ["FAILED", "VERIFICATION_FAILED"].includes(r.status)).length;
+    const escalated = data.filter((r: { status: string }) =>
+      ["ESCALATED", "PRECONDITION_FAILED", "RISK_BLOCKED", "RATE_LIMITED", "COOLDOWN_ACTIVE", "CIRCUIT_OPEN", "DISABLED"].includes(r.status)
+    ).length;
+    const circuitOpen = data.filter((r: { status: string }) => r.status === "CIRCUIT_OPEN").length;
+    // كل الـPlaybooks Shadow Mode اليوم — "أُصلِح فعلياً" (succeeded) يجب أن
+    // يبقى 0 بالضرورة؛ لا نصف WOULD_AUTO_HEAL كإصلاحٍ فعلي حصل.
+    return `🩹 <b>ملخّص الإصلاح الذاتي (Shadow Mode):</b> ${data.length} تقييماً | كان سيُصلَح تلقائياً لو AUTO: ${wouldAutoHeal} | أُصلِح فعلياً: ${succeeded} | فشل: ${failed} | صُعِّد: ${escalated} | قاطعٌ مفتوح: ${circuitOpen}`;
+  } catch (error) {
+    return `🩹 <b>ملخّص الإصلاح الذاتي:</b> ❌ خطأ (${error})`;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -133,13 +165,14 @@ Deno.serve(async (req) => {
     run = await startRun(sb, "daily-summary", "CRON");
 
     // جمع البيانات من جميع الوكلاء
-    const [creditSummary, librarySummary, peakHours, feedbackSummary, analyticsSummary] =
+    const [creditSummary, librarySummary, peakHours, feedbackSummary, analyticsSummary, selfHealingSummary] =
       await Promise.all([
         getCreditSummary(sb),
         getLibrarySummary(sb),
         getPeakHoursSummary(sb),
         getFeedbackSummary(sb),
         getAnalyticsSummary(sb),
+        getSelfHealingSummary(sb),
       ]);
 
     // بناء الرسالة الكاملة
@@ -151,6 +184,7 @@ Deno.serve(async (req) => {
     message += `${peakHours}\n\n`;
     message += `${feedbackSummary}\n\n`;
     message += `${analyticsSummary}\n\n`;
+    message += `${selfHealingSummary}\n\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     // الأزرار الرئيسية

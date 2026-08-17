@@ -414,3 +414,56 @@ export async function get_agent_schedule(admin: any, agentName: string) {
     .maybeSingle();
   return { agent_name: agentName, schedule: data || null, found: !!data };
 }
+
+// ═══ Phase 3 — القسم 28: أدواتٌ للكوبايلوت عن الإصلاح الذاتي (Self-
+// Healing). قراءةٌ صرفة من repair_playbooks/repair_executions/
+// self_healing_controls الحقيقية حصراً — لا اختلاق أرقام إن كانت الجداول
+// فارغةً (كل شيءٍ يبدأ في Shadow Mode، فقد لا توجد بياناتٌ بعد). ═══
+
+// "أي Playbook استُخدم؟" / "كم عملية Self-Healing تمّت؟" اليوم.
+export async function get_self_healing_summary(admin: any, hours = 24) {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const { data } = await admin
+    .from("repair_executions")
+    .select("repair_id,playbook_id,status,mode,started_at,escalation_reason")
+    .gte("started_at", since)
+    .order("started_at", { ascending: false })
+    .limit(200);
+  const rows = data || [];
+  const would_auto_heal = rows.filter((r: any) => r.status === "WOULD_AUTO_HEAL").length;
+  const succeeded = rows.filter((r: any) => r.status === "SUCCEEDED").length;
+  const failed = rows.filter((r: any) => ["FAILED", "VERIFICATION_FAILED"].includes(r.status)).length;
+  const escalated = rows.filter((r: any) => ["ESCALATED", "PRECONDITION_FAILED", "RISK_BLOCKED", "RATE_LIMITED", "COOLDOWN_ACTIVE", "CIRCUIT_OPEN", "DISABLED"].includes(r.status)).length;
+  const circuit_open = rows.filter((r: any) => r.status === "CIRCUIT_OPEN").length;
+  const by_playbook: Record<string, number> = {};
+  for (const r of rows) by_playbook[r.playbook_id] = (by_playbook[r.playbook_id] || 0) + 1;
+  return {
+    window_hours: hours,
+    total_evaluations: rows.length,
+    would_auto_heal_shadow_mode: would_auto_heal,     // لا "إصلاحاتٍ فعلية" — كل شيءٍ Shadow اليوم
+    actual_auto_heals_executed: succeeded,             // يبقى 0 بالضرورة ما دام لا Playbook في AUTO
+    failed, escalated, circuit_breaker_triggered: circuit_open,
+    by_playbook,
+    note: rows.length ? null : "لا تقييمات Self-Healing مسجَّلة بعد في هذه النافذة الزمنية.",
+  };
+}
+
+export async function get_repair_playbooks_status(admin: any) {
+  const { data } = await admin.from("repair_playbooks")
+    .select("playbook_id,name,mode,enabled,circuit_state,risk_level,minimum_confidence,max_attempts,cooldown_minutes,affected_scope")
+    .order("playbook_id");
+  return { playbooks: data || [] };
+}
+
+// "هل يوجد Playbook متوقّف بسبب Circuit Breaker؟"
+export async function get_circuit_breaker_status(admin: any) {
+  const { data } = await admin.from("repair_playbooks")
+    .select("playbook_id,name,circuit_state,circuit_opened_at")
+    .eq("circuit_state", "OPEN");
+  return { open_circuits: data || [], any_open: !!(data && data.length) };
+}
+
+export async function get_self_healing_controls(admin: any) {
+  const { data } = await admin.from("self_healing_controls").select("*").eq("control_id", "global").maybeSingle();
+  return { controls: data || null };
+}
