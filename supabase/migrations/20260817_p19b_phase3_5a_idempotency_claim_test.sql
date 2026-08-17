@@ -14,7 +14,7 @@ BEGIN
   ) VALUES (
     'PHASE3_5A_IDEMPOTENCY_TEST_TEMP', 'LOW', 'DETECTED', 'test-component',
     'PHASE3_5A test incident (self-rollback, never persisted)', '{}'::jsonb,
-    90, now(), now(), now(), 'phase3_5a_validation'
+    'VERIFIED', now(), now(), now(), 'phase3_5a_validation'
   ) RETURNING id INTO v_incident_id;
 
   -- الإدراج الأول: يجب أن ينجح
