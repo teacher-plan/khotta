@@ -33,6 +33,7 @@ import { parseAiJson } from "../_shared/aiJson.ts";
 import { startRun, finishRun } from "../_shared/agentRun.ts";
 import { collectEvidence, ruleBasedDiagnose, assessRisk } from "../_shared/opsDiagnosis.ts";
 import { ACTIONS, isKnownAction } from "../_shared/opsActionRegistry.ts";
+import { evaluateShadow, dryRun, autoModeGateStatus } from "../_shared/opsPlaybooks.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -212,8 +213,137 @@ Deno.serve(async (req) => {
         completed_at: new Date().toISOString(),
       }).eq("diagnosis_id", diagRow.diagnosis_id).select("*").maybeSingle();
 
+      // ═══ Phase 3 — القسم 17: Playbook Match → Preconditions → Risk →
+      // Permission → (لا تنفيذ AUTO في هذه المرحلة) — تقييمٌ Shadow Mode
+      // فقط، مسجَّلٌ في repair_executions بصرف النظر عن النتيجة. لا يُشغَّل
+      // إلا حين اكتمل تشخيصٌ فعلي (COMPLETED/LOW_CONFIDENCE) بأدلّة agent_runs
+      // حقيقية — لا تقييم على تشخيصاتٍ فاشلة. ═══
+      let selfHealing: Record<string, unknown> | null = null;
+      try {
+        const runsItem = (evidence.find((e) => e.source === "get_recent_agent_runs")?.value) as any;
+        if (runsItem && runsItem.agent_id) {
+          const decision = await evaluateShadow(
+            admin,
+            { diagnosis_id: diagRow.diagnosis_id, incident_id: incidentId, confidence: updated?.confidence ?? finalDiag.confidence, recommended_action_id: updated?.recommended_action_id ?? null, risk_level: updated?.risk_level ?? null },
+            { component: incident.component, source_agent: incident.source_agent },
+            { agent_id: runsItem.agent_id, consecutive_failures: runsItem.consecutive_failures || 0, distinct_errors: runsItem.distinct_errors || [], last_success_at: runsItem.last_success_at || null },
+          );
+          if (decision.playbook_id) {
+            const { data: repRow } = await admin.from("repair_executions").insert({
+              incident_id: incidentId, diagnosis_id: diagRow.diagnosis_id, playbook_id: decision.playbook_id,
+              action_id: null, agent_id: runsItem.agent_id, mode: "SHADOW", status: decision.status,
+              evidence_snapshot: { evidence, diagnosis: updated }, preconditions_result: decision.preconditions,
+              blast_radius: decision.blast_radius, confidence_at_decision: updated?.confidence ?? finalDiag.confidence ?? null,
+              escalation_reason: decision.status !== "WOULD_AUTO_HEAL" ? (decision.reason || null) : null,
+              actor: "system_self_healing_engine",
+            }).select("*").maybeSingle();
+            selfHealing = { decision: decision.status, reason: decision.reason || null, playbook_id: decision.playbook_id, repair_id: repRow?.repair_id || null };
+          } else {
+            selfHealing = { decision: decision.status, reason: decision.reason || null, playbook_id: null };
+          }
+        }
+      } catch (e) {
+        // فشلٌ في محرّك التقييم لا يُفسِد التشخيص نفسه — يُسجَّل فقط، القسم
+        // 4: عدم القدرة على التقييم يعني بالضرورة عدم الإصلاح الآلي.
+        selfHealing = { decision: "EVALUATION_ERROR", reason: String(e) };
+      }
+
       await finishRun(admin, run, { status: "SUCCESS", resultSummary: `تشخيصٌ ${finalDiag.status} للحادثة ${incidentId}` });
-      return json({ diagnosis: updated, recommended_action: actionRow, recommended_action_params: finalDiag.actionParams });
+      return json({ diagnosis: updated, recommended_action: actionRow, recommended_action_params: finalDiag.actionParams, self_healing: selfHealing });
+    }
+
+    // ═══ Phase 3 — list_playbooks: سجلّ Playbooks للوحة الإدارة ═══
+    if (action === "list_playbooks") {
+      const { data } = await admin.from("repair_playbooks").select("*").order("playbook_id");
+      const { data: ctl } = await admin.from("self_healing_controls").select("*").eq("control_id", "global").maybeSingle();
+      return json({ playbooks: data || [], controls: ctl || null });
+    }
+
+    // ═══ Phase 3 — list_repair_executions: سجلّ التقييمات/التنفيذات ═══
+    if (action === "list_repair_executions") {
+      const limit = Math.min(Number(b.limit) || 30, 100);
+      const { data } = await admin.from("repair_executions").select("*").order("started_at", { ascending: false }).limit(limit);
+      return json({ executions: data || [] });
+    }
+
+    // ═══ Phase 3 — القسم 13: Dry Run — يعرض الخطوة المتوقَّعة بلا تنفيذ ═══
+    if (action === "dry_run_playbook") {
+      if (auth.isService) return unauthorized(cors);
+      const playbookId = String(b.playbook_id || "");
+      const { data: pb } = await admin.from("repair_playbooks").select("*").eq("playbook_id", playbookId).maybeSingle();
+      if (!pb) return json({ error: "playbook_not_found" }, 404);
+      const result = dryRun(pb as any);
+      const { data: repRow } = await admin.from("repair_executions").insert({
+        playbook_id: playbookId, mode: "DRY_RUN", status: "DRY_RUN_LOGGED",
+        evidence_snapshot: {}, preconditions_result: [], blast_radius: { scope: pb.affected_scope, target: "dry_run" },
+        actor: actorLabel,
+      }).select("*").maybeSingle();
+      return json({ dry_run: result, repair_id: repRow?.repair_id || null });
+    }
+
+    // ═══ Phase 3 — القسم 16: قائمة تحقّق بوّابة الانتقال إلى AUTO (قراءةٌ
+    // فقط، لا تُغيِّر mode أبداً) ═══
+    if (action === "auto_mode_gate_status") {
+      const playbookId = String(b.playbook_id || "");
+      const gate = await autoModeGateStatus(admin, playbookId);
+      return json({ playbook_id: playbookId, gate });
+    }
+
+    // ═══ Phase 3 — القسم 12/32: التحكّم البشري — تعطيل/تفعيل Playbook،
+    // إيقاف/استئناف عام أو لوكيلٍ بعينه. المشرف البشري حصراً — لا مفتاح
+    // الخدمة. لا مسار هنا يمكنه رفع risk_level أو تجاوز بوّابة الموافقة
+    // (القسم 32) — فقط mode/enabled/circuit_state وself_healing_controls. ═══
+    if (action === "set_playbook_mode") {
+      if (auth.isService) return unauthorized(cors);
+      const playbookId = String(b.playbook_id || "");
+      const mode = String(b.mode || "");
+      if (!["SHADOW", "PAUSED", "DISABLED"].includes(mode)) {
+        // AUTO ممنوعٌ عمداً من هذا المسار في Phase 3 — القسم 15: لا تفعيل
+        // AUTO عبر أي واجهةٍ في هذه المرحلة، بشرياً كان الطلب أم غيره.
+        return json({ error: "auto_mode_not_available_in_phase3", message: "تفعيل وضع AUTO غير متاحٍ في هذه المرحلة لأي Playbook — قرارٌ بشريٌّ محجوزٌ لمرحلةٍ لاحقة صراحةً." }, 403);
+      }
+      const { data: updated } = await admin.from("repair_playbooks").update({ mode, updated_at: new Date().toISOString() }).eq("playbook_id", playbookId).select("*").maybeSingle();
+      return json({ playbook: updated });
+    }
+    if (action === "resume_circuit_breaker") {
+      if (auth.isService) return unauthorized(cors);
+      const playbookId = String(b.playbook_id || "");
+      const { data: updated } = await admin.from("repair_playbooks").update({ circuit_state: "CLOSED", circuit_opened_at: null, updated_at: new Date().toISOString() }).eq("playbook_id", playbookId).select("*").maybeSingle();
+      return json({ playbook: updated });
+    }
+    if (action === "set_self_healing_global") {
+      if (auth.isService) return unauthorized(cors);
+      const enabled = !!b.enabled;
+      const reason = b.reason ? String(b.reason).slice(0, 500) : null;
+      const { data: updated } = await admin.from("self_healing_controls").update({
+        self_healing_enabled: enabled, disabled_reason: enabled ? null : reason, updated_by: actorLabel, updated_at: new Date().toISOString(),
+      }).eq("control_id", "global").select("*").maybeSingle();
+      return json({ controls: updated });
+    }
+    if (action === "set_agent_self_healing") {
+      if (auth.isService) return unauthorized(cors);
+      const agentId = String(b.agent_id || "");
+      const enable = !!b.enabled;   // true = يُسمح بالإصلاح الذاتي لهذا الوكيل، false = يُعطَّل تحديداً
+      const { data: ctl } = await admin.from("self_healing_controls").select("*").eq("control_id", "global").maybeSingle();
+      const current: string[] = (ctl?.disabled_agents || []) as string[];
+      const next = enable ? current.filter((a) => a !== agentId) : [...new Set([...current, agentId])];
+      const { data: updated } = await admin.from("self_healing_controls").update({
+        disabled_agents: next, updated_by: actorLabel, updated_at: new Date().toISOString(),
+      }).eq("control_id", "global").select("*").maybeSingle();
+      return json({ controls: updated });
+    }
+    // القسم 32: تصعيدٌ إجباري — يدويٌّ من المشرف على تنفيذٍ/تقييمٍ قائم.
+    if (action === "force_escalate_repair") {
+      if (auth.isService) return unauthorized(cors);
+      const repairId = String(b.repair_id || "");
+      const reason = String(b.reason || "تصعيدٌ يدويٌّ من المشرف");
+      const { data: rep } = await admin.from("repair_executions").select("*").eq("repair_id", repairId).maybeSingle();
+      if (!rep) return json({ error: "repair_not_found" }, 404);
+      const { data: updated } = await admin.from("repair_executions").update({
+        status: "ESCALATED", escalation_reason: reason, completed_at: new Date().toISOString(),
+      }).eq("repair_id", repairId).select("*").maybeSingle();
+      if (rep.incident_id) await admin.from("ops_incidents").update({ status: "ESCALATED" }).eq("id", rep.incident_id);
+      return json({ execution: updated });
     }
 
     // ═══ request_action — المسار الوحيد للكوبايلوت/المشرف لطلب تنفيذ.
