@@ -58,6 +58,12 @@ Deno.serve(async (req) => {
   );
   let run = { runId: null as string | null, correlationId: null as string | null, startedAt: Date.now() };
 
+  // manual=true (أمر /رصيد من تلغرام) يُرسل الملخّص دوماً. التشغيلة
+  // المجدولة (كل ٦ ساعات) لم تعد تُرسل إلا إن وُجدت حالةٌ حرجة فعلاً
+  // (استهلاكٌ يتجاوز ٨٠٪ لمعلّمةٍ ما) — لا أربع رسائل يومياً بلا داعٍ.
+  const reqBody = await req.json().catch(() => ({}));
+  const manual = reqBody?.manual === true;
+
   try {
     console.log("📊 بدء مراقبة الرصيد...");
     run = await startRun(sb, "credit-monitor", "CRON");
@@ -97,7 +103,10 @@ Deno.serve(async (req) => {
     }
 
     if (!usageRows || usageRows.length === 0) {
-      const sent = await sendTelegram("📊 <b>ملخص الرصيد اليومي</b>\n━━━━━━━━━━━━━━━━━━━━━━\nلا يوجد استهلاك مسجّل لهذا الشهر بعد.");
+      // "لا استهلاك" ليست خبراً يستحقّ إشعاراً — تُرسَل عند الطلب فقط.
+      const sent = manual
+        ? await sendTelegram("📊 <b>ملخص الرصيد</b>\n━━━━━━━━━━━━━━━━━━━━━━\nلا يوجد استهلاك مسجّل لهذا الشهر بعد.")
+        : { ok: true as const, error: undefined as string | undefined };
       await finishRun(sb, run, { status: "SUCCESS", resultSummary: "لا استهلاك مسجَّل هذا الشهر", recordsRead: 0, error: sent.ok ? undefined : sent.error });
       return json({ ok: true, message: "No usage this month" });
     }
@@ -174,15 +183,22 @@ Deno.serve(async (req) => {
       [{ text: "⏰ إعادة الآن", callback_data: "credit:reschedule" }],
     ];
 
-    const result = await sendTelegram(messageText, { inline_keyboard: buttons });
+    // يُرسَل عند الطلب الصريح، أو تلقائياً فقط إن وُجدت حالةٌ حرجة فعلاً
+    // (>٨٠٪) — وهي وحدها ما يستحقّ مقاطعتك. غير ذلك يُحفَظ للوحة التشغيل.
+    const shouldPush = manual || critical.length > 0;
+    const result = shouldPush
+      ? await sendTelegram(messageText, { inline_keyboard: buttons })
+      : { ok: true as const, message_id: null as number | null, error: undefined as string | undefined };
+
+    // الحفظ دوماً — لوحة التشغيل تعرض آخر ملخّصٍ حتى لو لم يُرسَل.
+    await sb.from("agent_messages").insert({
+      message_id: `credit-${result.message_id ?? "saved"}-${Date.now()}`,
+      agent_name: "credit-monitor",
+      message_text: messageText,
+      telegram_message_id: shouldPush && result.ok ? result.message_id : null,
+    });
 
     if (result.ok) {
-      await sb.from("agent_messages").insert({
-        message_id: `credit-${result.message_id}-${Date.now()}`,
-        agent_name: "credit-monitor",
-        message_text: messageText,
-        telegram_message_id: result.message_id,
-      });
 
       await sb.from("agent_schedules").update({
         last_run: new Date().toISOString(),

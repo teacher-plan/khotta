@@ -61,7 +61,11 @@ async function checkEdgeFunctions(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({}),
-          signal: AbortSignal.timeout(5000), // timeout بـ 5 ثوانٍ
+          // ٥ ثوانٍ كانت أقصر من "البدء البارد" (cold start) الطبيعي لدوالّ
+          // الحافة — فكانت دوالٌّ سليمةٌ تماماً تُبلَّغ كـ"حرجة" بـTimeoutError
+          // كل بضع دورات. ٢٠ ثانية تتجاوز البدء البارد المعتاد، فيبقى
+          // TimeoutError دلالةً على عطلٍ حقيقي لا على بطءٍ عابر.
+          signal: AbortSignal.timeout(20000),
         }
       );
       const duration = Date.now() - start;
@@ -254,6 +258,22 @@ async function processHealthResults(
   // إرسال تنبيهات طارئة فقط
   if (criticalIssues.length > 0) {
     for (const issue of criticalIssues) {
+      // منع التكرار — مبنيٌّ على الزمن لا على حالة الحادثة. المحاولة
+      // السابقة (فحص ops_incidents المفتوحة) لم تكفِ لأن العطل المتقطّع
+      // (timeout ثم تعافٍ ثم timeout) يجعل الحادثة تُغلَق تلقائياً بين
+      // كل ظهورٍ وآخر، فيُعَدّ كلُّ ظهورٍ "جديداً" ويُرسَل تنبيهٌ من جديد.
+      // القاعدة الآن: تنبيهٌ واحدٌ لكل مكوّنٍ خلال ساعة، مهما تذبذب.
+      const alertCooldownSince = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: recentAlert } = await sb
+        .from("emergency_alerts")
+        .select("id")
+        .eq("affected_component", issue.component)
+        .gte("created_at", alertCooldownSince)
+        .limit(1)
+        .maybeSingle();
+
+      // السجلّ يُكتَب دوماً (أثرٌ تدقيقيٌّ كامل)، والإرسال وحده هو المحكوم
+      // بفترة التهدئة — فلا نفقد أي معلومةٍ من تاريخ الأعطال.
       await sb.from("emergency_alerts").insert({
         alert_type: issue.component.split(":")[1],
         severity: issue.severity,
@@ -263,18 +283,7 @@ async function processHealthResults(
         action_required: getActionForComponent(issue.component, issue.error),
       });
 
-      // منع التكرار: هذا الفحص يعمل كل ٥ دقائق — إن كانت نفس المشكلة
-      // مفتوحةً بالفعل في ops_incidents (لم تُحلّ بعد) فهذا تنبيهٌ متكرّرٌ
-      // لمشكلةٍ معروفة سلفاً، لا مشكلةٍ جديدة. نُرسل فقط عند الظهور الأول،
-      // أو عند عودة المشكلة بعد أن كانت قد حُلّت — لا في كل دورة فحصٍ لاحقة.
-      const { data: existingIncident } = await sb
-        .from("ops_incidents")
-        .select("id")
-        .eq("dedup_key", issue.component)
-        .neq("status", "RESOLVED")
-        .limit(1)
-        .maybeSingle();
-      if (existingIncident) continue;
+      if (recentAlert) continue; // نُبِّه عن هذا المكوّن خلال الساعة الماضية
 
       // إرسال تنبيه فوري عبر Telegram
       const alertMessage = `

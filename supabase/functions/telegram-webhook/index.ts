@@ -587,7 +587,28 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
-      if (isOpsBot && (text === "/مساعدة" || text === "/help" || text === "/اوامر" || text === "/أوامر")) {
+      // ملخّص الرصيد عند الطلب — التشغيلة كل ٦ ساعات لم تعد تُرسل إلا عند
+      // وجود حالةٍ حرجة فعلية (>٨٠٪).
+      if (isOpsBot && (text === "/رصيد" || text === "/credit")) {
+        await sendTelegramOps("⏳ جاري تجهيز ملخّص الرصيد الآن...");
+        const fnResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/credit-monitor`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ manual: true }),
+          }
+        );
+        if (!fnResponse.ok) {
+          await sendTelegramOps("❌ تعذّر تجهيز ملخّص الرصيد الآن — حاول لاحقاً.");
+        }
+        return json({ ok: fnResponse.ok });
+      }
+
+      if (isOpsBot && (text === "/مساعدة" || text === "/مساعد" || text === "/help" || text === "/اوامر" || text === "/أوامر" || text === "/start")) {
         await sendTelegramOps([
           "🤖 <b>أوامر بوت العمليات</b>",
           "",
@@ -597,6 +618,7 @@ Deno.serve(async (req) => {
           "🧩 /الوكلاء — حالة كل وكيلٍ وآخر تشغيلة له",
           "💳 /التكلفة — تكلفة الذكاء الاصطناعي هذا الشهر",
           "💾 /السعة — امتلاء قاعدة البيانات ومعدّل نموّها",
+          "💰 /رصيد — استهلاك المعلّمات ومن تجاوزت حدّها",
           "📁 /ملفات — ملخّص معالجة الملفات (يُرسَل الآن فعلياً)",
           "📈 /ملخص — الملخّص اليومي الكامل (يُرسَل الآن فعلياً)",
           "",
