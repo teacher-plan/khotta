@@ -2,7 +2,35 @@
 // عندما يضغط المستخدم على زر، Telegram ترسل callback هنا
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendTelegram, editTelegram, sendTelegramOps } from "../_shared/telegram.ts";
+import { sendTelegram, editTelegram, sendTelegramOps, setOpsBotCommands } from "../_shared/telegram.ts";
+
+// ═══ قائمة أوامر بوت العمليات الأصلية (زرّ "/" في تلغرام) ═══
+// قيدٌ من تلغرام: اسم الأمر يقبل حروفاً إنجليزية صغيرة وأرقاماً و_ فقط
+// (لا عربية) — فالقائمة تعرض الأسماء الإنجليزية بوصفٍ عربي، بينما تبقى
+// المرادفات العربية (/الحالة، /الحوادث…) تعمل كما هي عند كتابتها يدوياً.
+const OPS_BOT_COMMANDS = [
+  { command: "help", description: "📋 عرض كل الأوامر المتاحة" },
+  { command: "status", description: "📊 ملخّصٌ شامل + الإصلاح الذاتي (٢٤ ساعة)" },
+  { command: "health", description: "🩺 حالة النظام الآن — أعطالٌ أو تحذيرات" },
+  { command: "incidents", description: "🚨 الحوادث المفتوحة حالياً وخطورتها" },
+  { command: "agents", description: "🧩 حالة كل وكيلٍ وآخر تشغيلة له" },
+  { command: "cost", description: "💳 تكلفة الذكاء الاصطناعي هذا الشهر" },
+  { command: "capacity", description: "💾 امتلاء قاعدة البيانات ومعدّل نموّها" },
+  { command: "credit", description: "💰 استهلاك المعلّمات ومن تجاوزت حدّها" },
+  { command: "files", description: "📁 ملخّص معالجة الملفات" },
+  { command: "summary", description: "📈 الملخّص اليومي الكامل" },
+];
+
+// تُسجَّل مرّةً واحدة لكل نسخةٍ حيّة من الدالّة (لا في كل رسالة): العملية
+// idempotent وخفيفة، وتُطلَق بلا await فلا تُؤخّر الردّ ولا تُسقطه إن فشلت.
+let opsCommandsRegistered = false;
+function ensureOpsCommandsRegistered(): void {
+  if (opsCommandsRegistered) return;
+  opsCommandsRegistered = true;
+  setOpsBotCommands(OPS_BOT_COMMANDS)
+    .then((r) => { if (!r.ok) console.error("setMyCommands فشل:", r.error); })
+    .catch((e) => console.error("setMyCommands رمى:", String(e)));
+}
 
 // ═══ Phase 1.5 — القسم 3: تحقّق X-Telegram-Bot-Api-Secret-Token ═══
 // تلغرام يرسل هذا الترويسة مع كل تحديث webhook حين يُضبَط secret_token عند
@@ -375,6 +403,9 @@ Deno.serve(async (req) => {
     // آخر لتمييز مصدر التحديث لأن حمولة Telegram نفسها لا تحمل هوية البوت.
     const isOpsBot = new URL(req.url).searchParams.get("bot") === "ops";
 
+    // تسجيل قائمة الأوامر تلقائياً — بلا انتظار، فلا أثر على زمن الرد.
+    if (isOpsBot) ensureOpsCommandsRegistered();
+
     // استقبال callback من Telegram
     if (body.callback_query) {
       const query = body.callback_query;
@@ -562,7 +593,7 @@ Deno.serve(async (req) => {
       // سيصلحه؟" و"لماذا لم يُصلَح هذا؟" المُبنيَّان مسبقاً، لكن من تلغرام
       // مباشرة. قراءةٌ فقط دوماً — لا تنفيذ إطلاقاً مهما كان نصّ السؤال
       // (الكوبايلوت نفسه يرفض أي طلب تنفيذٍ صراحةً، انظر fixIntent أعلاه).
-      if (isOpsBot && text === "/تقرير") {
+      if (isOpsBot && (text === "/تقرير" || text === "/status")) {
         await askCopilotAndReply("لخّص حالة النظام الآن، وما الذي كان الإصلاح الذاتي سيُصلحه خلال آخر 24 ساعة؟");
         return json({ ok: true });
       }
@@ -612,15 +643,20 @@ Deno.serve(async (req) => {
         await sendTelegramOps([
           "🤖 <b>أوامر بوت العمليات</b>",
           "",
-          "📊 /تقرير — ملخّصٌ عامٌّ شامل + الإصلاح الذاتي آخر 24 ساعة",
-          "🩺 /الحالة — حالة النظام الآن (أعطالٌ حرجة/تحذيرات)",
-          "🚨 /الحوادث — الحوادث المفتوحة حالياً وخطورتها",
-          "🧩 /الوكلاء — حالة كل وكيلٍ وآخر تشغيلة له",
-          "💳 /التكلفة — تكلفة الذكاء الاصطناعي هذا الشهر",
-          "💾 /السعة — امتلاء قاعدة البيانات ومعدّل نموّها",
-          "💰 /رصيد — استهلاك المعلّمات ومن تجاوزت حدّها",
-          "📁 /ملفات — ملخّص معالجة الملفات (يُرسَل الآن فعلياً)",
-          "📈 /ملخص — الملخّص اليومي الكامل (يُرسَل الآن فعلياً)",
+          "<i>اضغط زرّ «/» بجانب مربّع الكتابة لاختيار أي أمرٍ من القائمة</i>",
+          "",
+          "📊 /status — ملخّصٌ شامل + الإصلاح الذاتي (٢٤ ساعة)",
+          "🩺 /health — حالة النظام الآن (أعطالٌ حرجة/تحذيرات)",
+          "🚨 /incidents — الحوادث المفتوحة حالياً وخطورتها",
+          "🧩 /agents — حالة كل وكيلٍ وآخر تشغيلة له",
+          "💳 /cost — تكلفة الذكاء الاصطناعي هذا الشهر",
+          "💾 /capacity — امتلاء قاعدة البيانات ومعدّل نموّها",
+          "💰 /credit — استهلاك المعلّمات ومن تجاوزت حدّها",
+          "📁 /files — ملخّص معالجة الملفات",
+          "📈 /summary — الملخّص اليومي الكامل",
+          "",
+          "<b>المرادفات العربية</b> (تعمل بالكتابة، لكنّ تلغرام لا يسمح بعرضها في القائمة):",
+          "/تقرير · /الحالة · /الحوادث · /الوكلاء · /التكلفة · /السعة · /رصيد · /ملفات · /ملخص",
           "",
           "أو اكتب أي سؤالٍ بأسلوبك الخاص مباشرةً — مثلاً:",
           "«لماذا لم يُصلَح النظام مشكلة كذا؟»",

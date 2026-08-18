@@ -121,3 +121,25 @@ export function sendTelegramOps(message: string, options?: TelegramOptions) {
 export function editTelegramOps(messageId: number, message: string, options?: TelegramOptions) {
   return editVia(Deno.env.get("TELEGRAM_BOT_TOKEN_OPS"), Deno.env.get("TELEGRAM_CHAT_ID_OPS"), messageId, message, options);
 }
+
+// ── قائمة الأوامر الأصلية في تلغرام (زرّ "/" بجانب مربّع الكتابة) ──
+// setMyCommands يُسجّل القائمة لدى تلغرام نفسه، فتظهر للمستخدم قائمةً
+// قابلةً للنقر بدل حفظ الأوامر وكتابتها يدوياً. العملية idempotent —
+// إعادة استدعائها بنفس القائمة لا تُنشئ شيئاً جديداً، فآمنٌ تكرارها.
+export async function setOpsBotCommands(
+  commands: Array<{ command: string; description: string }>,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN_OPS");
+  if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN_OPS غير مضبوط" };
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands }),
+    });
+    const data = await response.json() as { ok: boolean; description?: string };
+    return { ok: data.ok, error: data.description };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+}
