@@ -1707,6 +1707,21 @@ body:has(#page-fahim.active){overflow:hidden}
 .comm-msg .del{background:none;border:none;color:inherit;opacity:.6;font-size:9.5px;cursor:pointer;font-family:inherit;font-weight:800;margin-inline-start:8px}
 .comm-empty{text-align:center;color:var(--muted);font-size:13px;padding:36px 12px}
 .comm-inputrow{position:fixed;bottom:0;inset-inline:0;z-index:60;background:var(--bg);padding:10px 18px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 14px rgba(48,24,0,.08)}
+/* ═══ أسطحٌ شفّافة (Apple §12: المحتوى يمرّ تحت الكروم لا خلف جدار) ═══
+   داخل @supports حصراً: أي متصفّحٍ لا يدعم التمويه يبقى على الخلفية
+   المصمتة الحالية بلا أي تغيير. ويُلغى التمويه تلقائياً لمن طلب تقليل
+   الشفافية، أو على الأجهزة التي لا تدعم color-mix. */
+@supports (backdrop-filter:blur(1px)) and (background:color-mix(in srgb,red 50%,transparent)){
+  .comm-inputrow{
+    background:color-mix(in srgb,var(--bg) 76%,transparent);
+    backdrop-filter:blur(18px) saturate(180%);
+    -webkit-backdrop-filter:blur(18px) saturate(180%);
+  }
+  @media (prefers-reduced-transparency:reduce){
+    .comm-inputrow{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+  }
+}
+
 .comm-inputrow-in{display:flex;gap:9px;align-items:flex-end;max-width:1100px;margin:0 auto}
 .comm-inputrow textarea{flex:1;resize:none;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:11px 16px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;max-height:90px}
 .comm-inputrow textarea:focus{border-color:var(--olive)}

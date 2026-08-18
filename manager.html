@@ -1599,6 +1599,21 @@ body.lp .page.active{animation:lpPage .25s ease}
 .eg-export,.eg-regen{flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
 .eg-export{background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;border:none;}
 .eg-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:linear-gradient(180deg,var(--card),var(--surface));border:1px solid var(--border);border-radius:12px 12px 0 0;border-bottom:none;padding:8px 10px;position:sticky;top:56px;z-index:40;box-shadow:0 3px 10px rgba(0,0,0,.08);}
+/* ═══ أسطحٌ شفّافة (Apple §12: المحتوى يمرّ تحت الكروم لا خلف جدار) ═══
+   داخل @supports حصراً: أي متصفّحٍ لا يدعم التمويه يبقى على الخلفية
+   المصمتة الحالية بلا أي تغيير. ويُلغى التمويه تلقائياً لمن طلب تقليل
+   الشفافية، أو على الأجهزة التي لا تدعم color-mix. */
+@supports (backdrop-filter:blur(1px)) and (background:color-mix(in srgb,red 50%,transparent)){
+  .eg-toolbar{
+    background:color-mix(in srgb,var(--surface) 76%,transparent);
+    backdrop-filter:blur(18px) saturate(180%);
+    -webkit-backdrop-filter:blur(18px) saturate(180%);
+  }
+  @media (prefers-reduced-transparency:reduce){
+    .eg-toolbar{background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none}
+  }
+}
+
 .egt-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:46px;height:42px;padding:3px 6px;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--text);cursor:pointer;line-height:1;user-select:none;position:relative;transition:background .12s,border-color .12s;}
 .egt-ic{font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;height:18px;}
 .egt-lbl{font-size:8.5px;color:var(--muted);font-weight:600;white-space:nowrap}
