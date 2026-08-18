@@ -83,6 +83,20 @@ button,[role="button"]{-webkit-tap-highlight-color:transparent;touch-action:mani
 button:active,[role="button"]:active{scale:.97}
 button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 @media (prefers-reduced-motion:reduce){button:active,[role="button"]:active{scale:1}}
+/* ═══ ظهور النوافذ (Apple §12: تتجسّد لا تظهر فجأةً) ═══
+   السطح يكبر ويصعد قليلاً مع تلاشٍ في آنٍ واحد — منحنى تباطؤٍ بلا ارتداد،
+   لأن الارتداد يليق بما دفعته يدك لا بما ظهر من تلقائه (Apple §4).
+   تعمل تلقائياً عند تحوّل الحاوية من display:none إلى ظاهرة.
+   scale/translate خصائصُ مستقلّة — لا تُلغي أي transform قائم.
+   ولمن طلب تقليل الحركة: تلاشٍ فقط بلا أي إزاحة. */
+@keyframes khScrimIn{from{opacity:0}to{opacity:1}}
+@keyframes khSurfaceIn{from{opacity:0;scale:.94;translate:0 10px}to{opacity:1;scale:1;translate:0 0}}
+.kt-modal-bg:not(.hidden){animation:khScrimIn .18s ease-out}
+.kt-modal-bg:not(.hidden) .kt-modal{animation:khSurfaceIn .3s cubic-bezier(.32,.72,0,1)}
+@media (prefers-reduced-motion:reduce){
+  .kt-modal-bg:not(.hidden) .kt-modal{animation:khScrimIn .2s ease-out}
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    KHOTTA ADMIN DESIGN SYSTEM — PHASE C.1 (Design Tokens)
