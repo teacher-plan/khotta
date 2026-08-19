@@ -167,6 +167,14 @@ body.inapp #c1-user{display:flex}
 /* ── الإشعارات ── */
 #c1-notif-btn{position:fixed;top:calc(12px + env(safe-area-inset-top));inset-inline-end:64px;z-index:210;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(48,24,0,.14);color:var(--ink)}
 body.inapp #c1-notif-btn{display:flex}
+/* حلقة الرصيد الموحّدة — نسبةٌ واحدة بجانب أيقونتي الحساب والإشعارات، بدل
+   حلقتين منفصلتين (صور/نصوص) كانتا مدفونتين داخل الاستوديو والمساعد. */
+#c1-budget-btn{position:fixed;top:calc(12px + env(safe-area-inset-top));inset-inline-end:114px;z-index:210;width:44px;height:44px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0}
+body.inapp #c1-budget-btn{display:flex}
+#c1-budget-btn .qring{width:44px;height:44px}
+#c1-budget-btn .qring svg{width:44px;height:44px}
+#c1-budget-btn .qring .qr-t{stroke:var(--border)}
+#c1-budget-btn .qring .qr-n{font-size:11px}
 #c1-notif-badge{position:absolute;top:-3px;inset-inline-end:-3px;background:var(--red-d);color:#fff;font-size:9.5px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 #c1-notif-panel{position:fixed;top:62px;inset-inline-end:14px;z-index:220;background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(320px,88vw);max-height:70vh;overflow-y:auto;box-shadow:0 10px 30px rgba(48,24,0,.2);display:none}
 @media(max-width:400px){#c1-notif-panel{inset-inline-end:8px;width:min(300px,92vw)}}
@@ -1537,6 +1545,7 @@ body:has(#page-fahim.active){overflow:hidden}
      نفسه، مع تقليل الهامش الجانبي فقط ليناسب الشاشة الضيقة. */
   #c1-user{top:calc(8px + env(safe-area-inset-top));inset-inline-end:8px}
   #c1-notif-btn{top:calc(8px + env(safe-area-inset-top));inset-inline-end:56px}
+  #c1-budget-btn{top:calc(8px + env(safe-area-inset-top));inset-inline-end:104px}
   #c1-notif-panel{top:52px}
 }
 .beh-file-summary{display:flex;gap:10px;margin-bottom:14px}
@@ -2114,6 +2123,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 </div>
 <div id="cy-busy-light" role="status"><div class="cbl-spin"></div><span id="cy-busy-light-txt"></span></div>
 <button id="c1-corner" onclick="c1Board(true)" title="التنقل بين الأقسام" aria-label="التنقل"></button>
+<button id="c1-budget-btn" onclick="qhelpOpen()" title="رصيد الذكاء الاصطناعي" aria-label="رصيد الذكاء الاصطناعي"></button>
 <button id="c1-notif-btn" onclick="c1NotifToggle()" title="الإشعارات" aria-label="الإشعارات">
   <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .8-.3 1.6-.8 2.2L4 15.5V17h16v-1.5l-1.2-1.7c-.5-.6-.8-1.4-.8-2.2V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/></svg>
   <span id="c1-notif-badge" class="hidden">0</span>
@@ -2385,11 +2395,9 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 <div id="qhelp-bg" onclick="if(event.target===this)qhelpClose()">
   <div class="card">
     <h3>ما هذا الرصيد؟</h3>
-    <p>رصيدُ استخدامك لخدمات الذكاء الاصطناعي، <b>ويتجدّد كاملاً مطلع كل شهر</b>.</p>
-    <p style="margin-top:8px">رصيدان منفصلان لا يقتطع أحدهما من الآخر:</p>
-    <p style="margin-top:4px">🖼️ <b>الصور</b> — كل إنفوجرافيك تولّدينه، وكل صورةٍ ترسمينها في المحادثة.</p>
-    <p style="margin-top:4px">📝 <b>الطلبات النصّية</b> — التحضير، وقراءة صفحات الدرس، ومحتوى الألعاب، ورسائل المحادثة.</p>
+    <p>رصيدُ استخدامك لخدمات الذكاء الاصطناعي طوال الفصل الدراسي — <b>رصيدٌ واحد</b> تُنفقينه بحرّية على ما تحتاجينه: تحضير، ألعاب، إنفوجرافيك، محادثة، أو بحث. لا حدود منفصلة لكل نوع.</p>
     <p style="margin-top:8px;opacity:.85">وما تأخذينه جاهزاً مما حضّرته زميلاتك <b>لا يُخصم من رصيدك إطلاقاً</b> — فابحثي في «المشترك» قبل التوليد.</p>
+    <p style="margin-top:8px;opacity:.85">إن انتهى رصيدكِ، تواصلي مع فريق الدعم للحصول على المزيد.</p>
     <button class="c1-mbtn go" onclick="qhelpClose()">حسناً</button>
   </div>
 </div>
@@ -2407,7 +2415,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 
 <div class="page" id="page-studio"><div class="wrap">
   <div class="c1-pagehead"><div class="tag">الاستوديو</div><h1>ألعاب متقدمة وإنفوجرافيك بالذكاء الاصطناعي</h1></div>
-  <div id="studio-quota" style="text-align:center;margin:-6px 0 14px"></div>
 
   <div class="c1-sel-row">
     <select class="c1-select" id="studio-grade-sel" onchange="studioSwitchGrade(Number(this.value))"></select>
@@ -2573,7 +2580,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
         </div>
       </div>
       <aside id="fhp-side">
-        <div id="fahim-quota" class="fhp-side-quota"></div>
         <div class="fhp-side-head">محادثاتي السابقة
           <span style="display:flex;gap:5px;align-items:center">
             <button class="fh-hbtn fh-delall" onclick="fhDelAllChats()" title="حذف كل المحادثات">حذف الكل</button>
@@ -3351,7 +3357,7 @@ function c1Go(id){
   if(id==='plan')planRender();
   if(id==='students')starRender();
   if(id==='reserve')rsRender();
-  if(id==='fahim'){fhRender();fhHistory();qChip('fahim-quota','text');}
+  if(id==='fahim'){fhRender();fhHistory();}
   // مزامنة ارتفاع المحادثة عند كل تنقّل: الدخول يضبط --vvh، والخروج يمسحه
   // فلا يبقى ارتفاعٌ محسوبٌ للوحة مفاتيحَ أُغلقت مؤثّراً في قسمٍ آخر
   if(typeof fhViewportSync==='function')fhViewportSync();
@@ -3359,7 +3365,7 @@ function c1Go(id){
   if(id==='shared')shRender();
   if(id==='lib')libRender();
   if(id==='msgs')msgsRender();
-  if(id==='studio'){studioRender();qChip('studio-quota','img');}
+  if(id==='studio'){studioRender();}
 }
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -3585,6 +3591,7 @@ async function afterAuth(session){
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
+  khBudgetRing();
 }
 /* ══ إقلاع وضع التجربة ══
    بيانات معلمةٍ وشعبةٍ وهمية بأسماء عُمانية. لا تسجيلَ دخول، ولا اتصالَ
@@ -3734,7 +3741,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='0b3409d';
+const KH_BUILD='b8e90d0';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -3792,69 +3799,52 @@ function acctOpen(){
   if(bd)bd.innerHTML='نسخة <bdi dir="ltr">'+escHtml(KH_BUILD)+'</bdi>';
   document.getElementById('acct-modal').classList.add('open');
 }
-// عدّاد الرصيد. المعلّمة كانت تكتشف الحدّ حين تصطدم به فيُرفض توليدها بلا
-// سابق إنذار؛ العدّاد يجعلها توزّع رصيدها على الشهر بنفسها. ومكانه الطبيعيّ
-// داخل القسم الذي يستهلكه، لا مدفوناً في إعدادات الحساب حيث لا يُرى وقت
-// الحاجة إليه: الصور في الاستوديو، والنصّ عند المحادثة.
-let _khQuota=null,_khQuotaAt=0;
-async function khQuota(force){
-  if(!force&&_khQuota&&Date.now()-_khQuotaAt<60000)return _khQuota;
-  if(KH_DEMO){_khQuota={text:48,img:6,qT:300,qI:200};_khQuotaAt=Date.now();return _khQuota;}
-  const month=new Date().toISOString().slice(0,7);
-  // مهلةٌ صريحة: طلبٌ لا يعود كان يترك «يجري الحساب…» معلّقاً إلى الأبد
+// حلقة الرصيد الموحّدة — رقمٌ واحد (النسبة المتبقّية من حصّة الفصل بالريال)
+// بدل حلقتين منفصلتين (صور/نصوص) كانتا مدفونتين داخل الاستوديو والمساعد.
+// المعلّمة كانت تكتشف الحدّ حين تصطدم به فيُرفض توليدها بلا سابق إنذار؛
+// الحلقة — بجانب أيقونة الحساب دائماً، لا داخل قسمٍ بعينه — تجعلها تُدرك
+// وضعها من أي صفحة. النسبة والقرارات (لا كشف مبلغٍ بالدولار أو الريال
+// للمعلّمة) تأتي من get_my_ai_budget() — ملخَّصٌ محسوبٌ خادمياً، لا كشفَ
+// لسجلّ التكلفة الخام (انظر 20260819_p29_budget_quota.sql).
+let _khBudget=null,_khBudgetAt=0;
+async function khBudget(force){
+  if(!force&&_khBudget&&Date.now()-_khBudgetAt<60000)return _khBudget;
+  if(KH_DEMO){_khBudget={pct:32};_khBudgetAt=Date.now();return _khBudget;}
   const cap=(pr,d)=>Promise.race([Promise.resolve(pr).catch(()=>d),
     new Promise(r=>setTimeout(()=>r(d),12000))]);
-  // سياسة RLS تسمح للمعلّمة بصفوفها وحدها، فلا حاجة لترشيحٍ بالمعرّف
-  const q=await cap(sb.from('ai_usage').select('kind,count').eq('month',month),null);
-  if(!q||q.error)throw new Error('usage');
-  // للبحث حصّةٌ مستقلّة على الخادم، فعدُّه مع النصّ يُظهر الشريط أقلّ ممّا هو
-  let text=0,img=0;
-  (q.data||[]).forEach(r=>{
-    if(r.kind==='img')img+=r.count||0;
-    else if(r.kind==='text')text+=r.count||0;
-  });
-  // نفس افتراضات الخادم حرفياً (quota.ts): نصّ ٣٠٠ وصور ٨٠. كان المكتوب هنا
-  // ٢٠٠ للصور بينما يفرض الخادم ٨٠ — فلو خلا الإعداد يوماً لرأت المعلّمة
-  // شريطاً في ثلثه وهي ممنوعةٌ من التوليد أصلاً.
-  const qT=parseInt(await cap(c1Setting('quota_text'),'')||'')||300;
-  const qI=parseInt(await cap(c1Setting('quota_img'),'')||'')||80;
-  _khQuota={text,img,qT,qI};_khQuotaAt=Date.now();
-  return _khQuota;
+  const q=await cap(sb.rpc('get_my_ai_budget'),null);
+  if(!q||q.error)throw new Error('budget');
+  const row=Array.isArray(q.data)?q.data[0]:q.data;
+  _khBudget={pct:row&&typeof row.pct==='number'?row.pct:0};
+  _khBudgetAt=Date.now();
+  return _khBudget;
 }
-/* بعد كل توليدٍ ناجح: يُبطَل الخزن ويُعاد رسم الشريط الظاهر.
-   بدونه يبقى الشريط على حاله دقيقةً كاملة بعد استهلاك عشر صور — والمعلّمة
-   تحسب رصيدها وافراً وهو ينفد. */
+/* بعد كل توليدٍ ناجح: يُبطَل الخزن ويُعاد رسم الحلقة — التكلفة الفعلية
+   تُسجَّل خادمياً بعد النداء (logAiCost)، فإعادة القراءة فوراً قد لا تلحقها
+   دائماً، لكنها تلحق أغلبها ولا تترك الحلقة جامدة طوال الجلسة. */
 function qBump(){
-  _khQuota=null;_khQuotaAt=0;
-  if(document.getElementById('studio-quota'))qChip('studio-quota','img');
-  if(document.getElementById('fahim-quota'))qChip('fahim-quota','text');
+  _khBudget=null;_khBudgetAt=0;
+  khBudgetRing();
 }
 function qhelpOpen(){document.getElementById('qhelp-bg').classList.add('on');}
 function qhelpClose(){document.getElementById('qhelp-bg').classList.remove('on');}
-// شارةٌ مقتضبة: الرصيد المتبقّي وعلامة استفهامٍ تشرحه — بلا تفصيلٍ ولا أشرطة
-async function qChip(boxId,kind){
-  const box=document.getElementById(boxId);if(!box)return;
+async function khBudgetRing(){
+  const box=document.getElementById('c1-budget-btn');if(!box)return;
   try{
-    const q=await khQuota();
-    const used=kind==='img'?q.img:q.text, lim=kind==='img'?q.qI:q.qT;
-    const left=Math.max(0,lim-used);
-    const pct=lim?left/lim:1;
+    const b=await khBudget();
+    const pct=Math.max(0,Math.min(100,b.pct||0));
+    const left=100-pct;
     // أربع درجاتٍ لا ثلاث: الانتقال من الأخضر إلى الأحمر مباشرةً يُفزع، والدرجة
-    // الوسطى تُنبّه قبل الحاجة بوقتٍ يكفي لتغيير الخطّة.
-    const col=pct<=.1?'#C9453B':pct<=.25?'#D9662B':pct<=.5?'#D9A62B':'#2F7D74';
-    const unit=kind==='img'?'صورة':'طلب';
-    const R=18, C=2*Math.PI*R;                       // محيط الحلقة
-    box.innerHTML=`<span class="qchip">
-      <span class="qring" role="img" aria-label="المتبقّي ${Math.round(pct*100)} بالمئة">
+    // الوسطى تُنبّه قبل الحاجة بوقتٍ يكفي لتغيير نمط الاستعمال.
+    const col=left<=10?'#C9453B':left<=25?'#D9662B':left<=50?'#D9A62B':'#2F7D74';
+    const R=18, C=2*Math.PI*R;
+    box.innerHTML=`<span class="qring" role="img" aria-label="رصيدكِ المتبقّي ${Math.round(left)} بالمئة">
         <svg viewBox="0 0 46 46" aria-hidden="true">
           <circle class="qr-t" cx="23" cy="23" r="${R}"></circle>
           <circle class="qr-v" cx="23" cy="23" r="${R}"
-                  style="stroke:${left?col:'none'};stroke-dasharray:${(pct*C).toFixed(1)} ${C.toFixed(1)}"></circle>
+                  style="stroke:${left?col:'none'};stroke-dasharray:${(left/100*C).toFixed(1)} ${C.toFixed(1)}"></circle>
         </svg>
-        <span class="qr-n" style="color:${col}">${egArNum(Math.round(pct*100))}٪</span>
-      </span>
-      <span>رصيد ${kind==='img'?'الصور':'الطلبات'} هذا الشهر</span>
-      <button type="button" class="qq" onclick="qhelpOpen()" title="ما هذا الرصيد؟" aria-label="ما هذا الرصيد؟">؟</button></span>`;
+        <span class="qr-n" style="color:${col}">${egArNum(Math.round(left))}٪</span></span>`;
   }catch(e){box.innerHTML='';}
 }
 function acctClose(){document.getElementById('acct-modal').classList.remove('open');}
@@ -4911,9 +4901,9 @@ async function suRosterExtract(input){
       // بدل أن تُعيد الرفع مراراً وتظنّ العطل في كشفها.
       :m==='no_credit'?'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. أدخلي الأسماء يدوياً الآن'
       :m==='busy'?'الخدمة مزدحمة — أعيدي المحاولة بعد دقيقة'
-      // صار للاستخراج حصةٌ شهرية: بلا هذا السطر تسقط على «تعذّرت القراءة»
-      // فتُعيد الرفع مراراً وتظنّ العطل في كشفها لا في حصتها
-      :m==='quota_exceeded'?'نفدت حصة الاستخراج هذا الشهر — تتجدّد مطلع الشهر. أدخلي الأسماء يدوياً الآن'
+      // بلا هذا السطر تسقط على «تعذّرت القراءة» فتُعيد الرفع مراراً وتظنّ
+      // العطل في كشفها لا في رصيدها.
+      :m==='quota_exceeded'?'استهلكتِ رصيدكِ بالكامل — للحصول على المزيد من الرصيد الرجاء التواصل مع فريق الدعم. أدخلي الأسماء يدوياً الآن'
       :m==='quota_unavailable'?'تعذّر التحقّق من رصيدك — أعيدي المحاولة بعد قليل. لم يُخصم شيء'
       :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — جرّبي صورةً أوضح، لم تُخصم من حصّتك'
       :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
@@ -5648,12 +5638,12 @@ async function c1MigrateHeavyState(){
 function c1ErrMsg(code,fallback){
   const c=String(code||'');
   if(c.includes('no_credit'))return 'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. لا تُعيدي المحاولة الآن.';
-  // قبل الفحص العامّ: quota_exceeded_img يحتويه نصّاً، ورسالةٌ تقول «حدّ
-  // استخدامك» بلا تحديد تُوهمها أن المحادثة كلّها أُقفلت وهي مفتوحة.
-  if(c.includes('quota_exceeded_img'))return 'وصلتِ حدّ الصور هذا الشهر — المحادثة النصّية ما زالت متاحة.';
-  if(c.includes('quota_exceeded'))return 'وصلتِ حدّ استخدامك الشهري — يتجدّد مطلع الشهر القادم.';
-  // تعذّر التحقّق من الرصيد ≠ نفاده. الأول عطلٌ عابر يُصلحه الانتظار،
-  // والثاني لا يُصلحه شيء حتى مطلع الشهر — وخلطُهما يُرسلها تشكو رصيداً سليماً.
+  // منذ توحيد الحصّة (١٣ ر.ع/فصلٍ لكل معلّمة): لا حدّ صورٍ منفصلاً عن حدّ
+  // نصٍّ — رصيدٌ واحد. فإن نفد أثناء رسم صورةٍ داخل المحادثة، نفد للنصّ
+  // أيضاً — لا نطمئنها بأن «المحادثة النصّية ما زالت متاحة» وهذا غير صحيح.
+  if(c.includes('quota_exceeded_img')||c.includes('quota_exceeded'))
+    return 'استهلكتِ رصيدكِ بالكامل — للحصول على المزيد من الرصيد الرجاء التواصل مع فريق الدعم.';
+  // تعذّر التحقّق من الرصيد ≠ نفاده. الأول عطلٌ عابر يُصلحه الانتظار.
   if(c.includes('quota_unavailable'))return 'تعذّر التحقّق من رصيدك الآن — أعيدي المحاولة بعد قليل. لم يُخصم شيء.';
   // ردٌّ مشوَّهٌ من النموذج: أُعيد ما خُصم، وإعادةُ المحاولة مُجدية فعلاً
   // (النموذج يُنتج ردّاً مختلفاً في كل مرّة) — بخلاف نفاد الرصيد.
