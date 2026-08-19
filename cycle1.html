@@ -2922,6 +2922,13 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <h3 id="beh-add-title">مخالفة لـ —</h3>
     <div class="grp">اختاري نوع المخالفة لتُسجَّل فوراً</div>
     <div class="chip-row" id="beh-add-types"></div>
+    <!-- مخالفةٌ أخرى بنصٍّ حرّ — تظهر فقط عند الضغط على شريحة «أخرى»،
+         ولا تُسجَّل إلا بضغطة «تسجيل» صريحة كبقية الأنواع. -->
+    <div id="beh-add-other-box" style="display:none;margin-top:12px">
+      <label class="c1-lbl" style="display:block;margin-bottom:6px;font-size:12.5px;color:var(--muted)">اكتبي المخالفة</label>
+      <textarea id="beh-add-other-text" rows="2" placeholder="مثال: تأخّرت عن الحصة بلا عذر" style="width:100%;resize:vertical"></textarea>
+      <button class="c1-mbtn go" style="width:100%;margin-top:8px" onclick="behLogCustomViolation()">✅ تسجيل</button>
+    </div>
     <div class="c1-mrow" style="margin-top:14px">
       <button class="c1-mbtn no" onclick="behAddClose()">إلغاء</button>
     </div>
@@ -9852,17 +9859,38 @@ async function behOpenAdd(classId,idx){
   const nm=(cls&&cls.students&&cls.students[idx])||'';
   _behCtx={classId,idx};
   document.getElementById('beh-add-title').textContent='مخالفة لـ '+nm;
-  document.getElementById('beh-add-types').innerHTML=behTypes.length
+  // «أخرى» تظهر دائماً بعد أنواع المشرف — الأنواع محدودةٌ بما أعدّه، لكن
+  // الموقف الفعلي لا يقتصر عليها؛ الضغط عليها لا يُسجِّل شيئاً بنفسه، بل
+  // يفتح مربّع نصٍّ فتُسجَّل المخالفة الحرّة فقط بضغطة «تسجيل» صريحة.
+  document.getElementById('beh-add-types').innerHTML=(behTypes.length
     ?behTypes.map(t=>`<button class="chip" onclick="behLogViolation('${t.replace(/'/g,"\\'")}')">${escHtml(t)}</button>`).join('')
-    :'<span style="font-size:12px;color:var(--muted)">لم يُعِدّ المشرف أنواع المخالفات بعد — تواصلي معه لإضافتها.</span>';
+    :'<span style="font-size:12px;color:var(--muted)">لم يُعِدّ المشرف أنواع المخالفات بعد — تواصلي معه لإضافتها.</span>')
+    +'<button class="chip" onclick="behShowOtherBox()">➕ أخرى</button>';
+  const box=document.getElementById('beh-add-other-box');
+  const txt=document.getElementById('beh-add-other-text');
+  if(box)box.style.display='none';
+  if(txt)txt.value='';
   document.getElementById('beh-add-modal').classList.add('open');
 }
 function behAddClose(){document.getElementById('beh-add-modal').classList.remove('open');_behCtx=null;}
+function behShowOtherBox(){
+  const box=document.getElementById('beh-add-other-box');
+  if(!box)return;
+  box.style.display='block';
+  const txt=document.getElementById('beh-add-other-text');
+  if(txt)txt.focus();
+}
 async function behLogViolation(type){
   if(!_behCtx)return;
   const{classId,idx}=_behCtx;
   behAddClose();
   await behPush(classId,idx,{kind:'viol',type,date:new Date().toISOString()},'يسجّل المخالفة');
+}
+async function behLogCustomViolation(){
+  const txt=document.getElementById('beh-add-other-text');
+  const type=(txt&&txt.value||'').trim();
+  if(!type){toast('❌ اكتبي نصّ المخالفة أولاً',true);return;}
+  await behLogViolation(type);
 }
 // حذف تسجيل خاطئ من داخل ملف الطالب — النجمة تُنقص العدّاد أيضاً ليبقى مطابقاً
 async function behDelEntry(at){
