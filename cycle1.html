@@ -11015,7 +11015,16 @@ async function msgsLoadFeed(force){
       resp=data||[];
     }
     const mySubjects=libMySubjects();
-    const visibleMsgs=(msgs||[]).filter(m=>!m.target_subject||mySubjects.includes(m.target_subject));
+    // ⚠️ ثغرة كانت هنا: الفلتر يتحقق من target_subject فقط، لا من
+    // target_user_id — فرسالةٌ خاصة (kind='private') بلا target_subject
+    // كانت تمرّ للجميع (!undefined = true)، وmsgsMsgHtml يضع تسمية «خاصة
+    // لك» على أي رسالة لها target_user_id بغضّ النظر عمّن هي فعلاً.
+    // الحارس الصحيح: خاصةٌ بي، أو جماعية (target_user_id فارغ)، أو
+    // مشتركةٌ لمادتي.
+    const visibleMsgs=(msgs||[]).filter(m=>
+      (!m.target_user_id||m.target_user_id===currentUser.id)&&
+      (!m.target_subject||mySubjects.includes(m.target_subject))
+    );
     const items=[
       ...visibleMsgs.map(m=>({t:m.created_at,html:msgsMsgHtml(m)})),
       ...(surveys||[]).map(s=>({t:s.created_at,html:msgsSrvHtml(s,resp)}))
