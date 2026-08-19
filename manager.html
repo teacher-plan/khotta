@@ -788,6 +788,23 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .analytics-refresh{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:11px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
 .analytics-refresh:hover{border-color:var(--gold);color:var(--gold);}
 
+/* تبويبات «تحليل استخدام الموقع» — الحلقة الثانية/الأولى/مؤشراتٌ عبر الحلقتين */
+#page-analytics .an-tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px;}
+#page-analytics .an-tabs button{border:none;background:transparent;color:var(--muted);font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;padding:8px 16px;border-radius:9px;cursor:pointer;}
+#page-analytics .an-tabs button.active{background:var(--gold);color:#fff;}
+#page-analytics .an-panel{display:none;}
+#page-analytics .an-panel.active{display:block;}
+#page-analytics .an-section-title{font-size:13px;font-weight:800;color:var(--gold);margin:22px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+#page-analytics .an-badge{font-size:10px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 10px;}
+#page-analytics .analytics-grid.secondary{opacity:.82;}
+#page-analytics .analytics-grid.secondary .stat-box-num{font-size:26px;}
+#page-analytics .stat-box.an-clickable{cursor:pointer;}
+#page-analytics .stat-box.an-clickable:active{transform:translateY(-1px) scale(.98);}
+.an-detail-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.an-detail-table th{background:var(--card);color:var(--gold);font-weight:700;padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);}
+.an-detail-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
+.an-detail-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.8;}
+
 /* ══ SURVEY ══ */
 .survey-wrap{max-width:760px;width:100%;margin:0 auto;}
 .survey-builder{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px;}
@@ -2973,55 +2990,125 @@ input,textarea,select{font-size:16px !important;}
   <div class="page-header">
     <div class="tag">📈 لوحة الإحصائيات</div>
     <h1>تحليل استخدام الموقع</h1>
-    <p>بيانات شاملة لمساعدتك في تطوير الموقع</p>
+    <p>بيانات شاملة لمساعدتك في تطوير الموقع — اضغطي أي مربّع لتفاصيله</p>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-    <button class="analytics-refresh" onclick="loadAnalytics()" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8 8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6 6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> تحديث البيانات</button>
-  </div>
-  <div class="analytics-grid" id="analytics-kpis">
-    <div class="stat-box green"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></div><div class="stat-box-num" id="an-total">—</div><div class="stat-box-label">إجمالي المعلمين</div></div>
-    <div class="stat-box blue"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div><div class="stat-box-num" id="an-active">—</div><div class="stat-box-label">معلم نشط هذا الأسبوع</div></div>
-    <div class="stat-box red"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg></div><div class="stat-box-num" id="an-msgs">—</div><div class="stat-box-label">رسالة خاصة أُرسلت</div></div>
-    <div class="stat-box green"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg></div><div class="stat-box-num" id="an-survey-res">—</div><div class="stat-box-label">إجابة استبيان</div></div>
-    <div class="stat-box gold"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></div><div class="stat-box-num" id="an-schools">—</div><div class="stat-box-label">مدرسة مسجّلة</div></div>
-    <div class="stat-box blue"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 0 1-6.32-3.1C6.87 15.7 9.3 15 12 15s5.13.7 6.32 1.9A8 8 0 0 1 12 20zm0-15a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg></div><div class="stat-box-num" id="an-active-pct">—</div><div class="stat-box-label">نسبة النشاط الأسبوعي</div></div>
-    <div class="stat-box red"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg></div><div class="stat-box-num" id="an-disabled">—</div><div class="stat-box-label">حساب معطّل</div></div>
-    <div class="stat-box purple"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7V3H4zm9 0v18h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-7zm2 4h4v2h-4V7zm0 4h4v2h-4v-2z"/></svg></div><div class="stat-box-num" id="an-lib-files">—</div><div class="stat-box-label">ملف في المكتبة</div></div>
-    <div class="stat-box gold"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div><div class="stat-box-num" id="an-exams">—</div><div class="stat-box-label">اختبار منشور</div></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div class="an-tabs" id="an-tabs">
+      <button class="active" onclick="anSwitchTab('c2',this)">الحلقة الثانية</button>
+      <button onclick="anSwitchTab('c1',this)">الحلقة الأولى</button>
+      <button onclick="anSwitchTab('cross',this)">مؤشراتٌ عبر الحلقتين</button>
+    </div>
+    <button class="analytics-refresh" onclick="anRefreshAll()" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8 8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6 6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> تحديث البيانات</button>
   </div>
 
-  <!-- نشاط المعلمين -->
-  <div class="analytics-section">
-    <h4>آخر نشاط للمعلمين</h4>
-    <div id="an-activity-table">
-      <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+  <!-- ══ الحلقة الثانية ══ -->
+  <div class="an-panel active" id="an-panel-c2">
+    <div class="analytics-grid" id="analytics-kpis">
+      <div class="stat-box green an-clickable" onclick="anShowDetail('c2-total')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm2 1a6 6 0 0 1 4 1.5V20H2v-6.5A6 6 0 0 1 6 12a5.97 5.97 0 0 0 6 3 5.97 5.97 0 0 0 6-3z"/></svg></div><div class="stat-box-num" id="an-total">—</div><div class="stat-box-label">إجمالي المعلمين</div></div>
+      <div class="stat-box blue an-clickable" onclick="anShowDetail('c2-active')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div><div class="stat-box-num" id="an-active">—</div><div class="stat-box-label">معلم نشط هذا الأسبوع</div></div>
+      <div class="stat-box blue an-clickable" onclick="anShowDetail('c2-active')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 0 1-6.32-3.1C6.87 15.7 9.3 15 12 15s5.13.7 6.32 1.9A8 8 0 0 1 12 20zm0-15a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg></div><div class="stat-box-num" id="an-active-pct">—</div><div class="stat-box-label">نسبة النشاط الأسبوعي</div></div>
+      <div class="stat-box red an-clickable" onclick="anShowDetail('c2-disabled')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg></div><div class="stat-box-num" id="an-disabled">—</div><div class="stat-box-label">حساب معطّل</div></div>
+      <div class="stat-box gold an-clickable" onclick="anShowDetail('c2-schools')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></div><div class="stat-box-num" id="an-schools">—</div><div class="stat-box-label">مدرسة مسجّلة</div></div>
+    </div>
+
+    <div class="an-section-title">مؤشّراتٌ تراكمية <span class="an-badge">أعدادٌ منذ إنشاء المنصّة — لا تعكس هذا الأسبوع تحديداً</span></div>
+    <div class="analytics-grid secondary" id="analytics-kpis-secondary">
+      <div class="stat-box red an-clickable" onclick="anShowDetail('c2-msgs')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg></div><div class="stat-box-num" id="an-msgs">—</div><div class="stat-box-label">رسالة خاصة أُرسلت</div></div>
+      <div class="stat-box green an-clickable" onclick="anShowDetail('c2-survey-res')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 2a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2-2H9zm0 2h6v2H9V4zM7 11l2 2 4-4 1.4 1.4L9 16.8l-3.4-3.4L7 11z"/></svg></div><div class="stat-box-num" id="an-survey-res">—</div><div class="stat-box-label">إجابة استبيان</div></div>
+      <div class="stat-box purple an-clickable" onclick="anShowDetail('c2-lib-files')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M4 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7V3H4zm9 0v18h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-7zm2 4h4v2h-4V7zm0 4h4v2h-4v-2z"/></svg></div><div class="stat-box-num" id="an-lib-files">—</div><div class="stat-box-label">ملف في المكتبة</div></div>
+      <div class="stat-box gold an-clickable" onclick="anShowDetail('c2-exams')"><div class="stat-box-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div><div class="stat-box-num" id="an-exams">—</div><div class="stat-box-label">اختبار منشور</div></div>
+    </div>
+
+    <!-- نشاط المعلمين -->
+    <div class="analytics-section">
+      <h4>آخر نشاط للمعلمين</h4>
+      <div id="an-activity-table">
+        <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+
+    <!-- المواد الأكثر استخداماً -->
+    <div class="analytics-section">
+      <h4>المواد الأكثر استخداماً</h4>
+      <div id="an-subjects-chart">
+        <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+
+    <!-- الصفوف الدراسية -->
+    <div class="analytics-section">
+      <h4>🏫 الصفوف الدراسية</h4>
+      <div id="an-grades-chart">
+        <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+      </div>
+    </div>
+
+    <!-- معلمون لم يدخلوا منذ فترة -->
+    <div class="analytics-section">
+      <h4>⚠️ معلمون غائبون أكثر من أسبوع</h4>
+      <div id="an-inactive-list">
+        <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+      </div>
     </div>
   </div>
 
-  <!-- المواد الأكثر استخداماً -->
-  <div class="analytics-section">
-    <h4>المواد الأكثر استخداماً</h4>
-    <div id="an-subjects-chart">
-      <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+  <!-- ══ الحلقة الأولى ══ -->
+  <div class="an-panel" id="an-panel-c1">
+    <div class="analytics-grid" id="an1-kpis">
+      <div class="stat-box green an-clickable" onclick="anShowDetail('c1-total')"><div class="stat-box-num" id="an1-total">—</div><div class="stat-box-label">إجمالي معلّمات الحلقة الأولى</div></div>
+      <div class="stat-box blue an-clickable" onclick="anShowDetail('c1-active')"><div class="stat-box-num" id="an1-active">—</div><div class="stat-box-label">نشطةٌ هذا الأسبوع</div></div>
+      <div class="stat-box blue an-clickable" onclick="anShowDetail('c1-active')"><div class="stat-box-num" id="an1-active-pct">—</div><div class="stat-box-label">نسبة النشاط الأسبوعي</div></div>
+      <div class="stat-box gold an-clickable" onclick="anShowDetail('c1-setup')"><div class="stat-box-num" id="an1-setup">—</div><div class="stat-box-label">أكملن الإعداد الأولي</div></div>
+      <div class="stat-box purple an-clickable" onclick="anShowDetail('c1-students')"><div class="stat-box-num" id="an1-students">—</div><div class="stat-box-label">طالبةٌ مسجَّلة</div></div>
+    </div>
+
+    <div class="an-section-title">النشاط والمحتوى</div>
+    <div class="analytics-grid secondary" id="an1-kpis-secondary">
+      <div class="stat-box purple an-clickable" onclick="anShowDetail('c1-lib-files')"><div class="stat-box-num" id="an1-lib-files">—</div><div class="stat-box-label">ملفٌ في مكتبة الحلقة الأولى</div></div>
+      <div class="stat-box green an-clickable" onclick="anShowDetail('c1-shared')"><div class="stat-box-num" id="an1-shared">—</div><div class="stat-box-label">عنصرٌ شاركته معلّمةٌ لأخرى</div></div>
+      <div class="stat-box blue an-clickable" onclick="anShowDetail('c1-games')"><div class="stat-box-num" id="an1-games">—</div><div class="stat-box-label">لعبة/انفوجرافيك أُنشئت</div></div>
+      <div class="stat-box gold"><div class="stat-box-num" id="an1-surveys">—</div><div class="stat-box-label">إجابة استبيانٍ (تراكمي)</div></div>
+    </div>
+
+    <div class="analytics-section">
+      <h4>🏫 توزيع الصفوف (١–٤)</h4>
+      <div id="an1-grades-chart"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+    </div>
+    <div class="analytics-section">
+      <h4>المواد الأكثر استخداماً</h4>
+      <div id="an1-subjects-chart"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+    </div>
+    <div class="analytics-section">
+      <h4>⚠️ معلّماتٌ غائبات أكثر من أسبوع</h4>
+      <div id="an1-inactive-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
     </div>
   </div>
 
-  <!-- الصفوف الدراسية -->
-  <div class="analytics-section">
-    <h4>🏫 الصفوف الدراسية</h4>
-    <div id="an-grades-chart">
-      <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+  <!-- ══ مؤشراتٌ عبر الحلقتين ══ -->
+  <div class="an-panel" id="an-panel-cross">
+    <div class="analytics-grid">
+      <div class="stat-box green an-clickable" onclick="anShowDetail('x-retention')"><div class="stat-box-num" id="anx-retention">—</div><div class="stat-box-label">الاحتفاظ — الحلقة الأولى (حساباتٌ عمرها شهرٌ+ وما زالت نشطة)</div></div>
+      <div class="stat-box gold an-clickable" onclick="anShowDetail('x-conversion')"><div class="stat-box-num" id="anx-conversion">—</div><div class="stat-box-label">معدّل التحويل من تسجيلٍ إلى دفع</div></div>
+      <div class="stat-box red an-clickable" onclick="anShowDetail('x-expiring')"><div class="stat-box-num" id="anx-expiring">—</div><div class="stat-box-label">حسابٌ ينتهي خلال أسبوع</div></div>
     </div>
-  </div>
-
-  <!-- معلمون لم يدخلوا منذ فترة -->
-  <div class="analytics-section">
-    <h4>⚠️ معلمون غائبون أكثر من أسبوع</h4>
-    <div id="an-inactive-list">
-      <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>
+    <div class="analytics-section">
+      <h4>🧭 قمع استخدام الميزات — الحلقة الأولى</h4>
+      <p style="font-size:11.5px;color:var(--muted);margin:0 0 12px">مقصورٌ على الحلقة الأولى لأن خطوات الرحلة (تفعيل ← إعداد ← تحضير درسٍ ← مشاركة) مسجَّلةٌ فيها في جداولَ منفصلة، بخلاف الحلقة الثانية حيث تُحفَظ الخطط محلياً على جهاز المعلّمة فقط.</p>
+      <div id="anx-funnel"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
     </div>
   </div>
 </div></div>
+
+<!-- ══ نافذة تفاصيل التحليلات — عامّة، يعيد استخدامها كل مربّعٍ قابلٍ للضغط ══ -->
+<div class="modal-bg hidden" id="an-detail-modal-bg" onclick="if(event.target===this)anCloseDetail()">
+  <div class="modal" style="max-width:560px">
+    <h3 id="an-detail-title">—</h3>
+    <div id="an-detail-body" style="font-size:13px;line-height:1.8"></div>
+    <div style="margin-top:16px;text-align:left">
+      <button onclick="anCloseDetail()" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 18px;font-size:12.5px;cursor:pointer;font-family:'Cairo',sans-serif">إغلاق</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ SURVEYS ══ -->
 <div class="page hidden" id="page-surveys"><div class="wrap">
@@ -6289,7 +6376,7 @@ function showPage(id,btn){
   if(id==='ktops'){ktopsLoad();}
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
-  if(id==='analytics')loadAnalytics();
+  if(id==='analytics')anRefreshAll();
   if(id==='schools')loadSchools();
   if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='announcements'){loadAnnouncements();}
@@ -10036,17 +10123,20 @@ async function loadAnalytics(){
   try{
     // جلب جميع البيانات
     const{data:profiles}=await sb.from('profiles').select('id,data,updated_at');
-    const{data:msgs}=await sb.from('private_messages').select('id');
-    const{data:surveyRes}=await sb.from('survey_responses').select('id');
+    // ارتقاءٌ عن id فقط: عنوانٌ وتاريخٌ ومستقبِلٌ تكفي لعرض تفاصيل مقبولة
+    // عند الضغط على المربّع، بلا تخمين أعمدةٍ غير مؤكَّدة.
+    const{data:msgs}=await sb.from('private_messages').select('id,title,created_at,to_user_id').order('created_at',{ascending:false});
+    const{data:surveyRes}=await sb.from('survey_responses').select('id,survey_id');
     const{data:bannedData}=await sb.from('banned_users').select('user_id');
     const bannedSet=new Set((bannedData||[]).map(r=>r.user_id));
-    let schoolsCount=0;
-    try{const{data:sc}=await sb.rpc('admin_list_schools');schoolsCount=(sc||[]).length;}catch(e){}
-    let libFilesCount=0,examsCount=0;
+    let schoolsCount=0,schoolsList=[];
+    try{const{data:sc}=await sb.rpc('admin_list_schools');schoolsList=sc||[];schoolsCount=schoolsList.length;}catch(e){}
+    let libFilesCount=0,examsCount=0,libFilesList=[];
     try{
-      const{data:lf}=await sb.from('library_files').select('url,content_type');
-      libFilesCount=(lf||[]).length;
-      examsCount=new Set((lf||[]).filter(r=>r.content_type==='exam').map(r=>r.url||'')).size;
+      const{data:lf}=await sb.from('library_files').select('subject,grade,content_type,created_at,url');
+      libFilesList=lf||[];
+      libFilesCount=libFilesList.length;
+      examsCount=new Set(libFilesList.filter(r=>r.content_type==='exam').map(r=>r.url||'')).size;
     }catch(e){}
 
     const now=new Date();
@@ -10095,6 +10185,31 @@ async function loadAnalytics(){
 
     // ══ جدول النشاط (يشمل التواصل وتعطيل الحساب — بديل قسم المعلمون) ══
     const sorted=[...(profiles||[])].sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0));
+    const anName=p=>{const d=p.data||{};return d.display_name||d.teacher_name||d.full_name||d.email||'—';};
+    const anRows=(list,extra)=>list.length
+      ?`<table class="an-detail-table"><thead><tr><th>الاسم</th><th>آخر دخول</th>${extra?`<th>${extra.h}</th>`:''}</tr></thead><tbody>${
+        list.map(p=>`<tr><td>${escHtml(anName(p))}</td><td style="color:var(--muted)">${p.updated_at?getLastSeenText(p.updated_at).text:'لم يدخل'}</td>${extra?`<td>${extra.v(p)}</td>`:''}</tr>`).join('')
+      }</tbody></table>`
+      :'<div class="an-detail-note">لا سجلّات.</div>';
+    anSetDetail('c2-total','إجمالي المعلمين — الحلقة الثانية',anRows(sorted));
+    anSetDetail('c2-active','معلّمون نشطون هذا الأسبوع',anRows(sorted.filter(p=>p.updated_at&&new Date(p.updated_at)>weekAgo)));
+    anSetDetail('c2-disabled','حساباتٌ معطَّلة',anRows(sorted.filter(p=>bannedSet.has(p.id))));
+    anSetDetail('c2-schools','المدارس المسجَّلة',schoolsList.length
+      ?`<table class="an-detail-table"><thead><tr><th>المدرسة</th><th>تاريخ التسجيل</th></tr></thead><tbody>${
+        schoolsList.map(s=>`<tr><td>${escHtml(s.name||'—')}</td><td style="color:var(--muted)">${s.created_at?new Date(s.created_at).toLocaleDateString('ar'):'—'}</td></tr>`).join('')
+      }</tbody></table>`:'<div class="an-detail-note">لا مدارس مسجَّلة بعد.</div>');
+    anSetDetail('c2-msgs','آخر الرسائل الخاصة',msgs&&msgs.length
+      ?`<table class="an-detail-table"><thead><tr><th>العنوان</th><th>التاريخ</th></tr></thead><tbody>${
+        msgs.slice(0,30).map(m=>`<tr><td>${escHtml(m.title||'رسالة')}</td><td style="color:var(--muted)">${m.created_at?new Date(m.created_at).toLocaleDateString('ar'):'—'}</td></tr>`).join('')
+      }</tbody></table><div class="an-detail-note">آخر ٣٠ رسالة من أصل ${msgs.length.toLocaleString('ar')} — التفاصيل الكاملة في قسم «التواصل».</div>`
+      :'<div class="an-detail-note">لا رسائل بعد.</div>');
+    anSetDetail('c2-survey-res','إجابات الاستبيانات',`<div class="an-detail-note">${(surveyRes?.length||0).toLocaleString('ar')} إجابة تراكمية عبر كل الاستبيانات منذ إنشاء المنصّة. لتفاصيل استبيانٍ بعينه، افتحي قسم «الاستبيانات».</div>`);
+    anSetDetail('c2-lib-files','ملفات المكتبة',libFilesList.length
+      ?`<table class="an-detail-table"><thead><tr><th>المادة</th><th>الصف</th><th>النوع</th></tr></thead><tbody>${
+        libFilesList.slice(0,30).map(f=>`<tr><td>${escHtml(f.subject||'—')}</td><td>${escHtml(f.grade||'—')}</td><td>${f.content_type==='exam'?'اختبار':'ملف'}</td></tr>`).join('')
+      }</tbody></table><div class="an-detail-note">آخر ٣٠ ملفٍّ من أصل ${libFilesList.length.toLocaleString('ar')}.</div>`
+      :'<div class="an-detail-note">لا ملفات بعد.</div>');
+    anSetDetail('c2-exams','الاختبارات المنشورة',`<div class="an-detail-note">${examsCount.toLocaleString('ar')} اختباراً فريداً بين ملفات المكتبة (بحسب رابط المرفق).</div>`);
     const actTable=document.getElementById('an-activity-table');
     actTable.innerHTML=`<div style="overflow-x:auto"><table class="analytics-table">
       <thead><tr><th>#</th><th>اسم المعلم</th><th>المادة</th><th>الصف</th><th>آخر دخول</th><th>الحالة</th><th>التواصل</th><th>الحساب</th></tr></thead>
@@ -10182,6 +10297,196 @@ async function loadAnalytics(){
 
   }catch(e){
     toast('❌ خطأ في تحميل الإحصائيات: '+e.message,true);
+  }
+}
+
+// ══ تبويبات «تحليل استخدام الموقع» + نافذة التفاصيل العامّة ══
+// كل مربّعٍ قابلٍ للضغط (.an-clickable) يستدعي anShowDetail(key)، والمخزن
+// anDetailStore يُملأ من داخل كل دالّة تحميلٍ فور حساب أرقامها — بلا أي
+// نداءٍ شبكيٍّ إضافي عند الضغط، فالتفاصيل جاهزةٌ سلفاً.
+const anDetailStore={};
+function anSetDetail(key,title,html){anDetailStore[key]={title,html};}
+function anShowDetail(key){
+  const e=anDetailStore[key];
+  const bg=document.getElementById('an-detail-modal-bg');
+  document.getElementById('an-detail-title').textContent=e?e.title:'—';
+  document.getElementById('an-detail-body').innerHTML=e?e.html:'<div class="an-detail-note">لم تُحمَّل البيانات بعد — اضغطي «تحديث البيانات».</div>';
+  bg.classList.remove('hidden');
+}
+function anCloseDetail(){document.getElementById('an-detail-modal-bg').classList.add('hidden');}
+
+function anSwitchTab(id,btn){
+  document.querySelectorAll('#page-analytics .an-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('an-panel-'+id).classList.add('active');
+  document.querySelectorAll('#page-analytics .an-tabs button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+function anRefreshAll(){loadAnalytics();loadC1Analytics();loadCrossAnalytics();}
+
+// ══ تحليلات الحلقة الأولى — من cycle1_profiles (مكافئ profiles) وجداول c1_* ══
+async function loadC1Analytics(){
+  if(!isAdmin())return;
+  try{
+    const{data:allowed}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
+    const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data,updated_at');
+    const now=new Date(),weekAgo=new Date(now-7*24*60*60*1000);
+
+    const total=(allowed||[]).length;
+    const active=(profs||[]).filter(p=>p.updated_at&&new Date(p.updated_at)>weekAgo).length;
+    const setupDone=(profs||[]).filter(p=>(p.data||{}).setupDone).length;
+    let students=0;const subjectCount={},gradeCount={};
+    const gradeNames=['الأول','الثاني','الثالث','الرابع'];
+    (profs||[]).forEach(p=>{
+      const grades=(p.data||{}).grades||[];
+      grades.forEach(g=>{
+        const key=`الصف ${gradeNames[(g.num||1)-1]||g.num}`;
+        (g.classes||[]).forEach(c=>{
+          students+=(c.students||[]).length;
+          gradeCount[key]=(gradeCount[key]||0)+(c.students||[]).length;
+          (c.subjects||[]).forEach(s=>{subjectCount[s]=(subjectCount[s]||0)+1;});
+        });
+      });
+    });
+
+    const setKpi=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    setKpi('an1-total',total);
+    setKpi('an1-active',active);
+    setKpi('an1-active-pct',(total>0?Math.round(active/total*100):0).toLocaleString('ar')+'٪');
+    setKpi('an1-setup',setupDone.toLocaleString('ar'));
+    setKpi('an1-students',students.toLocaleString('ar'));
+
+    // ── النشاط والمحتوى ── معرّفات الحسابات (auth uid) لازمةٌ لربط جداول
+    // c1_* (المكتبة/المشاركة/الألعاب) بمعلّمات الحلقة الأولى تحديداً.
+    const idSet=new Set((profs||[]).map(p=>p.id));
+    let libCount=0,sharedCount=0,gamesCount=0,surveyCount=0;
+    try{const{data}=await sb.from('c1_library_items').select('user_id');libCount=(data||[]).length;}catch(e){}
+    try{const{data}=await sb.from('c1_shared_assets').select('user_id');sharedCount=(data||[]).length;}catch(e){}
+    try{const{data}=await sb.from('games').select('user_id').in('user_id',[...idSet]);gamesCount=(data||[]).length;}catch(e){}
+    try{const{data}=await sb.from('c1_survey_responses').select('id');surveyCount=(data||[]).length;}catch(e){}
+    setKpi('an1-lib-files',libCount.toLocaleString('ar'));
+    setKpi('an1-shared',sharedCount.toLocaleString('ar'));
+    setKpi('an1-games',gamesCount.toLocaleString('ar'));
+    setKpi('an1-surveys',surveyCount.toLocaleString('ar'));
+
+    // ── تفاصيل الضغط ──
+    const pmap={};(profs||[]).forEach(p=>{pmap[(p.email||'').toLowerCase()]=p;});
+    const rowsOf=list=>list.length
+      ?`<table class="an-detail-table"><thead><tr><th>الاسم</th><th>البريد</th><th>آخر دخول</th></tr></thead><tbody>${
+        list.map(a=>{const p=pmap[(a.email||'').toLowerCase()];const d=(p&&p.data)||{};
+          return `<tr><td>${escHtml(d.display_name||'—')}</td><td dir="ltr" style="font-size:11px">${escHtml(a.email||'')}</td><td style="color:var(--muted)">${p&&p.updated_at?getLastSeenText(p.updated_at).text:'لم يدخل'}</td></tr>`;
+        }).join('')
+      }</tbody></table>`:'<div class="an-detail-note">لا سجلّات.</div>';
+    anSetDetail('c1-total','إجمالي معلّمات الحلقة الأولى',rowsOf(allowed||[]));
+    anSetDetail('c1-active','نشطاتٌ هذا الأسبوع',rowsOf((allowed||[]).filter(a=>{const p=pmap[(a.email||'').toLowerCase()];return p&&p.updated_at&&new Date(p.updated_at)>weekAgo;})));
+    anSetDetail('c1-setup','أكملن الإعداد الأولي',rowsOf((allowed||[]).filter(a=>{const p=pmap[(a.email||'').toLowerCase()];return p&&(p.data||{}).setupDone;})));
+    anSetDetail('c1-students',`${students.toLocaleString('ar')} طالبةٌ مسجَّلة`,'<div class="an-detail-note">مجموع الطالبات في كل شعب معلّمات الحلقة الأولى (بلا تكرار الشعبة الواحدة).</div>');
+    anSetDetail('c1-lib-files','ملفات مكتبة الحلقة الأولى',`<div class="an-detail-note">${libCount.toLocaleString('ar')} ملفٍّ في c1_library_items.</div>`);
+    anSetDetail('c1-shared','عناصرٌ مشتركة بين المعلّمات',`<div class="an-detail-note">${sharedCount.toLocaleString('ar')} عنصراً في c1_shared_assets — كل عنصرٍ صنعته معلّمةٌ وأتاحته لزميلاتها.</div>`);
+    anSetDetail('c1-games','ألعابٌ وانفوجرافيك',`<div class="an-detail-note">${gamesCount.toLocaleString('ar')} عنصراً أنشأته معلّمات الحلقة الأولى في الاستوديو.</div>`);
+
+    // ── الرسوم ──
+    const gradeEl=document.getElementById('an1-grades-chart');
+    const gradeSorted=gradeNames.map(g=>[`الصف ${g}`,gradeCount[`الصف ${g}`]||0]);
+    const maxGrade=Math.max(1,...gradeSorted.map(x=>x[1]));
+    gradeEl.innerHTML=gradeSorted.map(([g,c])=>`
+      <div class="analytics-bar-row"><div class="analytics-bar-label">${g}</div>
+        <div class="analytics-bar"><div class="analytics-bar-fill blue" style="width:${Math.round(c/maxGrade*100)}%"></div></div>
+        <div class="analytics-bar-val">${c}</div></div>`).join('');
+
+    const subjEl=document.getElementById('an1-subjects-chart');
+    const subjSorted=Object.entries(subjectCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const maxSubj=subjSorted[0]?.[1]||1;
+    subjEl.innerHTML=subjSorted.length?subjSorted.map(([s,c])=>`
+      <div class="analytics-bar-row"><div class="analytics-bar-label">${escHtml(s)}</div>
+        <div class="analytics-bar"><div class="analytics-bar-fill gold" style="width:${Math.round(c/maxSubj*100)}%"></div></div>
+        <div class="analytics-bar-val">${c}</div></div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:10px">لا توجد بيانات بعد</div>';
+
+    const inactiveEl=document.getElementById('an1-inactive-list');
+    const inactive=(allowed||[]).filter(a=>{const p=pmap[(a.email||'').toLowerCase()];return !p||!p.updated_at||new Date(p.updated_at)<=weekAgo;});
+    inactiveEl.innerHTML=inactive.length
+      ?`<table class="analytics-table"><thead><tr><th>الاسم</th><th>البريد</th><th>آخر دخول</th></tr></thead><tbody>${
+        inactive.map(a=>{const p=pmap[(a.email||'').toLowerCase()];const d=(p&&p.data)||{};
+          return `<tr><td style="font-weight:700;color:var(--red2)">${escHtml(d.display_name||'—')}</td><td dir="ltr" style="font-size:11px">${escHtml(a.email||'')}</td><td style="color:var(--muted)">${p&&p.updated_at?getLastSeenText(p.updated_at).text:'لم يدخل قط'}</td></tr>`;
+        }).join('')
+      }</tbody></table>`
+      :'<div style="color:var(--green2);font-size:13px;text-align:center;padding:10px">✅ جميع المعلّمات نشطاتٌ هذا الأسبوع!</div>';
+
+  }catch(e){
+    toast('❌ خطأ في تحميل تحليلات الحلقة الأولى: '+e.message,true);
+  }
+}
+
+// ══ مؤشراتٌ عبر الحلقتين ══
+async function loadCrossAnalytics(){
+  if(!isAdmin())return;
+  try{
+    const now=new Date();
+    const monthAgo=new Date(now-30*24*60*60*1000);
+
+    // ── الاحتفاظ: من الحسابات التي مضى على تفعيلها ٣٠ يوماً فأكثر، كم
+    // نسبةٌ ما زالت نشطةً هذا الأسبوع؟ ──
+    // ⚠️ مقصورٌ على الحلقة الأولى عمداً: profiles (الحلقة الثانية) لا تحمل
+    // عمود بريدٍ يربطها بتاريخ تفعيلها في allowed_emails، وupdated_at وحده
+    // (قيمةٌ تُكتب فوق نفسها في كل دخول) لا يكفي لبناء احتفاظٍ صحيح بلا هذا
+    // الربط — عرض رقمٍ مضلِّل هنا أسوأ من نطاقٍ أضيق لكنه صحيح.
+    const{data:allowedC1}=await sb.from('allowed_emails').select('email,added_at').eq('cycle','cycle1');
+    const{data:profsC1}=await sb.from('cycle1_profiles').select('email,updated_at');
+    const pmapC1={};(profsC1||[]).forEach(p=>{pmapC1[(p.email||'').toLowerCase()]=p;});
+    const monthOldAccounts=(allowedC1||[]).filter(a=>a.added_at&&new Date(a.added_at)<monthAgo);
+    const stillActive=monthOldAccounts.filter(a=>{
+      const p=pmapC1[(a.email||'').toLowerCase()];
+      return p&&p.updated_at&&new Date(p.updated_at)>new Date(now-7*24*60*60*1000);
+    });
+    const retentionPct=monthOldAccounts.length?Math.round(stillActive.length/monthOldAccounts.length*100):null;
+    document.getElementById('anx-retention').textContent=retentionPct==null?'—':retentionPct+'٪';
+    anSetDetail('x-retention','الاحتفاظ — الحلقة الأولى',
+      `<div class="an-detail-note">من ${monthOldAccounts.length.toLocaleString('ar')} حساباً مضى على تفعيله شهرٌ فأكثر، ${stillActive.length.toLocaleString('ar')} منها نشطٌ هذا الأسبوع.<br><br>مقصورٌ على الحلقة الأولى — لا يوجد ربطٌ موثوقٌ بين حسابات الحلقة الثانية وتاريخ تفعيلها بعد.</div>`);
+
+    // ── معدّل التحويل من تسجيلٍ إلى دفع ──
+    const{data:regs}=await sb.from('pre_registrations').select('payment_status');
+    const totalRegs=(regs||[]).length;
+    const paidRegs=(regs||[]).filter(r=>r.payment_status==='paid').length;
+    const convPct=totalRegs?Math.round(paidRegs/totalRegs*100):null;
+    document.getElementById('anx-conversion').textContent=convPct==null?'—':convPct+'٪';
+    anSetDetail('x-conversion','معدّل التحويل من تسجيلٍ إلى دفع',
+      `<div class="an-detail-note">من أصل ${totalRegs.toLocaleString('ar')} تسجيلاً مسبقاً، أصبح ${paidRegs.toLocaleString('ar')} حساباً مدفوعاً — الباقي إمّا قيد الانتظار أو لم يُكمل.</div>`);
+
+    // ── حساباتٌ تنتهي خلال أسبوع ── نفس منطق daily-summary Edge Function
+    const soon=new Date(now.getTime()+7*24*60*60*1000).toISOString();
+    const{data:expiring}=await sb.from('allowed_emails').select('email,expires_at,cycle')
+      .not('expires_at','is',null).lte('expires_at',soon).order('expires_at',{ascending:true});
+    const expList=expiring||[];
+    document.getElementById('anx-expiring').textContent=expList.length.toLocaleString('ar');
+    anSetDetail('x-expiring','حساباتٌ تنتهي خلال أسبوع',expList.length
+      ?`<table class="an-detail-table"><thead><tr><th>البريد</th><th>الحلقة</th><th>الأيام المتبقّية</th></tr></thead><tbody>${
+        expList.map(r=>{
+          const d=Math.ceil((new Date(r.expires_at).getTime()-now.getTime())/86400000);
+          return `<tr><td dir="ltr" style="font-size:11px">${escHtml(r.email)}</td><td>${r.cycle==='cycle1'?'الأولى':'الثانية'}</td><td style="color:${d<=0?'var(--red2)':'var(--muted)'}">${d<=0?'منتهٍ':d+' يوم'}</td></tr>`;
+        }).join('')
+      }</tbody></table>`:'<div class="an-detail-note">لا حسابٌ ينتهي خلال أسبوع ✅</div>');
+
+    // ── قمع استخدام الميزات (الحلقة الأولى فقط — انظر الملاحظة في الواجهة) ──
+    const{data:allowed1}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
+    const{data:profs1}=await sb.from('cycle1_profiles').select('id,data');
+    const idSet1=new Set((profs1||[]).map(p=>p.id));
+    const setupCount=(profs1||[]).filter(p=>(p.data||{}).setupDone).length;
+    let lessonCount=0,sharedCount2=0;
+    try{const{data}=await sb.from('c1_lesson_assets').select('user_id');lessonCount=new Set((data||[]).filter(r=>idSet1.has(r.user_id)).map(r=>r.user_id)).size;}catch(e){}
+    try{const{data}=await sb.from('c1_shared_assets').select('user_id');sharedCount2=new Set((data||[]).filter(r=>idSet1.has(r.user_id)).map(r=>r.user_id)).size;}catch(e){}
+    const steps=[
+      ['فعّلت حساباً',(allowed1||[]).length],
+      ['أكملت الإعداد الأولي',setupCount],
+      ['حضّرت درساً واحداً على الأقل',lessonCount],
+      ['شاركت محتوًى لزميلة',sharedCount2],
+    ];
+    const maxStep=Math.max(1,...steps.map(s=>s[1]));
+    document.getElementById('anx-funnel').innerHTML=steps.map(([label,v])=>`
+      <div class="analytics-bar-row"><div class="analytics-bar-label" style="min-width:170px">${label}</div>
+        <div class="analytics-bar"><div class="analytics-bar-fill blue" style="width:${Math.round(v/maxStep*100)}%"></div></div>
+        <div class="analytics-bar-val">${v}</div></div>`).join('');
+
+  }catch(e){
+    toast('❌ خطأ في تحميل المؤشرات المشتركة: '+e.message,true);
   }
 }
 
