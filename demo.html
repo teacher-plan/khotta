@@ -3727,7 +3727,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='d1b20d7';
+const KH_BUILD='69590cc';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -11016,7 +11016,16 @@ async function msgsLoadFeed(force){
       resp=data||[];
     }
     const mySubjects=libMySubjects();
-    const visibleMsgs=(msgs||[]).filter(m=>!m.target_subject||mySubjects.includes(m.target_subject));
+    // ⚠️ ثغرة كانت هنا: الفلتر يتحقق من target_subject فقط، لا من
+    // target_user_id — فرسالةٌ خاصة (kind='private') بلا target_subject
+    // كانت تمرّ للجميع (!undefined = true)، وmsgsMsgHtml يضع تسمية «خاصة
+    // لك» على أي رسالة لها target_user_id بغضّ النظر عمّن هي فعلاً.
+    // الحارس الصحيح: خاصةٌ بي، أو جماعية (target_user_id فارغ)، أو
+    // مشتركةٌ لمادتي.
+    const visibleMsgs=(msgs||[]).filter(m=>
+      (!m.target_user_id||m.target_user_id===currentUser.id)&&
+      (!m.target_subject||mySubjects.includes(m.target_subject))
+    );
     const items=[
       ...visibleMsgs.map(m=>({t:m.created_at,html:msgsMsgHtml(m)})),
       ...(surveys||[]).map(s=>({t:s.created_at,html:msgsSrvHtml(s,resp)}))
