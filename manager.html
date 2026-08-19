@@ -10354,14 +10354,18 @@ async function loadC1Analytics(){
     const setupDone=(profs||[]).filter(p=>(p.data||{}).setupDone).length;
     let students=0;const subjectCount={},gradeCount={};
     const gradeNames=['الأول','الثاني','الثالث','الرابع'];
+    // grades/classes/students/subjects قد تكون غير مصفوفةٍ في ملفٍّ لم
+    // يكمل معلّمته الإعداد بعد (data={} أو بنيةٌ جزئية) — Array.isArray
+    // يحرس كل مستوًى، فتُتجاهَل الشعبة الناقصة بدل إسقاط الدالّة كاملةً.
+    const asArr=v=>Array.isArray(v)?v:[];
     (profs||[]).forEach(p=>{
-      const grades=(p.data||{}).grades||[];
-      grades.forEach(g=>{
+      asArr((p.data||{}).grades).forEach(g=>{
         const key=`الصف ${gradeNames[(g.num||1)-1]||g.num}`;
-        (g.classes||[]).forEach(c=>{
-          students+=(c.students||[]).length;
-          gradeCount[key]=(gradeCount[key]||0)+(c.students||[]).length;
-          (c.subjects||[]).forEach(s=>{subjectCount[s]=(subjectCount[s]||0)+1;});
+        asArr(g.classes).forEach(c=>{
+          const cStudents=asArr(c.students);
+          students+=cStudents.length;
+          gradeCount[key]=(gradeCount[key]||0)+cStudents.length;
+          asArr(c.subjects).forEach(s=>{subjectCount[s]=(subjectCount[s]||0)+1;});
         });
       });
     });
