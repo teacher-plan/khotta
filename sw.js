@@ -102,7 +102,17 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const cached = await caches.match(req);
     const fetchPromise = fetch(req).then(resp => {
-      if (resp && resp.ok) caches.open(CACHE_NAME).then(c => c.put(req, resp.clone()));
+      // ⚠️ كانت caches.open(...).then(...) بلا انتظارٍ ولا حراسة — أي عطلٍ
+      // فيها (جسم استجابةٍ استُهلك سلفاً، أو خطأ تخزينٍ) يخرج كرفضٍ غير
+      // ملتقَط في Console (Uncaught in promise)، بلا أي أثرٍ على resp نفسها
+      // التي تُعاد للصفحة بيّةً على كل حال — التخزين اجتهاديٌّ لا حارس.
+      if (resp && resp.ok) {
+        try {
+          caches.open(CACHE_NAME)
+            .then(c => c.put(req, resp.clone()))
+            .catch(() => {});
+        } catch (_) { /* اجتهادي */ }
+      }
       return resp;
     }).catch(() => cached);
     return cached || fetchPromise;
