@@ -15787,6 +15787,12 @@ async function loadAiSettings(){
   try{
     const{data}=await sb.from('ai_settings').select('key,value');
     const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    // ⚠️ _aiSettings كانت تُعلَن {} ولا تُملأ هنا أبداً — فالعرض الأول عند
+    // فتح الصفحة صحيح (m محلّية)، لكن أي تبديلٍ لاحق لتبويب «النماذج»
+    // يعيد الرسم من _aiSettings الفارغة (switchAiTab)، فيُمحى الاختيار
+    // الحقيقي ويظهر كل شيءٍ «الإعداد العام» — أي DeepSeek فعلياً، بلا أي
+    // تغييرٍ حقيقي في القاعدة. هذا هو الخلل الذي أبلغَت عنه المشرفة.
+    _aiSettings=m;
     renderTaskModels(m);
     const ta=document.getElementById('ai-system-prompt');if(ta)ta.value=m.system_prompt||'';
     const per=document.getElementById('ai-budget-per');if(per)per.value=m.per_teacher_usd||'6';
