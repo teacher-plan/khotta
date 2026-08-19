@@ -32,14 +32,28 @@ function genPassword() {
   return p;
 }
 
-function mailHtml(name: string, email: string, password: string, link: string) {
+// مدد الصلاحية. الافتراضي «مدفوع» كي يبقى سلوك أي نداءٍ قديم لا يمرّر
+// plan كما كان تماماً من ناحية الإنشاء، مع إضافة تاريخ انتهاءٍ صريح.
+const PLAN_DAYS: Record<string, number> = {
+  paid: 150,   // خمسة أشهر (٥ × ٣٠ يوماً)
+  trial: 14,   // تفعيل تجريبي
+};
+function expiryFor(plan: string): string {
+  const days = PLAN_DAYS[plan] ?? PLAN_DAYS.paid;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function mailHtml(name: string, email: string, password: string, link: string, plan = "paid") {
+  const trial = plan === "trial";
   const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
   return `<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#F3EDE3;font-family:Tahoma,Arial,sans-serif;color:#2A1503">
 <div style="max-width:520px;margin:24px auto;background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:26px">
   <div style="font-size:12px;font-weight:bold;letter-spacing:2px;color:#A83030">منصة خُطّة</div>
   <h1 style="font-size:22px;margin:6px 0 4px">أهلاً ${esc(name)} 👋</h1>
   <p style="font-size:14px;line-height:1.9;color:#7A6A58;margin:0 0 18px">
-    فُعِّل حسابكِ في منصّة «خُطّة» للحلقة الأولى. هذه بيانات دخولكِ:</p>
+    ${trial
+      ? "فُتِح لكِ حسابٌ تجريبيّ في منصّة «خُطّة» للحلقة الأولى لمدّة ١٤ يوماً، تستخدمين فيه المنصّة كاملةً بلا نقص. هذه بيانات دخولكِ:"
+      : "فُعِّل حسابكِ في منصّة «خُطّة» للحلقة الأولى. هذه بيانات دخولكِ:"}</p>
   <div style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:12px;padding:14px;margin-bottom:16px">
     <div style="font-size:12px;color:#7A6A58">البريد الإلكتروني</div>
     <div style="font-size:15px;font-weight:bold;direction:ltr;text-align:left;margin-bottom:10px">${esc(email)}</div>
@@ -108,8 +122,27 @@ Deno.serve(async (req) => {
       return json({ ok: true, test: true, mailed: r.sent, mailReason: r.reason || null, to });
     }
 
+    // خطّة الاشتراك: paid (خمسة أشهر) أو trial (١٤ يوماً). أي قيمةٍ أخرى
+    // — أو غيابُها — تُعامَل مدفوعةً، فلا يكسر نداءٌ قديم شيئاً.
+    const plan = b.plan === "trial" ? "trial" : "paid";
+
     const regId = b.regId;
     if (!regId) return json({ error: "no_reg" }, 400);
+
+    // ─── تمديد حسابٍ قائم ───
+    // لازمٌ لا كماليّ: معلّمةٌ جرّبت أسبوعين ثم دفعت لا سبيل لترقيتها بغيره،
+    // ولا يُنشئ شيئاً ولا يمسّ كلمة مرورها — يحرّك تاريخ الانتهاء وحده.
+    if (b.action === "extend") {
+      const { data: r0 } = await admin.from("pre_registrations")
+        .select("account_email").eq("id", regId).maybeSingle();
+      const acct = String(r0?.account_email || "").trim().toLowerCase();
+      if (!acct || acct === "__activating__") return json({ error: "not_active" }, 409);
+      const expires_at = expiryFor(plan);
+      const { error: exErr } = await admin.from("allowed_emails")
+        .update({ expires_at }).ilike("email", acct);
+      if (exErr) return json({ error: "extend_failed", detail: exErr.message }, 502);
+      return json({ ok: true, extended: true, email: acct, plan, expires_at });
+    }
 
     const { data: reg0, error: regErr } = await admin.from("pre_registrations")
       .select("id,name,email,stage,account_email").eq("id", regId).maybeSingle();
@@ -161,7 +194,8 @@ Deno.serve(async (req) => {
       return json({ error: "create_failed", detail: m }, 502);
     }
 
-    const { error: aErr } = await admin.from("allowed_emails").insert({ email, cycle });
+    const expires_at = expiryFor(plan);
+    const { error: aErr } = await admin.from("allowed_emails").insert({ email, cycle, expires_at });
     // بلا هذا الصف لا تدخل المعلّمة وإن وُجد حسابها، فنتراجع عن الإنشاء
     // بدل أن نترك حساباً معطّلاً لا تفسير له.
     if (aErr) {
@@ -184,9 +218,13 @@ Deno.serve(async (req) => {
     if (uErr) console.error("activate-teacher: تعذّر حفظ account_email:", uErr.message);
 
     const link = cycle === "cycle1" ? "https://khotati.com/cycle1.html" : "https://khotati.com/";
-    const mail = await sendMail(email, "تفعيل حسابكِ في منصّة خُطّة", mailHtml(reg.name || "معلّمتنا", email, password, link));
+    const mail = await sendMail(
+      email,
+      plan === "trial" ? "حسابكِ التجريبي في منصّة خُطّة" : "تفعيل حسابكِ في منصّة خُطّة",
+      mailHtml(reg.name || "معلّمتنا", email, password, link, plan),
+    );
 
-    return json({ ok: true, email, password, mailed: mail.sent, mailReason: mail.reason || null });
+    return json({ ok: true, email, password, plan, expires_at, mailed: mail.sent, mailReason: mail.reason || null });
   } catch (e) {
     return json({ error: "server_error", detail: String(e) }, 500);
   }

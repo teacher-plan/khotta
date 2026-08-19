@@ -3709,8 +3709,8 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>حالة الدفع</th><th>الحساب</th><th>إجراءات</th></tr></thead>
-          <tbody id="accounts-table-body"><tr><td colspan="6"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
+          <thead><tr><th>الاسم</th><th>الهاتف</th><th>المرحلة</th><th>حالة الدفع</th><th>الحساب</th><th>الصلاحية</th><th>إجراءات</th></tr></thead>
+          <tbody id="accounts-table-body"><tr><td colspan="7"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -11514,6 +11514,36 @@ async function ref_loadRegistrations(){
     if(error){document.getElementById('data-table-body').innerHTML='<tr><td colspan="8"><div class="empty">❌ تعذّر التحميل — تأكد من تنفيذ سياسات RLS</div></td></tr>';return;}
     ref_registrations=data||[];
   }catch(e){}
+  await ref_loadExpiries();
+}
+
+// ── صلاحية الحسابات ──
+// خريطة «البريد ← تاريخ الانتهاء». تُقرأ من allowed_emails التي يراها
+// المشرف كاملةً (سياسة is_app_admin)، وغيابُ الصفّ أو فراغُ الحقل = دائم.
+let ref_expiryByEmail={};
+async function ref_loadExpiries(){
+  try{
+    const{data,error}=await sb.from('allowed_emails').select('email,expires_at');
+    if(error)return; // قبل تطبيق الهجرة لا وجود للعمود — لا نكسر الجدول
+    const m={};
+    (data||[]).forEach(x=>{m[String(x.email||'').toLowerCase()]=x.expires_at||null;});
+    ref_expiryByEmail=m;
+  }catch(e){}
+}
+function ref_daysLeft(email){
+  const v=ref_expiryByEmail[String(email||'').toLowerCase()];
+  if(!v)return null; // دائم
+  return Math.ceil((new Date(v).getTime()-Date.now())/86400000);
+}
+function ref_expiryCell(email){
+  if(!email)return '<span style="color:var(--muted)">—</span>';
+  if(!(String(email).toLowerCase() in ref_expiryByEmail))
+    return '<span style="color:var(--muted)">—</span>';
+  const d=ref_daysLeft(email);
+  if(d===null)return '<span style="color:var(--muted)">دائم</span>';
+  if(d<=0)return '<span class="status-badge pending">⛔ منتهٍ</span>';
+  const color=d<=7?'#e0803a':'var(--green,#3ecf8e)';
+  return `<span style="color:${color};font-weight:600">${d} يوم</span>`;
 }
 const ref_stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 الحلقة الثانية',['10-12']:'🎓 ما بعد الأساسي'};
 
@@ -11726,15 +11756,19 @@ async function ref_testActivationMail(){
   }catch(e){alert('❌ تعذّر الاختبار: '+(e.message||''));}
 }
 
-async function ref_activateTeacher(regId){
+async function ref_activateTeacher(regId,plan){
+  plan=plan==='trial'?'trial':'paid';
+  const trial=plan==='trial';
   const r=ref_registrations.find(x=>x.id===regId);
   if(!r)return;
   if(!r.email){alert('❌ لا يوجد بريد إلكتروني في تسجيلها — استخدم «إنشاء حساب مخصص».');return;}
-  if(!confirm(`تفعيل حساب ${r.name}؟\n\nسيُنشأ الحساب ببريدها ${r.email} وتصلها بياناتها على البريد نفسه.`))return;
-  const btn=document.getElementById('activate-btn-'+regId);
+  if(!confirm(trial
+    ? `تفعيل حساب تجريبي لـ ${r.name} لمدة ١٤ يوماً؟\n\nسيُنشأ الحساب ببريدها ${r.email}، ويتوقّف الدخول تلقائياً بعد ١٤ يوماً ما لم تُمدَّد صلاحيته.`
+    : `تفعيل حساب ${r.name}؟\n\nسيُنشأ الحساب ببريدها ${r.email} وتصلها بياناتها على البريد نفسه.\nالصلاحية: خمسة أشهر.`))return;
+  const btn=document.getElementById((trial?'trial-btn-':'activate-btn-')+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ يُفعّل...';}
   try{
-    const res=await sb.functions.invoke('activate-teacher',{body:{regId}});
+    const res=await sb.functions.invoke('activate-teacher',{body:{regId,plan}});
     const{data,error}=res;
     let why=(data&&data.error)||'';
     if(!why&&error){
@@ -11755,7 +11789,28 @@ async function ref_activateTeacher(regId){
       : `✅ فُعِّل الحساب — لكن لم يُرسَل البريد.\n\nالبريد: ${data.email}\nكلمة المرور: ${data.password}\n\nأرسلها إليها الآن.\n\nالسبب: ${data.mailReason||'خدمة البريد غير مهيّأة'}`);
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
-    if(btn){btn.disabled=false;btn.textContent='⚡ تفعيل الحساب';}
+    if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي ١٤ يوم':'⚡ تفعيل الحساب';}
+  }
+}
+
+// تمديد صلاحية حسابٍ قائم: المسار الوحيد لترقية معلّمةٍ جرّبت ثم دفعت.
+async function ref_extendTeacher(regId,plan){
+  plan=plan==='trial'?'trial':'paid';
+  const r=ref_registrations.find(x=>x.id===regId);
+  if(!r||!r.account_email){alert('لا يوجد حساب لهذه المعلّمة بعد');return;}
+  const label=plan==='trial'?'١٤ يوماً':'خمسة أشهر';
+  if(!confirm(`تمديد صلاحية ${r.account_email} إلى ${label} ابتداءً من اليوم؟`))return;
+  const btn=document.getElementById('extend-btn-'+regId);
+  if(btn){btn.disabled=true;btn.textContent='⏳ يُمدَّد...';}
+  try{
+    const{data,error}=await sb.functions.invoke('activate-teacher',{body:{regId,plan,action:'extend'}});
+    if(error||!data||!data.ok)throw new Error((data&&data.error)||(error&&error.message)||'خطأ');
+    await ref_loadRegistrations();
+    ref_renderAccountsTab();
+    alert(`✅ مُدِّدت الصلاحية ${label} — تنتهي في ${new Date(data.expires_at).toLocaleDateString('ar')}`);
+  }catch(e){
+    alert('❌ تعذّر التمديد: '+(e.message||''));
+    if(btn){btn.disabled=false;btn.textContent='📅 تمديد ٥ أشهر';}
   }
 }
 async function ref_generateTeacherAccount(regId){
@@ -11848,24 +11903,29 @@ function ref_renderAccountsTab(){
   const filtered=q?regs.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)||(r.email||'').toLowerCase().includes(q)):regs;
   const countEl=document.getElementById('accounts-results-count');
   if(countEl)countEl.textContent=q?`${filtered.length} من ${regs.length} نتيجة`:'';
-  if(!regs.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty">لا يوجد مسجّلون في ${ref_SCOPE_LABEL[ref_cycleScope]} بعد</div></td></tr>`;return;}
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
+  if(!regs.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty">لا يوجد مسجّلون في ${ref_SCOPE_LABEL[ref_cycleScope]} بعد</div></td></tr>`;return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
     const paidStatus=r.payment_status==='paid'?'<span class="status-badge paid">✅ مدفوع</span>':'<span class="status-badge pending">⏳ قيد الانتظار</span>';
     const accEmail=r.account_email;
     const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
     const actionBtn=accEmail
       ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="ref_showTeacherAccount(${r.id})">👁 عرض البيانات</button>
+         <button class="action-btn" id="extend-btn-${r.id}" onclick="ref_extendTeacher(${r.id},'paid')">📅 تمديد ٥ أشهر</button>
          <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="ref_resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
-      :`<button class="action-btn primary" id="activate-btn-${r.id}" onclick="ref_activateTeacher(${r.id})">⚡ تفعيل الحساب</button>
+      :`<button class="action-btn primary" id="activate-btn-${r.id}" onclick="ref_activateTeacher(${r.id},'paid')">⚡ تفعيل الحساب</button>
          <button class="action-btn" id="gen-account-btn-${r.id}" onclick="ref_generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
          <button class="action-btn" id="custom-account-btn-${r.id}" onclick="ref_createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button>`;
+    const trialCell=accEmail
+      ?ref_expiryCell(accEmail)
+      :`<button class="action-btn" id="trial-btn-${r.id}" onclick="ref_activateTeacher(${r.id},'trial')">🕒 تجريبي ١٤ يوم</button>`;
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
       <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
       <td>${ref_stageLabel[r.stage]||escHtml(r.stage)}</td>
       <td>${paidStatus}</td>
       <td>${accCell}</td>
+      <td>${trialCell}</td>
       <td>${actionBtn}</td>
     </tr>`;
   }).join('');

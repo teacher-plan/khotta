@@ -148,6 +148,39 @@ async function getSelfHealingSummary(sb: any): Promise<string> {
   }
 }
 
+// صلاحية الحسابات: أيّ حسابٍ يوشك على الانتهاء خلال أسبوع. الحسابات
+// الدائمة (expires_at = NULL) خارج الاستعلام أصلاً بحكم الفلتر.
+async function getExpirySummary(sb: any): Promise<{ text: string; urgent: boolean }> {
+  try {
+    const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await sb
+      .from("allowed_emails")
+      .select("email,expires_at")
+      .not("expires_at", "is", null)
+      .lte("expires_at", soon)
+      .order("expires_at", { ascending: true });
+    if (error) return { text: `⏳ <b>صلاحية الحسابات:</b> غير متوفرة (${error.message})`, urgent: false };
+    if (!data || !data.length) return { text: `⏳ <b>صلاحية الحسابات:</b> لا حساب ينتهي خلال أسبوع ✅`, urgent: false };
+    const expired = data.filter((r: any) => new Date(r.expires_at).getTime() <= Date.now());
+    const lines = data.slice(0, 10).map((r: any) => {
+      const d = Math.ceil((new Date(r.expires_at).getTime() - Date.now()) / 86400000);
+      return d <= 0 ? `  • ${r.email} — <b>منتهٍ</b>` : `  • ${r.email} — ${d} يوم`;
+    });
+    const more = data.length > 10 ? `\n  … و${data.length - 10} غيرها` : "";
+    return {
+      text: `⏳ <b>صلاحية الحسابات:</b> ${data.length} حساباً ينتهي خلال أسبوع (منها ${expired.length} منتهٍ)\n${lines.join("\n")}${more}`,
+      // الدفع إلى تلغرام عند ≤ ٣ أيام فقط. القائمة كاملةً تظهر في اللوحة
+      // كل يوم؛ أما الرسالة فتُحجز للنافذة التي يلزم فيها قرارٌ فعلاً —
+      // وإلا صار الحساب الواحد سبعَ رسائل متطابقة (وهي شكوى سابقة).
+      urgent: data.some((r: any) =>
+        (new Date(r.expires_at).getTime() - Date.now()) <= 3 * 24 * 60 * 60 * 1000
+      ),
+    };
+  } catch (error) {
+    return { text: `⏳ <b>صلاحية الحسابات:</b> ❌ خطأ (${error})`, urgent: false };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -172,7 +205,7 @@ Deno.serve(async (req) => {
     run = await startRun(sb, "daily-summary", "CRON");
 
     // جمع البيانات من جميع الوكلاء
-    const [creditSummary, librarySummary, peakHours, feedbackSummary, analyticsSummary, selfHealingSummary] =
+    const [creditSummary, librarySummary, peakHours, feedbackSummary, analyticsSummary, selfHealingSummary, expiry] =
       await Promise.all([
         getCreditSummary(sb),
         getLibrarySummary(sb),
@@ -180,6 +213,7 @@ Deno.serve(async (req) => {
         getFeedbackSummary(sb),
         getAnalyticsSummary(sb),
         getSelfHealingSummary(sb),
+        getExpirySummary(sb),
       ]);
 
     // بناء الرسالة الكاملة
@@ -192,6 +226,7 @@ Deno.serve(async (req) => {
     message += `${feedbackSummary}\n\n`;
     message += `${analyticsSummary}\n\n`;
     message += `${selfHealingSummary}\n\n`;
+    message += `${expiry.text}\n\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     // الأزرار الرئيسية
@@ -213,16 +248,18 @@ Deno.serve(async (req) => {
 
     // إرسال الرسالة فقط عند طلبٍ صريح (manual) — التشغيلة اليومية المجدولة
     // تكتفي بحفظه لعرضه في لوحة التشغيل، بلا رسالة تلغرام تلقائية.
-    const result = manual
+    // استثناءٌ واحد من قاعدة «لا تلغرام تلقائياً»: حسابٌ يوشك على الانتهاء
+    // إجراءٌ يفوت وقتُه إن لم يُر — معلّمةٌ دافعة تُمنَع من الدخول صباحاً.
+    const result = (manual || expiry.urgent)
       ? await sendTelegram(message, { inline_keyboard: buttons })
       : { ok: true as const, message_id: null as number | null, error: undefined as string | undefined };
 
     // تسجيل الملخّص دوماً — هذا هو المصدر الذي تقرأ منه لوحة التشغيل آخر ملخّص.
     await sb.from("agent_messages").insert({
-      message_id: `summary-${manual && result.ok && result.message_id ? result.message_id : Date.now()}`,
+      message_id: `summary-${(manual || expiry.urgent) && result.ok && result.message_id ? result.message_id : Date.now()}`,
       agent_name: "daily-summary",
       message_text: message,
-      telegram_message_id: manual && result.ok ? result.message_id : null,
+      telegram_message_id: (manual || expiry.urgent) && result.ok ? result.message_id : null,
     });
 
     // تسجيل السجل
