@@ -332,6 +332,23 @@ button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 .kt-sidebar-item:hover{background:rgba(255,255,255,.06);color:var(--kt-shell-text);}
 .kt-sidebar-item.active{background:var(--kt-shell-active-bg);color:#fff;}
 .kt-sidebar-footer{margin-top:auto;padding-top:var(--kt-space-4);}
+
+/* مجموعةٌ قابلةٌ للطيّ — «إدارة الحلقة الأولى/الثانية» تظهران وحدهما في
+   الشريط، وتُفتحان لعرض صفحاتهما الفرعية بضغطةٍ بدل تكديسها كلّها ظاهرة. */
+.kt-sidebar-group-toggle{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--kt-space-2);
+  width:100%;padding:10px var(--kt-space-3);margin-top:var(--kt-space-2);
+  border:none;background:none;cursor:pointer;font-family:'Cairo',sans-serif;
+  border-radius:var(--kt-radius-md);color:var(--kt-shell-text-muted);
+  font-size:var(--kt-font-label-size);font-weight:700;transition:background var(--kt-motion-fast),color var(--kt-motion-fast);
+}
+.kt-sidebar-group-toggle:hover{background:rgba(255,255,255,.06);color:var(--kt-shell-text);}
+.kt-sidebar-group-toggle.open{color:#fff;}
+.kt-sidebar-group-toggle .chev{transition:transform var(--kt-motion-fast);flex-shrink:0;}
+.kt-sidebar-group-toggle.open .chev{transform:rotate(180deg);}
+.kt-sidebar-subgroup{display:none;padding-right:var(--kt-space-2);border-right:2px solid rgba(255,255,255,.08);margin-right:var(--kt-space-3);}
+.kt-sidebar-subgroup.open{display:block;}
+.kt-sidebar-subgroup .kt-sidebar-item{font-size:12.5px;}
 .kt-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 .kt-topbar{
   display:flex;align-items:center;justify-content:space-between;gap:var(--kt-space-4);
@@ -2379,20 +2396,30 @@ input,textarea,select{font-size:16px !important;}
     <button class="kt-sidebar-item" data-page="ktops" onclick="showPage('ktops',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> التشغيل</button>
     <button class="kt-sidebar-item" data-page="analytics" onclick="showPage('analytics',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> تحليلات المنصة</button>
 
-    <div class="kt-sidebar-group-label">إدارة الحلقة الأولى</div>
-    <button class="kt-sidebar-item" data-page="c1teachers" onclick="ktGoC1('teachers',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
-    <button class="kt-sidebar-item" data-page="c1curric" onclick="ktGoC1('curric',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
-    <button class="kt-sidebar-item" data-page="c1live" onclick="ktGoC1('live',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
-    <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this);switchViolTypeTab('cycle1')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
-    <button class="kt-sidebar-item" data-page="c1msgs" onclick="ktGoC1('msgs',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
+    <button class="kt-sidebar-group-toggle" id="ktsg-c1-toggle" onclick="ktSidebarToggleGroup('c1')">
+      <span>إدارة الحلقة الأولى</span>
+      <svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+    </button>
+    <div class="kt-sidebar-subgroup" id="ktsg-c1">
+      <button class="kt-sidebar-item" data-page="c1teachers" onclick="ktGoC1('teachers',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمات</button>
+      <button class="kt-sidebar-item" data-page="c1curric" onclick="ktGoC1('curric',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الأولى</button>
+      <button class="kt-sidebar-item" data-page="c1live" onclick="ktGoC1('live',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
+      <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this);switchViolTypeTab('cycle1')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
+      <button class="kt-sidebar-item" data-page="c1msgs" onclick="ktGoC1('msgs',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
+    </div>
 
-    <div class="kt-sidebar-group-label">إدارة الحلقة الثانية</div>
-    <button class="kt-sidebar-item" data-page="c2teachers" onclick="showPage('c2teachers',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمون</button>
-    <button class="kt-sidebar-item" data-page="library" onclick="showPage('library',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> منهج الحلقة الثانية</button>
-    <button class="kt-sidebar-item" data-page="schools" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
-    <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this);switchViolTypeTab('main')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
-    <button class="kt-sidebar-item" data-page="announcements" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
-    <button class="kt-sidebar-item" data-page="surveys" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
+    <button class="kt-sidebar-group-toggle" id="ktsg-c2-toggle" onclick="ktSidebarToggleGroup('c2')">
+      <span>إدارة الحلقة الثانية</span>
+      <svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+    </button>
+    <div class="kt-sidebar-subgroup" id="ktsg-c2">
+      <button class="kt-sidebar-item" data-page="c2teachers" onclick="showPage('c2teachers',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg> المعلّمون</button>
+      <button class="kt-sidebar-item" data-page="c2curric" onclick="showPage('c2curric',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 5h10v2H4V9zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"/></svg> مناهج الحلقة الثانية</button>
+      <button class="kt-sidebar-item" data-page="schools" onclick="showPage('schools',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg> إدارة المدارس</button>
+      <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this);switchViolTypeTab('main')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
+      <button class="kt-sidebar-item" data-page="announcements" onclick="showPage('announcements',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الثانية</button>
+      <button class="kt-sidebar-item" data-page="surveys" onclick="showPage('surveys',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg> استبيانات الحلقة الثانية</button>
+    </div>
 
     <div class="kt-sidebar-group-label">المالية</div>
     <button class="kt-sidebar-item" data-page="referrals" onclick="showPage('referrals',this);ref_initReferralsPage();"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
@@ -2456,6 +2483,16 @@ input,textarea,select{font-size:16px !important;}
     <h1>مناهج الحلقة الأولى</h1>
     <p>رفع كتب كل مادة (تدعم حتى ٣ كتب لكل مادة) وتقطيعها إلى وحدات ودروس تلقائياً</p>
     <div id="mgr-c1-bookslot" style="max-width:760px;margin:0 auto"></div>
+  </div></div>
+
+  <!-- ══ منهج الحلقة الثانية — نفس بطاقة رفع الكتاب وتقطيعه الذكي (seg-card)
+       كانت مدفونةً داخل تبويب «المحتوى» بصفحة «إدارة المولّد»، صارت هنا
+       بمكانٍ واضح موازٍ لمناهج الحلقة الأولى. البطاقة والدوالّ نفسها بلا
+       تكرار كود — segMoveCard تنقلها إلى هذا الموضع فقط عند فتح الصفحة. ══ -->
+  <div class="page" id="page-c2curric"><div class="wrap">
+    <h1>مناهج الحلقة الثانية</h1>
+    <p>رفع كتاب كل مادة (PDF) وتقطيعه تلقائياً إلى وحدات ودروس — الصفوف ٥ إلى ١٢</p>
+    <div id="mgr-c2-bookslot" style="max-width:760px;margin:0 auto"></div>
   </div></div>
 
   <div class="page" id="page-c1live"><div class="wrap">
@@ -6211,19 +6248,21 @@ async function c1SfxDelete(kind){
 function mgrOpenKt(){
   showPage('ktcc');
 }
-// نقل بطاقة رفع الكتاب وتقطيعه بين جناحي الإدارة (نفس العنصر والدوال — لا تكرار كود)
-function segMoveCard(toC1){
+// نقل بطاقة رفع الكتاب وتقطيعه بين أجنحة الإدارة الثلاثة (نفس العنصر
+// والدوال — لا تكرار كود). target: 'c1'|'c2'|null (null = مكانها
+// الافتراضي داخل «إدارة المولّد»).
+function segMoveCard(target){
   const card=document.getElementById('seg-card');
-  const slot=document.getElementById('mgr-c1-bookslot');
   const anchor=document.getElementById('seg-card-anchor');
-  if(!card||!slot||!anchor)return;
-  if(toC1)slot.appendChild(card);
+  if(!card||!anchor)return;
+  const slot=target?document.getElementById('mgr-'+target+'-bookslot'):null;
+  if(slot)slot.appendChild(card);
   else anchor.parentNode.insertBefore(card,anchor.nextSibling);
-  segSetScope(toC1);
+  segSetScope(target);
 }
-function segSetScope(c1only){
+function segSetScope(target){
   const gs=document.getElementById('seg-grade');if(!gs)return;
-  const nums=c1only?[1,2,3,4]:[1,2,3,4,5,6,7,8,9,10,11,12];
+  const nums=target==='c1'?[1,2,3,4]:target==='c2'?[5,6,7,8,9,10,11,12]:[1,2,3,4,5,6,7,8,9,10,11,12];
   const cur=gs.value;
   gs.innerHTML='<option value="">الصف</option>'+nums.map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
   gs.value=nums.includes(Number(cur))?cur:'';
@@ -6383,9 +6422,10 @@ function showPage(id,btn){
   if(btn)btn.classList.add('active','ripple');
   const sideBtn=document.querySelector('.kt-sidebar-item[data-page="'+id+'"]');
   if(sideBtn)sideBtn.classList.add('active');
+  ktSidebarAutoOpenGroup(id);
   try{localStorage.setItem('lastPage',id);}catch(e){}
   if(btn)setTimeout(()=>btn.classList.remove('ripple'),600);
-  segMoveCard(id==='c1curric');
+  segMoveCard(id==='c1curric'?'c1':(id==='c2curric'?'c2':null));
   if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
@@ -13142,6 +13182,31 @@ function ktShellToggleDrawer(pageId){
   const backdrop=document.getElementById(pageId+'-backdrop');
   if(sidebar)sidebar.classList.toggle('kt-open');
   if(backdrop)backdrop.classList.toggle('kt-open');
+}
+// طيّ/فتح مجموعتَي «إدارة الحلقة الأولى/الثانية» في الشريط الجانبي —
+// الشريط يعرض عنوانَي المجموعتين فقط افتراضياً، وتظهر صفحاتهما الفرعية
+// عند الفتح، بدل تكديسها كلّها ظاهرةً دائماً.
+const KT_SIDEBAR_GROUP_PAGES={
+  c1:['c1teachers','c1curric','c1live','c1msgs'],
+  c2:['c2teachers','c2curric','schools','announcements','surveys'],
+};
+function ktSidebarToggleGroup(id,forceOpen){
+  const sub=document.getElementById('ktsg-'+id);
+  const toggle=document.getElementById('ktsg-'+id+'-toggle');
+  if(!sub||!toggle)return;
+  const open=forceOpen!=null?forceOpen:!sub.classList.contains('open');
+  sub.classList.toggle('open',open);
+  toggle.classList.toggle('open',open);
+}
+// فتح المجموعة المناسبة تلقائياً عند العودة لصفحةٍ فرعيةٍ محفوظة (بعد
+// تحديث الصفحة مثلاً) — وإلا يرى المشرف زرّاً «نشطاً» داخل مجموعةٍ
+// مطويّة فلا يفهم أين هو. «إدارة المخالفات» صفحةٌ واحدة بتبويبين، فتُفتح
+// مجموعتاها معاً حين يكون آخر تبويبٍ غير معروف (حالةٌ نادرة، بلا ضرر).
+function ktSidebarAutoOpenGroup(pageId){
+  if(pageId==='violtypes'){ktSidebarToggleGroup('c1',true);ktSidebarToggleGroup('c2',true);return;}
+  for(const g in KT_SIDEBAR_GROUP_PAGES){
+    if(KT_SIDEBAR_GROUP_PAGES[g].includes(pageId))ktSidebarToggleGroup(g,true);
+  }
 }
 // رجوعٌ إلى نظرة عامة — لوحة الإدارة الجديدة أصبحت نقطة الدخول الوحيدة
 // (لا بوّابة اختيارٍ متعدّدة أبوابٍ بعد الآن)، فزرّ "الخروج" هنا يعيد
