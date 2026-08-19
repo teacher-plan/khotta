@@ -800,10 +800,19 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 #page-analytics .analytics-grid.secondary .stat-box-num{font-size:26px;}
 #page-analytics .stat-box.an-clickable{cursor:pointer;}
 #page-analytics .stat-box.an-clickable:active{transform:translateY(-1px) scale(.98);}
-.an-detail-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-.an-detail-table th{background:var(--card);color:var(--gold);font-weight:700;padding:7px 10px;text-align:right;border-bottom:2px solid var(--border);}
-.an-detail-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
+/* نافذة تفاصيل التحليلات — أوسع وأطول من .modal العامّة (٤٤٠px تكفي
+   لنموذجٍ لا لجدول أسماءٍ وبريد؛ الجدول نفسه يمرَّر أفقياً داخلها بدل
+   انضغاط أعمدته). */
+.an-detail-modal{max-width:min(94vw,720px)!important;max-height:85vh;display:flex;flex-direction:column;}
+.an-detail-modal h3{flex-shrink:0;}
+/* overflow-x هنا (لا على الجدول نفسه) كي يمرَّر أي جدولٍ داخلي أفقياً
+   بلا حاجةٍ لتغليف كل استدعاء anSetDetail على حدة. */
+.an-detail-scroll{flex:1;min-height:0;overflow:auto;font-size:13px;line-height:1.8;}
+.an-detail-table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12.5px;}
+.an-detail-table th{background:var(--card);color:var(--gold);font-weight:700;padding:8px 10px;text-align:right;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap;}
+.an-detail-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
 .an-detail-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.8;}
+@media(max-width:520px){.an-detail-modal{max-width:96vw!important;padding:16px!important;}}
 
 /* ══ SURVEY ══ */
 .survey-wrap{max-width:760px;width:100%;margin:0 auto;}
@@ -3101,9 +3110,9 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- ══ نافذة تفاصيل التحليلات — عامّة، يعيد استخدامها كل مربّعٍ قابلٍ للضغط ══ -->
 <div class="modal-bg hidden" id="an-detail-modal-bg" onclick="if(event.target===this)anCloseDetail()">
-  <div class="modal" style="max-width:560px">
+  <div class="modal an-detail-modal">
     <h3 id="an-detail-title">—</h3>
-    <div id="an-detail-body" style="font-size:13px;line-height:1.8"></div>
+    <div id="an-detail-body" class="an-detail-scroll"></div>
     <div style="margin-top:16px;text-align:left">
       <button onclick="anCloseDetail()" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 18px;font-size:12.5px;cursor:pointer;font-family:'Cairo',sans-serif">إغلاق</button>
     </div>
@@ -10327,8 +10336,17 @@ function anRefreshAll(){loadAnalytics();loadC1Analytics();loadCrossAnalytics();}
 async function loadC1Analytics(){
   if(!isAdmin())return;
   try{
-    const{data:allowed}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
-    const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data,updated_at');
+    // كل استعلامٍ فرعيٍّ محروسٌ على حدة: فشل جدولٍ واحد (RLS/شبكة) يُسجَّل
+    // في الطرفية ويُعامَل كقائمةٍ فارغة، لا يُسقط اللوحة كلّها بصفحةٍ بيضاء
+    // وتنبيه خطأ — نفس فلسفة sendMail في activate-teacher.
+    const safeSelect=async(label,fn)=>{
+      try{const{data,error}=await fn();if(error)throw error;return data||[];}
+      catch(e){console.error('loadC1Analytics — تعذّر: '+label,e);return[];}
+    };
+    const[allowed,profs]=await Promise.all([
+      safeSelect('allowed_emails',()=>sb.from('allowed_emails').select('email').eq('cycle','cycle1')),
+      safeSelect('cycle1_profiles',()=>sb.from('cycle1_profiles').select('id,email,data,updated_at')),
+    ]);
     const now=new Date(),weekAgo=new Date(now-7*24*60*60*1000);
 
     const total=(allowed||[]).length;
@@ -10359,10 +10377,13 @@ async function loadC1Analytics(){
     // c1_* (المكتبة/المشاركة/الألعاب) بمعلّمات الحلقة الأولى تحديداً.
     const idSet=new Set((profs||[]).map(p=>p.id));
     let libCount=0,sharedCount=0,gamesCount=0,surveyCount=0;
-    try{const{data}=await sb.from('c1_library_items').select('user_id');libCount=(data||[]).length;}catch(e){}
-    try{const{data}=await sb.from('c1_shared_assets').select('user_id');sharedCount=(data||[]).length;}catch(e){}
-    try{const{data}=await sb.from('games').select('user_id').in('user_id',[...idSet]);gamesCount=(data||[]).length;}catch(e){}
-    try{const{data}=await sb.from('c1_survey_responses').select('id');surveyCount=(data||[]).length;}catch(e){}
+    try{const{data}=await sb.from('c1_library_items').select('user_id');libCount=(data||[]).length;}catch(e){console.error('c1_library_items',e);}
+    try{const{data}=await sb.from('c1_shared_assets').select('user_id');sharedCount=(data||[]).length;}catch(e){console.error('c1_shared_assets',e);}
+    // .in() بمصفوفةٍ فارغة يُرفَض من PostgREST (uuid فارغ) — نتجنّبه بلا استعلام.
+    if(idSet.size){
+      try{const{data}=await sb.from('games').select('user_id').in('user_id',[...idSet]);gamesCount=(data||[]).length;}catch(e){console.error('games',e);}
+    }
+    try{const{data}=await sb.from('c1_survey_responses').select('id');surveyCount=(data||[]).length;}catch(e){console.error('c1_survey_responses',e);}
     setKpi('an1-lib-files',libCount.toLocaleString('ar'));
     setKpi('an1-shared',sharedCount.toLocaleString('ar'));
     setKpi('an1-games',gamesCount.toLocaleString('ar'));
@@ -10412,7 +10433,8 @@ async function loadC1Analytics(){
       :'<div style="color:var(--green2);font-size:13px;text-align:center;padding:10px">✅ جميع المعلّمات نشطاتٌ هذا الأسبوع!</div>';
 
   }catch(e){
-    toast('❌ خطأ في تحميل تحليلات الحلقة الأولى: '+e.message,true);
+    console.error('loadC1Analytics',e);
+    toast('❌ خطأ في تحميل تحليلات الحلقة الأولى: '+(e.message||e),true);
   }
 }
 
@@ -10486,7 +10508,8 @@ async function loadCrossAnalytics(){
         <div class="analytics-bar-val">${v}</div></div>`).join('');
 
   }catch(e){
-    toast('❌ خطأ في تحميل المؤشرات المشتركة: '+e.message,true);
+    console.error('loadCrossAnalytics',e);
+    toast('❌ خطأ في تحميل المؤشرات المشتركة: '+(e.message||e),true);
   }
 }
 
