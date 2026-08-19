@@ -344,6 +344,36 @@ button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 .kt-shell-content{padding:var(--kt-space-6);max-width:1100px;width:100%;margin:0 auto;}
 .kt-shell-backdrop{display:none;}
 
+/* تبويبات «التشغيل» الفرعية — تجمع الأقسام الكثيرة في مجموعاتٍ يُنتقَل
+   بينها بضغطة بدل تمريرٍ طويل واحد. لاصقةٌ أسفل الشريط العلوي فتبقى
+   في متناول اليد أثناء قراءة أي تبويب. */
+.ktops-subtabs{
+  /* top يساوي ارتفاع .kt-topbar الفعلي تقريباً — كلاهما لاصق top:0
+     سيتراكبان بلا هذا الإزاحة، لأن sticky لا يُكدّس نفسه تلقائياً. */
+  position:sticky;top:69px;z-index:4;background:var(--kt-color-bg);
+  display:flex;gap:var(--kt-space-2);padding:var(--kt-space-3) 0 var(--kt-space-4);
+  margin-bottom:var(--kt-space-2);border-bottom:1px solid var(--kt-color-border);
+  overflow-x:auto;
+}
+.ktops-subtab{
+  display:inline-flex;align-items:center;gap:var(--kt-space-2);
+  padding:9px var(--kt-space-4);border-radius:var(--kt-radius-full);
+  font-family:'Almarai',sans-serif;font-size:13px;font-weight:700;
+  color:var(--kt-color-text-secondary);background:var(--kt-color-surface);
+  border:1.5px solid var(--kt-color-border);cursor:pointer;white-space:nowrap;
+  transition:border-color .15s,background .15s,color .15s;
+}
+.ktops-subtab:hover{border-color:#c9bd9e;}
+.ktops-subtab.active{background:var(--kt-shell-bg);color:#fff;border-color:var(--kt-shell-bg);}
+.ktops-subtab-cnt{
+  background:rgba(166,57,42,.15);color:var(--kt-color-error);
+  border-radius:var(--kt-radius-full);font-size:10px;font-weight:800;padding:1px 7px;
+}
+.ktops-subtab.active .ktops-subtab-cnt{background:rgba(255,255,255,.25);color:#fff;}
+.ktops-tabpanel{display:none;}
+.ktops-tabpanel.active{display:block;}
+@media(max-width:1023px){.ktops-subtabs{top:57px;}}
+
 @media(max-width:1023px){
   .kt-sidebar{position:fixed;inset-inline-start:0;top:0;height:100vh;transform:translateX(102%);
     transition:transform var(--kt-motion-base) var(--kt-motion-easing);z-index:302;box-shadow:var(--kt-shadow-modal);}
@@ -3470,73 +3500,99 @@ input,textarea,select{font-size:16px !important;}
       <button class="kt-btn kt-btn-ghost" onclick="ktopsLoad()" style="font-size:12px;padding:8px 14px;min-height:36px">تحديث</button>
     </header>
     <div class="kt-shell-content">
-      <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)">
+      <!-- نقطة الحالة تبقى فوق التبويبات دائماً، ظاهرةً أياً كان التبويب المفتوح. -->
+      <div class="kt-card" style="display:flex;align-items:center;gap:var(--kt-space-3);margin-bottom:var(--kt-space-4)">
         <span class="kt-status-dot" id="ktops-status-dot"></span>
         <span id="ktops-status-text" style="font-weight:600">⏳ جارٍ التحقّق...</span>
       </div>
-      <!-- Phase 1.5 — القسم 11: عدّادات حالة النظام أعلى صفحة التشغيل -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)" id="ktops-counts-row">
-        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ سليمة</div><div class="kt-kpi-value" id="ktops-cnt-healthy">—</div></div>
-        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ بتحذير/فشل</div><div class="kt-kpi-value" id="ktops-cnt-failed">—</div></div>
-        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث مفتوحة</div><div class="kt-kpi-value" id="ktops-cnt-incidents">—</div></div>
-        <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث حرجة</div><div class="kt-kpi-value" id="ktops-cnt-critical">—</div></div>
+
+      <!-- تبويباتٌ فرعية تجمع الأقسام العشرة في أربع مجموعات بدل تمريرٍ
+           طويل واحد — كل قسمٍ بمكانه كما كان، فقط أُعيد تجميعه. -->
+      <div class="ktops-subtabs" id="ktops-subtabs">
+        <button class="ktops-subtab active" onclick="ktopsShowTab('quick',this)">① نظرة سريعة</button>
+        <button class="ktops-subtab" onclick="ktopsShowTab('agents',this)">② الوكلاء والتشخيص</button>
+        <button class="ktops-subtab" id="ktops-subtab-incidents" onclick="ktopsShowTab('incidents',this)">③ الحوادث والإصلاح الذاتي<span class="ktops-subtab-cnt" id="ktops-subtab-incidents-cnt" style="display:none"></span></button>
+        <button class="ktops-subtab" onclick="ktopsShowTab('resources',this)">④ الموارد والتكلفة</button>
       </div>
-      <!-- الملخّصات الدورية — daily-summary/file-processor-monitor لم يعودا
-           يُرسلان تلغرام تلقائياً، هذا مكان عرضهما بدل ذلك. تلغرام يبقى
-           للطلب الصريح فقط (/ملخص، /ملفات). -->
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-summaries-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">آخر الملخّصات الدورية</h3></div>
-        <div id="ktops-summaries-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">تُحفَظ هذه الملخّصات تلقائياً بجدولتها المعتادة بلا إرسال تلغرام — استخدم أمرَي /ملخص و/ملفات في تلغرام إن أردت إرسالها فعلياً عند الحاجة.</p>
+
+      <!-- ① نظرة سريعة -->
+      <div class="ktops-tabpanel active" id="ktops-tab-quick">
+        <!-- Phase 1.5 — القسم 11: عدّادات حالة النظام أعلى صفحة التشغيل -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--kt-space-3);margin-bottom:var(--kt-space-5)" id="ktops-counts-row">
+          <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ سليمة</div><div class="kt-kpi-value" id="ktops-cnt-healthy">—</div></div>
+          <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">وكلاءٌ بتحذير/فشل</div><div class="kt-kpi-value" id="ktops-cnt-failed">—</div></div>
+          <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث مفتوحة</div><div class="kt-kpi-value" id="ktops-cnt-incidents">—</div></div>
+          <div class="kt-card kt-kpi"><div class="kt-kpi-label" style="font-size:11px">حوادث حرجة</div><div class="kt-kpi-value" id="ktops-cnt-critical">—</div></div>
+        </div>
+        <!-- الملخّصات الدورية — daily-summary/file-processor-monitor لم يعودا
+             يُرسلان تلغرام تلقائياً، هذا مكان عرضهما بدل ذلك. تلغرام يبقى
+             للطلب الصريح فقط (/ملخص، /ملفات). -->
+        <div class="kt-card" id="ktops-summaries-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">آخر الملخّصات الدورية</h3></div>
+          <div id="ktops-summaries-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">تُحفَظ هذه الملخّصات تلقائياً بجدولتها المعتادة بلا إرسال تلغرام — استخدم أمرَي /ملخص و/ملفات في تلغرام إن أردت إرسالها فعلياً عند الحاجة.</p>
+        </div>
       </div>
-      <!-- Phase 1.5 — القسم 11: AGENT CONTROL CENTER — من agent_runs الحقيقية عبر get_agent_status_summary -->
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-agents-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">مركز التحكّم بالوكلاء (Agent Control Center)</h3></div>
-        <div id="ktops-agents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">الصحة مُحتسَبةٌ من تشغيلات agent_runs الفعلية آخر 24 ساعة، لا قيمةٌ ثابتة. وكيلٌ بلا تشغيلاتٍ مسجَّلة بعد يظهر "غير معروف" لا "سليم".</p>
+
+      <!-- ② الوكلاء والتشخيص -->
+      <div class="ktops-tabpanel" id="ktops-tab-agents">
+        <!-- Phase 1.5 — القسم 11: AGENT CONTROL CENTER — من agent_runs الحقيقية عبر get_agent_status_summary -->
+        <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-agents-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">مركز التحكّم بالوكلاء (Agent Control Center)</h3></div>
+          <div id="ktops-agents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">الصحة مُحتسَبةٌ من تشغيلات agent_runs الفعلية آخر 24 ساعة، لا قيمةٌ ثابتة. وكيلٌ بلا تشغيلاتٍ مسجَّلة بعد يظهر "غير معروف" لا "سليم".</p>
+        </div>
+        <!-- Phase 2 — القسم 26/27: التشخيصات النشطة + سجلّ الإجراءات الآمنة -->
+        <div class="kt-card" id="ktops-diag-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">التشخيصات النشطة (Active Diagnoses)</h3></div>
+          <div id="ktops-diag-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">لا تنفيذ تلقائي هنا — كل إجراءٍ من سجلّ الإجراءات الآمنة فقط، وبموافقتك إن كانت الخطورة تتطلّبها.</p>
+        </div>
       </div>
-      <!-- Phase 2 — القسم 26/27: التشخيصات النشطة + سجلّ الإجراءات الآمنة -->
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-diag-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">التشخيصات النشطة (Active Diagnoses)</h3></div>
-        <div id="ktops-diag-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">لا تنفيذ تلقائي هنا — كل إجراءٍ من سجلّ الإجراءات الآمنة فقط، وبموافقتك إن كانت الخطورة تتطلّبها.</p>
-      </div>
-      <!-- Phase 3 — القسم 30/31: الإصلاح الذاتي (Self-Healing) — كل Playbook
-           SHADOW MODE فقط اليوم. بطاقاتٌ بنفس نمط Agent Control Center/
-           Active Diagnoses، عمودٌ واحد قابلٌ للطيّ. -->
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-heal-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">الإصلاح الذاتي (Self-Healing)</h3></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:var(--kt-space-3);padding:10px;border:1px solid var(--kt-color-border);border-radius:var(--kt-radius-md)">
-          <div style="font-size:13px" id="ktops-heal-global-text">⏳ جارٍ التحميل...</div>
-          <div style="display:flex;gap:8px">
-            <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(true)">تفعيل الكلّ</button>
-            <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(false)">⛔ إيقافٌ طارئٌ للكلّ</button>
+
+      <!-- ③ الحوادث والإصلاح الذاتي -->
+      <div class="ktops-tabpanel" id="ktops-tab-incidents">
+        <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
+          <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        </div>
+        <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
+          <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
+          <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+        </div>
+        <!-- Phase 3 — القسم 30/31: الإصلاح الذاتي (Self-Healing) — كل Playbook
+             SHADOW MODE فقط اليوم. بطاقاتٌ بنفس نمط Agent Control Center/
+             Active Diagnoses، عمودٌ واحد قابلٌ للطيّ. -->
+        <div class="kt-card" id="ktops-heal-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">الإصلاح الذاتي (Self-Healing)</h3></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:var(--kt-space-3);padding:10px;border:1px solid var(--kt-color-border);border-radius:var(--kt-radius-md)">
+            <div style="font-size:13px" id="ktops-heal-global-text">⏳ جارٍ التحميل...</div>
+            <div style="display:flex;gap:8px">
+              <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(true)">تفعيل الكلّ</button>
+              <button class="kt-btn kt-btn-ghost" style="min-height:36px;font-size:12px" onclick="ktopsHealGlobalToggle(false)">⛔ إيقافٌ طارئٌ للكلّ</button>
+            </div>
           </div>
+          <div id="ktops-heal-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <div style="margin-top:var(--kt-space-3)">
+            <div class="kt-card-header" style="padding:0 0 8px 0"><h4 style="font-size:13px;margin:0">آخر تقييمات الإصلاح الذاتي</h4></div>
+            <div id="ktops-heal-executions-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          </div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">كل الـPlaybooks بوضع SHADOW MODE فقط — النظام يُقيِّم ويسجِّل «كان سيُصلِح تلقائياً» بلا أي تنفيذٍ فعلي. تفعيل وضع AUTO قرارٌ بشريٌّ محجوزٌ لمرحلةٍ لاحقة، غير متاحٍ من هذه اللوحة.</p>
         </div>
-        <div id="ktops-heal-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <div style="margin-top:var(--kt-space-3)">
-          <div class="kt-card-header" style="padding:0 0 8px 0"><h4 style="font-size:13px;margin:0">آخر تقييمات الإصلاح الذاتي</h4></div>
-          <div id="ktops-heal-executions-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+      </div>
+
+      <!-- ④ الموارد والتكلفة -->
+      <div class="ktops-tabpanel" id="ktops-tab-resources">
+        <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-capacity-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">سعة قاعدة البيانات</h3></div>
+          <div id="ktops-capacity-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">حجم قاعدة بيانات Postgres فقط — منفصلٌ عن Supabase Storage (الملفات) وعن تكلفة الذكاء الاصطناعي أدناه. النمو/التوقّع يظهران فقط بعد تراكم تاريخ قياسات كافٍ من database-capacity-monitor.</p>
         </div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">كل الـPlaybooks بوضع SHADOW MODE فقط — النظام يُقيِّم ويسجِّل «كان سيُصلِح تلقائياً» بلا أي تنفيذٍ فعلي. تفعيل وضع AUTO قرارٌ بشريٌّ محجوزٌ لمرحلةٍ لاحقة، غير متاحٍ من هذه اللوحة.</p>
-      </div>
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-components-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">المكوّنات المتأثّرة</h3></div>
-        <div id="ktops-components-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-      </div>
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)">
-        <div class="kt-card-header"><h3 class="kt-card-title">الحوادث</h3></div>
-        <div id="ktops-incidents-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-      </div>
-      <div class="kt-card" style="margin-bottom:var(--kt-space-5)" id="ktops-capacity-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">سعة قاعدة البيانات</h3></div>
-        <div id="ktops-capacity-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">حجم قاعدة بيانات Postgres فقط — منفصلٌ عن Supabase Storage (الملفات) وعن تكلفة الذكاء الاصطناعي أدناه. النمو/التوقّع يظهران فقط بعد تراكم تاريخ قياسات كافٍ من database-capacity-monitor.</p>
-      </div>
-      <div class="kt-card">
-        <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
-        <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
-        <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
+        <div class="kt-card">
+          <div class="kt-card-header"><h3 class="kt-card-title">تكلفة العمليات (Ops AI)</h3></div>
+          <div id="ktops-cost-body"><div class="kt-state"><div class="kt-state-text">⏳ جارٍ التحميل...</div></div></div>
+          <p style="font-size:11px;color:var(--kt-color-text-muted);margin-top:var(--kt-space-3)">هذه تكلفة نداءات الكوبايلوت وتحليل الحوادث نفسها (kind='ops') — منفصلةٌ عن تكلفة استخدام المعلّمات، المعروضة في القسم المالي.</p>
+        </div>
       </div>
     </div>
 </div>
@@ -12372,6 +12428,16 @@ function ktcpRetry(){
 // نفس ops-analyze action:health/cost بلا أي تعديل — إعادة عرضٍ فقط.
 // مستقلّةٌ عن ktccLoad — نداءاتٌ منفصلة، عناصر DOM منفصلة، لا تشارك
 // حالةً معها.
+// تبديل تبويبات «التشغيل» الفرعية — عرضٌ محضٌ لا يُعيد تحميل بيانات
+// (كل الأقسام محمَّلةٌ أصلاً بنداء ktopsLoad() الواحد)، فالتبديل فوريّ.
+function ktopsShowTab(id,btn){
+  document.querySelectorAll('#page-ktops .ktops-tabpanel').forEach(p=>p.classList.remove('active'));
+  const panel=document.getElementById('ktops-tab-'+id);
+  if(panel)panel.classList.add('active');
+  document.querySelectorAll('#page-ktops .ktops-subtab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
 async function ktopsLoad(){
   try{
     const{data,error}=await sb.functions.invoke('ops-analyze',{body:{action:'health'}});
@@ -12400,6 +12466,13 @@ async function ktopsLoad(){
     const criticalIncidents=openIncidents.filter(i=>i.severity==='P0'||i.severity==='P1').length;
     const cntInc=document.getElementById('ktops-cnt-incidents'); if(cntInc)cntInc.textContent=String(openIncidents.length);
     const cntCrit=document.getElementById('ktops-cnt-critical'); if(cntCrit)cntCrit.textContent=String(criticalIncidents);
+    // شارة العدد على تبويب «الحوادث والإصلاح الذاتي» — تظهر من خارج
+    // التبويب أنّ فيه ما يستحقّ الفتح، فلا داعي لتفقّد كل تبويبٍ يدوياً.
+    const tabCnt=document.getElementById('ktops-subtab-incidents-cnt');
+    if(tabCnt){
+      if(openIncidents.length>0){tabCnt.textContent=String(openIncidents.length);tabCnt.style.display='';}
+      else{tabCnt.style.display='none';}
+    }
 
     if(incBody){
       const list=data.open_incidents||[];
