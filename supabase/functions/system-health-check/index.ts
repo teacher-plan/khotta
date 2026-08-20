@@ -266,7 +266,7 @@ async function processHealthResults(
       const alertCooldownSince = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data: recentAlert } = await sb
         .from("emergency_alerts")
-        .select("id")
+        .select("alert_id")
         .eq("affected_component", issue.component)
         .gte("created_at", alertCooldownSince)
         .limit(1)
