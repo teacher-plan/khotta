@@ -48,9 +48,20 @@ export async function takeQuota(
   const budgetOmr = parseFloat(st["budget_omr"] || "") || 13;
   const rate = parseFloat(st["usd_omr_rate"] || "") || 0.3845;
   const budgetUsd = budgetOmr / rate;
-  const periodStart = st["budget_period_start"] || "2026-01-01";
 
   try {
+    // الحصّة تُقاس منذ تفعيل حساب هذه المعلّمة تحديداً (allowed_emails.
+    // added_at) — توافقاً مع مدّة اشتراكها (٥ أشهر)، لا من تاريخٍ عامٍّ واحد
+    // لكل المعلّمات (انظر 20260819_p30_budget_per_account_period.sql).
+    const { data: acc } = await admin
+      .from("allowed_emails")
+      .select("added_at")
+      .ilike("email", email)
+      .maybeSingle();
+    const periodStart = acc?.added_at
+      ? String(acc.added_at).slice(0, 10)
+      : (st["budget_period_start"] || "2026-01-01");
+
     const { data, error } = await admin
       .from("ai_cost_log")
       .select("cost_usd")
