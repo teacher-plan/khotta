@@ -79,48 +79,73 @@ Deno.serve(async (req) => {
     const budgetOmr = parseFloat(st["budget_omr"] || "") || 13;
     const rate = parseFloat(st["usd_omr_rate"] || "") || 0.3845;
     const budgetUsd = budgetOmr / rate;
-    const periodStart = st["budget_period_start"] || "2026-01-01";
+    const fallbackPeriod = st["budget_period_start"] || "2026-01-01";
 
-    // من أنفقت شيئاً خلال هذه الفترة (بلا هذا القيد نجمع كل معلّمةٍ سجّلت
-    // منذ إنشاء الحساب حتى لو صفراً — نداءٌ بلا فائدة).
+    // كلّ التكلفة المسجَّلة لكل معلّمة — الفترة الآن لكل حسابٍ على حدة
+    // (تفعيله الخاص)، لا تاريخاً عامّاً واحداً يُصفّى به الاستعلام هنا.
+    // الجدول جديدٌ (منذ ١٦ أغسطس) فحجمه صغيرٌ بما يكفي لجلبه كاملاً.
     const { data: costRows, error: cErr } = await sb
       .from("ai_cost_log")
-      .select("user_id, cost_usd")
-      .gte("created_at", periodStart + "T00:00:00Z")
+      .select("user_id, cost_usd, created_at")
       .not("user_id", "is", null);
     if (cErr) throw cErr;
 
-    const usedByUser = new Map<string, number>();
-    (costRows || []).forEach((r: { user_id: string; cost_usd: number | null }) => {
-      usedByUser.set(r.user_id, (usedByUser.get(r.user_id) || 0) + (r.cost_usd || 0));
+    const rowsByUser = new Map<string, { cost: number; at: string }[]>();
+    (costRows || []).forEach((r: { user_id: string; cost_usd: number | null; created_at: string }) => {
+      const arr = rowsByUser.get(r.user_id) || [];
+      arr.push({ cost: r.cost_usd || 0, at: r.created_at });
+      rowsByUser.set(r.user_id, arr);
     });
 
-    const crossed = [...usedByUser.entries()].filter(([, used]) => used / budgetUsd >= 0.8);
-    if (crossed.length === 0) {
-      await finishRun(sb, run, { status: "SUCCESS", resultSummary: "لا معلّمة تجاوزت ٨٠٪", recordsRead: usedByUser.size });
-      return json({ ok: true, checked: usedByUser.size, alerted: 0 });
+    const uids = [...rowsByUser.keys()];
+    const { data: teacherRows } = await sb.from("cycle1_profiles").select("id, email, data").in("id", uids);
+    const teacherById = new Map<string, { email: string; name: string | null }>();
+    (teacherRows || []).forEach((t: { id: string; email: string; data: Record<string, unknown> | null }) => {
+      teacherById.set(t.id, { email: t.email, name: (t.data?.display_name as string) || null });
+    });
+
+    const emails = [...new Set([...teacherById.values()].map((t) => t.email.toLowerCase()))];
+    const { data: accRows } = await sb.from("allowed_emails").select("email, added_at").in("email", emails);
+    const addedAtByEmail = new Map<string, string>();
+    (accRows || []).forEach((a: { email: string; added_at: string }) => addedAtByEmail.set(a.email.toLowerCase(), a.added_at));
+
+    // تفعيل حساب كل معلّمة تحديداً — لا تاريخٌ عامّ واحد (انظر
+    // 20260819_p30_budget_per_account_period.sql لنفس المنطق في get_my_ai_budget).
+    const crossed: [string, number, string][] = []; // [uid, used, periodStart]
+    for (const [uid, rows] of rowsByUser) {
+      const t = teacherById.get(uid);
+      if (!t?.email) continue;
+      const periodStart = (addedAtByEmail.get(t.email.toLowerCase()) || fallbackPeriod).slice(0, 10);
+      const used = rows.filter((r) => r.at >= periodStart).reduce((s, r) => s + r.cost, 0);
+      if (used / budgetUsd >= 0.8) crossed.push([uid, used, periodStart]);
     }
 
-    // من أُرسل لها التنبيه فعلاً في هذه الفترة تحديداً
+    if (crossed.length === 0) {
+      await finishRun(sb, run, { status: "SUCCESS", resultSummary: "لا معلّمة تجاوزت ٨٠٪", recordsRead: rowsByUser.size });
+      return json({ ok: true, checked: rowsByUser.size, alerted: 0 });
+    }
+
+    // من أُرسل لها التنبيه فعلاً في فترتها الحالية تحديداً (لو أُعيد تفعيل
+    // حسابها لاحقاً بتاريخٍ جديد، هذا يُعامَل فترةً جديدة تستحقّ تنبيهاً جديداً)
     const { data: alertRows } = await sb
       .from("budget_alerts")
       .select("user_id, period_start, alert_80_sent_at")
       .in("user_id", crossed.map(([uid]) => uid));
     const already = new Map<string, string>();
     (alertRows || []).forEach((r: { user_id: string; period_start: string; alert_80_sent_at: string | null }) => {
-      if (r.period_start === periodStart && r.alert_80_sent_at) already.set(r.user_id, r.alert_80_sent_at);
+      if (r.alert_80_sent_at) already.set(r.user_id + "|" + r.period_start, r.alert_80_sent_at);
     });
 
-    const toNotify = crossed.filter(([uid]) => !already.has(uid));
+    const toNotify = crossed.filter(([uid, , ps]) => !already.has(uid + "|" + ps));
     let sentCount = 0;
-    for (const [uid, used] of toNotify) {
-      const { data: prof } = await sb.from("cycle1_profiles").select("id, email, data").eq("id", uid).maybeSingle();
-      if (!prof?.email) continue;
-      const name = (prof.data?.display_name as string) || "معلّمتنا";
+    for (const [uid, used, ps] of toNotify) {
+      const t = teacherById.get(uid);
+      if (!t?.email) continue;
+      const name = t.name || "معلّمتنا";
       const pct = Math.min(100, Math.round((used / budgetUsd) * 100));
-      const r = await sendMail(prof.email, "تنبيهٌ لطيف بشأن رصيد الذكاء الاصطناعي 🌙", alertHtml(name, pct));
+      const r = await sendMail(t.email, "تنبيهٌ لطيف بشأن رصيد الذكاء الاصطناعي 🌙", alertHtml(name, pct));
       await sb.from("budget_alerts").upsert({
-        user_id: uid, period_start: periodStart,
+        user_id: uid, period_start: ps,
         alert_80_sent_at: r.sent ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       });
@@ -131,9 +156,9 @@ Deno.serve(async (req) => {
     await finishRun(sb, run, {
       status: "SUCCESS",
       resultSummary: `${sentCount} بريدٍ أُرسل من أصل ${toNotify.length} تجاوزت ٨٠٪`,
-      recordsRead: usedByUser.size, recordsWritten: sentCount,
+      recordsRead: rowsByUser.size, recordsWritten: sentCount,
     });
-    return json({ ok: true, checked: usedByUser.size, crossed: crossed.length, alerted: sentCount });
+    return json({ ok: true, checked: rowsByUser.size, crossed: crossed.length, alerted: sentCount });
   } catch (error) {
     console.error("❌ budget-alert-check:", error);
     await finishRun(sb, run, { status: "FAILED", error: String(error) });
