@@ -1,0 +1,51 @@
+# تشخيصٌ يدويّ: قراءة أخطاء Postgres/Storage الحقيقية من سجلّات Supabase
+# (نفس ما تعرضه لوحة Supabase في Project > Logs) — قراءةٌ صرفة، لا كتابة
+# ولا تعديل. يستعمل نفس السرّ الموجود أصلاً (SUPABASE_ACCESS_TOKEN)، بلا
+# بيان اعتمادٍ جديد.
+name: Check Supabase Logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'مصدر السجلّ'
+        required: true
+        default: 'postgres_logs'
+        type: choice
+        options:
+          - postgres_logs
+          - storage_logs
+      hours:
+        description: 'عدد الساعات الماضية'
+        required: true
+        default: '24'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: قراءة الأخطاء
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          SOURCE: ${{ inputs.source }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          set -uo pipefail
+          START=$(date -u -d "-${HOURS} hours" +%Y-%m-%dT%H:%M:%S.000Z)
+          END=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          SQL="select id, ${SOURCE}.timestamp, event_message from ${SOURCE} where event_message ilike '%error%' order by timestamp desc limit 30"
+          ENC_SQL=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$SQL")
+
+          echo "── المصدر: $SOURCE — من $START إلى $END ──"
+          code=$(curl -s -o /tmp/logs.json -w '%{http_code}' \
+            "https://api.supabase.com/v1/projects/$REF/analytics/endpoints/logs.all?sql=${ENC_SQL}&iso_timestamp_start=${START}&iso_timestamp_end=${END}" \
+            -H "Authorization: Bearer $TOKEN")
+
+          if [ "$code" = "200" ]; then
+            echo "✅ نجح ($code)"
+            cat /tmp/logs.json | python3 -m json.tool
+          else
+            echo "❌ فشل ($code)"
+            cat /tmp/logs.json
+          fi
