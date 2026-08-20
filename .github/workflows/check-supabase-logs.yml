@@ -34,7 +34,14 @@ jobs:
           set -uo pipefail
           START=$(date -u -d "-${HOURS} hours" +%Y-%m-%dT%H:%M:%S.000Z)
           END=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-          SQL="select id, ${SOURCE}.timestamp, event_message from ${SOURCE} where event_message ilike '%error%' order by timestamp desc limit 30"
+          # صيغة Logflare القانونية (نفس ما يولّده Logs Explorer في اللوحة).
+          # postgres_logs فقط له metadata.parsed.error_severity منظَّم؛
+          # storage_logs لا يملك هذا الحقل فيُكتفى بتصفية نصّية على الرسالة.
+          if [ "$SOURCE" = "postgres_logs" ]; then
+            SQL="select ${SOURCE}.timestamp, id, event_message, parsed.error_severity, parsed.query from ${SOURCE} cross join unnest(metadata) as m cross join unnest(m.parsed) as parsed where parsed.error_severity in ('ERROR','FATAL','PANIC') order by timestamp desc limit 30"
+          else
+            SQL="select ${SOURCE}.timestamp, id, event_message from ${SOURCE} where event_message ilike '%error%' order by timestamp desc limit 30"
+          fi
           ENC_SQL=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$SQL")
 
           echo "── المصدر: $SOURCE — من $START إلى $END ──"
