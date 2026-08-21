@@ -12166,6 +12166,40 @@ async function ref_testActivationMail(){
   }catch(e){alert('❌ تعذّر الاختبار: '+(e.message||''));}
 }
 
+// نافذة بيانات دخول المعلّمة بعد التفعيل — بديلٌ عن alert() العادي كي
+// يستطيع المشرف نسخ البريد أو كلمة المرور بضغطةٍ واحدة بدل تحديدها يدوياً.
+function _copyCredField(text,btn){
+  const done=()=>{const old=btn.textContent;btn.textContent='✅ نُسخ';setTimeout(()=>{btn.textContent=old;},1400);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>toast('تعذّر النسخ',true));
+  }else{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');done();}catch(e){toast('تعذّر النسخ',true);}
+    document.body.removeChild(ta);
+  }
+}
+function showActivationCreds(email,password,mailed,mailReason){
+  const bg=document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal" style="max-width:400px">
+    <h3 style="margin-bottom:6px">${mailed?'✅ فُعِّل الحساب وأُرسلت البيانات':'✅ فُعِّل الحساب — لم يُرسَل البريد'}</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">${mailed?'احتفظ بالبيانات أدناه — قد تقع الرسالة في المهملات.':'أرسل البيانات أدناه للمعلّمة يدوياً. السبب: '+escHtml(mailReason||'خدمة البريد غير مهيّأة')}</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px">
+        <div style="flex:1;min-width:0"><div style="font-size:10.5px;color:var(--muted);margin-bottom:2px">البريد الإلكتروني</div><div style="font-size:13px;font-weight:700;direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(email||'')}</div></div>
+        <button class="action-btn" style="flex-shrink:0" onclick="_copyCredField('${escAttr(email||'')}',this)">📋 نسخ</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px">
+        <div style="flex:1;min-width:0"><div style="font-size:10.5px;color:var(--muted);margin-bottom:2px">كلمة المرور</div><div style="font-size:13px;font-weight:700;direction:ltr;text-align:right">${escHtml(password||'')}</div></div>
+        <button class="action-btn" style="flex-shrink:0" onclick="_copyCredField('${escAttr(password||'')}',this)">📋 نسخ</button>
+      </div>
+      <button class="action-btn" onclick="_copyCredField('البريد: ${escAttr(email||'')}\\nكلمة المرور: ${escAttr(password||'')}',this)">📋 نسخ الاثنين معاً</button>
+    </div>
+    <button class="setup-btn secondary" style="width:100%;margin-top:16px" onclick="this.closest('.modal-bg').remove()">إغلاق</button>
+  </div>`;
+  bg.onclick=(e)=>{if(e.target===bg)bg.remove();};
+  document.body.appendChild(bg);
+}
 async function ref_activateTeacher(regId,plan){
   plan=plan==='trial'?'trial':'paid';
   const trial=plan==='trial';
@@ -12194,9 +12228,7 @@ async function ref_activateTeacher(regId,plan){
     }
     await ref_loadRegistrations();
     ref_renderAccountsTab();
-    alert(data.mailed
-      ? `✅ فُعِّل الحساب وأُرسلت البيانات إلى ${data.email}\n\nكلمة المرور: ${data.password}\n(احتفظ بها — قد تقع الرسالة في المهملات)`
-      : `✅ فُعِّل الحساب — لكن لم يُرسَل البريد.\n\nالبريد: ${data.email}\nكلمة المرور: ${data.password}\n\nأرسلها إليها الآن.\n\nالسبب: ${data.mailReason||'خدمة البريد غير مهيّأة'}`);
+    showActivationCreds(data.email,data.password,data.mailed,data.mailReason);
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي ١٤ يوم':'⚡ تفعيل الحساب';}
