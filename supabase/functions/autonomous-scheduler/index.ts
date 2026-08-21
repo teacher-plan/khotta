@@ -50,6 +50,45 @@ function freshCounters(): RunCounters {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Observability فقط — لا تُغيّر أي قرار، تُسجِّل ما قرَّره الكود القائم
+// بالفعل. تعيد استعمال agent_logs (موجودٌ أصلاً، لا هجرة جديدة): action
+// ثابتٌ "shadow_decision" يُميِّزها عن سجلّات "started/completed/failed"
+// العامّة، وstatus يحمل نفس قيم decision/reason التي يستعملها الكود
+// أصلاً في مكانٍ آخر (النمط الحرفي من evaluateShadow/autonomousGateway —
+// لا enum جديد يُخترَع هنا). فشل التسجيل نفسه لا يُسقط الدورة أبداً.
+// ─────────────────────────────────────────────────────────────────────
+async function recordShadowDecision(
+  admin: any,
+  input: {
+    runId: string | null; incidentId: string; stage: "ELIGIBILITY" | "EXECUTION";
+    decision: string; reason: string; agentId?: string | null; severity?: unknown;
+    diagnosisConfidence?: number | null; playbookId?: string | null; gate?: string | null;
+  },
+): Promise<void> {
+  try {
+    await admin.from("agent_logs").insert({
+      agent_name: "autonomous-scheduler",
+      action: "shadow_decision",
+      status: input.decision,
+      data_collected: {
+        incident_id: input.incidentId,
+        scheduler_run_id: input.runId,
+        stage: input.stage,
+        reason: input.reason,
+        agent_id: input.agentId ?? null,
+        severity: input.severity ?? null,
+        diagnosis_confidence: input.diagnosisConfidence ?? null,
+        playbook_id: input.playbookId ?? null,
+        gate: input.gate ?? null,
+      },
+    });
+  } catch (e) {
+    // تسجيلٌ اجتهاديّ صرف — عطله لا يمسّ منطق القرار نفسه إطلاقاً.
+    console.error("recordShadowDecision: فشل التسجيل:", String(e));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // الحصول على تشخيصٍ صالحٍ للحادثة — يفضّل تشخيصاً مكتملاً موجوداً سلفاً؛
 // لا يُنشئ تشخيصاً جديداً إلا عند غيابه فعلياً، وحتى حينها لا نداء LLM
 // جديد يُضاف هنا: الاستدعاء يمرّ عبر نفس مسار action:"diagnose" في
@@ -155,28 +194,53 @@ export async function runSchedulerCycle(
       if (eligible.length >= BATCH_LIMIT) break;
       try {
         const diagnosis = await getOrCreateDiagnosis(admin, incident.id, supabaseUrl, serviceKey);
-        if (!diagnosis) continue;
+        if (!diagnosis) {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "DIAGNOSIS_FAILED", severity: incident.severity });
+          continue;
+        }
         const runsSummary = extractRunsSummary(diagnosis);
-        if (!runsSummary) continue;
+        if (!runsSummary) {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "NO_RUNS_EVIDENCE", severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null });
+          continue;
+        }
 
         const pattern = matchIncidentPattern(runsSummary);
-        if (!pattern) continue;
+        if (!pattern) {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "NO_PLAYBOOK_MATCH", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null });
+          continue;
+        }
 
         const { data: playbook } = await admin.from("repair_playbooks").select("*").eq("incident_pattern", pattern).eq("enabled", true).maybeSingle();
-        if (!playbook) continue;
+        if (!playbook) {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "NO_PLAYBOOK_MATCH", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null });
+          continue;
+        }
 
         // فحصٌ إضافيٌّ رخيص (المتطلَّب 8): خطورةٌ عالية أو قاطعٌ مفتوح ⇒
         // لا داعي لادّعاءٍ أو استدعاء بوّابةٍ عبثاً — الاثنان اليوم دوماً
         // LOW/CLOSED لكن الفحص صادقٌ لا مُعلَّقاً بافتراض.
-        if (playbook.risk_level === "HIGH" || playbook.risk_level === "CRITICAL") continue;
-        if (playbook.circuit_state === "OPEN") continue;
+        if (playbook.risk_level === "HIGH" || playbook.risk_level === "CRITICAL") {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "RISK_BLOCKED", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null, playbookId: playbook.playbook_id });
+          continue;
+        }
+        if (playbook.circuit_state === "OPEN") {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: "CIRCUIT_OPEN", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null, playbookId: playbook.playbook_id });
+          continue;
+        }
 
         const rl = await checkRateLimitAndCooldown(admin, playbook, incident.id);
-        if (rl.rateLimited || rl.cooldownActive) continue;
+        if (rl.rateLimited || rl.cooldownActive) {
+          await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "SKIPPED", reason: rl.rateLimited ? "RATE_LIMITED" : "COOLDOWN_ACTIVE", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null, playbookId: playbook.playbook_id });
+          continue;
+        }
 
+        await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "ELIGIBLE", reason: "PASSED_ALL_ELIGIBILITY_CHECKS", agentId: runsSummary.agent_id, severity: incident.severity, diagnosisConfidence: diagnosis.confidence ?? null, playbookId: playbook.playbook_id });
         eligible.push({ incident, diagnosis, playbook, runsSummary });
-      } catch {
+      } catch (_e) {
         // فشل تقييم مرشّحٍ واحد لا يُسقط بقيّة المسح — يُتجاوَز فقط.
+        // السبب الحقيقي غير معروفٍ سلفاً هنا (استثناءٌ عامّ)، فلا يُخترَع —
+        // UNKNOWN_REASON بدل تسميةٍ زائفة اليقين (المتطلَّب 8).
+        await recordShadowDecision(admin, { runId, incidentId: incident.id, stage: "ELIGIBILITY", decision: "ERROR", reason: "UNKNOWN_REASON", severity: incident.severity });
         continue;
       }
     }
@@ -200,7 +264,11 @@ export async function runSchedulerCycle(
           p_claimed_by: "autonomous_scheduler",
           p_stale_minutes: CLAIM_STALE_MINUTES,
         });
-        if (claimErr || !claim) continue; // ادّعاءٌ فاشل — تخطٍّ فوري، لا إعادة محاولة ضمن نفس الدورة
+        if (claimErr || !claim) {
+          // ادّعاءٌ فاشل — تخطٍّ فوري، لا إعادة محاولة ضمن نفس الدورة (بلا تغيير).
+          await recordShadowDecision(admin, { runId, incidentId: item.incident.id, stage: "EXECUTION", decision: "SKIPPED", reason: "LOCK_DENIED", agentId: item.runsSummary!.agent_id, severity: item.incident.severity, playbookId: item.playbook.playbook_id });
+          continue;
+        }
         claimId = String(claim);
         counters.incidents_claimed += 1;
 
@@ -217,8 +285,14 @@ export async function runSchedulerCycle(
         counters.incidents_evaluated += 1;
         if (result.status === "WOULD_AUTO_HEAL") counters.shadow_would_repair += 1;
         if (result.status === "ESCALATED") counters.escalated += 1;
-      } catch {
+        // نفس result.status الذي يحسب عليه العدّادان أعلاه — لا قيمةٌ جديدة
+        // تُخترَع، فقط يُسجَّل هنا حتى تصير مرئيةً لكل حادثةٍ بمفردها لا
+        // إجمالياً فقط. آخر بوّابةٍ وصلها result.gates تُسجَّل إن وُجدت.
+        const lastGate = Array.isArray(result.gates) && result.gates.length ? result.gates[result.gates.length - 1].gate : null;
+        await recordShadowDecision(admin, { runId, incidentId: item.incident.id, stage: "EXECUTION", decision: result.status, reason: result.reason || result.status, agentId: item.runsSummary!.agent_id, severity: item.incident.severity, playbookId: item.playbook.playbook_id, gate: lastGate });
+      } catch (_e) {
         counters.errors += 1;
+        await recordShadowDecision(admin, { runId, incidentId: item.incident.id, stage: "EXECUTION", decision: "ERROR", reason: "UNKNOWN_REASON", agentId: item.runsSummary?.agent_id, severity: item.incident.severity, playbookId: item.playbook?.playbook_id });
       } finally {
         // تحريرٌ دوماً بعد اكتمال المحاولة (نجاحاً أو فشلاً) — لا إعادة
         // محاولةٍ ضمن نفس الدورة (المتطلَّب 4د).

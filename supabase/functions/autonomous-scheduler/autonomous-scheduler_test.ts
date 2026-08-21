@@ -249,6 +249,81 @@ Deno.test("(G) one incident's eligibility check throws: subsequent incidents in 
 });
 
 // ─── (H) أكثر من ٥ حوادث مؤهَّلة → BATCH_LIMIT فقط تُعالَج هذه الدورة ───
+// ═══ اختبارات Observability (شهادة قابلية الرصد) — تُثبت أن كل early-exit
+// صار يُسجِّل صفّاً في agent_logs بسببٍ صريح، بلا تغيير أي قرارٍ قائم. ═══
+
+// ─── (I) حادثةٌ بلا تشخيصٍ مكتمل → DIAGNOSIS_FAILED مُسجَّلة في agent_logs.
+//     نفس مبدأ بقيّة الملف: لا فتح اتصالٍ شبكيّ حقيقي — fetch مُستبدَلةٌ
+//     مؤقّتاً بردٍّ فاشل مضبوطٍ، تُعاد بعد الاختبار مباشرة. ───
+Deno.test("(I) incident with no diagnosis: DIAGNOSIS_FAILED reason is recorded in agent_logs", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (() => Promise.resolve(new Response("{}", { status: 500 }))) as typeof fetch;
+  try {
+    const admin = makeFakeAdmin({
+      self_healing_controls: [GLOBAL_ENABLED],
+      ops_incidents: [makeIncident("i1")],
+      ops_diagnoses: [], // لا تشخيص موجود سلفاً ⇒ getOrCreateDiagnosis يستدعي fetch (مُستبدَلة أعلاه)، ترجع !ok، فتُعيد null
+    });
+    await runSchedulerCycle(admin, "https://example.test", "svc-key");
+    const log = (admin._tables.agent_logs || []).find((r: any) => r.data_collected?.incident_id === "i1");
+    assert(log, "يجب تسجيل قرارٍ لهذه الحادثة");
+    assertEquals(log.data_collected.reason, "DIAGNOSIS_FAILED");
+    assertEquals(log.status, "SKIPPED");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+// ─── (J) تشخيصٌ ناجح لكن لا نمط حادثةٍ معروف (فشلاتٌ قليلة) → NO_PLAYBOOK_MATCH ───
+Deno.test("(J) diagnosis succeeds but no known pattern: NO_PLAYBOOK_MATCH reason is recorded", async () => {
+  const diag = makeDiagnosis("d1", "i1", "system-health-check", 1); // فشلٌ واحد فقط — لا يطابق أي نمط
+  const admin = makeFakeAdmin({
+    self_healing_controls: [GLOBAL_ENABLED],
+    ops_incidents: [makeIncident("i1")],
+    ops_diagnoses: [diag],
+    repair_playbooks: [BASE_PB],
+  });
+  await runSchedulerCycle(admin, "https://example.test", "svc-key");
+  const log = (admin._tables.agent_logs || []).find((r: any) => r.data_collected?.incident_id === "i1");
+  assert(log, "يجب تسجيل قرارٍ لهذه الحادثة");
+  assertEquals(log.data_collected.reason, "NO_PLAYBOOK_MATCH");
+});
+
+// ─── (K) ادّعاءٌ فاشل (اقتناصٌ متزامن) → LOCK_DENIED مُسجَّلة، بلا استدعاء بوّابة ───
+Deno.test("(K) claim fails: LOCK_DENIED reason is recorded, gateway not invoked for that incident", async () => {
+  const diag = makeDiagnosis("d1", "i1");
+  const admin = makeFakeAdmin({
+    self_healing_controls: [GLOBAL_ENABLED],
+    ops_incidents: [makeIncident("i1")],
+    ops_diagnoses: [diag],
+    repair_playbooks: [BASE_PB],
+  }, { rpcResults: { claim_incident_for_repair: { data: null, error: null } } });
+  await runSchedulerCycle(admin, "https://example.test", "svc-key");
+  const log = (admin._tables.agent_logs || []).find((r: any) => r.data_collected?.stage === "EXECUTION");
+  assert(log, "يجب تسجيل قرار EXECUTION لهذه الحادثة");
+  assertEquals(log.data_collected.reason, "LOCK_DENIED");
+  assertEquals((admin._tables.repair_executions || []).length, 0);
+});
+
+// ─── (L) حادثةٌ مؤهَّلة تصل حدّ Shadow → WOULD_EXECUTE (DISABLED من Gate 4
+//     فعلياً اليوم) يُسجَّل في agent_logs، مع تأكيدٍ أن لا تنفيذٍ فعلي وقع
+//     (نفس تأكيد الاختبار B لكن من زاوية سجلّ agent_logs الجديد). ───
+Deno.test("(L) eligible incident reaches shadow boundary: EXECUTION decision recorded, no real repair executed", async () => {
+  const diag = makeDiagnosis("d1", "i1");
+  const admin = makeFakeAdmin({
+    self_healing_controls: [GLOBAL_ENABLED],
+    ops_incidents: [makeIncident("i1")],
+    ops_diagnoses: [diag],
+    repair_playbooks: [BASE_PB],
+  }, { rpcResults: { claim_incident_for_repair: { data: "claim-1", error: null } } });
+  await runSchedulerCycle(admin, "https://example.test", "svc-key");
+  const log = (admin._tables.agent_logs || []).find((r: any) => r.data_collected?.stage === "EXECUTION");
+  assert(log, "يجب تسجيل قرار EXECUTION");
+  assert(log.data_collected.reason, "يجب أن يحمل سبباً حقيقياً من executeAutonomous، لا فراغاً");
+  assert(log.status !== "SUCCEEDED", "لا يجوز أبداً تسجيل نجاح تنفيذٍ فعلي في هذه المرحلة");
+  assertEquals((admin._tables.repair_executions || []).find((r: any) => r.status === "SUCCEEDED"), undefined);
+});
+
 Deno.test("(H) more than BATCH_LIMIT eligible incidents exist: only BATCH_LIMIT are processed per cycle", async () => {
   const N = 8;
   assert(N > BATCH_LIMIT);
