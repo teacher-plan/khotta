@@ -4624,9 +4624,6 @@ function suRender(){
       // المتغيّرات، فما لم يُلتقط ما كُتب فوراً مُسح الاسم والهاتف عند أوّل
       // ضغطةٍ على الفصل — وهو ما وقع فعلاً.
       +'<div class="fld"><label for="su-name">الاسم</label><input type="text" id="su-name" oninput="suName=this.value" value="'+escAttr(suName)+'"/></div>'
-      +'<div class="fld"><label for="su-phone">رقم الهاتف</label>'
-      +'<input type="tel" inputmode="tel" id="su-phone" dir="ltr" style="text-align:right" placeholder="9XXXXXXX" maxlength="20" oninput="suPhone=this.value" value="'+escAttr(suPhone)+'"/>'
-      +'<small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">لتتواصل معكِ الإدارة عند الحاجة. مثال: ٩١٢٣٤٥٦٧</small></div>'
       // كانت الشهادة تُصدَّر باسم مدرسة فارغ لأنه لم يُطلب هنا إطلاقاً — كان
       // موجوداً فقط بقسمٍ اختياري منفصل («إنجازاتك ومبادراتك») لا تفتحه كل معلّمة
       +'<div class="fld"><label for="su-school">اسم المدرسة</label><input type="text" id="su-school" oninput="suSchool=this.value" value="'+escAttr(suSchool)+'"/>'
@@ -4961,10 +4958,6 @@ function suGradeTab(g){
 function suNext1(){
   suName=(document.getElementById('su-name').value||'').trim();
   if(!suName){toast('اكتبي اسمك أولاً',true);return;}
-  // يُطلب مرّةً واحدة هنا، فيُلزَم به: تركه اختيارياً يعني حساباتٍ بلا رقم
-  // لا سبيل لاستدراكها إلا بمطاردة كل معلّمة على حدة.
-  suPhone=acctDigits(document.getElementById('su-phone').value);
-  if(suPhone.length<8||suPhone.length>15){toast('اكتبي رقم هاتفكِ',true);return;}
   suSchool=(document.getElementById('su-school').value||'').trim();
   if(!suSchool){toast('اكتبي اسم المدرسة',true);return;}
   if(!suSem){toast('اختاري الفصل الدراسي',true);return;}
@@ -5711,31 +5704,9 @@ async function planInfoBtn(id){
   const st=planGet(id);
   if(st.info_url){planShowInfo(id);return;}
   const l=planFindLesson(id);if(!l)return;
-  if(!_c1GenLock(id)){toast('التوليد جارٍ بالفعل لهذا الدرس',true);return;}
-  cyBusy('يقرأ الدرس ويرسم ملخصه... قد يستغرق دقيقة');
-  try{
-    const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name);
-    const _infoRes=await sb.functions.invoke('generate-infographic',{
-      body:{grade:String(planGrade),subject:planSubject,lessonNames:[l.name],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext:bookContext||''}
-    });
-    const{data,error}=_infoRes;
-    if(error||!data||!data.image){
-      const reason=await c1FnErr(_infoRes);
-      toast(c1ErrMsg(reason,'تعذّر توليد الملخص — تحقّقي من الاتصال وأعيدي المحاولة.'),true);
-      return;
-    }
-    const blob=await c1CompressInfo(data.image);
-    const path=c1InfoPath(id);
-    const{error:upErr}=await sb.storage.from('library-files').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=3600'});
-    if(upErr)throw upErr;
-    const url=sb.storage.from('library-files').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
-    await planSetState(id,{info_url:url,info_at:new Date().toISOString()});
-    qBump();
-    shPublishInfo(id,planGrade,planSubject,url);
-    planRenderUnits();
-    toast('جهز ملخص الدرس','ok');
-  }catch(e){toast('تعذّر توليد الملخص',true);}
-  finally{cyBusyDone();_c1GenUnlock(id);}
+  // بدل التوليد المباشر بتعليماتٍ ثابتة، ننقل المعلّمة إلى الاستوديو حيث
+  // تستطيع إضافة تعليماتٍ خاصة لملخّص هذا الدرس إن أرادت قبل التوليد.
+  studioJumpToInfo(planGrade,planSubject,l.name);
 }
 // الملخص يُعرض بملء الشاشة — مقاسه العريض لا يظهر في نافذة ضيّقة
 function imgFullOpen(url,title){
@@ -5991,16 +5962,16 @@ async function planPrepBtn(id){
   if(!_c1GenLock(id)){toast('التوليد جارٍ بالفعل لهذا الدرس',true);return;}
   try{
     // ① الجاهز عند الزميلات أولاً: أسرع وأرخص، ولا يمسّ حصّتها الشهرية.
-    cyBusy('يبحث عمّا جهّزته زميلاتك...');
+    cyBusyLight('يبحث عمّا جهّزته زميلاتك...');
     const found=await shPoolFetch(id,['prep']);
     if((await shAdopt(id,found)).includes('prep')){
-      cyBusyDone();
+      cyBusyLightDone();
       toast('أخذنا لكِ خطةً مما جهّزته زميلاتك لهذا الدرس','ok');
       planRenderUnits();planShowPrep(id);return;
     }
-    cyBusy('يقرأ الدرس من الكتاب...');
+    cyBusyLight('يقرأ الدرس من الكتاب...');
     const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name)||'';
-    cyBusy('يُعِدّ خطة الدرس... قد يستغرق دقيقة');
+    cyBusyLight('يُعِدّ خطة الدرس... قد يستغرق دقيقة');
     const res=await sb.functions.invoke('generate-lesson-plan',{
       body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,images:[],bookContext}
     });
@@ -6015,7 +5986,7 @@ async function planPrepBtn(id){
     planRenderUnits();planShowPrep(id);
     toast('جهزت خطة الدرس','ok');
   }catch(e){toast('تعذّر إعداد الخطة — أعيدي المحاولة',true);}
-  finally{cyBusyDone();_c1GenUnlock(id);}
+  finally{cyBusyLightDone();_c1GenUnlock(id);}
 }
 // إعادة التوليد تتجاهل الجاهز: تُمسح الخطة المتبنّاة أولاً كي تُبنى من جديد
 async function planPrepRegen(id){
@@ -6287,11 +6258,11 @@ async function todayGenerate(){
   try{
     // ① الجاهز من زميلة أولاً — أسرع وأرخص من التوليد، ولا يمسّ الحصة الشهرية
     if(!todayForceOwn){
-      cyBusy('يبحث عمّا جهّزته زميلاتك...');
+      cyBusyLight('يبحث عمّا جهّزته زميلاتك...');
       const found=await shPoolFetch(id,[...need]);
       for(const k of await shAdopt(id,found)){need.delete(k);adopted.add(k);}
       if(!need.size){
-        cyBusyDone();
+        cyBusyLightDone();
         toast(`أخذنا لك ${[...adopted].map(k=>labels[k]).join(' و')} مما جهّزته زميلاتك لهذا الدرس`,'ok');
         todayCardRender();
         if(planGrade===ctx.grade&&planSubject===ctx.subject)planRenderUnits();
@@ -6301,14 +6272,14 @@ async function todayGenerate(){
     }
 
     // ② ما بقي ناقصاً نولّده
-    cyBusy('يقرأ الدرس من الكتاب...');
+    cyBusyLight('يقرأ الدرس من الكتاب...');
     try{bookContext=await c1BookSummary(id,ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName)||'';}catch(e){}
 
     for(let round=1;round<=TODAY_TRIES&&need.size&&!quota;round++){
       const suffix=round>1?` — محاولة ${egArNum(round)}`:'';
 
       if(need.has('prep')){
-        cyBusy('يُعِدّ خطة الدرس'+suffix);
+        cyBusyLight('يُعِدّ خطة الدرس'+suffix);
         try{
           const res=await sb.functions.invoke('generate-lesson-plan',{
             body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,images:[],bookContext}
@@ -6325,7 +6296,7 @@ async function todayGenerate(){
       }
 
       if(need.has('info')&&!quota){
-        cyBusy('يرسم الملخص البصري'+suffix+'... قد يستغرق دقيقة');
+        cyBusyLight('يرسم الملخص البصري'+suffix+'... قد يستغرق دقيقة');
         try{
           const res=await sb.functions.invoke('generate-infographic',{
             body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext}
@@ -6349,7 +6320,7 @@ async function todayGenerate(){
 
       // مهلة تصاعدية بين الجولات: تعثّر الخادم اللحظي يزول بالانتظار
       if(need.size&&!quota&&round<TODAY_TRIES){
-        cyBusy('تعذّر جزء — يعيد المحاولة بعد لحظات');
+        cyBusyLight('تعذّر جزء — يعيد المحاولة بعد لحظات');
         await new Promise(r=>setTimeout(r,1500*round));
       }
     }
@@ -6362,7 +6333,7 @@ async function todayGenerate(){
     else toast(`تعذّر تجهيز ${nm(need)} بعد ${egArNum(TODAY_TRIES)} محاولات — تحققي من الاتصال`,true);
   }catch(e){toast('تعذّر الاتصال، حاولي مجدداً',true);}
   finally{
-    cyBusyDone();
+    cyBusyLightDone();
     todayCardRender();
     if(planGrade===ctx.grade&&planSubject===ctx.subject)planRenderUnits();
     const b=document.getElementById('today-gen-btn');if(b)b.disabled=false;
@@ -8341,6 +8312,12 @@ async function studioJumpTo(grade,subject,lessonName){
   c1Go('studio');
   await studioRenderLessons();
   studioSetMode('game');
+}
+async function studioJumpToInfo(grade,subject,lessonName){
+  studioGrade=grade;studioSubject=subject;studioLessonName=lessonName;
+  c1Go('studio');
+  await studioRenderLessons();
+  studioSetMode('info');
 }
 
 // ══ مولّد الإنفوجرافيك — صورة مرسومة بالكامل ══
