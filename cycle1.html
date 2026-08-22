@@ -1453,8 +1453,11 @@ body:has(#page-fahim.active){overflow:hidden}
    min-height يغلب height دائماً. */
 #page-fahim.active .fhp-card{max-width:none;height:100%;min-height:0;border-radius:0;border:none;box-shadow:none}
 /* رأس المساعد يفسح لربع الدائرة (يمين) وأيقونة الحساب (يسار) بالوضع الكامل */
-#page-fahim.active #fh-head{padding-inline-start:78px;padding-inline-end:122px}
-@media(max-width:480px){#page-fahim.active #fh-head{padding-inline-start:60px;padding-inline-end:104px;flex-wrap:wrap}}
+/* حجم أيقونات النقطة الثابتة (الحساب + الإشعارات + حلقة الرصيد) 44px لكل
+   واحدة، وأبعدها (حلقة الرصيد) تبدأ عند 114px من الحافة — فحيّزها الكامل
+   يبلغ 158px لا 122px كما كان مضبوطاً هنا، فكانت تتراكب فوق زرّ «جديدة». */
+#page-fahim.active #fh-head{padding-inline-start:78px;padding-inline-end:166px}
+@media(max-width:480px){#page-fahim.active #fh-head{padding-inline-start:60px;padding-inline-end:156px;flex-wrap:wrap}}
 #fh-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:linear-gradient(135deg,var(--red-deep),var(--red-d) 60%,var(--red));color:#fff}
 .fh-name{font-size:14.5px;font-weight:800;color:#fff}
 .fh-status{font-size:11px;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:6px;margin-top:2px}
@@ -1551,6 +1554,13 @@ body:has(#page-fahim.active){overflow:hidden}
 .fh-webtag{display:inline-flex;align-items:center;gap:4px;background:rgba(72,120,72,.12);color:var(--olive-d);
   border:1px solid rgba(72,120,72,.3);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;
   margin-bottom:7px;white-space:nowrap}
+/* إشعار نظامٍ (نفاد رصيد، ازدحام، عطل...) — يجب ألّا يُشبه ردّ المساعد
+   الحقيقي بصرياً، وإلا ظنّته المعلّمة إجابةً ذكيةً كاذبة عن سؤالها. */
+.fh-msg.bot.err{background:linear-gradient(170deg,#FBF0E4,#F7E6D4);border-color:rgba(166,106,31,.35)}
+.fh-msg.bot.err::before{background:linear-gradient(180deg,#C98A2E,#A66A1F)}
+.fh-err-tag{display:flex;align-items:center;gap:5px;background:rgba(166,106,31,.15);color:#8A5A1F;
+  border:1px solid rgba(166,106,31,.35);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;
+  margin-bottom:7px;width:fit-content}
 #fh-thumbs{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
 #fh-thumbs:not(:empty){padding-top:10px}
 .fh-th{position:relative;width:62px;height:62px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
@@ -10225,8 +10235,13 @@ function fhRender(){
     </div>`;
     return;
   }
+  // رسالة العطل تُميَّز بصرياً عن ردّ المساعد الحقيقي — بلا هذا التمييز
+  // تبدو «استهلكتِ رصيدكِ» كأن المساعد نفسه قالها كإجابةٍ عن سؤالها، فتُصدَّق
+  // كردٍّ ذكيّ لا كإشعار نظامٍ حقيقي.
   body.innerHTML=fhMsgs.map(m=>m.role==='user'
     ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
+    :m.err
+    ?`<div class="fh-msg bot err"><span class="fh-err-tag">⚠️ إشعار نظام — لا ردّ ذكاء اصطناعي</span>${escHtml(m.content)}</div>`
     :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${
         m.img?`<img class="fh-genimg" src="${m.img}" alt="صورة مولَّدة"/>`
              +`<a class="fh-imgdl" href="${m.img}" download="khotta-${Date.now()}.png">⬇︎ تنزيل الصورة</a>`:''
@@ -10316,7 +10331,7 @@ async function fhSend(){
     document.getElementById('fh-typing')?.remove();
     if(error||!data||(_draw?!data.image:!data.reply)){
       const reason=await c1FnErr(_chatRes);
-      fhMsgs.push({role:'assistant',content:c1ErrMsg(reason,_draw?'عذراً، تعذّر رسم الصورة. حاولي مرة أخرى.':'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
+      fhMsgs.push({role:'assistant',err:true,content:c1ErrMsg(reason,_draw?'عذراً، تعذّر رسم الصورة. حاولي مرة أخرى.':'عذراً، تعثّرت في الردّ. حاولي مرة أخرى.')});
     }else{
       fhMsgs.push({role:'assistant',content:data.reply||'',img:data.image||null,web:data.webUsed===true});
       qBump();
@@ -10327,7 +10342,7 @@ async function fhSend(){
     }
   }catch(e){
     document.getElementById('fh-typing')?.remove();
-    fhMsgs.push({role:'assistant',content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
+    fhMsgs.push({role:'assistant',err:true,content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
   }
   fhBusy=false;document.getElementById('fh-send').disabled=false;
   fhRender();
