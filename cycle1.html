@@ -6385,7 +6385,14 @@ async function todayCardRender(){
 // العرض واللعبة: نسخة واحدة تكفي — الأولى أغلى استدعاءً والثانية تُصمَّم يدوياً.
 // العرض صار ست صورٍ لا شرائح نصّية، فتكلفته قفزت — والتنوّع الثلاثي هو ما
 // يجعلها محتملة: ثلاث معلّماتٍ تولّدن، ومن بعدهنّ تأخذ نسخةً منها بلا رصيد.
-const SH_VARIANTS={prep:3,info:3};
+// العتبة كانت ثابتةً بالكود (٣) — صارت قابلةً للتعديل من لوحة الإدارة
+// (قسم «متابعة الخطة الذهبية») عبر ai_settings، فتُحسب هنا لا تُقرأ من
+// ثابتٍ محلّي؛ الافتراضي ٣ يبقى إن لم تُضبَط القيمة بعد.
+async function shVariantThreshold(kind){
+  const key=kind==='info'?'sh_variants_info':(kind==='prep'?'sh_variants_prep':null);
+  if(!key)return 1;   // العرض واللعبة: نسخة واحدة تكفي، لا عتبة قابلة للضبط
+  return Math.max(1,parseInt(await c1Setting(key))||3);
+}
 async function shPoolFetch(lessonId,kinds){
   if(!lessonId||!kinds.length)return{};
   try{
@@ -6397,7 +6404,7 @@ async function shPoolFetch(lessonId,kinds){
     const out={};
     for(const k of kinds){
       const arr=byKind[k]||[];
-      if(arr.length<(SH_VARIANTS[k]||1))continue;   // لم يكتمل التنوّع: تولّد نسختها وتُضيفها
+      if(arr.length<(await shVariantThreshold(k)))continue;   // لم يكتمل التنوّع: تولّد نسختها وتُضيفها
       out[k]=arr[Math.floor(Math.random()*arr.length)];
     }
     return out;
@@ -6414,6 +6421,15 @@ async function shAdopt(lessonId,found){
   }
   if(found.info&&found.info.image_url){stPatch.info_url=found.info.image_url;stPatch.info_at=new Date().toISOString();took.push('info');}
   if(Object.keys(stPatch).length)await planSetState(lessonId,stPatch);
+  // تسجيل إعادة الاستخدام — مصدر رقم «التوفير» في لوحة متابعة الخطة
+  // الذهبية بالإدارة؛ عملٌ خلفي لا يوقف تبنّي المعلّمة لنسختها لو فشل.
+  for(const k of took){
+    const src=found[k];if(!src)continue;
+    sb.from('c1_golden_reuses').insert({
+      kind:k,source_asset_id:src.id,lesson_id:lessonId,
+      grade:src.grade,subject:src.subject,lesson:src.lesson,
+    }).then(({error})=>{if(error)console.error('تعذّر تسجيل إعادة استخدام '+k+':',error.message);});
+  }
   return took;
 }
 
@@ -10918,6 +10934,12 @@ async function shSave(id,btn){
     toast(`حُفظ في بطاقة درس «${target.name}»`,'ok');
     todayCardRender();
     if(planGrade===parseInt(it.grade,10)&&planSubject===it.subject)planRenderUnits();
+    // تسجيل إعادة استخدام — هذا مسار المكتبة اليدوي (الألعاب لا تدخل في
+    // العتبة التلقائية shAdopt، فتُسجَّل هنا بدلاً من ذلك عند نسخها فعلياً).
+    sb.from('c1_golden_reuses').insert({
+      kind:it.kind,source_asset_id:it.id,lesson_id:it.lesson_id||target.id,
+      grade:String(it.grade),subject:it.subject,lesson:it.lesson,
+    }).then(({error})=>{if(error)console.error('تعذّر تسجيل إعادة استخدام '+it.kind+':',error.message);});
   }catch(e){toast('تعذّر الحفظ — تحققي من الاتصال',true);}
   finally{shBusy=false;if(btn){btn.disabled=false;btn.textContent='حفظ';}}
 }
