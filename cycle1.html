@@ -448,6 +448,28 @@ body.inapp #c1-budget-btn{display:flex}
 .c1-modal{position:fixed;inset:0;z-index:941;background:rgba(48,24,0,.5);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
 .c1-modal.open{display:flex}
 .c1-mbox{background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(48,24,0,.3)}
+.c1-mbox.wide{max-width:640px}
+.rs-cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:16px}
+.rs-cls-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px;
+  cursor:pointer;text-align:right;font-family:inherit;transition:.15s}
+.rs-cls-card:hover{border-color:var(--olive)}
+.rs-cls-card.sel{border-color:var(--red);background:rgba(216,96,72,.08)}
+.rs-cls-nm{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:3px}
+.rs-cls-n{font-size:11px;color:var(--muted)}
+.rs-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.rs-act-btn{flex:1;min-width:120px;background:var(--card);border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12.5px;font-weight:700;
+  color:var(--ink);cursor:pointer;transition:.15s}
+.rs-act-btn:disabled{opacity:.4;cursor:default}
+.rs-act-btn.danger:not(:disabled){color:var(--red-d)}
+.rs-act-btn:not(:disabled):hover{border-color:var(--olive)}
+.rs-del-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;background:var(--card);
+  border:1px solid var(--border);border-radius:12px;padding:10px}
+.rs-del-row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:7px 10px;background:var(--surface);border-radius:8px}
+.rs-del-row span{font-size:12.5px}
+.rs-del-row button{background:none;border:none;color:var(--red-d);font-size:16px;
+  font-weight:800;cursor:pointer;line-height:1;padding:2px 6px}
 .c1-mbox h3{font-size:15px;font-weight:800;margin-bottom:14px}
 .prep-sec{margin-bottom:14px}
 .prep-sec-t{font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px}
@@ -2211,18 +2233,23 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   </div>
 </div>
 
-<!-- ══ إدارة الشعب — إضافة/حذف طالبات، ورفع القوائم لمن أجّلته في الإعداد ══ -->
+<!-- ══ إدارة الشعب — إضافة/حذف طالبات، ورفع القوائم لمن أجّلته في الإعداد ══
+     الشعب أولاً، لا أسماء الطالبات: نافذةٌ تعرض كشفاً كاملاً لثلاثين اسماً
+     فور الفتح تُربك أكثر مما تُفيد. الأزرار الثلاثة باهتةٌ حتى تُحدَّد شعبة،
+     وحذف طالبةٍ وحدها يكشف قائمة أسماء (لحظياً، عند الحاجة الفعلية لا دوماً). -->
 <div class="c1-modal" id="roster-modal" onclick="if(event.target===this)rosterClose()">
-  <div class="c1-mbox">
+  <div class="c1-mbox wide">
     <h3>إدارة الشعب</h3>
-    <p class="acct-note">صحّحي اسماً كُتب خطأً، أضيفي منضمّةً جديدة، أو ارفعي كشف الأسماء إن لم ترفعيه في الإعداد. النجوم والسلوك تتبع كلَّ طالبةٍ باسمها.</p>
-    <div id="roster-tabs" class="su-grade-tabs"></div>
-    <div class="su-roster-tools" style="margin-bottom:10px">
-      <input type="file" id="roster-file" accept="image/*,application/pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="rosterUpload(this)"/>
-      <button type="button" class="su-roster-btn" id="roster-upload-btn" onclick="document.getElementById('roster-file').click()">📎 رفع قائمة الطلاب</button>
-      <span class="su-roster-hint" id="roster-upload-msg">صورة · PDF · Word · Excel — تُضاف الأسماء إلى الشعبة المحدَّدة</span>
+    <input type="file" id="roster-file" accept="image/*,application/pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="rosterUpload(this)"/>
+    <div class="grp">حدّدي شعبة</div>
+    <div id="roster-cls-grid" class="rs-cls-grid"></div>
+    <div class="rs-actions">
+      <button type="button" class="rs-act-btn" id="rs-add-btn" onclick="rosterAddStudent()" disabled>➕ إضافة طالب</button>
+      <button type="button" class="rs-act-btn danger" id="rs-del-btn" onclick="rosterDeleteToggle()" disabled>🗑️ حذف طالب</button>
+      <button type="button" class="rs-act-btn" id="rs-upload-btn" onclick="document.getElementById('roster-file').click()" disabled>📎 رفع قوائم الطلاب</button>
     </div>
-    <div id="roster-classes"></div>
+    <span class="su-roster-hint" id="roster-upload-msg"></span>
+    <div id="roster-del-list"></div>
     <div class="c1-mrow"><button class="c1-mbtn no" onclick="rosterClose()">إغلاق</button>
       <button class="c1-mbtn go" onclick="rosterSave()">حفظ</button></div>
   </div>
@@ -3763,35 +3790,56 @@ function acctDigits(s){
 }
 let acctRoster={},acctCls=null;
 function acctRenderRoster(){
-  const tabs=document.getElementById('roster-tabs'),box=document.getElementById('roster-classes');
+  const grid=document.getElementById('roster-cls-grid');
   const cls=c1AllClasses();
+  document.getElementById('roster-del-list').innerHTML='';
   if(!cls.length){
-    tabs.innerHTML='';
-    box.innerHTML='<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+    grid.innerHTML='<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+    ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=true);
     return;
   }
-  if(!acctCls||!cls.some(c=>c.id===acctCls))acctCls=cls[0].id;
-  tabs.innerHTML=cls.map(c=>{
+  grid.innerHTML=cls.map(c=>{
     const n=(acctRoster[c.id]||[]).length;
-    return `<button type="button" class="su-gt ${c.id===acctCls?'on':''}" onclick="acctTab('${escJs(c.id)}')">${escHtml(c.name||'')}${n?`<span class="ok">${n}</span>`:''}</button>`;
+    return `<button type="button" class="rs-cls-card ${c.id===acctCls?'sel':''}" onclick="acctTab('${escJs(c.id)}')">
+      <div class="rs-cls-nm">${escHtml(c.name||'')}</div>
+      <div class="rs-cls-n">${n?n+' طالب':'لا طلاب بعد'}</div>
+    </button>`;
   }).join('');
-  const list=acctRoster[acctCls]||[];
-  box.innerHTML=(list.length?list.map((s,i)=>
-    `<div class="acct-row">
-      <span class="acct-g" style="min-width:26px;text-align:center">${i+1}</span>
-      <input class="acct-in" type="text" value="${escHtml(s.nm||'')}" maxlength="40"
-             oninput="acctRoster['${escHtml(acctCls)}'][${i}].nm=this.value"/>
-      <button type="button" class="acct-del" title="حذف" onclick="acctDelStu(${i})">&times;</button>
-    </div>`).join('')
-    : '<p class="acct-note">لا طالبات في هذه الشعبة بعد.</p>')
-    +'<button type="button" class="acct-add" onclick="acctAddStu()">+ إضافة طالبة</button>';
+  const has=!!acctCls;
+  ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=!has);
 }
-function acctTab(id){acctCls=id;acctRenderRoster();}
-function acctAddStu(){(acctRoster[acctCls]=acctRoster[acctCls]||[]).push({nm:'',si:-1});acctRenderRoster();}
-function acctDelStu(i){
+function acctTab(id){
+  acctCls=(acctCls===id)?null:id;   // ضغطةٌ ثانية على الشعبة نفسها تُلغي التحديد
+  acctRenderRoster();
+}
+function rosterAddStudent(){
+  if(!acctCls)return;
+  const nm=(prompt('اسم الطالبة الجديدة:')||'').trim();
+  if(!nm)return;
+  (acctRoster[acctCls]=acctRoster[acctCls]||[]).push({nm,si:-1});
+  acctRenderRoster();
+  toast('أُضيفت «'+nm+'»','ok');
+}
+// قائمة الأسماء تظهر فقط عند الضغط على «حذف طالب» تحديداً، لا افتراضياً —
+// وضغطةٌ ثانية على الزرّ نفسه تُخفيها (تبديلٌ لا فتحٌ متراكم).
+function rosterDeleteToggle(){
+  if(!acctCls)return;
+  const el=document.getElementById('roster-del-list');
+  if(el.innerHTML.trim()){el.innerHTML='';return;}
+  const list=acctRoster[acctCls]||[];
+  el.innerHTML=list.length
+    ?'<div class="rs-del-list">'+list.map((s,i)=>
+        `<div class="rs-del-row"><span>${escHtml(s.nm||'')}</span>
+          <button type="button" title="حذف" onclick="rosterDelStu(${i})">&times;</button></div>`).join('')
+      +'</div>'
+    :'<p class="acct-note">لا طالبات في هذه الشعبة بعد.</p>';
+}
+function rosterDelStu(i){
   const l=acctRoster[acctCls]||[];
   if(!confirm('حذف «'+(l[i]&&l[i].nm||'')+'»؟ ستُحذف نجومها وسجلّ سلوكها معها.'))return;
-  l.splice(i,1);acctRenderRoster();
+  l.splice(i,1);
+  document.getElementById('roster-del-list').innerHTML='';
+  acctRenderRoster();
 }
 function acctOpen(){
   document.getElementById('c1-menu').classList.remove('open');
@@ -3906,7 +3954,7 @@ async function rosterUpload(input){
   if(!files.length)return;
   if(!acctCls){toast('اختاري شعبةً أولاً',true);return;}
   const msg=document.getElementById('roster-upload-msg');
-  const btn=document.getElementById('roster-upload-btn');
+  const btn=document.getElementById('rs-upload-btn');
   const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
   const big=files.find(f=>f.size>ROSTER_MAX_MB*1024*1024);
   if(big){say('الملف أكبر من '+ROSTER_MAX_MB+' ميجا — صوّري الكشف بجودةٍ أقلّ',true);return;}
@@ -3960,7 +4008,7 @@ async function rosterUpload(input){
       :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — جرّبي صورةً أوضح، لم تُخصم من حصّتك'
       :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='📎 رفع قائمة الطلاب';}
+    if(btn){btn.disabled=false;btn.textContent='📎 رفع قوائم الطلاب';}
   }
 }
 function cyBusy(text){
