@@ -6208,6 +6208,15 @@ async function planFileDel(id,fi){
 }
 // معاينة ملفٍ داخل نافذة — صورةٌ بوسم <img> (يحترم max-height هنا)، وأي
 // نوعٍ آخر بإطار <iframe> كالسابق (روابطنا مباشرة للملف نفسه لا صفحة Drive).
+// ملفات أوفيس (وورد/إكسل/باوربوينت) ليس للمتصفح عارضٌ يعرضها داخل
+// iframe كالصور أو PDF — يُنزّلها فوراً بدل عرضها. رابطنا للملف عامّ
+// القراءة أصلاً، فتمريره عبر عارض مايكروسوفت المجاني (بلا أي حساب أو
+// ربط) يعرضها داخل الإطار بدل تنزيلها.
+const OFFICE_EXT_RE=/\.(docx?|xlsx?|pptx?)$/i;
+function filePreviewSrc(url,name){
+  const isOffice=OFFICE_EXT_RE.test(name||'')||OFFICE_EXT_RE.test(url||'');
+  return isOffice?'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(url):url;
+}
 function drivePrevOpen(url,name,type){
   const u=url||'';
   const isImg=/^image\//.test(type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name||'');
@@ -6216,7 +6225,7 @@ function drivePrevOpen(url,name,type){
   img.style.display=isImg?'block':'none';
   frame.style.display=isImg?'none':'';
   if(isImg){img.src=u;frame.src='about:blank';}
-  else{frame.src=u;img.src='';}
+  else{frame.src=filePreviewSrc(u,name);img.src='';}
   document.getElementById('drive-prev-modal').classList.add('open');
 }
 function drivePrevClose(){
@@ -8221,7 +8230,7 @@ function liveOpenFile(fi){
   // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
   // بلا أي تصغير، مهما كانت أبعادها.
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
-  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe src="${u}" allow="autoplay"></iframe>`,false);
+  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe src="${filePreviewSrc(u,f.name)}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
