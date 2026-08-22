@@ -2409,6 +2409,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="kt-sidebar-item" data-page="c1live" onclick="ktGoC1('live',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.41l4.29 4.3-1.42 1.41L11 13V7h2z"/></svg> الحصة الحية</button>
       <button class="kt-sidebar-item" data-page="violtypes" onclick="showPage('violtypes',this);switchViolTypeTab('cycle1')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg> إدارة المخالفات</button>
       <button class="kt-sidebar-item" data-page="c1msgs" onclick="ktGoC1('msgs',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
+      <button class="kt-sidebar-item" data-page="c1storage" onclick="ktGoC1('storage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2zm-2 7h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7zm4 3v2h6v-2H6z"/></svg> مراقبة التخزين</button>
     </div>
 
     <button class="kt-sidebar-group-toggle" id="ktsg-c2-toggle" onclick="ktSidebarToggleGroup('c2')">
@@ -2555,6 +2556,23 @@ input,textarea,select{font-size:16px !important;}
     <div class="c1msg-sub" id="c1msg-sub-suggestions">
       <p style="font-size:12px;color:#7A715B;margin-bottom:16px;max-width:560px;text-align:center;margin-inline:auto">اقتراحات المعلمات لتطوير المنصة نفسها — مقروءة للمشرف فقط</p>
       <div class="c1msg-list" id="c1sug-list"><div style="text-align:center;color:#7A715B;font-size:12.5px">يجري التحميل</div></div>
+    </div>
+  </div></div>
+
+  <div class="page" id="page-c1storage"><div class="wrap">
+    <h1>مراقبة التخزين</h1>
+    <p>المساحة المستهلَكة من كل معلّمة (الافتراضي ١ جيجابايت لكل حساب) — وسّعي حصّة معلّمةٍ بعينها عند الحاجة</p>
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px">
+        <thead><tr style="background:#F0EBDF">
+          <th style="padding:10px;border:1px solid #E3DCC9;font-weight:800">المعلّمة</th>
+          <th style="padding:10px;border:1px solid #E3DCC9;font-weight:800">المستهلَك</th>
+          <th style="padding:10px;border:1px solid #E3DCC9;font-weight:800">الحصّة</th>
+          <th style="padding:10px;border:1px solid #E3DCC9;font-weight:800">النسبة</th>
+          <th style="padding:10px;border:1px solid #E3DCC9;font-weight:800">توسعة المساحة</th>
+        </tr></thead>
+        <tbody id="mc1-storage-b"><tr><td colspan="5" style="padding:14px;text-align:center;color:#7A715B">يجري التحميل</td></tr></tbody>
+      </table></div>
     </div>
   </div></div>
 <!-- ══ TIMETABLE ══ -->
@@ -5981,6 +5999,78 @@ async function mc1LoadUsage(force){
       : 'تعذّر التحميل: '+msg;
     tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:#8F3D22">'+escHtml(hint)+'</td></tr>';
   }
+}
+
+// جدول مراقبة التخزين — user_files (مجموع لكل مستخدم) وuser_storage_limits
+// (الحصّة الفردية، بلا سياسة قراءةٍ لغير المشرف عمداً — انظر هجرة P32).
+// المعلّمة لا ترى هذا الرقم من أي مسار؛ الجدول هنا مقروءٌ للمشرف فقط.
+function mc1FmtBytes(n){
+  n=Number(n)||0;
+  if(n<1024)return n+' بايت';
+  if(n<1024*1024)return (n/1024).toFixed(1)+' كيلوبايت';
+  if(n<1024*1024*1024)return (n/(1024*1024)).toFixed(1)+' ميجابايت';
+  return (n/(1024*1024*1024)).toFixed(2)+' جيجابايت';
+}
+async function mc1LoadStorage(force){
+  const tb=document.getElementById('mc1-storage-b');if(!tb)return;
+  if(tb.dataset.ready&&!force)return;
+  try{
+    const{data:allowed}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
+    const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data');
+    const{data:files,error:filesErr}=await sb.from('user_files').select('user_id,size_bytes');
+    if(filesErr)throw filesErr;
+    const{data:limits,error:limErr}=await sb.from('user_storage_limits').select('user_id,limit_bytes');
+    if(limErr)throw limErr;
+    const usedMap={};(files||[]).forEach(f=>{usedMap[f.user_id]=(usedMap[f.user_id]||0)+(f.size_bytes||0);});
+    const limMap={};(limits||[]).forEach(l=>{limMap[l.user_id]=l.limit_bytes;});
+    const pmap={};(profs||[]).forEach(p=>{pmap[(p.email||'').toLowerCase()]=p;});
+    const DEFAULT_LIMIT=1073741824;
+    const rows=(allowed||[]).map(a=>{
+      const em=(a.email||'').toLowerCase();
+      const p=pmap[em];
+      const name=(p&&(p.data||{}).display_name)||a.email||'—';
+      const uid=p&&p.id;
+      const used=uid?(usedMap[uid]||0):0;
+      const limit=uid&&limMap[uid]!=null?limMap[uid]:DEFAULT_LIMIT;
+      const pct=limit?Math.round(used/limit*100):0;
+      const col=pct>=90?'#8F3D22':pct>=70?'#B06D18':'#487848';
+      return{uid,name,email:a.email,used,limit,pct,col};
+    }).sort((x,y)=>y.pct-x.pct);
+    tb.innerHTML=rows.map(r=>
+      '<tr>'+
+      '<td style="padding:9px;border:1px solid #E3DCC9;font-weight:800">'+escHtml(r.name)+
+        '<div style="font-weight:400;direction:ltr;text-align:left;font-size:11px;color:#7A715B">'+escHtml(r.email)+'</div></td>'+
+      '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center">'+mc1FmtBytes(r.used)+'</td>'+
+      '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center">'+mc1FmtBytes(r.limit)+'</td>'+
+      '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center;color:'+r.col+';font-weight:800">'+r.pct+'٪</td>'+
+      '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center">'+
+        (r.uid
+          ? '<button onclick="mc1ExpandStorage(\''+r.uid+'\',\''+escHtml(r.name).replace(/'/g,"\\'")+'\')" style="padding:6px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:\'Cairo\',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer">توسعة</button>'
+          : '—')+
+      '</td></tr>'
+    ).join('')||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#7A715B">لا حسابات حلقة أولى بعد</td></tr>';
+    tb.dataset.ready='1';
+  }catch(e){
+    tb.innerHTML='<tr><td colspan="5" style="padding:14px;text-align:center;color:#8F3D22">تعذّر التحميل: '+escHtml(e.message||'')+'</td></tr>';
+  }
+}
+// توسعة حصّة معلّمةٍ بعينها — upsert في user_storage_limits (المشرف فقط
+// عبر RLS)؛ تُدخَل بالجيجابايت وتُحفَظ بايتاً.
+async function mc1ExpandStorage(userId,name){
+  const cur=prompt('حصّة التخزين الجديدة لـ«'+name+'» بالجيجابايت:','2');
+  if(cur==null)return;
+  const gb=parseFloat(cur);
+  if(!gb||gb<=0){toast&&toast('قيمة غير صالحة',true);return;}
+  const bytes=Math.round(gb*1073741824);
+  try{
+    const{data:{user}}=await sb.auth.getUser();
+    const{error}=await sb.from('user_storage_limits').upsert({
+      user_id:userId,limit_bytes:bytes,updated_at:new Date().toISOString(),
+      updated_by:(user&&user.email)||null,
+    },{onConflict:'user_id'});
+    if(error)throw error;
+    mc1LoadStorage(true);
+  }catch(e){alert('تعذّر الحفظ: '+(e.message||''));}
 }
 
 // ══ مراسلات الحلقة الأولى: جماعية + خاصة + استبيانات ══
@@ -13222,7 +13312,7 @@ function ktShellToggleDrawer(pageId){
 // الشريط يعرض عنوانَي المجموعتين فقط افتراضياً، وتظهر صفحاتهما الفرعية
 // عند الفتح، بدل تكديسها كلّها ظاهرةً دائماً.
 const KT_SIDEBAR_GROUP_PAGES={
-  c1:['c1teachers','c1curric','c1live','c1msgs'],
+  c1:['c1teachers','c1curric','c1live','c1msgs','c1storage'],
   c2:['c2teachers','c2curric','schools','announcements','surveys'],
 };
 function ktSidebarToggleGroup(id,forceOpen){
@@ -13257,6 +13347,7 @@ function ktGoC1(section,btn){
   if(section==='teachers'){mc1LoadTeachers();mc1LoadUsage();}
   if(section==='live')c1SfxSlots();
   if(section==='msgs')c1msgInit();
+  if(section==='storage')mc1LoadStorage();
 }
 function ktShellGreeting(){
   const h=new Date().getHours();

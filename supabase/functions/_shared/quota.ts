@@ -31,19 +31,28 @@ export async function takeQuota(
   email: string,
   kind: "text" | "img" | "search",
   st: Record<string, string>,
+  // نداءٌ ثانٍ من نفس الطلب (مثلاً فحص "img" بعد فحص "text" العام، أو
+  // فحص "search" بعد أيٍّ منهما) لا يجوز أن يصطدم بحدّ المعدّل — هذا الحدّ
+  // مصمَّمٌ لمنع طلباتٍ متكرّرة من المستخدمة نفسها، لا لمنع طلبٍ واحدٍ
+  // يحتاج أكثر من فحص حصّةٍ داخلياً. بلا هذا الخيار كانت أي رسالة تطلب
+  // صورةً أو بحثاً تُرفض بخطأ "نفد رصيدك" الكاذب لأن الفحص الثاني يقع
+  // خلال أقلّ من RATE_LIMIT_MS من الأول.
+  opts?: { skipRateLimit?: boolean },
 ): Promise<QuotaResult> {
   if ((email || "").toLowerCase() === ADMIN_EMAIL) return { ok: true, used: 0, limit: 0 };
 
-  try {
-    const { data: allowed, error: rlErr } = await admin.rpc("check_ai_rate_limit", {
-      p_user: userId, p_min_ms: RATE_LIMIT_MS,
-    });
-    // الدالة قد لا تكون منشورةً بعد (مرحلة انتقالية كما في take_quota) —
-    // عطلٌ هنا لا يمنع التوليد، فهذه طبقةٌ إضافية لا حارسٌ وحيد.
-    if (!rlErr && allowed === false) {
-      return { ok: false, used: 0, limit: 0, error: "rate_limited" };
-    }
-  } catch (_e) { /* طبقةٌ إضافية: تجاهل عطلها ولا نمنع التوليد بسببه */ }
+  if (!opts?.skipRateLimit) {
+    try {
+      const { data: allowed, error: rlErr } = await admin.rpc("check_ai_rate_limit", {
+        p_user: userId, p_min_ms: RATE_LIMIT_MS,
+      });
+      // الدالة قد لا تكون منشورةً بعد (مرحلة انتقالية كما في take_quota) —
+      // عطلٌ هنا لا يمنع التوليد، فهذه طبقةٌ إضافية لا حارسٌ وحيد.
+      if (!rlErr && allowed === false) {
+        return { ok: false, used: 0, limit: 0, error: "rate_limited" };
+      }
+    } catch (_e) { /* طبقةٌ إضافية: تجاهل عطلها ولا نمنع التوليد بسببه */ }
+  }
 
   const budgetOmr = parseFloat(st["budget_omr"] || "") || 13;
   const rate = parseFloat(st["usd_omr_rate"] || "") || 0.3845;

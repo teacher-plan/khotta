@@ -69,24 +69,6 @@ Deno.serve(async (req) => {
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
 
-    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
-    const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
-    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
-    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
-    if (!quota.ok) return quota.error === "quota_unavailable"
-      ? json({ error: "quota_unavailable" }, 503)
-      : json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
-    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
-    // على توليدٍ لم تستلمه.
-    let webOn = false;
-    let imgOn = false;
-    const refund = async (body: Record<string, unknown>, status: number) => {
-      await refundQuota(admin, user.id, user.email || "", "text");
-      if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
-      if (imgOn) await refundQuota(admin, user.id, user.email || "", "img");
-      return json(body, status);
-    };
-
     const b = await req.json().catch(() => ({}));
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;
     const userMsg = String(b.message || "").trim().slice(0, 2000);
@@ -97,9 +79,46 @@ Deno.serve(async (req) => {
     // بحث الويب اختياريّ بضغطةٍ من المعلّمة، لا تلقائيّ: لكلّ استعمالٍ ثمنٌ
     // يقارب أربعين رسالةً عادية، فتفعيله على كل سؤالٍ يُنفق بلا حاجة
     const web = b.web === true;
-    // حصة بحثٍ منفصلة: من نفدت حصةُ بحثها يُجاب سؤالها بلا بحث، ولا يُمنع
+    // ترسله الواجهة صريحاً بزرٍّ تضغطه المعلّمة (انظر التعليق الكامل أدناه) —
+    // نحتاج معرفته هنا، قبل فحص الحصّة، لنفحص الحصّة الصحيحة من أول محاولة.
+    const wantImage = b.makeImage === true;
+    // تعديل صورةٍ سابقة (مولَّدة أو أرسلتها المعلّمة) بوصفٍ نصّي — نفس فكرة
+    // زرّ "تعديل" في الاستوديو، منقولةٌ إلى داخل المحادثة. تحتاج الصورة نفسها
+    // (كـdata URI) لا رابطاً فقط، لأن بعض الروابط المولَّدة مؤقّتة.
+    const editImage = (typeof b.editImage === "string" && b.editImage.startsWith("data:image/")) ? b.editImage : "";
+    const editPrompt = String(b.editPrompt || "").trim().slice(0, 1000);
+    const isEdit = !!(editImage && editPrompt);
+
+    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم. فحصٌ واحدٌ فقط لكل طلب:
+    // "img" إن كانت رسالة رسمٍ أو تعديل صورة، وإلا "text" — لا فحص "text"
+    // عامّ ثم "img" تباعاً كما كان، لأن حدّ المعدّل (RATE_LIMIT_MS) في
+    // takeQuota يرفض أي فحصٍ ثانٍ خلال ثانيتين من الأول بصرف النظر عن
+    // الحصّة المتبقّية، فكانت كل رسالة رسمٍ تُرفض بخطأ "نفد رصيدك" الكاذب
+    // لأن الفحص الثاني (img) يقع خلال أجزاء الثانية من الفحص الأول (text)
+    // — لا لأن الحصّة نفدت فعلاً. النوعان يقرآن نفس الحصّة الموحّدة، فلا
+    // فرق في القرار.
+    const wantsImgQuota = wantImage || isEdit;
+    const quota = await takeQuota(admin, user.id, user.email || "", wantsImgQuota ? "img" : "text", st);
+    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
+    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
+    if (!quota.ok) return quota.error === "quota_unavailable"
+      ? json({ error: "quota_unavailable" }, 503)
+      : json({ error: wantsImgQuota ? "quota_exceeded_img" : "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
+    // على توليدٍ لم تستلمه.
+    let webOn = false;
+    let imgOn = wantsImgQuota;
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "text");
+      if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
+      if (imgOn) await refundQuota(admin, user.id, user.email || "", "img");
+      return json(body, status);
+    };
+    // حصة بحثٍ منفصلة: من نفدت حصةُ بحثها يُجاب سؤالها بلا بحث، ولا يُمنع.
+    // skipRateLimit: هذا فحصٌ ثانٍ داخل نفس الطلب (بعد فحص الحصّة أعلاه)،
+    // لا طلبٌ متكرّرٌ مستقلّ — نفس السبب الموضَّح أعلاه بالضبط.
     if (web) {
-      const wq = await takeQuota(admin, user.id, user.email || "", "search", st);
+      const wq = await takeQuota(admin, user.id, user.email || "", "search", st, { skipRateLimit: true });
       webOn = wq.ok;
     }
     // آخر رسائل المحادثة من العميل (ثمانٍ: التاريخ يُعاد قراءته كاملاً مع
@@ -114,30 +133,24 @@ Deno.serve(async (req) => {
     const images: string[] = (Array.isArray(b.images) ? b.images : [])
       .filter((u: unknown) => typeof u === "string" && /^data:image\//.test(u as string))
       .slice(0, 4) as string[];
-    if (!userMsg && !images.length) return json({ error: "no_message" }, 400);
+    if (!userMsg && !images.length && !isEdit) return json({ error: "no_message" }, 400);
 
     // ═ طلب رسم صورة ═
     // ترسله الواجهة صريحاً بزرٍّ تضغطه المعلّمة، ولا نستنبطه من نصّها:
     // الاستنباط يخطئ في الاتجاهين، وكلا خطأيه مكلف. «اشرحي لي الصورة»
     // تُقرأ طلبَ رسم فتدفع ثمن صورةٍ لم تُرَد، و«أريد شيئاً يوضّح الدرس»
     // تُقرأ سؤالاً فتأتيها فقرةُ نصٍّ وهي تنتظر رسماً. والزرّ لا يلتبس.
-    const wantImage = b.makeImage === true;
-    const imageModel = st.model_chat_image || st.model_infographic || st.slide_model
+    // (wantImage نفسه، وفحص حصّة الصور، صارا أعلاه قبل فحص الحصّة الأول —
+    // imgOn مضبوطةٌ منه مسبقاً)
+    let imageModel = st.model_chat_image || st.model_infographic || st.slide_model
                     || "google/gemini-3.1-flash-image-preview";
-
-    // الصورة تُخصم من حصّة الصور لا من حصّة النصّ: ثمنها يقارب ثلاثمئة رسالة،
-    // فخصمها رسالةً واحدة يجعل حصّة النصّ بابَ إنفاقٍ لا سقفاً له.
-    if (wantImage) {
-      const iq = await takeQuota(admin, user.id, user.email || "", "img", st);
-      if (!iq.ok) return iq.error === "quota_unavailable"
-        ? refund({ error: "quota_unavailable" }, 503)
-        : refund({ error: "quota_exceeded_img", used: iq.used, limit: iq.limit }, 429);
-      imgOn = true;
-    }
+    // التعديل بالوصف يتطلب نموذج جوجل (يستقبل صورة ويعيد صورة معدّلة) —
+    // نفس القيد في الاستوديو (generate-infographic).
+    if (isEdit && !imageModel.startsWith("google/")) imageModel = "google/gemini-3.1-flash-image-preview";
 
     // مع صورة نحتاج نموذج رؤية مضموناً: النموذج النصي يُسقط الصور بصمت
     // فتظن المعلمة أنه قرأها وهو يجيب من فراغ.
-    const model = wantImage
+    const model = wantsImgQuota
       ? imageModel
       : images.length
       ? ensureVision(st.model_chat_vision || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash")
@@ -153,10 +166,19 @@ Deno.serve(async (req) => {
     const imagePrompt = [
       userMsg || "ارسم صورةً تعليمية جميلة تصلح للعرض في صفٍّ ابتدائي.",
       images.length ? "الصور المرفقة مرجعٌ للرسم — احتفظ بأسلوبها وموضوعها." : "",
-      "الصورة للعرض أمام طالباتٍ في الصفوف الأولى: واضحة، بألوانٍ مبهجة، بلا تفاصيل مزدحمة.",
+      "الصورة للعرض أمام طلابٍ وطالبات في الصفوف الأولى (لا تفترض جنساً واحداً): واضحة، بألوانٍ مبهجة، بلا تفاصيل مزدحمة.",
       "إن كتبت أي نصٍّ داخل الصورة فليكن بعربيةٍ فصيحةٍ سليمة الحروف والاتصال، قليلاً وكبيراً مقروءاً من آخر الصف.",
       "إن رسمت أشخاصاً أو مبانيَ أو بيئة فالهوية العُمانية حصراً (الزي المدرسي العُماني، الكمّة والدشداشة) — لا غترة ولا عقال ولا هوية خليجية أخرى.",
     ].filter(Boolean).join("\n");
+
+    // تعليمات التعديل: نفس أسلوب الاستوديو حرفياً — حافظي على كل شيء إلا
+    // ما طُلب تغييره صراحةً، فلا يفاجَأ من طلبت تعديلاً بسيطاً بصورةٍ مختلفة.
+    const editInstr = [
+      "هذه صورةٌ من محادثة «خُطّة AI».",
+      `أعد رسم نفس الصورة بالضبط مع تطبيق هذا التعديل فقط: «${editPrompt}».`,
+      "حافظ حرفياً على كل شيء آخر دون أي تغيير: التخطيط، الألوان، الرسومات، وجميع النصوص الأخرى وأماكنها.",
+      "أخرج الصورة بنفس أبعاد الصورة الأصلية ونفس أسلوبها تماماً.",
+    ].join("\n");
 
     const system = [
       "أنت «خُطّة AI» — مساعدٌ ذكيٌّ عامّ داخل منصة «خطتي الفصلية». تخدم مستخدمك في أي شيء يسأل عنه، تماماً كأي مساعدٍ ذكيٍّ عامّ.",
@@ -184,7 +206,12 @@ Deno.serve(async (req) => {
         // نموذج الصور لا يأخذ نظاماً ولا تاريخاً: النظام يصفه مساعداً نصّياً
         // فيخرج بنصٍّ بدل الصورة، والتاريخ يشوّش الموضوع بدروسٍ سابقة. تُرسل
         // الصور المرفقة إن وُجدت — فطلب «عدّلي هذه» يحتاج الأصل بين يديه.
-        messages: wantImage
+        messages: isEdit
+          ? [{ role: "user", content: [
+                { type: "text", text: editInstr },
+                { type: "image_url", image_url: { url: editImage } },
+              ] }]
+          : wantImage
           ? [{ role: "user", content: images.length
                 ? [{ type: "text", text: imagePrompt }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))]
                 : imagePrompt }]
@@ -199,8 +226,10 @@ Deno.serve(async (req) => {
         // 2K كالانفوجرافيك: ما تسمّيه المعلّمة تجربةً يصير مخرَجاً نهائياً بضغطة
         // تنزيل — تعرضه على البروجكتر أو تطبعه ورقةَ نشاط. و1K يُمَدّ ×1.43 على
         // شاشة ١٠٨٠p فتذوب أسنان الحروف العربية ونقاطها، ويعطي ١١٥ نقطة/بوصة
-        // على A4 وهي دون حدّ الطباعة المقبول.
+        // على A4 وهي دون حدّ الطباعة المقبول. التعديل وحده بلا image_config:
+        // يجب أن يحافظ على أبعاد الصورة الأصلية لا يفرض مقاساً جديداً.
         ...(wantImage ? { modalities: ["image", "text"], image_config: { aspect_ratio: "16:9", image_size: "2K" } } : {}),
+        ...(isEdit ? { modalities: ["image", "text"] } : {}),
         temperature: 0.6,
         max_tokens: images.length ? 1400 : 900,
         // OpenRouter يوزّع الطلب على عدة مزوّدين للنموذج نفسه، وترتيبه
@@ -221,25 +250,25 @@ Deno.serve(async (req) => {
     const _msg = or?.choices?.[0]?.message || {};
     // نماذج الصور تعيدها في images[].image_url.url، وبعضها يضعها في content
     // كـdata URI. نقبل الصيغتين حتى لا يتوقّف الأمر على مزوّدٍ بعينه.
-    const genImage: string = wantImage
+    const genImage: string = wantsImgQuota
       ? (_msg?.images?.[0]?.image_url?.url
          || (typeof _msg?.content === "string" && /^data:image\//.test(_msg.content) ? _msg.content : "")
          || "")
       : "";
     const reply = typeof _msg?.content === "string" && !/^data:image\//.test(_msg.content) ? _msg.content : "";
 
-    // طلبت صورةً فلم تأتِ: لا نُسلّمها نصّاً اعتذارياً وقد خُصمت حصّتها —
-    // نستردّ ونصرّح بالفشل لتعيد المحاولة.
-    if (wantImage && !genImage) return refund({ error: "no_image" }, 502);
-    if (!wantImage && !reply) return refund({ error: "no_reply" }, 502);
+    // طلبت صورةً (رسماً أو تعديلاً) فلم تأتِ: لا نُسلّمها نصّاً اعتذارياً
+    // وقد خُصمت حصّتها — نستردّ ونصرّح بالفشل لتعيد المحاولة.
+    if (wantsImgQuota && !genImage) return refund({ error: "no_image" }, 502);
+    if (!wantsImgQuota && !reply) return refund({ error: "no_reply" }, 502);
 
     // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) ═
     // سقف حجم المحادثة المحفوظة — لا تنمو بلا حد
-    const askedText = userMsg || (wantImage ? "(طلب رسم صورة)" : "(صورة مرفقة)");
+    const askedText = userMsg || (isEdit ? "(طلب تعديل صورة)" : wantImage ? "(طلب رسم صورة)" : "(صورة مرفقة)");
     // نحفظ نص السؤال لا الصور: تخزين data URI يضخّم الصف ويُعاد إرساله كل دور.
     // والصورة المولَّدة كذلك: يُحفظ أثرها نصّاً، فالمعلّمة تنزّلها إن أرادتها
     // باقيةً، وحفظُ عشرات الصور في صفٍّ واحد يُبطئ فتح المحادثة على الجوال.
-    const savedReply = wantImage ? "🖼️ (صورة مولَّدة)" : reply;
+    const savedReply = wantsImgQuota ? "🖼️ (صورة مولَّدة)" : reply;
     const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: savedReply }].slice(-60);
     const title = (history.find((m) => m.role === "user")?.content || askedText).slice(0, 60);
     let savedId = chatId;
@@ -268,7 +297,7 @@ Deno.serve(async (req) => {
 
     // webUsed يُخبر الواجهة إن جرى البحث فعلاً: من نفدت حصتها تُجاب بلا بحث
     // وينبغي أن ترى ذلك، لا أن تظنّ جوابها مبنيّاً على مصدرٍ حديث
-    await logAiCost(admin, user.id, "generate-chat", wantImage ? "img" : "text", model, or?.usage);
+    await logAiCost(admin, user.id, "generate-chat", wantsImgQuota ? "img" : "text", model, or?.usage);
     return json({ reply, image: genImage || null, chatId: savedId, model, webUsed: webOn, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
