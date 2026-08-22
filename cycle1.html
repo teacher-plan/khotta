@@ -2963,6 +2963,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 <div class="c1-modal" id="drive-prev-modal" style="z-index:4200" onclick="if(event.target===this)drivePrevClose()">
   <div class="c1-mbox" style="max-width:720px;width:94vw">
     <h3 id="drive-prev-title">معاينة الملف</h3>
+    <img id="drive-prev-img" style="display:none;max-width:100%;max-height:min(72vh,560px);border-radius:12px;margin:0 auto;object-fit:contain">
     <iframe id="drive-prev-frame" allow="autoplay"></iframe>
     <div class="c1-mrow" style="margin-top:8px">
       <button class="c1-mbtn no" onclick="drivePrevClose()">إغلاق</button>
@@ -6185,7 +6186,7 @@ function planAttach(id){
 }
 function planFileOpen(id,fi){
   const f=(planGet(id).files||[])[fi];if(!f)return;
-  drivePrevOpen(f.viewLink||f.previewLink,f.name);
+  drivePrevOpen(f.viewLink||f.previewLink,f.name,f.type);
 }
 async function planFileDel(id,fi){
   const files=[...(planGet(id).files||[])];
@@ -6196,16 +6197,23 @@ async function planFileDel(id,fi){
   await planSetState(id,{files});
   planRenderUnits();
 }
-// معاينة ملفٍ داخل نافذة بإطار
-function drivePrevOpen(url,name){
-  let u=url||'';
+// معاينة ملفٍ داخل نافذة — صورةٌ بوسم <img> (يحترم max-height هنا)، وأي
+// نوعٍ آخر بإطار <iframe> كالسابق (روابطنا مباشرة للملف نفسه لا صفحة Drive).
+function drivePrevOpen(url,name,type){
+  const u=url||'';
+  const isImg=/^image\//.test(type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name||'');
   document.getElementById('drive-prev-title').textContent=name||'معاينة الملف';
-  document.getElementById('drive-prev-frame').src=u;
+  const img=document.getElementById('drive-prev-img'),frame=document.getElementById('drive-prev-frame');
+  img.style.display=isImg?'block':'none';
+  frame.style.display=isImg?'none':'';
+  if(isImg){img.src=u;frame.src='about:blank';}
+  else{frame.src=u;img.src='';}
   document.getElementById('drive-prev-modal').classList.add('open');
 }
 function drivePrevClose(){
   document.getElementById('drive-prev-modal').classList.remove('open');
   document.getElementById('drive-prev-frame').src='about:blank';
+  document.getElementById('drive-prev-img').src='';
 }
 // ابدئي الحصة من بطاقة الدرس: اختيار الشعبة فقط عند التعدد
 function planStartLive(id){
@@ -8199,7 +8207,12 @@ function liveOpenInfo(){
 function liveOpenFile(fi){
   const f=(planGet(liveCtx.lessonId).files||[])[fi];if(!f)return;
   const u=f.viewLink||f.previewLink||'';
-  liveViewOpen(f.name,`<iframe src="${u}" allow="autoplay"></iframe>`,false);
+  // ملفٌ من تخزيننا الخاص: رابطٌ مباشر للملف نفسه لا صفحة عرض Drive —
+  // الصورة تُعرض بوسم <img> (يحترم max-height:100% من .lv-vbody img)
+  // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
+  // بلا أي تصغير، مهما كانت أبعادها.
+  const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
+  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe src="${u}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
