@@ -3317,18 +3317,22 @@ async function storageUpload(file,fileName,kind){
     if(!allowed){toast('امتلأت مساحة تخزينكِ — احذفي ملفاتٍ قديمة أو راسلي الإدارة',true);return null;}
     const path=storagePath(fileName);
     const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
-    if(upErr){toast('تعذّر رفع الملف',true);return null;}
+    if(upErr){
+      console.error('storageUpload: فشل الرفع',upErr);
+      toast('تعذّر رفع الملف'+(upErr.message?' — '+upErr.message:''),true);return null;
+    }
     const{error:rowErr}=await sb.from('user_files').insert({
       user_id:currentUser.id,path,size_bytes:file.size,kind,file_name:fileName,
     });
     if(rowErr){
+      console.error('storageUpload: فشل تسجيل الصفّ',rowErr);
       // الملف رُفع لكن سجلّه فشل: نحذفه فوراً كي لا يُحتسب مساحةً بلا حصّةٍ تعكسها
       try{await sb.storage.from('user-files').remove([path]);}catch(e){}
-      toast('تعذّر حفظ الملف',true);return null;
+      toast('تعذّر حفظ الملف'+(rowErr.message?' — '+rowErr.message:''),true);return null;
     }
     const url=sb.storage.from('user-files').getPublicUrl(path).data.publicUrl;
     return{path,name:fileName,size:file.size,viewLink:url,previewLink:url,downloadLink:url};
-  }catch(e){toast('تعذّر رفع الملف',true);return null;}
+  }catch(e){console.error('storageUpload: استثناء',e);toast('تعذّر رفع الملف'+(e&&e.message?' — '+e.message:''),true);return null;}
 }
 async function storageDelete(path){
   if(!path)return false;
