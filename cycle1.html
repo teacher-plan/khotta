@@ -528,6 +528,10 @@ body.inapp #c1-budget-btn{display:flex}
   padding:9px 14px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
 .su-roster-btn:disabled{opacity:.6;cursor:default}
 .su-roster-hint{font-size:11.5px;color:var(--muted);line-height:1.8;flex:1;min-width:180px}
+.su-roster-skip{display:block;width:100%;text-align:center;background:none;border:none;
+  color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  text-decoration:underline;padding:8px 4px;margin-top:2px}
+.su-roster-skip:hover{color:var(--red-d)}
 .su-steps{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
 .su-steps i{width:34px;height:5px;border-radius:4px;background:var(--border)}
 .su-steps i.on{background:linear-gradient(90deg,var(--red),var(--red-d))}
@@ -2136,6 +2140,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 <div id="c1-menu">
   <div class="c1-mi" id="c1-menu-name" style="color:var(--muted);font-size:11.5px;cursor:default">—</div>
   <div class="c1-mi" onclick="acctOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9.4 4c0 .6-.05 1.2-.15 1.75l2.1 1.63-2 3.46-2.5-1a7.6 7.6 0 0 1-3 1.74L15.5 22h-4l-.35-2.42a7.6 7.6 0 0 1-3-1.74l-2.5 1-2-3.46 2.1-1.63a8.6 8.6 0 0 1 0-3.5L1.65 8.62l2-3.46 2.5 1a7.6 7.6 0 0 1 3-1.74L11.5 2h4l.35 2.42c1.1.35 2.12.94 3 1.74l2.5-1 2 3.46-2.1 1.63c.1.55.15 1.15.15 1.75z"/></svg> إعدادات الحساب</div>
+  <div class="c1-mi" onclick="rosterOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg> إدارة الشعب</div>
   <div class="c1-mi" onclick="pwOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm3 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg> تغيير كلمة المرور</div>
   <div class="c1-mi" onclick="guideOpen()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm1.8-7.2-.9.9c-.7.7-1.1 1.3-1.1 2.3h-2v-.5c0-1 .4-1.9 1.1-2.6l1.2-1.2c.4-.3.6-.8.6-1.3a2 2 0 0 0-4 0H8a4 4 0 0 1 8 0c0 .8-.3 1.5-.9 2.1l-.3.3z"/></svg> دليل الاستخدام</div>
 </div>
@@ -2190,16 +2195,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <h3>إعدادات الحساب</h3>
     <div class="grp">اسمكِ كما يظهر في المنصّة وفي الشهادات</div>
     <input class="acct-in" id="acct-name" type="text" placeholder="الاسم"/>
-    <div class="grp">رقم هاتفكِ</div>
-    <p class="acct-note">لتتواصل معكِ الإدارة عند الحاجة. يظهر للإدارة وحدها. مثال: ٩١٢٣٤٥٦٧</p>
-    <!-- الحقل ltr كي لا ينقلب الرقم، فلا يصلح خلط العربية في الـ placeholder:
-         المحايدات تُعاد ترتيبها فيخرج «XXXXXXXمثال: 9». المثال في السطر أعلاه. -->
-    <input class="acct-in" id="acct-phone" type="tel" inputmode="tel" dir="ltr"
-           style="text-align:right" placeholder="9XXXXXXX" maxlength="20"/>
-    <div class="grp">طالباتُ شعبكِ</div>
-    <p class="acct-note">صحّحي اسماً كُتب خطأً، أو أضيفي منضمّةً جديدة. النجوم والسلوك تتبع كلَّ طالبةٍ باسمها.</p>
-    <div id="acct-tabs" class="su-grade-tabs"></div>
-    <div id="acct-classes"></div>
     <div class="grp">التواصل مع الإدارة</div>
     <p class="acct-note">لأي استفسارٍ أو مشكلةٍ تواجهكِ، أو لطلب تعديلٍ لا تجدينه هنا.</p>
     <a class="acct-wa" id="acct-wa" target="_blank" rel="noopener">
@@ -2213,6 +2208,23 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <div class="c1-mi danger" onclick="acctClose();c1ResetData()"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 3v1H4v2h1l1 14h12l1-14h1V4h-5V3H9zm2 5h2v8h-2V8z"/></svg> حذف كل بياناتي</div>
     </div>
     <div id="acct-build" style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ══ إدارة الشعب — إضافة/حذف طالبات، ورفع القوائم لمن أجّلته في الإعداد ══ -->
+<div class="c1-modal" id="roster-modal" onclick="if(event.target===this)rosterClose()">
+  <div class="c1-mbox">
+    <h3>إدارة الشعب</h3>
+    <p class="acct-note">صحّحي اسماً كُتب خطأً، أضيفي منضمّةً جديدة، أو ارفعي كشف الأسماء إن لم ترفعيه في الإعداد. النجوم والسلوك تتبع كلَّ طالبةٍ باسمها.</p>
+    <div id="roster-tabs" class="su-grade-tabs"></div>
+    <div class="su-roster-tools" style="margin-bottom:10px">
+      <input type="file" id="roster-file" accept="image/*,application/pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="rosterUpload(this)"/>
+      <button type="button" class="su-roster-btn" id="roster-upload-btn" onclick="document.getElementById('roster-file').click()">📎 رفع قائمة الطلاب</button>
+      <span class="su-roster-hint" id="roster-upload-msg">صورة · PDF · Word · Excel — تُضاف الأسماء إلى الشعبة المحدَّدة</span>
+    </div>
+    <div id="roster-classes"></div>
+    <div class="c1-mrow"><button class="c1-mbtn no" onclick="rosterClose()">إغلاق</button>
+      <button class="c1-mbtn go" onclick="rosterSave()">حفظ</button></div>
   </div>
 </div>
 
@@ -3751,7 +3763,7 @@ function acctDigits(s){
 }
 let acctRoster={},acctCls=null;
 function acctRenderRoster(){
-  const tabs=document.getElementById('acct-tabs'),box=document.getElementById('acct-classes');
+  const tabs=document.getElementById('roster-tabs'),box=document.getElementById('roster-classes');
   const cls=c1AllClasses();
   if(!cls.length){
     tabs.innerHTML='';
@@ -3784,15 +3796,6 @@ function acctDelStu(i){
 function acctOpen(){
   document.getElementById('c1-menu').classList.remove('open');
   document.getElementById('acct-name').value=profile.display_name||'';
-  document.getElementById('acct-phone').value=profile.phone||'';
-  // نسخةُ عملٍ منفصلة: التعديل لا يمسّ الملف حتى تضغط «حفظ»، فالإغلاق يتراجع.
-  // كل طالبة تحمل si = موضعها الأصلي، وهو ما تُبنى عليه إعادةُ ترتيب النجوم.
-  acctRoster={};
-  c1AllClasses().forEach(c=>{
-    acctRoster[c.id]=(c.students||[]).map((nm,i)=>({nm,si:i}));
-  });
-  acctCls=null;
-  acctRenderRoster();
   const wa=document.getElementById('acct-wa');
   const msg='السلام عليكم، أنا '+(profile.display_name||'معلمة')+' من منصّة خُطّة، ولديّ استفسار:';
   wa.href='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent(msg);
@@ -3853,10 +3856,28 @@ function acctClose(){document.getElementById('acct-modal').classList.remove('ope
 async function acctSave(){
   const nm=(document.getElementById('acct-name').value||'').trim();
   if(nm.length<2){toast('اكتبي اسمكِ أولاً',true);return;}
-  // الرقم يُدخَل أحياناً بأرقامٍ عربية أو بمسافاتٍ وشرطات، فنخزّنه موحَّداً
-  // بأرقامٍ لاتينية: الإدارة تبني منه رابط واتساب، وهو لا يقبل غيرها.
-  const ph=acctDigits(document.getElementById('acct-phone').value);
-  if(ph&&(ph.length<8||ph.length>15)){toast('تأكّدي من رقم الهاتف',true);return;}
+  const _ok=await cy1Save({display_name:nm},'يحفظ الإعدادات');
+  const el=document.getElementById('c1-menu-name');
+  if(el)el.textContent=(KH_DEMO?'أ. ':'')+nm;
+  // لا نُغلق النافذة ولا نقول «حُفظت» إن لم يُحفظ: إغلاقُها كان يُخفي
+  // الاسمَ المعدَّل عن عينها بينما لم يصل الخادمَ منه شيء.
+  if(!_ok)return;
+  acctClose();toast('حُفظت إعدادات حسابكِ');
+}
+function rosterClose(){document.getElementById('roster-modal').classList.remove('open');}
+function rosterOpen(){
+  document.getElementById('c1-menu').classList.remove('open');
+  // نسخةُ عملٍ منفصلة: التعديل لا يمسّ الملف حتى تضغط «حفظ»، فالإغلاق يتراجع.
+  // كل طالبة تحمل si = موضعها الأصلي، وهو ما تُبنى عليه إعادةُ ترتيب النجوم.
+  acctRoster={};
+  c1AllClasses().forEach(c=>{
+    acctRoster[c.id]=(c.students||[]).map((nm,i)=>({nm,si:i}));
+  });
+  acctCls=null;
+  acctRenderRoster();
+  document.getElementById('roster-modal').classList.add('open');
+}
+async function rosterSave(){
   // النجوم وسجلّ السلوك مصفوفتان مفهرستان بموضع الطالبة لا باسمها، فحذفُ
   // طالبةٍ من المنتصف يزحزح كلَّ من بعدها وتنتقل نجومهنّ لغيرهنّ. لذا نُعيد
   // بناء المصفوفتين بالسحب من الموضع الأصلي (si)، والمنضمّة الجديدة تبدأ نظيفة.
@@ -3871,17 +3892,76 @@ async function acctSave(){
     beh[c.id]=kept.map(s=>s.si>=0?(oldB[s.si]||[]):[]);
     return{...c,students:kept.map(s=>s.nm.trim())};
   })}));
-  const _ok=await cy1Save({display_name:nm,phone:ph,grades,stars,beh_log:beh},'يحفظ الإعدادات');
+  const _ok=await cy1Save({grades,stars,beh_log:beh},'يحفظ الشعب');
   profile.stars=stars;profile.beh_log=beh;
-  const el=document.getElementById('c1-menu-name');
-  if(el)el.textContent=(KH_DEMO?'أ. ':'')+nm;
-  // لا نُغلق النافذة ولا نقول «حُفظت» إن لم يُحفظ: إغلاقُها كان يُخفي
-  // الكشفَ المعدَّل عن عينها بينما لم يصل الخادمَ منه شيء.
   if(!_ok)return;
-  acctClose();toast('حُفظت إعدادات حسابكِ');
+  rosterClose();toast('حُفظت الشعب');
   const cur=(document.querySelector('.page.active')||{}).id||'';
   if(cur==='page-students')starRender();
   if(cur==='page-plan')planRender();
+}
+async function rosterUpload(input){
+  const files=[...(input.files||[])].slice(0,4);
+  input.value='';
+  if(!files.length)return;
+  if(!acctCls){toast('اختاري شعبةً أولاً',true);return;}
+  const msg=document.getElementById('roster-upload-msg');
+  const btn=document.getElementById('roster-upload-btn');
+  const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
+  const big=files.find(f=>f.size>ROSTER_MAX_MB*1024*1024);
+  if(big){say('الملف أكبر من '+ROSTER_MAX_MB+' ميجا — صوّري الكشف بجودةٍ أقلّ',true);return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ يقرأ الكشف…';}
+  say('قد يستغرق نصف دقيقة — لا تُغلقي الصفحة');
+  try{
+    const payload=[];
+    for(const f of files){
+      const nm=(f.name||'').toLowerCase();
+      if(/\.(docx|xlsx)$/.test(nm)){
+        const t=await khOfficeText(f);
+        if(!t||!t.trim())throw new Error('empty_office');
+        payload.push({name:f.name,text:t.slice(0,20000)});
+      }else if(/\.(csv|txt)$/.test(nm)){
+        payload.push({name:f.name,text:(await f.text()).slice(0,20000)});
+      }else if(/\.(doc|xls)$/.test(nm)){
+        throw new Error('old_office');
+      }else{
+        payload.push({name:f.name,data:await readAsDataUrl(f)});
+      }
+    }
+    const{data,error}=await sb.functions.invoke('extract-roster',{body:{files:payload}});
+    let why=(data&&data.error)||'';
+    if(error&&!why)why=error.message||'';
+    if(why||!data)throw new Error(why||'خطأ');
+    const names=Array.isArray(data.names)?data.names:[];
+    if(!names.length){say('لم أجد أسماءً في الملف — تأكّدي أنّ الكشف واضحٌ في الصورة',true);return;}
+    const list=acctRoster[acctCls]=acctRoster[acctCls]||[];
+    const seen=new Set(list.map(s=>(s.nm||'').replace(/\s+/g,' ').trim()));
+    let added=0;
+    for(const n of names){
+      const k=String(n).replace(/\s+/g,' ').trim();
+      if(!k||seen.has(k))continue;
+      seen.add(k);list.push({nm:k,si:-1});added++;
+    }
+    acctRenderRoster();
+    say(added?('أُضيف '+added+' اسماً — راجعيها وصحّحي ما يلزم'):'كل الأسماء موجودةٌ مسبقاً');
+    if(added)toast('أُضيف '+added+' اسماً إلى الشعبة');
+  }catch(e){
+    const m=String(e&&e.message||'');
+    say(m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
+      :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورة أو PDF أو Word أو Excel'
+      :m==='old_office'?'الصيغة القديمة (doc/xls) غير مدعومة — احفظيه بصيغة docx أو xlsx، أو صوّري الكشف'
+      :m==='empty_office'?'لم أجد نصّاً في الملف — تأكّدي أن الأسماء مكتوبةٌ فيه لا صورةً بداخله'
+      :m==='nodecomp'?'متصفّحك قديم ولا يفكّ هذا النوع — حدّثيه، أو أرفقي صورةً أو PDF'
+      :m==='no_files'?'لم يُرفَق ملف'
+      :m==='no_credit'?'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. أدخلي الأسماء يدوياً الآن'
+      :m==='busy'?'الخدمة مزدحمة — أعيدي المحاولة بعد دقيقة'
+      :m==='quota_exceeded'?'استهلكتِ رصيدكِ بالكامل — للحصول على المزيد من الرصيد الرجاء التواصل مع فريق الدعم. أدخلي الأسماء يدوياً الآن'
+      :m==='quota_unavailable'?'تعذّر التحقّق من رصيدك — أعيدي المحاولة بعد قليل. لم يُخصم شيء'
+      :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — جرّبي صورةً أوضح، لم تُخصم من حصّتك'
+      :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='📎 رفع قائمة الطلاب';}
+  }
 }
 function cyBusy(text){
   const el=document.getElementById('cy-busy');if(!el)return;
@@ -4689,7 +4769,7 @@ function suRender(){
     const active=classes.find(c=>c.id===suRActive);
     const txt=active?(suRosters[active.id]||[]).join('\n'):'';
     el.innerHTML='<div class="su-card" style="max-width:760px">'+steps
-      +'<h2>قوائم الطلاب</h2><div class="d">أدخلي أسماء طلاب كل شعبة مرة واحدة فقط، مهما كان عدد موادها</div>'
+      +'<h2>قوائم الطلاب</h2><div class="d">أدخلي أسماء طلاب كل شعبة مرة واحدة فقط، مهما كان عدد موادها — أو تجاوزي هذه الخطوة وأكمليها لاحقاً من «إدارة الشعب»</div>'
       +'<div class="su-grade-tabs">'+tabs+'</div>'
       +(active?('<div class="fld"><label>طلاب شعبة '+active.name+'</label>'
         // كتابة ثلاثين اسماً بيدها لكل شعبة أطولُ خطوةٍ في الإعداد وأكثرها
@@ -4701,6 +4781,10 @@ function suRender(){
         +'</div>'
         +'<textarea id="su-roster-ta" rows="8" placeholder="اسم في كل سطر" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);resize:vertical" oninput="suRSave()">'+escHtml(txt)+'</textarea></div>')
         :'<div class="d">لا توجد شعب محددة</div>')
+      // تكرارُ إدخال ثلاثين اسماً لكل شعبةٍ فوراً عبءٌ يوقف بعض المعلّمات
+      // عن إكمال الإعداد أصلاً؛ التخطّي الصريح هنا يُبقيها تكمل باقي
+      // الإعداد الآن، وترفع القوائم لاحقاً من «إدارة الشعب» بلا استعجال.
+      +'<button type="button" class="su-roster-skip" onclick="suGoStep5()">تجاوز هذه الخطوة — أكملها لاحقاً من «إدارة الشعب»</button>'
       +'<div class="c1-mrow" style="margin-top:8px"><button class="c1-mbtn no" onclick="suStep=3;suRender()">رجوع</button>'
       +'<button class="c1-mbtn go" onclick="suGoStep5()">التالي: المعاينة</button></div></div>';
   }else{
