@@ -1558,6 +1558,31 @@ body:has(#page-fahim.active){overflow:hidden}
 .fh-typing-dots i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:fhBounce 1.2s infinite}
 .fh-typing-dots i:nth-child(2){animation-delay:.15s}.fh-typing-dots i:nth-child(3){animation-delay:.3s}
 @keyframes fhBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+/* ═══ مؤشّر رسم الصورة — لوحةٌ تُملأ بلونٍ بدل نقاطٍ محايدة ═══
+   طلب "فكّري" (نصّ) ونقاط الانتظار كافيان له — لكن طلب "ارسمي" ينتظر
+   دقيقةً كاملةً أحياناً، وتلك النقاط الثلاث الرمادية تُشعر بانتظارٍ
+   بلا وجهة. لوحةٌ صغيرة تمتلئ بتدرّج ألوان المنصّة (أحمر←ذهبيّ←زيتونيّ)
+   تعطي إحساساً مختلفاً تماماً: شيءٌ يُرسم فعلاً لا نصٌّ يُفكَّر فيه. */
+.fh-draw-loader{display:inline-flex;align-items:center;gap:9px}
+.fh-draw-canvas{position:relative;width:22px;height:22px;border-radius:6px;flex:none;
+  border:1.6px solid var(--border);background:var(--card);overflow:hidden}
+.fh-draw-fill{position:absolute;inset:0;
+  background:linear-gradient(120deg,var(--red-d),#C9973F 55%,var(--olive-d));
+  animation:fhDrawSweep 2.2s ease-in-out infinite}
+@keyframes fhDrawSweep{
+  0%{clip-path:inset(0 100% 0 0)}
+  45%{clip-path:inset(0 0 0 0)}
+  55%{clip-path:inset(0 0 0 0)}
+  100%{clip-path:inset(0 0 0 100%)}
+}
+.fh-draw-txt{font-size:13px;color:var(--muted);font-weight:700}
+.fh-draw-dots{display:inline-block;width:1.1em;text-align:left;overflow:hidden;
+  animation:fhDrawDots 1.4s steps(4) infinite}
+@keyframes fhDrawDots{from{width:0}to{width:1.1em}}
+@media(prefers-reduced-motion:reduce){
+  .fh-draw-fill{animation:none;clip-path:inset(0 0 0 0);opacity:.55}
+  .fh-draw-dots{animation:none;width:1.1em}
+}
 #fh-inputrow{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--card);align-items:flex-end}
 #fh-clip{width:38px;height:38px;flex:none;border:1.5px solid var(--border);border-radius:50%;
   background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -10337,7 +10362,9 @@ async function fhSend(){
   fhMsgs.push({role:'user',content:msg||'',imgs,draw:_draw});
   fhRender();
   const body=document.getElementById('fh-body');
-  body.insertAdjacentHTML('beforeend','<div class="fh-msg bot" id="fh-typing"><span class="fh-typing-dots"><i></i><i></i><i></i></span></div>');
+  body.insertAdjacentHTML('beforeend','<div class="fh-msg bot" id="fh-typing">'+(_draw
+    ?'<span class="fh-draw-loader"><span class="fh-draw-canvas"><span class="fh-draw-fill"></span></span><span class="fh-draw-txt">تُرسم لوحتكِ<span class="fh-draw-dots">…</span></span></span>'
+    :'<span class="fh-typing-dots"><i></i><i></i><i></i></span>')+'</div>');
   body.scrollTop=body.scrollHeight;
   fhBusy=true;document.getElementById('fh-send').disabled=true;
   if(KH_DEMO){
