@@ -69,24 +69,6 @@ Deno.serve(async (req) => {
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
     if (st.generator_enabled === "0") return json({ error: "disabled" }, 403);
 
-    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم
-    const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
-    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
-    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
-    if (!quota.ok) return quota.error === "quota_unavailable"
-      ? json({ error: "quota_unavailable" }, 503)
-      : json({ error: "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
-    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
-    // على توليدٍ لم تستلمه.
-    let webOn = false;
-    let imgOn = false;
-    const refund = async (body: Record<string, unknown>, status: number) => {
-      await refundQuota(admin, user.id, user.email || "", "text");
-      if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
-      if (imgOn) await refundQuota(admin, user.id, user.email || "", "img");
-      return json(body, status);
-    };
-
     const b = await req.json().catch(() => ({}));
     const chatId = typeof b.chatId === "string" && b.chatId ? b.chatId : null;
     const userMsg = String(b.message || "").trim().slice(0, 2000);
@@ -97,9 +79,38 @@ Deno.serve(async (req) => {
     // بحث الويب اختياريّ بضغطةٍ من المعلّمة، لا تلقائيّ: لكلّ استعمالٍ ثمنٌ
     // يقارب أربعين رسالةً عادية، فتفعيله على كل سؤالٍ يُنفق بلا حاجة
     const web = b.web === true;
-    // حصة بحثٍ منفصلة: من نفدت حصةُ بحثها يُجاب سؤالها بلا بحث، ولا يُمنع
+    // ترسله الواجهة صريحاً بزرٍّ تضغطه المعلّمة (انظر التعليق الكامل أدناه) —
+    // نحتاج معرفته هنا، قبل فحص الحصّة، لنفحص الحصّة الصحيحة من أول محاولة.
+    const wantImage = b.makeImage === true;
+
+    // ⛔ حصة الاستخدام الشهرية — تُفرض على الخادم. فحصٌ واحدٌ فقط لكل طلب:
+    // "img" إن كانت رسالة رسمٍ، وإلا "text" — لا فحص "text" عامّ ثم "img"
+    // تباعاً كما كان، لأن حدّ المعدّل (RATE_LIMIT_MS) في takeQuota يرفض أي
+    // فحصٍ ثانٍ خلال ثانيتين من الأول بصرف النظر عن الحصّة المتبقّية،
+    // فكانت كل رسالة رسمٍ تُرفض بخطأ "نفد رصيدك" الكاذب لأن الفحص الثاني
+    // (img) يقع خلال أجزاء الثانية من الفحص الأول (text) — لا لأن الحصّة
+    // نفدت فعلاً. النوعان يقرآن نفس الحصّة الموحّدة، فلا فرق في القرار.
+    const quota = await takeQuota(admin, user.id, user.email || "", wantImage ? "img" : "text", st);
+    // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
+    // فلو قلنا «نفد رصيدك» لكذبنا على المعلّمة وأرسلناها تشكو رصيداً سليماً.
+    if (!quota.ok) return quota.error === "quota_unavailable"
+      ? json({ error: "quota_unavailable" }, 503)
+      : json({ error: wantImage ? "quota_exceeded_img" : "quota_exceeded", used: quota.used, limit: quota.limit }, 429);
+    // كل مخرجٍ بخطأٍ بعد هذه النقطة يستردّ ما خُصم: المعلمة لا تُحاسَب
+    // على توليدٍ لم تستلمه.
+    let webOn = false;
+    let imgOn = wantImage;
+    const refund = async (body: Record<string, unknown>, status: number) => {
+      await refundQuota(admin, user.id, user.email || "", "text");
+      if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
+      if (imgOn) await refundQuota(admin, user.id, user.email || "", "img");
+      return json(body, status);
+    };
+    // حصة بحثٍ منفصلة: من نفدت حصةُ بحثها يُجاب سؤالها بلا بحث، ولا يُمنع.
+    // skipRateLimit: هذا فحصٌ ثانٍ داخل نفس الطلب (بعد فحص الحصّة أعلاه)،
+    // لا طلبٌ متكرّرٌ مستقلّ — نفس السبب الموضَّح أعلاه بالضبط.
     if (web) {
-      const wq = await takeQuota(admin, user.id, user.email || "", "search", st);
+      const wq = await takeQuota(admin, user.id, user.email || "", "search", st, { skipRateLimit: true });
       webOn = wq.ok;
     }
     // آخر رسائل المحادثة من العميل (ثمانٍ: التاريخ يُعاد قراءته كاملاً مع
@@ -121,19 +132,10 @@ Deno.serve(async (req) => {
     // الاستنباط يخطئ في الاتجاهين، وكلا خطأيه مكلف. «اشرحي لي الصورة»
     // تُقرأ طلبَ رسم فتدفع ثمن صورةٍ لم تُرَد، و«أريد شيئاً يوضّح الدرس»
     // تُقرأ سؤالاً فتأتيها فقرةُ نصٍّ وهي تنتظر رسماً. والزرّ لا يلتبس.
-    const wantImage = b.makeImage === true;
+    // (wantImage نفسه، وفحص حصّة الصور، صارا أعلاه قبل فحص الحصّة الأول —
+    // imgOn مضبوطةٌ منه مسبقاً)
     const imageModel = st.model_chat_image || st.model_infographic || st.slide_model
                     || "google/gemini-3.1-flash-image-preview";
-
-    // الصورة تُخصم من حصّة الصور لا من حصّة النصّ: ثمنها يقارب ثلاثمئة رسالة،
-    // فخصمها رسالةً واحدة يجعل حصّة النصّ بابَ إنفاقٍ لا سقفاً له.
-    if (wantImage) {
-      const iq = await takeQuota(admin, user.id, user.email || "", "img", st);
-      if (!iq.ok) return iq.error === "quota_unavailable"
-        ? refund({ error: "quota_unavailable" }, 503)
-        : refund({ error: "quota_exceeded_img", used: iq.used, limit: iq.limit }, 429);
-      imgOn = true;
-    }
 
     // مع صورة نحتاج نموذج رؤية مضموناً: النموذج النصي يُسقط الصور بصمت
     // فتظن المعلمة أنه قرأها وهو يجيب من فراغ.
