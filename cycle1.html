@@ -931,10 +931,19 @@ body.inapp #c1-budget-btn{display:flex}
 }
 #live-bar.tick-flash{animation:lbFlash .45s ease 3}
 @keyframes lbFlash{0%,100%{box-shadow:0 3px 20px rgba(48,24,0,.35)}50%{box-shadow:0 3px 0 6px rgba(232,195,74,.55)}}
-/* توجيه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — توهّجٌ خفيف لبضع ثوانٍ */
-.lb-fs-hint{animation:lbFsHint 1.1s ease 2}
-@keyframes lbFsHint{0%,100%{box-shadow:0 0 0 0 rgba(255,233,168,.6)}50%{box-shadow:0 0 0 7px rgba(255,233,168,0)}}
+/* توجيه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — نبضٌ مستمر وفقّاعة
+   رسالةٍ بجانبه، يبقيان حتى تضغط الزرّ نفسه (لا مهلة زمنية). */
+.lb-fs-wrap{position:relative;display:inline-flex}
+.lb-fs-hint{animation:lbFsHint 1.4s ease infinite}
+@keyframes lbFsHint{0%,100%{box-shadow:0 0 0 0 rgba(255,233,168,.65)}50%{box-shadow:0 0 0 8px rgba(255,233,168,0)}}
 @media(prefers-reduced-motion:reduce){.lb-fs-hint{animation:none}}
+.lb-fs-bubble{position:absolute;top:calc(100% + 10px);inset-inline-end:0;background:#fff;color:var(--ink);
+  font-size:12px;font-weight:800;padding:8px 13px;border-radius:11px;box-shadow:0 10px 24px rgba(0,0,0,.28);
+  white-space:nowrap;display:none;z-index:10}
+.lb-fs-bubble.on{display:block}
+.lb-fs-bubble::before{content:'';position:absolute;top:-5px;inset-inline-end:16px;width:11px;height:11px;
+  background:#fff;transform:rotate(45deg);border-radius:2px}
+@media(max-width:700px){.lb-fs-bubble{font-size:11px;padding:7px 11px;inset-inline-end:-6px}}
 /* لوحات منسدلة من البار — تظهر فوق أي مرفق مفتوح لأن البار نفسه فوق الجميع */
 .lb-pop{position:absolute;top:calc(var(--live-bar-h) - 5px);min-width:236px;max-width:min(440px,92vw);
   background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:13px;box-shadow:0 18px 46px rgba(48,24,0,.34);color:var(--ink);display:none;text-align:start}
@@ -3177,8 +3186,11 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 3.5A1.5 1.5 0 1 0 8 9.5a1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-8 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4-4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg><span class="lbl">قرعة</span></button>
     <button class="lb-btn" id="lb-stars-btn" onclick="lbPop('stars')" title="نجوم سريعة">
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg><span class="lbl">نجوم</span></button>
-    <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm16 0h-2v4h-4v2h6v-6z"/></svg><span class="lbl">ملء الشاشة</span></button>
+    <span class="lb-fs-wrap">
+      <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm16 0h-2v4h-4v2h6v-6z"/></svg><span class="lbl">ملء الشاشة</span></button>
+      <div class="lb-fs-bubble" id="lb-fs-bubble">فعّلي وضع ملء الشاشة لتجربة أفضل</div>
+    </span>
   </div>
   <button class="lb-btn end" onclick="liveClose()" title="إنهاء الحصة">
     <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm5.6 3.6L14.2 8l3 3H8v2h9.2l-3 3 1.4 1.4L21 12l-5.4-5.4z"/></svg><span class="lbl">إنهاء الحصة</span></button>
@@ -8111,14 +8123,15 @@ function liveOpen(classId,subject,lessonId){
   liveLoadBook(); // صفحات الكتاب تُجلب تلقائياً وتُضاف للمرفقات فور جاهزيتها
   liveFsHint();
 }
-// تنبيهٌ قصير يوجّه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — توهّجٌ
-// خفيف حول الزرّ لبضع ثوانٍ مع رسالةٍ مقتضبة، لا نافذةً تحتاج إغلاقاً.
+// تنبيهٌ يوجّه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — نبضٌ مستمر
+// وفقّاعة رسالة، يبقيان ظاهرين حتى تضغط الزرّ نفسه (liveFsHintDismiss).
 function liveFsHint(){
-  toast('💡 اضغطي «ملء الشاشة» لأفضل تجربة','ok');
-  const btn=document.getElementById('lb-fs-btn');
-  if(!btn)return;
-  btn.classList.add('lb-fs-hint');
-  setTimeout(()=>btn.classList.remove('lb-fs-hint'),3200);
+  document.getElementById('lb-fs-btn')?.classList.add('lb-fs-hint');
+  document.getElementById('lb-fs-bubble')?.classList.add('on');
+}
+function liveFsHintDismiss(){
+  document.getElementById('lb-fs-btn')?.classList.remove('lb-fs-hint');
+  document.getElementById('lb-fs-bubble')?.classList.remove('on');
 }
 function liveClose(){
   document.getElementById('live-stage').classList.remove('on');
@@ -8129,12 +8142,14 @@ function liveClose(){
   liveTimerPause();
   clearInterval(_liveShuffleT);
   liveCtx=null;
+  liveFsHintDismiss();
   if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
 }
 // ملء الشاشة يخفي شريط عنوان/أدوات المتصفح — مفيدٌ حين يُعرض الجهاز على
 // شاشة الصف. يعمل على عنصر الصفحة كلّه (documentElement) لا live-stage
 // وحدها، فيغطّي أيضاً المسرح والمرفقات المفتوحة فوقه بنفس الطلب
 function liveFullscreenToggle(){
+  liveFsHintDismiss();
   if(document.fullscreenElement){document.exitFullscreen().catch(()=>{});return;}
   document.documentElement.requestFullscreen().catch(()=>{toast('تعذّر تفعيل ملء الشاشة على هذا الجهاز',true);});
 }
