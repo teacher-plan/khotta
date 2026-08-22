@@ -49,53 +49,63 @@ async function checkEdgeFunctions(
 
   const results: HealthCheckResult[] = [];
 
-  for (const fn of functions) {
-    try {
-      const start = Date.now();
-      const response = await fetch(
-        `${baseUrl}/functions/v1/${fn}`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-          // ٥ ثوانٍ كانت أقصر من "البدء البارد" (cold start) الطبيعي لدوالّ
-          // الحافة — فكانت دوالٌّ سليمةٌ تماماً تُبلَّغ كـ"حرجة" بـTimeoutError
-          // كل بضع دورات. ٢٠ ثانية تتجاوز البدء البارد المعتاد، فيبقى
-          // TimeoutError دلالةً على عطلٍ حقيقي لا على بطءٍ عابر.
-          signal: AbortSignal.timeout(20000),
-        }
-      );
-      const duration = Date.now() - start;
-
-      // 401 هنا متوقّع للدوال المحمية: نستدعيها بمفتاح anon بلا JWT مستخدم
-      // حقيقي، فرفضها بـ401 يعني أنها تعمل وتتحقق من الهوية بشكل صحيح —
-      // وليس عطلاً. العطل الحقيقي هو 5xx أو انقطاع الاتصال.
-      if (response.status === 200 || response.status === 201 || response.status === 401) {
-        results.push({
-          component: `function:${fn}`,
-          status: "healthy",
-          responseTime: duration,
-          severity: 1,
-        });
-      } else {
-        results.push({
-          component: `function:${fn}`,
-          status: response.status >= 500 ? "critical" : "warning",
-          responseTime: duration,
-          error: `HTTP ${response.status}`,
-          severity: response.status >= 500 ? 4 : 2,
-        });
+  const ping = async (fn: string) => {
+    const start = Date.now();
+    const response = await fetch(
+      `${baseUrl}/functions/v1/${fn}`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+        // ٥ ثوانٍ كانت أقصر من "البدء البارد" (cold start) الطبيعي لدوالّ
+        // الحافة — فكانت دوالٌّ سليمةٌ تماماً تُبلَّغ كـ"حرجة" بـTimeoutError
+        // كل بضع دورات. ٢٠ ثانية تتجاوز البدء البارد المعتاد عادةً، لكنها
+        // لا تزال تُخطئ أحياناً على بدءٍ باردٍ نادرٍ أبطأ من المعتاد — رفعُ
+        // الرقم مجدداً لن يحلّها للأبد (فُعل هذا مرّةً ولا يزال يتكرّر)،
+        // فبدلاً منه أُضيفت محاولةٌ ثانية أدناه قبل إعلان العطل.
+        signal: AbortSignal.timeout(20000),
       }
-    } catch (error) {
+    );
+    return { response, duration: Date.now() - start };
+  };
+
+  for (const fn of functions) {
+    let last: { response: Response; duration: number } | null = null;
+    let lastErr: unknown = null;
+    // محاولتان قبل الحكم بعطلٍ حقيقي: بدءٌ باردٌ عابر يصيب أي دالّةٍ أحياناً،
+    // والتشغيلات المجدولة الفعلية لهذه الدوالّ (عبر cron) مُثبَتٌ أنها تنجح
+    // خلال ثوانٍ معدودة — فتكرار التنبيه على عطلٍ لم يتكرّر فعلياً هو الضجيج
+    // الذي أراد المشرف إيقافه، لا حجب عطلٍ حقيقي (الذي يفشل في المحاولتين معاً).
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        last = await ping(fn);
+        lastErr = null;
+        // 401 هنا متوقّع للدوال المحمية: نستدعيها بمفتاح anon بلا JWT مستخدم
+        // حقيقي، فرفضها بـ401 يعني أنها تعمل وتتحقق من الهوية بشكل صحيح —
+        // وليس عطلاً. العطل الحقيقي هو 5xx أو انقطاع الاتصال.
+        if ([200, 201, 401].includes(last.response.status)) break;
+        if (last.response.status < 500) break; // 4xx غير 401: لا تستحقّ إعادة محاولة
+      } catch (error) {
+        lastErr = error;
+        last = null;
+      }
+    }
+
+    if (last && [200, 201, 401].includes(last.response.status)) {
+      results.push({ component: `function:${fn}`, status: "healthy", responseTime: last.duration, severity: 1 });
+    } else if (last) {
       results.push({
         component: `function:${fn}`,
-        status: "critical",
-        error: String(error),
-        severity: 4,
+        status: last.response.status >= 500 ? "critical" : "warning",
+        responseTime: last.duration,
+        error: `HTTP ${last.response.status}`,
+        severity: last.response.status >= 500 ? 4 : 2,
       });
+    } else {
+      results.push({ component: `function:${fn}`, status: "critical", error: String(lastErr), severity: 4 });
     }
   }
 
