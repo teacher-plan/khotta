@@ -3293,106 +3293,48 @@ const sb=KH_DEMO?(function(){
 const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
 let currentUser=null,profile={};
 
-// ══ تخزين الملفات على Google Drive الخاص بالمعلمة (نفس آلية صفحة المعلم) ══
-const GOOGLE_DRIVE_FOLDER_NAME='خطتي الفصلية';
+// ══ تخزين الملفات على Supabase الخاص بالحساب — بديل Google Drive ══
+// كان الرفع يمرّ بثلاث رحلاتٍ شبكية على الأقل (تجديد توكن ← بحث/إنشاء
+// مجلد ← رفع)، وربطاً إضافياً بحساب Google يُشتّت المعلّمة، وملفاتٍ
+// محميّة تفشل بصمتٍ أحياناً. باكِت user-files عامّ القراءة (كـlibrary-files
+// القائم أصلاً)، مسارٌ بمعرّف المستخدم لا يُخمَّن، والكتابة/الحذف محميّان
+// بسياسة RLS تقصرهما على صاحبة الملف. الحصّة (١ جيجابايت افتراضياً، قابلة
+// للتوسيع فردياً من لوحة الإدارة) تُفرض خادمياً عبر can_upload_file() —
+// بلا كشف رقمها للمعلّمة في أي مسار، كما طُلب صراحةً.
 const ACH_MAX_FILE_SIZE=500*1024*1024;
-let googleAccessToken=null,driveTokenExpiry=0,driveFolderId=null;
-async function storeDriveRefreshToken(session){
-  try{
-    const rt=session&&session.provider_refresh_token;
-    if(!rt||!currentUser)return;
-    // الفشل هنا لا يُعطّل الجلسة (الرمز يبقى صالحاً حتى انتهائها)، لكنه
-    // يعني انقطاع ربط Drive عند الدخول القادم بلا سببٍ ظاهر — يُسجَّل ليُرى
-    const{error}=await sb.from('drive_tokens').upsert({user_id:currentUser.id,refresh_token:rt,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-    if(error)console.error('تعذّر حفظ رمز Drive:',error.message||error);
-  }catch(e){console.error('تعذّر حفظ رمز Drive:',e);}
+function storagePath(fileName){
+  const safe=String(fileName||'file').replace(/[^\w.؀-ۿ-]/g,'_').slice(-80);
+  return currentUser.id+'/'+crypto.randomUUID()+'-'+safe;
 }
-async function getFreshDriveToken(){
-  try{
-    const{data,error}=await sb.functions.invoke('drive-token');
-    if(error||!data||!data.access_token)return null;
-    googleAccessToken=data.access_token;
-    driveTokenExpiry=Date.now()+((data.expires_in||3600)*1000)-60000;
-    return googleAccessToken;
-  }catch(e){return null;}
-}
-async function ensureDriveToken(){
-  if(googleAccessToken&&(driveTokenExpiry===0||Date.now()<driveTokenExpiry))return true;
-  return !!(await getFreshDriveToken());
-}
-async function linkGoogleDrive(){
-  try{
-    const{error}=await sb.auth.linkIdentity({
-      provider:'google',
-      options:{redirectTo:window.location.href.split('#')[0],scopes:'https://www.googleapis.com/auth/drive.file',queryParams:{access_type:'offline',prompt:'consent'}}
-    });
-    if(error)toast('تعذّر ربط Google: '+error.message,true);
-  }catch(e){toast('تعذّر ربط Google',true);}
-}
-async function promptLinkDrive(){
-  if(await c1Confirm('لتخزين الملفات تحتاج لربط حساب Google مرة واحدة.\nسيُفتح جوجل لمنح إذن التخزين فقط، ثم تعودين للموقع.\nربط الآن؟')){
-    await linkGoogleDrive();
-  }
-}
-async function ensureDriveFolder(){
-  if(driveFolderId)return driveFolderId;
-  if(!await ensureDriveToken())throw new Error('no-google-token');
-  const q=encodeURIComponent(`name='${GOOGLE_DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{headers:{Authorization:'Bearer '+googleAccessToken}});
-  const j=await res.json();
-  if(j.files&&j.files.length){driveFolderId=j.files[0].id;return driveFolderId;}
-  const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
-    method:'POST',headers:{Authorization:'Bearer '+googleAccessToken,'Content-Type':'application/json'},
-    body:JSON.stringify({name:GOOGLE_DRIVE_FOLDER_NAME,mimeType:'application/vnd.google-apps.folder'})
-  });
-  const cj=await cr.json();
-  driveFolderId=cj.id;
-  return driveFolderId;
-}
-async function driveUpload(file,fileName){
-  if(!await ensureDriveToken()){await promptLinkDrive();return null;}
+async function storageUpload(file,fileName,kind){
   if(file.size>ACH_MAX_FILE_SIZE){toast('الملف أكبر من الحد المسموح',true);return null;}
   try{
-    const folderId=await ensureDriveFolder();
-    const form=new FormData();
-    form.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId]})],{type:'application/json'}));
-    form.append('file',file);
-    let res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
-      method:'POST',headers:{Authorization:'Bearer '+googleAccessToken},body:form
+    const{data:allowed,error:qErr}=await sb.rpc('can_upload_file',{add_bytes:file.size});
+    if(qErr){toast('تعذّر التحقّق قبل الرفع — أعيدي المحاولة',true);return null;}
+    // رسالةٌ لا تكشف رقم الحصّة ولا المستهلَك — فقط أن المساحة امتلأت،
+    // مطابقةً لروح "بلا إشعارٍ بالمساحة المتاحة".
+    if(!allowed){toast('امتلأت مساحة تخزينكِ — احذفي ملفاتٍ قديمة أو راسلي الإدارة',true);return null;}
+    const path=storagePath(fileName);
+    const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
+    if(upErr){toast('تعذّر رفع الملف',true);return null;}
+    const{error:rowErr}=await sb.from('user_files').insert({
+      user_id:currentUser.id,path,size_bytes:file.size,kind,file_name:fileName,
     });
-    if(res.status===401){
-      googleAccessToken=null;driveTokenExpiry=1;driveFolderId=null;
-      if(await ensureDriveToken()){
-        const folderId2=await ensureDriveFolder();
-        const form2=new FormData();
-        form2.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId2]})],{type:'application/json'}));
-        form2.append('file',file);
-        res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink,webContentLink',{
-          method:'POST',headers:{Authorization:'Bearer '+googleAccessToken},body:form2
-        });
-      }
+    if(rowErr){
+      // الملف رُفع لكن سجلّه فشل: نحذفه فوراً كي لا يُحتسب مساحةً بلا حصّةٍ تعكسها
+      try{await sb.storage.from('user-files').remove([path]);}catch(e){}
+      toast('تعذّر حفظ الملف',true);return null;
     }
-    if(!res.ok){
-      toast(res.status===401?'انتهت صلاحية ربط Google — أعيدي الربط من إعدادات الحساب':'تعذّر رفع الملف',true);
-      return null;
-    }
-    const j=await res.json();
-    try{
-      await fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions',{
-        method:'POST',headers:{Authorization:'Bearer '+googleAccessToken,'Content-Type':'application/json'},
-        body:JSON.stringify({role:'reader',type:'anyone'})
-      });
-    }catch(e){}
-    const view='https://drive.google.com/file/d/'+j.id+'/view';
-    return{id:j.id,name:j.name||fileName,size:file.size,viewLink:view,previewLink:view,downloadLink:'https://drive.google.com/uc?export=download&id='+j.id};
+    const url=sb.storage.from('user-files').getPublicUrl(path).data.publicUrl;
+    return{path,name:fileName,size:file.size,viewLink:url,previewLink:url,downloadLink:url};
   }catch(e){toast('تعذّر رفع الملف',true);return null;}
 }
-async function driveDelete(fileId){
-  if(!fileId)return false;
-  if(!await ensureDriveToken())return false;
+async function storageDelete(path){
+  if(!path)return false;
   try{
-    const res=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId,{method:'DELETE',headers:{Authorization:'Bearer '+googleAccessToken}});
-    return res.ok||res.status===404;
+    await sb.storage.from('user-files').remove([path]);
+    await sb.from('user_files').delete().eq('user_id',currentUser.id).eq('path',path);
+    return true;
   }catch(e){return false;}
 }
 
@@ -3682,8 +3624,6 @@ function showLogin(msg){
 }
 async function afterAuth(session){
   currentUser=session.user;
-  if(session.provider_token){googleAccessToken=session.provider_token;driveTokenExpiry=0;}
-  storeDriveRefreshToken(session);
   document.getElementById('auth-loading-box').classList.remove('hidden');
   document.getElementById('cy1-login-form').classList.add('hidden');
   const userEmail=(currentUser.email||'').toLowerCase();
@@ -4708,15 +4648,6 @@ c1SelectEnhanceAll();
     }
     // عودةُ الجلسة بعد انتهائها: نرفع ما بقي معلّقاً قبل أيّ شيء.
     if(event==='TOKEN_REFRESHED'&&s&&currentUser&&_cy1Dirty)cy1Flush();
-    if(event==='SIGNED_IN'&&s&&currentUser){
-      if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
-      storeDriveRefreshToken(s);
-    }
-    if(event==='USER_UPDATED'&&s){
-      if(s.provider_token){googleAccessToken=s.provider_token;driveTokenExpiry=0;}
-      await storeDriveRefreshToken(s);
-      if(s.provider_refresh_token)toast('تم ربط حساب Google — يمكنك الآن رفع الملفات','ok');
-    }
   });
 })();
 
@@ -6233,18 +6164,18 @@ function planShowInfo(id){
   const l=planFindLesson(id);
   imgFullOpen(st.info_url,'ملخص الدرس'+(l?' — '+l.name:''));
 }
-// إرفاق ملف: يُرفع إلى Drive المعلمة ويُسجل على بطاقة الدرس
+// إرفاق ملف: يُرفع إلى تخزين الحساب ويُسجل على بطاقة الدرس
 function planAttach(id){
   const inp=document.createElement('input');
   inp.type='file';
   inp.onchange=async()=>{
     const f=inp.files[0];if(!f)return;
-    cyBusy('يرفع الملف إلى Drive');
+    cyBusy('يرفع الملف');
     try{
-      const result=await driveUpload(f,f.name);
+      const result=await storageUpload(f,f.name,'lesson_attachment');
       if(!result)return;
       const st=planGet(id);
-      const files=[...(st.files||[]),{name:f.name,type:f.type,size:f.size,driveId:result.id,viewLink:result.viewLink,previewLink:result.previewLink}];
+      const files=[...(st.files||[]),{name:f.name,type:f.type,size:f.size,path:result.path,viewLink:result.viewLink,previewLink:result.previewLink}];
       await planSetState(id,{files});
       planRenderUnits();
       toast('أُرفق الملف بالدرس','ok');
@@ -6259,17 +6190,15 @@ function planFileOpen(id,fi){
 async function planFileDel(id,fi){
   const files=[...(planGet(id).files||[])];
   const f=files[fi];if(!f)return;
-  if(!await c1Confirm('حذف «'+f.name+'» من مرفقات الدرس؟ سيُحذف من Drive أيضاً.'))return;
-  if(f.driveId)driveDelete(f.driveId);
+  if(!await c1Confirm('حذف «'+f.name+'» من مرفقات الدرس؟'))return;
+  if(f.path)storageDelete(f.path);
   files.splice(fi,1);
   await planSetState(id,{files});
   planRenderUnits();
 }
-// معاينة ملفات Drive داخل نافذة بإطار /preview (الروابط المباشرة يرفضها المتصفح)
+// معاينة ملفٍ داخل نافذة بإطار
 function drivePrevOpen(url,name){
   let u=url||'';
-  if(u.includes('/view'))u=u.replace('/view','/preview');
-  else if(u.includes('id=')){const m=u.match(/id=([^&]+)/);if(m)u='https://drive.google.com/file/d/'+m[1]+'/preview';}
   document.getElementById('drive-prev-title').textContent=name||'معاينة الملف';
   document.getElementById('drive-prev-frame').src=u;
   document.getElementById('drive-prev-modal').classList.add('open');
@@ -8269,9 +8198,7 @@ function liveOpenInfo(){
 }
 function liveOpenFile(fi){
   const f=(planGet(liveCtx.lessonId).files||[])[fi];if(!f)return;
-  let u=f.viewLink||f.previewLink||'';
-  if(u.includes('/view'))u=u.replace('/view','/preview');
-  else if(u.includes('id=')){const m=u.match(/id=([^&]+)/);if(m)u='https://drive.google.com/file/d/'+m[1]+'/preview';}
+  const u=f.viewLink||f.previewLink||'';
   liveViewOpen(f.name,`<iframe src="${u}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
@@ -10579,15 +10506,15 @@ async function achSaveProfile(){
 async function achPhotoChange(e){
   const f=e.target.files[0];if(!f)return;
   if(f.size>5*1024*1024){toast('الصورة كبيرة — الحد الأقصى ٥ ميجا',true);e.target.value='';return;}
-  cyBusy('يرفع الصورة على Drive');
+  cyBusy('يرفع الصورة');
   try{
-    const prevId=(achProfile().photo_drive_id)||null;
-    const result=await driveUpload(f,'صورة الملف الشخصي.png');
+    const prevPath=(achProfile().photo_path)||null;
+    const result=await storageUpload(f,'صورة الملف الشخصي.png','profile_photo');
     if(!result)return;
-    const url='https://drive.google.com/uc?export=view&id='+result.id;
-    const p={...achProfile(),photo_url:url,photo_drive_id:result.id};
+    const url=result.viewLink;
+    const p={...achProfile(),photo_url:url,photo_path:result.path};
     await cy1Save({ach_profile:p});
-    if(prevId&&prevId!==result.id)driveDelete(prevId);
+    if(prevPath&&prevPath!==result.path)storageDelete(prevPath);
     const img=document.getElementById('ach-photo-img'),ph=document.getElementById('ach-photo-ph');
     img.src=url;img.style.display='block';ph.style.display='none';
     toast('تم حفظ الصورة','ok');
@@ -10670,8 +10597,8 @@ async function achSave(){
   const attachments=[];
   for(const f of achPendingFiles){
     const fileName='[إنجاز-'+id+'] '+f.name;
-    const result=await driveUpload(f,fileName);
-    if(result)attachments.push({name:f.name,type:f.type,size:f.size,driveId:result.id,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
+    const result=await storageUpload(f,fileName,'achievement_attachment');
+    if(result)attachments.push({name:f.name,type:f.type,size:f.size,path:result.path,viewLink:result.viewLink,downloadLink:result.downloadLink,previewLink:result.previewLink});
   }
   const items=[...achList(),{id,type:achType,title,date,desc,attachments}];
   achAddClose();
@@ -10683,7 +10610,7 @@ async function achSave(){
 async function achDelete(id){
   if(!await c1Confirm('حذف هذا العنصر من سجلّك؟'))return;
   const item=achList().find(i=>i.id===id);
-  if(item&&item.attachments)for(const a of item.attachments)if(a.driveId)await driveDelete(a.driveId);
+  if(item&&item.attachments)for(const a of item.attachments)if(a.path)await storageDelete(a.path);
   const items=achList().filter(i=>i.id!==id);
   await cy1Save({achievements:items},'يحذف العنصر');
   achRender();
