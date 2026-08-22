@@ -3303,9 +3303,14 @@ let currentUser=null,profile={};
 // للتوسيع فردياً من لوحة الإدارة) تُفرض خادمياً عبر can_upload_file() —
 // بلا كشف رقمها للمعلّمة في أي مسار، كما طُلب صراحةً.
 const ACH_MAX_FILE_SIZE=500*1024*1024;
+// مفتاح الكائن في Supabase Storage يجب أن يكون ASCII صرفاً (قيدٌ من
+// Supabase نفسها، منفصلٌ عن سياسة RLS التي تسمح بأي محرفٍ في المسار) —
+// رفعُ ملفٍ باسمٍ عربي (وهو الشائع هنا) كان يفشل بخطأ "Invalid key" رغم
+// نجاح كل الفحوص الأخرى. الاسم العربي الأصلي يبقى محفوظاً كاملاً في
+// عمود file_name وفي الحقل المعروض للمعلّمة؛ هذا المسار للتخزين فقط.
 function storagePath(fileName){
-  const safe=String(fileName||'file').replace(/[^\w.؀-ۿ-]/g,'_').slice(-80);
-  return currentUser.id+'/'+crypto.randomUUID()+'-'+safe;
+  const ext=(String(fileName||'').match(/\.[A-Za-z0-9]{1,8}$/)||[''])[0].toLowerCase();
+  return currentUser.id+'/'+crypto.randomUUID()+ext;
 }
 async function storageUpload(file,fileName,kind){
   if(file.size>ACH_MAX_FILE_SIZE){toast('الملف أكبر من الحد المسموح',true);return null;}
