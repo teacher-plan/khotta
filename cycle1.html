@@ -1601,6 +1601,20 @@ body:has(#page-fahim.active){overflow:hidden}
   border-radius:12px;margin:2px 0 8px;background:rgba(0,0,0,.04)}
 .fh-imgdl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;
   border:1px solid var(--border);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--text)}
+.fh-imgacts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.fh-imgedit-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;
+  border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--surface);
+  color:var(--text);cursor:pointer;font-family:inherit}
+.fh-imgedit-btn:hover{border-color:var(--red)}
+/* صفّ تعديل الصورة: مطويٌّ افتراضياً تحت كل صورة، يظهر فقط عند الضغط
+   على «تعديل الصورة» — لا يُثقل كل فقاعةٍ بحقلٍ ظاهرٍ دائماً. */
+.fh-edit-row{display:none;gap:8px;margin:2px 0 8px}
+.fh-edit-row.open{display:flex}
+.fh-edit-row input{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:10px;
+  padding:8px 12px;font-family:inherit;font-size:12.5px;background:var(--surface);color:var(--ink)}
+.fh-edit-row button{flex:none;border:none;border-radius:10px;padding:8px 14px;
+  background:var(--red-d);color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.fh-edit-row button:hover{background:var(--red-deep)}
 .fh-webtag{display:inline-flex;align-items:center;gap:4px;background:rgba(72,120,72,.12);color:var(--olive-d);
   border:1px solid rgba(72,120,72,.3);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;
   margin-bottom:7px;white-space:nowrap}
@@ -10295,17 +10309,66 @@ function fhRender(){
   // رسالة العطل تُميَّز بصرياً عن ردّ المساعد الحقيقي — بلا هذا التمييز
   // تبدو «استهلكتِ رصيدكِ» كأن المساعد نفسه قالها كإجابةٍ عن سؤالها، فتُصدَّق
   // كردٍّ ذكيّ لا كإشعار نظامٍ حقيقي.
-  body.innerHTML=fhMsgs.map(m=>m.role==='user'
+  body.innerHTML=fhMsgs.map((m,i)=>m.role==='user'
     ?`<div class="fh-msg user">${(m.imgs||[]).map(u=>`<img src="${u}" alt="مرفق" style="max-width:150px;border-radius:9px;display:block;margin-bottom:6px"/>`).join('')}${escHtml(m.content)}</div>`
     :m.err
     ?`<div class="fh-msg bot err"><span class="fh-err-tag">⚠️ إشعار نظام — لا ردّ ذكاء اصطناعي</span>${escHtml(m.content)}</div>`
     :`<div class="fh-msg bot">${m.web?'<span class="fh-webtag">🌐 نتائج من الويب</span>':''}${
         m.img?`<img class="fh-genimg" src="${m.img}" alt="صورة مولَّدة"/>`
-             +`<a class="fh-imgdl" href="${m.img}" download="khotta-${Date.now()}.png">⬇︎ تنزيل الصورة</a>`:''
+             +`<div class="fh-imgacts">`
+             +`<a class="fh-imgdl" href="${m.img}" download="khotta-${Date.now()}.png">⬇︎ تنزيل الصورة</a>`
+             +`<button type="button" class="fh-imgedit-btn" onclick="fhEditToggle(${i})">✏️ تعديل الصورة</button>`
+             +`</div>`
+             +`<div class="fh-edit-row" id="fh-edit-${i}">`
+             +`<input type="text" id="fh-edit-in-${i}" placeholder="مثال: بدّلي اللون الأزرق إلى أخضر" onkeydown="if(event.key==='Enter')fhEditImage(${i})"/>`
+             +`<button type="button" onclick="fhEditImage(${i})">تطبيق</button>`
+             +`</div>`:''
       }${m.content?fhMd(m.content):''}</div>`).join('');
   body.scrollTop=body.scrollHeight;
 }
 function fhAsk(q){document.getElementById('fh-input').value=q;fhSend();}
+
+// ── تعديل صورةٍ مولَّدة داخل المحادثة نفسها — بلا فتح الاستوديو ──
+function fhEditToggle(i){
+  const el=document.getElementById('fh-edit-'+i);if(!el)return;
+  el.classList.toggle('open');
+  if(el.classList.contains('open')){
+    const inp=document.getElementById('fh-edit-in-'+i);
+    if(inp)setTimeout(()=>inp.focus(),50);
+  }
+}
+async function fhEditImage(i){
+  if(fhBusy)return;
+  const m=fhMsgs[i];if(!m||!m.img)return;
+  const inp=document.getElementById('fh-edit-in-'+i);
+  const editPrompt=(inp&&inp.value||'').trim();
+  if(!editPrompt){toast('اكتبي التعديل المطلوب أولاً',true);return;}
+  if(KH_DEMO){toast('تعديل الصور متاحٌ في الحساب الكامل',true);return;}
+  fhBusy=true;document.getElementById('fh-send').disabled=true;
+  const body=document.getElementById('fh-body');
+  body.insertAdjacentHTML('beforeend','<div class="fh-msg bot" id="fh-typing"><span class="fh-draw-loader"><span class="fh-draw-canvas"><span class="fh-draw-fill"></span></span><span class="fh-draw-txt">تُعدَّل الصورة<span class="fh-draw-dots">…</span></span></span></div>');
+  body.scrollTop=body.scrollHeight;
+  try{
+    const _chatRes=await sb.functions.invoke('generate-chat',{body:{
+      chatId:fhChatId,editImage:m.img,editPrompt,context:fhContext()
+    }});
+    const{data,error}=_chatRes;
+    document.getElementById('fh-typing')?.remove();
+    if(error||!data||!data.image){
+      const reason=await c1FnErr(_chatRes);
+      fhMsgs.push({role:'assistant',err:true,content:c1ErrMsg(reason,'عذراً، تعذّر تعديل الصورة. حاولي مرة أخرى.')});
+    }else{
+      fhMsgs.push({role:'assistant',content:'',img:data.image});
+      qBump();
+      if(data.chatId){const isNew=!fhChatId;fhChatId=data.chatId;if(isNew)fhHistory();}
+    }
+  }catch(e){
+    document.getElementById('fh-typing')?.remove();
+    fhMsgs.push({role:'assistant',err:true,content:'عذراً، تعثرت في الرد. حاولي مرة أخرى.'});
+  }
+  fhBusy=false;document.getElementById('fh-send').disabled=false;
+  fhRender();
+}
 
 // ── صورٌ ترفعها المعلمة ليقرأها المساعد ──
 let fhImgs=[];
