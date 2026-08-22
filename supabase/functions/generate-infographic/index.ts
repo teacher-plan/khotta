@@ -196,19 +196,31 @@ Deno.serve(async (req) => {
     let img = "";
     let usage: unknown = null;
     if (model.startsWith("google/")) {
-      let orResp = await call({ aspect_ratio: aspect, image_size: size });
-      let or = await orResp.json();
-      if (!orResp.ok) { orResp = await call({ aspect_ratio: aspect }); or = await orResp.json(); }
-      if (!orResp.ok) { orResp = await call(null); or = await orResp.json(); }
-      if (!orResp.ok) {
-        const _m = String(or?.error?.message || or?.message || "");
-        console.error(`openrouter ${orResp.status} في generate-infographic: ${_m}`);
-        return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+      // ثلاث محاولات بإعداداتٍ متدرّجة (مقاسٌ كامل ← نسبة فقط ← بلا إعداد).
+      // كانت هذه السلسلة تُجرَّب فقط عند فشل HTTP الصريح؛ لكن العطل الأشيع
+      // فعلياً هو عطلٌ صامت: النموذج يردّ 200 لكن بلا صورة (يرفض المقاس/النسبة
+      // المطلوبة بصمتٍ ويعيد نصّاً بدلها) — وكانت هذه الحالة تُخفق فوراً بلا
+      // تجربة الإعداد الأخفّ التالي، فتضطرّ المعلّمة لإعادة الضغط يدوياً حتى
+      // يوافق الحظّ إعداداً يقبله النموذج. الآن الحالتان تُعاملان معاملةً واحدة.
+      const configs: (Record<string, unknown> | null)[] = [{ aspect_ratio: aspect, image_size: size }, { aspect_ratio: aspect }, null];
+      let orResp: Response, or: any, message: any;
+      for (const cfg of configs) {
+        orResp = await call(cfg);
+        or = await orResp.json();
+        message = or?.choices?.[0]?.message;
+        img = message?.images?.[0]?.image_url?.url || "";
+        if (orResp.ok && img) break; // نجاحٌ فعلي بصورةٍ حقيقية — لا داعٍ لتجربة إعداداتٍ أخرى
       }
-      const msg = or?.choices?.[0]?.message;
-      img = msg?.images?.[0]?.image_url?.url || "";
+      if (!orResp!.ok) {
+        const _m = String(or?.error?.message || or?.message || "");
+        console.error(`openrouter ${orResp!.status} في generate-infographic: ${_m}`);
+        return refund({ error: orErrCode(orResp!.status, _m), detail: _m.slice(0, 200) }, 502);
+      }
       usage = or?.usage || null;
-      if (!img) return refund({ error: "no_image", detail: msg?.content || null }, 502);
+      if (!img) {
+        console.error(`generate-infographic: النموذج ${model} ردّ 200 بلا صورةٍ عبر كل الإعدادات الثلاثة — content: ${String(message?.content || "").slice(0, 200)}`);
+        return refund({ error: "no_image", detail: message?.content || null }, 502);
+      }
     } else {
       const r = await callImagesApi();
       if (!r.ok) {
