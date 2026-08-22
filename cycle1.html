@@ -715,11 +715,6 @@ body.inapp #c1-budget-btn{display:flex}
 .cls-pick-btn{flex:1;border:1.5px solid var(--cc,var(--border));border-radius:12px;padding:13px;background:var(--card);color:var(--cc,var(--ink));font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;transition:.15s}
 .cls-pick-btn:hover{background:var(--cc,var(--red));color:#fff}
 #drive-prev-frame{width:100%;height:min(72vh,560px);border:none;border-radius:12px;background:#fff}
-/* عارض مايكروسوفت لملفات أوفيس يرسم صفحته بمقاسٍ ثابتٍ سخيّ لا يتجاوب
-   مع حجم الإطار — تصغيرٌ بصريّ (transform) مع تكبير الصندوق بمقدار
-   معكوس النسبة، فتبقى التغطية كاملةً رغم التصغير الظاهر. */
-#drive-prev-frame.office-doc,.lv-vbody iframe.office-doc{
-  width:139%;height:139%;transform:scale(.72);transform-origin:0 0}
 
 /* ── بطاقة اليوم — تحضير مباشر بضغطة زر ── */
 /* ══ بار الخطة — كولاج ورقيّ ══
@@ -6218,9 +6213,9 @@ async function planFileDel(id,fi){
 // القراءة أصلاً، فتمريره عبر عارض مايكروسوفت المجاني (بلا أي حساب أو
 // ربط) يعرضها داخل الإطار بدل تنزيلها.
 const OFFICE_EXT_RE=/\.(docx?|xlsx?|pptx?)$/i;
-function isOfficeDoc(url,name){return OFFICE_EXT_RE.test(name||'')||OFFICE_EXT_RE.test(url||'');}
 function filePreviewSrc(url,name){
-  return isOfficeDoc(url,name)?'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(url):url;
+  const isOffice=OFFICE_EXT_RE.test(name||'')||OFFICE_EXT_RE.test(url||'');
+  return isOffice?'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(url):url;
 }
 function drivePrevOpen(url,name,type){
   const u=url||'';
@@ -6229,7 +6224,6 @@ function drivePrevOpen(url,name,type){
   const img=document.getElementById('drive-prev-img'),frame=document.getElementById('drive-prev-frame');
   img.style.display=isImg?'block':'none';
   frame.style.display=isImg?'none':'';
-  frame.classList.toggle('office-doc',!isImg&&isOfficeDoc(u,name));
   if(isImg){img.src=u;frame.src='about:blank';}
   else{frame.src=filePreviewSrc(u,name);img.src='';}
   document.getElementById('drive-prev-modal').classList.add('open');
@@ -8236,8 +8230,7 @@ function liveOpenFile(fi){
   // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
   // بلا أي تصغير، مهما كانت أبعادها.
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
-  const cls=!isImg&&isOfficeDoc(u,f.name)?' class="office-doc"':'';
-  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe${cls} src="${filePreviewSrc(u,f.name)}" allow="autoplay"></iframe>`,false);
+  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe src="${filePreviewSrc(u,f.name)}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
