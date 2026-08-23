@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
     await logAiCost(admin, user.id, "extract-roster", "img", model, or?.usage);
     return json({ names, model, usage: or?.usage || null });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

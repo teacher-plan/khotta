@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     let targetId: string | null = null;
     for (let page = 1; page <= 20 && !targetId; page++) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
-      if (error) return json({ error: "lookup_failed", detail: error.message }, 500);
+      if (error) { console.error("lookup_failed:", error.message); return json({ error: "lookup_failed" }, 500); }
       const found = data.users.find((u) => (u.email || "").toLowerCase() === String(email).toLowerCase());
       if (found) { targetId = found.id; break; }
       if (data.users.length < 200) break;
@@ -67,11 +67,12 @@ Deno.serve(async (req) => {
 
     const newPassword = genPassword();
     const { error: updErr } = await admin.auth.admin.updateUserById(targetId, { password: newPassword });
-    if (updErr) return json({ error: "update_failed", detail: updErr.message }, 500);
+    if (updErr) { console.error("update_failed:", updErr.message); return json({ error: "update_failed" }, 500); }
 
     // كلمة المرور لا تُخزَّن — تُعرض للمشرف مرة واحدة فقط ليرسلها للمعلم
     return json({ password: newPassword });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       const expires_at = expiryFor(plan);
       const { error: exErr } = await admin.from("allowed_emails")
         .update({ expires_at }).ilike("email", acct);
-      if (exErr) return json({ error: "extend_failed", detail: exErr.message }, 502);
+      if (exErr) { console.error("extend_failed:", exErr.message); return json({ error: "extend_failed" }, 502); }
       return json({ ok: true, extended: true, email: acct, plan, expires_at });
     }
 
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       .update({ account_email: claimMark })
       .eq("id", regId).is("account_email", null)
       .select("id,name,email,stage").maybeSingle();
-    if (claimErr) return json({ error: "server_error", detail: claimErr.message }, 500);
+    if (claimErr) { console.error("server_error:", claimErr.message); return json({ error: "server_error" }, 500); }
     if (!claimed) {
       // لم يُرجَع صفّ = طلبٌ آخر (أو تفعيلٌ سابق) سبقنا إلى الحجز
       const { data: now } = await admin.from("pre_registrations")
@@ -201,7 +201,8 @@ Deno.serve(async (req) => {
     if (aErr) {
       await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
       await release();
-      return json({ error: "allow_failed", detail: aErr.message }, 502);
+      console.error("allow_failed:", aErr.message);
+      return json({ error: "allow_failed" }, 502);
     }
 
     // ⚠️ لا تُكتب كلمة المرور هنا. كانت تُحفظ نصّاً صريحاً في
@@ -226,6 +227,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, email, password, plan, expires_at, mailed: mail.sent, mailReason: mail.reason || null });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

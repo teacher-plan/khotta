@@ -6757,7 +6757,7 @@ function exitEditMode(){
 }
 function renderClassConfig(){
   const list=document.getElementById('ccfg-list');const keys=Object.keys(classConfig);
-  list.innerHTML=keys.map((k,i)=>{const c=classConfig[k];return`<div class="ccfg-row"><input type="text" value="${c.name}" onchange="updClassName('${k}',this.value)" placeholder="اسم الشعبة"/><input type="color" value="${c.color}" onchange="updClassColor('${k}',this.value)"/>${keys.length>1?`<button class="del-class" onclick="delClass('${k}')">حذف</button>`:''}</div>`;}).join('');
+  list.innerHTML=keys.map((k,i)=>{const c=classConfig[k];return`<div class="ccfg-row"><input type="text" value="${escAttr(c.name)}" onchange="updClassName('${escAttr(k)}',this.value)" placeholder="اسم الشعبة"/><input type="color" value="${escAttr(c.color)}" onchange="updClassColor('${escAttr(k)}',this.value)"/>${keys.length>1?`<button class="del-class" onclick="delClass('${escAttr(k)}')">حذف</button>`:''}</div>`;}).join('');
 }
 function updClassName(key,name){classConfig[key].name=name.trim()||key;}
 function updClassColor(key,color){classConfig[key].color=color;renderTimetable();}
@@ -8461,8 +8461,8 @@ function renderInnerItems(catId){
   items.forEach(item=>{
     const el=document.createElement('div');el.className='arc-item';const isImg=item.type&&item.type.startsWith('image/');
     const ds=item.date?new Date(item.date).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}):'';
-    const openAction=isImg?`viewImg('${item.previewLink||item.viewLink}')`:`openDriveFile('${item.previewLink||item.viewLink}','${(item.name||'').replace(/'/g,"\\'")}'  )`;
-    el.innerHTML=`<div class="arc-item-top"><span class="arc-item-icon">${isImg?'🖼️':'📄'}</span><div class="arc-item-body"><div class="arc-item-name">${item.name}</div><div class="arc-item-meta">${ds?`<span>📅 ${ds}</span>`:''}<span>${fmtSize(item.size)}</span></div>${item.note?`<div class="arc-item-note">${item.note}</div>`:''}</div></div><div class="arc-item-actions"><button class="arc-btn" onclick="${openAction}">👁️ فتح</button><button class="arc-btn" onclick="downloadDriveFile('${item.downloadLink}','${(item.name||'').replace(/'/g,"\\'")}')">⬇️ تحميل</button><button class="arc-btn del" onclick="deleteArcItem('${catId}','${item.id}','${item.driveId||''}')">🗑️ حذف</button></div>`;
+    const openAction=isImg?`viewImg('${escAttr(item.previewLink||item.viewLink)}')`:`openDriveFile('${escAttr(item.previewLink||item.viewLink)}','${escAttr(item.name||'')}')`;
+    el.innerHTML=`<div class="arc-item-top"><span class="arc-item-icon">${isImg?'🖼️':'📄'}</span><div class="arc-item-body"><div class="arc-item-name">${escHtml(item.name)}</div><div class="arc-item-meta">${ds?`<span>📅 ${ds}</span>`:''}<span>${fmtSize(item.size)}</span></div>${item.note?`<div class="arc-item-note">${escHtml(item.note)}</div>`:''}</div></div><div class="arc-item-actions"><button class="arc-btn" onclick="${openAction}">👁️ فتح</button><button class="arc-btn" onclick="downloadDriveFile('${escAttr(item.downloadLink)}','${escAttr(item.name||'')}')">⬇️ تحميل</button><button class="arc-btn del" onclick="deleteArcItem('${escAttr(catId)}','${escAttr(item.id)}','${escAttr(item.driveId||'')}')">🗑️ حذف</button></div>`;
     c.appendChild(el);
   });
 }
@@ -11795,11 +11795,11 @@ function renderCv(){
       const rows=item.attachments.map(a=>{
         const isImg=a.type&&a.type.startsWith('image/');
         const openUrl=a.previewLink||a.viewLink||'';
-        return`<div class="cv-file-row"><span>${isImg?'🖼️':'📄'}</span><span class="cv-file-name">${a.name}</span><span style="font-size:10px;color:var(--muted)">${fmtSize(a.size)}</span><button class="arc-btn" onclick="openDriveFile('${openUrl}','${a.name.replace(/'/g,"\\'")}')" style="padding:3px 8px;font-size:10px;">👁️</button></div>`;
+        return`<div class="cv-file-row"><span>${isImg?'🖼️':'📄'}</span><span class="cv-file-name">${escHtml(a.name)}</span><span style="font-size:10px;color:var(--muted)">${fmtSize(a.size)}</span><button class="arc-btn" onclick="openDriveFile('${escAttr(openUrl)}','${escAttr(a.name)}')" style="padding:3px 8px;font-size:10px;">👁️</button></div>`;
       }).join('');
       filesHtml=`<div class="cv-files"><div class="cv-files-label">📎 المرفقات (${item.attachments.length})</div><div class="cv-files-list">${rows}</div></div>`;
     }
-    el.innerHTML=`<div class="cv-item-head"><div class="cv-badge">${item.type==='achievement'?'🏆':'🚀'}</div><div class="cv-item-body"><div class="cv-item-title">${item.title}</div><div class="cv-item-meta">${ds?`<span class="cv-item-date">📅 ${ds}</span>`:''}<span class="cv-item-type ${tClass}">${tLabel}</span></div>${item.desc?`<div class="cv-item-desc">${item.desc}</div>`:''}<div class="cv-item-actions"><button class="arc-btn del" onclick="deleteCvItem('${item.id}')">🗑️ حذف</button></div></div></div>${filesHtml}`;
+    el.innerHTML=`<div class="cv-item-head"><div class="cv-badge">${item.type==='achievement'?'🏆':'🚀'}</div><div class="cv-item-body"><div class="cv-item-title">${escHtml(item.title)}</div><div class="cv-item-meta">${ds?`<span class="cv-item-date">📅 ${ds}</span>`:''}<span class="cv-item-type ${tClass}">${tLabel}</span></div>${item.desc?`<div class="cv-item-desc">${escHtml(item.desc)}</div>`:''}<div class="cv-item-actions"><button class="arc-btn del" onclick="deleteCvItem('${escAttr(item.id)}')">🗑️ حذف</button></div></div></div>${filesHtml}`;
     timeline.appendChild(el);
   });
 }

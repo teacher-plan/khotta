@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
     // total/used/remaining تبقى كما كانت: شاشات قديمة تقرؤها ولا تعرف keys
     return json({ total, used, remaining: Math.max(0, total - used), keys: per });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

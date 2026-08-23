@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
     if (!arr.ok) return json({ error: "bad_ai_output", detail: arr.reason }, 502);
     return json({ units: arr.items, model, usage: or?.usage || null });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

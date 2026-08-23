@@ -136,9 +136,13 @@ Deno.serve(async (req) => {
     try {
       resp = await safeFetch(url);
     } catch (e) {
-      return json({ error: "fetch_failed", detail: String(e) }, 502);
+      console.error("fetch_failed:", String(e));
+      return json({ error: "fetch_failed" }, 502);
     }
-    if (!resp.ok) return json({ error: "source_error", status: resp.status }, 502);
+    if (!resp.ok) {
+      console.error("source_error:", resp.status);
+      return json({ error: "source_error" }, 502);
+    }
 
     const ctype = (resp.headers.get("content-type") || "").toLowerCase();
     const buf = new Uint8Array(await resp.arrayBuffer());
@@ -156,11 +160,15 @@ Deno.serve(async (req) => {
       contentType: "application/pdf",
       upsert: false,
     });
-    if (upErr) return json({ error: "upload_failed", detail: upErr.message }, 500);
+    if (upErr) {
+      console.error("upload_failed:", upErr.message);
+      return json({ error: "upload_failed" }, 500);
+    }
 
     const { data: pub } = admin.storage.from("library-files").getPublicUrl(path);
     return json({ url: pub.publicUrl, bytes: buf.byteLength, path });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });
