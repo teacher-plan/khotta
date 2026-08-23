@@ -3847,7 +3847,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f95fd98';
+const KH_BUILD='5afe6c9';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -6567,7 +6567,7 @@ function todayPreview(){
   document.getElementById('today-modal-title').textContent='معاينة الدرس — '+todayCache.lessonName;
   const parts=[];
   if(st.info_url)parts.push(`<div class="prep-sec"><div class="prep-sec-t">ملخص الدرس</div>
-    <img src="${st.info_url}" class="tdp-img" alt="ملخص الدرس" onclick="imgFullOpen('${st.info_url}','ملخص الدرس')" title="اضغطي للعرض بملء الشاشة"></div>`);
+    <img src="${escAttr(st.info_url)}" class="tdp-img" alt="ملخص الدرس" onclick="imgFullOpen('${escJs(st.info_url)}','ملخص الدرس')" title="اضغطي للعرض بملء الشاشة"></div>`);
   if(st.prep)parts.push(renderPrepHtml(st.prep));
   (st.files||[]).forEach((f,fi)=>parts.push(
     `<div class="prep-sec"><div class="prep-sec-t">مرفق</div>
@@ -8311,7 +8311,7 @@ function liveShowLauncher(){liveViewClose();}
 function liveOpenInfo(){
   const st=planGet(liveCtx.lessonId);
   if(!st.info_url)return;
-  liveViewOpen('ملخص الدرس',`<img src="${st.info_url}" alt="ملخص الدرس">`,false);
+  liveViewOpen('ملخص الدرس',`<img src="${escAttr(st.info_url)}" alt="ملخص الدرس">`,false);
 }
 function liveOpenFile(fi){
   const f=(planGet(liveCtx.lessonId).files||[])[fi];if(!f)return;
@@ -11007,7 +11007,7 @@ function libMySubjects(){
 const LIB_FILE_ICON=`<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 2.5L18.5 9H14V4.5zM8 13h8v1.5H8V13zm0 3h8v1.5H8V16z"/></svg>`;
 const LIB_DL_ICON=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.5l3.5-3.5L17 11.5 12 16.5 7 11.5l1.5-1.5L12 13.5V3zM5 19h14v2H5z"/></svg>`;
 function libThumbHtml(it){
-  if(it.file_type==='image'&&it.file_url)return `<img src="${it.file_url}" alt="" loading="lazy"/>`;
+  if(it.file_type==='image'&&it.file_url)return `<img src="${escAttr(it.file_url)}" alt="" loading="lazy"/>`;
   return LIB_FILE_ICON;
 }
 // تنزيل فعلي (لا مجرد فتح) — نجلب المحتوى كـBlob محلي حتى يعمل زر التنزيل عبر النطاقات المختلفة
