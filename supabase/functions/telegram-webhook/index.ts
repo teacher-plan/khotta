@@ -2,7 +2,10 @@
 // عندما يضغط المستخدم على زر، Telegram ترسل callback هنا
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendTelegram, editTelegram, sendTelegramOps, setOpsBotCommands, setMainBotCommands } from "../_shared/telegram.ts";
+import {
+  sendTelegram, editTelegram, sendTelegramOps, sendTelegramPayment, editTelegramPayment,
+  setOpsBotCommands, setMainBotCommands, setPaymentBotCommands,
+} from "../_shared/telegram.ts";
 
 // ═══ قائمة أوامر بوت العمليات الأصلية (زرّ "/" في تلغرام) ═══
 // قيدٌ من تلغرام: اسم الأمر يقبل حروفاً إنجليزية صغيرة وأرقاماً و_ فقط
@@ -21,16 +24,22 @@ const OPS_BOT_COMMANDS = [
   { command: "summary", description: "📈 الملخّص اليومي الكامل" },
 ];
 
-// ═══ قائمة أوامر البوت الأصلي (الترحيب/الدفع/التسجيلات) ═══
-// نفس قيد تلغرام: أسماءٌ إنجليزية فقط. المرادفات العربية (/دفع، /دفع2،
-// /دفع3، /انتظار…) تعمل عند كتابتها يدوياً لكنها لا تظهر في هذه القائمة.
+// ═══ قائمة أوامر البوت الأصلي (الترحيب/التسجيلات) ═══
+// نفس قيد تلغرام: أسماءٌ إنجليزية فقط. المرادفات العربية (/انتظار…) تعمل
+// عند كتابتها يدوياً لكنها لا تظهر في هذه القائمة. أوامر متابعة الدفع
+// انتقلت بالكامل إلى بوتٍ مستقل (PAYMENT_BOT_COMMANDS أدناه) — طلبٌ صريح
+// من المشرفة: تنبيهات تسجيلٍ جديد كانت تقاطع تركيزها أثناء متابعة الدفع.
 const MAIN_BOT_COMMANDS = [
   { command: "pending", description: "🕐 في انتظار التفعيل — مع رابط ترحيب" },
+  { command: "registrations", description: "📊 تسجيلات الحلقة الأولى — الإجمالي واليوم" },
+  { command: "summary", description: "📋 الملخص الشامل الآن" },
+];
+
+// ═══ قائمة أوامر بوت متابعة الدفع (مستقلٌّ عن البوت الأصلي) ═══
+const PAYMENT_BOT_COMMANDS = [
   { command: "payment", description: "💳 متابعة الدفع (تذكير١) — مع رابط واتساب" },
   { command: "payment2", description: "💳 متابعة الدفع (تذكير٢) — تجربة مجانية" },
   { command: "payment3", description: "💳 متابعة الدفع (تذكير٣) — تذكيرٌ أخير" },
-  { command: "registrations", description: "📊 تسجيلات الحلقة الأولى — الإجمالي واليوم" },
-  { command: "summary", description: "📋 الملخص الشامل الآن" },
 ];
 
 // تُسجَّلان مرّةً واحدة لكل نسخةٍ حيّة من الدالّة (لا في كل رسالة): العملية
@@ -50,6 +59,14 @@ function ensureMainCommandsRegistered(): void {
   setMainBotCommands(MAIN_BOT_COMMANDS)
     .then((r) => { if (!r.ok) console.error("setMyCommands (main) فشل:", r.error); })
     .catch((e) => console.error("setMyCommands (main) رمى:", String(e)));
+}
+let paymentCommandsRegistered = false;
+function ensurePaymentCommandsRegistered(): void {
+  if (paymentCommandsRegistered) return;
+  paymentCommandsRegistered = true;
+  setPaymentBotCommands(PAYMENT_BOT_COMMANDS)
+    .then((r) => { if (!r.ok) console.error("setMyCommands (payment) فشل:", r.error); })
+    .catch((e) => console.error("setMyCommands (payment) رمى:", String(e)));
 }
 
 // ═══ Phase 1.5 — القسم 3: تحقّق X-Telegram-Bot-Api-Secret-Token ═══
@@ -72,8 +89,15 @@ function ensureMainCommandsRegistered(): void {
 // تكون false والتحقّق "يتنازل بأمان" (يسمح بالمرور كسابق عهده) بدل أن
 // يقفل webhook تلغرام الحيّ فجأةً بلا تنسيقٍ مسبق — هذا مقصودٌ صراحةً؛
 // إبقاء البوت يعمل أولويةٌ حتى يضبط المدير السرّ فعلياً في الخطوتين أعلاه.
-function verifyTelegramSecret(req: Request): { ok: boolean; configured: boolean } {
-  const expected = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") || "";
+// كل بوتٍ قد يملك سرَّه الخاص (TELEGRAM_WEBHOOK_SECRET_<BOT>) — إن لم يكن
+// مضبوطاً يُستخدم السرّ المشترك TELEGRAM_WEBHOOK_SECRET كاحتياطي (هذا هو
+// حال البوت الأصلي وبوت العمليات اليوم: سرٌّ واحدٌ مشترك بينهما). بوت
+// الدفع الجديد يملك سرَّه الخاص منذ إنشائه (TELEGRAM_WEBHOOK_SECRET_PAYMENT)
+// فلا يتأثّر بأي تعديلٍ على السرّ المشترك مستقبلاً ولا يؤثّر فيه.
+function verifyTelegramSecret(req: Request, bot: string | null): { ok: boolean; configured: boolean } {
+  const perBotVar = bot === "ops" ? "TELEGRAM_WEBHOOK_SECRET_OPS"
+    : bot === "payment" ? "TELEGRAM_WEBHOOK_SECRET_PAYMENT" : null;
+  const expected = (perBotVar && Deno.env.get(perBotVar)) || Deno.env.get("TELEGRAM_WEBHOOK_SECRET") || "";
   if (!expected) return { ok: true, configured: false }; // لا سرّ مضبوط بعد — NOT YET DEPLOYED
   const got = req.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
   // لا نُسجّل got أو expected أبداً في أي console.log/سجلّ — القسم 3 صراحةً.
@@ -256,7 +280,7 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
 
   if (error) {
     console.error("sendPaymentList query failed:", error.message);
-    await sendTelegram(`⚠️ تعذّر جلب القائمة: ${error.message}`);
+    await sendTelegramPayment(`⚠️ تعذّر جلب القائمة: ${error.message}`);
     return { ok: false, listed: 0, error: error.message };
   }
 
@@ -264,7 +288,7 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   if (!data || !data.length) {
-    await sendTelegram(`✅ لا أحد بانتظار التذكير ${reminder.label} — إمّا دفعن أو انتقلن لمرحلةٍ تالية.`);
+    await sendTelegramPayment(`✅ لا أحد بانتظار التذكير ${reminder.label} — إمّا دفعن أو انتقلن لمرحلةٍ تالية.`);
     return { ok: true, listed: 0 };
   }
 
@@ -285,12 +309,12 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
   const noPhone = data.filter((r: { phone?: string }) => !_payWaNum(r.phone || ""));
   if (noPhone.length) head.push("", `⚠️ بلا رقم هاتف: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
 
-  const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
+  const sent = await sendTelegramPayment(head.join("\n"), { inline_keyboard: rows });
   if (!sent.ok) {
     // كان الفشل هنا يُبتلع بصمت (console.error فقط) فيظنّ المشرف أن الأمر
     // لم يصل أصلاً — تشخيصه يحتاج سجلّات لا نملك وصولاً سهلاً إليها.
     console.error("payment list failed:", sent.error);
-    await sendTelegram(`⚠️ تعذّر إرسال قائمة التذكير ${reminder.label} (${page.length} معلّمة): ${sent.error || "سببٌ غير معروف"}`);
+    await sendTelegramPayment(`⚠️ تعذّر إرسال قائمة التذكير ${reminder.label} (${page.length} معلّمة): ${sent.error || "سببٌ غير معروف"}`);
   }
   return { ok: sent.ok, listed: page.length, error: sent.error };
 }
@@ -446,11 +470,15 @@ Deno.serve(async (req) => {
     return json({ error: "Method not allowed" }, 405);
   }
 
+  // معامل ?bot= يميّز مصدر التحديث (لا سبيل آخر، حمولة Telegram نفسها لا
+  // تحمل هوية البوت) — يُحسَب هنا مبكراً لأن التحقّق من السرّ يحتاجه أيضاً.
+  const botParam = new URL(req.url).searchParams.get("bot");
+
   // Phase 1.5 — القسم 3: رفض التحديثات بلا سرٍّ صحيح، فقط إن كان السرّ
   // مضبوطاً فعلاً في بيئة الدالّة (configured=true). طالما لم يُضبَط بعد
   // (البوت الحيّ لا يرسل الترويسة إطلاقاً اليوم) نستمرّ كسابق عهدنا —
   // BLOCKED حتى تُنجَز خطوتا الضبط الخارجيتان أعلاه.
-  const secretCheck = verifyTelegramSecret(req);
+  const secretCheck = verifyTelegramSecret(req, botParam);
   if (secretCheck.configured && !secretCheck.ok) {
     console.error("telegram-webhook: رُفض طلبٌ — X-Telegram-Bot-Api-Secret-Token غائبٌ أو خاطئ");
     return json({ error: "unauthorized" }, 401);
@@ -464,12 +492,12 @@ Deno.serve(async (req) => {
   // موصًى به كخطوةٍ لاحقة (انظر التقرير، القسم 4 وقسم "المشاكل المعروفة").
   try {
     const body = await req.json();
-    // بوت الفحص الدوري يسجّل رابط Webhook بمعامل ?bot=ops مميَّز — لا سبيل
-    // آخر لتمييز مصدر التحديث لأن حمولة Telegram نفسها لا تحمل هوية البوت.
-    const isOpsBot = new URL(req.url).searchParams.get("bot") === "ops";
+    const isOpsBot = botParam === "ops";
+    const isPaymentBot = botParam === "payment";
 
     // تسجيل قائمة الأوامر تلقائياً — بلا انتظار، فلا أثر على زمن الرد.
     if (isOpsBot) ensureOpsCommandsRegistered();
+    else if (isPaymentBot) ensurePaymentCommandsRegistered();
     else ensureMainCommandsRegistered();
 
     // استقبال callback من Telegram
@@ -522,7 +550,9 @@ Deno.serve(async (req) => {
             .update({ payment_followup_at: new Date().toISOString(), payment_reminder_stage: stage + 1 })
             .in("id", ids);
         }
-        await editTelegram(messageId, `✅ سُجّلت متابعة الدفع (تذكير ${stage + 1}) لـ${ids.length} معلّمة.`);
+        // الرسالة الأصلية أُرسلت من بوت الدفع دوماً الآن (الأوامر مقصورةٌ
+        // عليه أدناه)، فتحريرها يجب أن يمرّ عبره لا عبر البوت الأصلي.
+        await editTelegramPayment(messageId, `✅ سُجّلت متابعة الدفع (تذكير ${stage + 1}) لـ${ids.length} معلّمة.`);
         await sendPaymentList(stage);
         return json({ ok: true, marked: ids.length });
       }
@@ -657,15 +687,18 @@ Deno.serve(async (req) => {
 
       // متابعة من سجّلن ولم تدفع بعد — ثلاث مراحل تذكير متدرّجة، كل أمرٍ
       // يعرض من هي بالضبط عند تلك المرحلة (انظر PAY_REMINDERS أعلاه).
-      if (text === "/payment" || text === "/دفع" || text === "/متابعة_الدفع") {
+      // مقصورةٌ على بوت الدفع المستقل (isPaymentBot) عمداً — نُقلت من
+      // البوت الأصلي بطلب المشرفة صراحة كي لا تقاطع إشعارات التسجيل
+      // الجديد تركيزها أثناء متابعة الدفع.
+      if (isPaymentBot && (text === "/payment" || text === "/دفع" || text === "/متابعة_الدفع")) {
         await sendPaymentList(0);
         return json({ ok: true });
       }
-      if (text === "/payment2" || text === "/دفع2" || text === "/متابعة_الدفع2" || text === "/متابعة_الدفع_2") {
+      if (isPaymentBot && (text === "/payment2" || text === "/دفع2" || text === "/متابعة_الدفع2" || text === "/متابعة_الدفع_2")) {
         await sendPaymentList(1);
         return json({ ok: true });
       }
-      if (text === "/payment3" || text === "/دفع3" || text === "/متابعة_الدفع3" || text === "/متابعة_الدفع_3") {
+      if (isPaymentBot && (text === "/payment3" || text === "/دفع3" || text === "/متابعة_الدفع3" || text === "/متابعة_الدفع_3")) {
         await sendPaymentList(2);
         return json({ ok: true });
       }

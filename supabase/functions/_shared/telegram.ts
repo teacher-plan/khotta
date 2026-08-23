@@ -122,6 +122,16 @@ export function editTelegramOps(messageId: number, message: string, options?: Te
   return editVia(Deno.env.get("TELEGRAM_BOT_TOKEN_OPS"), Deno.env.get("TELEGRAM_CHAT_ID_OPS"), messageId, message, options);
 }
 
+// ── بوت متابعة الدفع: مستقلٌّ عن البوت الأصلي عمداً — إشعارات التسجيل
+//    الجديد على البوت الأصلي كانت تقاطع تركيز المشرفة أثناء متابعة الدفع
+//    (telegram-webhook فقط، أوامر /payment، /payment2، /payment3) ──
+export function sendTelegramPayment(message: string, options?: TelegramOptions) {
+  return sendVia(Deno.env.get("TELEGRAM_BOT_TOKEN_PAYMENT"), Deno.env.get("TELEGRAM_CHAT_ID_PAYMENT"), message, options);
+}
+export function editTelegramPayment(messageId: number, message: string, options?: TelegramOptions) {
+  return editVia(Deno.env.get("TELEGRAM_BOT_TOKEN_PAYMENT"), Deno.env.get("TELEGRAM_CHAT_ID_PAYMENT"), messageId, message, options);
+}
+
 // ── قائمة الأوامر الأصلية في تلغرام (زرّ "/" بجانب مربّع الكتابة) ──
 // setMyCommands يُسجّل القائمة لدى تلغرام نفسه، فتظهر للمستخدم قائمةً
 // قابلةً للنقر بدل حفظ الأوامر وكتابتها يدوياً. العملية idempotent —
@@ -153,6 +163,25 @@ export async function setMainBotCommands(
 ): Promise<{ ok: boolean; error?: string }> {
   const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
   if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN غير مضبوط" };
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands }),
+    });
+    const data = await response.json() as { ok: boolean; description?: string };
+    return { ok: data.ok, error: data.description };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+}
+
+// نفس النمط لبوت متابعة الدفع.
+export async function setPaymentBotCommands(
+  commands: Array<{ command: string; description: string }>,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN_PAYMENT");
+  if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN_PAYMENT غير مضبوط" };
   try {
     const response = await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
       method: "POST",
