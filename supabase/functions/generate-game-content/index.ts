@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
     return json({ items: _arr.items, groupNames: _p.value.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });

@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
       contentType: mime,
       upsert: false,
     });
-    if (upErr) return json({ error: "upload_failed", detail: upErr.message }, 500);
+    if (upErr) { console.error("upload_failed:", upErr.message); return json({ error: "upload_failed" }, 500); }
     const { data: pub } = admin.storage.from("library-files").getPublicUrl(path);
 
     let { data: row, error: insErr } = await admin.from("game_themes").insert({
@@ -165,13 +165,15 @@ Deno.serve(async (req) => {
         }).select().single();
         row = retry.data; insErr = retry.error;
       } catch (e) {
-        return json({ error: "db_error", detail: "bootstrap: " + String(e) }, 500);
+        console.error("db_error (bootstrap):", String(e));
+        return json({ error: "db_error" }, 500);
       }
     }
-    if (insErr) return json({ error: "db_error", detail: insErr.message }, 500);
+    if (insErr) { console.error("db_error:", insErr.message); return json({ error: "db_error" }, 500); }
 
     return json({ theme: row, model, usage: or?.usage || null });
   } catch (e) {
-    return json({ error: "server_error", detail: String(e) }, 500);
+    console.error("server_error:", String(e));
+    return json({ error: "server_error" }, 500);
   }
 });
