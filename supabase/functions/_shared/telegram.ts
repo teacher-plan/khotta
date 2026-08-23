@@ -143,3 +143,25 @@ export async function setOpsBotCommands(
     return { ok: false, error: String(error) };
   }
 }
+
+// نفس setOpsBotCommands لكن للبوت الأصلي — كانت هذه القائمة مضبوطةً يدوياً
+// عبر BotFather في وقتٍ سابق فلم يحتج الكود دالّةً لها؛ أُضيفت الآن ليبقى
+// تسجيلها آليّاً كما هو الحال في بوت العمليات، فلا يُنسى تحديثها يدوياً
+// مجدداً كلّما أُضيف أمرٌ جديد.
+export async function setMainBotCommands(
+  commands: Array<{ command: string; description: string }>,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN غير مضبوط" };
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands }),
+    });
+    const data = await response.json() as { ok: boolean; description?: string };
+    return { ok: data.ok, error: data.description };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+}
