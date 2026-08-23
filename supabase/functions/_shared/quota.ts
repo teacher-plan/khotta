@@ -64,9 +64,16 @@ export async function takeQuota(
     // لكل المعلّمات (انظر 20260819_p30_budget_per_account_period.sql).
     const { data: acc } = await admin
       .from("allowed_emails")
-      .select("added_at")
+      .select("added_at, expires_at")
       .ilike("email", email)
       .maybeSingle();
+
+    // انتهاء الاشتراك/التجربة يُخفي الصفّ فقط عن تسجيل دخولٍ جديد (RLS)،
+    // لا يُبطل جلسةً قائمة — فهذا الفحص هو الحارس الفعلي لنداءات التوليد.
+    if (acc?.expires_at && new Date(acc.expires_at) <= new Date()) {
+      return { ok: false, used: 0, limit: 0, error: "account_expired" };
+    }
+
     const periodStart = acc?.added_at
       ? String(acc.added_at).slice(0, 10)
       : (st["budget_period_start"] || "2026-01-01");

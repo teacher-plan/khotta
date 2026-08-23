@@ -30,14 +30,74 @@ const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
 function isForbiddenHost(host: string) {
   const h = host.toLowerCase();
   if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal")) return true;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
-    const p = h.split(".").map(Number);
-    if (p[0] === 10 || p[0] === 127 || p[0] === 0) return true;
-    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
-    if (p[0] === 192 && p[1] === 168) return true;
-    if (p[0] === 169 && p[1] === 254) return true; // metadata
-  }
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return isForbiddenIpv4(h);
   return false;
+}
+
+function isForbiddenIpv4(h: string) {
+  const p = h.split(".").map(Number);
+  if (p[0] === 10 || p[0] === 127 || p[0] === 0) return true;
+  if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+  if (p[0] === 192 && p[1] === 168) return true;
+  if (p[0] === 169 && p[1] === 254) return true; // metadata
+  return false;
+}
+
+// IPv6: يرفض ::1 (loopback)، fe80::/10 (link-local — يشمل عنوان التعريف
+// السحابي عبر IPv6 على بعض المزودات)، fc00::/7 (unique local)، و
+// ::ffff:a.b.c.d (عنوان IPv4 مُطعَّمٌ داخل IPv6 يُلتفّ به حول الفحص أعلاه).
+function isForbiddenIpv6(h: string) {
+  const s = h.toLowerCase().replace(/^\[|\]$/g, "");
+  if (s === "::1" || s === "::") return true;
+  if (s.startsWith("fe80:") || s.startsWith("fe8") || s.startsWith("fe9") || s.startsWith("fea") || s.startsWith("feb")) return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(s)) return true; // fc00::/7
+  const v4 = s.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4) return isForbiddenIpv4(v4[1]);
+  return false;
+}
+
+// يحلّ اسم المضيف إلى عناوينه الفعلية ويرفض إن كان أيٌّ منها داخلياً —
+// يمنع DNS rebinding والالتفاف عبر اسمٍ ظاهره عام لكنه يُحلّ محلياً.
+async function hasForbiddenResolvedIp(hostname: string): Promise<boolean> {
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return isForbiddenIpv4(hostname);
+  if (hostname.includes(":")) return isForbiddenIpv6(hostname);
+  try {
+    const [v4, v6] = await Promise.all([
+      Deno.resolveDns(hostname, "A").catch(() => [] as string[]),
+      Deno.resolveDns(hostname, "AAAA").catch(() => [] as string[]),
+    ]);
+    if (v4.some(isForbiddenIpv4)) return true;
+    if (v6.some(isForbiddenIpv6)) return true;
+    if (v4.length === 0 && v6.length === 0) return true; // تعذّر الحلّ — نرفض احتياطاً
+    return false;
+  } catch (_e) {
+    return true; // فشل التحقق يعني رفضاً (fail-closed)
+  }
+}
+
+// يجلب الرابط دون اتّباع أي تحويلة تلقائياً، ويعيد التحقّق من كل تحويلة
+// (المضيف والعنوان المُحلَّل) قبل تتبّعها — التحقّق من الرابط الأصلي فقط
+// لا يمنع 302 نحو عنوانٍ داخلي.
+async function safeFetch(startUrl: string, maxHops = 5): Promise<Response> {
+  let current = startUrl;
+  for (let hop = 0; hop < maxHops; hop++) {
+    const u = new URL(current);
+    if (u.protocol !== "https:") throw new Error("bad_url");
+    if (isForbiddenHost(u.hostname)) throw new Error("bad_url");
+    if (await hasForbiddenResolvedIp(u.hostname)) throw new Error("bad_url");
+    const resp = await fetch(current, {
+      headers: { "User-Agent": "Mozilla/5.0 KhottaBookFetcher" },
+      redirect: "manual",
+    });
+    if (resp.status >= 300 && resp.status < 400) {
+      const loc = resp.headers.get("location");
+      if (!loc) return resp;
+      current = new URL(loc, current).toString();
+      continue;
+    }
+    return resp;
+  }
+  throw new Error("too_many_redirects");
 }
 
 Deno.serve(async (req) => {
@@ -61,6 +121,7 @@ Deno.serve(async (req) => {
     try { parsed = new URL(url); } catch (_) { return json({ error: "bad_url" }, 400); }
     if (parsed.protocol !== "https:") return json({ error: "bad_url" }, 400);
     if (isForbiddenHost(parsed.hostname)) return json({ error: "bad_url" }, 400);
+    if (await hasForbiddenResolvedIp(parsed.hostname)) return json({ error: "bad_url" }, 400);
 
     // تنظيف الملفات المؤقتة القديمة (أقدم من ٢٤ ساعة) — لا تتراكم بعد اليوم
     try {
@@ -73,7 +134,7 @@ Deno.serve(async (req) => {
     // جلب الملف من المصدر الخارجي (الخادم لا تقيّده CORS)
     let resp: Response;
     try {
-      resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 KhottaBookFetcher" } });
+      resp = await safeFetch(url);
     } catch (e) {
       return json({ error: "fetch_failed", detail: String(e) }, 502);
     }
