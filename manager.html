@@ -12681,7 +12681,14 @@ function ref_togglePayout(code){
 }
 
 async function ref_markRegistrationPaid(id,status){
-  await sb.from('pre_registrations').update({payment_status:status}).eq('id',id);
+  const patch={payment_status:status};
+  if(status==='paid'){
+    // إسنادٌ لأي تذكيرٍ حوّلها: نُسجّل المرحلة التي كانت عليها هذه اللحظة
+    // فقط (لا نُعيدها لاحقاً عند إلغاء الدفع كي لا يضيع رقم الإسناد الأصلي).
+    const{data:cur}=await sb.from('pre_registrations').select('payment_reminder_stage').eq('id',id).maybeSingle();
+    if(cur&&cur.payment_reminder_stage!=null)patch.paid_at_reminder_stage=cur.payment_reminder_stage;
+  }
+  await sb.from('pre_registrations').update(patch).eq('id',id);
   await ref_loadRegistrations();
   ref_renderDataTab();
   ref_renderFinanceTab();
