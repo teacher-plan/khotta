@@ -163,18 +163,47 @@ function _payWaNum(p: string): string {
   if (d.startsWith("00")) d = d.slice(2);
   return d ? (d.length === 8 ? "968" + d : d) : "";
 }
-function _payText(n: string, price: number): string {
-  const nm = String(n || "").trim();
-  return [
-    nm ? `مرحباً ${nm} 🌸` : "مرحباً 🌸", "",
-    "أهلاً بكِ في منصة «خُطّتي الفصلية» — سعدنا بتسجيلكِ.", "",
-    `لتفعيل حسابك يتبقّى تحويل مبلغ ${price} ريالاً عُمانياً، وهو اشتراك الفصل الدراسي كاملاً.`, "",
-    "طريقة الدفع:",
-    `• تحويل على الرقم: ${_payNum}`, "",
-    "وبعد التحويل أرسلي صورة الإيصال هنا ليُفعَّل حسابك 🌷",
-  ].join("\n");
-}
-async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?: string }> {
+// ثلاث رسائل تذكير متدرّجة — كل معلّمةٍ تصعد من مرحلةٍ لتاليتها عبر زرّ
+// «تابعتُ هؤلاء»، فلا تصلها نفس الرسالة مرّتين. الأولى تحثّ على الدفع
+// المباشر (استعجال + رقم التحويل)، الثانية تعرض تجربةً مجانية لمن ترددت،
+// والثالثة تذكيرٌ أخير بلا ذكر تحويلٍ — تفتح باباً للسؤال فقط.
+const PAY_REMINDERS: Array<{ label: string; text: (nm: string, price: number) => string }> = [
+  {
+    label: "الأول",
+    text: (nm, price) => [
+      nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "", "",
+      "بقي أسبوعٌ واحد على بداية العام الدراسي — ومنصة «خُطّتي الفصلية» معكِ لتبدئي عامكِ بلا فوضى صفٍّ ولا تشتت، وذهنٍ مرتاح من بداية الفصل حتى نهايته.", "", "",
+      "كوني من أوائل المشتركات وتميّزي بتوظيف أحدث وسائل الذكاء الاصطناعي في كل حصة. ✨", "", "",
+      `حوّلي قيمة الاشتراك (${price} ريالاً عُمانياً) على *${_payNum}*، وأرسلي صورة الإيصال هنا ليُفعَّل حسابكِ فوراً 📌`,
+    ].join("\n"),
+  },
+  {
+    label: "الثاني",
+    text: (nm, price) => [
+      nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "", "",
+      "نعلم أن قرار الاشتراك يحتاج وقتاً — لذا وفّرنا لكِ تجربةً مجانية لاختبار ميزات منصة «خُطّتي الفصلية» بنفسكِ قبل أن تقرّري.", "", "",
+      "جرّبي كيف تُدار الحصة بلا فوضى ولا تشتت، وكيف يوظَّف الذكاء الاصطناعي في تحضيرها. ✨", "", "",
+      `وإن أعجبتكِ، فتفعيل الحساب الكامل يتم بتحويل قيمة الاشتراك (${price} ريالاً عُمانياً) على نفس الرقم *${_payNum}*، وإرسال صورة الإيصال هنا 📌`,
+    ].join("\n"),
+  },
+  {
+    label: "الثالث",
+    text: (nm) => [
+      nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "", "",
+      "لم نسمع منكِ بعد — وربما لديكِ سؤالٌ لم يجد إجابته، أو فقط لم تتسنَّ لكِ الفرصة بعد وسط انشغال هذه الأيام.", "", "",
+      "نحن هنا لأي استفسار، ونودّ أن تبدئي عامكِ الدراسي معنا. 📌", "", "",
+      "اكتبي لنا سؤالكِ أو ما يشغلكِ، وسنجيبكِ بسرور 🌷",
+    ].join("\n"),
+  },
+];
+
+// stage: مرحلة التذكير المطلوب عرضها الآن (0 = الأول، 1 = الثاني، 2 = الثالث)
+// — تجلب من هي بالضبط عند payment_reminder_stage=stage، فلا تتكرّر رسالةٌ
+// على من تجاوزتها ولا تُقفَز رسالةٌ على من لم تصلها بعد.
+async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: number; error?: string }> {
+  const reminder = PAY_REMINDERS[stage];
+  if (!reminder) return { ok: false, listed: 0, error: "invalid_stage" };
+
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -190,6 +219,7 @@ async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?:
   const { data, error } = await sb.from("pre_registrations")
     .select("id,name,phone")
     .eq("stage", "cycle1").eq("payment_status", "pending")
+    .eq("payment_reminder_stage", stage)
     .order("payment_followup_at", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: true })
     .limit(60);
@@ -204,7 +234,7 @@ async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?:
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   if (!data || !data.length) {
-    await sendTelegram("✅ لا أحد بانتظار الدفع — الجميع مُفعَّلات أو رُوسِلن بالفعل.");
+    await sendTelegram(`✅ لا أحد بانتظار التذكير ${reminder.label} — إمّا دفعن أو انتقلن لمرحلةٍ تالية.`);
     return { ok: true, listed: 0 };
   }
 
@@ -212,14 +242,14 @@ async function sendPaymentList(): Promise<{ ok: boolean; listed: number; error?:
   const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
   for (const r of page) {
     rows.push([{ text: `💳 ${(r.name || "بلا اسم").slice(0, 26)}`,
-      url: `https://wa.me/${_payWaNum(r.phone || "")}?text=${encodeURIComponent(_payText(r.name || "", price))}` }]);
+      url: `https://wa.me/${_payWaNum(r.phone || "")}?text=${encodeURIComponent(reminder.text(r.name || "", price))}` }]);
   }
   if (page.length) {
     rows.push([{ text: `✅ تابعتُ هؤلاء (${page.length})`,
-      callback_data: "pay:done:" + page.map((r: { id: number }) => r.id).join(",") }]);
+      callback_data: `pay:done:${stage}:` + page.map((r: { id: number }) => r.id).join(",") }]);
   }
 
-  const head = [`💳 <b>بانتظار الدفع: ${data.length}</b>`, "",
+  const head = [`💳 <b>بانتظار التذكير ${reminder.label}: ${data.length}</b>`, "",
     "اضغط اسم المعلّمة ليُفتح واتساب ورسالةُ الدفع مكتوبةٌ فيه."];
   if (data.length > page.length) head.push("", `<i>تُعرض ${page.length} — وبعد الضغط على «تابعتُ هؤلاء» تظهر التالية.</i>`);
   const noPhone = data.filter((r: { phone?: string }) => !_payWaNum(r.phone || ""));
@@ -440,16 +470,24 @@ Deno.serve(async (req) => {
         return json({ ok: true, marked: ids.length });
       }
 
-      // «تابعتُ هؤلاء» في قائمة الدفع: يُسجَّل وقت المتابعة (لا حذفٌ من
-      // القائمة، فمن لم تدفع بعد تعود لآخر الطابور لا خارجه).
+      // «تابعتُ هؤلاء» في قائمة الدفع: يُسجَّل وقت المتابعة ويُرفَع
+      // payment_reminder_stage خطوةً (لا حذفٌ من القائمة، فمن لم تدفع بعد
+      // تنتقل للتذكير التالي لا تختفي). الصيغة "pay:done:<stage>:<ids>" —
+      // تبقى الصيغة القديمة "pay:done:<ids>" (بلا مرحلة) تُقرأ كمرحلة٠
+      // لتوافقٍ خلفي مع أزرار أُرسلت قبل هذا التعديل.
       if (callbackData.startsWith("pay:done:")) {
-        const ids = callbackData.slice(9).split(",").map((x) => Number(x)).filter(Boolean);
+        const rest = callbackData.slice(9);
+        const parts = rest.split(":");
+        let stage = 0, idsStr = rest;
+        if (parts.length === 2 && /^\d+$/.test(parts[0])) { stage = Number(parts[0]); idsStr = parts[1]; }
+        const ids = idsStr.split(",").map((x) => Number(x)).filter(Boolean);
         if (ids.length) {
           await sb.from("pre_registrations")
-            .update({ payment_followup_at: new Date().toISOString() }).in("id", ids);
+            .update({ payment_followup_at: new Date().toISOString(), payment_reminder_stage: stage + 1 })
+            .in("id", ids);
         }
-        await editTelegram(messageId, `✅ سُجّلت متابعة الدفع لـ${ids.length} معلّمة.`);
-        await sendPaymentList();
+        await editTelegram(messageId, `✅ سُجّلت متابعة الدفع (تذكير ${stage + 1}) لـ${ids.length} معلّمة.`);
+        await sendPaymentList(stage);
         return json({ ok: true, marked: ids.length });
       }
 
@@ -581,9 +619,18 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
-      // متابعة من سجّلن ولم تدفع بعد — نفس فكرة /pending برسالة الدفع بدل الترحيب.
+      // متابعة من سجّلن ولم تدفع بعد — ثلاث مراحل تذكير متدرّجة، كل أمرٍ
+      // يعرض من هي بالضبط عند تلك المرحلة (انظر PAY_REMINDERS أعلاه).
       if (text === "/payment" || text === "/دفع" || text === "/متابعة_الدفع") {
-        await sendPaymentList();
+        await sendPaymentList(0);
+        return json({ ok: true });
+      }
+      if (text === "/payment2" || text === "/دفع2" || text === "/متابعة_الدفع2" || text === "/متابعة_الدفع_2") {
+        await sendPaymentList(1);
+        return json({ ok: true });
+      }
+      if (text === "/payment3" || text === "/دفع3" || text === "/متابعة_الدفع3" || text === "/متابعة_الدفع_3") {
+        await sendPaymentList(2);
         return json({ ok: true });
       }
 
