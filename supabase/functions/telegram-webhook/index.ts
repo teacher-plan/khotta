@@ -276,7 +276,12 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
   if (noPhone.length) head.push("", `⚠️ بلا رقم هاتف: ${noPhone.map((r: { name?: string }) => esc(r.name || "")).join("، ")}`);
 
   const sent = await sendTelegram(head.join("\n"), { inline_keyboard: rows });
-  if (!sent.ok) console.error("payment list failed:", sent.error);
+  if (!sent.ok) {
+    // كان الفشل هنا يُبتلع بصمت (console.error فقط) فيظنّ المشرف أن الأمر
+    // لم يصل أصلاً — تشخيصه يحتاج سجلّات لا نملك وصولاً سهلاً إليها.
+    console.error("payment list failed:", sent.error);
+    await sendTelegram(`⚠️ تعذّر إرسال قائمة التذكير ${reminder.label} (${page.length} معلّمة): ${sent.error || "سببٌ غير معروف"}`);
+  }
   return { ok: sent.ok, listed: page.length, error: sent.error };
 }
 
