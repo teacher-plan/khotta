@@ -3678,13 +3678,15 @@ function showLogin(msg){
 // نافذة انتهاء التجربة/الاشتراك — رسالتان بحسب حالة الدفع المعروفة لدينا:
 // من دفعت (وربما لم يُفعَّل تمديد حسابها بعد) تُطمأَن وتُوجَّه لإعادة
 // الإعداد بدل رسالة رفضٍ عامة، ومن لم تدفع تُوجَّه مباشرةً لرقم التفعيل.
-function expiredOpen(paymentStatus){
+function expiredOpen(paymentStatus,name){
   document.getElementById('auth-loading-box').classList.add('hidden');
   document.getElementById('cy1-login-form').classList.add('hidden');
+  const nm=(name||'').trim();
+  const hi=nm?` يا ${escHtml(nm)}`:'';
   const msgEl=document.getElementById('expired-msg');
   msgEl.innerHTML=paymentStatus==='paid'
-    ? 'انتهت فترة استخدامك، ولدينا سجلٌّ بأنكِ حوّلتِ قيمة الاشتراك. يبدو أن حسابكِ يحتاج إعادة إعدادٍ من طرفنا — تواصلي معنا على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi> ليُعاد تفعيله فوراً.'
-    : 'انتهت فترة استخدامك التجريبية. لتفعيل حسابكِ والاستمرار، تواصلي مع خدمة العملاء على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi>.';
+    ? `انتهت فترتكِ التجريبية${hi} 🌟 حان وقت إعداد حسابكِ الفعلي — اختاري موادكِ وأدخلي قوائم طلابكِ لتبدئي فصلكِ الدراسي.`
+    : `انتهت التجربة المجانية${hi} 🌟 لإكمال تفعيل حسابكِ، يرجى التواصل مع خدمة العملاء عبر واتساب على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi>.`;
   document.getElementById('expired-modal').classList.add('open');
 }
 async function afterAuth(session){
@@ -3704,7 +3706,7 @@ async function afterAuth(session){
         let status=null;
         try{const{data}=await sb.rpc('check_my_account_status');status=data;}catch(e){}
         await sb.auth.signOut();
-        if(status&&status.status==='expired'){expiredOpen(status.payment_status);return;}
+        if(status&&status.status==='expired'){expiredOpen(status.payment_status,status.name);return;}
         showLogin('هذا البريد غير مصرّح له بالدخول');return;
       }
       if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — ادخلي من الموقع الرئيسي');return;}
