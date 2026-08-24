@@ -12534,6 +12534,10 @@ async function ref_activateTeacher(regId,plan){
     await ref_loadRegistrations();
     ref_renderAccountsTab();
     showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone);
+    // فتحٌ تلقائي لواتساب بضغطةٍ واحدة — يبقى زرّ "إشعارها عبر واتساب" في
+    // النافذة كبديلٍ يدوي إن حجب المتصفح الفتح التلقائي (Safari تحديداً
+    // قد يفعل هذا أحياناً بعد نداء شبكةٍ غير متزامن).
+    if(r.phone)window.open(ref_activationLink(r.phone,r.name),'_blank');
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي حتى بدء الدوام':'⚡ تفعيل الحساب';}
