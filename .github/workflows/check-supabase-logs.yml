@@ -15,10 +15,14 @@ on:
         options:
           - postgres_logs
           - storage_logs
+          - edge_logs
       hours:
         description: 'عدد الساعات الماضية'
         required: true
         default: '24'
+      sql:
+        description: 'استعلامٌ خام يتجاوز البناء التلقائي (اختياري، للتشخيص اليدوي)'
+        required: false
 
 jobs:
   check:
@@ -30,6 +34,7 @@ jobs:
           REF: mkdsnnfkkdwdkywnwnjh
           SOURCE: ${{ inputs.source }}
           HOURS: ${{ inputs.hours }}
+          RAW_SQL: ${{ inputs.sql }}
         run: |
           set -uo pipefail
           START=$(date -u -d "-${HOURS} hours" +%Y-%m-%dT%H:%M:%S.000Z)
@@ -37,7 +42,9 @@ jobs:
           # صيغة Logflare القانونية (نفس ما يولّده Logs Explorer في اللوحة).
           # postgres_logs فقط له metadata.parsed.error_severity منظَّم؛
           # storage_logs لا يملك هذا الحقل فيُكتفى بتصفية نصّية على الرسالة.
-          if [ "$SOURCE" = "postgres_logs" ]; then
+          if [ -n "$RAW_SQL" ]; then
+            SQL="$RAW_SQL"
+          elif [ "$SOURCE" = "postgres_logs" ]; then
             SQL="select ${SOURCE}.timestamp, id, event_message, parsed.error_severity, parsed.query from ${SOURCE} cross join unnest(metadata) as m cross join unnest(m.parsed) as parsed where parsed.error_severity in ('ERROR','FATAL','PANIC') order by timestamp desc limit 30"
           else
             SQL="select ${SOURCE}.timestamp, id, event_message from ${SOURCE} where event_message ilike '%error%' order by timestamp desc limit 30"

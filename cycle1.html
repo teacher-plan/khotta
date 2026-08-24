@@ -2940,6 +2940,20 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   </div>
 </div></div>
 
+<!-- انتهاء التجربة/الاشتراك — تظهر بدل رسالة «البريد غير مصرّح» العامة حين
+     يكون الحساب موجوداً فعلاً لكن expires_at تجاوزه الوقت (انظر
+     check_my_account_status في قاعدة البيانات). لا زرّ إغلاقٍ خارجي عمداً:
+     رسالةٌ توجيهية، لا حالة عملٍ تُقفَل عرضاً. -->
+<div class="c1-modal" id="expired-modal">
+  <div class="c1-mbox" style="max-width:380px;text-align:center">
+    <h3 style="margin:0 0 10px" id="expired-title">انتهت صلاحية حسابك</h3>
+    <div id="expired-msg" style="font-size:13.5px;line-height:2;color:var(--ink);margin-bottom:18px"></div>
+    <div class="c1-mrow">
+      <button class="c1-mbtn go" onclick="document.getElementById('expired-modal').classList.remove('open');showLogin();">حسناً</button>
+    </div>
+  </div>
+</div>
+
 <div class="c1-modal" id="c1-confirm-modal" onclick="if(event.target===this)c1ConfirmAnswer(false)">
   <div class="c1-mbox" style="max-width:340px;text-align:center">
     <div id="c1-confirm-msg" style="font-size:13.5px;font-weight:700;line-height:2;margin-bottom:16px;color:var(--ink)"></div>
@@ -3661,6 +3675,18 @@ function showLogin(msg){
   btn.disabled=false;btn.textContent='تسجيل الدخول';
   if(msg)toast(msg,true);
 }
+// نافذة انتهاء التجربة/الاشتراك — رسالتان بحسب حالة الدفع المعروفة لدينا:
+// من دفعت (وربما لم يُفعَّل تمديد حسابها بعد) تُطمأَن وتُوجَّه لإعادة
+// الإعداد بدل رسالة رفضٍ عامة، ومن لم تدفع تُوجَّه مباشرةً لرقم التفعيل.
+function expiredOpen(paymentStatus){
+  document.getElementById('auth-loading-box').classList.add('hidden');
+  document.getElementById('cy1-login-form').classList.add('hidden');
+  const msgEl=document.getElementById('expired-msg');
+  msgEl.innerHTML=paymentStatus==='paid'
+    ? 'انتهت فترة استخدامك، ولدينا سجلٌّ بأنكِ حوّلتِ قيمة الاشتراك. يبدو أن حسابكِ يحتاج إعادة إعدادٍ من طرفنا — تواصلي معنا على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi> ليُعاد تفعيله فوراً.'
+    : 'انتهت فترة استخدامك التجريبية. لتفعيل حسابكِ والاستمرار، تواصلي مع خدمة العملاء على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi>.';
+  document.getElementById('expired-modal').classList.add('open');
+}
 async function afterAuth(session){
   currentUser=session.user;
   document.getElementById('auth-loading-box').classList.remove('hidden');
@@ -3671,7 +3697,16 @@ async function afterAuth(session){
     if(error)throw error;
     const isAdminU=userEmail===CY1_ADMIN_EMAIL.toLowerCase();
     if(!isAdminU){
-      if(!allowed){await sb.auth.signOut();showLogin('هذا البريد غير مصرّح له بالدخول');return;}
+      if(!allowed){
+        // قد يكون الحساب موجوداً فعلاً وانتهت صلاحيته (RLS تُخفي صفّه عمداً
+        // فيصل هنا بنفس شكل «غير مصرّح» تماماً) — هذا الفحص الضيّق وحده
+        // يميّز الحالتين، انظر check_my_account_status في قاعدة البيانات.
+        let status=null;
+        try{const{data}=await sb.rpc('check_my_account_status');status=data;}catch(e){}
+        await sb.auth.signOut();
+        if(status&&status.status==='expired'){expiredOpen(status.payment_status);return;}
+        showLogin('هذا البريد غير مصرّح له بالدخول');return;
+      }
       if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — ادخلي من الموقع الرئيسي');return;}
     }
   }catch(e){await sb.auth.signOut();showLogin('تعذّر التحقق، حاولي مجدداً');return;}

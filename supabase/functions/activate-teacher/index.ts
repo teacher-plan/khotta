@@ -38,7 +38,17 @@ const PLAN_DAYS: Record<string, number> = {
   paid: 150,   // خمسة أشهر (٥ × ٣٠ يوماً)
   trial: 14,   // تفعيل تجريبي
 };
+// تجربة العام الدراسي الحالي: بدل ١٤ يوماً من التفعيل، تنتهي في تاريخٍ
+// ثابت (نهاية أول يوم دوامٍ فعلياً، ٣٠/٨/٢٠٢٦ بتوقيت عُمان) — فمن تُفعّل
+// حسابها مبكراً تُبقي تجربتها حتى بداية الفصل بدل أن تنتهي قبله. بعد هذا
+// التاريخ نعود تلقائياً لقاعدة الأيام المعتادة، وإلا صار كل تفعيلٍ تجريبيّ
+// لاحقٍ خلال العام منتهياً منذ لحظته (تاريخٌ في الماضي).
+const TRIAL_FIXED_DEADLINE = new Date("2026-08-30T20:00:00Z"); // نهاية ٣٠/٨ بتوقيت عُمان (UTC+4)
+
 function expiryFor(plan: string): string {
+  if (plan === "trial" && Date.now() < TRIAL_FIXED_DEADLINE.getTime()) {
+    return TRIAL_FIXED_DEADLINE.toISOString();
+  }
   const days = PLAN_DAYS[plan] ?? PLAN_DAYS.paid;
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
