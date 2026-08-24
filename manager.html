@@ -1776,12 +1776,17 @@ body.lp .page.active{animation:lpPage .25s ease}
    احتياطاً لا مساراً معتاداً — لا ينبغي أن يُفعَّل في الاستخدام الطبيعي. */
 #page-referrals .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;overflow-x:auto;}
 #page-referrals table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
-#page-referrals th{background:var(--card);color:var(--muted);font-weight:800;padding:9px 8px;text-align:right;font-size:11px;border-bottom:2px solid var(--border);border-left:2px solid var(--border);overflow-wrap:break-word;}
+#page-referrals th{background:var(--card);color:var(--muted);font-weight:800;padding:9px 8px;text-align:right;font-size:11px;border-bottom:2px solid var(--border);border-left:2px solid var(--border);overflow-wrap:break-word;word-break:keep-all;}
 #page-referrals th:last-child{border-left:none;}
-#page-referrals td{padding:9px 8px;border-bottom:1px solid var(--border);border-left:2px solid var(--border);vertical-align:middle;overflow-wrap:break-word;word-break:break-word;}
+/* word-break:keep-all لا break-word: كسر منتصف كلمةٍ عربية يُفسد شكل
+   الحروف المتّصلة (تشبيك الأحرف يعتمد على الجار)، فتظهر حروفاً مبتورةً
+   غير مقروءة بدل كلمةٍ ملتفّة بأمان على السطر التالي. overflow-wrap يبقى
+   وحده لالتفاف نصوصٍ لاتينية طويلة لا تحوي فراغات (كالبريد الإلكتروني). */
+#page-referrals td{padding:9px 8px;border-bottom:1px solid var(--border);border-left:2px solid var(--border);vertical-align:middle;overflow-wrap:break-word;word-break:keep-all;}
 #page-referrals td:last-child{border-left:none;}
+#page-referrals td[dir="ltr"]{word-break:break-all;}
 #page-referrals .ref-actions-cell{display:flex;flex-wrap:wrap;gap:5px;}
-#page-referrals .ref-actions-cell .action-btn{white-space:normal;}
+#page-referrals .ref-actions-cell .action-btn,#tab-accounts td:nth-child(6) .action-btn{white-space:normal;}
 @media (max-width:640px){
   #page-referrals table{font-size:11.5px;}
   #page-referrals th{padding:7px 5px;font-size:10px;}
@@ -1805,11 +1810,11 @@ body.lp .page.active{animation:lpPage .25s ease}
 #tab-data th:nth-child(8),#tab-data td:nth-child(8){width:15%;}
 
 #tab-accounts th:nth-child(1),#tab-accounts td:nth-child(1){width:12%;}
-#tab-accounts th:nth-child(2),#tab-accounts td:nth-child(2){width:11%;}
-#tab-accounts th:nth-child(3),#tab-accounts td:nth-child(3){width:9%;}
-#tab-accounts th:nth-child(4),#tab-accounts td:nth-child(4){width:11%;}
-#tab-accounts th:nth-child(5),#tab-accounts td:nth-child(5){width:16%;}
-#tab-accounts th:nth-child(6),#tab-accounts td:nth-child(6){width:13%;}
+#tab-accounts th:nth-child(2),#tab-accounts td:nth-child(2){width:9%;}
+#tab-accounts th:nth-child(3),#tab-accounts td:nth-child(3){width:8%;}
+#tab-accounts th:nth-child(4),#tab-accounts td:nth-child(4){width:12%;}
+#tab-accounts th:nth-child(5),#tab-accounts td:nth-child(5){width:15%;}
+#tab-accounts th:nth-child(6),#tab-accounts td:nth-child(6){width:16%;}
 #tab-accounts th:nth-child(7),#tab-accounts td:nth-child(7){width:28%;}
 
 #tab-finance th:nth-child(1),#tab-finance td:nth-child(1){width:22%;}
@@ -12362,6 +12367,21 @@ function ref_whatsappLink(phone,name){
 function ref_welcomeLink(phone,name){
   return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_welcomeMessage(name))}`;
 }
+function ref_activationMessage(name){
+  const n=(name||'').trim();
+  return [
+    n?`أهلاً بكِ ${n} 🌟`:'أهلاً بكِ 🌟',
+    '',
+    'تمّ تفعيل حسابكِ في منصّة «خُطّتي الفصلية»، ووصلتكِ بيانات تسجيل الدخول عبر بريدكِ الإلكتروني.',
+    '',
+    'نتمنّى لكِ فصلاً دراسياً متميّزاً 🌸',
+    '',
+    'ونستقبل استفساراتكِ في أي وقت.'
+  ].join('\n');
+}
+function ref_activationLink(phone,name){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_activationMessage(name))}`;
+}
 
 function ref_renderDataTab(){
   const regs=ref_scopedRegs();
@@ -12461,9 +12481,10 @@ function _copyCredField(text,btn){
     document.body.removeChild(ta);
   }
 }
-function showActivationCreds(email,password,mailed,mailReason){
+function showActivationCreds(email,password,mailed,mailReason,name,phone){
   const bg=document.createElement('div');
   bg.className='modal-bg';
+  const waBtn=phone?`<a class="action-btn primary" style="text-align:center;text-decoration:none;display:block" href="${ref_activationLink(phone,name)}" target="_blank">📱 إشعارها عبر واتساب</a>`:'';
   bg.innerHTML=`<div class="modal" style="max-width:400px">
     <h3 style="margin-bottom:6px">${mailed?'✅ فُعِّل الحساب وأُرسلت البيانات':'✅ فُعِّل الحساب — لم يُرسَل البريد'}</h3>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">${mailed?'احتفظ بالبيانات أدناه — قد تقع الرسالة في المهملات.':'أرسل البيانات أدناه للمعلّمة يدوياً. السبب: '+escHtml(mailReason||'خدمة البريد غير مهيّأة')}</p>
@@ -12477,6 +12498,7 @@ function showActivationCreds(email,password,mailed,mailReason){
         <button class="action-btn" style="flex-shrink:0" onclick="_copyCredField('${escAttr(password||'')}',this)">📋 نسخ</button>
       </div>
       <button class="action-btn" onclick="_copyCredField('البريد: ${escAttr(email||'')}\\nكلمة المرور: ${escAttr(password||'')}',this)">📋 نسخ الاثنين معاً</button>
+      ${waBtn}
     </div>
     <button class="setup-btn secondary" style="width:100%;margin-top:16px" onclick="this.closest('.modal-bg').remove()">إغلاق</button>
   </div>`;
@@ -12511,7 +12533,7 @@ async function ref_activateTeacher(regId,plan){
     }
     await ref_loadRegistrations();
     ref_renderAccountsTab();
-    showActivationCreds(data.email,data.password,data.mailed,data.mailReason);
+    showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone);
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي حتى بدء الدوام':'⚡ تفعيل الحساب';}
@@ -12681,8 +12703,13 @@ function ref_computeFinanceRows(){
   const totalPaidAll=regs.filter(r=>r.payment_status==='paid').length;
   const totalRevenue=Math.round(totalPaidAll*price*100)/100;
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
-  const netProfit=Math.round((totalRevenue-totalCommissionAll)*100)/100;
-  return{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,payoutKey,regs};
+  // تكلفة المستخدم التشغيلية: حصّة الذكاء الاصطناعي المتّفق عليها لكل معلّمة
+  // مشتركة (١٣ ر.ع، نفس budget_omr الافتراضي في quota.ts) — تُحتسب فقط على
+  // المشتركات المدفوعات فعلياً، لا على كل المسجّلين.
+  const OPERATIONAL_COST_PER_USER=13;
+  const totalOperationalCost=Math.round(totalPaidAll*OPERATIONAL_COST_PER_USER*100)/100;
+  const netProfit=Math.round((totalRevenue-totalCommissionAll-totalOperationalCost)*100)/100;
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,payoutKey,regs};
 }
 
 function ref_renderFinanceTab(){
@@ -12739,7 +12766,7 @@ async function ref_markRegistrationPaid(id,status){
 
 // ══ تبويب النظرة العامة (ملخّص شامل للمدير) ══
 function ref_renderOverviewTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,regs}=ref_computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,regs}=ref_computeFinanceRows();
   const total=regs.length;
   const paid=regs.filter(r=>r.payment_status==='paid').length;
   const conversion=total?Math.round((paid/total)*100):0;
@@ -12762,7 +12789,8 @@ function ref_renderOverviewTab(){
 
   document.getElementById('overview-kpi-row').innerHTML=`
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-num">${totalRevenue.toFixed(2)}</div><div class="kpi-label">إجمالي الأرباح (ر.ع)</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات</div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات والتكلفة التشغيلية</div></div>
+    <div class="kpi-card"><div class="kpi-icon">⚙️</div><div class="kpi-num">${totalOperationalCost.toFixed(2)}</div><div class="kpi-label">تكلفة المستخدم التشغيلية (١٣ ر.ع لكل مشتركة)</div></div>
     <div class="kpi-card red"><div class="kpi-icon">⏳</div><div class="kpi-num">${totalOwed.toFixed(2)}</div><div class="kpi-label">مستحقات غير مدفوعة</div></div>
     <div class="kpi-card gold"><div class="kpi-icon">👥</div><div class="kpi-num">${total}</div><div class="kpi-label">إجمالي المسجّلين</div>${growthLabel}</div>
     <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-num">${paid}</div><div class="kpi-label">مشتركون مدفوعون</div></div>
