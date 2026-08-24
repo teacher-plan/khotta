@@ -2947,9 +2947,10 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 <div class="c1-modal" id="expired-modal">
   <div class="c1-mbox" style="max-width:380px;text-align:center">
     <h3 style="margin:0 0 10px" id="expired-title">انتهت صلاحية حسابك</h3>
-    <div id="expired-msg" style="font-size:13.5px;line-height:2;color:var(--ink);margin-bottom:18px"></div>
+    <div id="expired-msg" style="font-size:13.5px;line-height:2;color:var(--ink);margin-bottom:14px"></div>
+    <div id="expired-actions" style="margin-bottom:10px"></div>
     <div class="c1-mrow">
-      <button class="c1-mbtn go" onclick="document.getElementById('expired-modal').classList.remove('open');showLogin();">حسناً</button>
+      <button class="c1-mbtn go" onclick="expiredClose()">حسناً</button>
     </div>
   </div>
 </div>
@@ -3678,14 +3679,42 @@ function showLogin(msg){
 // نافذة انتهاء التجربة/الاشتراك — رسالتان بحسب حالة الدفع المعروفة لدينا:
 // من دفعت (وربما لم يُفعَّل تمديد حسابها بعد) تُطمأَن وتُوجَّه لإعادة
 // الإعداد بدل رسالة رفضٍ عامة، ومن لم تدفع تُوجَّه مباشرةً لرقم التفعيل.
-function expiredOpen(paymentStatus){
+// ⚠️ الجلسة تبقى مفتوحةً عمداً هنا (لا signOut قبل هذه الدالّة، انظر
+// afterAuth) — زرّ حذف الإعداد يحتاج جلسةً صالحة ليكتب على cycle1_profiles؛
+// expiredClose هو من يسجّل الخروج فعلياً حين تغادر المعلّمة النافذة.
+function expiredOpen(paymentStatus,name){
   document.getElementById('auth-loading-box').classList.add('hidden');
   document.getElementById('cy1-login-form').classList.add('hidden');
+  const nm=(name||'').trim();
+  const hi=nm?` يا ${escHtml(nm)}`:'';
   const msgEl=document.getElementById('expired-msg');
-  msgEl.innerHTML=paymentStatus==='paid'
-    ? 'انتهت فترة استخدامك، ولدينا سجلٌّ بأنكِ حوّلتِ قيمة الاشتراك. يبدو أن حسابكِ يحتاج إعادة إعدادٍ من طرفنا — تواصلي معنا على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi> ليُعاد تفعيله فوراً.'
-    : 'انتهت فترة استخدامك التجريبية. لتفعيل حسابكِ والاستمرار، تواصلي مع خدمة العملاء على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi>.';
+  const actionsEl=document.getElementById('expired-actions');
+  if(paymentStatus==='paid'){
+    msgEl.innerHTML=`انتهت فترتكِ التجريبية${hi} 🌟 حان وقت إعداد حسابكِ الفعلي — اختاري موادكِ وأدخلي قوائم طلابكِ لتبدئي فصلكِ الدراسي.`;
+    actionsEl.innerHTML=`<button class="c1-mbtn no" style="width:100%" onclick="expiredResetSetup()">🔄 حذف الإعداد التجريبي والانتقال للإعداد الجديد</button>`;
+  }else{
+    const waMsg=encodeURIComponent('مرحباً، أرغب في تأكيد تفعيل اشتراكي في منصة «خُطّتي الفصلية». رقم التواصل: 76787595');
+    msgEl.innerHTML=`انتهت التجربة المجانية${hi} 🌟 لإكمال تفعيل حسابكِ، يرجى التواصل مع خدمة العملاء عبر واتساب على الرقم <bdi dir="ltr" style="font-weight:700">76787595</bdi>.`;
+    actionsEl.innerHTML=`<a class="c1-mbtn no" style="width:100%;display:block;text-decoration:none;box-sizing:border-box" href="https://wa.me/96876787595?text=${waMsg}" target="_blank">📱 تأكيد الاشتراك عبر واتساب</a>`;
+  }
   document.getElementById('expired-modal').classList.add('open');
+}
+async function expiredClose(){
+  document.getElementById('expired-modal').classList.remove('open');
+  try{await sb.auth.signOut();}catch(e){}
+  showLogin();
+}
+async function expiredResetSetup(){
+  if(!currentUser)return;
+  if(!await c1Confirm('سيُحذف إعدادكِ التجريبي (المواد وقوائم الطلاب المُدخلة أثناء التجربة) نهائياً، لتبدئي إعداداً جديداً عند تفعيل حسابكِ. متابعة؟'))return;
+  try{
+    const{error}=await sb.from('cycle1_profiles').update({data:{}}).eq('id',currentUser.id);
+    if(error)throw error;
+    toast('تمّ حذف الإعداد التجريبي — حسابكِ جاهزٌ لإعدادٍ جديد.','ok');
+  }catch(e){
+    toast('تعذّر الحذف الآن، حاولي لاحقاً',true);
+  }
+  await expiredClose();
 }
 async function afterAuth(session){
   currentUser=session.user;
@@ -3703,8 +3732,11 @@ async function afterAuth(session){
         // يميّز الحالتين، انظر check_my_account_status في قاعدة البيانات.
         let status=null;
         try{const{data}=await sb.rpc('check_my_account_status');status=data;}catch(e){}
+        // انتهاءٌ مؤكَّد: نُبقي الجلسة صالحةً (لا signOut هنا) — زرّ حذف
+        // الإعداد في expiredOpen يحتاجها، وexpiredClose يسجّل الخروج فعلياً
+        // حين تغادر المعلّمة النافذة بأي طريق.
+        if(status&&status.status==='expired'){expiredOpen(status.payment_status,status.name);return;}
         await sb.auth.signOut();
-        if(status&&status.status==='expired'){expiredOpen(status.payment_status);return;}
         showLogin('هذا البريد غير مصرّح له بالدخول');return;
       }
       if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — ادخلي من الموقع الرئيسي');return;}

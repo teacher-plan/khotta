@@ -1,0 +1,48 @@
+-- إضافة اسم المعلّمة إلى مخرجات check_my_account_status عند انتهاء
+-- الصلاحية — لعرض نافذةٍ باسمها بدل رسالةٍ عامة. المصدر pre_registrations
+-- (لا مصدر آخر لاسمٍ متاح هنا بأمان طالما allowed_own_select تُخفي صفّها).
+CREATE OR REPLACE FUNCTION public.check_my_account_status()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_email text := lower(auth.jwt()->>'email');
+  v_expires_at timestamptz;
+  v_found boolean;
+  v_payment text;
+  v_name text;
+BEGIN
+  IF v_email IS NULL OR v_email = '' THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
+
+  SELECT true, expires_at INTO v_found, v_expires_at
+  FROM public.allowed_emails
+  WHERE lower(email) = v_email
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
+
+  IF v_expires_at IS NOT NULL AND v_expires_at <= now() THEN
+    SELECT payment_status, name INTO v_payment, v_name
+    FROM public.pre_registrations
+    WHERE lower(email) = v_email
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    RETURN jsonb_build_object(
+      'status', 'expired',
+      'payment_status', COALESCE(v_payment, 'pending'),
+      'name', v_name
+    );
+  END IF;
+
+  RETURN jsonb_build_object('status', 'active');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_my_account_status() TO authenticated;

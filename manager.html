@@ -12382,6 +12382,21 @@ function ref_activationMessage(name){
 function ref_activationLink(phone,name){
   return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_activationMessage(name))}`;
 }
+function ref_trialActivationMessage(name){
+  const n=(name||'').trim();
+  return [
+    n?`أهلاً بكِ ${n} 🌟`:'أهلاً بكِ 🌟',
+    '',
+    'تمّ تفعيل حسابكِ التجريبي في منصّة «خُطّتي الفصلية»، ووصلتكِ بيانات تسجيل الدخول عبر بريدكِ الإلكتروني.',
+    '',
+    'حسابكِ التجريبي متاحٌ حتى بداية الدوام (٣٠/٨) — جرّبي المنصة بحرّية، وللاستمرار بعدها يكفي تحويل قيمة الاشتراك.',
+    '',
+    'نتمنّى لكِ فصلاً دراسياً متميّزاً 🌸 ونستقبل استفساراتكِ في أي وقت.'
+  ].join('\n');
+}
+function ref_trialActivationLink(phone,name){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_trialActivationMessage(name))}`;
+}
 
 function ref_renderDataTab(){
   const regs=ref_scopedRegs();
@@ -12481,10 +12496,11 @@ function _copyCredField(text,btn){
     document.body.removeChild(ta);
   }
 }
-function showActivationCreds(email,password,mailed,mailReason,name,phone){
+function showActivationCreds(email,password,mailed,mailReason,name,phone,isTrial){
   const bg=document.createElement('div');
   bg.className='modal-bg';
-  const waBtn=phone?`<a class="action-btn primary" style="text-align:center;text-decoration:none;display:block" href="${ref_activationLink(phone,name)}" target="_blank">📱 إشعارها عبر واتساب</a>`:'';
+  const waLink=isTrial?ref_trialActivationLink(phone,name):ref_activationLink(phone,name);
+  const waBtn=phone?`<a class="action-btn primary" style="text-align:center;text-decoration:none;display:block" href="${waLink}" target="_blank">📱 إشعارها عبر واتساب</a>`:'';
   bg.innerHTML=`<div class="modal" style="max-width:400px">
     <h3 style="margin-bottom:6px">${mailed?'✅ فُعِّل الحساب وأُرسلت البيانات':'✅ فُعِّل الحساب — لم يُرسَل البريد'}</h3>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">${mailed?'احتفظ بالبيانات أدناه — قد تقع الرسالة في المهملات.':'أرسل البيانات أدناه للمعلّمة يدوياً. السبب: '+escHtml(mailReason||'خدمة البريد غير مهيّأة')}</p>
@@ -12533,7 +12549,11 @@ async function ref_activateTeacher(regId,plan){
     }
     await ref_loadRegistrations();
     ref_renderAccountsTab();
-    showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone);
+    showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone,trial);
+    // فتحٌ تلقائي لواتساب بضغطةٍ واحدة — يبقى زرّ "إشعارها عبر واتساب" في
+    // النافذة كبديلٍ يدوي إن حجب المتصفح الفتح التلقائي (Safari تحديداً
+    // قد يفعل هذا أحياناً بعد نداء شبكةٍ غير متزامن).
+    if(r.phone)window.open(trial?ref_trialActivationLink(r.phone,r.name):ref_activationLink(r.phone,r.name),'_blank');
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي حتى بدء الدوام':'⚡ تفعيل الحساب';}
