@@ -45,7 +45,15 @@ const PLAN_DAYS: Record<string, number> = {
 // لاحقٍ خلال العام منتهياً منذ لحظته (تاريخٌ في الماضي).
 const TRIAL_FIXED_DEADLINE = new Date("2026-08-30T20:00:00Z"); // نهاية ٣٠/٨ بتوقيت عُمان (UTC+4)
 
-function expiryFor(plan: string): string {
+// اختيارُ تاريخ نهايةٍ يدويٍّ للتجربة (من لوحة الإدارة) — معلّمةٌ قد تطلب
+// تجربةً في منتصف الفصل، فالتاريخ الثابت وحده (٣٠/٨) لا يناسبها. صيغة
+// customDate: "YYYY-MM-DD"؛ تُرفَض بصمتٍ (رجوعٌ للمنطق التلقائي) إن كانت
+// غير صالحة أو في الماضي — لا تُفشِل التفعيل بسبب مُدخلٍ سيّئ.
+function expiryFor(plan: string, customDate?: string): string {
+  if (plan === "trial" && customDate) {
+    const d = new Date(customDate + "T20:00:00Z"); // نهاية اليوم المختار بتوقيت عُمان
+    if (!isNaN(d.getTime()) && d.getTime() > Date.now()) return d.toISOString();
+  }
   if (plan === "trial" && Date.now() < TRIAL_FIXED_DEADLINE.getTime()) {
     return TRIAL_FIXED_DEADLINE.toISOString();
   }
@@ -204,7 +212,7 @@ Deno.serve(async (req) => {
       return json({ error: "create_failed", detail: m }, 502);
     }
 
-    const expires_at = expiryFor(plan);
+    const expires_at = expiryFor(plan, plan === "trial" ? String(b.trialEndDate || "") : undefined);
     const { error: aErr } = await admin.from("allowed_emails").insert({ email, cycle, expires_at });
     // بلا هذا الصف لا تدخل المعلّمة وإن وُجد حسابها، فنتراجع عن الإنشاء
     // بدل أن نترك حساباً معطّلاً لا تفسير له.

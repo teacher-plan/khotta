@@ -12527,13 +12527,58 @@ async function ref_activateTeacher(regId,plan){
   const r=ref_registrations.find(x=>x.id===regId);
   if(!r)return;
   if(!r.email){alert('❌ لا يوجد بريد إلكتروني في تسجيلها — استخدم «إنشاء حساب مخصص».');return;}
-  if(!confirm(trial
-    ? `تفعيل حساب تجريبي لـ ${r.name} حتى بداية الدوام (٣٠/٨)؟\n\nسيُنشأ الحساب ببريدها ${r.email}، ويتوقّف الدخول تلقائياً بعد ذلك التاريخ ما لم تُمدَّد صلاحيته.`
-    : `تفعيل حساب ${r.name}؟\n\nسيُنشأ الحساب ببريدها ${r.email} وتصلها بياناتها على البريد نفسه.\nالصلاحية: خمسة أشهر.`))return;
+  // التجربة قد تُطلَب في أي وقتٍ من العام (لا بداية الدوام فقط) — لذلك
+  // تاريخ نهايتها يُختار يدوياً في كل مرة بدل تاريخٍ ثابتٍ واحد للجميع.
+  if(trial){ref_openTrialDateModal(regId,r);return;}
+  if(!confirm(`تفعيل حساب ${r.name}؟\n\nسيُنشأ الحساب ببريدها ${r.email} وتصلها بياناتها على البريد نفسه.\nالصلاحية: خمسة أشهر.`))return;
+  await ref_doActivate(regId,plan,null);
+}
+function _todayISODate(){return new Date().toISOString().slice(0,10);}
+function ref_openTrialDateModal(regId,r){
+  const bg=document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal" style="max-width:360px">
+    <h3 style="margin-bottom:10px">📅 تاريخ نهاية التجربة</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">لـ ${escHtml(r.name)} — اختاري التاريخ الذي ينتهي عنده الحساب التجريبي.</p>
+    <input type="date" id="trial-date-input" value="2026-08-30" min="${_todayISODate()}" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:14px;box-sizing:border-box" oninput="ref_updateTrialDaysHint()"/>
+    <div id="trial-days-hint" style="margin-top:10px;font-size:13px;font-weight:700;color:var(--gold)"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="setup-btn secondary" style="flex:1" onclick="this.closest('.modal-bg').remove()">إلغاء</button>
+      <button class="btn-gold" style="flex:1" onclick="ref_confirmTrialActivation(${regId})">✅ تفعيل</button>
+    </div>
+  </div>`;
+  bg.onclick=(e)=>{if(e.target===bg)bg.remove();};
+  document.body.appendChild(bg);
+  ref_updateTrialDaysHint();
+}
+function ref_updateTrialDaysHint(){
+  const input=document.getElementById('trial-date-input');
+  const hint=document.getElementById('trial-days-hint');
+  if(!input||!hint)return;
+  if(!input.value){hint.textContent='';return;}
+  const chosen=new Date(input.value+'T00:00:00');
+  const today=new Date();today.setHours(0,0,0,0);
+  const days=Math.round((chosen-today)/86400000);
+  hint.textContent=days>0?`⏳ ${days} يوماً من اليوم`:days===0?'⏳ اليوم نفسه':'⚠️ هذا التاريخ في الماضي';
+  hint.style.color=days>=0?'var(--gold)':'var(--red)';
+}
+async function ref_confirmTrialActivation(regId){
+  const input=document.getElementById('trial-date-input');
+  const val=input?input.value:'';
+  if(!val){alert('اختاري تاريخاً أولاً');return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  if(new Date(val+'T00:00:00')<today){alert('لا يمكن اختيار تاريخٍ في الماضي');return;}
+  document.querySelector('.modal-bg')?.remove();
+  await ref_doActivate(regId,'trial',val);
+}
+async function ref_doActivate(regId,plan,trialEndDate){
+  const trial=plan==='trial';
+  const r=ref_registrations.find(x=>x.id===regId);
+  if(!r)return;
   const btn=document.getElementById((trial?'trial-btn-':'activate-btn-')+regId);
   if(btn){btn.disabled=true;btn.textContent='⏳ يُفعّل...';}
   try{
-    const res=await sb.functions.invoke('activate-teacher',{body:{regId,plan}});
+    const res=await sb.functions.invoke('activate-teacher',{body:{regId,plan,trialEndDate}});
     const{data,error}=res;
     let why=(data&&data.error)||'';
     if(!why&&error){
