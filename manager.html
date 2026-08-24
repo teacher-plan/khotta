@@ -1770,12 +1770,54 @@ body.lp .page.active{animation:lpPage .25s ease}
 #page-referrals .form-row input{flex:1;min-width:140px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-family:'Cairo',sans-serif;font-size:14px;color:var(--text);}
 #page-referrals .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border:none;border-radius:10px;padding:11px 22px;font-weight:800;font-size:13.5px;white-space:nowrap;}
 #page-referrals .btn-gold:disabled{opacity:.6;}
+/* ── جداول بلا تمرير أفقي: تخطيطٌ ثابت (table-layout:fixed) يوزّع العرض
+   على الأعمدة بنسبٍ محدَّدة أدناه لكل جدول، فيلتزم كل عمودٍ بحصّته ويلتفّ
+   محتواه (نصّاً أو أزراراً) داخلها بدل توسيع الجدول كله. overflow-x يبقى
+   احتياطاً لا مساراً معتاداً — لا ينبغي أن يُفعَّل في الاستخدام الطبيعي. */
 #page-referrals .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;overflow-x:auto;}
-#page-referrals table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px;}
-#page-referrals th{background:var(--card);color:var(--muted);font-weight:800;padding:11px 14px;text-align:right;font-size:11.5px;border-bottom:2px solid var(--border);border-left:2px solid var(--border);white-space:nowrap;}
+#page-referrals table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+#page-referrals th{background:var(--card);color:var(--muted);font-weight:800;padding:9px 8px;text-align:right;font-size:11px;border-bottom:2px solid var(--border);border-left:2px solid var(--border);overflow-wrap:break-word;}
 #page-referrals th:last-child{border-left:none;}
-#page-referrals td{padding:12px 14px;border-bottom:1px solid var(--border);border-left:2px solid var(--border);vertical-align:middle;}
+#page-referrals td{padding:9px 8px;border-bottom:1px solid var(--border);border-left:2px solid var(--border);vertical-align:middle;overflow-wrap:break-word;word-break:break-word;}
 #page-referrals td:last-child{border-left:none;}
+#page-referrals .ref-actions-cell{display:flex;flex-wrap:wrap;gap:5px;}
+#page-referrals .ref-actions-cell .action-btn{white-space:normal;}
+@media (max-width:640px){
+  #page-referrals table{font-size:11.5px;}
+  #page-referrals th{padding:7px 5px;font-size:10px;}
+  #page-referrals td{padding:7px 5px;}
+}
+
+/* نسب أعمدة كل جدولٍ في قسم الإحالات — مجموعها ١٠٠٪ */
+#tab-links th:nth-child(1),#tab-links td:nth-child(1){width:14%;}
+#tab-links th:nth-child(2),#tab-links td:nth-child(2){width:44%;}
+#tab-links th:nth-child(3),#tab-links td:nth-child(3){width:12%;}
+#tab-links th:nth-child(4),#tab-links td:nth-child(4){width:18%;}
+#tab-links th:nth-child(5),#tab-links td:nth-child(5){width:12%;}
+
+#tab-data th:nth-child(1),#tab-data td:nth-child(1){width:13%;}
+#tab-data th:nth-child(2),#tab-data td:nth-child(2){width:11%;}
+#tab-data th:nth-child(3),#tab-data td:nth-child(3){width:16%;}
+#tab-data th:nth-child(4),#tab-data td:nth-child(4){width:9%;}
+#tab-data th:nth-child(5),#tab-data td:nth-child(5){width:11%;}
+#tab-data th:nth-child(6),#tab-data td:nth-child(6){width:11%;}
+#tab-data th:nth-child(7),#tab-data td:nth-child(7){width:14%;}
+#tab-data th:nth-child(8),#tab-data td:nth-child(8){width:15%;}
+
+#tab-accounts th:nth-child(1),#tab-accounts td:nth-child(1){width:12%;}
+#tab-accounts th:nth-child(2),#tab-accounts td:nth-child(2){width:11%;}
+#tab-accounts th:nth-child(3),#tab-accounts td:nth-child(3){width:9%;}
+#tab-accounts th:nth-child(4),#tab-accounts td:nth-child(4){width:11%;}
+#tab-accounts th:nth-child(5),#tab-accounts td:nth-child(5){width:16%;}
+#tab-accounts th:nth-child(6),#tab-accounts td:nth-child(6){width:13%;}
+#tab-accounts th:nth-child(7),#tab-accounts td:nth-child(7){width:28%;}
+
+#tab-finance th:nth-child(1),#tab-finance td:nth-child(1){width:22%;}
+#tab-finance th:nth-child(2),#tab-finance td:nth-child(2){width:15%;}
+#tab-finance th:nth-child(3),#tab-finance td:nth-child(3){width:17%;}
+#tab-finance th:nth-child(4),#tab-finance td:nth-child(4){width:18%;}
+#tab-finance th:nth-child(5),#tab-finance td:nth-child(5){width:14%;}
+#tab-finance th:nth-child(6),#tab-finance td:nth-child(6){width:14%;}
 #page-referrals tr:last-child td{border-bottom:none;}
 #page-referrals .cell-name{font-weight:800;}
 #page-referrals .ref-link-cell{display:flex;align-items:center;gap:8px;}
@@ -12593,12 +12635,12 @@ function ref_renderAccountsTab(){
     const accEmail=r.account_email;
     const accCell=accEmail?`<span style="color:var(--green,#3ecf8e);font-family:monospace;font-size:12px" dir="ltr">${escHtml(accEmail)}</span>`:'<span style="color:var(--muted)">لا يوجد</span>';
     const actionBtn=accEmail
-      ?`<button class="action-btn" id="gen-account-btn-${r.id}" onclick="ref_showTeacherAccount(${r.id})">👁 عرض البيانات</button>
+      ?`<div class="ref-actions-cell"><button class="action-btn" id="gen-account-btn-${r.id}" onclick="ref_showTeacherAccount(${r.id})">👁 عرض البيانات</button>
          <button class="action-btn" id="extend-btn-${r.id}" onclick="ref_extendTeacher(${r.id},'paid')">📅 تمديد ٥ أشهر</button>
-         <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="ref_resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button>`
-      :`<button class="action-btn primary" id="activate-btn-${r.id}" onclick="ref_activateTeacher(${r.id},'paid')">⚡ تفعيل الحساب</button>
+         <button class="action-btn" id="reset-pw-btn-${r.id}" onclick="ref_resetTeacherPassword(${r.id})">🔄 إعادة تعيين كلمة المرور</button></div>`
+      :`<div class="ref-actions-cell"><button class="action-btn primary" id="activate-btn-${r.id}" onclick="ref_activateTeacher(${r.id},'paid')">⚡ تفعيل الحساب</button>
          <button class="action-btn" id="gen-account-btn-${r.id}" onclick="ref_generateTeacherAccount(${r.id})">🔑 توليد حساب</button>
-         <button class="action-btn" id="custom-account-btn-${r.id}" onclick="ref_createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button>`;
+         <button class="action-btn" id="custom-account-btn-${r.id}" onclick="ref_createCustomTeacherAccount(${r.id})">✏️ إنشاء حساب مخصص</button></div>`;
     const trialCell=accEmail
       ?ref_expiryCell(accEmail)
       :`<button class="action-btn" id="trial-btn-${r.id}" onclick="ref_activateTeacher(${r.id},'trial')">🕒 تجريبي حتى بدء الدوام</button>`;
