@@ -12686,8 +12686,13 @@ function ref_computeFinanceRows(){
   const totalPaidAll=regs.filter(r=>r.payment_status==='paid').length;
   const totalRevenue=Math.round(totalPaidAll*price*100)/100;
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
-  const netProfit=Math.round((totalRevenue-totalCommissionAll)*100)/100;
-  return{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,payoutKey,regs};
+  // تكلفة المستخدم التشغيلية: حصّة الذكاء الاصطناعي المتّفق عليها لكل معلّمة
+  // مشتركة (١٣ ر.ع، نفس budget_omr الافتراضي في quota.ts) — تُحتسب فقط على
+  // المشتركات المدفوعات فعلياً، لا على كل المسجّلين.
+  const OPERATIONAL_COST_PER_USER=13;
+  const totalOperationalCost=Math.round(totalPaidAll*OPERATIONAL_COST_PER_USER*100)/100;
+  const netProfit=Math.round((totalRevenue-totalCommissionAll-totalOperationalCost)*100)/100;
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,payoutKey,regs};
 }
 
 function ref_renderFinanceTab(){
@@ -12744,7 +12749,7 @@ async function ref_markRegistrationPaid(id,status){
 
 // ══ تبويب النظرة العامة (ملخّص شامل للمدير) ══
 function ref_renderOverviewTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,regs}=ref_computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,regs}=ref_computeFinanceRows();
   const total=regs.length;
   const paid=regs.filter(r=>r.payment_status==='paid').length;
   const conversion=total?Math.round((paid/total)*100):0;
@@ -12767,7 +12772,8 @@ function ref_renderOverviewTab(){
 
   document.getElementById('overview-kpi-row').innerHTML=`
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-num">${totalRevenue.toFixed(2)}</div><div class="kpi-label">إجمالي الأرباح (ر.ع)</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات</div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات والتكلفة التشغيلية</div></div>
+    <div class="kpi-card"><div class="kpi-icon">⚙️</div><div class="kpi-num">${totalOperationalCost.toFixed(2)}</div><div class="kpi-label">تكلفة المستخدم التشغيلية (١٣ ر.ع لكل مشتركة)</div></div>
     <div class="kpi-card red"><div class="kpi-icon">⏳</div><div class="kpi-num">${totalOwed.toFixed(2)}</div><div class="kpi-label">مستحقات غير مدفوعة</div></div>
     <div class="kpi-card gold"><div class="kpi-icon">👥</div><div class="kpi-num">${total}</div><div class="kpi-label">إجمالي المسجّلين</div>${growthLabel}</div>
     <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-num">${paid}</div><div class="kpi-label">مشتركون مدفوعون</div></div>
