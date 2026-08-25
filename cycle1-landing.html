@@ -687,10 +687,10 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
             <div class="hint">رقمٌ عُمانيّ يبدأ بـ ٧ أو ٩ ومكوَّنٌ من ثمانية أرقام</div>
           </div>
           <div class="field">
-            <label for="r-email">البريد الإلكتروني (Gmail) <span style="color:#FFB3A3">*</span></label>
+            <label for="r-email">البريد الإلكتروني <span style="color:#FFB3A3">*</span></label>
             <input type="email" id="r-email" dir="ltr" style="text-align:right" autocomplete="email"
-                   placeholder="example@gmail.com" oninput="checkForm()"/>
-            <div class="hint">عليه يُفعَّل حسابُكِ — يُشترط بريد Gmail فقط</div>
+                   placeholder="example@email.com" oninput="checkForm()"/>
+            <div class="hint">عليه يُفعَّل حسابُكِ</div>
           </div>
           <button class="submit" id="r-btn" onclick="submitReg()" disabled>احجزي مقعدي</button>
           <div class="reg-msg" id="r-msg"></div>
@@ -880,7 +880,7 @@ function normPhone(p){
   return d;
 }
 const validPhone=p=>/^[79]\d{7}$/.test(normPhone(p));
-const validEmail=e=>/^[^\s@]+@gmail\.com$/i.test((e||'').trim());
+const validEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e||'').trim());
 const val=id=>(document.getElementById(id).value||'').trim();
 function checkForm(){
   const ok=val('r-name').length>=3&&validPhone(val('r-phone'))&&validEmail(val('r-email'));
@@ -891,7 +891,7 @@ async function submitReg(){
   const name=val('r-name'),phone=val('r-phone'),email=val('r-email');
   if(name.length<3)return msg('يُرجى إدخال الاسم الكامل','err');
   if(!validPhone(phone))return msg('يُرجى إدخال رقم عُمانيّ صحيح (يبدأ بـ ٧ أو ٩ ومكوَّن من ٨ أرقام)','err');
-  if(!validEmail(email))return msg('يُسمح فقط ببريد Gmail (مثال: name@gmail.com)','err');
+  if(!validEmail(email))return msg('يُرجى إدخال بريدٍ إلكترونيّ صحيح','err');
   if(!sb)return msg('تعذّر الاتصال — أعيدي تحميل الصفحة','err');
   const btn=document.getElementById('r-btn');
   btn.disabled=true;btn.textContent='يُسجَّل حجزُكِ…';msg('');
@@ -910,7 +910,7 @@ async function submitReg(){
   }catch(e){
     const m=String(e?.message||'');
     if(m.includes('already_registered'))msg('هذا الرقم أو البريد مسجَّلٌ مسبقاً','err');
-    else if(m.includes('invalid_email_domain'))msg('يُسمح فقط ببريد Gmail (مثال: name@gmail.com)','err');
+    else if(m.includes('invalid_email_domain'))msg('يُرجى إدخال بريدٍ إلكترونيّ صحيح','err');
     else msg('تعذّر تسجيل الحجز — تحقّقي من الاتصال وأعيدي المحاولة','err');
     btn.disabled=false;btn.textContent='احجزي مقعدي';
   }
