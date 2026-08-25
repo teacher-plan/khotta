@@ -12782,21 +12782,27 @@ function ref_computeFinanceRows(){
   const totalRevenue=Math.round(totalPaidAll*price*100)/100;
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
   // تكلفة المستخدم التشغيلية: حصّة الذكاء الاصطناعي المتّفق عليها لكل معلّمة
-  // مشتركة (١٣ ر.ع، نفس budget_omr الافتراضي في quota.ts) — تُحتسب فقط على
-  // المشتركات المدفوعات فعلياً، لا على كل المسجّلين.
-  const OPERATIONAL_COST_PER_USER=13;
+  // مشتركة (١٠ ر.ع) — تُحتسب فقط على المشتركات المدفوعات فعلياً، لا على كل
+  // المسجّلين.
+  const OPERATIONAL_COST_PER_USER=10;
   const totalOperationalCost=Math.round(totalPaidAll*OPERATIONAL_COST_PER_USER*100)/100;
-  const netProfit=Math.round((totalRevenue-totalCommissionAll-totalOperationalCost)*100)/100;
-  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,payoutKey,regs};
+  // تكلفة السيرفر: قيمة خطة Pro في Supabase (~١٠ ر.ع/شهر)، ثابتة تقريباً على
+  // مدار فصلٍ دراسيٍّ من ٤ أشهر — لا تتغيّر بعدد المشتركات.
+  const SERVER_COST_PER_MONTH=10;
+  const SEMESTER_MONTHS=4;
+  const serverCostPerSemester=SERVER_COST_PER_MONTH*SEMESTER_MONTHS;
+  const netProfit=Math.round((totalRevenue-totalCommissionAll-totalOperationalCost-serverCostPerSemester)*100)/100;
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,serverCostPerSemester,netProfit,payoutKey,regs};
 }
 
 function ref_renderFinanceTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,netProfit,payoutKey,regs}=ref_computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,serverCostPerSemester,netProfit,payoutKey,regs}=ref_computeFinanceRows();
   document.getElementById('finance-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num green">${totalRevenue.toFixed(2)} ر.ع</div><div class="stat-label">💰 مجموع الأرباح (الإجمالي)</div></div>
     <div class="stat-card"><div class="stat-num">${netProfit.toFixed(2)} ر.ع</div><div class="stat-label">📈 صافي الربح بعد العمولات</div></div>
     <div class="stat-card"><div class="stat-num gold">${totalCommissionAll.toFixed(2)} ر.ع</div><div class="stat-label">🤝 إجمالي مستحقات الأصدقاء</div></div>
     <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">⏳ مستحق غير مدفوع بعد</div></div>
+    <div class="stat-card"><div class="stat-num">${serverCostPerSemester.toFixed(2)} ر.ع</div><div class="stat-label">🖥️ تكلفة السيرفر في الفصل الدراسي</div></div>
     <div class="stat-card"><div class="stat-num">${ref_friends.length}</div><div class="stat-label">عدد الأصدقاء النشطين</div></div>
     <div class="stat-card"><div class="stat-num gold">${regs.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
   `;
@@ -12860,7 +12866,7 @@ async function ref_markRegistrationPaid(id,status){
 
 // ══ تبويب النظرة العامة (ملخّص شامل للمدير) ══
 function ref_renderOverviewTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,netProfit,regs}=ref_computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,serverCostPerSemester,netProfit,regs}=ref_computeFinanceRows();
   const total=regs.length;
   const paid=regs.filter(r=>r.payment_status==='paid').length;
   const conversion=total?Math.round((paid/total)*100):0;
@@ -12883,8 +12889,9 @@ function ref_renderOverviewTab(){
 
   document.getElementById('overview-kpi-row').innerHTML=`
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-num">${totalRevenue.toFixed(2)}</div><div class="kpi-label">إجمالي الأرباح (ر.ع)</div></div>
-    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات والتكلفة التشغيلية</div></div>
-    <div class="kpi-card"><div class="kpi-icon">⚙️</div><div class="kpi-num">${totalOperationalCost.toFixed(2)}</div><div class="kpi-label">تكلفة المستخدم التشغيلية (١٣ ر.ع لكل مشتركة)</div></div>
+    <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات والتكلفة التشغيلية وتكلفة السيرفر</div></div>
+    <div class="kpi-card"><div class="kpi-icon">⚙️</div><div class="kpi-num">${totalOperationalCost.toFixed(2)}</div><div class="kpi-label">تكلفة المستخدم التشغيلية (١٠ ر.ع لكل مشتركة)</div></div>
+    <div class="kpi-card"><div class="kpi-icon">🖥️</div><div class="kpi-num">${serverCostPerSemester.toFixed(2)}</div><div class="kpi-label">تكلفة السيرفر في الفصل الدراسي</div></div>
     <div class="kpi-card red"><div class="kpi-icon">⏳</div><div class="kpi-num">${totalOwed.toFixed(2)}</div><div class="kpi-label">مستحقات غير مدفوعة</div></div>
     <div class="kpi-card gold"><div class="kpi-icon">👥</div><div class="kpi-num">${total}</div><div class="kpi-label">إجمالي المسجّلين</div>${growthLabel}</div>
     <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-num">${paid}</div><div class="kpi-label">مشتركون مدفوعون</div></div>
