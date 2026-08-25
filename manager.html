@@ -12436,7 +12436,10 @@ function ref_renderDataTab(){
     return `<tr>
       <td class="cell-name">${escHtml(r.name)}</td>
       <td dir="ltr" style="text-align:right;font-family:monospace">${escHtml(r.phone)}</td>
-      <td dir="ltr" style="text-align:right;font-family:monospace;font-size:11.5px">${r.email?escHtml(r.email):'<span style="color:var(--red)">— لا بريد</span>'}</td>
+      <td style="white-space:nowrap">
+        <span dir="ltr" style="text-align:right;font-family:monospace;font-size:11.5px">${r.email?escHtml(r.email):'<span style="color:var(--red)">— لا بريد</span>'}</span>
+        <button title="تعديل البريد الإلكتروني" onclick="ref_editRegistrationEmail(${r.id})" style="border:none;background:transparent;cursor:pointer;font-size:12px;opacity:.7;margin-inline-start:4px">✏️</button>
+      </td>
       <td>${ref_stageLabel[r.stage]||escHtml(r.stage)}</td>
       <td>${refLabel}</td>
       <td style="color:var(--muted);font-size:12px">${new Date(r.created_at).toLocaleDateString('ar-OM')}</td>
@@ -12822,6 +12825,22 @@ function ref_togglePayout(code){
   if(cur)localStorage.removeItem(key);else localStorage.setItem(key,'1');
   ref_renderFinanceTab();
   ref_renderOverviewTab();
+}
+
+async function ref_editRegistrationEmail(id){
+  const r=ref_registrations.find(x=>x.id===id);
+  if(!r)return;
+  const input=(prompt('البريد الإلكتروني الجديد:',r.email||'')||'').trim();
+  if(!input)return;
+  const email=input.toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){alert('❌ صيغة البريد الإلكتروني غير صحيحة');return;}
+  if(email===r.email)return;
+  const{error}=await sb.from('pre_registrations').update({email}).eq('id',id);
+  if(error){alert('❌ تعذّر تحديث البريد: '+(error.message||''));return;}
+  await ref_loadRegistrations();
+  ref_renderDataTab();
+  ref_renderAccountsTab();
+  toast('✅ حُدِّث البريد الإلكتروني');
 }
 
 async function ref_markRegistrationPaid(id,status){
