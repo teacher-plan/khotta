@@ -6585,8 +6585,13 @@ async function todayGenerate(){
       if(need.has('info')&&!quota){
         cyBusyLight('يرسم الملخص البصري'+suffix+'... قد يستغرق دقيقة');
         try{
+          // صفحات الدرس الخام للنموذج ليقرأها بصرياً بنفسه — لا الملخص
+          // النصي bookContext (وسيطٌ قد يُفقِد التفاصيل)، وهو مخصَّصٌ لخطة
+          // الدرس النصية أعلاه فقط.
+          let infoImages=[];
+          try{infoImages=await c1LessonBookImages(ctx.grade,ctx.subject,ctx.unitName,ctx.lessonName)||[];}catch(e){}
           const res=await sb.functions.invoke('generate-infographic',{
-            body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,bookContext}
+            body:{grade:String(ctx.grade),subject:ctx.subject,lessonNames:[ctx.lessonName],teacherPrompt:'ملخص بصري لأهم أفكار الدرس',size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,images:infoImages.slice(0,10)}
           });
           const{data}=res;
           if(await _todayStop(res))quota=true;
@@ -8725,11 +8730,17 @@ async function infoGenerate(){
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري رسم الإنفوجرافيك... (قد يستغرق دقيقة)';}
   // مؤشّر غير حاجب: التوليد قد يستغرق دقيقة، ولا داعي لمنع المعلّمة من
   // تصفّح باقي المنصة أثناء الانتظار
+  cyBusyLight('يقرأ صفحات الدرس من الكتاب...');
+  // صفحات الدرس الفعلية من الكتاب — تُرسَل للنموذج ليقرأها بصرياً بنفسه،
+  // لا ملخصاً نصياً وسيطاً قد يُفقِد التفاصيل (نفس صور c1BookSummary لكن
+  // خاماً بلا تلخيص).
+  let images=[];
+  try{images=await c1LessonBookImages(grade,subject,lessons[0].unit,lessons[0].name)||[];}catch(e){}
   cyBusyLight('يرسم الإنفوجرافيك… قد يستغرق دقيقة');
   let img=null,reason='';
   try{
     const _r=await sb.functions.invoke('generate-infographic',{
-      body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt,size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT}
+      body:{grade,subject,lessonNames:lessons.map(l=>l.name),teacherPrompt,size:C1_INFO_SIZE,aspect:C1_INFO_ASPECT,images:images.slice(0,10)}
     });
     const{data,error}=_r;
     if(!error&&data&&data.image){img=data.image;}
