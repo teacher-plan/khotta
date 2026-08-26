@@ -26,11 +26,11 @@ BEGIN
   FROM vault.decrypted_secrets
   WHERE name IN ('RESEND_API_KEY', 'MAIL_FROM');
 
-  SELECT jsonb_agg(jsonb_build_object('occurred_at', occurred_at, 'function_name', function_name, 'message', left(message,200)))
+  SELECT jsonb_agg(jsonb_build_object('occurred_at', occurred_at, 'function_name', function_name, 'error_message', left(error_message,200)))
   INTO v_errlogs
   FROM (
     SELECT * FROM public.error_logs
-    WHERE (function_name ILIKE '%activate%' OR message ILIKE '%hebaa%' OR message ILIKE '%resend%')
+    WHERE (function_name ILIKE '%activate%' OR error_message ILIKE '%hebaa%' OR error_message ILIKE '%resend%')
     ORDER BY occurred_at DESC LIMIT 10
   ) x;
 
