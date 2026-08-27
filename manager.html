@@ -12164,10 +12164,17 @@ async function ref_addManualRegistration(){
 
 // عدّاد زيارات صفحة الترويج (page_views) — لحساب نسبة التحويل في النظرة
 // العامة. count فقط، بلا جلب أي صفٍّ (head:true لا يُحمِّل البيانات).
+// نجلب أيضاً تاريخ أول زيارةٍ مسجَّلة: التسجيلات السابقة على بدء العدّاد
+// (شهورٌ من قبله) يجب ألّا تُحتسَب في نسبة التحويل — وإلا قُورِنت زياراتٌ
+// حديثة (أيام) بتسجيلاتٍ متراكمة من قبل وجود العدّاد أصلاً، فتخرج نسبٌ
+// لا معنى لها كـ٣٠٠٠٪.
+let ref_pageViewsSince=null;
 async function ref_loadPageViews(){
   try{
     const{count,error}=await sb.from('page_views').select('id',{count:'exact',head:true}).eq('page','cycle1-landing');
     if(!error)ref_pageViewsCount=count;
+    const{data:first}=await sb.from('page_views').select('created_at').eq('page','cycle1-landing').order('created_at',{ascending:true}).limit(1).maybeSingle();
+    ref_pageViewsSince=first?first.created_at:null;
   }catch(e){}
 }
 
@@ -12854,11 +12861,14 @@ function ref_renderOverviewTab(){
   }
 
   const visitCount=ref_pageViewsCount;
-  const visitConv=(visitCount!=null&&visitCount>0)?Math.round((total/visitCount)*100):null;
+  // التسجيلات التي تُحتسَب بالتحويل هي فقط ما وقع بعد بدء العدّاد — تسجيلاتٌ
+  // أقدم من أول زيارةٍ مسجَّلة لا تقابلها زياراتٌ محسوبة أصلاً.
+  const regsSinceTracking=ref_pageViewsSince?regs.filter(r=>r.created_at>=ref_pageViewsSince).length:0;
+  const visitConv=(visitCount!=null&&visitCount>0)?Math.min(100,Math.round((regsSinceTracking/visitCount)*100)):null;
 
   document.getElementById('overview-kpi-row').innerHTML=`
     ${visitCount!=null?`<div class="kpi-card"><div class="kpi-icon">👁️</div><div class="kpi-num">${visitCount}</div><div class="kpi-label">زيارات صفحة الترويج</div></div>
-    <div class="kpi-card gold"><div class="kpi-icon">🧲</div><div class="kpi-num">${visitConv!=null?visitConv+'%':'—'}</div><div class="kpi-label">نسبة التحويل من زيارةٍ إلى تسجيل</div></div>`:''}
+    <div class="kpi-card gold"><div class="kpi-icon">🧲</div><div class="kpi-num">${visitConv!=null?visitConv+'%':'—'}</div><div class="kpi-label">نسبة التحويل من زيارةٍ إلى تسجيل<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">منذ بدء العدّاد فقط</div></div></div>`:''}
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-num">${totalRevenue.toFixed(2)}</div><div class="kpi-label">إجمالي الأرباح (ر.ع)</div></div>
     <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-num">${netProfit.toFixed(2)}</div><div class="kpi-label">صافي الربح بعد العمولات والتكلفة التشغيلية وتكلفة السيرفر</div></div>
     <div class="kpi-card"><div class="kpi-icon">⚙️</div><div class="kpi-num">${totalOperationalCost.toFixed(2)}</div><div class="kpi-label">تكلفة المستخدم التشغيلية (١٠ ر.ع لكل مشتركة)</div></div>
