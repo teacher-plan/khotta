@@ -747,6 +747,10 @@ function khRefGet(){
 }
 try{const r=new URLSearchParams(location.search).get('ref');if(r)khRefSet(r.trim());}catch(e){}
 
+// عدّاد زيارات داخلي (لا خدمة تحليلات خارجية) — تسجيلٌ صامتٌ لا يُعطّل
+// الصفحة إن فشل، ولا يحمل أي بيانات شخصية.
+try{sb&&sb.from('page_views').insert({page:'cycle1-landing',ref:khRefGet()}).then(()=>{},()=>{});}catch(e){}
+
 /* ══ جولة الأقسام: بطاقاتٌ تُبدّل اللقطة بدل صفٍّ طويل من الصور ══
    تتقدّم وحدها كلّ ٦ ثوانٍ حتى تلمس المعلمة شيئاً، فتتوقّف ويصير التحكّم لها. */
 const TOUR=[
