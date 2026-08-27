@@ -137,6 +137,9 @@ Deno.serve(async (req) => {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json({ error: "bad_email" }, 400);
       const r = await sendMail(to, "رسالة اختبار — منصّة خُطّة",
         mailHtml("معلّمتنا", to, "PaSSw0rdTest", "https://khotati.com/cycle1.html"));
+      // السبب كان يظهر للمشرف في المتصفح فقط ويضيع فوراً — الآن يُسجَّل هنا
+      // أيضاً ليبقى قابلاً للفحص لاحقاً عبر سجلّات الدالة (edge_logs).
+      if (!r.sent) console.error(`activate-teacher (test): فشل الإرسال إلى ${to} — السبب: ${r.reason}`);
       return json({ ok: true, test: true, mailed: r.sent, mailReason: r.reason || null, to });
     }
 
@@ -242,6 +245,10 @@ Deno.serve(async (req) => {
       plan === "trial" ? "حسابكِ التجريبي في منصّة خُطّة" : "تفعيل حسابكِ في منصّة خُطّة",
       mailHtml(reg.name || "معلّمتنا", email, password, link, plan),
     );
+    // نفس ملاحظة وضع الاختبار: كان السبب يظهر للمشرف مرّةً واحدة في المتصفح
+    // ثم يضيع — الآن يبقى في سجلّات الدالة لفحصه لاحقاً بلا اعتماد على أن
+    // يكون أحدٌ قد رأى الرسالة وقتها أو تذكّر نصّها.
+    if (!mail.sent) console.error(`activate-teacher: فشل إرسال بريد التفعيل إلى ${email} (regId=${regId}) — السبب: ${mail.reason}`);
 
     return json({ ok: true, email, password, plan, expires_at, mailed: mail.sent, mailReason: mail.reason || null });
   } catch (e) {
