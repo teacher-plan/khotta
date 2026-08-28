@@ -6,7 +6,7 @@ BEGIN
   FROM public.allowed_emails
   WHERE lower(email) IN ('c1@khotati.app','x@y.com','iphon90z8@yahoo.com','tv8888tvvv@gmail.com');
 
-  SELECT jsonb_agg(jsonb_build_object('id',id,'email',email,'data',data,'created_at',created_at))
+  SELECT jsonb_agg(jsonb_build_object('id',id,'email',email,'data',data,'updated_at',updated_at))
   INTO v2
   FROM public.cycle1_profiles
   WHERE lower(email) IN ('c1@khotati.app','x@y.com','iphon90z8@yahoo.com','tv8888tvvv@gmail.com');
