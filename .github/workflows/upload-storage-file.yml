@@ -1,0 +1,72 @@
+# رفعُ ملفٍّ واحد إلى مخزن Supabase (Storage) — بيدٍ لا تلقائياً.
+#
+# لماذا هذا المسلك: السرّ المتاح أصلاً (SUPABASE_ACCESS_TOKEN) مفتاحٌ لواجهة
+# الإدارة (Management API) لا لواجهة المخزن. نستعمله أولاً لجلب مفتاح
+# service_role الفعلي للمشروع (نقطة official لذلك: GET .../api-keys)، ثم
+# نستعمل ذلك المفتاح لحظةً واحدة لرفع الملف عبر واجهة storage/v1 — لا يُطبع
+# ولا يُخزَّن، يبقى في متغيّر بيئةٍ داخل هذه التشغيلة فقط.
+#
+# الاستعمال: أي ملفٍّ ثابت (تحضير PDF، صورة، إلخ) يُودَع مؤقتاً في المستودع
+# (عادةً supabase/_uploads/) ثم يُرفع بهذا المسلك، ويمكن حذفه من المستودع
+# بعدها — النسخة الحيّة صارت في المخزن، لا في Git.
+name: Upload file to Supabase Storage
+
+on:
+  workflow_dispatch:
+    inputs:
+      local_path:
+        description: 'مسار الملف داخل المستودع (مثال: supabase/_uploads/x.pdf)'
+        required: true
+      bucket:
+        description: 'اسم الـbucket في Supabase Storage'
+        required: true
+        default: 'library-files'
+      dest_path:
+        description: 'المسار الوجهة داخل الـbucket (مثال: prep-notebooks/x.pdf)'
+        required: true
+      content_type:
+        description: 'Content-Type للملف'
+        required: true
+        default: 'application/pdf'
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: رفع الملف
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          LOCAL_PATH: ${{ inputs.local_path }}
+          BUCKET: ${{ inputs.bucket }}
+          DEST_PATH: ${{ inputs.dest_path }}
+          CONTENT_TYPE: ${{ inputs.content_type }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$LOCAL_PATH" ]; then echo "::error::الملف غير موجود: $LOCAL_PATH"; exit 1; fi
+
+          echo "── جلب مفتاح service_role ──"
+          KEYS_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys")
+          SERVICE_KEY=$(echo "$KEYS_JSON" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          if [ -z "$SERVICE_KEY" ] || [ "$SERVICE_KEY" = "null" ]; then
+            echo "::error::تعذّر جلب مفتاح service_role"; echo "$KEYS_JSON"; exit 1
+          fi
+
+          echo "── رفع $LOCAL_PATH إلى $BUCKET/$DEST_PATH ──"
+          code=$(curl -s -o /tmp/upload_resp.json -w '%{http_code}' \
+            -X POST "https://$REF.supabase.co/storage/v1/object/$BUCKET/$DEST_PATH" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: $CONTENT_TYPE" \
+            -H "x-upsert: true" \
+            --data-binary "@$LOCAL_PATH")
+
+          if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+            echo "✅ رُفع بنجاح ($code)"
+            cat /tmp/upload_resp.json; echo
+            echo "الرابط العام: https://$REF.supabase.co/storage/v1/object/public/$BUCKET/$DEST_PATH"
+          else
+            echo "❌ فشل الرفع ($code)"; cat /tmp/upload_resp.json; echo
+            exit 1
+          fi
