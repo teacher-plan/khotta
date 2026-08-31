@@ -2483,6 +2483,9 @@ input,textarea,select{font-size:16px !important;}
     <div class="kt-sidebar-group-label">المالية</div>
     <button class="kt-sidebar-item" data-page="referrals" onclick="showPage('referrals',this);ref_initReferralsPage();"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7 3.5v8.6l-7 3.5-7-3.5V7.7l7-3.5zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg> الإحالات والعمولات</button>
 
+    <div class="kt-sidebar-group-label">الترويج</div>
+    <button class="kt-sidebar-item" data-page="promo" onclick="showPage('promo',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 3a1 1 0 0 1 1 1v1.06A7.5 7.5 0 0 1 19 12v3.59l1.71 1.7a1 1 0 0 1-.71 1.71H4a1 1 0 0 1-.71-1.71L5 15.59V12a7.5 7.5 0 0 1 6-7.35V4a1 1 0 0 1 1-1H11zm1 17a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 20z"/></svg> آراء المشتركين</button>
+
     <div class="kt-sidebar-group-label">الإعدادات</div>
     <button class="kt-sidebar-item" data-page="aimanage" onclick="showPage('aimanage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg> إدارة مولّد الاختبارات</button>
 
@@ -3376,6 +3379,31 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
     <div id="schools-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+  </div>
+</div></div>
+
+<!-- ══ PROMOTION (الترويج — آراء المشتركين) ══ -->
+<div class="page" id="page-promo"><div class="wrap">
+  <div class="page-header">
+    <div class="tag"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M11 3a1 1 0 0 1 1 1v1.06A7.5 7.5 0 0 1 19 12v3.59l1.71 1.7a1 1 0 0 1-.71 1.71H4a1 1 0 0 1-.71-1.71L5 15.59V12a7.5 7.5 0 0 1 6-7.35V4a1 1 0 0 1 1-1H11z"/></svg></span> الترويج</div>
+    <h1>آراء المشتركين</h1>
+    <p>الآراء المنشورة هنا تظهر مباشرةً في قسم «آراء المشتركين» بصفحة الترويج</p>
+  </div>
+
+  <div class="admin-panel-card">
+    <div class="admin-panel-header">
+      <h3 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> إضافة رأيٍ جديد</h3>
+    </div>
+    <div style="margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">اسم المعلّمة *</label>
+      <input id="promo-name-inp" type="text" placeholder="مثال: أ. مريم الحارثية" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;margin-bottom:10px"/>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">الرأي / الشهادة *</label>
+      <textarea id="promo-quote-inp" rows="3" placeholder="اكتب رأي المعلّمة هنا..." style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Cairo',sans-serif;font-size:14px;margin-bottom:10px;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="grade-btn" style="background:linear-gradient(135deg,#1a7a3a,#27ae60);color:#fff;font-weight:700" onclick="promoSaveTestimonial()" id="promo-save-btn">حفظ الرأي ✅</button>
+      </div>
+    </div>
+    <div id="promo-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
   </div>
 </div></div>
 
@@ -6688,6 +6716,7 @@ function showPage(id,btn){
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')anRefreshAll();
   if(id==='schools')loadSchools();
+  if(id==='promo')promoLoadList();
   if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='announcements'){loadAnnouncements();}
   if(id==='referrals'){ref_initReferralsPage();}
@@ -12970,6 +12999,76 @@ function renderSchoolsList(){
     </div>`;
   }).join('');
 }
+// ══ الترويج — آراء المشتركين ══
+let _promoList=[];
+async function promoLoadList(){
+  const list=document.getElementById('promo-list');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>';
+  try{
+    const{data,error}=await sb.from('testimonials').select('*').order('sort_order').order('created_at',{ascending:false});
+    if(error){list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ تعذّر التحميل</div>';return;}
+    _promoList=data||[];
+    promoRenderList();
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">❌ حدث خطأ</div>';
+  }
+}
+function promoRenderList(){
+  const list=document.getElementById('promo-list');
+  if(!list)return;
+  if(!_promoList.length){
+    list.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">📭 لا توجد آراء بعد<br><small>أضف أول رأيٍ من النموذج أعلاه</small></div>';
+    return;
+  }
+  list.innerHTML=_promoList.map(t=>`
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px${t.is_published?'':';opacity:.55'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div style="font-weight:800;color:var(--text);font-size:14px">${escHtml(t.teacher_name)}</div>
+        <span style="font-size:11px;font-weight:700;color:${t.is_published?'#1a7a3a':'var(--muted)'}">${t.is_published?'✅ منشور':'⏸️ مخفي'}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7;background:var(--surface);border-radius:8px;padding:10px;margin-bottom:8px">${escHtml(t.quote)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="grade-btn" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px" onclick="promoTogglePublish(${t.id},${!t.is_published})">${t.is_published?'إخفاء':'نشر'}</button>
+        <button class="user-disable-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px" onclick="promoDeleteTestimonial(${t.id},'${escHtml(t.teacher_name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
+      </div>
+    </div>`).join('');
+}
+async function promoSaveTestimonial(){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  const nameInp=document.getElementById('promo-name-inp'),quoteInp=document.getElementById('promo-quote-inp');
+  const name=nameInp.value.trim(),quote=quoteInp.value.trim();
+  if(!name||!quote){toast('يرجى إدخال الاسم والرأي',true);return;}
+  const btn=document.getElementById('promo-save-btn');
+  btn.disabled=true;
+  try{
+    const{error}=await sb.from('testimonials').insert({teacher_name:name,quote:quote});
+    if(error){toast('فشل الحفظ: '+error.message,true);return;}
+    toast('✅ تمت إضافة الرأي','ok');
+    nameInp.value='';quoteInp.value='';
+    promoLoadList();
+  }catch(e){toast('حدث خطأ',true);}
+  finally{btn.disabled=false;}
+}
+async function promoTogglePublish(id,newState){
+  try{
+    const{error}=await sb.from('testimonials').update({is_published:newState}).eq('id',id);
+    if(error){toast('فشل: '+error.message,true);return;}
+    toast(newState?'تم النشر':'تم الإخفاء','ok');
+    promoLoadList();
+  }catch(e){toast('حدث خطأ',true);}
+}
+async function promoDeleteTestimonial(id,name){
+  if(!isAdmin()){toast('فقط المشرف',true);return;}
+  if(!await uiConfirm(`حذف رأي "${name}"؟ لا يمكن التراجع.`))return;
+  try{
+    const{error}=await sb.from('testimonials').delete().eq('id',id);
+    if(error){toast('فشل الحذف: '+error.message,true);return;}
+    toast('🗑️ تم الحذف','ok');
+    promoLoadList();
+  }catch(e){toast('حدث خطأ',true);}
+}
+
 async function deleteSchool(id,name){
   if(!isAdmin()){toast('فقط المشرف',true);return;}
   if(!await uiConfirm(`حذف مدرسة "${name}"؟\nسيتم حذف جميع مخالفاتها أيضاً ولا يمكن التراجع.`))return;
