@@ -63,11 +63,24 @@ section{padding:78px 0}
 
 /* ── آراء المشتركين ── */
 .testi{background:var(--surface);border-block:1.5px solid var(--border)}
-.testi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
-@media(max-width:900px){.testi-grid{grid-template-columns:1fr;gap:14px}}
+.testi-wrap{position:relative}
+.testi-grid{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:0;
+  -ms-overflow-style:none;scrollbar-width:none;padding-bottom:2px}
+.testi-grid::-webkit-scrollbar{display:none}
 .testi-card{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:26px 24px 22px;
-  position:relative;box-shadow:var(--sh-sm);transition:.2s;display:flex;flex-direction:column;gap:14px}
-.testi-card:hover{box-shadow:var(--sh);transform:translateY(-3px)}
+  position:relative;box-shadow:var(--sh-sm);transition:box-shadow .2s;display:flex;flex-direction:column;gap:14px;
+  flex:0 0 100%;max-width:620px;margin-inline:auto;scroll-snap-align:start}
+.testi-card:hover{box-shadow:var(--sh)}
+.testi-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:22px}
+.testi-arrow{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);
+  color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;flex:none}
+.testi-arrow svg{width:16px;height:16px}
+.testi-arrow:hover{background:var(--card);border-color:var(--gold)}
+.testi-arrow:disabled{opacity:.35;cursor:default}
+.testi-arrow:disabled:hover{background:var(--surface);border-color:var(--border)}
+.testi-dots{display:flex;align-items:center;gap:7px}
+.testi-dot{width:7px;height:7px;border-radius:50%;background:var(--border);border:0;padding:0;cursor:pointer;transition:.2s}
+.testi-dot.on{width:20px;border-radius:4px;background:var(--red)}
 .testi-q{width:38px;height:38px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(140deg,var(--gold-l),var(--gold));color:#fff;font-family:Georgia,serif;font-size:24px;font-weight:700;line-height:1}
 .testi-quote{font-size:14.5px;color:var(--ink);line-height:1.95;flex:1}
@@ -674,7 +687,18 @@ h2{font-size:clamp(26px,3.7vw,41px);margin-bottom:14px;text-wrap:balance}
       <h2>ماذا تقول المعلّمات اللواتي جرّبنها؟</h2>
       <p>آراءٌ حقيقية من معلّمات الحلقة الأولى المشتركات في «خُطّة».</p>
     </div>
-    <div class="testi-grid" id="testi-grid"></div>
+    <div class="testi-wrap">
+      <div class="testi-grid" id="testi-grid"></div>
+      <div class="testi-nav">
+        <button class="testi-arrow" id="testi-next" aria-label="الرأي التالي" onclick="testiStep(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <div class="testi-dots" id="testi-dots"></div>
+        <button class="testi-arrow" id="testi-prev" aria-label="الرأي السابق" onclick="testiStep(-1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -802,8 +826,46 @@ try{sb&&sb.from('page_views').insert({page:'cycle1-landing',ref:khRefGet()}).the
       </div>`;
     }).join('');
     sec.hidden=false;
+    testiInitNav(data.length);
   }catch(e){}
 })();
+// تنقّل أفقي بين الآراء: نقاطٌ تدلّ على العدد، وسهمان خفيفان يحرّكان
+// المسار المُقاس (scroll-snap) بدل حساب إحداثيات RTL يدوياً — كلٌّ من
+// scrollIntoView واتجاه المتصفّح للـRTL يتكفّلان بالجهة الصحيحة تلقائياً.
+let _testiCards=[],_testiIdx=0;
+function testiInitNav(count){
+  _testiCards=Array.from(document.querySelectorAll('#testi-grid .testi-card'));
+  const dotsEl=document.getElementById('testi-dots');
+  if(dotsEl) dotsEl.innerHTML=_testiCards.map((_,i)=>
+    `<button class="testi-dot${i===0?' on':''}" aria-label="الرأي ${i+1}" onclick="testiGoTo(${i})"></button>`).join('');
+  const track=document.getElementById('testi-grid');
+  if(track) track.addEventListener('scroll',testiOnScroll,{passive:true});
+  testiUpdateNav();
+}
+function testiOnScroll(){
+  if(!_testiCards.length)return;
+  const track=document.getElementById('testi-grid');
+  const tRect=track.getBoundingClientRect();
+  let best=0,bestDist=Infinity;
+  _testiCards.forEach((c,i)=>{
+    const d=Math.abs(c.getBoundingClientRect().left-tRect.left);
+    if(d<bestDist){bestDist=d;best=i;}
+  });
+  if(best!==_testiIdx){_testiIdx=best;testiUpdateNav();}
+}
+function testiUpdateNav(){
+  document.querySelectorAll('#testi-dots .testi-dot').forEach((d,i)=>d.classList.toggle('on',i===_testiIdx));
+  const next=document.getElementById('testi-next'),prev=document.getElementById('testi-prev');
+  if(next)next.disabled=_testiIdx>=_testiCards.length-1;
+  if(prev)prev.disabled=_testiIdx<=0;
+}
+function testiGoTo(i){
+  if(!_testiCards[i])return;
+  _testiIdx=i;
+  _testiCards[i].scrollIntoView({behavior:'smooth',inline:'start',block:'nearest'});
+  testiUpdateNav();
+}
+function testiStep(dir){testiGoTo(Math.min(Math.max(_testiIdx+dir,0),_testiCards.length-1));}
 function escHtmlLanding(s){
   return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
