@@ -2465,6 +2465,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="kt-sidebar-item" data-page="c1msgs" onclick="ktGoC1('msgs',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
       <button class="kt-sidebar-item" data-page="c1storage" onclick="ktGoC1('storage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2zm-2 7h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7zm4 3v2h6v-2H6z"/></svg> مراقبة التخزين واستهلاك الرصيد</button>
       <button class="kt-sidebar-item" data-page="c1golden" onclick="ktGoC1('golden',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> متابعة الخطة الذهبية</button>
+      <button class="kt-sidebar-item" data-page="c1preps" onclick="ktGoC1('preps',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM7 12h10v2H7v-2zm0 4h10v2H7v-2zm0-8h5v2H7V8z"/></svg> تحاضير الحلقة الأولى</button>
     </div>
 
     <button class="kt-sidebar-group-toggle" id="ktsg-c2-toggle" onclick="ktSidebarToggleGroup('c2')">
@@ -2669,6 +2670,85 @@ input,textarea,select{font-size:16px !important;}
         </tr></thead>
         <tbody id="mc1g-top-b"><tr><td colspan="4" style="padding:14px;text-align:center;color:#7A715B">يجري التحميل</td></tr></tbody>
       </table></div>
+    </div>
+  </div></div>
+
+  <div class="page" id="page-c1preps"><div class="wrap">
+    <h1>تحاضير الحلقة الأولى</h1>
+    <p>ارفعي دليل المعلم لمادةٍ ما، طابقي فهرسه مع فهرس الكتاب، ثم ولّدي تحضير كل درسٍ من صفحاته في الكتاب ودليل المعلم معاً</p>
+
+    <!-- ١) اختيار النطاق -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="flex:1;min-width:140px">
+          <label class="eg-lbl">الفصل</label>
+          <select id="prep-semester" onchange="prepReloadSubjects()"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label class="eg-lbl">الصف</label>
+          <select id="prep-grade" onchange="prepReloadSubjects()"><option value="">الصف</option></select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label class="eg-lbl">المادة</label>
+          <select id="prep-subject" onchange="prepScopeChanged()"><option value="">المادة</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ٢) قالب التحضير المعتمد (ثابت لكل المواد) -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <h1 style="font-size:16px;margin:0 0 8px">القالب المعتمد للتحضير</h1>
+      <p style="margin:0 0 10px">مرجع تنسيقٍ واحد يُستخدم لكل المواد — الصقي نص القالب (عناوين أقسامه بالترتيب) هنا</p>
+      <textarea id="prep-template-text" placeholder="مثال:\nأولاً: الأهداف\nثانياً: التهيئة\nثالثاً: العرض والأنشطة\n..." style="width:100%;min-height:140px;padding:10px;border:1.5px solid #E3DCC9;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12.5px;resize:vertical"></textarea>
+      <button onclick="prepSaveTemplate()" style="margin-top:10px;padding:9px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer">حفظ القالب</button>
+      <span id="prep-template-msg" style="font-size:11.5px;font-weight:700;color:#487848;margin-inline-start:10px"></span>
+    </div>
+
+    <!-- ٣) دليل المعلم لهذا النطاق -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <h1 style="font-size:16px;margin:0 0 8px">دليل المعلم</h1>
+      <div id="prep-guide-status" style="font-size:12.5px;color:#7A715B;margin-bottom:10px">اختاري الفصل والصف والمادة أولاً</div>
+      <div id="prep-guide-controls" style="display:none">
+        <input type="file" id="prep-guide-file" accept="application/pdf" style="font-size:12px"/>
+        <button onclick="prepUploadGuide()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#4A7A9E,#2F5A78);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">رفع الدليل</button>
+        <button onclick="prepIndexGuide()" id="prep-index-btn" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#C8A03C,#A97E22);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px;display:none">مطابقة الفهرس بالذكاء الاصطناعي</button>
+        <div id="prep-guide-progress" style="font-size:12px;color:#7A715B;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- ٤) نتيجة المطابقة -->
+    <div id="prep-match-wrap" style="max-width:760px;margin:0 auto 18px;display:none">
+      <h1 style="font-size:16px">مطابقة الفهرس</h1>
+      <p style="margin:0 0 10px">راجعي المطابقة قبل المتابعة — كل بندٍ من فهرس الدليل مقابل درسه في الكتاب</p>
+      <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:14px;text-align:right">
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px">
+          <thead><tr style="background:#F0EBDF">
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">بند دليل المعلم</th>
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">درس الكتاب المطابق</th>
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">الثقة</th>
+          </tr></thead>
+          <tbody id="prep-match-b"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ٥) قائمة الدروس -->
+    <div id="prep-lessons-wrap" style="max-width:760px;margin:0 auto;display:none">
+      <h1 style="font-size:16px">دروس المادة</h1>
+      <div id="prep-lessons-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- ٦) معاينة التحضير المولَّد -->
+    <div id="prep-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;padding:24px;overflow:auto">
+      <div style="background:#fff;border-radius:16px;max-width:720px;margin:0 auto;padding:24px;text-align:right;position:relative">
+        <button onclick="prepClosePreview()" style="position:absolute;top:14px;left:14px;background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+        <h1 id="prep-preview-title" style="font-size:17px;margin:0 0 14px"></h1>
+        <div id="prep-preview-body" style="font-size:13px;line-height:2"></div>
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="prepApprove()" id="prep-approve-btn" style="padding:9px 22px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">اعتماد</button>
+          <button onclick="prepClosePreview()" style="padding:9px 22px;border:1.5px solid #E3DCC9;border-radius:10px;background:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">إغلاق</button>
+        </div>
+      </div>
     </div>
   </div></div>
 <!-- ══ TIMETABLE ══ -->
@@ -6168,6 +6248,263 @@ async function mc1ExpandBudget(userId,name){
     mc1LoadStorage(true);
     toast&&toast('✅ أُضيف $٥ إلى رصيد '+name);
   }catch(e){alert('تعذّر الحفظ: '+(e.message||''));}
+}
+
+// ══ تحاضير الحلقة الأولى: مطابقة دليل المعلم مع فهرس الكتاب، ثم توليد
+// تحضير كل درسٍ من صفحاته في الكتاب + دليل المعلم معاً، بتنسيق قالبٍ
+// معتمدٍ ثابت (ai_settings.prep_template_text) — مسودة تنتظر اعتماد المشرف
+// (lesson_prep_generations.status: draft → approved). ══
+let prepCurriculum=[],prepGuide=null;
+
+function prepInit(){
+  const gs=document.getElementById('prep-grade');
+  if(!gs.dataset.ready){
+    gs.dataset.ready='1';
+    gs.innerHTML='<option value="">الصف</option>'+[1,2,3,4].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
+    prepLoadTemplate();
+  }
+  prepReloadSubjects();
+}
+function prepReloadSubjects(){
+  const ssel=document.getElementById('prep-subject');
+  ssel.innerHTML='<option value="">المادة</option>'+FIRST_CYCLE_SUBJECTS.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+  prepScopeChanged();
+}
+function prepScope(){
+  return{
+    semester:document.getElementById('prep-semester').value,
+    grade:document.getElementById('prep-grade').value,
+    subject:document.getElementById('prep-subject').value,
+  };
+}
+async function prepScopeChanged(){
+  document.getElementById('prep-match-wrap').style.display='none';
+  document.getElementById('prep-lessons-wrap').style.display='none';
+  prepGuide=null;prepCurriculum=[];
+  const{semester,grade,subject}=prepScope();
+  const status=document.getElementById('prep-guide-status');
+  const controls=document.getElementById('prep-guide-controls');
+  if(!grade||!subject){status.textContent='اختاري الفصل والصف والمادة أولاً';controls.style.display='none';return;}
+  controls.style.display='block';
+  status.textContent='يجري التحميل…';
+  try{
+    const{data:cur,error:cErr}=await sb.from('curriculum').select('*').eq('semester',semester).eq('grade',Number(grade)).eq('subject',subject).order('sort');
+    if(cErr)throw cErr;
+    prepCurriculum=cur||[];
+    const{data:guide}=await sb.from('teacher_guides').select('*').eq('semester',semester).eq('grade',Number(grade)).eq('subject',subject).maybeSingle();
+    prepGuide=guide||null;
+    prepRenderGuideStatus();
+    if(prepGuide&&prepGuide.status==='indexed')await prepRenderMatchAndLessons();
+  }catch(e){status.textContent='تعذّر التحميل: '+(e.message||'');}
+}
+function prepRenderGuideStatus(){
+  const status=document.getElementById('prep-guide-status');
+  const idxBtn=document.getElementById('prep-index-btn');
+  if(!prepGuide){status.textContent='لا يوجد دليل معلمٍ مرفوع لهذا النطاق بعد — ارفعي ملف PDF';idxBtn.style.display='none';return;}
+  const map={uploaded:'⬆️ مرفوع — لم تُطابَق فهرسه بعد',indexing:'⏳ تجري المطابقة الآن…',indexed:'✅ تمّت مطابقة الفهرس',index_failed:'❌ فشلت المطابقة — أعيدي المحاولة'};
+  status.textContent=map[prepGuide.status]||prepGuide.status;
+  idxBtn.style.display=(prepGuide.status==='uploaded'||prepGuide.status==='index_failed')?'inline-block':'none';
+}
+// رفع دليل المعلم PDF → صور صفحات (نفس مسار segUploadAndSegment لكتاب
+// الطالب) → تسجيل صف في teacher_guides.
+async function prepUploadGuide(){
+  const file=document.getElementById('prep-guide-file').files[0];
+  const{semester,grade,subject}=prepScope();
+  const status=document.getElementById('prep-guide-progress');
+  if(!file){status.textContent='❌ اختاري ملف PDF أولاً';return;}
+  if(!grade||!subject){status.textContent='❌ اختاري الصف والمادة أولاً';return;}
+  if(!/\.pdf$/i.test(file.name)){status.textContent='❌ الملف يجب أن يكون PDF';return;}
+  let pdf;
+  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
+  catch(e){status.textContent='❌ فشل فتح الـPDF';return;}
+  const N=pdf.numPages;
+  if(!await uiConfirm('سيُرفع دليل المعلم ('+egToArabic(N)+' صفحة) لـ'+subject+' — '+libGradeName(Number(grade))+' — '+semester+'. متابعة؟'))return;
+  const base='teacher-guides/'+stableLessonId(semester,subject,String(grade),'GUIDE','');
+  const failed=[];
+  const putPage=async(p,tries)=>{
+    let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
+    if(!blob)return false;
+    for(let a=1;a<=tries;a++){
+      try{
+        const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});
+        if(!error)return true;
+      }catch(e){}
+      if(a<tries)await new Promise(r=>setTimeout(r,1200*a));
+    }
+    return false;
+  };
+  for(let p=1;p<=N;p++){
+    status.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+'...';
+    if(!await putPage(p,3))failed.push(p);
+  }
+  if(failed.length){status.textContent='⚠️ تعذّر رفع '+egToArabic(failed.length)+' صفحة — أعيدي رفع الملف لإكمالها.';}
+  try{
+    const{data,error}=await sb.from('teacher_guides').upsert({
+      semester,grade:Number(grade),subject,base_path:base,page_count:N,offset_pages:1,status:'uploaded',
+    },{onConflict:'grade,subject,semester'}).select().single();
+    if(error)throw error;
+    prepGuide=data;
+    status.textContent=failed.length?status.textContent:'✅ اكتمل الرفع';
+    prepRenderGuideStatus();
+  }catch(e){status.textContent='فشل تسجيل الدليل: '+(e.message||'');}
+}
+async function prepIndexGuide(){
+  if(!prepGuide)return;
+  const progress=document.getElementById('prep-guide-progress');
+  progress.textContent='⏳ يقرأ الفهرس ويطابقه بالذكاء الاصطناعي… قد يستغرق دقيقة';
+  try{
+    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:prepGuide.id}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    progress.textContent='✅ تمّت المطابقة';
+    const{data:guide}=await sb.from('teacher_guides').select('*').eq('id',prepGuide.id).maybeSingle();
+    prepGuide=guide;
+    prepRenderGuideStatus();
+    await prepRenderMatchAndLessons();
+  }catch(e){progress.textContent='❌ فشلت المطابقة: '+(e.message||'');prepRenderGuideStatus();}
+}
+async function prepRenderMatchAndLessons(){
+  if(!prepGuide||!Array.isArray(prepGuide.toc))return;
+  const curById={};prepCurriculum.forEach(r=>curById[r.id]=r);
+  const mb=document.getElementById('prep-match-b');
+  const confLabel={high:'مرتفعة',medium:'متوسطة',low:'منخفضة'};
+  mb.innerHTML=prepGuide.toc.map(e=>{
+    const m=e.matched_curriculum_id?curById[e.matched_curriculum_id]:null;
+    return `<tr>
+      <td style="padding:8px;border:1px solid #E3DCC9">${escHtml(e.guide_unit||'')} — ${escHtml(e.guide_lesson||'')}</td>
+      <td style="padding:8px;border:1px solid #E3DCC9">${m?escHtml(m.unit+' — '+m.lesson):'<span style=\"color:#B23">لا مطابقة</span>'}</td>
+      <td style="padding:8px;border:1px solid #E3DCC9">${confLabel[e.confidence]||e.confidence||''}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('prep-match-wrap').style.display='block';
+
+  // خريطة curriculum_id → بند الدليل المطابق (لجلب صفحات الدليل عند التوليد)
+  const guideByCurId={};
+  prepGuide.toc.forEach(e=>{if(e.matched_curriculum_id)guideByCurId[e.matched_curriculum_id]=e;});
+
+  const{data:gens}=await sb.from('lesson_prep_generations').select('curriculum_id,status').eq('semester',prepGuide.semester).eq('grade',prepGuide.grade).eq('subject',prepGuide.subject);
+  const genByCurId={};(gens||[]).forEach(g=>genByCurId[g.curriculum_id]=g.status);
+
+  const list=document.getElementById('prep-lessons-list');
+  list.innerHTML=prepCurriculum.map(r=>{
+    const hasGuide=!!guideByCurId[r.id];
+    const st=genByCurId[r.id];
+    const badge=st==='approved'?'<span style="color:#2F5D2F;font-weight:800">معتمد ✓</span>':st==='draft'?'<span style="color:#8A6D1E;font-weight:800">مسودة</span>':'';
+    return `<div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><div style="font-weight:800;font-size:13px">${escHtml(r.lesson)}</div><div style="font-size:11px;color:#7A715B">${escHtml(r.unit)}${hasGuide?'':' — بلا صفحات دليل مطابقة'}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${badge}
+        <button onclick="prepGenerateLesson(${r.id})" style="padding:7px 16px;border:none;border-radius:9px;background:linear-gradient(135deg,#4A7A9E,#2F5A78);color:#fff;font-family:'Cairo',sans-serif;font-size:12px;font-weight:800;cursor:pointer">${st?'إعادة توليد':'تحضير الدرس'}</button>
+        ${st?`<button onclick="prepShowExisting(${r.id})" style="padding:7px 16px;border:1.5px solid #E3DCC9;border-radius:9px;background:#fff;font-family:'Cairo',sans-serif;font-size:12px;font-weight:800;cursor:pointer">عرض</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('prep-lessons-wrap').style.display='block';
+  prepMap={guideByCurId,curById};
+}
+let prepMap={guideByCurId:{},curById:{}};
+// صور صفحات الدرس في الكتاب — نفس منطق c1LessonBookImages في cycle1.html،
+// معاد هنا لأن لوحة الإدارة لا تحمّل ملف المعلّمة.
+async function prepBookImages(cur){
+  try{
+    const{data:bs}=await sb.from('book_sources').select('*').eq('grade',String(cur.grade)).eq('subject',cur.subject).eq('semester',cur.semester).eq('book_no',cur.book_no||1).maybeSingle();
+    if(!bs||!bs.base_path||!bs.page_count)return[];
+    const sorted=prepCurriculum.filter(r=>(r.book_no||1)===(cur.book_no||1)).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+    const idx=sorted.findIndex(r=>r.id===cur.id);
+    const start=parseInt(cur.page);if(!start)return[];
+    let end=bs.page_count;
+    for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+    if(end<start)end=start;
+    const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
+    const images=[];
+    for(let bp=start;bp<=end&&images.length<15;bp++){
+      const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+      images.push(sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl);
+    }
+    return images;
+  }catch(e){return[];}
+}
+// صور صفحات نفس الدرس في دليل المعلم — من رقم الصفحة الذي استخرجه AI في
+// prepGuide.toc إلى بداية البند التالي في الفهرس (أو نهاية الدليل).
+function prepGuideImages(cur){
+  if(!prepGuide||!prepGuide.base_path)return[];
+  const e=prepMap.guideByCurId[cur.id];
+  if(!e||!e.guide_page)return[];
+  const toc=(prepGuide.toc||[]).filter(x=>x.guide_page).sort((a,b)=>a.guide_page-b.guide_page);
+  const idx=toc.findIndex(x=>x===e);
+  const start=e.guide_page;
+  let end=prepGuide.page_count;
+  for(let j=idx+1;j<toc.length;j++){if(toc[j].guide_page>start){end=toc[j].guide_page-1;break;}}
+  if(end<start)end=start;
+  const offset=prepGuide.offset_pages||1,pageCount=prepGuide.page_count,base=prepGuide.base_path;
+  const images=[];
+  for(let bp=start;bp<=end&&images.length<15;bp++){
+    const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+    images.push(sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl);
+  }
+  return images;
+}
+async function prepGenerateLesson(curId){
+  const cur=prepCurriculum.find(r=>r.id===curId);
+  if(!cur)return;
+  if(!await uiConfirm('توليد تحضير درس «'+cur.lesson+'»؟'))return;
+  try{
+    const[bookImages,guideImages]=[await prepBookImages(cur),prepGuideImages(cur)];
+    if(!bookImages.length&&!guideImages.length){alert('لا صفحات متاحة لهذا الدرس (لا كتاب مرفوع ولا دليل مطابق)');return;}
+    const{data,error}=await sb.functions.invoke('generate-lesson-prep-guided',{body:{
+      curriculum_id:cur.id,teacher_guide_id:prepGuide?prepGuide.id:null,book_images:bookImages,guide_images:guideImages,
+    }});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    prepOpenPreview(data.generation);
+    await prepRenderMatchAndLessons();
+  }catch(e){alert('تعذّر التوليد: '+(e.message||''));}
+}
+async function prepShowExisting(curId){
+  try{
+    const{data,error}=await sb.from('lesson_prep_generations').select('*').eq('curriculum_id',curId).maybeSingle();
+    if(error)throw error;
+    if(data)prepOpenPreview(data);
+  }catch(e){alert('تعذّر العرض: '+(e.message||''));}
+}
+let prepPreviewGen=null;
+function prepOpenPreview(gen){
+  prepPreviewGen=gen;
+  document.getElementById('prep-preview-title').textContent=(gen.lesson||'')+' — '+(gen.unit||'');
+  const content=gen.content||{};
+  const sections=Array.isArray(content.sections)?content.sections:[];
+  document.getElementById('prep-preview-body').innerHTML=sections.map(s=>
+    `<div style="margin-bottom:16px"><div style="font-weight:800;font-size:14px;margin-bottom:6px;color:#2F5A78">${escHtml(s.heading||'')}</div><div style="white-space:pre-wrap">${escHtml(s.body||'')}</div></div>`
+  ).join('')||'<div style="color:#7A715B">لا محتوى</div>';
+  document.getElementById('prep-approve-btn').style.display=gen.status==='approved'?'none':'inline-block';
+  document.getElementById('prep-preview-modal').style.display='block';
+}
+function prepClosePreview(){document.getElementById('prep-preview-modal').style.display='none';prepPreviewGen=null;}
+async function prepApprove(){
+  if(!prepPreviewGen)return;
+  try{
+    const{error}=await sb.from('lesson_prep_generations').update({status:'approved',approved_at:new Date().toISOString()}).eq('id',prepPreviewGen.id);
+    if(error)throw error;
+    prepClosePreview();
+    await prepRenderMatchAndLessons();
+    toast&&toast('✅ اعتُمد التحضير');
+  }catch(e){alert('تعذّر الاعتماد: '+(e.message||''));}
+}
+async function prepSaveTemplate(){
+  const text=document.getElementById('prep-template-text').value.trim();
+  const msg=document.getElementById('prep-template-msg');
+  if(!text){msg.textContent='الصقي نص القالب أولاً';return;}
+  try{
+    const{error}=await sb.from('ai_settings').upsert({key:'prep_template_text',value:text},{onConflict:'key'});
+    if(error)throw error;
+    msg.textContent='✅ حُفظ';
+  }catch(e){msg.textContent='تعذّر الحفظ: '+(e.message||'');}
+}
+async function prepLoadTemplate(){
+  try{
+    const{data}=await sb.from('ai_settings').select('value').eq('key','prep_template_text').maybeSingle();
+    if(data&&data.value)document.getElementById('prep-template-text').value=data.value;
+  }catch(e){}
 }
 
 // ══ متابعة الخطة الذهبية ══
@@ -13758,6 +14095,7 @@ function ktGoC1(section,btn){
   if(section==='msgs')c1msgInit();
   if(section==='storage')mc1LoadStorage();
   if(section==='golden')mc1GoldenInit();
+  if(section==='preps')prepInit();
 }
 function ktShellGreeting(){
   const h=new Date().getHours();
