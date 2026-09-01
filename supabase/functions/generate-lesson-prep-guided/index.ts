@@ -11,6 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseAiJson } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
+import { readDocxBytes, fillDocxTemplate, appendUnmatchedSections, writeDocxBytes, buildGenericDocx } from "../_shared/docx.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -137,6 +138,39 @@ Deno.serve(async (req) => {
       return json({ error: "bad_output", detail: (attempt as { detail?: string }).detail }, 502);
     }
 
+    // بناء ملف Word الفعلي: إن كان القالب المعتمد مرفوعاً كـWord، نحقن كل
+    // قسمٍ مولَّد داخل نسخةٍ من ملف القالب نفسه (بعد فقرة عنوانه المطابقة)
+    // فيخرج التحضير بنفس تنسيق القالب حرفياً. غياب قالب Word (قالبٌ من PDF
+    // فقط، أو لم يُرفع بعد) يُنتج مستنداً عاماً بسيطاً بدلاً منه.
+    const sections = (attempt.content.sections || []) as { heading?: string; body?: string }[];
+    const cleanSections = sections.map((s) => ({ heading: String(s.heading || ""), body: String(s.body || "") }));
+    let docxBytes: Uint8Array;
+    try {
+      if (st.prep_template_ext === "docx") {
+        const { data: tplBlob, error: tplErr } = await admin.storage.from("library-files").download("prep-template/template.docx");
+        if (tplErr || !tplBlob) throw new Error("template_missing");
+        const tplBytes = new Uint8Array(await tplBlob.arrayBuffer());
+        const { zip, documentXml } = await readDocxBytes(tplBytes);
+        const filled = fillDocxTemplate(documentXml, cleanSections);
+        const withExtras = appendUnmatchedSections(filled.xml, cleanSections, filled.unmatched);
+        docxBytes = await writeDocxBytes(zip, withExtras);
+      } else {
+        docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
+      }
+    } catch (e) {
+      console.error("docx_build_failed:", String(e));
+      docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
+    }
+
+    const docxPath = `generated-preps/${curriculumId}.docx`;
+    const { error: docxUpErr } = await admin.storage.from("library-files").upload(docxPath, docxBytes, {
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      upsert: true,
+    });
+    let docxUrl: string | null = null;
+    if (docxUpErr) console.error("docx_upload_failed:", docxUpErr.message);
+    else docxUrl = admin.storage.from("library-files").getPublicUrl(docxPath).data.publicUrl;
+
     const { data: saved, error: upErr } = await admin.from("lesson_prep_generations").upsert({
       curriculum_id: curriculumId,
       teacher_guide_id: teacherGuideId || null,
@@ -146,6 +180,7 @@ Deno.serve(async (req) => {
       unit: cur.unit,
       lesson: cur.lesson,
       content: attempt.content,
+      docx_url: docxUrl,
       status: "draft",
       model,
       created_by: user.id,

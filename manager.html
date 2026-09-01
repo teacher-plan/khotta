@@ -2695,13 +2695,14 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
 
-    <!-- ٢) قالب التحضير المعتمد (ثابت لكل المواد) -->
+    <!-- ٢) قالب التحضير المعتمد (ملفٌّ واحد ثابت لكل المواد) -->
     <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
       <h1 style="font-size:16px;margin:0 0 8px">القالب المعتمد للتحضير</h1>
-      <p style="margin:0 0 10px">مرجع تنسيقٍ واحد يُستخدم لكل المواد — الصقي نص القالب (عناوين أقسامه بالترتيب) هنا</p>
-      <textarea id="prep-template-text" placeholder="مثال:\nأولاً: الأهداف\nثانياً: التهيئة\nثالثاً: العرض والأنشطة\n..." style="width:100%;min-height:140px;padding:10px;border:1.5px solid #E3DCC9;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12.5px;resize:vertical"></textarea>
-      <button onclick="prepSaveTemplate()" style="margin-top:10px;padding:9px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer">حفظ القالب</button>
-      <span id="prep-template-msg" style="font-size:11.5px;font-weight:700;color:#487848;margin-inline-start:10px"></span>
+      <p style="margin:0 0 10px">ارفعي ملف القالب (Word أو PDF) — لو كان Word سيُستعمل حرفياً كهيكل التحضير الناتج (نفس التنسيق بالضبط)؛ لو كان PDF يُستخرج نصّ أقسامه فقط ويُنتَج ملفٌّ عامٌّ منسَّق بدلاً من نسخةٍ حرفية</p>
+      <div id="prep-template-status" style="font-size:12.5px;color:#7A715B;margin-bottom:10px">يجري التحميل…</div>
+      <input type="file" id="prep-template-file" accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>
+      <button onclick="prepUploadTemplate()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">رفع القالب</button>
+      <div id="prep-template-progress" style="font-size:12px;color:#7A715B;margin-top:8px"></div>
     </div>
 
     <!-- ٣) دليل المعلم لهذا النطاق -->
@@ -2744,7 +2745,8 @@ input,textarea,select{font-size:16px !important;}
         <button onclick="prepClosePreview()" style="position:absolute;top:14px;left:14px;background:none;border:none;font-size:20px;cursor:pointer">✕</button>
         <h1 id="prep-preview-title" style="font-size:17px;margin:0 0 14px"></h1>
         <div id="prep-preview-body" style="font-size:13px;line-height:2"></div>
-        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <a id="prep-download-btn" href="#" target="_blank" style="display:none;padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#2F5A78,#1F3E54);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;text-decoration:none">⬇️ تنزيل ملف Word</a>
           <button onclick="prepApprove()" id="prep-approve-btn" style="padding:9px 22px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">اعتماد</button>
           <button onclick="prepClosePreview()" style="padding:9px 22px;border:1.5px solid #E3DCC9;border-radius:10px;background:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">إغلاق</button>
         </div>
@@ -6477,6 +6479,8 @@ function prepOpenPreview(gen){
     `<div style="margin-bottom:16px"><div style="font-weight:800;font-size:14px;margin-bottom:6px;color:#2F5A78">${escHtml(s.heading||'')}</div><div style="white-space:pre-wrap">${escHtml(s.body||'')}</div></div>`
   ).join('')||'<div style="color:#7A715B">لا محتوى</div>';
   document.getElementById('prep-approve-btn').style.display=gen.status==='approved'?'none':'inline-block';
+  const dl=document.getElementById('prep-download-btn');
+  if(gen.docx_url){dl.href=gen.docx_url;dl.style.display='inline-block';}else{dl.style.display='none';}
   document.getElementById('prep-preview-modal').style.display='block';
 }
 function prepClosePreview(){document.getElementById('prep-preview-modal').style.display='none';prepPreviewGen=null;}
@@ -6490,21 +6494,53 @@ async function prepApprove(){
     toast&&toast('✅ اعتُمد التحضير');
   }catch(e){alert('تعذّر الاعتماد: '+(e.message||''));}
 }
-async function prepSaveTemplate(){
-  const text=document.getElementById('prep-template-text').value.trim();
-  const msg=document.getElementById('prep-template-msg');
-  if(!text){msg.textContent='الصقي نص القالب أولاً';return;}
+// رفع ملف القالب المعتمد (Word حرفياً كهيكل، أو PDF فقط لاستخراج نصّه)
+// ثم استدعاء extract-prep-template لقراءته وتسجيله في ai_settings.
+async function prepUploadTemplate(){
+  const file=document.getElementById('prep-template-file').files[0];
+  const progress=document.getElementById('prep-template-progress');
+  if(!file){progress.textContent='❌ اختاري ملفاً أولاً';return;}
+  const isDocx=/\.docx$/i.test(file.name);
+  const isPdf=/\.pdf$/i.test(file.name);
+  if(!isDocx&&!isPdf){progress.textContent='❌ الملف يجب أن يكون Word (.docx) أو PDF';return;}
   try{
-    const{error}=await sb.from('ai_settings').upsert({key:'prep_template_text',value:text},{onConflict:'key'});
-    if(error)throw error;
-    msg.textContent='✅ حُفظ';
-  }catch(e){msg.textContent='تعذّر الحفظ: '+(e.message||'');}
+    if(isDocx){
+      progress.textContent='⬆️ يرفع ملف Word…';
+      const{error}=await sb.storage.from('library-files').upload('prep-template/template.docx',file,{upsert:true,contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      if(error)throw error;
+      progress.textContent='⏳ يقرأ عناوين أقسام القالب…';
+      const{data,error:fnErr}=await sb.functions.invoke('extract-prep-template',{body:{ext:'docx'}});
+      if(fnErr)throw fnErr;
+      if(data&&data.error)throw new Error(data.error);
+      progress.textContent='✅ تم — سيُستعمل هذا الملف حرفياً كهيكل كل تحضيرٍ يُولَّد';
+    }else{
+      progress.textContent='⏳ يحوّل صفحات القالب…';
+      await loadPdfJs();
+      const buf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+      const N=pdf.numPages;
+      for(let p=1;p<=N;p++){
+        progress.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+'...';
+        const blob=await ltRenderPageBlob(pdf,p,850,0.6);
+        if(blob)await sb.storage.from('library-files').upload('prep-template/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});
+      }
+      progress.textContent='⏳ يقرأ عناوين أقسام القالب بالذكاء الاصطناعي…';
+      const{data,error:fnErr}=await sb.functions.invoke('extract-prep-template',{body:{ext:'pdf',page_count:N}});
+      if(fnErr)throw fnErr;
+      if(data&&data.error)throw new Error(data.error);
+      progress.textContent='✅ تم — استُخرج نص أقسام القالب (الناتج سيكون Word بتنسيقٍ عامٍّ منسَّق، لا نسخةً حرفية من PDF)';
+    }
+    await prepLoadTemplate();
+  }catch(e){progress.textContent='❌ تعذّر: '+(e.message||'');}
 }
 async function prepLoadTemplate(){
+  const status=document.getElementById('prep-template-status');
   try{
-    const{data}=await sb.from('ai_settings').select('value').eq('key','prep_template_text').maybeSingle();
-    if(data&&data.value)document.getElementById('prep-template-text').value=data.value;
-  }catch(e){}
+    const{data}=await sb.from('ai_settings').select('key,value').in('key',['prep_template_text','prep_template_ext']);
+    const m={};(data||[]).forEach(r=>m[r.key]=r.value);
+    if(!m.prep_template_text){status.textContent='لا يوجد قالبٌ مرفوع بعد';return;}
+    status.textContent='✅ قالبٌ مرفوع ('+(m.prep_template_ext==='docx'?'Word — يُستعمل حرفياً':'PDF — نصٌّ مستخرَج فقط')+') — '+m.prep_template_text.split('\n').filter(Boolean).length+' قسماً مكتشفاً';
+  }catch(e){status.textContent='';}
 }
 
 // ══ متابعة الخطة الذهبية ══
