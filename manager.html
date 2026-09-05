@@ -6344,13 +6344,24 @@ async function prepUploadGuide(){
     prepRenderGuideStatus();
   }catch(e){status.textContent='فشل تسجيل الدليل: '+(e.message||'');}
 }
+// supabase-js يلفّ أي ردٍّ غير 2xx في FunctionsHttpError برسالةٍ عامة
+// («non-2xx status code») ويُخفي جسم الرد — وفيه سببُ الفشل الحقيقي الذي
+// تُعيده الدالّة. هذه تقرأ الجسم فتظهر الرسالة المفيدة بدل العامة.
+async function prepFnErrText(error){
+  try{
+    const j=await error.context.json();
+    const parts=[j.error,j.detail].filter(Boolean);
+    if(parts.length)return parts.join(' — ');
+  }catch(_){}
+  return error.message||'خطأ غير معروف';
+}
 async function prepIndexGuide(){
   if(!prepGuide)return;
   const progress=document.getElementById('prep-guide-progress');
   progress.textContent='⏳ يقرأ الفهرس ويطابقه بالذكاء الاصطناعي… قد يستغرق دقيقة';
   try{
     const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:prepGuide.id}});
-    if(error)throw error;
+    if(error)throw new Error(await prepFnErrText(error));
     if(data&&data.error)throw new Error(data.error);
     progress.textContent='✅ تمّت المطابقة';
     const{data:guide}=await sb.from('teacher_guides').select('*').eq('id',prepGuide.id).maybeSingle();
@@ -6450,7 +6461,7 @@ async function prepGenerateLesson(curId){
     const{data,error}=await sb.functions.invoke('generate-lesson-prep-guided',{body:{
       curriculum_id:cur.id,teacher_guide_id:prepGuide?prepGuide.id:null,book_images:bookImages,guide_images:guideImages,
     }});
-    if(error)throw error;
+    if(error)throw new Error(await prepFnErrText(error));
     if(data&&data.error)throw new Error(data.error);
     prepOpenPreview(data.generation);
     await prepRenderMatchAndLessons();

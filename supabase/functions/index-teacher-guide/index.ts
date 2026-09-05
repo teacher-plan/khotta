@@ -24,9 +24,13 @@ function json(body: unknown, status = 200) {
 }
 
 const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
-// عدد صفحات دليل المعلم التي نفحصها بحثاً عن الفهرس — عادة في المقدمة،
-// لكن نمنح هامشاً (بعض الأدلة تضع فهرساً تفصيلياً بعد مقدمة طويلة).
-const SCAN_PAGES = 25;
+// البحث عن الفهرس يتم على دفعاتٍ متتابعة لا دفعةً واحدة: أوّل محاولةٍ فعلية
+// أرسلت أوّل ٢٥ صفحة من دليلٍ عدده ٤٠٤ صفحات فلم تجد الفهرس (رجع
+// no_entries_found)، لأن الأدلة الكبيرة تضع فهرسها بعد مقدماتٍ وأُطرٍ عامة
+// طويلة. نمسح الآن مدًى أوسع، لكن على دفعاتٍ صغيرة نتوقف عند أوّل دفعةٍ
+// يظهر فيها الفهرس — فلا ندفع ثمن الصفحات الباقية بلا داعٍ.
+const SCAN_BATCH = 12;      // صفحات لكل نداء رؤية
+const SCAN_MAX_PAGES = 72;  // أقصى مدًى نبحث فيه عن الفهرس (٦ دفعات)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -73,60 +77,76 @@ Deno.serve(async (req) => {
     const model = ensureVision(st.model_guide_index || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
 
     const pub = (sheet: number) => admin.storage.from("library-files").getPublicUrl(`${guide.base_path}/p${sheet}.jpg`).data.publicUrl;
-    const scanCount = Math.min(SCAN_PAGES, guide.page_count);
-    const images: string[] = [];
-    for (let i = 1; i <= scanCount; i++) images.push(pub(i));
 
     const curListText = curRows.map((r: { id: number; unit: string; lesson: string }) => `${r.id}: ${r.unit} — ${r.lesson}`).join("\n");
 
     const system = [
-      "أنت خبيرٌ في مطابقة فهارس الكتب المدرسية العُمانية. أمامك صور صفحات من مقدمة دليل معلمٍ (تحتوي على فهرس/جدول محتويات في مكانٍ ما بينها).",
-      "مهمتك: (١) حدد صفحة الفهرس واستخرج كل بند فيه (اسم الوحدة، اسم الدرس، رقم الصفحة كما هو مطبوع في الدليل).",
-      "(٢) طابق كل بندٍ من فهرس الدليل مع أقرب درسٍ في قائمة دروس الكتاب المرقّمة أدناه (المطابقة بالمعنى لا بالنص الحرفي — قد يختلف صياغة اسم الدرس قليلاً بين الكتاب والدليل).",
+      "أنت خبيرٌ في مطابقة فهارس الكتب المدرسية العُمانية. أمامك صورُ صفحاتٍ متتابعة من دليل معلم؛ قد تحتوي على فهرس/جدول محتويات وقد لا تحتوي.",
+      "مهمتك: (١) إن وُجدت صفحة فهرسٍ بين الصور، استخرج كل بندٍ فيها (اسم الوحدة، اسم الدرس، رقم الصفحة كما هو مطبوع في الدليل).",
+      "(٢) طابق كل بندٍ من فهرس الدليل مع أقرب درسٍ في قائمة دروس الكتاب المرقّمة أدناه (المطابقة بالمعنى لا بالنص الحرفي — قد تختلف صياغة اسم الدرس قليلاً بين الكتاب والدليل).",
       "قائمة دروس الكتاب (id: الوحدة — الدرس):",
       curListText,
       'أعد الناتج JSON فقط بهذا الشكل: {"entries":[{"guide_unit":"...","guide_lesson":"...","guide_page":12,"matched_curriculum_id":37,"confidence":"high"}]}',
       "confidence تكون high إن كانت المطابقة شبه مؤكدة، medium إن محتملة، low إن غير متأكد — واترك matched_curriculum_id فارغاً (null) إن لم تجد أي تطابق معقول.",
       "لا تخترع بنوداً غير موجودة فعلاً في صور الفهرس.",
+      'مهمٌّ جداً: إن لم تكن هذه الصور تحوي فهرساً إطلاقاً (صفحات مقدمةٍ أو دروسٍ عادية) فأعد {"entries":[]} بلا أي اجتهاد.',
     ].join("\n");
 
-    const userContent: unknown[] = [{ type: "text", text: "صور صفحات دليل المعلم (ابحث عن الفهرس بينها):" }];
-    for (const u of images) userContent.push({ type: "image_url", image_url: { url: u } });
+    // مسحٌ على دفعات: نتوقف عند أوّل دفعةٍ يظهر فيها الفهرس فعلاً.
+    const lastPage = Math.min(SCAN_MAX_PAGES, guide.page_count);
+    let entries: unknown[] = [];
+    let usage: unknown = null;
+    let scannedTo = 0;
 
-    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://khotati.com",
-        "X-Title": "Khotta Guide Index Matcher",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-        max_tokens: 4000,
-      }),
-    }, { st, task: "guide_index" });
+    for (let start = 1; start <= lastPage && !entries.length; start += SCAN_BATCH) {
+      const end = Math.min(start + SCAN_BATCH - 1, lastPage);
+      scannedTo = end;
+      const userContent: unknown[] = [{
+        type: "text",
+        text: `صفحات دليل المعلم من ${start} إلى ${end} — ابحث عن الفهرس بينها:`,
+      }];
+      for (let i = start; i <= end; i++) userContent.push({ type: "image_url", image_url: { url: pub(i) } });
 
-    const j = await r.json();
-    if (!r.ok) {
-      const m = String(j?.error?.message || j?.message || "");
-      console.error(`openrouter ${r.status} في index-teacher-guide: ${m}`);
-      await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
-      return json({ error: orErrCode(r.status, m), detail: m.slice(0, 200) }, 502);
+      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Guide Index Matcher",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: userContent },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 4000,
+        }),
+      }, { st, task: "guide_index" });
+
+      const j = await r.json();
+      if (!r.ok) {
+        const m = String(j?.error?.message || j?.message || "");
+        console.error(`openrouter ${r.status} في index-teacher-guide (صفحات ${start}-${end}): ${m}`);
+        await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
+        return json({ error: orErrCode(r.status, m), detail: m.slice(0, 200) }, 502);
+      }
+
+      const text = j?.choices?.[0]?.message?.content || "";
+      const parsed = parseAiJson<{ entries?: unknown[] }>(text);
+      const batch = parsed.ok ? (parsed.value.entries || []) : [];
+      if (batch.length) { entries = batch; usage = j?.usage || null; }
     }
 
-    const text = j?.choices?.[0]?.message?.content || "";
-    const parsed = parseAiJson<{ entries?: unknown[] }>(text);
-    const entries = parsed.ok ? (parsed.value.entries || []) : [];
     if (!entries.length) {
+      // يُسجَّل صراحةً: أوّل فشلٍ حقيقي مرّ صامتاً بلا أثرٍ في السجلّ فتعذّر
+      // تشخيصه إلا بقراءة رمز الحالة وحده.
+      console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${scannedTo} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
       await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
-      return json({ error: "no_entries_found" }, 502);
+      return json({ error: "index_not_found", detail: `لم يُعثر على فهرسٍ في أول ${scannedTo} صفحة من الدليل (عدد صفحاته ${guide.page_count})` }, 502);
     }
 
     await admin.from("teacher_guides").update({
@@ -136,7 +156,7 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     }).eq("id", guideId);
 
-    return json({ entries, model, usage: j?.usage || null });
+    return json({ entries, model, usage, scanned_to: scannedTo });
   } catch (e) {
     console.error("server_error:", String(e));
     return json({ error: "server_error" }, 500);
