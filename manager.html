@@ -2707,6 +2707,17 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
 
+    <!-- ٣) مطابقةٌ شاملة + تقرير التغطية -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <h1 style="font-size:16px;margin:0 0 8px">المطابقة الشاملة وتقرير التغطية</h1>
+      <p style="margin:0 0 10px">طابقي فهارس كل الأدلة المرفوعة دفعةً واحدة، ثم اعرضي أي درسٍ في كتاب الطالب بلا مقابلٍ في دليل المعلم</p>
+      <button onclick="prepMatchAll()" id="prep-matchall-btn" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#C8A03C,#A97E22);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer">مطابقة كل الأدلة غير المطابَقة</button>
+      <button onclick="prepMatchAll(true)" style="padding:9px 18px;border:1.5px solid #E3DCC9;border-radius:10px;background:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">إعادة مطابقة الكل</button>
+      <button onclick="prepCoverageReport()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">تقرير التغطية</button>
+      <div id="prep-matchall-log" style="font-size:12px;color:#5B5340;margin-top:10px;max-height:220px;overflow:auto;line-height:1.9"></div>
+      <div id="prep-coverage" style="margin-top:12px"></div>
+    </div>
+
     <!-- ٤) نتيجة المطابقة -->
     <div id="prep-match-wrap" style="max-width:760px;margin:0 auto 18px;display:none">
       <h1 style="font-size:16px">مطابقة الفهرس</h1>
@@ -6370,6 +6381,107 @@ async function prepIndexGuide(){
     await prepRenderMatchAndLessons();
   }catch(e){progress.textContent='❌ فشلت المطابقة: '+(e.message||'');prepRenderGuideStatus();}
 }
+// ── مطابقةٌ شاملة لكل الأدلة ──
+// الدالّة محميّةٌ بصلاحية المشرف، فتُنفَّذ من متصفّح المشرف لا من الخادم.
+// نُنفّذها تسلسلياً (لا متوازية) لأن كل مطابقةٍ تستهلك نداءات رؤيةٍ متعددة،
+// والتوازي يصطدم بحدّ المعدّل عند المزوّد ويُفشل أدلةً سليمة بلا سبب.
+async function prepMatchAll(redoAll){
+  const log=document.getElementById('prep-matchall-log');
+  const btn=document.getElementById('prep-matchall-btn');
+  const semester=document.getElementById('prep-semester').value;
+  let q=sb.from('teacher_guides').select('*').eq('semester',semester).order('grade').order('subject');
+  const{data:guides,error}=await q;
+  if(error){log.innerHTML='<span style="color:#B23">تعذّر جلب الأدلة: '+escHtml(error.message||'')+'</span>';return;}
+  const todo=(guides||[]).filter(g=>redoAll?true:g.status!=='indexed');
+  if(!todo.length){log.innerHTML='لا أدلة تحتاج مطابقة (كلها مطابَقة سلفاً — استعملي «إعادة مطابقة الكل» لإعادتها).';return;}
+  if(!await uiConfirm('ستُطابَق '+egToArabic(todo.length)+' أدلة، وكلٌّ منها يستغرق نحو دقيقة.\nلا تُغلقي الصفحة أثناء التنفيذ. متابعة؟'))return;
+  btn.disabled=true;
+  let ok=0,failed=0;
+  log.innerHTML='';
+  for(let i=0;i<todo.length;i++){
+    const g=todo[i];
+    const line=document.createElement('div');
+    line.textContent='⏳ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+'…';
+    log.prepend(line);
+    try{
+      const{data,error:fnErr}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:g.id}});
+      if(fnErr)throw new Error(await prepFnErrText(fnErr));
+      if(data&&data.error)throw new Error(data.error);
+      const n=(data&&data.entries&&data.entries.length)||0;
+      line.textContent='✅ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': '+egToArabic(n)+' بنداً';
+      line.style.color='#2F5D2F';ok++;
+    }catch(e){
+      line.textContent='❌ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': '+(e.message||'خطأ');
+      line.style.color='#B23';failed++;
+    }
+  }
+  btn.disabled=false;
+  const sum=document.createElement('div');
+  sum.style.cssText='font-weight:800;margin-bottom:6px;border-bottom:1px solid #E3DCC9;padding-bottom:6px';
+  sum.textContent='انتهت المطابقة: نجح '+egToArabic(ok)+'، فشل '+egToArabic(failed);
+  log.prepend(sum);
+  await prepScopeChanged();
+}
+
+// ── تقرير التغطية ──
+// السؤال الذي يجيب عنه: هل لكل درسٍ في كتاب الطالب مقابلٌ في دليل المعلم؟
+// يقارن صفوف curriculum بما طابقه الذكاء الاصطناعي في teacher_guides.toc،
+// ويُسمّي الدروس غير المغطّاة صراحةً بدل الاكتفاء بنسبةٍ مئوية.
+async function prepCoverageReport(){
+  const box=document.getElementById('prep-coverage');
+  const semester=document.getElementById('prep-semester').value;
+  box.innerHTML='<div style="font-size:12px;color:#7A715B">يجري الحساب…</div>';
+  try{
+    const{data:guides}=await sb.from('teacher_guides').select('*').eq('semester',semester).order('grade').order('subject');
+    const{data:curAll,error:cErr}=await sb.from('curriculum').select('id,grade,subject,unit,lesson,sort').eq('semester',semester).lte('grade',4).order('grade').order('sort');
+    if(cErr)throw cErr;
+    const byKey={};
+    (curAll||[]).forEach(r=>{const k=r.grade+'|'+r.subject;(byKey[k]=byKey[k]||[]).push(r);});
+    const rows=[];let totLessons=0,totCovered=0;
+    for(const g of (guides||[])){
+      const k=g.grade+'|'+g.subject;
+      const lessons=byKey[k]||[];
+      const matched=new Set(((g.toc||[]).map(e=>e.matched_curriculum_id).filter(Boolean)));
+      const missing=lessons.filter(l=>!matched.has(l.id));
+      totLessons+=lessons.length;totCovered+=(lessons.length-missing.length);
+      rows.push({grade:g.grade,subject:g.subject,status:g.status,total:lessons.length,missing});
+    }
+    // مواد لها منهجٌ في القاعدة ولا دليل مرفوع أصلاً — نقصٌ يجب أن يظهر أيضاً
+    Object.keys(byKey).forEach(k=>{
+      const[gr,sub]=k.split('|');
+      if(!(guides||[]).some(g=>String(g.grade)===gr&&g.subject===sub)){
+        rows.push({grade:Number(gr),subject:sub,status:'no_guide',total:byKey[k].length,missing:byKey[k]});
+        totLessons+=byKey[k].length;
+      }
+    });
+    rows.sort((a,b)=>a.grade-b.grade||a.subject.localeCompare(b.subject,'ar'));
+    const pct=totLessons?Math.round(totCovered*100/totLessons):0;
+    box.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:8px">التغطية الكلية: '
+      +egToArabic(totCovered)+' من '+egToArabic(totLessons)+' درساً ('+egToArabic(pct)+'٪)</div>'
+      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<thead><tr style="background:#F0EBDF">'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">الصف</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">المادة</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">مغطّى</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">دروس بلا مقابل في الدليل</th></tr></thead><tbody>'
+      +rows.map(r=>{
+        const cov=r.total-r.missing.length;
+        const bad=r.missing.length>0;
+        return '<tr>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'+escHtml(libGradeName(r.grade))+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'+escHtml(r.subject)+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9;font-weight:800;color:'+(bad?'#B23':'#2F5D2F')+'">'
+            +egToArabic(cov)+'/'+egToArabic(r.total)+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'
+            +(r.status==='no_guide'?'<span style="color:#B23">لا دليل مرفوع</span>'
+              :r.status!=='indexed'?'<span style="color:#8A6D1E">لم تُطابَق بعد</span>'
+              :bad?escHtml(r.missing.map(m=>m.lesson).join('، ')):'<span style="color:#2F5D2F">مكتمل ✓</span>')
+          +'</td></tr>';
+      }).join('')
+      +'</tbody></table></div>';
+  }catch(e){box.innerHTML='<span style="color:#B23">تعذّر التقرير: '+escHtml(e.message||'')+'</span>';}
+}
+
 async function prepRenderMatchAndLessons(){
   if(!prepGuide||!Array.isArray(prepGuide.toc))return;
   const curById={};prepCurriculum.forEach(r=>curById[r.id]=r);
