@@ -149,14 +149,68 @@ Deno.serve(async (req) => {
       return json({ error: "index_not_found", detail: `لم يُعثر على فهرسٍ في أول ${scannedTo} صفحة من الدليل (عدد صفحاته ${guide.page_count})` }, 502);
     }
 
+    // ── إزاحة الترقيم ──
+    // الفهرس يعطي رقم الصفحة *المطبوع*، وصورنا مرقّمة بترتيب ورق الـPDF.
+    // الغلاف والمقدمات تجعل الاثنين مختلفَين، فترسل الواجهةُ صفحاتِ درسٍ
+    // آخر بلا أن يشعر أحد. نقيسها هنا مرّةً واحدة: نعرض ورقةً بعينها ونسأل
+    // النموذج عن الرقم المطبوع عليها، فالإزاحة = رقم الورقة − المطبوع + ١.
+    // (نفس معنى offset_pages في book_sources الذي يضبطه المشرف يدوياً للكتاب.)
+    const printedOnSheet = async (sheet: number): Promise<number | null> => {
+      const rr = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Guide Offset Probe",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: 'ما رقم الصفحة المطبوع على هذه الصفحة (عادةً في أعلاها أو أسفلها)؟ أعد JSON فقط بالشكل {"printed": 12} أو {"printed": null} إن لم يظهر رقمٌ مطبوع.' },
+              { type: "image_url", image_url: { url: pub(sheet) } },
+            ],
+          }],
+          response_format: { type: "json_object" },
+          temperature: 0,
+          max_tokens: 100,
+        }),
+      }, { st, task: "guide_index" });
+      if (!rr.ok) return null;
+      const jj = await rr.json();
+      const pp = parseAiJson<{ printed?: number | null }>(jj?.choices?.[0]?.message?.content || "");
+      const v = pp.ok ? pp.value.printed : null;
+      return typeof v === "number" && isFinite(v) && v > 0 ? v : null;
+    };
+
+    let offsetPages = guide.offset_pages || 1;
+    try {
+      const firstPrinted = (entries as { guide_page?: number }[])
+        .map((e) => e.guide_page).filter((p): p is number => typeof p === "number" && p > 0)
+        .sort((a, b) => a - b)[0];
+      if (firstPrinted) {
+        // نجرّب ورقتين: الورقة المساوية للرقم المطبوع، ثم واحدةٌ أبعد قليلاً
+        // إن لم يظهر رقمٌ على الأولى (صفحاتُ بدايةِ الوحدات كثيراً بلا ترقيم).
+        for (const probeSheet of [firstPrinted, Math.min(firstPrinted + 6, guide.page_count)]) {
+          const printed = await printedOnSheet(probeSheet);
+          if (printed) { offsetPages = probeSheet - printed + 1; break; }
+        }
+      }
+    } catch (e) {
+      console.error("offset probe failed (نُبقي الإزاحة كما هي):", String(e));
+    }
+
     await admin.from("teacher_guides").update({
       toc: entries,
+      offset_pages: offsetPages,
       status: "indexed",
       indexed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", guideId);
 
-    return json({ entries, model, usage, scanned_to: scannedTo });
+    return json({ entries, model, usage, scanned_to: scannedTo, offset_pages: offsetPages });
   } catch (e) {
     console.error("server_error:", String(e));
     return json({ error: "server_error" }, 500);

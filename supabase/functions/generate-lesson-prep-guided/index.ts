@@ -198,7 +198,10 @@ Deno.serve(async (req) => {
       subject: cur.subject,
       unit: cur.unit,
       lesson: cur.lesson,
-      content: attempt.content,
+      // _sources: أثرٌ محفوظ لما قُرئ فعلاً — عددُ صفحات كل مصدر وروابطها.
+      // بدونه يبقى «قرأ الكتاب ودليل المعلم» ادّعاءً لا سبيل للتحقق منه بعد
+      // التوليد، ولا ينكشف تحضيرٌ بُني من الكتاب وحده لغياب مطابقةٍ للدليل.
+      content: { ...attempt.content, _sources: { book_pages: bookImages.length, guide_pages: guideImages.length, book_images: bookImages, guide_images: guideImages } },
       docx_url: docxUrl,
       status: "draft",
       model,
