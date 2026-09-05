@@ -1,9 +1,11 @@
-// v2026.09.01 ════════════════════════════════════════════════════════════════
+// v2026.09.06 ════════════════════════════════════════════════════════════════
 // Edge Function: generate-lesson-prep-guided
 // (للمشرف فقط) يولّد تحضير درسٍ واحد من صفحاته في الكتاب المدرسي + دليل
-// المعلم معاً (بعد مطابقة الفهرس عبر index-teacher-guide)، بتنسيقٍ يقلّد
-// القالب المعتمد المخزَّن في ai_settings (prep_template_text). يُخزَّن
-// الناتج في lesson_prep_generations كمسودة تنتظر اعتماد المشرف.
+// المعلم معاً (بعد مطابقة الفهرس عبر index-teacher-guide)، بهيكل التحضير
+// المعتمد في منصة نور (سبعة أقسامٍ ثابتة — انظر NOOR_SECTIONS أدناه)، لا
+// بقالب Word مرفوع (أُلغي هذا المسار: التسليم الفعلي في نور نفسه، فالمعلمة
+// تنسخ كل قسمٍ من معاينة الشاشة إلى حقل نور المقابل مباشرة). يُخزَّن الناتج
+// في lesson_prep_generations كمسودة تنتظر اعتماد المشرف.
 //
 // النشر: تلقائي عبر GitHub Actions
 // الأسرار: OPENROUTER_API_KEY
@@ -11,7 +13,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseAiJson } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
-import { readDocxBytes, fillDocxTemplate, appendUnmatchedSections, writeDocxBytes, buildGenericDocx } from "../_shared/docx.ts";
+import { buildGenericDocx } from "../_shared/docx.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +28,37 @@ function json(body: unknown, status = 200) {
 }
 
 const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
+
+// هيكل التحضير المعتمد في منصة نور — ثابتٌ لكل درسٍ ومادة، لا يتغيّر بتغيّر
+// قالبٍ مرفوع. استُخرج من نموذج تحضيرٍ فعلي اعتمده الأستاذ عيسى (تحضير
+// «سورة الحشر» — تربية إسلامية، صف عاشر) وأكّد أن هذا هو العمق والتفصيل
+// المطلوبان فعلياً لكل درس، وليسا مبالغةً في مثالٍ واحد.
+const NOOR_SECTIONS = [
+  {
+    heading: "المخرجات التعليمية والمستوى التعليمي",
+    guidance: "٣-٥ مخرجات، كل واحدٍ بصيغة «أن يفعل الطالب...» (قراءة/فهم/تطبيق/تقويم حسب طبيعة الدرس)، مبنية حصراً على محتوى الكتاب ودليل المعلم لهذا الدرس. اختم بسطر «المستوى التعليمي: ...» يسمّي مستويات بلوم التي تغطيها المخرجات مجتمعة.",
+  },
+  {
+    heading: "الاستراتيجيات والمصادر التعليمية والمفاهيم",
+    guidance: "بنودٌ فرعية بعناوين صريحة كلٌّ في سطره: «الاستراتيجيات:»، «المصادر والوسائل:»، «المفاهيم:»، «المفردات:»، «المهارات:»، وإن اقتضت طبيعة المادة (كأحكام تلاوة أو مواضع وقف في التربية الإسلامية، أو قواعد سلامة في العلوم) أضف «الضبط المنهجي:» — احذفه إن لم يكن للدرس ما يستدعيه.",
+  },
+  {
+    heading: "التهيئة / التعلم القبلي",
+    guidance: "فقرة سردية تصف موقفاً أو سؤالاً افتتاحياً يربط الدرس بمعرفة الطلاب السابقة، ثم سطر منفصل يبدأ بـ«التحقق من التعلم القبلي:» يصف كيف يتأكد المعلم من جاهزية الطلاب قبل الدخول في الدرس.",
+  },
+  {
+    heading: "إجراءات سير الدرس والأنشطة",
+    guidance: "القسم الأكبر والأهم — سلسلة خطواتٍ مرقّمة متتابعة (عادة ما بين ١٥ إلى ٢٠ خطوة لدرسٍ كامل، لا تختصرها) تغطي بالترتيب: تثبيت هدف الحصة، الأنشطة الرئيسية للدرس بالتفصيل العملي (ماذا يفعل المعلم بالضبط وماذا يقول، وماذا يفعل الطلاب)، أسئلة المعلم المتدرجة (اذكرها كقائمة أسئلة فعلية مبنية على محتوى الدرس)، نشاط تطبيقي مركب، دعم المتعثرين، إثراء المتقدمين، تغذية راجعة منظمة، مؤشرات الأداء التي يلاحظها المعلم، معالجة الخطأ المتوقع الشائع لهذا الدرس تحديداً، تنظيم المشاركة والوقت، مهمة فردية تثبت الفهم، مراجعة بالأقران، إعادة تعليم فورية للمتعثرين، وتوثيق أثر التعلم استعداداً للغلق. كل خطوة رقمٌ متسلسل يبدأ بعنوان قصير ثم شرح تفصيلي عملي — لا عناوين عامة بلا تفصيل.",
+  },
+  {
+    heading: "التقويم التكويني",
+    guidance: "فقرة تصف آلية المتابعة أثناء الحصة (أسئلة شفهية بعد كل خطوة، اختيار طلاب متفاوتي المستوى...)، ثم سطر يبدأ بـ«معيار النجاح أثناء الحصة:» يحدد ما يُعتبر أداءً مقبولاً.",
+  },
+  {
+    heading: "التقويم الختامي / غلق الدرس",
+    guidance: "أداة تقويم ختامي محددة (بطاقة خروج، سؤال ختامي، أو ما يناسب طبيعة الدرس) بتفاصيلها، ثم فقرة «غلق الدرس:» تلخّص الدرس وتوجّه الطلاب لموضع المراجعة في الكتاب أو التدريب المقرر — بلا أي واجب أو معلومة غير واردة في المصدر.",
+  },
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -59,26 +92,25 @@ Deno.serve(async (req) => {
     const { data: rows } = await admin.from("ai_settings").select("key,value");
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
-    const template = String(st.prep_template_text || "").slice(0, 6000);
-    if (!template) return json({ error: "no_template" }, 400);
 
     const model = ensureVision(st.model_guided_prep || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
 
     const gradeNum = parseInt(String(cur.grade)) || 0;
     const age = gradeNum ? gradeNum + 6 : 0;
 
+    const sectionsSpec = NOOR_SECTIONS.map((s, i) => `${i + 1}. «${s.heading}» — ${s.guidance}`).join("\n");
+
     const system = [
-      "أنت خبير مناهج وطرائق تدريس متمرس في سلطنة عُمان.",
-      "معك مصدران للصور: (أ) صفحات الدرس من كتاب الطالب المعتمد، (ب) صفحات نفس الدرس من دليل المعلم الرسمي (يحوي توجيهات تدريسية وأنشطة مقترحة من الوزارة).",
+      "أنت خبير مناهج وطرائق تدريس متمرس في سلطنة عُمان، تُعِدّ تحضيراً رسمياً بهيكل منصة نور المعتمد وزارياً.",
+      "معك مصدران للصور: (أ) صفحات الدرس من كتاب الطالب المعتمد، (ب) صفحات نفس الدرس من دليل المعلم الرسمي (توجيهات تدريسية وأنشطة مقترحة من الوزارة).",
       "اقرأهما معاً بدقّة، وابنِ تحضيراً كاملاً لهذا الدرس اعتماداً على محتواهما الفعلي حصراً (لا من معرفة عامة) — استعمل توجيهات دليل المعلم تحديداً لتحديد الاستراتيجيات والأنشطة والتوقيت، واستعمل الكتاب لتحديد المحتوى والأمثلة والأسئلة.",
-      "القالب المعتمد التالي هو مرجع التنسيق الرسمي المطلوب — اتبع هيكله وعناوين أقسامه وترتيبها بدقة (لا تخترع أقساماً غير موجودة فيه، ولا تُسقط قسماً منه):",
-      "── بداية القالب ──",
-      template,
-      "── نهاية القالب ──",
-      age ? `أعمار الطلاب: ${age} سنوات تقريباً (الصف ${cur.grade}) — راعِ ذلك في الصياغة والأنشطة.` : "",
+      "هيكل التحضير ثابتٌ دائماً بهذه الأقسام السبعة بالضبط وبهذا الترتيب — لا تُسقط قسماً ولا تُضف قسماً غير مذكور:",
+      sectionsSpec,
+      age ? `أعمار الطلاب: ${age} سنوات تقريباً (الصف ${cur.grade}) — راعِ ذلك في الصياغة والأنشطة ومستوى الأسئلة.` : "",
       "صُغ بالعربية الفصحى بلغة تربوية رسمية دقيقة، والأرقام بالترقيم العربي-الهندي (٠١٢٣٤٥٦٧٨٩).",
-      'أعد الناتج JSON فقط بهذا الشكل: {"title":"عنوان التحضير","sections":[{"heading":"عنوان القسم كما في القالب","body":"المحتوى التفصيلي لهذا القسم"}]}',
-      "اجعل sections مطابقة تماماً لعدد وترتيب أقسام القالب أعلاه.",
+      "قسم «إجراءات سير الدرس والأنشطة» يجب أن يكون مفصلاً وعملياً بعمق مماثل للنموذج المعتمد (خطواتٌ مرقّمة كثيرة، لا ملخصاً عاماً) — هذا هو العمق الفعلي المطلوب دائماً، لا استثناءً.",
+      'أعد الناتج JSON فقط بهذا الشكل: {"title":"عنوان التحضير","sections":[{"heading":"عنوان القسم كما هو أعلاه حرفياً","body":"المحتوى التفصيلي لهذا القسم"}]}',
+      "اجعل sections سبعة عناصر بالضبط، بنفس ترتيب الأقسام أعلاه وعناوينها الحرفية.",
     ].filter(Boolean).join("\n");
 
     const userMsg = [
@@ -114,7 +146,7 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 4000,
+          max_tokens: 6000,
         }),
       }, { st, task: "guided_prep" });
       const j = await r.json();
@@ -122,7 +154,9 @@ Deno.serve(async (req) => {
       const text = j?.choices?.[0]?.message?.content || "";
       const pp = parseAiJson<{ title?: string; sections?: unknown[] }>(text);
       const val = pp.ok ? pp.value : null;
-      if (!val || !Array.isArray(val.sections) || !val.sections.length) return { ok: false as const, detail: text.slice(0, 300) };
+      if (!val || !Array.isArray(val.sections) || val.sections.length < NOOR_SECTIONS.length) {
+        return { ok: false as const, detail: text.slice(0, 300) };
+      }
       return { ok: true as const, content: val, usage: j?.usage || null };
     };
 
@@ -138,38 +172,23 @@ Deno.serve(async (req) => {
       return json({ error: "bad_output", detail: (attempt as { detail?: string }).detail }, 502);
     }
 
-    // بناء ملف Word الفعلي: إن كان القالب المعتمد مرفوعاً كـWord، نحقن كل
-    // قسمٍ مولَّد داخل نسخةٍ من ملف القالب نفسه (بعد فقرة عنوانه المطابقة)
-    // فيخرج التحضير بنفس تنسيق القالب حرفياً. غياب قالب Word (قالبٌ من PDF
-    // فقط، أو لم يُرفع بعد) يُنتج مستنداً عاماً بسيطاً بدلاً منه.
+    // ملف Word بسيط اختياري (تنزيلٌ إضافي مريح) — لا يقلّد أي قالبٍ ورقي؛
+    // المصدر الأساسي للتسليم هو نسخ كل قسمٍ من معاينة الشاشة إلى نور مباشرة.
     const sections = (attempt.content.sections || []) as { heading?: string; body?: string }[];
     const cleanSections = sections.map((s) => ({ heading: String(s.heading || ""), body: String(s.body || "") }));
-    let docxBytes: Uint8Array;
+    let docxUrl: string | null = null;
     try {
-      if (st.prep_template_ext === "docx") {
-        const { data: tplBlob, error: tplErr } = await admin.storage.from("library-files").download("prep-template/template.docx");
-        if (tplErr || !tplBlob) throw new Error("template_missing");
-        const tplBytes = new Uint8Array(await tplBlob.arrayBuffer());
-        const { zip, documentXml } = await readDocxBytes(tplBytes);
-        const filled = fillDocxTemplate(documentXml, cleanSections);
-        const withExtras = appendUnmatchedSections(filled.xml, cleanSections, filled.unmatched);
-        docxBytes = await writeDocxBytes(zip, withExtras);
-      } else {
-        docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
-      }
+      const docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
+      const docxPath = `generated-preps/${curriculumId}.docx`;
+      const { error: docxUpErr } = await admin.storage.from("library-files").upload(docxPath, docxBytes, {
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        upsert: true,
+      });
+      if (docxUpErr) console.error("docx_upload_failed:", docxUpErr.message);
+      else docxUrl = admin.storage.from("library-files").getPublicUrl(docxPath).data.publicUrl;
     } catch (e) {
       console.error("docx_build_failed:", String(e));
-      docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
     }
-
-    const docxPath = `generated-preps/${curriculumId}.docx`;
-    const { error: docxUpErr } = await admin.storage.from("library-files").upload(docxPath, docxBytes, {
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      upsert: true,
-    });
-    let docxUrl: string | null = null;
-    if (docxUpErr) console.error("docx_upload_failed:", docxUpErr.message);
-    else docxUrl = admin.storage.from("library-files").getPublicUrl(docxPath).data.publicUrl;
 
     const { data: saved, error: upErr } = await admin.from("lesson_prep_generations").upsert({
       curriculum_id: curriculumId,

@@ -2695,17 +2695,7 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
 
-    <!-- ٢) قالب التحضير المعتمد (ملفٌّ واحد ثابت لكل المواد) -->
-    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
-      <h1 style="font-size:16px;margin:0 0 8px">القالب المعتمد للتحضير</h1>
-      <p style="margin:0 0 10px">ارفعي ملف القالب (Word أو PDF) — لو كان Word سيُستعمل حرفياً كهيكل التحضير الناتج (نفس التنسيق بالضبط)؛ لو كان PDF يُستخرج نصّ أقسامه فقط ويُنتَج ملفٌّ عامٌّ منسَّق بدلاً من نسخةٍ حرفية</p>
-      <div id="prep-template-status" style="font-size:12.5px;color:#7A715B;margin-bottom:10px">يجري التحميل…</div>
-      <input type="file" id="prep-template-file" accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>
-      <button onclick="prepUploadTemplate()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">رفع القالب</button>
-      <div id="prep-template-progress" style="font-size:12px;color:#7A715B;margin-top:8px"></div>
-    </div>
-
-    <!-- ٣) دليل المعلم لهذا النطاق -->
+    <!-- ٢) دليل المعلم لهذا النطاق -->
     <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
       <h1 style="font-size:16px;margin:0 0 8px">دليل المعلم</h1>
       <div id="prep-guide-status" style="font-size:12.5px;color:#7A715B;margin-bottom:10px">اختاري الفصل والصف والمادة أولاً</div>
@@ -6263,7 +6253,6 @@ function prepInit(){
   if(!gs.dataset.ready){
     gs.dataset.ready='1';
     gs.innerHTML='<option value="">الصف</option>'+[1,2,3,4].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
-    prepLoadTemplate();
   }
   prepReloadSubjects();
 }
@@ -6477,8 +6466,17 @@ function prepOpenPreview(gen){
   document.getElementById('prep-preview-title').textContent=(gen.lesson||'')+' — '+(gen.unit||'');
   const content=gen.content||{};
   const sections=Array.isArray(content.sections)?content.sections:[];
-  document.getElementById('prep-preview-body').innerHTML=sections.map(s=>
-    `<div style="margin-bottom:16px"><div style="font-weight:800;font-size:14px;margin-bottom:6px;color:#2F5A78">${escHtml(s.heading||'')}</div><div style="white-space:pre-wrap">${escHtml(s.body||'')}</div></div>`
+  // زرّ نسخٍ مستقل لكل قسم: التسليم الفعلي يتم بلصق كل قسمٍ في حقله المقابل
+  // داخل منصة نور، لا بتنزيل ملفٍ ثم إعادة كتابته يدوياً.
+  prepPreviewSections=sections;
+  document.getElementById('prep-preview-body').innerHTML=sections.map((s,i)=>
+    `<div style="margin-bottom:18px;border:1px solid #EEE7D8;border-radius:12px;padding:12px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div style="font-weight:800;font-size:14px;color:#2F5A78">${escHtml(s.heading||'')}</div>
+        <button onclick="prepCopySection(${i},this)" style="padding:5px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap">نسخ</button>
+      </div>
+      <div style="white-space:pre-wrap">${escHtml(s.body||'')}</div>
+    </div>`
   ).join('')||'<div style="color:#7A715B">لا محتوى</div>';
   document.getElementById('prep-approve-btn').style.display=gen.status==='approved'?'none':'inline-block';
   const dl=document.getElementById('prep-download-btn');
@@ -6486,6 +6484,18 @@ function prepOpenPreview(gen){
   document.getElementById('prep-preview-modal').style.display='block';
 }
 function prepClosePreview(){document.getElementById('prep-preview-modal').style.display='none';prepPreviewGen=null;}
+let prepPreviewSections=[];
+async function prepCopySection(i,btn){
+  const s=prepPreviewSections[i];if(!s)return;
+  const text=(s.heading||'')+'\n\n'+(s.body||'');
+  try{await navigator.clipboard.writeText(text);}
+  catch(e){
+    // متصفحاتٌ ترفض الحافظة بلا HTTPS أو بلا إذن — بديلٌ قديمٌ يعمل دائماً
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);
+    ta.select();try{document.execCommand('copy');}catch(_){}document.body.removeChild(ta);
+  }
+  const old=btn.textContent;btn.textContent='✓ نُسخ';setTimeout(()=>{btn.textContent=old;},1400);
+}
 async function prepApprove(){
   if(!prepPreviewGen)return;
   try{
@@ -6496,55 +6506,6 @@ async function prepApprove(){
     toast&&toast('✅ اعتُمد التحضير');
   }catch(e){alert('تعذّر الاعتماد: '+(e.message||''));}
 }
-// رفع ملف القالب المعتمد (Word حرفياً كهيكل، أو PDF فقط لاستخراج نصّه)
-// ثم استدعاء extract-prep-template لقراءته وتسجيله في ai_settings.
-async function prepUploadTemplate(){
-  const file=document.getElementById('prep-template-file').files[0];
-  const progress=document.getElementById('prep-template-progress');
-  if(!file){progress.textContent='❌ اختاري ملفاً أولاً';return;}
-  const isDocx=/\.docx$/i.test(file.name);
-  const isPdf=/\.pdf$/i.test(file.name);
-  if(!isDocx&&!isPdf){progress.textContent='❌ الملف يجب أن يكون Word (.docx) أو PDF';return;}
-  try{
-    if(isDocx){
-      progress.textContent='⬆️ يرفع ملف Word…';
-      const{error}=await sb.storage.from('library-files').upload('prep-template/template.docx',file,{upsert:true,contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-      if(error)throw error;
-      progress.textContent='⏳ يقرأ عناوين أقسام القالب…';
-      const{data,error:fnErr}=await sb.functions.invoke('extract-prep-template',{body:{ext:'docx'}});
-      if(fnErr)throw fnErr;
-      if(data&&data.error)throw new Error(data.error);
-      progress.textContent='✅ تم — سيُستعمل هذا الملف حرفياً كهيكل كل تحضيرٍ يُولَّد';
-    }else{
-      progress.textContent='⏳ يحوّل صفحات القالب…';
-      await loadPdfJs();
-      const buf=await file.arrayBuffer();
-      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-      const N=pdf.numPages;
-      for(let p=1;p<=N;p++){
-        progress.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+'...';
-        const blob=await ltRenderPageBlob(pdf,p,850,0.6);
-        if(blob)await sb.storage.from('library-files').upload('prep-template/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg'});
-      }
-      progress.textContent='⏳ يقرأ عناوين أقسام القالب بالذكاء الاصطناعي…';
-      const{data,error:fnErr}=await sb.functions.invoke('extract-prep-template',{body:{ext:'pdf',page_count:N}});
-      if(fnErr)throw fnErr;
-      if(data&&data.error)throw new Error(data.error);
-      progress.textContent='✅ تم — استُخرج نص أقسام القالب (الناتج سيكون Word بتنسيقٍ عامٍّ منسَّق، لا نسخةً حرفية من PDF)';
-    }
-    await prepLoadTemplate();
-  }catch(e){progress.textContent='❌ تعذّر: '+(e.message||'');}
-}
-async function prepLoadTemplate(){
-  const status=document.getElementById('prep-template-status');
-  try{
-    const{data}=await sb.from('ai_settings').select('key,value').in('key',['prep_template_text','prep_template_ext']);
-    const m={};(data||[]).forEach(r=>m[r.key]=r.value);
-    if(!m.prep_template_text){status.textContent='لا يوجد قالبٌ مرفوع بعد';return;}
-    status.textContent='✅ قالبٌ مرفوع ('+(m.prep_template_ext==='docx'?'Word — يُستعمل حرفياً':'PDF — نصٌّ مستخرَج فقط')+') — '+m.prep_template_text.split('\n').filter(Boolean).length+' قسماً مكتشفاً';
-  }catch(e){status.textContent='';}
-}
-
 // ══ متابعة الخطة الذهبية ══
 // c1_shared_assets: مخزن النسخ المشتركة (kind='info' ملخص بصري، 'game'
 // لعبة). c1_golden_reuses: سجلٌ يُكتب سطرٌ فيه فقط عند إعادة استخدامٍ
