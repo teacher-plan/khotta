@@ -6248,12 +6248,15 @@ async function mc1ExpandBudget(userId,name){
 // (lesson_prep_generations.status: draft → approved). ══
 let prepCurriculum=[],prepGuide=null;
 
+// تُبنى القائمتان في كل استدعاء (لا مرّةً واحدة براية dataset): بناءٌ مشروط
+// يعني أن أي مسارٍ لا يمرّ بالتهيئة يترك القائمة فارغةً بلا إصلاحٍ ممكن
+// بعدها. البناءُ رخيصٌ (٤ خيارات)، والاختيارُ القائم يُحفَظ فلا يضيع.
 function prepInit(){
   const gs=document.getElementById('prep-grade');
-  if(!gs.dataset.ready){
-    gs.dataset.ready='1';
-    gs.innerHTML='<option value="">الصف</option>'+[1,2,3,4].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
-  }
+  if(!gs)return;
+  const cur=gs.value;
+  gs.innerHTML='<option value="">الصف</option>'+[1,2,3,4].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
+  gs.value=['1','2','3','4'].includes(String(cur))?cur:'';
   prepReloadSubjects();
 }
 function prepReloadSubjects(){
@@ -7048,6 +7051,10 @@ function showPage(id,btn){
   if(id==='aimanage'){loadAiSettings();ltInit();aiLayout();}
   if(id==='ktcc'){ktccLoad();}
   if(id==='ktops'){ktopsLoad();}
+  // تهيئةٌ هنا لا في ktGoC1 وحدها: تحديثُ المتصفّح يستعيد آخر صفحةٍ عبر
+  // showPage مباشرةً بلا مرورٍ بزرّ الشريط الجانبي، فتبقى قوائم الصف
+  // والمادة فارغةً بلا هذا السطر (كما وقع فعلاً).
+  if(id==='c1preps')prepInit();
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')anRefreshAll();
