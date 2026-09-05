@@ -1,0 +1,119 @@
+# استيراد أدلة المعلم للحلقة الأولى (الفصل الأول) من مصدر خارجي — بيدٍ لا تلقائياً.
+#
+# لماذا هذا المسلك: مصادر أدلة المعلم (Google Drive) خارج نطاق الشبكة المسموح
+# بها من بيئة العمل التفاعلية، فتُنجَز هنا حيث الشبكة مفتوحة (نفس سبب وجود
+# upload-storage-file.yml وapply-migrations.yml). كل دليلٍ: يُنزَّل PDF عبر
+# gdown، يُحوَّل لصور صفحاتٍ عبر pdftoppm (نفس تنسيق صفحات الكتاب في
+# book_sources)، تُرفع الصور لمخزن Supabase، ويُسجَّل صفٌّ في teacher_guides
+# بحالة 'uploaded' — مطابقة الفهرس مع الكتاب (AI) تبقى خطوةً يدوية لاحقة من
+# لوحة الإدارة (زر "مطابقة الفهرس بالذكاء الاصطناعي") لأنها تحتاج جلسة مشرفٍ
+# حقيقية.
+name: Import teacher guides (Cycle 1, semester 1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_path:
+        description: 'مسار ملف القائمة (JSON) داخل المستودع'
+        required: true
+        default: 'supabase/_teacher_guides_manifest.json'
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تثبيت الأدوات
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          pip install --quiet gdown
+
+      - name: استيراد كل دليل
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          BUCKET: library-files
+          MANIFEST: ${{ inputs.manifest_path }}
+        run: |
+          set -uo pipefail
+
+          echo "── جلب مفتاح service_role ──"
+          KEYS_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys")
+          SERVICE_KEY=$(echo "$KEYS_JSON" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          if [ -z "$SERVICE_KEY" ] || [ "$SERVICE_KEY" = "null" ]; then
+            echo "::error::تعذّر جلب مفتاح service_role"; exit 1
+          fi
+
+          fail=0
+          total=$(jq length "$MANIFEST")
+          echo "عدد الأدلة في القائمة: $total"
+
+          for i in $(seq 0 $((total-1))); do
+            grade=$(jq -r ".[$i].grade" "$MANIFEST")
+            subject=$(jq -r ".[$i].subject" "$MANIFEST")
+            slug=$(jq -r ".[$i].slug" "$MANIFEST")
+            driveId=$(jq -r ".[$i].drive_id" "$MANIFEST")
+            base="teacher-guides/c1-g${grade}-${slug}-sem1"
+            echo "════════ [$((i+1))/$total] صف $grade — $subject (${slug}) ════════"
+
+            rm -f /tmp/guide.pdf
+            if ! gdown --id "$driveId" -O /tmp/guide.pdf --quiet; then
+              echo "❌ فشل تنزيل $subject صف $grade (drive_id=$driveId)"; fail=1; continue
+            fi
+            if ! head -c4 /tmp/guide.pdf | grep -q "%PDF"; then
+              echo "❌ الملف الناتج ليس PDF صالحاً — $subject صف $grade"; fail=1; continue
+            fi
+
+            N=$(pdfinfo /tmp/guide.pdf 2>/dev/null | awk -F': *' '/^Pages/{print $2}')
+            if [ -z "$N" ] || [ "$N" -eq 0 ]; then
+              echo "❌ تعذّر قراءة عدد الصفحات — $subject صف $grade"; fail=1; continue
+            fi
+            echo "  عدد الصفحات: $N"
+
+            rm -rf /tmp/pages && mkdir -p /tmp/pages
+            pdftoppm -jpeg -r 110 /tmp/guide.pdf /tmp/pages/p >/dev/null 2>&1
+            # pdftoppm يُرقّم بصيغة p-1.jpg أو p-01.jpg حسب عدد الصفحات — نعيد التسمية لصيغة موحّدة pN.jpg
+            cnt=0
+            for f in $(ls /tmp/pages/p-*.jpg 2>/dev/null | sort -V); do
+              cnt=$((cnt+1))
+              mv "$f" "/tmp/pages/p${cnt}.jpg"
+            done
+            if [ "$cnt" -eq 0 ]; then
+              echo "❌ لم يُنتَج أي صفحة صورة — $subject صف $grade"; fail=1; continue
+            fi
+
+            uploaded=0
+            for p in $(seq 1 "$cnt"); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' \
+                -X POST "https://$REF.supabase.co/storage/v1/object/$BUCKET/${base}/p${p}.jpg" \
+                -H "Authorization: Bearer $SERVICE_KEY" \
+                -H "Content-Type: image/jpeg" \
+                -H "x-upsert: true" \
+                --data-binary "@/tmp/pages/p${p}.jpg")
+              if [ "$code" = "200" ] || [ "$code" = "201" ]; then uploaded=$((uploaded+1)); fi
+            done
+            echo "  رُفع $uploaded من $cnt صفحة"
+            if [ "$uploaded" -lt "$cnt" ]; then
+              echo "⚠️ نقصٌ في الرفع — سيُسجَّل الدليل بعدد الصفحات الفعلي المرفوع فقط إن أمكن"
+            fi
+
+            subjectEsc=$(printf '%s' "$subject" | sed "s/'/''/g")
+            q="insert into public.teacher_guides (semester, grade, subject, base_path, page_count, offset_pages, status)
+               values ('الفصل الأول', ${grade}, '${subjectEsc}', '${base}', ${cnt}, 1, 'uploaded')
+               on conflict (grade, subject, semester) do update
+               set base_path=excluded.base_path, page_count=excluded.page_count, offset_pages=1, status='uploaded', updated_at=now();"
+            body=$(jq -Rs '{query: .}' <<< "$q")
+            code=$(curl -s -o /tmp/resp.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$body")
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "✅ سُجِّل الدليل في teacher_guides"
+            else
+              echo "❌ فشل تسجيل الدليل في القاعدة ($code)"; cat /tmp/resp.json; fail=1
+            fi
+          done
+
+          exit $fail
