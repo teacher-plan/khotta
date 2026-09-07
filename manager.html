@@ -6385,13 +6385,14 @@ async function prepFnErrText(error){
 // مهلة الاتصال. onProgress يتيح إظهار موضع البحث للمشرف بدل انتظارٍ صامت.
 // يُعيد عدد بنود الفهرس عند النجاح، ويرمي عند الفشل الحقيقي.
 async function prepRunIndexing(guideId,onProgress){
-  let from=1;
+  let from=1,bestEntries=[];
   for(let guard=0;guard<12;guard++){
-    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:guideId,scan_from:from}});
+    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:guideId,scan_from:from,best_entries:bestEntries}});
     if(error)throw new Error(await prepFnErrText(error));
     if(data&&data.error)throw new Error(data.detail||data.error);
     if(data&&data.done)return(data.entries&&data.entries.length)||0;
     if(data&&data.exhausted)throw new Error(data.detail||'لم يُعثر على فهرس في الدليل');
+    bestEntries=(data&&data.best_entries)||bestEntries;
     from=(data&&data.next_from)||(from+12);
     if(onProgress)onProgress(from);
   }

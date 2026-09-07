@@ -100,11 +100,102 @@ Deno.serve(async (req) => {
       'مهمٌّ جداً: إن لم تكن هذه الصور تحوي فهرساً إطلاقاً (صفحات مقدمةٍ أو دروسٍ عادية) فأعد {"entries":[]} بلا أي اجتهاد.',
     ].join("\n");
 
+    // ── إزاحة الترقيم ──
+    // الفهرس يعطي رقم الصفحة *المطبوع*، وصورنا مرقّمة بترتيب ورق الـPDF.
+    // الغلاف والمقدمات تجعل الاثنين مختلفَين، فترسل الواجهةُ صفحاتِ درسٍ
+    // آخر بلا أن يشعر أحد. نقيسها هنا: نعرض ورقةً بعينها ونسأل النموذج عن
+    // الرقم المطبوع عليها، فالإزاحة = رقم الورقة − المطبوع + ١.
+    const printedOnSheet = async (sheet: number): Promise<number | null> => {
+      const rr = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://khotati.com",
+          "X-Title": "Khotta Guide Offset Probe",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: 'ما رقم الصفحة المطبوع على هذه الصفحة (عادةً في أعلاها أو أسفلها)؟ أعد JSON فقط بالشكل {"printed": 12} أو {"printed": null} إن لم يظهر رقمٌ مطبوع.' },
+              { type: "image_url", image_url: { url: pub(sheet) } },
+            ],
+          }],
+          response_format: { type: "json_object" },
+          temperature: 0,
+          max_tokens: 100,
+        }),
+      }, { st, task: "guide_index" });
+      if (!rr.ok) return null;
+      const jj = await rr.json();
+      const pp = parseAiJson<{ printed?: number | null }>(jj?.choices?.[0]?.message?.content || "");
+      const v = pp.ok ? pp.value.printed : null;
+      return typeof v === "number" && isFinite(v) && v > 0 ? v : null;
+    };
+    // نحسب الإزاحة من مدخلين مستقلّين من الفهرس ونقبلها فقط إن اتّفقا
+    // (بفارق صفحةٍ واحدة كحدٍّ أقصى) بدل الاكتفاء بمرشّحٍ واحد قد يصادف
+    // صفحة مقدّمةٍ أو رقم تمرينٍ فيُخرج إزاحةً خاطئة بصمت (وهذا فعلياً ما
+    // حدث: ٣٠ بدل ٠-٣ المعتادة في أحد الأدلة).
+    const computeOffset = async (idxEntries: unknown[], g: { offset_pages?: number | null; page_count: number }): Promise<number> => {
+      let offsetPages = g.offset_pages || 1;
+      try {
+        const distinctPrinted = Array.from(new Set(
+          (idxEntries as { guide_page?: number }[])
+            .map((e) => e.guide_page)
+            .filter((p): p is number => typeof p === "number" && p > 0),
+        )).sort((a, b) => a - b);
+
+        const candidateOffsets: number[] = [];
+        for (const firstPrinted of distinctPrinted.slice(0, 3)) {
+          let found: number | null = null;
+          for (const probeSheet of [firstPrinted, Math.min(firstPrinted + 6, g.page_count)]) {
+            const printed = await printedOnSheet(probeSheet);
+            if (printed) { found = probeSheet - printed + 1; break; }
+          }
+          if (found !== null) candidateOffsets.push(found);
+          if (candidateOffsets.length >= 2) break;
+        }
+
+        if (candidateOffsets.length >= 2 && Math.abs(candidateOffsets[0] - candidateOffsets[1]) <= 1) {
+          offsetPages = candidateOffsets[0];
+        } else if (candidateOffsets.length >= 2) {
+          console.error(`index-teacher-guide: إزاحةٌ غير متّفقٍ عليها لدليل ${guideId} (${candidateOffsets.join(", ")}) — أُبقيت القيمة السابقة ${offsetPages} بلا تحديث.`);
+        } else if (candidateOffsets.length === 1) {
+          offsetPages = candidateOffsets[0];
+        }
+      } catch (e) {
+        console.error("offset probe failed (نُبقي الإزاحة كما هي):", String(e));
+      }
+      return offsetPages;
+    };
+
     // دفعةٌ واحدة لكل نداء: العميل يبدأ بـscan_from=1 ويتقدّم بما يُعيده
     // next_from حتى يُعثر على الفهرس أو يُستنفد المدى.
+    // ⚠️ أفضل مطابقةٍ حتى الآن تُمرَّر ذهاباً وإياباً مع العميل (best_entries/
+    // best_count) لأن كل نداءٍ عديم الحالة: صفحة فهرسٍ فرعية صغيرة (مثلاً
+    // فهرس وحدةٍ واحدة من ٢-٣ دروس) كانت تُقبل فوراً بمجرّد وجود أي بند،
+    // فيتوقّف البحث قبل بلوغ الفهرس الرئيسي الحقيقي — وهذا فعلياً ما خفض
+    // نسبة التغطية (بعض الأدلة انتهت بفهرسٍ من بندين أو ثلاثة فقط بينما
+    // منهج الفصل عشرات الدروس).
     const lastPage = Math.min(SCAN_MAX_PAGES, guide.page_count);
     const start = Math.max(1, parseInt(b.scan_from) || 1);
+    const bestEntriesIn: unknown[] = Array.isArray(b.best_entries) ? b.best_entries : [];
+    const bestCountIn = bestEntriesIn.length;
+    // فهرسٌ حقيقي للفصل يُغطّي عادةً معظم دروسه؛ نقبل دفعةً فوراً فقط إن
+    // بلغت هذا الحدّ، وإلا نُبقيها كأفضل مرشّحٍ مؤقّت ونواصل البحث.
+    const neededEntries = Math.max(8, Math.ceil(curRows.length * 0.4));
     if (start > lastPage) {
+      if (bestCountIn > 0) {
+        console.error(`index-teacher-guide: لم يُعثر على فهرسٍ كاملٍ في الصفحات ١-${lastPage}، استُخدم أفضل مرشّحٍ جزئي بـ${bestCountIn} بنداً فقط من أصل ${curRows.length} درساً (دليل ${guideId}، ${guide.subject} صف ${guide.grade}).`);
+        const offsetPages = await computeOffset(bestEntriesIn, guide);
+        await admin.from("teacher_guides").update({
+          toc: bestEntriesIn, offset_pages: offsetPages, status: "indexed",
+          indexed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq("id", guideId);
+        return json({ done: true, entries: bestEntriesIn, partial: true, scanned_to: lastPage, offset_pages: offsetPages });
+      }
       console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${lastPage} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
       await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
       return json({ error: "index_not_found", detail: `لم يُعثر على فهرسٍ في أول ${lastPage} صفحة من الدليل (عدد صفحاته ${guide.page_count})` }, 502);
@@ -151,90 +242,33 @@ Deno.serve(async (req) => {
     const entries: unknown[] = parsed.ok ? (parsed.value.entries || []) : [];
     const usage = j?.usage || null;
 
-    if (!entries.length) {
-      // ليست فشلاً: هذه الدفعة لا تحوي فهرساً فحسب. نُعيد 200 مع موضع الدفعة
-      // التالية — ولو أعدناها خطأً لظنّها العميل إخفاقاً وأوقف البحث.
+    // أفضل مرشّحٍ نعرفه حتى الآن (المُمرَّر من العميل، أو هذه الدفعة إن
+    // كانت أكبر منه) — يُستعمل إن استُنفد المدى بلا فهرسٍ يبلغ neededEntries.
+    const bestSoFar = entries.length > bestCountIn ? entries : bestEntriesIn;
+
+    if (entries.length < neededEntries) {
+      // دفعةٌ فيها بندٌ أو بضعة — على الأرجح فهرس وحدةٍ فرعي لا الفهرس
+      // الرئيسي لدروس الفصل كاملةً. لا نقبلها فوراً؛ نُبقيها كأفضل مرشّح
+      // ونواصل البحث عن فهرسٍ أشمل في الصفحات التالية.
       const nextFrom = end + 1;
       if (nextFrom > lastPage) {
+        if (bestSoFar.length) {
+          console.error(`index-teacher-guide: لم يُعثر على فهرسٍ يبلغ ${neededEntries} بنداً، استُخدم أفضل مرشّحٍ جزئي بـ${bestSoFar.length} بنداً (دليل ${guideId}، ${guide.subject} صف ${guide.grade}).`);
+          const offsetPages = await computeOffset(bestSoFar, guide);
+          await admin.from("teacher_guides").update({
+            toc: bestSoFar, offset_pages: offsetPages, status: "indexed",
+            indexed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq("id", guideId);
+          return json({ done: true, entries: bestSoFar, partial: true, scanned_to: scannedTo, offset_pages: offsetPages });
+        }
         console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${lastPage} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
         await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
         return json({ done: false, exhausted: true, scanned_to: scannedTo, detail: `لم يُعثر على فهرسٍ في أول ${lastPage} صفحة` });
       }
-      return json({ done: false, exhausted: false, next_from: nextFrom, scanned_to: scannedTo });
+      return json({ done: false, exhausted: false, next_from: nextFrom, scanned_to: scannedTo, best_entries: bestSoFar });
     }
 
-    // ── إزاحة الترقيم ──
-    // الفهرس يعطي رقم الصفحة *المطبوع*، وصورنا مرقّمة بترتيب ورق الـPDF.
-    // الغلاف والمقدمات تجعل الاثنين مختلفَين، فترسل الواجهةُ صفحاتِ درسٍ
-    // آخر بلا أن يشعر أحد. نقيسها هنا مرّةً واحدة: نعرض ورقةً بعينها ونسأل
-    // النموذج عن الرقم المطبوع عليها، فالإزاحة = رقم الورقة − المطبوع + ١.
-    // (نفس معنى offset_pages في book_sources الذي يضبطه المشرف يدوياً للكتاب.)
-    const printedOnSheet = async (sheet: number): Promise<number | null> => {
-      const rr = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + apiKey,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://khotati.com",
-          "X-Title": "Khotta Guide Offset Probe",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: 'ما رقم الصفحة المطبوع على هذه الصفحة (عادةً في أعلاها أو أسفلها)؟ أعد JSON فقط بالشكل {"printed": 12} أو {"printed": null} إن لم يظهر رقمٌ مطبوع.' },
-              { type: "image_url", image_url: { url: pub(sheet) } },
-            ],
-          }],
-          response_format: { type: "json_object" },
-          temperature: 0,
-          max_tokens: 100,
-        }),
-      }, { st, task: "guide_index" });
-      if (!rr.ok) return null;
-      const jj = await rr.json();
-      const pp = parseAiJson<{ printed?: number | null }>(jj?.choices?.[0]?.message?.content || "");
-      const v = pp.ok ? pp.value.printed : null;
-      return typeof v === "number" && isFinite(v) && v > 0 ? v : null;
-    };
-
-    // نحسب الإزاحة من مرشّحٍ واحد فقط ثم نُصدّقها فوراً كان خطأً: لو صادف
-    // probeSheet صفحة مقدّمةٍ أو صفحة غلاف وحدة (رقمٌ آخر مطبوعٌ عليها
-    // كرقم تمرين أو شكل)، تُحسب إزاحةٌ خاطئة وتُحفظ بلا أي تحقّق — وهذا
-    // فعلياً ما حدث (٣٠ بدل ٠-٣ المعتادة لبقية الأدلة). الآن نحسبها من
-    // مدخلين مستقلّين من الفهرس ونقبلها فقط إن اتّفقا (بفارق صفحةٍ واحدة
-    // كحدٍّ أقصى)، وإلا نُبقي القيمة الافتراضية ونُسجّل الاضطراب بدل أن
-    // نُخمّن.
-    let offsetPages = guide.offset_pages || 1;
-    try {
-      const distinctPrinted = Array.from(new Set(
-        (entries as { guide_page?: number }[])
-          .map((e) => e.guide_page)
-          .filter((p): p is number => typeof p === "number" && p > 0),
-      )).sort((a, b) => a - b);
-
-      const candidateOffsets: number[] = [];
-      for (const firstPrinted of distinctPrinted.slice(0, 3)) {
-        let found: number | null = null;
-        for (const probeSheet of [firstPrinted, Math.min(firstPrinted + 6, guide.page_count)]) {
-          const printed = await printedOnSheet(probeSheet);
-          if (printed) { found = probeSheet - printed + 1; break; }
-        }
-        if (found !== null) candidateOffsets.push(found);
-        if (candidateOffsets.length >= 2) break;
-      }
-
-      if (candidateOffsets.length >= 2 && Math.abs(candidateOffsets[0] - candidateOffsets[1]) <= 1) {
-        offsetPages = candidateOffsets[0];
-      } else if (candidateOffsets.length >= 2) {
-        console.error(`index-teacher-guide: إزاحةٌ غير متّفقٍ عليها لدليل ${guideId} (${candidateOffsets.join(", ")}) — أُبقيت القيمة السابقة ${offsetPages} بلا تحديث.`);
-      } else if (candidateOffsets.length === 1) {
-        offsetPages = candidateOffsets[0];
-      }
-    } catch (e) {
-      console.error("offset probe failed (نُبقي الإزاحة كما هي):", String(e));
-    }
+    const offsetPages = await computeOffset(entries, guide);
 
     await admin.from("teacher_guides").update({
       toc: entries,
