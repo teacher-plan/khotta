@@ -182,10 +182,15 @@ Deno.serve(async (req) => {
     const lastPage = Math.min(SCAN_MAX_PAGES, guide.page_count);
     const start = Math.max(1, parseInt(b.scan_from) || 1);
     const bestEntriesIn: unknown[] = Array.isArray(b.best_entries) ? b.best_entries : [];
-    const bestCountIn = bestEntriesIn.length;
+    const bestCountIn = new Set(
+      (bestEntriesIn as { matched_curriculum_id?: number | null }[]).map((e) => e.matched_curriculum_id).filter((v) => v != null),
+    ).size;
     // فهرسٌ حقيقي للفصل يُغطّي عادةً معظم دروسه؛ نقبل دفعةً فوراً فقط إن
     // بلغت هذا الحدّ، وإلا نُبقيها كأفضل مرشّحٍ مؤقّت ونواصل البحث.
-    const neededEntries = Math.max(8, Math.ceil(curRows.length * 0.4));
+    // مقيَّدٌ بعدد دروس الفصل نفسه: حدٌّ أدنى ٨ كان يجعل الهدف مستحيلاً في
+    // موادّ صغيرةٍ (فصلٌ بستّة دروسٍ فقط مثلاً) فيفشل الفهرس دائماً مهما
+    // كان صحيحاً.
+    const neededEntries = Math.min(curRows.length, Math.max(4, Math.ceil(curRows.length * 0.4)));
     if (start > lastPage) {
       if (bestCountIn > 0) {
         console.error(`index-teacher-guide: لم يُعثر على فهرسٍ كاملٍ في الصفحات ١-${lastPage}، استُخدم أفضل مرشّحٍ جزئي بـ${bestCountIn} بنداً فقط من أصل ${curRows.length} درساً (دليل ${guideId}، ${guide.subject} صف ${guide.grade}).`);
@@ -233,20 +238,70 @@ Deno.serve(async (req) => {
     if (!r.ok) {
       const m = String(j?.error?.message || j?.message || "");
       console.error(`openrouter ${r.status} في index-teacher-guide (صفحات ${start}-${end}): ${m}`);
+      // خطأٌ عابرٌ في دفعةٍ واحدة (حدّ معدّل، انقطاعٌ مؤقّت) لا يجوز أن
+      // يُسقط ما جُمع من مطابقاتٍ في الدفعات السابقة — كان يحدث فعلياً:
+      // status يُصبح index_failed بينما toc القديم يبقى بلا تحديث، فيظهر
+      // الدليل "فاشلاً" رغم مطابقاتٍ سابقة صحيحة كانت قد جُمعت هذا التشغيل.
+      if (bestCountIn > 0) {
+        return json({ done: false, exhausted: false, next_from: start, scanned_to: start - 1, best_entries: bestEntriesIn, retry_after_error: true });
+      }
       await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
       return json({ error: orErrCode(r.status, m), detail: m.slice(0, 200) }, 502);
     }
 
     const text = j?.choices?.[0]?.message?.content || "";
     const parsed = parseAiJson<{ entries?: unknown[] }>(text);
-    const entries: unknown[] = parsed.ok ? (parsed.value.entries || []) : [];
+    const rawEntries: unknown[] = parsed.ok ? (parsed.value.entries || []) : [];
     const usage = j?.usage || null;
+
+    // ── تعويض فهرسٍ بمستوى الوحدة لا الدرس ──
+    // بعض الأدلة لا تملك فهرساً يُدرج كل درسٍ برقم صفحته؛ فهرسها الوحيد
+    // (عادةً في مقدّمة الدليل) يذكر عنوان كل وحدةٍ فقط، فيترك النموذج
+    // matched_curriculum_id فارغاً لكل بند — إذ لا يستطيع اختيار درساً
+    // واحداً من بين دروس الوحدة الثلاثة بلا معلومةٍ إضافية. فعلياً هذا هو
+    // ما حدث في "الهوية والمواطنة" (فهرسٌ كاملٌ ٩ بنود، صفر مطابقة).
+    // نُكمل هنا: لكل بندٍ غير مطابقٍ له عنوان وحدةٍ يُطابق وحدةً في منهج
+    // الكتاب، نوزّع دروس تلك الوحدة على مدى صفحاتها (من بداية الوحدة إلى
+    // بداية الوحدة التالية) بالتساوي — تقديرٌ تقريبي (confidence: low)
+    // أفضل من مطابقةٍ معدومة، ويبقى المشرف قادراً على تصحيحه يدوياً.
+    const alreadyMatched = new Set(
+      rawEntries.map((e) => (e as { matched_curriculum_id?: number | null }).matched_curriculum_id).filter((v) => v != null),
+    );
+    const unitEntries = (rawEntries as { guide_unit?: string | null; guide_page?: number; matched_curriculum_id?: number | null }[])
+      .filter((e) => e.matched_curriculum_id == null && e.guide_unit && typeof e.guide_page === "number")
+      .sort((a, b) => (a.guide_page || 0) - (b.guide_page || 0));
+    const derived: unknown[] = [];
+    for (let i = 0; i < unitEntries.length; i++) {
+      const ue = unitEntries[i];
+      const unitLessons = curRows
+        .filter((r: { unit?: string }) => r.unit && ue.guide_unit && r.unit.trim() === (ue.guide_unit as string).trim())
+        .filter((r: { id: number }) => !alreadyMatched.has(r.id))
+        .sort((a: { sort: number }, b: { sort: number }) => a.sort - b.sort);
+      if (!unitLessons.length) continue;
+      const startPage = ue.guide_page as number;
+      const nextPage = unitEntries[i + 1]?.guide_page;
+      unitLessons.forEach((lessonRow: { id: number; unit: string; lesson: string }, idx: number) => {
+        const guess = typeof nextPage === "number"
+          ? Math.round(startPage + ((nextPage - startPage) * idx) / unitLessons.length)
+          : startPage;
+        derived.push({
+          guide_unit: ue.guide_unit, guide_lesson: lessonRow.lesson, guide_page: guess,
+          matched_curriculum_id: lessonRow.id, confidence: "low", derived: true,
+        });
+      });
+    }
+    const entries: unknown[] = rawEntries.concat(derived);
+    const matchedCount = new Set(
+      (entries as { matched_curriculum_id?: number | null }[]).map((e) => e.matched_curriculum_id).filter((v) => v != null),
+    ).size;
 
     // أفضل مرشّحٍ نعرفه حتى الآن (المُمرَّر من العميل، أو هذه الدفعة إن
     // كانت أكبر منه) — يُستعمل إن استُنفد المدى بلا فهرسٍ يبلغ neededEntries.
-    const bestSoFar = entries.length > bestCountIn ? entries : bestEntriesIn;
+    // المقياس هو عدد الدروس المُطابَقة فعلياً لا عدد بنود الفهرس الخام،
+    // فبعض الأدلة تُخرج بنوداً كثيرة لكن قلّةً منها تُطابَق (رياضياتٌ مثلاً).
+    const bestSoFar = matchedCount > bestCountIn ? entries : bestEntriesIn;
 
-    if (entries.length < neededEntries) {
+    if (matchedCount < neededEntries) {
       // دفعةٌ فيها بندٌ أو بضعة — على الأرجح فهرس وحدةٍ فرعي لا الفهرس
       // الرئيسي لدروس الفصل كاملةً. لا نقبلها فوراً؛ نُبقيها كأفضل مرشّح
       // ونواصل البحث عن فهرسٍ أشمل في الصفحات التالية.
