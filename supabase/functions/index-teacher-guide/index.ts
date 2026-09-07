@@ -36,7 +36,9 @@ const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
 // التي وُجد فهرسها في أوّل دفعة). كل نداءٍ الآن نداءُ رؤيةٍ واحد (~٢٠ ثانية)
 // فلا يقترب من أي مهلة، والتقدّم يظهر للمشرف دفعةً دفعة.
 const SCAN_BATCH = 12;      // صفحات لكل نداء رؤية
-const SCAN_MAX_PAGES = 72;  // أقصى مدًى نبحث فيه عن الفهرس (٦ دفعات)
+const SCAN_MAX_PAGES = 132; // أقصى مدًى نبحث فيه عن الفهرس (١١ دفعة)
+// ⚠️ رُفع من ٧٢ إلى ١٣٢: دليل رياضيات الصف الرابع (٢٠٤ صفحة) فشل فعلياً
+// بفهرسٍ يقع بعد الصفحة ٧٢ — ٧٢ كانت كافيةً للأدلة الأصغر فقط.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -197,18 +199,38 @@ Deno.serve(async (req) => {
       return typeof v === "number" && isFinite(v) && v > 0 ? v : null;
     };
 
+    // نحسب الإزاحة من مرشّحٍ واحد فقط ثم نُصدّقها فوراً كان خطأً: لو صادف
+    // probeSheet صفحة مقدّمةٍ أو صفحة غلاف وحدة (رقمٌ آخر مطبوعٌ عليها
+    // كرقم تمرين أو شكل)، تُحسب إزاحةٌ خاطئة وتُحفظ بلا أي تحقّق — وهذا
+    // فعلياً ما حدث (٣٠ بدل ٠-٣ المعتادة لبقية الأدلة). الآن نحسبها من
+    // مدخلين مستقلّين من الفهرس ونقبلها فقط إن اتّفقا (بفارق صفحةٍ واحدة
+    // كحدٍّ أقصى)، وإلا نُبقي القيمة الافتراضية ونُسجّل الاضطراب بدل أن
+    // نُخمّن.
     let offsetPages = guide.offset_pages || 1;
     try {
-      const firstPrinted = (entries as { guide_page?: number }[])
-        .map((e) => e.guide_page).filter((p): p is number => typeof p === "number" && p > 0)
-        .sort((a, b) => a - b)[0];
-      if (firstPrinted) {
-        // نجرّب ورقتين: الورقة المساوية للرقم المطبوع، ثم واحدةٌ أبعد قليلاً
-        // إن لم يظهر رقمٌ على الأولى (صفحاتُ بدايةِ الوحدات كثيراً بلا ترقيم).
+      const distinctPrinted = Array.from(new Set(
+        (entries as { guide_page?: number }[])
+          .map((e) => e.guide_page)
+          .filter((p): p is number => typeof p === "number" && p > 0),
+      )).sort((a, b) => a - b);
+
+      const candidateOffsets: number[] = [];
+      for (const firstPrinted of distinctPrinted.slice(0, 3)) {
+        let found: number | null = null;
         for (const probeSheet of [firstPrinted, Math.min(firstPrinted + 6, guide.page_count)]) {
           const printed = await printedOnSheet(probeSheet);
-          if (printed) { offsetPages = probeSheet - printed + 1; break; }
+          if (printed) { found = probeSheet - printed + 1; break; }
         }
+        if (found !== null) candidateOffsets.push(found);
+        if (candidateOffsets.length >= 2) break;
+      }
+
+      if (candidateOffsets.length >= 2 && Math.abs(candidateOffsets[0] - candidateOffsets[1]) <= 1) {
+        offsetPages = candidateOffsets[0];
+      } else if (candidateOffsets.length >= 2) {
+        console.error(`index-teacher-guide: إزاحةٌ غير متّفقٍ عليها لدليل ${guideId} (${candidateOffsets.join(", ")}) — أُبقيت القيمة السابقة ${offsetPages} بلا تحديث.`);
+      } else if (candidateOffsets.length === 1) {
+        offsetPages = candidateOffsets[0];
       }
     } catch (e) {
       console.error("offset probe failed (نُبقي الإزاحة كما هي):", String(e));
