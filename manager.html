@@ -6381,15 +6381,29 @@ async function prepFnErrText(error){
   }catch(_){}
   return error.message||'خطأ غير معروف';
 }
+// يقود المسح دفعةً دفعة: كل نداءٍ يفحص ١٢ صفحة ويعود سريعاً، فلا يقترب من
+// مهلة الاتصال. onProgress يتيح إظهار موضع البحث للمشرف بدل انتظارٍ صامت.
+// يُعيد عدد بنود الفهرس عند النجاح، ويرمي عند الفشل الحقيقي.
+async function prepRunIndexing(guideId,onProgress){
+  let from=1;
+  for(let guard=0;guard<12;guard++){
+    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:guideId,scan_from:from}});
+    if(error)throw new Error(await prepFnErrText(error));
+    if(data&&data.error)throw new Error(data.detail||data.error);
+    if(data&&data.done)return(data.entries&&data.entries.length)||0;
+    if(data&&data.exhausted)throw new Error(data.detail||'لم يُعثر على فهرس في الدليل');
+    from=(data&&data.next_from)||(from+12);
+    if(onProgress)onProgress(from);
+  }
+  throw new Error('تجاوز عدد الدفعات المسموح');
+}
 async function prepIndexGuide(){
   if(!prepGuide)return;
   const progress=document.getElementById('prep-guide-progress');
-  progress.textContent='⏳ يقرأ الفهرس ويطابقه بالذكاء الاصطناعي… قد يستغرق دقيقة';
+  progress.textContent='⏳ يبحث عن الفهرس…';
   try{
-    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:prepGuide.id}});
-    if(error)throw new Error(await prepFnErrText(error));
-    if(data&&data.error)throw new Error(data.error);
-    progress.textContent='✅ تمّت المطابقة';
+    const n=await prepRunIndexing(prepGuide.id,f=>{progress.textContent='⏳ يبحث عن الفهرس… من الصفحة '+egToArabic(f);});
+    progress.textContent='✅ تمّت المطابقة: '+egToArabic(n)+' بنداً';
     const{data:guide}=await sb.from('teacher_guides').select('*').eq('id',prepGuide.id).maybeSingle();
     prepGuide=guide;
     prepRenderGuideStatus();
@@ -6419,10 +6433,9 @@ async function prepMatchAll(redoAll){
     line.textContent='⏳ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+'…';
     log.prepend(line);
     try{
-      const{data,error:fnErr}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:g.id}});
-      if(fnErr)throw new Error(await prepFnErrText(fnErr));
-      if(data&&data.error)throw new Error(data.error);
-      const n=(data&&data.entries&&data.entries.length)||0;
+      const n=await prepRunIndexing(g.id,f=>{
+        line.textContent='⏳ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': يبحث من الصفحة '+egToArabic(f)+'…';
+      });
       line.textContent='✅ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': '+egToArabic(n)+' بنداً';
       line.style.color='#2F5D2F';ok++;
     }catch(e){

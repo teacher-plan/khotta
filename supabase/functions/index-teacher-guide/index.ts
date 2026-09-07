@@ -29,6 +29,12 @@ const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
 // no_entries_found)، لأن الأدلة الكبيرة تضع فهرسها بعد مقدماتٍ وأُطرٍ عامة
 // طويلة. نمسح الآن مدًى أوسع، لكن على دفعاتٍ صغيرة نتوقف عند أوّل دفعةٍ
 // يظهر فيها الفهرس — فلا ندفع ثمن الصفحات الباقية بلا داعٍ.
+// ⚠️ دفعةٌ واحدة لكل نداءٍ للدالّة، والعميل يُكرّر النداء متقدّماً:
+// مسحُ الدفعات الستّ داخل نداءٍ واحد كان يستغرق دقائق فينقطع الاتصال قبل
+// الردّ («Failed to send a request to the Edge Function» — فشلٌ في النقل لا
+// خطأٌ من الدالّة، ظهر فعلياً في الرياضيات والإنجليزية بينما نجحت المواد
+// التي وُجد فهرسها في أوّل دفعة). كل نداءٍ الآن نداءُ رؤيةٍ واحد (~٢٠ ثانية)
+// فلا يقترب من أي مهلة، والتقدّم يظهر للمشرف دفعةً دفعة.
 const SCAN_BATCH = 12;      // صفحات لكل نداء رؤية
 const SCAN_MAX_PAGES = 72;  // أقصى مدًى نبحث فيه عن الفهرس (٦ دفعات)
 
@@ -92,61 +98,67 @@ Deno.serve(async (req) => {
       'مهمٌّ جداً: إن لم تكن هذه الصور تحوي فهرساً إطلاقاً (صفحات مقدمةٍ أو دروسٍ عادية) فأعد {"entries":[]} بلا أي اجتهاد.',
     ].join("\n");
 
-    // مسحٌ على دفعات: نتوقف عند أوّل دفعةٍ يظهر فيها الفهرس فعلاً.
+    // دفعةٌ واحدة لكل نداء: العميل يبدأ بـscan_from=1 ويتقدّم بما يُعيده
+    // next_from حتى يُعثر على الفهرس أو يُستنفد المدى.
     const lastPage = Math.min(SCAN_MAX_PAGES, guide.page_count);
-    let entries: unknown[] = [];
-    let usage: unknown = null;
-    let scannedTo = 0;
+    const start = Math.max(1, parseInt(b.scan_from) || 1);
+    if (start > lastPage) {
+      console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${lastPage} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
+      await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
+      return json({ error: "index_not_found", detail: `لم يُعثر على فهرسٍ في أول ${lastPage} صفحة من الدليل (عدد صفحاته ${guide.page_count})` }, 502);
+    }
+    const end = Math.min(start + SCAN_BATCH - 1, lastPage);
+    const scannedTo = end;
 
-    for (let start = 1; start <= lastPage && !entries.length; start += SCAN_BATCH) {
-      const end = Math.min(start + SCAN_BATCH - 1, lastPage);
-      scannedTo = end;
-      const userContent: unknown[] = [{
-        type: "text",
-        text: `صفحات دليل المعلم من ${start} إلى ${end} — ابحث عن الفهرس بينها:`,
-      }];
-      for (let i = start; i <= end; i++) userContent.push({ type: "image_url", image_url: { url: pub(i) } });
+    const userContent: unknown[] = [{
+      type: "text",
+      text: `صفحات دليل المعلم من ${start} إلى ${end} — ابحث عن الفهرس بينها:`,
+    }];
+    for (let i = start; i <= end; i++) userContent.push({ type: "image_url", image_url: { url: pub(i) } });
 
-      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + apiKey,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://khotati.com",
-          "X-Title": "Khotta Guide Index Matcher",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: userContent },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-          max_tokens: 4000,
-        }),
-      }, { st, task: "guide_index" });
+    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://khotati.com",
+        "X-Title": "Khotta Guide Index Matcher",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userContent },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 4000,
+      }),
+    }, { st, task: "guide_index" });
 
-      const j = await r.json();
-      if (!r.ok) {
-        const m = String(j?.error?.message || j?.message || "");
-        console.error(`openrouter ${r.status} في index-teacher-guide (صفحات ${start}-${end}): ${m}`);
-        await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
-        return json({ error: orErrCode(r.status, m), detail: m.slice(0, 200) }, 502);
-      }
-
-      const text = j?.choices?.[0]?.message?.content || "";
-      const parsed = parseAiJson<{ entries?: unknown[] }>(text);
-      const batch = parsed.ok ? (parsed.value.entries || []) : [];
-      if (batch.length) { entries = batch; usage = j?.usage || null; }
+    const j = await r.json();
+    if (!r.ok) {
+      const m = String(j?.error?.message || j?.message || "");
+      console.error(`openrouter ${r.status} في index-teacher-guide (صفحات ${start}-${end}): ${m}`);
+      await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
+      return json({ error: orErrCode(r.status, m), detail: m.slice(0, 200) }, 502);
     }
 
+    const text = j?.choices?.[0]?.message?.content || "";
+    const parsed = parseAiJson<{ entries?: unknown[] }>(text);
+    const entries: unknown[] = parsed.ok ? (parsed.value.entries || []) : [];
+    const usage = j?.usage || null;
+
     if (!entries.length) {
-      // يُسجَّل صراحةً: أوّل فشلٍ حقيقي مرّ صامتاً بلا أثرٍ في السجلّ فتعذّر
-      // تشخيصه إلا بقراءة رمز الحالة وحده.
-      console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${scannedTo} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
-      await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
-      return json({ error: "index_not_found", detail: `لم يُعثر على فهرسٍ في أول ${scannedTo} صفحة من الدليل (عدد صفحاته ${guide.page_count})` }, 502);
+      // ليست فشلاً: هذه الدفعة لا تحوي فهرساً فحسب. نُعيد 200 مع موضع الدفعة
+      // التالية — ولو أعدناها خطأً لظنّها العميل إخفاقاً وأوقف البحث.
+      const nextFrom = end + 1;
+      if (nextFrom > lastPage) {
+        console.error(`index-teacher-guide: لم يُعثر على فهرس في الصفحات ١-${lastPage} (دليل ${guideId}، ${guide.subject} صف ${guide.grade}، ${guide.page_count} صفحة)`);
+        await admin.from("teacher_guides").update({ status: "index_failed" }).eq("id", guideId);
+        return json({ done: false, exhausted: true, scanned_to: scannedTo, detail: `لم يُعثر على فهرسٍ في أول ${lastPage} صفحة` });
+      }
+      return json({ done: false, exhausted: false, next_from: nextFrom, scanned_to: scannedTo });
     }
 
     // ── إزاحة الترقيم ──
@@ -210,7 +222,7 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     }).eq("id", guideId);
 
-    return json({ entries, model, usage, scanned_to: scannedTo, offset_pages: offsetPages });
+    return json({ done: true, entries, model, usage, scanned_to: scannedTo, offset_pages: offsetPages });
   } catch (e) {
     console.error("server_error:", String(e));
     return json({ error: "server_error" }, 500);
