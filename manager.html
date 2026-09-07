@@ -3245,6 +3245,21 @@ input,textarea,select{font-size:16px !important;}
       <h4>⚠️ معلّماتٌ غائبات أكثر من أسبوع</h4>
       <div id="an1-inactive-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
     </div>
+
+    <!-- ══ تتبّع الاستخدام: دخولات كل معلّمة والأقسام التي تفتحها ══ -->
+    <div class="analytics-section">
+      <h4>📊 استخدام المنصّة لكل معلّمة</h4>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:800">المدى:</label>
+        <select id="an1-usage-days" onchange="anUsageLoad()" style="padding:6px 10px;border:1.5px solid #E3DCC9;border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px">
+          <option value="1">اليوم</option>
+          <option value="7" selected>آخر ٧ أيام</option>
+          <option value="30">آخر ٣٠ يوماً</option>
+        </select>
+        <span id="an1-usage-note" style="font-size:11.5px;color:var(--muted)"></span>
+      </div>
+      <div id="an1-usage-table"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div></div>
+    </div>
   </div>
 
   <!-- ══ مؤشراتٌ عبر الحلقتين ══ -->
@@ -10681,7 +10696,89 @@ function anSwitchTab(id,btn){
   document.querySelectorAll('#page-analytics .an-tabs button').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
 }
-function anRefreshAll(){loadAnalytics();loadC1Analytics();loadCrossAnalytics();}
+function anRefreshAll(){loadAnalytics();loadC1Analytics();loadCrossAnalytics();anUsageLoad();}
+
+// ══ استخدام المنصّة لكل معلّمة (usage_tracking) ══
+// مصدرُ الصدق: صفوفٌ تكتبها صفحة المعلّمة عند كل دخولٍ وكل فتح قسم. القراءة
+// هنا للمشرف وحده (سياسة usage_admin_select)، والتجميع في المتصفّح لأن
+// الأحجام صغيرة (٩٠ يوماً محفوظة فقط، ومعلّماتٌ بالعشرات لا الآلاف).
+const AN_SECTION_NAMES={yawmi:'يومي',plan:'الخطة',studio:'الاستوديو',students:'طلابي',
+  reserve:'حصص الاحتياط',fahim:'خُطّة AI',ach:'إنجازاتك',shared:'المحفوظات',
+  lib:'المكتبة',msgs:'المراسلات'};
+async function anUsageLoad(){
+  if(!isAdmin())return;
+  const box=document.getElementById('an1-usage-table');
+  const note=document.getElementById('an1-usage-note');
+  if(!box)return;
+  const days=parseInt(document.getElementById('an1-usage-days').value)||7;
+  box.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">⏳ جاري التحميل...</div>';
+  try{
+    const since=new Date(Date.now()-days*864e5).toISOString();
+    const{data:ev,error}=await sb.from('usage_tracking')
+      .select('user_id,event_type,feature_name,timestamp')
+      .gte('timestamp',since).order('timestamp',{ascending:false}).limit(20000);
+    if(error)throw error;
+    if(!ev||!ev.length){
+      box.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">لا أحداث في هذا المدى — التتبّع يبدأ من أوّل دخولٍ بعد تفعيله.</div>';
+      note.textContent='';return;
+    }
+    // أسماء المعلّمات من ملفّاتهنّ (المعرّف وحده لا يفيد المشرف)
+    const names={};
+    try{
+      const{data:profs}=await sb.from('cycle1_profiles').select('id,data');
+      (profs||[]).forEach(p=>{names[p.id]=(p.data&&p.data.display_name)||'';});
+    }catch(e){}
+    const byUser={};
+    ev.forEach(e=>{
+      const u=(byUser[e.user_id]=byUser[e.user_id]||{logins:0,days:new Set(),sections:{},last:null});
+      if(e.event_type==='login'){u.logins++;u.days.add(String(e.timestamp).slice(0,10));}
+      if(e.event_type==='feature_used'&&e.feature_name){u.sections[e.feature_name]=(u.sections[e.feature_name]||0)+1;}
+      if(!u.last||e.timestamp>u.last)u.last=e.timestamp;
+    });
+    const rows=Object.keys(byUser).map(uid=>{
+      const u=byUser[uid];
+      const top=Object.entries(u.sections).sort((a,b)=>b[1]-a[1]);
+      return{uid,name:names[uid]||'(بلا اسم)',logins:u.logins,
+        activeDays:u.days.size,
+        perDay:u.days.size?(u.logins/u.days.size):0,
+        top,last:u.last};
+    }).sort((a,b)=>b.logins-a.logins);
+    note.textContent='إجمالي '+egToArabic(ev.length)+' حدثاً لـ'+egToArabic(rows.length)+' معلّمة';
+    box.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px">'
+      +'<thead><tr style="background:#F0EBDF">'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">المعلّمة</th>'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">مرّات الدخول</th>'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">أيام نشطة</th>'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">متوسط/يوم</th>'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">الأقسام التي فتحتها (الأكثر أولاً)</th>'
+      +'<th style="padding:8px;border:1px solid #E3DCC9">آخر نشاط</th>'
+      +'</tr></thead><tbody>'
+      +rows.map(r=>'<tr>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9;font-weight:800">'+escHtml(r.name)+'</td>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9;text-align:center">'+egToArabic(r.logins)+'</td>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9;text-align:center">'+egToArabic(r.activeDays)+'</td>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9;text-align:center">'+egToArabic(r.perDay.toFixed(1))+'</td>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9">'
+          +(r.top.length?r.top.slice(0,6).map(([k,n])=>
+             '<span style="display:inline-block;background:#F6F2E6;border:1px solid #E3DCC9;border-radius:20px;padding:2px 9px;margin:2px;white-space:nowrap">'
+             +escHtml(AN_SECTION_NAMES[k]||k)+' <b>'+egToArabic(n)+'</b></span>').join('')
+             :'<span style="color:var(--muted)">لم تفتح قسماً</span>')
+        +'</td>'
+        +'<td style="padding:8px;border:1px solid #E3DCC9;white-space:nowrap">'+escHtml(anUsageAgo(r.last))+'</td>'
+        +'</tr>').join('')
+      +'</tbody></table></div>';
+  }catch(e){
+    box.innerHTML='<div style="color:#B23;font-size:12.5px;padding:10px">تعذّر تحميل بيانات الاستخدام: '+escHtml(e.message||'')+'</div>';
+  }
+}
+function anUsageAgo(ts){
+  if(!ts)return'—';
+  const m=Math.floor((Date.now()-new Date(ts).getTime())/60000);
+  if(m<1)return'الآن';
+  if(m<60)return'قبل '+egToArabic(m)+' دقيقة';
+  const h=Math.floor(m/60);if(h<24)return'قبل '+egToArabic(h)+' ساعة';
+  return'قبل '+egToArabic(Math.floor(h/24))+' يوم';
+}
 
 // ══ تحليلات الحلقة الأولى — من cycle1_profiles (مكافئ profiles) وجداول c1_* ══
 async function loadC1Analytics(){
