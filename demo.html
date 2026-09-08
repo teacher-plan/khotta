@@ -3471,7 +3471,22 @@ function c1Board(open){
   }).join('');
   b.classList.add('open');
 }
+// ── تتبّع الاستخدام ──
+// حدثٌ واحد لكل دخولٍ ولكل فتح قسم، يُكتب في usage_tracking. سياسة RLS
+// تحصر المعلّمة في صفوفها هي (user_id = auth.uid())، والمشرف وحده يقرأ.
+// صامتٌ تماماً عند الفشل: التتبّع تحسينٌ إداري، فلا يجوز أن يُعطّل شيئاً
+// على المعلّمة إن تعذّرت الكتابة (شبكة، أو سياسةٌ لم تُطبَّق بعد).
+// وضعُ التجربة (KH_DEMO) لا يسجّل شيئاً — بياناته وهمية لا تُلوَّث بها الإحصاءات.
+function trackUsage(eventType,featureName){
+  try{
+    if(KH_DEMO||!currentUser||!currentUser.id)return;
+    sb.from('usage_tracking').insert({
+      user_id:currentUser.id,event_type:eventType,feature_name:featureName||null,
+    }).then(()=>{},()=>{});
+  }catch(e){}
+}
 function c1Go(id){
+  trackUsage('feature_used',id);
   c1Board(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('page-'+id);
@@ -3762,6 +3777,10 @@ async function afterAuth(session){
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
+  // يُسجَّل هنا لا عند إدخال كلمة المرور: المقصود «كم مرّةً دخلت المعلّمة
+  // المنصة» لا «كم مرّةً كتبت كلمة مرورها» — والمعلّمات يبقين مسجّلات دخولٍ
+  // ويفتحن التطبيق مراراً. وهو بعد اجتياز التحقق فلا تُحسب محاولةٌ مرفوضة.
+  trackUsage('login');
   renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
   khBudgetRing();
@@ -3914,7 +3933,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='9060322';
+const KH_BUILD='551a3c1';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
