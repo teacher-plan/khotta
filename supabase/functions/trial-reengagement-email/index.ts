@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
     // إعادة نداءٍ (شبكةٌ منقطعة، تحقّقٌ يدوي، إلخ).
     const { data: already } = await admin.from("trial_reengagement_log").select("email,status");
     const alreadySent = new Set((already || []).filter((r: { status: string }) => r.status === "sent").map((r: { email: string }) => r.email.toLowerCase()));
+    const skipped = alreadySent.size;
 
     const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
     const targets: { email: string; name: string }[] = [];
