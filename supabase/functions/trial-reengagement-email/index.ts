@@ -137,9 +137,15 @@ Deno.serve(async (req) => {
       if (p.data?.display_name) nameById.set(p.id, p.data.display_name);
     });
 
+    // ما أُرسل بنجاحٍ من قبل لا يُعاد — الجدول هو ضمان عدم التكرار عند أي
+    // إعادة نداءٍ (شبكةٌ منقطعة، تحقّقٌ يدوي، إلخ).
+    const { data: already } = await admin.from("trial_reengagement_log").select("email,status");
+    const alreadySent = new Set((already || []).filter((r: { status: string }) => r.status === "sent").map((r: { email: string }) => r.email.toLowerCase()));
+
     const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
     const targets: { email: string; name: string }[] = [];
     for (const email of emailSet) {
+      if (alreadySent.has(email)) continue;
       const u = usersByEmail.get(email);
       const lastMs = u?.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : null;
       const inactive = !u || lastMs === null || lastMs < twoDaysAgo;
@@ -149,18 +155,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, skipped = alreadySent.size;
     const failures: string[] = [];
     for (const t of targets) {
       const r = await sendMail(t.email, "يومٌ واحدٌ يفصلكِ عن نهاية تجربتكِ في «خُطّة» 🌸", reengageHtml(t.name));
+      await admin.from("trial_reengagement_log").upsert({
+        email: t.email, status: r.sent ? "sent" : "failed", reason: r.reason || null, sent_at: new Date().toISOString(),
+      });
       if (r.sent) sent++;
       else { failed++; failures.push(`${t.email}: ${r.reason}`); }
     }
 
-    console.log(`trial-reengagement-email: sent=${sent} failed=${failed} total_targets=${targets.length}`);
+    console.log(`trial-reengagement-email: sent=${sent} failed=${failed} skipped_already_sent=${skipped} total_targets=${targets.length}`);
     if (failures.length) console.error("trial-reengagement-email failures:\n" + failures.join("\n"));
 
-    return json({ ok: true, sent, failed, total_targets: targets.length });
+    return json({ ok: true, sent, failed, skipped_already_sent: skipped, total_targets: targets.length });
   } catch (e) {
     console.error("trial-reengagement-email server_error:", String(e));
     return json({ error: "server_error", detail: String(e).slice(0, 300) }, 500);
