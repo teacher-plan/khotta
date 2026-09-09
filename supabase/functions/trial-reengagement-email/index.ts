@@ -155,21 +155,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    let sent = 0, failed = 0, skipped = alreadySent.size;
-    const failures: string[] = [];
-    for (const t of targets) {
-      const r = await sendMail(t.email, "يومٌ واحدٌ يفصلكِ عن نهاية تجربتكِ في «خُطّة» 🌸", reengageHtml(t.name));
-      await admin.from("trial_reengagement_log").upsert({
-        email: t.email, status: r.sent ? "sent" : "failed", reason: r.reason || null, sent_at: new Date().toISOString(),
-      });
-      if (r.sent) sent++;
-      else { failed++; failures.push(`${t.email}: ${r.reason}`); }
+    // ⚠️ الإرسال الفعلي يستمر في الخلفية عبر waitUntil لا في الطلب نفسه:
+    // ٢٧ نداء Resend متتابعاً قد يتجاوز مهلة تنفيذ الدالّة، فينقطع الاتصال
+    // قبل أي ردٍّ — وهذا فعلياً ما حدث (net._http_response لم تحمل صفاً
+    // إطلاقاً رغم محاولتين، وtrial_reengagement_log بقي فارغاً كلياً).
+    // الردّ الآن فوريٌّ بعدد المستهدَفات؛ التقدّم الفعلي يُتابَع من الجدول.
+    const sendAll = async () => {
+      let sent = 0, failed = 0;
+      const failures: string[] = [];
+      for (const t of targets) {
+        const r = await sendMail(t.email, "يومٌ واحدٌ يفصلكِ عن نهاية تجربتكِ في «خُطّة» 🌸", reengageHtml(t.name));
+        await admin.from("trial_reengagement_log").upsert({
+          email: t.email, status: r.sent ? "sent" : "failed", reason: r.reason || null, sent_at: new Date().toISOString(),
+        });
+        if (r.sent) sent++;
+        else { failed++; failures.push(`${t.email}: ${r.reason}`); }
+      }
+      console.log(`trial-reengagement-email: sent=${sent} failed=${failed} skipped_already_sent=${skipped} total_targets=${targets.length}`);
+      if (failures.length) console.error("trial-reengagement-email failures:\n" + failures.join("\n"));
+    };
+
+    // deno-lint-ignore no-explicit-any
+    const rt = (globalThis as any).EdgeRuntime;
+    if (rt && typeof rt.waitUntil === "function") {
+      rt.waitUntil(sendAll());
+    } else {
+      // بيئة اختبارٍ محلية بلا EdgeRuntime — ننفّذ مباشرةً بلا خلفية.
+      await sendAll();
     }
 
-    console.log(`trial-reengagement-email: sent=${sent} failed=${failed} skipped_already_sent=${skipped} total_targets=${targets.length}`);
-    if (failures.length) console.error("trial-reengagement-email failures:\n" + failures.join("\n"));
-
-    return json({ ok: true, sent, failed, skipped_already_sent: skipped, total_targets: targets.length });
+    return json({ ok: true, started: true, skipped_already_sent: skipped, total_targets: targets.length });
   } catch (e) {
     console.error("trial-reengagement-email server_error:", String(e));
     return json({ error: "server_error", detail: String(e).slice(0, 300) }, 500);
