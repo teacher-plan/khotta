@@ -5,7 +5,7 @@ BEGIN
   IF v_key IS NULL THEN RAISE EXCEPTION 'NO_KEY'; END IF;
 
   SELECT net.http_post(
-    url := 'https://mkdsnnfkkdwdkywnwnjh.supabase.co/functions/v1/trial-reengagement-email',
+    url := 'https://mkdsnnfkkdwdkywnwnjh.supabase.co/functions/v1/credit-monitor',
     headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||v_key),
     body := '{}'::jsonb,
     timeout_milliseconds := 20000
@@ -14,12 +14,12 @@ BEGIN
   LOOP
     v_tries := v_tries + 1;
     SELECT status_code, content INTO v_status, v_content FROM net._http_response WHERE id = v_req;
-    EXIT WHEN v_status IS NOT NULL OR v_tries > 40;
+    EXIT WHEN v_status IS NOT NULL OR v_tries > 30;
     PERFORM pg_sleep(0.5);
   END LOOP;
 
   IF v_status IS NULL THEN
     RAISE EXCEPTION 'REQ_ID=% still pending after % tries', v_req, v_tries;
   END IF;
-  RAISE EXCEPTION 'REQ_ID=% STATUS=% BODY=%', v_req, v_status, left(v_content, 800);
+  RAISE EXCEPTION 'REQ_ID=% STATUS=% BODY=%', v_req, v_status, left(v_content, 500);
 END $$;
