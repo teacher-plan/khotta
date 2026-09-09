@@ -1,10 +1,9 @@
 DO $$
 DECLARE d text;
 BEGIN
-  SELECT string_agg('id='||id||' status='||coalesce(status_code::text,'null')||' created='||created, E'\n' ORDER BY id DESC)
+  SELECT string_agg(to_jsonb(t)::text, E'\n' ORDER BY t.id DESC)
   INTO d
-  FROM net._http_response
-  ORDER BY id DESC LIMIT 5;
+  FROM (SELECT * FROM net._http_response ORDER BY id DESC LIMIT 5) t;
   IF d IS NULL THEN d := 'NO_ROWS_AT_ALL'; END IF;
-  RAISE EXCEPTION 'DATA=%', d;
+  RAISE EXCEPTION 'DATA=%', left(d, 3000);
 END $$;
