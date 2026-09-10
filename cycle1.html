@@ -1107,8 +1107,13 @@ body.inapp #c1-budget-btn{display:flex}
 .grp-regen-btn svg{width:14px;height:14px}
 .grp-present-btn{display:flex;align-items:center;gap:6px;background:var(--olive);color:#fff;border:none;border-radius:11px;padding:9px 13px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .grp-present-btn svg{width:14px;height:14px}
-.grp-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.grp-box{border-radius:15px;padding:11px 12px;background:var(--card);border:1.5px solid var(--border);border-top:4px solid var(--gc)}
+.grp-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:stretch}
+/* عمودٌ مرن: مهما زاد عدد طلاب المجموعة (بلا حدٍّ أعلى)، تبقى الأعضاء
+   تتمدّد بحرّية وزرّ المكافأة يُثبَّت أسفل البطاقة بمحاذاة بقية المجموعات
+   في نفس الصفّ — لا يتحرّك بحسب عدد الأسماء فوقه. */
+.grp-box{border-radius:15px;padding:11px 12px;background:var(--card);border:1.5px solid var(--border);border-top:4px solid var(--gc);
+  display:flex;flex-direction:column}
+.grp-mem-list{flex:1}
 .grp-box .gh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px}
 .grp-box .gh b{font-size:13px;font-weight:800;color:var(--gc)}
 .grp-box .gh span{font-size:10.5px;color:var(--muted);font-weight:700;white-space:nowrap}
@@ -7195,9 +7200,9 @@ function grpAssignRenderAll(){
     <div class="grp-box" style="--gc:${GRP_COLORS[gi%GRP_COLORS.length]}">
       <input class="grp-name-input" value="${escAttr(_grpAssign.names[gi]||'')}" oninput="grpAssignNameInput(${gi},this.value)" placeholder="اسم المجموعة"/>
       <div class="gh"><span>${egArNum(mem.length)} طلاب</span></div>
-      ${mem.length?mem.map(idx=>`
+      <div class="grp-mem-list">${mem.length?mem.map(idx=>`
         <div class="grp-mem" onclick="grpMoveOpen(${gi},${idx})"><span class="grp-mem-nm">${escHtml(cls.students[idx]||'')}</span></div>`).join('')
-        :'<div class="grp-box-empty">لا طالبات بعد</div>'}
+        :'<div class="grp-box-empty">لا طالبات بعد</div>'}</div>
     </div>`).join('');
 }
 function grpAssignNameInput(gi,val){_grpAssign.names[gi]=val;}
@@ -7258,8 +7263,8 @@ function grpRenderBoardGroups(cls){
     <div class="grp-boxes">${data.groups.map((mem,gi)=>`
       <div class="grp-box" style="--gc:${GRP_COLORS[gi%GRP_COLORS.length]}">
         <div class="gh"><b>${escHtml(data.names[gi]||('مجموعة '+egArNum(gi+1)))}</b><span>${egArNum(mem.length)} طلاب</span></div>
-        ${mem.length?mem.map(idx=>`<div class="grp-mem" onclick="stuOpenFile('${cls.id}',${idx})"><span class="grp-mem-nm">${escHtml(cls.students[idx]||'')}</span></div>`).join('')
-          :'<div class="grp-box-empty">لا طالبات في هذه المجموعة</div>'}
+        <div class="grp-mem-list">${mem.length?mem.map(idx=>`<div class="grp-mem" onclick="stuOpenFile('${cls.id}',${idx})"><span class="grp-mem-nm">${escHtml(cls.students[idx]||'')}</span></div>`).join('')
+          :'<div class="grp-box-empty">لا طالبات في هذه المجموعة</div>'}</div>
         ${mem.length?`<button class="grp-reward-btn" onclick="grpRewardGroup('${cls.id}',${gi})">${STAR_SVG}مكافأة جماعية لكل المجموعة</button>`:''}
       </div>`).join('')}</div>`;
 }
