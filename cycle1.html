@@ -6955,8 +6955,8 @@ function stuAddOpen(classId){
   const input=document.getElementById('stu-add-input');
   if(input)input.value='';
   const wrap=document.getElementById('stu-add-grp-wrap');
-  const data=profile.stu_groups&&profile.stu_groups[classId];
-  if(data&&data.groups&&data.groups.length){
+  const data=grpSafe(classId);
+  if(data&&data.groups.length){
     wrap.classList.remove('hidden');
     document.getElementById('stu-add-grp-chips').innerHTML=data.names.map((nm,gi)=>
       `<div class="chip olv" id="stu-add-grp-chip-${gi}" onclick="stuAddPickGroup(${gi})">${escHtml(nm||('مجموعة '+egArNum(gi+1)))}</div>`).join('');
@@ -6966,7 +6966,8 @@ function stuAddOpen(classId){
 }
 function stuAddPickGroup(gi){
   _stuAddGroupIdx=gi;
-  const data=profile.stu_groups[_stuAddClassId];
+  const data=grpSafe(_stuAddClassId);
+  if(!data)return;
   data.names.forEach((_,i)=>{
     const el=document.getElementById('stu-add-grp-chip-'+i);
     if(el)el.classList.toggle('sel',i===gi);
@@ -7112,6 +7113,15 @@ function grpHasSaved(classId){
   const d=profile.stu_groups&&profile.stu_groups[classId];
   return !!(d&&d.groups&&d.groups.length);
 }
+// قراءةٌ آمنة لتوزيعٍ محفوظ: تصون أي تقسيمٍ أُنشئ بنسخةٍ سابقة كانت لا تخزّن
+// أسماء المجموعات (names)، فتقرأ مباشرةً data.names[gi] كان يرمي خطأً صامتاً
+// يُسقط الزرّ كاملاً بلا أي أثر ظاهر — من هنا فصاعداً كل قراءةٍ تمرّ من هنا.
+function grpSafe(classId){
+  const d=profile.stu_groups&&profile.stu_groups[classId];
+  if(!d||!d.groups)return null;
+  const names=(d.names&&d.names.length===d.groups.length)?d.names:d.groups.map((_,i)=>'المجموعة '+egArNum(i+1));
+  return{names,groups:d.groups};
+}
 // ── الخطوة ١: عدد المجموعات فقط ──
 function grpOpen(classId){
   _grpSetupClassId=classId;
@@ -7142,7 +7152,7 @@ function grpStep1Next(){
 }
 // فتح شاشة التسمية والتوزيع مباشرةً على توزيعٍ محفوظ سلفاً (تعديل)
 function grpEditOpen(classId){
-  const saved=profile.stu_groups&&profile.stu_groups[classId];
+  const saved=grpSafe(classId);
   if(!saved)return;
   _grpAssign={classId,isEdit:true,
     names:saved.names.slice(),
@@ -7238,7 +7248,8 @@ async function grpDeleteSet(){
 }
 // عرض المجموعات ضمن قسم طلابي نفسه (لا نافذة) بعد اعتماد التوزيع
 function grpRenderBoardGroups(cls){
-  const data=profile.stu_groups[cls.id];
+  const data=grpSafe(cls.id);
+  if(!data)return'';
   return `<div class="grp-result-top">
       <button class="grp-edit-btn" onclick="grpEditOpen('${cls.id}')">✏️ تعديل التقسيم</button>
       <button class="grp-present-btn" onclick="grpPresentOpen('${cls.id}')">
@@ -7255,7 +7266,7 @@ function grpRenderBoardGroups(cls){
 // مكافأةٌ جماعية: نجمةٌ واحدة لكل عضوةٍ في المجموعة بضغطةٍ واحدة، بلا
 // تشغيل صوت/احتفال كل عضوةٍ على حدة حتى لا يتزاحم عشرون صوتاً معاً.
 async function grpRewardGroup(classId,gi){
-  const data=profile.stu_groups[classId];
+  const data=grpSafe(classId);
   if(!data)return;
   const mem=data.groups[gi]||[];
   if(!mem.length)return;
@@ -7272,7 +7283,7 @@ async function grpRewardGroup(classId,gi){
 }
 function grpPresentOpen(classId){
   const cls=starClassObj(classId);
-  const data=profile.stu_groups&&profile.stu_groups[classId];
+  const data=grpSafe(classId);
   if(!cls||!data)return;
   document.getElementById('grp-present-title').textContent='شعبة '+cls.name+' — '+egArNum(data.groups.length)+' مجموعات';
   document.getElementById('grp-present-grid').innerHTML=data.groups.map((mem,gi)=>`
