@@ -2465,6 +2465,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="kt-sidebar-item" data-page="c1msgs" onclick="ktGoC1('msgs',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg> مراسلات الحلقة الأولى</button>
       <button class="kt-sidebar-item" data-page="c1storage" onclick="ktGoC1('storage',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2zm-2 7h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7zm4 3v2h6v-2H6z"/></svg> مراقبة التخزين واستهلاك الرصيد</button>
       <button class="kt-sidebar-item" data-page="c1golden" onclick="ktGoC1('golden',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> متابعة الخطة الذهبية</button>
+      <button class="kt-sidebar-item" data-page="c1preps" onclick="ktGoC1('preps',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM7 12h10v2H7v-2zm0 4h10v2H7v-2zm0-8h5v2H7V8z"/></svg> تحاضير الحلقة الأولى</button>
     </div>
 
     <button class="kt-sidebar-group-toggle" id="ktsg-c2-toggle" onclick="ktSidebarToggleGroup('c2')">
@@ -2669,6 +2670,88 @@ input,textarea,select{font-size:16px !important;}
         </tr></thead>
         <tbody id="mc1g-top-b"><tr><td colspan="4" style="padding:14px;text-align:center;color:#7A715B">يجري التحميل</td></tr></tbody>
       </table></div>
+    </div>
+  </div></div>
+
+  <div class="page" id="page-c1preps"><div class="wrap">
+    <h1>تحاضير الحلقة الأولى</h1>
+    <p>ارفعي دليل المعلم لمادةٍ ما، طابقي فهرسه مع فهرس الكتاب، ثم ولّدي تحضير كل درسٍ من صفحاته في الكتاب ودليل المعلم معاً</p>
+
+    <!-- ١) اختيار النطاق -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="flex:1;min-width:140px">
+          <label class="eg-lbl">الفصل</label>
+          <select id="prep-semester" onchange="prepReloadSubjects()"><option value="الفصل الأول">الفصل الأول</option><option value="الفصل الثاني">الفصل الثاني</option></select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label class="eg-lbl">الصف</label>
+          <select id="prep-grade" onchange="prepScopeChanged()"><option value="">الصف</option></select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label class="eg-lbl">المادة</label>
+          <select id="prep-subject" onchange="prepScopeChanged()"><option value="">المادة</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ٢) دليل المعلم لهذا النطاق -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <h1 style="font-size:16px;margin:0 0 8px">دليل المعلم</h1>
+      <div id="prep-guide-status" style="font-size:12.5px;color:#7A715B;margin-bottom:10px">اختاري الفصل والصف والمادة أولاً</div>
+      <div id="prep-guide-controls" style="display:none">
+        <input type="file" id="prep-guide-file" accept="application/pdf" style="font-size:12px"/>
+        <button onclick="prepUploadGuide()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#4A7A9E,#2F5A78);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">رفع الدليل</button>
+        <button onclick="prepIndexGuide()" id="prep-index-btn" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#C8A03C,#A97E22);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px;display:none">مطابقة الفهرس بالذكاء الاصطناعي</button>
+        <div id="prep-guide-progress" style="font-size:12px;color:#7A715B;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- ٣) مطابقةٌ شاملة + تقرير التغطية -->
+    <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:20px;text-align:right;max-width:760px;margin:0 auto 18px">
+      <h1 style="font-size:16px;margin:0 0 8px">المطابقة الشاملة وتقرير التغطية</h1>
+      <p style="margin:0 0 10px">طابقي فهارس كل الأدلة المرفوعة دفعةً واحدة، ثم اعرضي أي درسٍ في كتاب الطالب بلا مقابلٍ في دليل المعلم</p>
+      <button onclick="prepMatchAll()" id="prep-matchall-btn" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#C8A03C,#A97E22);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer">مطابقة كل الأدلة غير المطابَقة</button>
+      <button onclick="prepMatchAll(true)" style="padding:9px 18px;border:1.5px solid #E3DCC9;border-radius:10px;background:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">إعادة مطابقة الكل</button>
+      <button onclick="prepCoverageReport()" style="padding:9px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;margin-inline-start:8px">تقرير التغطية</button>
+      <div id="prep-matchall-log" style="font-size:12px;color:#5B5340;margin-top:10px;max-height:220px;overflow:auto;line-height:1.9"></div>
+      <div id="prep-coverage" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ٤) نتيجة المطابقة -->
+    <div id="prep-match-wrap" style="max-width:760px;margin:0 auto 18px;display:none">
+      <h1 style="font-size:16px">مطابقة الفهرس</h1>
+      <p style="margin:0 0 10px">راجعي المطابقة قبل المتابعة — كل بندٍ من فهرس الدليل مقابل درسه في الكتاب</p>
+      <div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:18px;padding:14px;text-align:right">
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px">
+          <thead><tr style="background:#F0EBDF">
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">بند دليل المعلم</th>
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">درس الكتاب المطابق</th>
+            <th style="padding:8px;border:1px solid #E3DCC9;font-weight:800">الثقة</th>
+          </tr></thead>
+          <tbody id="prep-match-b"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ٥) قائمة الدروس -->
+    <div id="prep-lessons-wrap" style="max-width:760px;margin:0 auto;display:none">
+      <h1 style="font-size:16px">دروس المادة</h1>
+      <div id="prep-lessons-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- ٦) معاينة التحضير المولَّد -->
+    <div id="prep-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;padding:24px;overflow:auto">
+      <div style="background:#fff;border-radius:16px;max-width:720px;margin:0 auto;padding:24px;text-align:right;position:relative">
+        <button onclick="prepClosePreview()" style="position:absolute;top:14px;left:14px;background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+        <h1 id="prep-preview-title" style="font-size:17px;margin:0 0 14px"></h1>
+        <div id="prep-preview-body" style="font-size:13px;line-height:2"></div>
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <a id="prep-download-btn" href="#" target="_blank" style="display:none;padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#2F5A78,#1F3E54);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;text-decoration:none">⬇️ تنزيل ملف Word</a>
+          <button onclick="prepApprove()" id="prep-approve-btn" style="padding:9px 22px;border:none;border-radius:10px;background:linear-gradient(135deg,#487848,#35603A);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">اعتماد</button>
+          <button onclick="prepClosePreview()" style="padding:9px 22px;border:1.5px solid #E3DCC9;border-radius:10px;background:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer">إغلاق</button>
+        </div>
+      </div>
     </div>
   </div></div>
 <!-- ══ TIMETABLE ══ -->
@@ -6185,6 +6268,416 @@ async function mc1ExpandBudget(userId,name){
   }catch(e){alert('تعذّر الحفظ: '+(e.message||''));}
 }
 
+// ══ تحاضير الحلقة الأولى: مطابقة دليل المعلم مع فهرس الكتاب، ثم توليد
+// تحضير كل درسٍ من صفحاته في الكتاب + دليل المعلم معاً، بتنسيق قالبٍ
+// معتمدٍ ثابت (ai_settings.prep_template_text) — مسودة تنتظر اعتماد المشرف
+// (lesson_prep_generations.status: draft → approved). ══
+let prepCurriculum=[],prepGuide=null;
+
+// تُبنى القائمتان في كل استدعاء (لا مرّةً واحدة براية dataset): بناءٌ مشروط
+// يعني أن أي مسارٍ لا يمرّ بالتهيئة يترك القائمة فارغةً بلا إصلاحٍ ممكن
+// بعدها. البناءُ رخيصٌ (٤ خيارات)، والاختيارُ القائم يُحفَظ فلا يضيع.
+function prepInit(){
+  const gs=document.getElementById('prep-grade');
+  if(!gs)return;
+  const cur=gs.value;
+  gs.innerHTML='<option value="">الصف</option>'+[1,2,3,4].map(n=>`<option value="${n}">${libGradeName(n)}</option>`).join('');
+  gs.value=['1','2','3','4'].includes(String(cur))?cur:'';
+  prepReloadSubjects();
+}
+function prepReloadSubjects(){
+  const ssel=document.getElementById('prep-subject');
+  const cur=ssel.value;
+  ssel.innerHTML='<option value="">المادة</option>'+FIRST_CYCLE_SUBJECTS.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+  ssel.value=FIRST_CYCLE_SUBJECTS.includes(cur)?cur:'';
+  prepScopeChanged();
+}
+function prepScope(){
+  return{
+    semester:document.getElementById('prep-semester').value,
+    grade:document.getElementById('prep-grade').value,
+    subject:document.getElementById('prep-subject').value,
+  };
+}
+async function prepScopeChanged(){
+  document.getElementById('prep-match-wrap').style.display='none';
+  document.getElementById('prep-lessons-wrap').style.display='none';
+  prepGuide=null;prepCurriculum=[];
+  const{semester,grade,subject}=prepScope();
+  const status=document.getElementById('prep-guide-status');
+  const controls=document.getElementById('prep-guide-controls');
+  if(!grade||!subject){status.textContent='اختاري الفصل والصف والمادة أولاً';controls.style.display='none';return;}
+  controls.style.display='block';
+  status.textContent='يجري التحميل…';
+  try{
+    const{data:cur,error:cErr}=await sb.from('curriculum').select('*').eq('semester',semester).eq('grade',Number(grade)).eq('subject',subject).order('sort');
+    if(cErr)throw cErr;
+    prepCurriculum=cur||[];
+    const{data:guide}=await sb.from('teacher_guides').select('*').eq('semester',semester).eq('grade',Number(grade)).eq('subject',subject).maybeSingle();
+    prepGuide=guide||null;
+    prepRenderGuideStatus();
+    if(prepGuide&&prepGuide.status==='indexed')await prepRenderMatchAndLessons();
+  }catch(e){status.textContent='تعذّر التحميل: '+(e.message||'');}
+}
+function prepRenderGuideStatus(){
+  const status=document.getElementById('prep-guide-status');
+  const idxBtn=document.getElementById('prep-index-btn');
+  if(!prepGuide){status.textContent='لا يوجد دليل معلمٍ مرفوع لهذا النطاق بعد — ارفعي ملف PDF';idxBtn.style.display='none';return;}
+  const map={uploaded:'⬆️ مرفوع — لم تُطابَق فهرسه بعد',indexing:'⏳ تجري المطابقة الآن…',indexed:'✅ تمّت مطابقة الفهرس',index_failed:'❌ فشلت المطابقة — أعيدي المحاولة'};
+  status.textContent=map[prepGuide.status]||prepGuide.status;
+  idxBtn.style.display=(prepGuide.status==='uploaded'||prepGuide.status==='index_failed')?'inline-block':'none';
+}
+// رفع دليل المعلم PDF → صور صفحات (نفس مسار segUploadAndSegment لكتاب
+// الطالب) → تسجيل صف في teacher_guides.
+async function prepUploadGuide(){
+  const file=document.getElementById('prep-guide-file').files[0];
+  const{semester,grade,subject}=prepScope();
+  const status=document.getElementById('prep-guide-progress');
+  if(!file){status.textContent='❌ اختاري ملف PDF أولاً';return;}
+  if(!grade||!subject){status.textContent='❌ اختاري الصف والمادة أولاً';return;}
+  if(!/\.pdf$/i.test(file.name)){status.textContent='❌ الملف يجب أن يكون PDF';return;}
+  let pdf;
+  try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
+  catch(e){status.textContent='❌ فشل فتح الـPDF';return;}
+  const N=pdf.numPages;
+  if(!await uiConfirm('سيُرفع دليل المعلم ('+egToArabic(N)+' صفحة) لـ'+subject+' — '+libGradeName(Number(grade))+' — '+semester+'. متابعة؟'))return;
+  const base='teacher-guides/'+stableLessonId(semester,subject,String(grade),'GUIDE','');
+  const failed=[];
+  const putPage=async(p,tries)=>{
+    let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
+    if(!blob)return false;
+    for(let a=1;a<=tries;a++){
+      try{
+        const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});
+        if(!error)return true;
+      }catch(e){}
+      if(a<tries)await new Promise(r=>setTimeout(r,1200*a));
+    }
+    return false;
+  };
+  for(let p=1;p<=N;p++){
+    status.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+'...';
+    if(!await putPage(p,3))failed.push(p);
+  }
+  if(failed.length){status.textContent='⚠️ تعذّر رفع '+egToArabic(failed.length)+' صفحة — أعيدي رفع الملف لإكمالها.';}
+  try{
+    const{data,error}=await sb.from('teacher_guides').upsert({
+      semester,grade:Number(grade),subject,base_path:base,page_count:N,offset_pages:1,status:'uploaded',
+    },{onConflict:'grade,subject,semester'}).select().single();
+    if(error)throw error;
+    prepGuide=data;
+    status.textContent=failed.length?status.textContent:'✅ اكتمل الرفع';
+    prepRenderGuideStatus();
+  }catch(e){status.textContent='فشل تسجيل الدليل: '+(e.message||'');}
+}
+// supabase-js يلفّ أي ردٍّ غير 2xx في FunctionsHttpError برسالةٍ عامة
+// («non-2xx status code») ويُخفي جسم الرد — وفيه سببُ الفشل الحقيقي الذي
+// تُعيده الدالّة. هذه تقرأ الجسم فتظهر الرسالة المفيدة بدل العامة.
+async function prepFnErrText(error){
+  try{
+    const j=await error.context.json();
+    const parts=[j.error,j.detail].filter(Boolean);
+    if(parts.length)return parts.join(' — ');
+  }catch(_){}
+  return error.message||'خطأ غير معروف';
+}
+// يقود المسح دفعةً دفعة: كل نداءٍ يفحص ١٢ صفحة ويعود سريعاً، فلا يقترب من
+// مهلة الاتصال. onProgress يتيح إظهار موضع البحث للمشرف بدل انتظارٍ صامت.
+// يُعيد عدد بنود الفهرس عند النجاح، ويرمي عند الفشل الحقيقي.
+async function prepRunIndexing(guideId,onProgress){
+  let from=1,bestEntries=[];
+  for(let guard=0;guard<12;guard++){
+    const{data,error}=await sb.functions.invoke('index-teacher-guide',{body:{teacher_guide_id:guideId,scan_from:from,best_entries:bestEntries}});
+    if(error)throw new Error(await prepFnErrText(error));
+    if(data&&data.error)throw new Error(data.detail||data.error);
+    if(data&&data.done)return(data.entries&&data.entries.length)||0;
+    if(data&&data.exhausted)throw new Error(data.detail||'لم يُعثر على فهرس في الدليل');
+    bestEntries=(data&&data.best_entries)||bestEntries;
+    from=(data&&data.next_from)||(from+12);
+    if(onProgress)onProgress(from);
+  }
+  throw new Error('تجاوز عدد الدفعات المسموح');
+}
+async function prepIndexGuide(){
+  if(!prepGuide)return;
+  const progress=document.getElementById('prep-guide-progress');
+  progress.textContent='⏳ يبحث عن الفهرس…';
+  try{
+    const n=await prepRunIndexing(prepGuide.id,f=>{progress.textContent='⏳ يبحث عن الفهرس… من الصفحة '+egToArabic(f);});
+    progress.textContent='✅ تمّت المطابقة: '+egToArabic(n)+' بنداً';
+    const{data:guide}=await sb.from('teacher_guides').select('*').eq('id',prepGuide.id).maybeSingle();
+    prepGuide=guide;
+    prepRenderGuideStatus();
+    await prepRenderMatchAndLessons();
+  }catch(e){progress.textContent='❌ فشلت المطابقة: '+(e.message||'');prepRenderGuideStatus();}
+}
+// ── مطابقةٌ شاملة لكل الأدلة ──
+// الدالّة محميّةٌ بصلاحية المشرف، فتُنفَّذ من متصفّح المشرف لا من الخادم.
+// نُنفّذها تسلسلياً (لا متوازية) لأن كل مطابقةٍ تستهلك نداءات رؤيةٍ متعددة،
+// والتوازي يصطدم بحدّ المعدّل عند المزوّد ويُفشل أدلةً سليمة بلا سبب.
+async function prepMatchAll(redoAll){
+  const log=document.getElementById('prep-matchall-log');
+  const btn=document.getElementById('prep-matchall-btn');
+  const semester=document.getElementById('prep-semester').value;
+  let q=sb.from('teacher_guides').select('*').eq('semester',semester).order('grade').order('subject');
+  const{data:guides,error}=await q;
+  if(error){log.innerHTML='<span style="color:#B23">تعذّر جلب الأدلة: '+escHtml(error.message||'')+'</span>';return;}
+  const todo=(guides||[]).filter(g=>redoAll?true:g.status!=='indexed');
+  if(!todo.length){log.innerHTML='لا أدلة تحتاج مطابقة (كلها مطابَقة سلفاً — استعملي «إعادة مطابقة الكل» لإعادتها).';return;}
+  if(!await uiConfirm('ستُطابَق '+egToArabic(todo.length)+' أدلة، وكلٌّ منها يستغرق نحو دقيقة.\nلا تُغلقي الصفحة أثناء التنفيذ. متابعة؟'))return;
+  btn.disabled=true;
+  let ok=0,failed=0;
+  log.innerHTML='';
+  for(let i=0;i<todo.length;i++){
+    const g=todo[i];
+    const line=document.createElement('div');
+    line.textContent='⏳ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+'…';
+    log.prepend(line);
+    try{
+      const n=await prepRunIndexing(g.id,f=>{
+        line.textContent='⏳ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': يبحث من الصفحة '+egToArabic(f)+'…';
+      });
+      line.textContent='✅ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': '+egToArabic(n)+' بنداً';
+      line.style.color='#2F5D2F';ok++;
+    }catch(e){
+      line.textContent='❌ ('+egToArabic(i+1)+'/'+egToArabic(todo.length)+') '+libGradeName(g.grade)+' — '+g.subject+': '+(e.message||'خطأ');
+      line.style.color='#B23';failed++;
+    }
+  }
+  btn.disabled=false;
+  const sum=document.createElement('div');
+  sum.style.cssText='font-weight:800;margin-bottom:6px;border-bottom:1px solid #E3DCC9;padding-bottom:6px';
+  sum.textContent='انتهت المطابقة: نجح '+egToArabic(ok)+'، فشل '+egToArabic(failed);
+  log.prepend(sum);
+  await prepScopeChanged();
+}
+
+// ── تقرير التغطية ──
+// السؤال الذي يجيب عنه: هل لكل درسٍ في كتاب الطالب مقابلٌ في دليل المعلم؟
+// يقارن صفوف curriculum بما طابقه الذكاء الاصطناعي في teacher_guides.toc،
+// ويُسمّي الدروس غير المغطّاة صراحةً بدل الاكتفاء بنسبةٍ مئوية.
+async function prepCoverageReport(){
+  const box=document.getElementById('prep-coverage');
+  const semester=document.getElementById('prep-semester').value;
+  box.innerHTML='<div style="font-size:12px;color:#7A715B">يجري الحساب…</div>';
+  try{
+    const{data:guides}=await sb.from('teacher_guides').select('*').eq('semester',semester).order('grade').order('subject');
+    const{data:curAll,error:cErr}=await sb.from('curriculum').select('id,grade,subject,unit,lesson,sort').eq('semester',semester).lte('grade',4).order('grade').order('sort');
+    if(cErr)throw cErr;
+    const byKey={};
+    (curAll||[]).forEach(r=>{const k=r.grade+'|'+r.subject;(byKey[k]=byKey[k]||[]).push(r);});
+    const rows=[];let totLessons=0,totCovered=0;
+    for(const g of (guides||[])){
+      const k=g.grade+'|'+g.subject;
+      const lessons=byKey[k]||[];
+      const matched=new Set(((g.toc||[]).map(e=>e.matched_curriculum_id).filter(Boolean)));
+      const missing=lessons.filter(l=>!matched.has(l.id));
+      totLessons+=lessons.length;totCovered+=(lessons.length-missing.length);
+      rows.push({grade:g.grade,subject:g.subject,status:g.status,total:lessons.length,missing});
+    }
+    // مواد لها منهجٌ في القاعدة ولا دليل مرفوع أصلاً — نقصٌ يجب أن يظهر أيضاً
+    Object.keys(byKey).forEach(k=>{
+      const[gr,sub]=k.split('|');
+      if(!(guides||[]).some(g=>String(g.grade)===gr&&g.subject===sub)){
+        rows.push({grade:Number(gr),subject:sub,status:'no_guide',total:byKey[k].length,missing:byKey[k]});
+        totLessons+=byKey[k].length;
+      }
+    });
+    rows.sort((a,b)=>a.grade-b.grade||a.subject.localeCompare(b.subject,'ar'));
+    const pct=totLessons?Math.round(totCovered*100/totLessons):0;
+    box.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:8px">التغطية الكلية: '
+      +egToArabic(totCovered)+' من '+egToArabic(totLessons)+' درساً ('+egToArabic(pct)+'٪)</div>'
+      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<thead><tr style="background:#F0EBDF">'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">الصف</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">المادة</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">مغطّى</th>'
+      +'<th style="padding:7px;border:1px solid #E3DCC9">دروس بلا مقابل في الدليل</th></tr></thead><tbody>'
+      +rows.map(r=>{
+        const cov=r.total-r.missing.length;
+        const bad=r.missing.length>0;
+        return '<tr>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'+escHtml(libGradeName(r.grade))+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'+escHtml(r.subject)+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9;font-weight:800;color:'+(bad?'#B23':'#2F5D2F')+'">'
+            +egToArabic(cov)+'/'+egToArabic(r.total)+'</td>'
+          +'<td style="padding:7px;border:1px solid #E3DCC9">'
+            +(r.status==='no_guide'?'<span style="color:#B23">لا دليل مرفوع</span>'
+              :r.status!=='indexed'?'<span style="color:#8A6D1E">لم تُطابَق بعد</span>'
+              :bad?escHtml(r.missing.map(m=>m.lesson).join('، ')):'<span style="color:#2F5D2F">مكتمل ✓</span>')
+          +'</td></tr>';
+      }).join('')
+      +'</tbody></table></div>';
+  }catch(e){box.innerHTML='<span style="color:#B23">تعذّر التقرير: '+escHtml(e.message||'')+'</span>';}
+}
+
+async function prepRenderMatchAndLessons(){
+  if(!prepGuide||!Array.isArray(prepGuide.toc))return;
+  const curById={};prepCurriculum.forEach(r=>curById[r.id]=r);
+  const mb=document.getElementById('prep-match-b');
+  const confLabel={high:'مرتفعة',medium:'متوسطة',low:'منخفضة'};
+  mb.innerHTML=prepGuide.toc.map(e=>{
+    const m=e.matched_curriculum_id?curById[e.matched_curriculum_id]:null;
+    return `<tr>
+      <td style="padding:8px;border:1px solid #E3DCC9">${escHtml(e.guide_unit||'')} — ${escHtml(e.guide_lesson||'')}</td>
+      <td style="padding:8px;border:1px solid #E3DCC9">${m?escHtml(m.unit+' — '+m.lesson):'<span style=\"color:#B23">لا مطابقة</span>'}</td>
+      <td style="padding:8px;border:1px solid #E3DCC9">${confLabel[e.confidence]||e.confidence||''}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('prep-match-wrap').style.display='block';
+
+  // خريطة curriculum_id → بند الدليل المطابق (لجلب صفحات الدليل عند التوليد)
+  const guideByCurId={};
+  prepGuide.toc.forEach(e=>{if(e.matched_curriculum_id)guideByCurId[e.matched_curriculum_id]=e;});
+
+  const{data:gens}=await sb.from('lesson_prep_generations').select('curriculum_id,status').eq('semester',prepGuide.semester).eq('grade',prepGuide.grade).eq('subject',prepGuide.subject);
+  const genByCurId={};(gens||[]).forEach(g=>genByCurId[g.curriculum_id]=g.status);
+
+  const list=document.getElementById('prep-lessons-list');
+  list.innerHTML=prepCurriculum.map(r=>{
+    const hasGuide=!!guideByCurId[r.id];
+    const st=genByCurId[r.id];
+    const badge=st==='approved'?'<span style="color:#2F5D2F;font-weight:800">معتمد ✓</span>':st==='draft'?'<span style="color:#8A6D1E;font-weight:800">مسودة</span>':'';
+    return `<div style="background:#FFFEFB;border:1.5px solid #E3DCC9;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><div style="font-weight:800;font-size:13px">${escHtml(r.lesson)}</div><div style="font-size:11px;color:#7A715B">${escHtml(r.unit)}${hasGuide?'':' — بلا صفحات دليل مطابقة'}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${badge}
+        <button onclick="prepGenerateLesson(${r.id})" style="padding:7px 16px;border:none;border-radius:9px;background:linear-gradient(135deg,#4A7A9E,#2F5A78);color:#fff;font-family:'Cairo',sans-serif;font-size:12px;font-weight:800;cursor:pointer">${st?'إعادة توليد':'تحضير الدرس'}</button>
+        ${st?`<button onclick="prepShowExisting(${r.id})" style="padding:7px 16px;border:1.5px solid #E3DCC9;border-radius:9px;background:#fff;font-family:'Cairo',sans-serif;font-size:12px;font-weight:800;cursor:pointer">عرض</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('prep-lessons-wrap').style.display='block';
+  prepMap={guideByCurId,curById};
+}
+let prepMap={guideByCurId:{},curById:{}};
+// صور صفحات الدرس في الكتاب — نفس منطق c1LessonBookImages في cycle1.html،
+// معاد هنا لأن لوحة الإدارة لا تحمّل ملف المعلّمة.
+async function prepBookImages(cur){
+  try{
+    const{data:bs}=await sb.from('book_sources').select('*').eq('grade',String(cur.grade)).eq('subject',cur.subject).eq('semester',cur.semester).eq('book_no',cur.book_no||1).maybeSingle();
+    if(!bs||!bs.base_path||!bs.page_count)return[];
+    const sorted=prepCurriculum.filter(r=>(r.book_no||1)===(cur.book_no||1)).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+    const idx=sorted.findIndex(r=>r.id===cur.id);
+    const start=parseInt(cur.page);if(!start)return[];
+    let end=bs.page_count;
+    for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+    if(end<start)end=start;
+    const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
+    const images=[];
+    for(let bp=start;bp<=end&&images.length<15;bp++){
+      const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+      images.push(sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl);
+    }
+    return images;
+  }catch(e){return[];}
+}
+// صور صفحات نفس الدرس في دليل المعلم — من رقم الصفحة الذي استخرجه AI في
+// prepGuide.toc إلى بداية البند التالي في الفهرس (أو نهاية الدليل).
+function prepGuideImages(cur){
+  if(!prepGuide||!prepGuide.base_path)return[];
+  const e=prepMap.guideByCurId[cur.id];
+  if(!e||!e.guide_page)return[];
+  const toc=(prepGuide.toc||[]).filter(x=>x.guide_page).sort((a,b)=>a.guide_page-b.guide_page);
+  const idx=toc.findIndex(x=>x===e);
+  const start=e.guide_page;
+  let end=prepGuide.page_count;
+  for(let j=idx+1;j<toc.length;j++){if(toc[j].guide_page>start){end=toc[j].guide_page-1;break;}}
+  if(end<start)end=start;
+  const offset=prepGuide.offset_pages||1,pageCount=prepGuide.page_count,base=prepGuide.base_path;
+  const images=[];
+  for(let bp=start;bp<=end&&images.length<15;bp++){
+    const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
+    images.push(sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl);
+  }
+  return images;
+}
+async function prepGenerateLesson(curId){
+  const cur=prepCurriculum.find(r=>r.id===curId);
+  if(!cur)return;
+  // نُطلع المشرف على المصادر *قبل* التوليد: كم صفحةً من الكتاب وكم من دليل
+  // المعلم، وأيّ صفحاتٍ بالضبط — حتى لا يكون «قرأ المصدرين» ادّعاءً غير قابل
+  // للتحقق، وحتى ينكشف فوراً أي درسٍ يُولَّد من الكتاب وحده.
+  const[bookImages,guideImages]=[await prepBookImages(cur),prepGuideImages(cur)];
+  if(!bookImages.length&&!guideImages.length){alert('لا صفحات متاحة لهذا الدرس (لا كتاب مرفوع ولا دليل مطابق)');return;}
+  const gEntry=prepMap.guideByCurId[cur.id];
+  const srcTxt='المصادر التي ستُقرأ:\n'
+    +'• كتاب الطالب: '+egToArabic(bookImages.length)+' صفحة'+(bookImages.length?' (من صفحة '+egToArabic(cur.page||'؟')+')':' — لا شيء!')+'\n'
+    +'• دليل المعلم: '+egToArabic(guideImages.length)+' صفحة'+(guideImages.length?' (من صفحة '+egToArabic(gEntry&&gEntry.guide_page||'؟')+' في الدليل)':' — لا شيء!')+'\n\n';
+  if(!await uiConfirm(srcTxt+'توليد تحضير درس «'+cur.lesson+'»؟'))return;
+  try{
+    const{data,error}=await sb.functions.invoke('generate-lesson-prep-guided',{body:{
+      curriculum_id:cur.id,teacher_guide_id:prepGuide?prepGuide.id:null,book_images:bookImages,guide_images:guideImages,
+    }});
+    if(error)throw new Error(await prepFnErrText(error));
+    if(data&&data.error)throw new Error(data.error);
+    prepOpenPreview(data.generation);
+    await prepRenderMatchAndLessons();
+  }catch(e){alert('تعذّر التوليد: '+(e.message||''));}
+}
+async function prepShowExisting(curId){
+  try{
+    const{data,error}=await sb.from('lesson_prep_generations').select('*').eq('curriculum_id',curId).maybeSingle();
+    if(error)throw error;
+    if(data)prepOpenPreview(data);
+  }catch(e){alert('تعذّر العرض: '+(e.message||''));}
+}
+let prepPreviewGen=null;
+function prepOpenPreview(gen){
+  prepPreviewGen=gen;
+  document.getElementById('prep-preview-title').textContent=(gen.lesson||'')+' — '+(gen.unit||'');
+  const content=gen.content||{};
+  const sections=Array.isArray(content.sections)?content.sections:[];
+  // زرّ نسخٍ مستقل لكل قسم: التسليم الفعلي يتم بلصق كل قسمٍ في حقله المقابل
+  // داخل منصة نور، لا بتنزيل ملفٍ ثم إعادة كتابته يدوياً.
+  prepPreviewSections=sections;
+  // شريطُ المصادر: يُثبت من أين بُني هذا التحضير فعلاً، وروابط الصفحات
+  // نفسها لمن أراد التأكد بعينه لا بالثقة.
+  const src=content._sources||null;
+  const srcBar=src?`<div style="background:#F6F2E6;border:1px solid #E3DCC9;border-radius:10px;padding:9px 12px;margin-bottom:14px;font-size:11.5px;color:#5B5340">
+      قُرئ من: <b>${egToArabic(src.book_pages||0)}</b> صفحة من كتاب الطالب،
+      <b>${egToArabic(src.guide_pages||0)}</b> صفحة من دليل المعلم
+      ${(src.book_images||[]).length?` — <a href="${escAttr(src.book_images[0])}" target="_blank" style="color:#2F5A78">أول صفحة كتاب</a>`:''}
+      ${(src.guide_images||[]).length?` · <a href="${escAttr(src.guide_images[0])}" target="_blank" style="color:#2F5A78">أول صفحة دليل</a>`:''}
+      ${!src.guide_pages?' <span style="color:#B23;font-weight:800">⚠️ بلا دليل معلم</span>':''}
+    </div>`:'';
+  document.getElementById('prep-preview-body').innerHTML=srcBar+sections.map((s,i)=>
+    `<div style="margin-bottom:18px;border:1px solid #EEE7D8;border-radius:12px;padding:12px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div style="font-weight:800;font-size:14px;color:#2F5A78">${escHtml(s.heading||'')}</div>
+        <button onclick="prepCopySection(${i},this)" style="padding:5px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap">نسخ</button>
+      </div>
+      <div style="white-space:pre-wrap">${escHtml(s.body||'')}</div>
+    </div>`
+  ).join('')||'<div style="color:#7A715B">لا محتوى</div>';
+  document.getElementById('prep-approve-btn').style.display=gen.status==='approved'?'none':'inline-block';
+  const dl=document.getElementById('prep-download-btn');
+  if(gen.docx_url){dl.href=gen.docx_url;dl.style.display='inline-block';}else{dl.style.display='none';}
+  document.getElementById('prep-preview-modal').style.display='block';
+}
+function prepClosePreview(){document.getElementById('prep-preview-modal').style.display='none';prepPreviewGen=null;}
+let prepPreviewSections=[];
+async function prepCopySection(i,btn){
+  const s=prepPreviewSections[i];if(!s)return;
+  const text=(s.heading||'')+'\n\n'+(s.body||'');
+  try{await navigator.clipboard.writeText(text);}
+  catch(e){
+    // متصفحاتٌ ترفض الحافظة بلا HTTPS أو بلا إذن — بديلٌ قديمٌ يعمل دائماً
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);
+    ta.select();try{document.execCommand('copy');}catch(_){}document.body.removeChild(ta);
+  }
+  const old=btn.textContent;btn.textContent='✓ نُسخ';setTimeout(()=>{btn.textContent=old;},1400);
+}
+async function prepApprove(){
+  if(!prepPreviewGen)return;
+  try{
+    const{error}=await sb.from('lesson_prep_generations').update({status:'approved',approved_at:new Date().toISOString()}).eq('id',prepPreviewGen.id);
+    if(error)throw error;
+    prepClosePreview();
+    await prepRenderMatchAndLessons();
+    toast&&toast('✅ اعتُمد التحضير');
+  }catch(e){alert('تعذّر الاعتماد: '+(e.message||''));}
+}
 // ══ متابعة الخطة الذهبية ══
 // c1_shared_assets: مخزن النسخ المشتركة (kind='info' ملخص بصري، 'game'
 // لعبة). c1_golden_reuses: سجلٌ يُكتب سطرٌ فيه فقط عند إعادة استخدامٍ
@@ -6727,6 +7220,10 @@ function showPage(id,btn){
   if(id==='aimanage'){loadAiSettings();ltInit();aiLayout();}
   if(id==='ktcc'){ktccLoad();}
   if(id==='ktops'){ktopsLoad();}
+  // تهيئةٌ هنا لا في ktGoC1 وحدها: تحديثُ المتصفّح يستعيد آخر صفحةٍ عبر
+  // showPage مباشرةً بلا مرورٍ بزرّ الشريط الجانبي، فتبقى قوائم الصف
+  // والمادة فارغةً بلا هذا السطر (كما وقع فعلاً).
+  if(id==='c1preps')prepInit();
   if(id==='behavior')initBehaviorPage();
   if(id==='surveys'){loadSurveyResults();renderSurveyBuilder();}
   if(id==='analytics')anRefreshAll();
@@ -13855,6 +14352,7 @@ function ktGoC1(section,btn){
   if(section==='msgs')c1msgInit();
   if(section==='storage')mc1LoadStorage();
   if(section==='golden')mc1GoldenInit();
+  if(section==='preps')prepInit();
 }
 function ktShellGreeting(){
   const h=new Date().getHours();
