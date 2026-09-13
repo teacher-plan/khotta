@@ -478,11 +478,20 @@ body.inapp #c1-budget-btn{display:flex}
   box-shadow:0 24px 70px rgba(48,24,0,.35),0 1px 0 rgba(255,255,255,.6) inset;}
 .c1-mbox.wide::before{content:'';position:absolute;top:0;right:0;left:0;height:4px;
   background:linear-gradient(90deg,var(--red),var(--red-d));}
+/* نافذة «إضافة شعبة جديدة» أطول من نافذة الشعب (صفّ + ثمانية أرقام + سبع
+   مواد + كشف الطلاب)، و.c1-mbox.wide يُلغي تمرير النافذة بـoverflow:hidden
+   فتُقصّ أزرار الحفظ على الشاشات القصيرة. نُعيد لها التمرير، ونحصر كشف
+   الأسماء بارتفاعٍ ثابت كي لا يطول بعدد الطلاب المرفوعين. */
+#newcls-modal .c1-mbox{overflow-y:auto}
+#newcls-list{max-height:210px;overflow-y:auto;margin-top:8px}
+#newcls-secs .chip:disabled:hover{border-color:var(--border)}
 .rs-cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:16px}
 .rs-cls-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px;
   cursor:pointer;text-align:right;font-family:inherit;transition:.15s}
 .rs-cls-card:hover{border-color:var(--olive)}
 .rs-cls-card.sel{border-color:var(--red);background:rgba(216,96,72,.08)}
+.rs-cls-card.add{background:transparent;border-style:dashed;color:var(--muted)}
+.rs-cls-card.add:hover{border-color:var(--red);color:var(--red-d)}
 .rs-cls-nm{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:3px}
 .rs-cls-n{font-size:11px;color:var(--muted)}
 .rs-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -2439,6 +2448,39 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   </div>
 </div>
 
+<!-- ══ إضافة شعبة جديدة ══
+     الترتيب يتبع ما تعرفه المعلّمة عن الشعبة: صفُّها، ثم رقمها، ثم موادّها
+     التي تُدرّسها فيها، ثم طلابها. زرّ الحفظ باهتٌ حتى يكتمل الإلزاميّ
+     (صفّ + رقم + مادة واحدة على الأقل) فلا تُنشأ شعبةٌ بلا مادّةٍ تُخطَّط لها. -->
+<div class="c1-modal" id="newcls-modal" onclick="if(event.target===this)newClsClose()">
+  <div class="c1-mbox wide">
+    <h3>إضافة شعبة جديدة</h3>
+    <input type="file" id="newcls-file" accept="image/*,application/pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="newClsUpload(this)"/>
+
+    <div class="grp">الصف</div>
+    <div class="chip-row" id="newcls-grades"></div>
+
+    <div class="grp">رقم الشعبة</div>
+    <div class="chip-row" id="newcls-secs"></div>
+    <p class="acct-note" id="newcls-sec-note" style="margin-top:7px"></p>
+
+    <div class="grp">المواد التي تُدرّسينها في هذه الشعبة</div>
+    <div class="chip-row" id="newcls-subs"></div>
+
+    <div class="grp">طلاب الشعبة <span style="font-weight:700;color:var(--muted)">(اختياري — يمكنكِ إضافتهم لاحقاً)</span></div>
+    <div class="rs-actions">
+      <button type="button" class="rs-act-btn" onclick="newClsAddStudent()">➕ إضافة طالب</button>
+      <button type="button" class="rs-act-btn" id="newcls-up-btn"
+              onclick="document.getElementById('newcls-file').click()">📎 رفع قوائم الطلاب</button>
+    </div>
+    <span class="su-roster-hint" id="newcls-msg"></span>
+    <div id="newcls-list"></div>
+
+    <div class="c1-mrow"><button class="c1-mbtn no" onclick="newClsClose()">إلغاء</button>
+      <button class="c1-mbtn go" id="newcls-save" onclick="newClsSave()" disabled>حفظ الشعبة</button></div>
+  </div>
+</div>
+
 <div id="c1-board" onclick="if(event.target===this)c1Board(false)">
   <div class="c1b-in">
     <div class="c1b-head"><h2>إلى أين ننطلق؟</h2><div style="display:flex;gap:8px"><button onclick="guideOpen()">دليل الاستخدام</button><button onclick="c1Board(false)">إغلاق</button></div></div>
@@ -4074,7 +4116,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='dfbc585';
+const KH_BUILD='3b8494d';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -4085,8 +4127,14 @@ function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
   const cls=c1AllClasses();
   document.getElementById('roster-del-list').innerHTML='';
+  // بطاقةٌ متقطّعة الحدّ في آخر الشبكة: إضافة الشعب مكانها الطبيعي مع
+  // إدارتها، لا في إعدادات الحساب. وتظهر حتى حين لا شعب بعد.
+  const addCard=`<button type="button" class="rs-cls-card add" onclick="newClsOpen()">
+      <div class="rs-cls-nm">➕ شعبة جديدة</div>
+      <div class="rs-cls-n">صفّها وموادّها وطلابها</div>
+    </button>`;
   if(!cls.length){
-    grid.innerHTML='<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+    grid.innerHTML='<div class="plan-empty-card" style="grid-column:1/-1">لا شعب بعد — أضيفي أولى شُعَبكِ من الزرّ أدناه.</div>'+addCard;
     ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=true);
     return;
   }
@@ -4096,7 +4144,7 @@ function acctRenderRoster(){
       <div class="rs-cls-nm">${escHtml(c.name||'')}</div>
       <div class="rs-cls-n">${n?n+' طالب':'لا طلاب بعد'}</div>
     </button>`;
-  }).join('');
+  }).join('')+addCard;
   const has=!!acctCls;
   ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=!has);
 }
@@ -4204,6 +4252,137 @@ async function acctSave(){
   if(!_ok)return;
   acctClose();toast('حُفظت إعدادات حسابكِ');
 }
+/* ═══════════ إضافة شعبة جديدة من إعدادات الحساب ═══════════
+   الشعبة تُبنى بنفس شكل ما يبنيه الإعداد الأوّل (suFinish): المعرّف
+   c1g{صف}s{رقم} والاسم «الأول/١» واللون من نفس الدورة — فلا تختلف شعبةٌ
+   أُضيفت لاحقاً عن أخواتها في أي قسم. */
+let newCls={g:0,n:0,subs:[],stu:[]};
+function newClsOpen(){
+  newCls={g:0,n:0,subs:[],stu:[]};
+  const msg=document.getElementById('newcls-msg');if(msg)msg.textContent='';
+  newClsRender();
+  document.getElementById('newcls-modal').classList.add('open');
+}
+function newClsClose(){document.getElementById('newcls-modal').classList.remove('open');}
+// أرقام الشعب المأخوذة في هذا الصف — لا تُعرض للاختيار كي لا يُنشأ معرّفان متطابقان
+function newClsTaken(g){
+  const gr=(profile.grades||[]).find(x=>Number(x.num)===Number(g));
+  return new Set((gr&&gr.classes||[]).map(c=>Number(c.num)||0));
+}
+function newClsRender(){
+  const G=['الأول','الثاني','الثالث','الرابع'];
+  document.getElementById('newcls-grades').innerHTML=G.map((nm,i)=>
+    `<button type="button" class="chip ${newCls.g===i+1?'sel':''}" onclick="newClsPickGrade(${i+1})">الصف ${nm}</button>`).join('');
+
+  const secBox=document.getElementById('newcls-secs'),note=document.getElementById('newcls-sec-note');
+  if(!newCls.g){
+    secBox.innerHTML='<span class="acct-note" style="margin:0">اختاري الصف أولاً</span>';
+    note.textContent='';
+  }else{
+    const taken=newClsTaken(newCls.g);
+    secBox.innerHTML=[1,2,3,4,5,6,7,8].map(n=>{
+      const t=taken.has(n);
+      return `<button type="button" class="chip ${newCls.n===n?'sel':''}" ${t?'disabled style="opacity:.4;cursor:not-allowed"':''}
+        onclick="${t?'':'newClsPickSec('+n+')'}">${'١٢٣٤٥٦٧٨'[n-1]}</button>`;
+    }).join('');
+    note.textContent=taken.size?'الأرقام الباهتة شُعَبٌ لديكِ أصلاً في هذا الصف.':'';
+  }
+
+  document.getElementById('newcls-subs').innerHTML=newCls.g
+    ? C1_SUBJECTS.map(s=>
+        `<button type="button" class="chip olv ${newCls.subs.includes(s)?'sel':''}"
+          onclick="newClsToggleSub('${escJs(s)}')">${escHtml(s)}</button>`).join('')
+    : '<span class="acct-note" style="margin:0">اختاري الصف أولاً</span>';
+
+  document.getElementById('newcls-list').innerHTML=newCls.stu.length
+    ? `<div class="rs-del-list">${newCls.stu.map((nm,i)=>
+        `<div class="rs-del-row"><span>${escHtml(nm)}</span>
+          <button type="button" title="حذف" onclick="newClsDelStu(${i})">&times;</button></div>`).join('')}</div>`
+    : '';
+
+  document.getElementById('newcls-save').disabled=!(newCls.g&&newCls.n&&newCls.subs.length);
+}
+function newClsPickGrade(g){
+  if(newCls.g!==g){newCls.g=g;newCls.n=0;}   // أرقام الشعب تختلف بين الصفوف
+  newClsRender();
+}
+function newClsPickSec(n){newCls.n=(newCls.n===n)?0:n;newClsRender();}
+function newClsToggleSub(s){
+  const i=newCls.subs.indexOf(s);
+  if(i>=0)newCls.subs.splice(i,1);else newCls.subs.push(s);
+  newClsRender();
+}
+function newClsAddStudent(){
+  const nm=(prompt('اسم الطالب الجديد:')||'').trim();
+  if(!nm)return;
+  newCls.stu.push(nm);newClsRender();
+}
+function newClsDelStu(i){newCls.stu.splice(i,1);newClsRender();}
+async function newClsUpload(input){
+  const files=[...(input.files||[])].slice(0,4);
+  input.value='';
+  if(!files.length)return;
+  const msg=document.getElementById('newcls-msg'),btn=document.getElementById('newcls-up-btn');
+  const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
+  const big=files.find(f=>f.size>ROSTER_MAX_MB*1024*1024);
+  if(big){say('الملف أكبر من '+ROSTER_MAX_MB+' ميجا — صوّري الكشف بجودةٍ أقلّ',true);return;}
+  btn.disabled=true;btn.textContent='⏳ يقرأ الكشف…';
+  say('قد يستغرق نصف دقيقة — لا تُغلقي الصفحة');
+  try{
+    const names=await khReadRosterFiles(files);
+    if(!names.length){say('لم أجد أسماءً في الملف — تأكّدي أنّ الكشف واضحٌ في الصورة',true);return;}
+    const seen=new Set(newCls.stu.map(s=>s.replace(/\s+/g,' ').trim()));
+    let added=0;
+    for(const n of names){
+      const k=String(n).replace(/\s+/g,' ').trim();
+      if(!k||seen.has(k))continue;
+      seen.add(k);newCls.stu.push(k);added++;
+    }
+    newClsRender();
+    say(added?('أُضيف '+added+' اسماً — راجعيها وصحّحي ما يلزم'):'كل الأسماء موجودةٌ مسبقاً');
+  }catch(e){
+    say(khRosterErrMsg(String(e&&e.message||'')),true);
+  }finally{
+    btn.disabled=false;btn.textContent='📎 رفع قوائم الطلاب';
+  }
+}
+async function newClsSave(){
+  const{g,n,subs}=newCls;
+  if(!g||!n||!subs.length){toast('أكملي الصف ورقم الشعبة والمواد',true);return;}
+  if(newClsTaken(g).has(n)){toast('هذه الشعبة موجودةٌ لديكِ أصلاً',true);newClsRender();return;}
+  const id='c1g'+g+'s'+n;
+  if(c1AllClasses().some(c=>c.id===id)){toast('هذه الشعبة موجودةٌ لديكِ أصلاً',true);return;}
+  const students=newCls.stu.map(s=>s.trim()).filter(Boolean);
+  const cls={
+    id,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,
+    color:C1_CLS_COLORS[c1AllClasses().length%C1_CLS_COLORS.length],
+    subjects:subs.slice(),students,
+  };
+  // الصف قد لا يكون موجوداً في الملف أصلاً (شعبةٌ في صفٍّ جديد عليها)
+  const grades=(profile.grades||[]).map(x=>({...x,classes:[...(x.classes||[])]}));
+  const gr=grades.find(x=>Number(x.num)===Number(g));
+  if(gr)gr.classes.push(cls);
+  else grades.push({num:g,classes:[cls]});
+  grades.sort((a,b)=>Number(a.num)-Number(b.num));
+  // النجوم والسلوك مصفوفتان مفهرستان بموضع الطالب، فتبدآن بطول الكشف لا فارغتين
+  const stars={...(profile.stars||{}),[id]:students.map(()=>0)};
+  const beh={...(profile.beh_log||{}),[id]:students.map(()=>[])};
+  const _ok=await cy1Save({grades,stars,beh_log:beh},'يحفظ الشعبة');
+  if(!_ok)return;
+  newClsClose();
+  // نافذة «إدارة الشعب» مفتوحةٌ خلفنا: نُسجّل الشعبة في نسخة العمل بمواضعها
+  // الأصلية (si) كي تظهر فوراً، ولئلّا يعدّها حفظُ الشعب لاحقاً كشفاً فارغاً.
+  if(document.getElementById('roster-modal').classList.contains('open')){
+    acctRoster[id]=students.map((nm,i)=>({nm,si:i}));
+    acctCls=id;
+    acctRenderRoster();
+  }
+  toast('أُضيفت شعبة «'+cls.name+'»','ok');
+  const cur=(document.querySelector('.page.active')||{}).id||'';
+  if(cur==='page-students')starRender();
+  if(cur==='page-plan')planRender();
+}
+
 function rosterClose(){document.getElementById('roster-modal').classList.remove('open');}
 function rosterOpen(){
   document.getElementById('c1-menu').classList.remove('open');
@@ -4247,6 +4426,45 @@ async function rosterSave(){
   if(cur==='page-students')starRender();
   if(cur==='page-plan')planRender();
 }
+// ── قراءة كشف الأسماء من ملفات المعلّمة ──
+// مشتركةٌ بين «إدارة الشعب» و«إضافة شعبة جديدة»: نفس الصيغ المدعومة ونفس
+// حدّ الحجم ونفس رسائل الخطأ، فلا يختلف سلوك الرفع بين نافذةٍ وأخرى.
+async function khReadRosterFiles(files){
+  const payload=[];
+  for(const f of files){
+    const nm=(f.name||'').toLowerCase();
+    if(/\.(docx|xlsx)$/.test(nm)){
+      const t=await khOfficeText(f);
+      if(!t||!t.trim())throw new Error('empty_office');
+      payload.push({name:f.name,text:t.slice(0,20000)});
+    }else if(/\.(csv|txt)$/.test(nm)){
+      payload.push({name:f.name,text:(await f.text()).slice(0,20000)});
+    }else if(/\.(doc|xls)$/.test(nm)){
+      throw new Error('old_office');
+    }else{
+      payload.push({name:f.name,data:await readAsDataUrl(f)});
+    }
+  }
+  const{data,error}=await sb.functions.invoke('extract-roster',{body:{files:payload}});
+  let why=(data&&data.error)||'';
+  if(error&&!why)why=error.message||'';
+  if(why||!data)throw new Error(why||'خطأ');
+  return Array.isArray(data.names)?data.names:[];
+}
+function khRosterErrMsg(m){
+  return m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
+    :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورة أو PDF أو Word أو Excel'
+    :m==='old_office'?'الصيغة القديمة (doc/xls) غير مدعومة — احفظيه بصيغة docx أو xlsx، أو صوّري الكشف'
+    :m==='empty_office'?'لم أجد نصّاً في الملف — تأكّدي أن الأسماء مكتوبةٌ فيه لا صورةً بداخله'
+    :m==='nodecomp'?'متصفّحك قديم ولا يفكّ هذا النوع — حدّثيه، أو أرفقي صورةً أو PDF'
+    :m==='no_files'?'لم يُرفَق ملف'
+    :m==='no_credit'?'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. أدخلي الأسماء يدوياً الآن'
+    :m==='busy'?'الخدمة مزدحمة — أعيدي المحاولة بعد دقيقة'
+    :m==='quota_exceeded'?'استهلكتِ رصيدكِ بالكامل — للحصول على المزيد من الرصيد الرجاء التواصل مع فريق الدعم. أدخلي الأسماء يدوياً الآن'
+    :m==='quota_unavailable'?'تعذّر التحقّق من رصيدك — أعيدي المحاولة بعد قليل. لم يُخصم شيء'
+    :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — جرّبي صورةً أوضح، لم تُخصم من حصّتك'
+    :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة';
+}
 async function rosterUpload(input){
   const files=[...(input.files||[])].slice(0,4);
   input.value='';
@@ -4260,26 +4478,7 @@ async function rosterUpload(input){
   if(btn){btn.disabled=true;btn.textContent='⏳ يقرأ الكشف…';}
   say('قد يستغرق نصف دقيقة — لا تُغلقي الصفحة');
   try{
-    const payload=[];
-    for(const f of files){
-      const nm=(f.name||'').toLowerCase();
-      if(/\.(docx|xlsx)$/.test(nm)){
-        const t=await khOfficeText(f);
-        if(!t||!t.trim())throw new Error('empty_office');
-        payload.push({name:f.name,text:t.slice(0,20000)});
-      }else if(/\.(csv|txt)$/.test(nm)){
-        payload.push({name:f.name,text:(await f.text()).slice(0,20000)});
-      }else if(/\.(doc|xls)$/.test(nm)){
-        throw new Error('old_office');
-      }else{
-        payload.push({name:f.name,data:await readAsDataUrl(f)});
-      }
-    }
-    const{data,error}=await sb.functions.invoke('extract-roster',{body:{files:payload}});
-    let why=(data&&data.error)||'';
-    if(error&&!why)why=error.message||'';
-    if(why||!data)throw new Error(why||'خطأ');
-    const names=Array.isArray(data.names)?data.names:[];
+    const names=await khReadRosterFiles(files);
     if(!names.length){say('لم أجد أسماءً في الملف — تأكّدي أنّ الكشف واضحٌ في الصورة',true);return;}
     const list=acctRoster[acctCls]=acctRoster[acctCls]||[];
     const seen=new Set(list.map(s=>(s.nm||'').replace(/\s+/g,' ').trim()));
@@ -4293,19 +4492,7 @@ async function rosterUpload(input){
     say(added?('أُضيف '+added+' اسماً — راجعيها وصحّحي ما يلزم'):'كل الأسماء موجودةٌ مسبقاً');
     if(added)toast('أُضيف '+added+' اسماً إلى الشعبة');
   }catch(e){
-    const m=String(e&&e.message||'');
-    say(m==='file_too_large'?'الملف كبير — صوّري الكشف بجودةٍ أقلّ'
-      :m==='unsupported_type'?'نوع الملف غير مدعوم — أرفقي صورة أو PDF أو Word أو Excel'
-      :m==='old_office'?'الصيغة القديمة (doc/xls) غير مدعومة — احفظيه بصيغة docx أو xlsx، أو صوّري الكشف'
-      :m==='empty_office'?'لم أجد نصّاً في الملف — تأكّدي أن الأسماء مكتوبةٌ فيه لا صورةً بداخله'
-      :m==='nodecomp'?'متصفّحك قديم ولا يفكّ هذا النوع — حدّثيه، أو أرفقي صورةً أو PDF'
-      :m==='no_files'?'لم يُرفَق ملف'
-      :m==='no_credit'?'رصيد الذكاء الاصطناعي نفد — راسلي الإدارة. أدخلي الأسماء يدوياً الآن'
-      :m==='busy'?'الخدمة مزدحمة — أعيدي المحاولة بعد دقيقة'
-      :m==='quota_exceeded'?'استهلكتِ رصيدكِ بالكامل — للحصول على المزيد من الرصيد الرجاء التواصل مع فريق الدعم. أدخلي الأسماء يدوياً الآن'
-      :m==='quota_unavailable'?'تعذّر التحقّق من رصيدك — أعيدي المحاولة بعد قليل. لم يُخصم شيء'
-      :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — جرّبي صورةً أوضح، لم تُخصم من حصّتك'
-      :'تعذّرت القراءة — تحقّقي من الاتصال وأعيدي المحاولة',true);
+    say(khRosterErrMsg(String(e&&e.message||'')),true);
   }finally{
     if(btn){btn.disabled=false;btn.textContent='📎 رفع قوائم الطلاب';}
   }
