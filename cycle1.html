@@ -490,6 +490,8 @@ body.inapp #c1-budget-btn{display:flex}
   cursor:pointer;text-align:right;font-family:inherit;transition:.15s}
 .rs-cls-card:hover{border-color:var(--olive)}
 .rs-cls-card.sel{border-color:var(--red);background:rgba(216,96,72,.08)}
+.rs-cls-card.add{background:transparent;border-style:dashed;color:var(--muted)}
+.rs-cls-card.add:hover{border-color:var(--red);color:var(--red-d)}
 .rs-cls-nm{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:3px}
 .rs-cls-n{font-size:11px;color:var(--muted)}
 .rs-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -2408,12 +2410,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <h3>إعدادات الحساب</h3>
     <div class="grp">اسمكِ كما يظهر في المنصّة وفي الشهادات</div>
     <input class="acct-in" id="acct-name" type="text" placeholder="الاسم"/>
-    <!-- إضافة شعبةٍ بعد الإعداد الأوّل: المعلّمة تُسنَد إليها شعبةٌ جديدة في
-         منتصف الفصل، وكانت مضطرّةً لمراسلة الإدارة. الصفّ والمادة إلزاميّان
-         لأن الخطة والتحضير يُبنيان عليهما، ورفع الكشف اختياريٌّ هنا. -->
-    <div class="grp">شُعَبكِ</div>
-    <p class="acct-note">أُسنِدت إليكِ شعبةٌ جديدة؟ أضيفيها بموادّها وكشف طلابها.</p>
-    <button type="button" class="acct-add" onclick="newClsOpen()">➕ إضافة شعبة جديدة</button>
     <div class="grp">التواصل مع الإدارة</div>
     <p class="acct-note">لأي استفسارٍ أو مشكلةٍ تواجهكِ، أو لطلب تعديلٍ لا تجدينه هنا.</p>
     <a class="acct-wa" id="acct-wa" target="_blank" rel="noopener">
@@ -4130,8 +4126,14 @@ function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
   const cls=c1AllClasses();
   document.getElementById('roster-del-list').innerHTML='';
+  // بطاقةٌ متقطّعة الحدّ في آخر الشبكة: إضافة الشعب مكانها الطبيعي مع
+  // إدارتها، لا في إعدادات الحساب. وتظهر حتى حين لا شعب بعد.
+  const addCard=`<button type="button" class="rs-cls-card add" onclick="newClsOpen()">
+      <div class="rs-cls-nm">➕ شعبة جديدة</div>
+      <div class="rs-cls-n">صفّها وموادّها وطلابها</div>
+    </button>`;
   if(!cls.length){
-    grid.innerHTML='<div class="plan-empty-card">لا شعب بعد — أضيفيها من قسم الجدول.</div>';
+    grid.innerHTML='<div class="plan-empty-card" style="grid-column:1/-1">لا شعب بعد — أضيفي أولى شُعَبكِ من الزرّ أدناه.</div>'+addCard;
     ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=true);
     return;
   }
@@ -4141,7 +4143,7 @@ function acctRenderRoster(){
       <div class="rs-cls-nm">${escHtml(c.name||'')}</div>
       <div class="rs-cls-n">${n?n+' طالب':'لا طلاب بعد'}</div>
     </button>`;
-  }).join('');
+  }).join('')+addCard;
   const has=!!acctCls;
   ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=!has);
 }
@@ -4367,6 +4369,13 @@ async function newClsSave(){
   const _ok=await cy1Save({grades,stars,beh_log:beh},'يحفظ الشعبة');
   if(!_ok)return;
   newClsClose();
+  // نافذة «إدارة الشعب» مفتوحةٌ خلفنا: نُسجّل الشعبة في نسخة العمل بمواضعها
+  // الأصلية (si) كي تظهر فوراً، ولئلّا يعدّها حفظُ الشعب لاحقاً كشفاً فارغاً.
+  if(document.getElementById('roster-modal').classList.contains('open')){
+    acctRoster[id]=students.map((nm,i)=>({nm,si:i}));
+    acctCls=id;
+    acctRenderRoster();
+  }
   toast('أُضيفت شعبة «'+cls.name+'»','ok');
   const cur=(document.querySelector('.page.active')||{}).id||'';
   if(cur==='page-students')starRender();
