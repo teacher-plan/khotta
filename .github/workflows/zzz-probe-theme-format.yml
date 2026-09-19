@@ -1,0 +1,16 @@
+name: zzz probe theme format
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: فحص
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data-binary "$(jq -Rs '{query: .}' <<< "select id,name,emoji,bg_url,colors from game_themes order by created_at limit 3;")" | python3 -m json.tool
