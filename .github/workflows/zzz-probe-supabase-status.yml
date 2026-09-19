@@ -18,49 +18,39 @@ jobs:
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
           set -uo pipefail
-          api(){
-            local path="$1"
-            local code
+          api() {
             code=$(curl -s -o /tmp/r.json -w '%{http_code}' \
-              "https://api.supabase.com/v1${path}" \
+              "https://api.supabase.com/v1$1" \
               -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json')
-            echo "HTTP $code  ←  $path"
+            echo "HTTP $code  <-  $1"
             if [ "$code" = "200" ]; then
-              python3 -c "import json,sys; d=json.load(open('/tmp/r.json')); print(json.dumps(d,ensure_ascii=False,indent=2)[:6000])"
+              jq -C . /tmp/r.json 2>/dev/null | head -c 7000 || head -c 2000 /tmp/r.json
             else
-              head -c 600 /tmp/r.json; echo
+              head -c 600 /tmp/r.json
             fi
-            echo "────────────────────────────────────────"
+            echo ""
+            echo "----------------------------------------"
           }
 
-          echo "════════ ١) إشعارات المشروع ════════"
+          echo "======== 1) اشعارات المشروع ========"
           api "/notifications?offset=0&limit=25"
 
-          echo "════════ ٢) مدقّق الأمان ════════"
+          echo "======== 2) مدقق الامان ========"
           api "/projects/$REF/advisors/security"
 
-          echo "════════ ٣) مدقّق الأداء ════════"
+          echo "======== 3) مدقق الاداء ========"
           api "/projects/$REF/advisors/performance"
 
-          echo "════════ ٤) المؤسّسات ════════"
+          echo "======== 4) المؤسسات ========"
           api "/organizations"
+          SLUGS=$(jq -r '.[].slug // empty' /tmp/r.json 2>/dev/null | tr '\n' ' ')
+          echo "slugs: $SLUGS"
 
-          echo "════════ ٥) اشتراك كل مؤسّسة ════════"
-          SLUGS=$(python3 - <<'PY'
-import json,subprocess,os
-tok=os.environ['TOKEN']
-out=subprocess.run(['curl','-s','https://api.supabase.com/v1/organizations',
-                    '-H','Authorization: Bearer '+tok],capture_output=True,text=True).stdout
-try:
-    print(' '.join(o.get('slug','') for o in json.loads(out) if o.get('slug')))
-except Exception:
-    print('')
-PY
-)
+          echo "======== 5) اشتراك كل مؤسسة ========"
           for s in $SLUGS; do
-            echo "── المؤسّسة: $s ──"
+            echo "-- المؤسسة: $s --"
             api "/organizations/$s/billing/subscription"
           done
 
-          echo "════════ ٦) حالة المشروع ════════"
+          echo "======== 6) حالة المشروع ========"
           api "/projects/$REF"
