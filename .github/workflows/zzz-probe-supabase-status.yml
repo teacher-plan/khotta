@@ -1,0 +1,66 @@
+# فحصٌ مؤقّت — يُحذف فور قراءة نتيجته.
+# يقرأ من Supabase Management API ثلاثة أشياء تعرضها اللوحة ولا تصل إليها
+# سير العمل القائمة: إشعارات المشروع، ونصائح المدقّق (أمنية وأداء)، واشتراك
+# المؤسّسة (الخطة وتاريخ التجديد). قراءةٌ صرفة — لا كتابة ولا تعديل — وبنفس
+# السرّ الموجود أصلاً (SUPABASE_ACCESS_TOKEN)، بلا بيان اعتمادٍ جديد.
+name: zzz probe — Supabase status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: قراءة الحالة
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          api(){
+            local path="$1"
+            local code
+            code=$(curl -s -o /tmp/r.json -w '%{http_code}' \
+              "https://api.supabase.com/v1${path}" \
+              -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json')
+            echo "HTTP $code  ←  $path"
+            if [ "$code" = "200" ]; then
+              python3 -c "import json,sys; d=json.load(open('/tmp/r.json')); print(json.dumps(d,ensure_ascii=False,indent=2)[:6000])"
+            else
+              head -c 600 /tmp/r.json; echo
+            fi
+            echo "────────────────────────────────────────"
+          }
+
+          echo "════════ ١) إشعارات المشروع ════════"
+          api "/notifications?offset=0&limit=25"
+
+          echo "════════ ٢) مدقّق الأمان ════════"
+          api "/projects/$REF/advisors/security"
+
+          echo "════════ ٣) مدقّق الأداء ════════"
+          api "/projects/$REF/advisors/performance"
+
+          echo "════════ ٤) المؤسّسات ════════"
+          api "/organizations"
+
+          echo "════════ ٥) اشتراك كل مؤسّسة ════════"
+          SLUGS=$(python3 - <<'PY'
+import json,subprocess,os
+tok=os.environ['TOKEN']
+out=subprocess.run(['curl','-s','https://api.supabase.com/v1/organizations',
+                    '-H','Authorization: Bearer '+tok],capture_output=True,text=True).stdout
+try:
+    print(' '.join(o.get('slug','') for o in json.loads(out) if o.get('slug')))
+except Exception:
+    print('')
+PY
+)
+          for s in $SLUGS; do
+            echo "── المؤسّسة: $s ──"
+            api "/organizations/$s/billing/subscription"
+          done
+
+          echo "════════ ٦) حالة المشروع ════════"
+          api "/projects/$REF"
