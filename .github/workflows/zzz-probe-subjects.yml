@@ -1,0 +1,30 @@
+name: zzz probe subjects
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: فحص المواد
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          q() {
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")"
+            echo
+          }
+          echo "— المواد الأكثر استخداماً في shared_preps (كل الوقت) —"
+          q "select subject, count(*) as cnt from shared_preps group by subject order by cnt desc limit 15;"
+
+          echo "— المواد الأكثر استخداماً في user_preps آخر ٣٠ يوم —"
+          q "select subject, count(*) as cnt from user_preps where created_at > now() - interval '30 days' group by subject order by cnt desc limit 15;"
+
+          echo "— الثيمات الموجودة حالياً في game_themes —"
+          q "select id, name from game_themes order by 1;"
+
+          echo "— بنية عمود theme_id/الاستخدام الحالي في games حسب المادة (إن وُجد ربط بالمادة) —"
+          q "select column_name, data_type from information_schema.columns where table_name='games' order by ordinal_position;"
