@@ -11332,7 +11332,9 @@ async function loadC1Analytics(){
     if(idSet.size){
       try{const{data}=await sb.from('games').select('user_id').in('user_id',[...idSet]);gamesCount=(data||[]).length;}catch(e){console.error('games',e);}
     }
-    try{const{data}=await sb.from('c1_survey_responses').select('id');surveyCount=(data||[]).length;}catch(e){console.error('c1_survey_responses',e);}
+    // الجدول مفتاحه (survey_id,user_id) بلا عمود id — select('id') كان يفشل صامتاً
+    // فيبقى العدّاد صفراً دائماً. count:'exact',head:true يعدّ الصفوف بلا جلب بياناتٍ.
+    try{const{count}=await sb.from('c1_survey_responses').select('survey_id',{count:'exact',head:true});surveyCount=count||0;}catch(e){console.error('c1_survey_responses',e);}
     setKpi('an1-lib-files',libCount.toLocaleString('ar'));
     setKpi('an1-shared',sharedCount.toLocaleString('ar'));
     setKpi('an1-games',gamesCount.toLocaleString('ar'));
