@@ -1,0 +1,38 @@
+name: zzz probe c1 books
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: فحص كتب الحلقة الأولى
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          q() {
+            echo "─── $2 ───"
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")" | python3 -m json.tool
+            echo
+          }
+
+          q "select semester, grade, subject, book_no, count(*) as lessons, count(page) as with_page, count(*)-count(page) as missing_page from curriculum where grade between 1 and 4 group by semester, grade, subject, book_no order by grade, subject, semester, book_no;" \
+            "١) تغطية أرقام الصفحات لكل كتاب (الحلقة الأولى)"
+
+          q "select grade, subject, semester, book_no, base_path, page_count, offset_pages, updated_at from book_sources where grade in ('1','2','3','4') order by grade, subject, semester, book_no;" \
+            "٢) صفوف book_sources الموجودة للحلقة الأولى"
+
+          q "select c.semester, c.grade, c.subject, c.book_no, count(*) as lessons, max(bs.base_path) as base_path, max(bs.page_count) as page_count, case when max(bs.base_path) is null then 'غير مرفوع (لا مصدر)' when max(bs.page_count) is null then 'ناقص (لا عدد صفحات)' else 'مرفوع' end as status from curriculum c left join book_sources bs on bs.grade=c.grade::text and bs.subject=c.subject and bs.semester=c.semester and bs.book_no=c.book_no where c.grade between 1 and 4 group by c.semester, c.grade, c.subject, c.book_no order by status desc, c.grade, c.subject;" \
+            "٣) الكتب المطلوبة في المنهج وحالة رفعها"
+
+          q "select bs.grade, bs.subject, bs.semester, bs.book_no, bs.base_path, bs.page_count, (select count(*) from storage.objects o where o.bucket_id='library-files' and o.name like bs.base_path || '/%') as files_in_storage from book_sources bs where bs.grade in ('1','2','3','4') order by bs.grade, bs.subject, bs.book_no;" \
+            "٤) هل الصور موجودة فعلاً في التخزين؟ (تحقّق حقيقي لا ادّعاء)"
+
+          q "select grade, count(*) as rows from book_sources group by grade order by 1;" \
+            "٥) توزيع صفوف book_sources على كل الصفوف (للمقارنة مع الحلقة الثانية)"
+
+          q "select distinct semester from curriculum where grade between 1 and 4 order by 1;" \
+            "٦) الفصول الدراسية الموجودة في منهج الحلقة الأولى"
