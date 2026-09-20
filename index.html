@@ -307,14 +307,10 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .rs-mins{background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:5px 8px;width:60px;text-align:center;outline:none;}
 
 /* Current class banner */
-.current-class-banner{background:linear-gradient(135deg,rgba(240,192,96,.15),rgba(192,57,43,.1));border:1.5px solid var(--gold);border-radius:16px;padding:14px 18px;margin-bottom:20px;display:none;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 4px 24px rgba(240,192,96,.15);}
-.current-class-banner.show{display:flex;}
-.ccb-icon{font-size:28px;}
-.ccb-info{flex:1;min-width:140px;}
-.ccb-label{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:3px;}
-.ccb-class{font-family:'Tajawal',sans-serif;font-size:18px;font-weight:800;color:var(--text);}
-.ccb-timer{font-family:'Tajawal',sans-serif;font-size:22px;font-weight:800;color:var(--gold);text-align:center;min-width:80px;}
-.ccb-timer-lbl{font-size:10px;color:var(--muted);text-align:center;}
+/* شريط الحصة الحالية (#ccb) أُزيل بعد دمج الجدول في يومي — بطاقة #yw-now-card تغني عنه،
+   وبديله داخل الجدول تمييز خلية الحصة الجارية */
+.cell.current-period{outline:2.5px solid var(--kh-red-d);outline-offset:1px;box-shadow:0 0 0 4px rgba(168,48,48,.14);position:relative;}
+.cell.current-period::after{content:'الآن';position:absolute;top:-8px;inset-inline-start:50%;transform:translateX(50%);background:var(--kh-red-d);color:#fff;font-size:8.5px;font-weight:800;border-radius:6px;padding:1px 6px;}
 
 /* ══ TRACKER ══ */
 .overall{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:22px;box-shadow:0 4px 30px rgba(192,57,43,.08);}
@@ -2231,7 +2227,6 @@ input,textarea,select{font-size:16px !important;}
 <!-- NAV -->
 <div class="nav" id="main-nav" style="display:none">
   <button class="nav-btn active teacher-only" data-page="yawmi" onclick="showPage('yawmi',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg></span> يومي</button>
-  <button class="nav-btn teacher-only" data-page="timetable" onclick="showPage('timetable',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9zm2 3v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zm-8 4v2h2v-2H7zm4 0v2h2v-2h-2z"/></svg></span> الجدول</button>
   <button class="nav-btn" data-page="tracker" onclick="showPage('tracker',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7V3H4zm9 0v18h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-7zm2 4h4v2h-4V7zm0 4h4v2h-4v-2zm0 4h2v2h-2v-2z"/></svg></span> الخطة</button>
   <button class="nav-btn" data-page="grades" onclick="showPage('grades',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm4 10h3v5H7v-5zm5-4h3v9h-3V9zm5-4h3v13h-3V5z"/></svg></span> الدرجات</button>
   <button class="nav-btn teacher-only" data-page="stats" onclick="showPage('stats',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> إحصائيات</button>
@@ -2271,6 +2266,30 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- ══ يومي — لوحة الصباح ══ -->
 <div class="page active" id="page-yawmi"><div class="wrap">
+  <!-- 🔔 جرس الإعلانات (كان في قسم الجدول — صار يعيش في يومي) -->
+  <div class="teacher-banner" style="position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;">
+    <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" style="position:absolute;left:0;">
+      <button class="bell-btn" title="الإعلانات"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span></button>
+      <span class="bell-badge" id="bell-badge">0</span>
+      <div class="bell-dropdown" id="bell-dropdown">
+        <div class="bell-drop-header">
+          <span><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> الإعلانات</span>
+          <span id="bell-unread-count" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+        </div>
+        <div class="bell-drop-list" id="bell-drop-list">
+          <div class="bell-drop-empty">⏳ جاري التحميل...</div>
+        </div>
+        <button class="bell-mark-all" onclick="markAllRead(event)">✓ تحديد الكل كمقروء</button>
+      </div>
+    </div>
+  </div>
+  <!-- 👨‍🏫 بيانات المعلم -->
+  <div class="teacher-idcard">
+    <div class="tic-info">
+      <div class="teacher-name" id="teacher-name-banner" data-kh-g="الأستاذة|الأستاذ">الأستاذ</div>
+      <div class="teacher-sub" id="teacher-sub-banner">معلم — الصف</div>
+    </div>
+  </div>
   <div class="yw-dhikr-box" id="yw-dhikr">
     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg>
     <span id="yw-dhikr-txt">سبحان الله وبحمده، سبحان الله العظيم</span>
@@ -2282,9 +2301,27 @@ input,textarea,select{font-size:16px !important;}
   </div>
   <div id="yw-now-card"></div>
   <div class="yw-insights" id="yw-insights"></div>
+
+  <!-- ☀️ مساعد التحضير اليومي (كان في قسم الجدول) -->
+  <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
+    <div class="dp-head">
+      <div>
+        <div class="dp-title">☀️ يومك جاهز</div>
+        <div class="dp-date" id="dp-date"></div>
+      </div>
+      <div class="dp-fahim" id="dp-fahim" style="display:none">
+        <div class="dp-fahim-bubble" id="dp-fahim-bubble"></div>
+        <img id="dp-fahim-img" alt="فهيم">
+      </div>
+    </div>
+    <div class="dp-items-wrap">
+      <div id="dp-items"></div>
+    </div>
+  </div>
+
   <div class="yw-grid">
     <div class="yw-card">
-      <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> دروسك القادمة <button class="yw-link" onclick="document.querySelector('.nav-btn[data-page=\'timetable\']').click()">الجدول كاملاً</button></div>
+      <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> دروسك القادمة <button class="yw-link" onclick="ywScrollTo('#tt-section')">الجدول كاملاً</button></div>
       <div id="yw-lessons"></div>
     </div>
     <!-- 🗓️ مفكرة الأسبوع: التقويم والمهام في بطاقة واحدة -->
@@ -2317,85 +2354,36 @@ input,textarea,select{font-size:16px !important;}
       </div>
     </div>
   </div>
+
+  <!-- ══ جدول الحصص — صار جزءاً من «يومي» (لا قسم مستقل) ══ -->
+  <div class="tt-section" id="tt-section">
+    <div class="page-header" style="margin-top:22px;margin-bottom:8px">
+      <h1>جدول الحصص</h1>
+      <p id="tt-semester-lbl">الفصل الدراسي 2025 / 2026</p>
+    </div>
+    <div class="reminders-settings">
+      <span style="font-size:12px;color:var(--text);font-weight:600">🔔 التذكيرات قبل الحصة:</span>
+      <div class="rs-toggle" id="rs-toggle" onclick="toggleReminders()"></div>
+      <span style="font-size:12px;color:var(--muted)">بـ</span>
+      <input type="number" class="rs-mins" id="rs-mins" min="1" max="60" value="10" onchange="updReminderMins()"/>
+      <span style="font-size:12px;color:var(--muted)">دقيقة</span>
+    </div>
+    <div class="tt-toolbar">
+      <button class="tt-edit-btn" id="tt-edit" onclick="toggleEditMode()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تعديل الجدول</button>
+      <button class="tt-edit-btn save" id="tt-save" onclick="saveTimetable()" style="display:none"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg></span> حفظ</button>
+      <button class="tt-edit-btn" id="tt-cancel" onclick="cancelEdit()" style="display:none">✕ إلغاء</button>
+    </div>
+    <div class="class-config-box" id="class-config">
+      <div class="ccfg-title">🏫 إدارة الشعب</div>
+      <div class="ccfg-list" id="ccfg-list"></div>
+      <button class="ccfg-add" onclick="addClassColor()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span> إضافة شعبة</button>
+    </div>
+    <div class="tt-wrap" id="tt-wrap">
+      <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
+    </div>
+  </div>
 </div></div>
 
-<!-- ══ TIMETABLE ══ -->
-<div class="page" id="page-timetable"><div class="wrap">
-
-
-
-  <div class="teacher-banner" style="position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;">
-    <!-- جرس الإشعارات - يسار -->
-    <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" style="position:absolute;left:0;">
-      <button class="bell-btn" title="الإعلانات"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span></button>
-      <span class="bell-badge" id="bell-badge">0</span>
-      <div class="bell-dropdown" id="bell-dropdown">
-        <div class="bell-drop-header">
-          <span><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> الإعلانات</span>
-          <span id="bell-unread-count" style="font-size:11px;color:var(--muted);font-weight:400"></span>
-        </div>
-        <div class="bell-drop-list" id="bell-drop-list">
-          <div class="bell-drop-empty">⏳ جاري التحميل...</div>
-        </div>
-        <button class="bell-mark-all" onclick="markAllRead(event)">✓ تحديد الكل كمقروء</button>
-      </div>
-    </div>
-  </div>
-  <!-- 👨‍🏫 بيانات المعلم -->
-  <div class="teacher-idcard">
-    <div class="tic-info">
-      <div class="teacher-name" id="teacher-name-banner" data-kh-g="الأستاذة|الأستاذ">الأستاذ</div>
-      <div class="teacher-sub" id="teacher-sub-banner">معلم — الصف</div>
-    </div>
-  </div>
-
-  <div class="page-header" style="margin-top:14px;margin-bottom:8px">
-    <h1>جدول الحصص</h1>
-    <p id="tt-semester-lbl">الفصل الدراسي 2025 / 2026</p>
-  </div>
-
-  <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
-    <div class="dp-head">
-      <div>
-        <div class="dp-title">☀️ يومك جاهز</div>
-        <div class="dp-date" id="dp-date"></div>
-      </div>
-      <div class="dp-fahim" id="dp-fahim" style="display:none">
-        <div class="dp-fahim-bubble" id="dp-fahim-bubble"></div>
-        <img id="dp-fahim-img" alt="فهيم">
-      </div>
-    </div>
-    <div class="dp-items-wrap">
-      <div id="dp-items"></div>
-    </div>
-  </div>
-
-  <div class="reminders-settings">
-    <span style="font-size:12px;color:var(--text);font-weight:600">🔔 التذكيرات قبل الحصة:</span>
-    <div class="rs-toggle" id="rs-toggle" onclick="toggleReminders()"></div>
-    <span style="font-size:12px;color:var(--muted)">بـ</span>
-    <input type="number" class="rs-mins" id="rs-mins" min="1" max="60" value="10" onchange="updReminderMins()"/>
-    <span style="font-size:12px;color:var(--muted)">دقيقة</span>
-  </div>
-  <div class="current-class-banner" id="ccb">
-    <span class="ccb-icon"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span></span>
-    <div class="ccb-info"><div class="ccb-label" id="ccb-label">الحصة الحالية</div><div class="ccb-class" id="ccb-class">—</div></div>
-    <div><div class="ccb-timer" id="ccb-timer">--:--</div><div class="ccb-timer-lbl" id="ccb-timer-lbl">المتبقي</div></div>
-  </div>
-  <div class="tt-toolbar">
-    <button class="tt-edit-btn" id="tt-edit" onclick="toggleEditMode()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تعديل الجدول</button>
-    <button class="tt-edit-btn save" id="tt-save" onclick="saveTimetable()" style="display:none"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg></span> حفظ</button>
-    <button class="tt-edit-btn" id="tt-cancel" onclick="cancelEdit()" style="display:none">✕ إلغاء</button>
-  </div>
-  <div class="class-config-box" id="class-config">
-    <div class="ccfg-title">🏫 إدارة الشعب</div>
-    <div class="ccfg-list" id="ccfg-list"></div>
-    <button class="ccfg-add" onclick="addClassColor()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span> إضافة شعبة</button>
-  </div>
-  <div class="tt-wrap" id="tt-wrap">
-    <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
-  </div>
-</div></div>
 
 <div class="ev-modal-bg" id="ev-modal-bg">
   <div class="ev-modal">
@@ -4136,8 +4124,8 @@ input,textarea,select{font-size:16px !important;}
     <div class="help-item">
       <div class="help-icon">📅</div>
       <div class="help-body">
-        <div class="help-title">الجدول</div>
-        <div class="help-desc">اضغط "تعديل الجدول" لإضافة حصصك. ستصلك تذكيرات تلقائية قبل كل حصة.</div>
+        <div class="help-title">يومي — جدول الحصص</div>
+        <div class="help-desc">جدولك صار داخل قسم «يومي»: انزل إلى «جدول الحصص» واضغط "تعديل الجدول" لإضافة حصصك. ستصلك تذكيرات تلقائية قبل كل حصة.</div>
       </div>
     </div>
     <div class="help-item">
@@ -6149,7 +6137,8 @@ function showApp(data){
 
 function restoreLastPage(){
   let id;try{id=localStorage.getItem('lastPage');}catch(e){}
-  if(!id)return; // يبقى القسم الافتراضي (الجدول)
+  if(id==='timetable')id='yawmi'; // «الجدول» اندمج في «يومي»
+  if(!id)return; // يبقى القسم الافتراضي (يومي)
   try{fhInitMascot();}catch(e){}
   const btn=document.querySelector('.nav-btn[data-page="'+id+'"]');
   if(!btn)return;
@@ -6171,6 +6160,8 @@ function updateTeacherBanner(){
 
 // ══ NAV ════════════════════════════════════════════════
 function showPage(id,btn){
+  // «الجدول» لم يعد قسماً مستقلاً — صار داخل «يومي»؛ أي نداء قديم يُحوَّل إليه
+  if(id==='timetable'){id='yawmi';btn=document.querySelector('.nav-btn[data-page="yawmi"]')||btn;}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
@@ -6178,7 +6169,7 @@ function showPage(id,btn){
   try{lpUpdatePill(btn);}catch(e){}
   try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
-  if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
+  if(id==='yawmi'){const nb=document.querySelector('.nav-btn[data-page="yawmi"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
   if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},150);}
@@ -6194,8 +6185,7 @@ function showPage(id,btn){
   if(id==='schools')loadSchools();
   if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='announcements'){loadAnnouncements();}
-  if(id==='timetable')loadAnnouncementBanner();
-  if(id==='yawmi')ywRender();
+  if(id==='yawmi'){loadAnnouncementBanner();ywRender();}
   if(id==='tracker'){
     setTimeout(()=>{
     if(isAdmin()){
@@ -6253,6 +6243,16 @@ function ywRender(){
   try{renderWeekPlanner();}catch(e){}
   try{renderTasks();}catch(e){}
   ywRenderInsights();
+  // جدول الحصص صار جزءاً من هذا القسم — نضمن رسمه وتحديث تذكيراته وتمييز حصته الجارية
+  try{renderTimetable();loadRemindersUI();updateCurrentClassBanner();}catch(e){}
+  try{renderDailyPrepSoon();}catch(e){}
+}
+// «الجدول» صار داخل «يومي» — الروابط الداخلية تمرّر لا تُبدّل القسم
+function ywScrollTo(sel){
+  try{
+    const el=document.querySelector(sel);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){}
 }
 // بطاقة الحصة الجارية/القادمة — تستعمل نفس حساب الجدول الموجود أصلاً
 // (findCurrentAndNextPeriod/classConfig) بدل مؤقّت ثانٍ مستقل.
@@ -6271,7 +6271,7 @@ function ywRenderNowCard(){
       <div class="r">تبقّى ${egToArabic(rem)} دقيقة</div>
       <div class="rail-bar"><i style="width:${pct}%"></i></div>
       <div class="rail-now-btns">
-        <button class="solid" onclick="document.querySelector('.nav-btn[data-page=\\'timetable\\']').click()">التحضير اليومي</button>
+        <button class="solid" onclick="ywScrollTo('#daily-prep-card')">التحضير اليومي</button>
       </div>
     </div>`;
     return;
@@ -6311,7 +6311,7 @@ function ywRenderInsights(){
       try{return (typeof dpBundle==='function'?dpBundle(it.lessonId).status:'idle')!=='ready';}catch(e){return true;}
     });
     if(notReady.length>=2){
-      list.push({text:`لديك ${egToArabic(notReady.length)} دروس قادمة لم يُجهَّز تحضيرها بعد`,btn:'التحضير اليومي',act:()=>document.querySelector('.nav-btn[data-page="timetable"]').click()});
+      list.push({text:`لديك ${egToArabic(notReady.length)} دروس قادمة لم يُجهَّز تحضيرها بعد`,btn:'التحضير اليومي',act:()=>ywScrollTo('#daily-prep-card')});
     }
   }catch(e){}
   box.innerHTML=list.map((it,i)=>`<div class="yw-insight">
@@ -6357,7 +6357,7 @@ function renderTimetable(){
       const classKey=(cfg.schedule[day.id]||{})[idx];
       if(classKey&&classConfig[classKey]){
         const col=classConfig[classKey].color;const bg=hexToRgba(col,.18);const br=hexToRgba(col,.35);
-        bodyHtml+=`<td><div class="cell" style="background:${bg};color:${col};border:1px solid ${br};" onclick="${ttEditing?`cycleCell('${day.id}',${idx})`:''}">${ttEditing?`<button class="cell-del" onclick="event.stopPropagation();clearCell('${day.id}',${idx})">✕</button>`:''}<span class="cls">${classConfig[classKey].name}</span><span class="sub">${teacherConfig?.subject||'المادة'}</span></div></td>`;
+        bodyHtml+=`<td><div class="cell" data-d="${day.id}" data-p="${idx}" style="background:${bg};color:${col};border:1px solid ${br};" onclick="${ttEditing?`cycleCell('${day.id}',${idx})`:''}">${ttEditing?`<button class="cell-del" onclick="event.stopPropagation();clearCell('${day.id}',${idx})">✕</button>`:''}<span class="cls">${classConfig[classKey].name}</span><span class="sub">${teacherConfig?.subject||'المادة'}</span></div></td>`;
       } else {
         bodyHtml+=`<td class="cell-empty" ${ttEditing?`onclick="cycleCell('${day.id}',${idx})"`:''}></td>`;
       }
@@ -6800,7 +6800,7 @@ function updateAdminButtons(){
     setTimeout(()=>{
       const currentActive=document.querySelector('.nav-btn.active:not([style*="display: none"])');
       if(!currentActive||currentActive.classList.contains('teacher-only')){
-        const trackerBtn=document.querySelector('.nav-btn[data-page="timetable"]');
+        const trackerBtn=document.querySelector('.nav-btn[data-page="tracker"]');
         if(trackerBtn){
           document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
           document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -11754,17 +11754,21 @@ function findCurrentAndNextPeriod(){
   timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start),e=parseTime12(p.end);const classKey=daySched[idx];if(s===null||e===null)return;if(now>=s&&now<e){current={idx,period:p,start:s,end:e,classKey,dayKey};}else if(now<s&&!next){if(classKey)next={idx,period:p,start:s,end:e,classKey,dayKey};}});
   return{current,next};
 }
+// بعد دمج «الجدول» في «يومي» صارت بطاقة #yw-now-card هي الواجهة الوحيدة
+// للحصة الجارية/القادمة (كانت مكرّرة مع شريط #ccb). هذه الدالة تبقى مسؤولة عن
+// تمييز خلية الحصة الجارية داخل الجدول وعن فحص التذكيرات — بالمصدر نفسه
+// (findCurrentAndNextPeriod) وبالمؤقّت نفسه (watcherInterval)، بلا مؤقّت ثانٍ.
 function updateCurrentClassBanner(){
-  const banner=document.getElementById('ccb');if(!banner)return;
   document.querySelectorAll('.cell.current-period').forEach(el=>el.classList.remove('current-period'));
   const{current}=findCurrentAndNextPeriod();
-  if(current&&current.classKey){const cls=classConfig[current.classKey];banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:current.classKey);document.getElementById('ccb-label').textContent=`الحصة ${current.period.num} • الآن`;document.getElementById('ccb-timer').textContent=(current.end-nowMins())+' د';document.getElementById('ccb-timer-lbl').textContent='المتبقي';}
-  else{const{next}=findCurrentAndNextPeriod();if(next&&next.classKey){const cls=classConfig[next.classKey];const mins=next.start-nowMins();if(mins>0&&mins<=60){banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:next.classKey);document.getElementById('ccb-label').textContent=`الحصة ${next.period.num} • قادمة`;document.getElementById('ccb-timer').textContent=mins+' د';document.getElementById('ccb-timer-lbl').textContent='تبدأ بعد';}else{banner.classList.remove('show');}}else{banner.classList.remove('show');}}
+  if(current&&current.classKey){
+    document.querySelectorAll(`.cell[data-d="${current.dayKey}"][data-p="${current.idx}"]`).forEach(c=>c.classList.add('current-period'));
+  }
   checkReminders();
 }
 function checkReminders(){if(!remindersConfig.enabled)return;const dayKey=currentDayKey();const daySched=(timetableConfig&&timetableConfig.schedule[dayKey])||{};const now=nowMins();timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start);const classKey=daySched[idx];if(s===null||!classKey)return;const diff=s-now;const target=remindersConfig.minutes||10;if(diff===target||diff===target-1){const key=`${dayKey}_${idx}_${new Date().toDateString()}`;if(reminderState[key])return;reminderState[key]=true;fireReminder(p,classKey,diff);}});}
 function dismissReminder(){document.getElementById('reminder-toast').classList.remove('show');}
-function loadRemindersUI(){const t=document.getElementById('rs-toggle');t.classList.toggle('on',remindersConfig.enabled);document.getElementById('rs-mins').value=remindersConfig.minutes||10;}
+function loadRemindersUI(){const t=document.getElementById('rs-toggle');if(!t)return;t.classList.toggle('on',remindersConfig.enabled);const m=document.getElementById('rs-mins');if(m)m.value=remindersConfig.minutes||10;}
 function toggleReminders(){remindersConfig.enabled=!remindersConfig.enabled;document.getElementById('rs-toggle').classList.toggle('on',remindersConfig.enabled);if(remindersConfig.enabled&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ تم تفعيل التذكيرات','ok');else toast('🔔 التذكيرات داخل الصفحة فقط');});}else{toast(remindersConfig.enabled?'✅ تم التفعيل':'❌ تم الإيقاف',remindersConfig.enabled?'ok':false);}scheduleSave();}
 function updReminderMins(){const v=parseInt(document.getElementById('rs-mins').value);if(v>0&&v<=60){remindersConfig.minutes=v;scheduleSave();}}
 
@@ -14057,10 +14061,10 @@ function fhInitMascot(){
   img.src=fhMascotUrl();
 }
 // ═ 🚀 لوحة الانطلاق — تنقل بكامل الصفحة ═
-const LP_DESC={timetable:'حصص اليوم وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات طلابك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اصنع اختباراً أو عرضاً أو إنفوجرافيك أو لعبة',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
+const LP_DESC={yawmi:'يومك: حصصك وجدولك ومفكرتك وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات طلابك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اصنع اختباراً أو عرضاً أو إنفوجرافيك أو لعبة',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
 function lpLive(pg){
   try{
-    if(pg==='timetable'&&typeof dpNextLessons==='function'){
+    if(pg==='yawmi'&&typeof dpNextLessons==='function'){
       const nx=dpNextLessons();
       if(nx&&nx.length)return 'التالي: «'+nx[0].lesson+'» — '+nx[0].subject+' صف '+nx[0].gradeNum;
     }
@@ -14100,8 +14104,8 @@ function fhSideToggle(){
 }
 // ⚡ أفعال تنفيذية: فهيم لا يتكلم فقط — يعمل
 function fhActPrep(){
-  const nb=document.querySelector('.nav-btn[data-page="timetable"]');
-  if(nb)showPage('timetable',nb);
+  const nb=document.querySelector('.nav-btn[data-page="yawmi"]');
+  if(nb)showPage('yawmi',nb);
   setTimeout(()=>{
     try{
       const items=window._dpItems||[];
@@ -14700,13 +14704,7 @@ async function renderDailyPrep(){
     </div>`;
   document.getElementById('dp-items').innerHTML=items.map((it,i)=>dpLessonCardHtml(it,i,miniLoader)).join('');
   window._dpItems=items;
-  // وهج زر الخطة لجذب المعلم عند الدخول (إن لم يزره بعد في هذه الجلسة)
-  try{
-    if(!sessionStorage.getItem('dpGlowSeen')&&!document.getElementById('page-tracker').classList.contains('active')){
-      const nb=document.querySelector('.nav-btn[data-page="timetable"]');
-      if(nb)nb.classList.add('nav-glow');
-    }
-  }catch(e){}
+  // لم يعد هناك زر «الجدول» يُومَض إليه — بطاقة التحضير تعيش في «يومي» نفسه
 }
 
 // ✨ التحضير الشامل المترابط: خطة → عرض مبني عليها → تقييم لأهدافها → إنفوجرافيك ملخّص
