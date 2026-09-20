@@ -307,14 +307,10 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .rs-mins{background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;padding:5px 8px;width:60px;text-align:center;outline:none;}
 
 /* Current class banner */
-.current-class-banner{background:linear-gradient(135deg,rgba(240,192,96,.15),rgba(192,57,43,.1));border:1.5px solid var(--gold);border-radius:16px;padding:14px 18px;margin-bottom:20px;display:none;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 4px 24px rgba(240,192,96,.15);}
-.current-class-banner.show{display:flex;}
-.ccb-icon{font-size:28px;}
-.ccb-info{flex:1;min-width:140px;}
-.ccb-label{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px;margin-bottom:3px;}
-.ccb-class{font-family:'Tajawal',sans-serif;font-size:18px;font-weight:800;color:var(--text);}
-.ccb-timer{font-family:'Tajawal',sans-serif;font-size:22px;font-weight:800;color:var(--gold);text-align:center;min-width:80px;}
-.ccb-timer-lbl{font-size:10px;color:var(--muted);text-align:center;}
+/* شريط الحصة الحالية (#ccb) أُزيل بعد دمج الجدول في يومي — بطاقة #yw-now-card تغني عنه،
+   وبديله داخل الجدول تمييز خلية الحصة الجارية */
+.cell.current-period{outline:2.5px solid var(--kh-red-d);outline-offset:1px;box-shadow:0 0 0 4px rgba(168,48,48,.14);position:relative;}
+.cell.current-period::after{content:'الآن';position:absolute;top:-8px;inset-inline-start:50%;transform:translateX(50%);background:var(--kh-red-d);color:#fff;font-size:8.5px;font-weight:800;border-radius:6px;padding:1px 6px;}
 
 /* ══ TRACKER ══ */
 .overall{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:22px;box-shadow:0 4px 30px rgba(192,57,43,.08);}
@@ -1033,6 +1029,56 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .dp-mini-squares{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:42px;height:42px;flex:none;margin:0;}
 .dp-working-title{font-weight:800;font-size:13.5px;color:var(--gold);}
 .dp-working-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+/* ── بطاقة الدرس وشريط الوحدات — نمط cycle1 (.plan-lesson/.pl-*) بألوان --kh ── */
+.plan-units{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 10px;margin-bottom:4px;scroll-snap-type:x proximity;}
+.plan-units::-webkit-scrollbar{display:none;}
+.plan-uchip{flex:none;scroll-snap-align:start;position:relative;width:172px;text-align:start;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:11px 13px 12px;font-family:'Cairo',sans-serif;cursor:pointer;color:var(--kh-ink);transition:.15s;overflow:hidden;}
+.plan-uchip:hover{border-color:var(--kh-red);}
+.plan-uchip.sel{border-color:var(--kh-red-d);box-shadow:0 4px 14px rgba(168,48,48,.18);}
+.plan-uchip.sel::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--kh-red),var(--kh-red-d));}
+.plan-uchip.done{border-color:var(--kh-olive);}
+.plan-uchip.done.sel::before{background:linear-gradient(90deg,var(--kh-olive),var(--kh-olive-d));}
+.plan-uchip .un{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:3px;}
+.plan-uchip .nm{font-size:12.5px;font-weight:800;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:37px;}
+.plan-uchip .prg{display:flex;align-items:center;gap:7px;margin-top:9px;}
+.plan-uchip .bar{flex:1;height:5px;border-radius:4px;background:var(--card);overflow:hidden;}
+.plan-uchip .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--kh-olive),var(--kh-olive-d));border-radius:4px;transition:width .3s;}
+.plan-uchip .cnt{font-size:10.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;}
+.plan-uchip.sel .cnt{color:var(--kh-red-d);}
+.plan-uhead{display:flex;align-items:center;gap:9px;margin:6px 0 11px;}
+.plan-uhead b{font-size:13.5px;font-weight:800;color:var(--kh-ink);}
+.plan-uhead span{font-size:11.5px;color:var(--muted);font-weight:700;margin-inline-start:auto;font-variant-numeric:tabular-nums;}
+.plan-lesson{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(48,24,0,.05);}
+.plan-lesson::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:linear-gradient(90deg,var(--kh-red),var(--kh-red-d));}
+.plan-lesson.done::before{background:linear-gradient(90deg,var(--kh-olive),var(--kh-olive-d));}
+.plan-lesson-top{display:flex;align-items:center;gap:12px;}
+.plan-chk{position:relative;width:26px;height:26px;border-radius:8px;border:2px solid var(--border);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;transition:.15s;cursor:pointer;}
+.plan-lesson.done .plan-chk{background:var(--kh-olive);border-color:var(--kh-olive);}
+.plan-lesson-nm{font-weight:800;font-size:13.5px;color:var(--kh-ink);}
+.plan-cls-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.plan-cls-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--cc,var(--border));border-radius:9px;padding:6px 11px;font-size:11.5px;font-weight:700;color:var(--cc,var(--kh-ink));cursor:pointer;background:var(--surface);}
+.plan-cls-chip.on{background:var(--cc,var(--kh-red));color:#fff;}
+.plan-empty-card{text-align:center;padding:44px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:20px;color:var(--muted);font-size:13.5px;line-height:1.9;}
+.pl-tt{flex:1;min-width:0;}
+.pl-unit{font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:1px;}
+.pl-ready{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.pl-rbox{flex:none;min-width:64px;text-align:center;font-size:10px;font-weight:800;padding:4px 6px;border-radius:6px;background:rgba(72,120,72,.13);color:var(--kh-olive-d);border:1px solid rgba(72,120,72,.28);}
+.pl-btnrow{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap;align-items:center;}
+.pl-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:800;color:var(--kh-ink);cursor:pointer;transition:all .15s;}
+.pl-btn:hover{border-color:var(--kh-red);transform:translateY(-1px);}
+.pl-btn .d{width:9px;height:9px;border-radius:3px;flex:none;}
+.pl-btn.ready{border-color:var(--kh-olive);background:rgba(72,120,72,.12);color:var(--kh-olive-d);}
+.pl-btn.main{background:linear-gradient(135deg,var(--kh-red),var(--kh-red-d));color:#fff;border-color:transparent;}
+.pl-btn.go{background:linear-gradient(135deg,var(--kh-olive),var(--kh-olive-d));color:#fff;border-color:transparent;}
+.pl-btn.live{margin-inline-start:auto;background:linear-gradient(135deg,var(--kh-red),var(--kh-red-d));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(216,96,72,.3);}
+@media(max-width:560px){.pl-btn.live{margin-inline-start:0;width:100%;justify-content:center;}}
+.pl-btn.pulse{animation:dpPulse 1.6s ease-in-out infinite;}
+.pl-files-t{font-size:11px;font-weight:800;color:var(--muted);margin:14px 0 7px;display:flex;align-items:center;gap:8px;}
+.pl-upload{margin-inline-start:auto;cursor:pointer;font-size:11px;font-weight:800;color:var(--kh-red-d);}
+.pl-upload input{display:none;}
+.pl-btn input[type=file]{display:none;}
+.pl-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.8;}
 
 /* ── يومي: لوحة الصباح — منقول من cycle1.html مع متغيرات الحلقة الثانية ── */
 .yw-dhikr-box{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:700;color:var(--kh-red-d);margin-bottom:12px;}
@@ -2181,22 +2227,20 @@ input,textarea,select{font-size:16px !important;}
 <!-- NAV -->
 <div class="nav" id="main-nav" style="display:none">
   <button class="nav-btn active teacher-only" data-page="yawmi" onclick="showPage('yawmi',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg></span> يومي</button>
-  <button class="nav-btn teacher-only" data-page="timetable" onclick="showPage('timetable',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9zm2 3v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zm-8 4v2h2v-2H7zm4 0v2h2v-2h-2z"/></svg></span> الجدول</button>
   <button class="nav-btn" data-page="tracker" onclick="showPage('tracker',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7V3H4zm9 0v18h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-7zm2 4h4v2h-4V7zm0 4h4v2h-4v-2zm0 4h2v2h-2v-2z"/></svg></span> الخطة</button>
+  <button class="nav-btn" data-page="examgen" onclick="showPage('examgen',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> الاستوديو</button>
+  <button class="nav-btn nav-fh" data-page="faheem" onclick="showPage('faheem',this)">🦊 خُطّة AI</button>
+  <button class="nav-btn" data-page="library" onclick="showPage('library',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></span> المكتبة</button>
   <button class="nav-btn" data-page="grades" onclick="showPage('grades',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm4 10h3v5H7v-5zm5-4h3v9h-3V9zm5-4h3v13h-3V5z"/></svg></span> الدرجات</button>
   <button class="nav-btn teacher-only" data-page="stats" onclick="showPage('stats',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> إحصائيات</button>
+  <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
   <button class="nav-btn teacher-only" data-page="archive" onclick="showPage('archive',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V4zm0 4h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm5 3v2h8v-2H8z"/></svg></span> الأرشيف</button>
-  <button class="nav-btn" data-page="library" onclick="showPage('library',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3L1 9l11 5 9-4.1V17h2V9L12 3zM5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2-7-3.2z"/></svg></span> المكتبة</button>
-  <button class="nav-btn" data-page="examgen" onclick="showPage('examgen',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> الاستوديو</button>
-  <button class="nav-btn nav-fh" data-page="faheem" onclick="showPage('faheem',this)">🦊 فهيم</button>
+  <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
   <button class="nav-btn admin-only" data-page="announcements" onclick="showPage('announcements',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span> المراسلات</button>
-
   <button class="nav-btn admin-only" data-page="analytics" onclick="showPage('analytics',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M3 3h2v16h16v2H3V3zm15.3 3.3 1.4 1.4-4.7 4.7-3-3-4 4-1.4-1.4 5.4-5.4 3 3 3.3-3.3z"/></svg></span> الإحصائيات</button>
   <button class="nav-btn admin-only" data-page="schools" onclick="showPage('schools',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></span> إدارة المدارس</button>
   <button class="nav-btn admin-only" data-page="violtypes" onclick="showPage('violtypes',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 4.5L18 9v6l-6 3-6-3V9l6-2.5zM11 7v5h2V7h-2zm0 6v2h2v-2h-2z"/></svg></span> إدارة المخالفات</button>
   <button class="nav-btn admin-only" data-page="aimanage" onclick="showPage('aimanage',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></span> إدارة مولّد الاختبارات</button>
-  <button class="nav-btn teacher-only" data-page="behavior" onclick="showPage('behavior',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.3 1.1 4.4 3 5.9V20l3.5-2c1.1.3 2.3.5 3.5.5 5.5 0 10-3.6 10-8S17.5 3 12 3zm1 11H7v-2h6v2zm2-4H7V8h8v2z"/></svg></span> السلوك والأداء</button>
-  <button class="nav-btn teacher-only" data-page="cv" onclick="showPage('cv',this)"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 18l-6.2 3 1.2-6.8L2 9.3l6.9-1L12 2z"/></svg></span> السيرة</button>
   <div class="user-badge" id="user-badge" onclick="toggleUserMenu(event)" style="display:none">
     <img id="ub-img" src="" alt=""/>
     <span class="user-badge-name" id="ub-name">—</span>
@@ -2221,61 +2265,8 @@ input,textarea,select{font-size:16px !important;}
 
 <!-- ══ يومي — لوحة الصباح ══ -->
 <div class="page active" id="page-yawmi"><div class="wrap">
-  <div class="yw-dhikr-box" id="yw-dhikr">
-    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg>
-    <span id="yw-dhikr-txt">سبحان الله وبحمده، سبحان الله العظيم</span>
-  </div>
-  <div class="page-header">
-    <div class="tag">يومي</div>
-    <h1 id="yw-greet">أهلاً بك</h1>
-    <p id="yw-date"></p>
-  </div>
-  <div id="yw-now-card"></div>
-  <div class="yw-insights" id="yw-insights"></div>
-  <div class="yw-grid">
-    <div class="yw-card">
-      <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> دروسك القادمة <button class="yw-link" onclick="document.querySelector('.nav-btn[data-page=\'timetable\']').click()">الجدول كاملاً</button></div>
-      <div id="yw-lessons"></div>
-    </div>
-    <!-- 🗓️ مفكرة الأسبوع: التقويم والمهام في بطاقة واحدة -->
-    <div class="widget-card">
-      <div class="widget-header">
-        <button class="cal-nav-btn" onclick="wkShift(-1)">‹</button>
-        <div class="cal-title" id="wk-title">🗓️ مفكرة الأسبوع</div>
-        <button class="cal-nav-btn" onclick="wkShift(1)">›</button>
-      </div>
-      <div id="wk-strip"></div>
-      <div id="wk-event"></div>
-      <div class="wk-tasks-title"><span>✓ مهامي</span><button class="add-task-btn" onclick="addTask()">+</button></div>
-      <div class="tasks-list" id="tasks-list"></div>
-      <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة..." onkeypress="if(event.key==='Enter')addTask()"/>
-    </div>
-    <div class="yw-acts">
-      <div class="yw-card act fh" onclick="document.querySelector('.nav-btn[data-page=\'faheem\']').click()">
-        <div class="yw-game-ic">🦊</div>
-        <div class="yw-fh-txt">
-          <div class="yw-fh-nm">فهيم</div>
-          <div class="yw-fh-sub">مساعدٌ ذكيٌّ عامّ — اسأله عن أي شيء</div>
-        </div>
-      </div>
-      <div class="yw-card act game" onclick="document.querySelector('.nav-btn[data-page=\'examgen\']').click()">
-        <div class="yw-game-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></div>
-        <div class="yw-fh-txt">
-          <div class="yw-fh-nm">الاستوديو</div>
-          <div class="yw-fh-sub">اصنع اختباراً أو عرضاً أو إنفوجرافيك — جرّب الآن!</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div></div>
-
-<!-- ══ TIMETABLE ══ -->
-<div class="page" id="page-timetable"><div class="wrap">
-
-
-
+  <!-- 🔔 جرس الإعلانات (كان في قسم الجدول — صار يعيش في يومي) -->
   <div class="teacher-banner" style="position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;">
-    <!-- جرس الإشعارات - يسار -->
     <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" style="position:absolute;left:0;">
       <button class="bell-btn" title="الإعلانات"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span></button>
       <span class="bell-badge" id="bell-badge">0</span>
@@ -2298,12 +2289,19 @@ input,textarea,select{font-size:16px !important;}
       <div class="teacher-sub" id="teacher-sub-banner">معلم — الصف</div>
     </div>
   </div>
-
-  <div class="page-header" style="margin-top:14px;margin-bottom:8px">
-    <h1>جدول الحصص</h1>
-    <p id="tt-semester-lbl">الفصل الدراسي 2025 / 2026</p>
+  <div class="yw-dhikr-box" id="yw-dhikr">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.6 7.4-6 8.8-3.4-1.4-6-4.9-6-8.8V6.45l6-2.25z"/></svg>
+    <span id="yw-dhikr-txt">سبحان الله وبحمده، سبحان الله العظيم</span>
   </div>
+  <div class="page-header">
+    <div class="tag">يومي</div>
+    <h1 id="yw-greet">أهلاً بك</h1>
+    <p id="yw-date"></p>
+  </div>
+  <div id="yw-now-card"></div>
+  <div class="yw-insights" id="yw-insights"></div>
 
+  <!-- ☀️ مساعد التحضير اليومي (كان في قسم الجدول) -->
   <div class="teacher-only dp-card" id="daily-prep-card" style="display:none">
     <div class="dp-head">
       <div>
@@ -2312,7 +2310,7 @@ input,textarea,select{font-size:16px !important;}
       </div>
       <div class="dp-fahim" id="dp-fahim" style="display:none">
         <div class="dp-fahim-bubble" id="dp-fahim-bubble"></div>
-        <img id="dp-fahim-img" alt="فهيم">
+        <img id="dp-fahim-img" alt="خُطّة AI">
       </div>
     </div>
     <div class="dp-items-wrap">
@@ -2320,32 +2318,71 @@ input,textarea,select{font-size:16px !important;}
     </div>
   </div>
 
-  <div class="reminders-settings">
-    <span style="font-size:12px;color:var(--text);font-weight:600">🔔 التذكيرات قبل الحصة:</span>
-    <div class="rs-toggle" id="rs-toggle" onclick="toggleReminders()"></div>
-    <span style="font-size:12px;color:var(--muted)">بـ</span>
-    <input type="number" class="rs-mins" id="rs-mins" min="1" max="60" value="10" onchange="updReminderMins()"/>
-    <span style="font-size:12px;color:var(--muted)">دقيقة</span>
+  <div class="yw-grid">
+    <div class="yw-card">
+      <div class="yw-card-t"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9z"/></svg> دروسك القادمة <button class="yw-link" onclick="ywScrollTo('#tt-section')">الجدول كاملاً</button></div>
+      <div id="yw-lessons"></div>
+    </div>
+    <!-- 🗓️ مفكرة الأسبوع: التقويم والمهام في بطاقة واحدة -->
+    <div class="widget-card">
+      <div class="widget-header">
+        <button class="cal-nav-btn" onclick="wkShift(-1)">‹</button>
+        <div class="cal-title" id="wk-title">🗓️ مفكرة الأسبوع</div>
+        <button class="cal-nav-btn" onclick="wkShift(1)">›</button>
+      </div>
+      <div id="wk-strip"></div>
+      <div id="wk-event"></div>
+      <div class="wk-tasks-title"><span>✓ مهامي</span><button class="add-task-btn" onclick="addTask()">+</button></div>
+      <div class="tasks-list" id="tasks-list"></div>
+      <input type="text" class="task-input" id="task-input" placeholder="مهمة جديدة..." onkeypress="if(event.key==='Enter')addTask()"/>
+    </div>
+    <div class="yw-acts">
+      <div class="yw-card act fh" onclick="document.querySelector('.nav-btn[data-page=\'faheem\']').click()">
+        <div class="yw-game-ic">🦊</div>
+        <div class="yw-fh-txt">
+          <div class="yw-fh-nm">خُطّة AI</div>
+          <div class="yw-fh-sub">مساعدٌ ذكيٌّ عامّ — اسأله عن أي شيء</div>
+        </div>
+      </div>
+      <div class="yw-card act game" onclick="document.querySelector('.nav-btn[data-page=\'examgen\']').click()">
+        <div class="yw-game-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9zm-1 9h8v2H8v-2zm0 4h8v2H8v-2z"/></svg></div>
+        <div class="yw-fh-txt">
+          <div class="yw-fh-nm">الاستوديو</div>
+          <div class="yw-fh-sub">اصنع اختباراً أو عرضاً أو إنفوجرافيك — جرّب الآن!</div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="current-class-banner" id="ccb">
-    <span class="ccb-icon"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zm-6 13a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2z"/></svg></span></span>
-    <div class="ccb-info"><div class="ccb-label" id="ccb-label">الحصة الحالية</div><div class="ccb-class" id="ccb-class">—</div></div>
-    <div><div class="ccb-timer" id="ccb-timer">--:--</div><div class="ccb-timer-lbl" id="ccb-timer-lbl">المتبقي</div></div>
-  </div>
-  <div class="tt-toolbar">
-    <button class="tt-edit-btn" id="tt-edit" onclick="toggleEditMode()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تعديل الجدول</button>
-    <button class="tt-edit-btn save" id="tt-save" onclick="saveTimetable()" style="display:none"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg></span> حفظ</button>
-    <button class="tt-edit-btn" id="tt-cancel" onclick="cancelEdit()" style="display:none">✕ إلغاء</button>
-  </div>
-  <div class="class-config-box" id="class-config">
-    <div class="ccfg-title">🏫 إدارة الشعب</div>
-    <div class="ccfg-list" id="ccfg-list"></div>
-    <button class="ccfg-add" onclick="addClassColor()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span> إضافة شعبة</button>
-  </div>
-  <div class="tt-wrap" id="tt-wrap">
-    <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
+
+  <!-- ══ جدول الحصص — صار جزءاً من «يومي» (لا قسم مستقل) ══ -->
+  <div class="tt-section" id="tt-section">
+    <div class="page-header" style="margin-top:22px;margin-bottom:8px">
+      <h1>جدول الحصص</h1>
+      <p id="tt-semester-lbl">الفصل الدراسي 2025 / 2026</p>
+    </div>
+    <div class="reminders-settings">
+      <span style="font-size:12px;color:var(--text);font-weight:600">🔔 التذكيرات قبل الحصة:</span>
+      <div class="rs-toggle" id="rs-toggle" onclick="toggleReminders()"></div>
+      <span style="font-size:12px;color:var(--muted)">بـ</span>
+      <input type="number" class="rs-mins" id="rs-mins" min="1" max="60" value="10" onchange="updReminderMins()"/>
+      <span style="font-size:12px;color:var(--muted)">دقيقة</span>
+    </div>
+    <div class="tt-toolbar">
+      <button class="tt-edit-btn" id="tt-edit" onclick="toggleEditMode()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span> تعديل الجدول</button>
+      <button class="tt-edit-btn save" id="tt-save" onclick="saveTimetable()" style="display:none"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg></span> حفظ</button>
+      <button class="tt-edit-btn" id="tt-cancel" onclick="cancelEdit()" style="display:none">✕ إلغاء</button>
+    </div>
+    <div class="class-config-box" id="class-config">
+      <div class="ccfg-title">🏫 إدارة الشعب</div>
+      <div class="ccfg-list" id="ccfg-list"></div>
+      <button class="ccfg-add" onclick="addClassColor()"><span style="display:inline-flex;align-items:center;line-height:1"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span> إضافة شعبة</button>
+    </div>
+    <div class="tt-wrap" id="tt-wrap">
+      <table id="tt-table"><thead id="tt-head"></thead><tbody id="tt-body"></tbody></table>
+    </div>
   </div>
 </div></div>
+
 
 <div class="ev-modal-bg" id="ev-modal-bg">
   <div class="ev-modal">
@@ -3137,7 +3174,7 @@ input,textarea,select{font-size:16px !important;}
     <div id="fh-head">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <div id="fh-avatar"></div>
-        <div style="min-width:0"><div class="fh-name">فهيم — مساعدك التربوي</div><div class="fh-status"><span class="fh-dot"></span>يعرف صفوفك ودروسك ويجيب من واقعها</div></div>
+        <div style="min-width:0"><div class="fh-name">خُطّة AI</div><div class="fh-status"><span class="fh-dot"></span>يعرف صفوفك ودروسك ويجيب من واقعها</div></div>
       </div>
       <div style="display:flex;gap:6px;flex:none">
         <button class="fh-hbtn" id="fhp-side-btn" onclick="fhSideToggle()" title="محادثاتي السابقة">🗂️</button>
@@ -3155,7 +3192,7 @@ input,textarea,select{font-size:16px !important;}
         </div>
         <div id="fh-body"></div>
         <div id="fh-inputrow">
-          <textarea id="fh-input" rows="1" placeholder="اسأل فهيم عن أي شيء تربوي..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
+          <textarea id="fh-input" rows="1" placeholder="اسأل خُطّة AI عن أي شيء تربوي..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fhSend();}"></textarea>
           <button id="fh-send" onclick="fhSend()"><svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" style="transform:scaleX(-1)"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
         </div>
       </div>
@@ -3727,7 +3764,7 @@ input,textarea,select{font-size:16px !important;}
 
   <!-- 🦉 شخصية المساعد -->
   <div class="eg-card">
-    <div class="eg-step-title">🦉 شخصية المساعد «فهيم»</div>
+    <div class="eg-step-title">🦉 شخصية المساعد «خُطّة AI»</div>
     <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">ارفع صورة الشخصية الكرتونية (مربعة، PNG) لتحل محل الرسم الافتراضي في الزر العائم لدى كل المعلمين. ولّدها بنانو بنانا ثم ارفعها هنا.</p>
     <div style="display:flex;gap:10px;align-items:center">
       <div id="fh-mascot-prev" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#6d28d9,#8b5cf6);background-size:cover;background-position:center;flex:none;border:2px solid var(--border)"></div>
@@ -4086,8 +4123,8 @@ input,textarea,select{font-size:16px !important;}
     <div class="help-item">
       <div class="help-icon">📅</div>
       <div class="help-body">
-        <div class="help-title">الجدول</div>
-        <div class="help-desc">اضغط "تعديل الجدول" لإضافة حصصك. ستصلك تذكيرات تلقائية قبل كل حصة.</div>
+        <div class="help-title">يومي — جدول الحصص</div>
+        <div class="help-desc">جدولك صار داخل قسم «يومي»: انزل إلى «جدول الحصص» واضغط "تعديل الجدول" لإضافة حصصك. ستصلك تذكيرات تلقائية قبل كل حصة.</div>
       </div>
     </div>
     <div class="help-item">
@@ -5917,6 +5954,8 @@ let lessonFiles={};let timetableConfig=null;let classConfig=null;let ttEditing=f
 let students={};let grades={};let gradeTypes=[];let remindersConfig={enabled:false,minutes:10};
 let activeGradesClass=null;let reminderState={};let teacherConfig=null;
 let currentTrackerIdx=0;
+// الوحدة المفتوحة في شريط وحدات الخطة (null = أول وحدة غير مكتملة)
+let trackerUnitIdx=null;
 
 const DEFAULT_PERIODS=[
   {num:1,start:'7:25 AM',end:'8:05 AM'},{num:2,start:'8:10 AM',end:'8:50 AM'},
@@ -6097,7 +6136,8 @@ function showApp(data){
 
 function restoreLastPage(){
   let id;try{id=localStorage.getItem('lastPage');}catch(e){}
-  if(!id)return; // يبقى القسم الافتراضي (الجدول)
+  if(id==='timetable')id='yawmi'; // «الجدول» اندمج في «يومي»
+  if(!id)return; // يبقى القسم الافتراضي (يومي)
   try{fhInitMascot();}catch(e){}
   const btn=document.querySelector('.nav-btn[data-page="'+id+'"]');
   if(!btn)return;
@@ -6119,6 +6159,8 @@ function updateTeacherBanner(){
 
 // ══ NAV ════════════════════════════════════════════════
 function showPage(id,btn){
+  // «الجدول» لم يعد قسماً مستقلاً — صار داخل «يومي»؛ أي نداء قديم يُحوَّل إليه
+  if(id==='timetable'){id='yawmi';btn=document.querySelector('.nav-btn[data-page="yawmi"]')||btn;}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active','ripple'));
   document.getElementById('page-'+id).classList.add('active');
@@ -6126,7 +6168,7 @@ function showPage(id,btn){
   try{lpUpdatePill(btn);}catch(e){}
   try{localStorage.setItem('lastPage',id);}catch(e){}
   setTimeout(()=>btn.classList.remove('ripple'),600);
-  if(id==='timetable'){const nb=document.querySelector('.nav-btn[data-page="timetable"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
+  if(id==='yawmi'){const nb=document.querySelector('.nav-btn[data-page="yawmi"]');if(nb)nb.classList.remove('nav-glow');try{sessionStorage.setItem('dpGlowSeen','1');}catch(e){}}
   if(id==='archive')loadArchive();
   if(id==='cv'){renderCv();loadCvProfile();}
   if(id==='grades'){setTimeout(()=>{renderGrades();if(isAdmin())loadAdminTemplates();},150);}
@@ -6142,8 +6184,7 @@ function showPage(id,btn){
   if(id==='schools')loadSchools();
   if(id==='violtypes')loadViolationTypesAdmin();
   if(id==='announcements'){loadAnnouncements();}
-  if(id==='timetable')loadAnnouncementBanner();
-  if(id==='yawmi')ywRender();
+  if(id==='yawmi'){loadAnnouncementBanner();ywRender();}
   if(id==='tracker'){
     setTimeout(()=>{
     if(isAdmin()){
@@ -6201,6 +6242,16 @@ function ywRender(){
   try{renderWeekPlanner();}catch(e){}
   try{renderTasks();}catch(e){}
   ywRenderInsights();
+  // جدول الحصص صار جزءاً من هذا القسم — نضمن رسمه وتحديث تذكيراته وتمييز حصته الجارية
+  try{renderTimetable();loadRemindersUI();updateCurrentClassBanner();}catch(e){}
+  try{renderDailyPrepSoon();}catch(e){}
+}
+// «الجدول» صار داخل «يومي» — الروابط الداخلية تمرّر لا تُبدّل القسم
+function ywScrollTo(sel){
+  try{
+    const el=document.querySelector(sel);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){}
 }
 // بطاقة الحصة الجارية/القادمة — تستعمل نفس حساب الجدول الموجود أصلاً
 // (findCurrentAndNextPeriod/classConfig) بدل مؤقّت ثانٍ مستقل.
@@ -6219,7 +6270,7 @@ function ywRenderNowCard(){
       <div class="r">تبقّى ${egToArabic(rem)} دقيقة</div>
       <div class="rail-bar"><i style="width:${pct}%"></i></div>
       <div class="rail-now-btns">
-        <button class="solid" onclick="document.querySelector('.nav-btn[data-page=\\'timetable\\']').click()">التحضير اليومي</button>
+        <button class="solid" onclick="ywScrollTo('#daily-prep-card')">التحضير اليومي</button>
       </div>
     </div>`;
     return;
@@ -6259,7 +6310,7 @@ function ywRenderInsights(){
       try{return (typeof dpBundle==='function'?dpBundle(it.lessonId).status:'idle')!=='ready';}catch(e){return true;}
     });
     if(notReady.length>=2){
-      list.push({text:`لديك ${egToArabic(notReady.length)} دروس قادمة لم يُجهَّز تحضيرها بعد`,btn:'التحضير اليومي',act:()=>document.querySelector('.nav-btn[data-page="timetable"]').click()});
+      list.push({text:`لديك ${egToArabic(notReady.length)} دروس قادمة لم يُجهَّز تحضيرها بعد`,btn:'التحضير اليومي',act:()=>ywScrollTo('#daily-prep-card')});
     }
   }catch(e){}
   box.innerHTML=list.map((it,i)=>`<div class="yw-insight">
@@ -6305,7 +6356,7 @@ function renderTimetable(){
       const classKey=(cfg.schedule[day.id]||{})[idx];
       if(classKey&&classConfig[classKey]){
         const col=classConfig[classKey].color;const bg=hexToRgba(col,.18);const br=hexToRgba(col,.35);
-        bodyHtml+=`<td><div class="cell" style="background:${bg};color:${col};border:1px solid ${br};" onclick="${ttEditing?`cycleCell('${day.id}',${idx})`:''}">${ttEditing?`<button class="cell-del" onclick="event.stopPropagation();clearCell('${day.id}',${idx})">✕</button>`:''}<span class="cls">${classConfig[classKey].name}</span><span class="sub">${teacherConfig?.subject||'المادة'}</span></div></td>`;
+        bodyHtml+=`<td><div class="cell" data-d="${day.id}" data-p="${idx}" style="background:${bg};color:${col};border:1px solid ${br};" onclick="${ttEditing?`cycleCell('${day.id}',${idx})`:''}">${ttEditing?`<button class="cell-del" onclick="event.stopPropagation();clearCell('${day.id}',${idx})">✕</button>`:''}<span class="cls">${classConfig[classKey].name}</span><span class="sub">${teacherConfig?.subject||'المادة'}</span></div></td>`;
       } else {
         bodyHtml+=`<td class="cell-empty" ${ttEditing?`onclick="cycleCell('${day.id}',${idx})"`:''}></td>`;
       }
@@ -6378,6 +6429,7 @@ function buildGradeFilterBar(){
 
 function switchTrackerGrade(idx,btn){
   currentTrackerIdx=idx;
+  trackerUnitIdx=null;
   document.querySelectorAll('.grade-filter-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   buildTracker();applyFilter();update();
@@ -6747,7 +6799,7 @@ function updateAdminButtons(){
     setTimeout(()=>{
       const currentActive=document.querySelector('.nav-btn.active:not([style*="display: none"])');
       if(!currentActive||currentActive.classList.contains('teacher-only')){
-        const trackerBtn=document.querySelector('.nav-btn[data-page="timetable"]');
+        const trackerBtn=document.querySelector('.nav-btn[data-page="tracker"]');
         if(trackerBtn){
           document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
           document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -6941,7 +6993,7 @@ const AI_TABS=[
   {id:'limits',  nm:'الحدود والميزانية',ic:'💰'},
   {id:'prompts', nm:'توجيه الذكاء',ic:'📝'},
   {id:'books',   nm:'المناهج والاختبارات',ic:'📚'},
-  {id:'games',   nm:'الألعاب وفهيم',ic:'🎮'},
+  {id:'games',   nm:'الألعاب وخُطّة AI',ic:'🎮'},
 ];
 // أين تذهب كل بطاقة: المعرّف الذي بداخلها → اللوح الجديد.
 // نستدلّ بمعرّفٍ داخلي لا بالعنوان: العنوان نصٌّ يتغيّر، والمعرّف عقدٌ مع الكود.
@@ -7343,10 +7395,10 @@ async function loadOrBalance(force){
       // الاسم وحده لا يكفي: «الإدارة» لا تقول إن تقطيع الكتب منها، فيظنّ
       // المشرف أن مفتاحاً معطّلاً لا يضرّ حتى يقف رفع كتابٍ جديد.
       const NM=['التحضير','الإنفوجرافيك','الشرائح','الإدارة'];
-      const TK=['خطة الدرس · فهيم · الألعاب · تلخيص صفحات الكتاب',
+      const TK=['خطة الدرس · خُطّة AI · الألعاب · تلخيص صفحات الكتاب',
                 'الملخص البصري للدرس',
                 'العرض المصوَّر · صور الشرائح · عروض ٥-١٢',
-                'تقطيع الكتب · استخراج الدروس · مولّد الاختبارات · خلفيات الألعاب · وضعيات فهيم'];
+                'تقطيع الكتب · استخراج الدروس · مولّد الاختبارات · خلفيات الألعاب · وضعيات خُطّة AI'];
       const EV=['OPENROUTER_API_KEY','OPENROUTER_API_KEY_2','OPENROUTER_API_KEY_3','OPENROUTER_API_KEY_4'];
       const ks=Array.isArray(data.keys)?data.keys:[];
       const rows=[0,1,2,3].map(i=>{
@@ -8369,34 +8421,49 @@ function buildTracker(){
     sectionsEl.innerHTML=`<div style="text-align:center;padding:50px 24px;color:var(--muted)"><div style="font-size:52px;margin-bottom:14px">📚</div><div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px">محتوى هذه المادة قيد الإعداد</div><div style="font-size:13px;line-height:1.7">سيتم رفع دروس "${grade.subject||''}" قريباً.<br/>ستظهر تلقائياً هنا فور توفّرها — بدون أي إعداد إضافي منك.</div></div>`;
     return;
   }
+  // ── شريط الوحدات (نمط cycle1): كل وحدات المادة أمام المعلم، وضغطة واحدة
+  //    تفتح دروسها تحتها مباشرة — بلا طيّ وفتح ولا تداخل مستويات ──
+  if(trackerUnitIdx==null||trackerUnitIdx>=grade.units.length){
+    const firstOpen=grade.units.findIndex(u=>(u.lessons||[]).some(l=>!get(l.id).done));
+    trackerUnitIdx=firstOpen<0?0:firstOpen;
+  }
+  const chipsWrap=document.createElement('div');chipsWrap.className='plan-units';
   grade.units.forEach((unit,ui)=>{
-    const secEl=document.createElement('div');secEl.className='section collapsed';secEl.id='sec-u'+ui;
-    const doneCount=unit.lessons.filter(l=>get(l.id).done).length;
-    const pct=unit.lessons.length?Math.round(doneCount/unit.lessons.length*100):0;
-    secEl.innerHTML=`<div class="sec-head" style="cursor:pointer" onclick="toggleUnit('sec-u${ui}')"><div class="sec-icon" style="background:rgba(192,57,43,.12)">📚</div><div style="flex:1"><div class="sec-title">${unit.name}</div><div class="sec-sub" id="prg-u${ui}">${doneCount}/${unit.lessons.length} دروس</div></div><div class="sec-bar-wrap"><div class="sec-bar" id="bar-u${ui}" style="width:${pct}%"></div></div><div class="unit-arrow">▼</div></div>`;
-    const lEl=document.createElement('div');lEl.className='lessons';
-    // تخزين بيانات الوحدة للبناء الكسول عند الفتح
-    secEl._unitData={unit,grade,ui};
-    secEl._lessonsEl=lEl;
-    secEl._built=false;
-    secEl.appendChild(lEl);sectionsEl.appendChild(secEl);
+    const ls=unit.lessons||[];
+    const doneCount=ls.filter(l=>get(l.id).done).length;
+    const pct=ls.length?Math.round(doneCount/ls.length*100):0;
+    const btn=document.createElement('button');
+    btn.className='plan-uchip'+(ui===trackerUnitIdx?' sel':'')+((ls.length&&doneCount===ls.length)?' done':'');
+    btn.setAttribute('onclick','trackerPickUnit('+ui+')');
+    btn.innerHTML=`<div class="un">الوحدة ${egToArabic(ui+1)}</div>
+      <div class="nm">${escHtml(unit.name||'')}</div>
+      <div class="prg"><span class="bar"><i id="bar-u${ui}" style="width:${pct}%"></i></span><span class="cnt" id="prg-u${ui}">${egToArabic(doneCount)}/${egToArabic(ls.length)}</span></div>`;
+    chipsWrap.appendChild(btn);
   });
+  sectionsEl.appendChild(chipsWrap);
+  const unit=grade.units[trackerUnitIdx];
+  if(!unit)return;
+  const uDone=(unit.lessons||[]).filter(l=>get(l.id).done).length;
+  const head=document.createElement('div');head.className='plan-uhead';
+  head.innerHTML=`<b>${escHtml(unit.name||'')}</b><span>${egToArabic(uDone)}/${egToArabic((unit.lessons||[]).length)} درس منجز</span>`;
+  sectionsEl.appendChild(head);
+  const lEl=document.createElement('div');lEl.className='lessons';
+  sectionsEl.appendChild(lEl);
+  buildUnitLessons(unit,grade,lEl);
   try{renderDailyPrepSoon();}catch(e){}
 }
+function trackerPickUnit(ui){
+  trackerUnitIdx=ui;
+  buildTracker();applyFilter();update();
+}
 
-function toggleUnit(secId){
-  const sec=document.getElementById(secId);
-  if(!sec)return;
-  const wasCollapsed=sec.classList.contains('collapsed');
-  sec.classList.toggle('collapsed');
-  // بناء كسول: ابنِ الدروس فقط عند أول فتح
-  if(wasCollapsed&&!sec._built&&sec._unitData){
-    const {unit,grade}=sec._unitData;
-    const lEl=sec._lessonsEl;
-    unit.lessons.forEach(lesson=>{
+// بناء دروس الوحدة المختارة — نفس بطاقة الدرس وسلوكها، بلا طيّ الأقسام
+function buildUnitLessons(unit,grade,lEl){
+      lEl.innerHTML='';
+      (unit.lessons||[]).forEach(lesson=>{
       const s=get(lesson.id);if(!s.classes)s.classes={};
       const card=document.createElement('div');card.className='lesson'+(s.done?' done':'');card.dataset.id=lesson.id;
-      const chips=grade.classes.map(cls=>{const checked=s.classes[cls.id];const col=cls.color;const style=checked?`border-color:${col};background:${hexToRgba(col,.12)};`:'';const chipCheckStyle=checked?`background:${col};border-color:${col};color:#fff;`:'';return`<div class="class-chip ${checked?'checked':''}" data-class="${cls.id}" style="${style}"><div class="chip-check" style="${chipCheckStyle}">✓</div><span class="chip-label" style="color:${col}">${cls.name}</span></div>`;}).join('');
+      const chips=(grade.classes||[]).map(cls=>{const checked=s.classes[cls.id];const col=cls.color;const style=checked?`border-color:${col};background:${hexToRgba(col,.12)};`:'';const chipCheckStyle=checked?`background:${col};border-color:${col};color:#fff;`:'';return`<div class="class-chip ${checked?'checked':''}" data-class="${cls.id}" style="${style}"><div class="chip-check" style="${chipCheckStyle}">✓</div><span class="chip-label" style="color:${col}">${cls.name}</span></div>`;}).join('');
       const lf=lessonFiles[lesson.id]||[];
       const filesHtml=lf.map(f=>lessonFileRowHtml(lesson.id,f)).join('');
       card.innerHTML=`<div class="lesson-top"><div class="chk">✓</div><div class="lesson-info"><div class="lesson-name">${lesson.name}</div><div class="lesson-unit">${unit.name}</div></div></div><div class="classes-row" onclick="event.stopPropagation()"><span class="classes-label">🏫 الشعب:</span>${chips}</div><div class="lesson-files-row" onclick="event.stopPropagation()"><div class="lesson-files-label">📎 ملفات التحضير:<label class="lesson-upload-btn" style="margin-right:auto"><input type="file" accept="application/pdf,image/*" onchange="uploadLessonFile(event,'${lesson.id}')"/>➕ إرفاق</label></div><div class="lesson-files-list" id="lfl-${lesson.id}">${filesHtml}</div></div>`;
@@ -8405,10 +8472,6 @@ function toggleUnit(secId){
       card.querySelectorAll('[data-f]').forEach(inp=>{inp.addEventListener('change',()=>{const cur=get(lesson.id);cur[inp.dataset.f]=inp.value;state[lesson.id]=cur;scheduleSave();});if(inp.tagName==='TEXTAREA'){inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';});setTimeout(()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';},0);}});
       lEl.appendChild(card);
     });
-    sec._built=true;
-    sec.setAttribute('data-built','1');
-    applyFilter();
-  }
 }
 
 
@@ -8439,8 +8502,11 @@ function lessonFileRowHtml(lessonId,f){
   return`<div class="lesson-file-item"><span>${icon}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="openDriveFile('${openUrl}','${(f.name||'').replace(/'/g,"\\'")}')">👁️ معاينة</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="window.open('${dlUrl}','_blank')">⬇️ تحميل</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="deleteLessonFile('${lessonId}','${f.id}','${f.driveId||''}')">🗑️</button></div>`;
 }
 function refreshLessonFiles(lessonId){
-  const container=document.getElementById('lfl-'+lessonId);if(!container)return;
-  container.innerHTML=(lessonFiles[lessonId]||[]).map(f=>lessonFileRowHtml(lessonId,f)).join('');
+  const html=(lessonFiles[lessonId]||[]).map(f=>lessonFileRowHtml(lessonId,f)).join('');
+  // البطاقة نفسها قد تظهر في موضعين (الخطة ومساعد التحضير) — نحدّث كل الحاويات
+  const boxes=[document.getElementById('lfl-'+lessonId),...document.querySelectorAll('[data-lfl="'+lessonId+'"]')];
+  boxes.forEach(c=>{if(c)c.innerHTML=html;});
+  try{if(typeof renderDailyPrepSoon==='function')renderDailyPrepSoon();}catch(e){}
 }
 
 async function deleteLessonFile(lessonId,fileId,driveId){
@@ -8457,28 +8523,20 @@ function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.filter-btn
 function applyFilter(){
   let vis=0;
   document.querySelectorAll('.lesson').forEach(card=>{const done=get(card.dataset.id).done;let show=true;if(currentFilter==='done'&&!done)show=false;if(currentFilter==='remain'&&done)show=false;card.classList.toggle('hidden',!show);if(show)vis++;});
-  document.querySelectorAll('#page-tracker .section').forEach(sec=>{
-    if(sec._built){
-      const sv=sec.querySelectorAll('.lesson:not(.hidden)').length;
-      sec.style.display=sv?'':'none';
-      return;
-    }
-    // إذا لم تُبنَ الدروس بعد، احسب التطابق من البيانات مباشرة بدون فتح الوحدة
-    if(sec._unitData&&sec._unitData.unit){
-      const lessons=sec._unitData.unit.lessons||[];
-      let match=0;
-      lessons.forEach(l=>{
-        const done=get(l.id).done;
-        if(currentFilter==='done'&&done)match++;
-        else if(currentFilter==='remain'&&!done)match++;
-        else if(currentFilter==='all')match++;
+  // شريط الوحدات: نخفي الوحدات التي لا درس فيها يطابق الفلتر الحالي
+  try{
+    const grade=(teacherConfig&&teacherConfig.grades)?(teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0]):null;
+    if(grade&&grade.units){
+      document.querySelectorAll('#page-tracker .plan-uchip').forEach((chip,ui)=>{
+        const lessons=(grade.units[ui]&&grade.units[ui].lessons)||[];
+        const match=lessons.filter(l=>{
+          const done=get(l.id).done;
+          return currentFilter==='all'||(currentFilter==='done'?done:!done);
+        }).length;
+        chip.style.display=match?'':'none';
       });
-      sec.style.display=match?'':'none';
-      vis+=match;
-    }else{
-      sec.style.display='';
     }
-  });
+  }catch(e){}
   const emptyEl=document.getElementById('empty');
   if(vis===0){emptyEl.style.display='block';if(currentFilter==='done'){document.getElementById('empty-emoji').textContent='📚';document.getElementById('empty-msg').textContent='ما خلصت أي درس بعد!';}else if(currentFilter==='remain'){document.getElementById('empty-emoji').textContent='🏆';document.getElementById('empty-msg').textContent='خلصت كل الدروس 🎉';}else{document.getElementById('empty-emoji').textContent='📋';document.getElementById('empty-msg').textContent='لا توجد دروس';}}
   else{emptyEl.style.display='none';}
@@ -8493,7 +8551,7 @@ function update(){
   document.getElementById('motiv').textContent=msgs[pct===0?0:pct<25?1:pct<50?2:pct<75?3:pct<100?4:5];
   if(teacherConfig&&teacherConfig.grades){
     const grade=teacherConfig.grades[currentTrackerIdx]||teacherConfig.grades[0];
-    if(grade){grade.units.forEach((unit,ui)=>{const ls=unit.lessons,sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;const pg=document.getElementById('prg-u'+ui);if(pg)pg.textContent=sd+'/'+ls.length+' دروس';const br=document.getElementById('bar-u'+ui);if(br)br.style.width=sp+'%';});}
+    if(grade&&grade.units){grade.units.forEach((unit,ui)=>{const ls=unit.lessons||[],sd=ls.filter(l=>get(l.id).done).length,sp=ls.length?Math.round(sd/ls.length*100):0;const pg=document.getElementById('prg-u'+ui);if(pg)pg.textContent=egToArabic(sd)+'/'+egToArabic(ls.length);const br=document.getElementById('bar-u'+ui);if(br)br.style.width=sp+'%';const chip=br?br.closest('.plan-uchip'):null;if(chip)chip.classList.toggle('done',!!ls.length&&sd===ls.length);});}
   }
 }
 
@@ -11695,17 +11753,21 @@ function findCurrentAndNextPeriod(){
   timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start),e=parseTime12(p.end);const classKey=daySched[idx];if(s===null||e===null)return;if(now>=s&&now<e){current={idx,period:p,start:s,end:e,classKey,dayKey};}else if(now<s&&!next){if(classKey)next={idx,period:p,start:s,end:e,classKey,dayKey};}});
   return{current,next};
 }
+// بعد دمج «الجدول» في «يومي» صارت بطاقة #yw-now-card هي الواجهة الوحيدة
+// للحصة الجارية/القادمة (كانت مكرّرة مع شريط #ccb). هذه الدالة تبقى مسؤولة عن
+// تمييز خلية الحصة الجارية داخل الجدول وعن فحص التذكيرات — بالمصدر نفسه
+// (findCurrentAndNextPeriod) وبالمؤقّت نفسه (watcherInterval)، بلا مؤقّت ثانٍ.
 function updateCurrentClassBanner(){
-  const banner=document.getElementById('ccb');if(!banner)return;
   document.querySelectorAll('.cell.current-period').forEach(el=>el.classList.remove('current-period'));
   const{current}=findCurrentAndNextPeriod();
-  if(current&&current.classKey){const cls=classConfig[current.classKey];banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:current.classKey);document.getElementById('ccb-label').textContent=`الحصة ${current.period.num} • الآن`;document.getElementById('ccb-timer').textContent=(current.end-nowMins())+' د';document.getElementById('ccb-timer-lbl').textContent='المتبقي';}
-  else{const{next}=findCurrentAndNextPeriod();if(next&&next.classKey){const cls=classConfig[next.classKey];const mins=next.start-nowMins();if(mins>0&&mins<=60){banner.classList.add('show');document.getElementById('ccb-class').textContent=(cls?cls.name:next.classKey);document.getElementById('ccb-label').textContent=`الحصة ${next.period.num} • قادمة`;document.getElementById('ccb-timer').textContent=mins+' د';document.getElementById('ccb-timer-lbl').textContent='تبدأ بعد';}else{banner.classList.remove('show');}}else{banner.classList.remove('show');}}
+  if(current&&current.classKey){
+    document.querySelectorAll(`.cell[data-d="${current.dayKey}"][data-p="${current.idx}"]`).forEach(c=>c.classList.add('current-period'));
+  }
   checkReminders();
 }
 function checkReminders(){if(!remindersConfig.enabled)return;const dayKey=currentDayKey();const daySched=(timetableConfig&&timetableConfig.schedule[dayKey])||{};const now=nowMins();timetableConfig.periods.forEach((p,idx)=>{const s=parseTime12(p.start);const classKey=daySched[idx];if(s===null||!classKey)return;const diff=s-now;const target=remindersConfig.minutes||10;if(diff===target||diff===target-1){const key=`${dayKey}_${idx}_${new Date().toDateString()}`;if(reminderState[key])return;reminderState[key]=true;fireReminder(p,classKey,diff);}});}
 function dismissReminder(){document.getElementById('reminder-toast').classList.remove('show');}
-function loadRemindersUI(){const t=document.getElementById('rs-toggle');t.classList.toggle('on',remindersConfig.enabled);document.getElementById('rs-mins').value=remindersConfig.minutes||10;}
+function loadRemindersUI(){const t=document.getElementById('rs-toggle');if(!t)return;t.classList.toggle('on',remindersConfig.enabled);const m=document.getElementById('rs-mins');if(m)m.value=remindersConfig.minutes||10;}
 function toggleReminders(){remindersConfig.enabled=!remindersConfig.enabled;document.getElementById('rs-toggle').classList.toggle('on',remindersConfig.enabled);if(remindersConfig.enabled&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ تم تفعيل التذكيرات','ok');else toast('🔔 التذكيرات داخل الصفحة فقط');});}else{toast(remindersConfig.enabled?'✅ تم التفعيل':'❌ تم الإيقاف',remindersConfig.enabled?'ok':false);}scheduleSave();}
 function updReminderMins(){const v=parseInt(document.getElementById('rs-mins').value);if(v>0&&v<=60){remindersConfig.minutes=v;scheduleSave();}}
 
@@ -13998,10 +14060,10 @@ function fhInitMascot(){
   img.src=fhMascotUrl();
 }
 // ═ 🚀 لوحة الانطلاق — تنقل بكامل الصفحة ═
-const LP_DESC={timetable:'حصص اليوم وبطاقة التحضير',tracker:'وحدات ودروس الفصل الدراسي',grades:'رصد درجات طلابك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اصنع اختباراً أو عرضاً أو إنفوجرافيك أو لعبة',faheem:'اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
+const LP_DESC={yawmi:'يومك: حصصك وجدولك ومفكرتك وبطاقة التحضير',tracker:'وحدات ودروس موادك',grades:'رصد درجات طلابك',stats:'نظرة على تقدمك',archive:'ملفاتك المؤرشفة',library:'كتب الوزارة والملفات المشتركة',examgen:'اصنع اختباراً أو عرضاً أو إنفوجرافيك أو لعبة',faheem:'مساعدٌ ذكيٌّ عامّ — اسألني: «حضّر لي درس الغد» ✨',announcements:'الإعلانات ومراسلة المعلمين',analytics:'إحصائيات المنصة',schools:'إدارة المدارس',violtypes:'أنواع المخالفات',aimanage:'إعدادات الذكاء والمولّد',behavior:'سلوك الطلاب والتواصل مع الأولياء',cv:'سيرتك المهنية'};
 function lpLive(pg){
   try{
-    if(pg==='timetable'&&typeof dpNextLessons==='function'){
+    if(pg==='yawmi'&&typeof dpNextLessons==='function'){
       const nx=dpNextLessons();
       if(nx&&nx.length)return 'التالي: «'+nx[0].lesson+'» — '+nx[0].subject+' صف '+nx[0].gradeNum;
     }
@@ -14041,8 +14103,8 @@ function fhSideToggle(){
 }
 // ⚡ أفعال تنفيذية: فهيم لا يتكلم فقط — يعمل
 function fhActPrep(){
-  const nb=document.querySelector('.nav-btn[data-page="timetable"]');
-  if(nb)showPage('timetable',nb);
+  const nb=document.querySelector('.nav-btn[data-page="yawmi"]');
+  if(nb)showPage('yawmi',nb);
   setTimeout(()=>{
     try{
       const items=window._dpItems||[];
@@ -14069,7 +14131,7 @@ function fhWelcome(){
   const body=document.getElementById('fh-body');
   body.innerHTML=`<div class="fh-hero">
     <div class="hero-ava"></div>
-    <h3>أهلاً بك! أنا فهيم 🦊</h3>
+    <h3>أهلاً بك! أنا خُطّة AI 🦊</h3>
     <p>مساعدك التربوي الخاص — أعرف صفوفك ودروسك، وجاهز أساعدك في التحضير والاستراتيجيات وإدارة الصف. اسألني ما شئت، أو ابدأ من البطاقات في الأعلى.</p>
     <div class="fh-suggest">
       <button onclick="fhAsk('اقترح تهيئة ممتعة لدرس اليوم')">✨ تهيئة لدرس اليوم</button>
@@ -14514,6 +14576,87 @@ function renderDailyPrepSoon(){clearTimeout(_dpRenderT);_dpRenderT=setTimeout(re
 let dpBundles=new Map(); // lessonId → {status:'idle|working|ready|saved', prog, plan, infoBranded, examHtml, missing:[]}
 function dpBundle(id){return dpBundles.get(id)||{status:'idle'};}
 
+// ── بطاقة الدرس الموسّعة (نمط cycle1: وحدة+درس، مؤشّرات جاهزية، أزرار المحتوى، ابدأ الحصة) ──
+// أجزاء الحزمة الأربعة كما تبنيها dpBundle: خطة، عرض، إنفوجرافيك، تقييم
+function dpPartsOf(b){
+  return {
+    plan:{k:'plan',lbl:'التحضير',ic:'📋',col:'var(--kh-red)',has:!!b.plan},
+    slides:{k:'slides',lbl:'العرض',ic:'🖥️',col:'#6d28d9',has:!!((b.slideImgs&&b.slideImgs.some(Boolean))||(b.slides&&b.slides.length))},
+    info:{k:'info',lbl:'الإنفوجرافيك',ic:'🎨',col:'var(--kh-red-d)',has:!!b.infoBranded},
+    exam:{k:'exam',lbl:'التقييم',ic:'📝',col:'var(--kh-olive-d)',has:!!b.examHtml}
+  };
+}
+// معاينة جزء واحد من الحزمة داخل نافذة الحزمة نفسها
+function dpOpenPart(i,only){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status!=='ready'&&b.status!=='saved')return;
+  window._dpBundleIdx=i;
+  dpOpenBundleIt(it,b,false,only);
+}
+// زر جزء غير جاهز: يولّد الحزمة كاملة إن لم تبدأ، أو يكمل الناقص إن كانت جاهزة جزئياً
+function dpMakePart(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const b=dpBundle(it.lessonId);
+  if(b.status==='ready'||b.status==='saved')dpCompleteMissing(i);
+  else dpPrepareAll(i);
+}
+function dpLessonCardHtml(it,i,miniLoader){
+  const b=dpBundle(it.lessonId);
+  const parts=dpPartsOf(b);
+  const busy=(b.status==='working'||b.status==='saving');
+  const done=(b.status==='ready'||b.status==='saved');
+  const files=((typeof lessonFiles!=='undefined'&&lessonFiles)?lessonFiles[it.lessonId]:null)||[];
+  let st='';
+  if(b.status==='working')st='<span class="dp-status wait">⏳ قيد التحضير</span>';
+  else if(b.status==='saving')st='<span class="dp-status wait">⬆️ جارٍ الحفظ</span>';
+  else if(b.status==='ready')st=(b.missing&&b.missing.length)?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
+  else if(b.status==='saved')st='<span class="dp-status ready">محفوظ ✅</span>';
+  else st='<span class="dp-status wait">بانتظارك</span>';
+  // مؤشّرات الجاهزية — مستطيلات متساوية كما في الحلقة الأولى
+  const rb=Object.values(parts).filter(p=>p.has).map(p=>p.lbl);
+  if(files.length)rb.push('مرفقات '+egToArabic(files.length));
+  const ready=rb.length?`<div class="pl-ready">${rb.map(t=>`<span class="pl-rbox">${escHtml(t)}</span>`).join('')}</div>`:'';
+  let body;
+  if(busy){
+    body=miniLoader(b.status==='saving'?'⬆️ جارٍ حفظ التحضير في بطاقة الدرس…':'⏳ الدرس قيد التحضير — لا تغلق الصفحة',(b.prog||'يبدأ…'));
+  }else{
+    const partBtns=Object.values(parts).map(p=>
+      `<button class="pl-btn ${p.has?'ready':''}" onclick="${p.has?`dpOpenPart(${i},'${p.k}')`:`dpMakePart(${i})`}"><span class="d" style="background:${p.col}"></span>${p.ic} ${p.lbl}</button>`
+    ).join('');
+    const attach=`<label class="pl-btn"><input type="file" accept="application/pdf,image/*" onchange="uploadLessonFile(event,'${it.lessonId}')"><span class="d" style="background:var(--kh-olive-d)"></span>📎 إرفاق ملف</label>`;
+    const live=`<button class="pl-btn live" onclick="liveStartFromItem(${i})"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>ابدأ الحصة</button>`;
+    let main;
+    if(!done){
+      main=`<button class="pl-btn main pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
+    }else{
+      const inc=b.missing&&b.missing.length;
+      main=`<button class="pl-btn go" onclick="dpOpenBundle(${i})">👁️ معاينة كاملة</button>
+        ${inc?`<button class="pl-btn main pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
+        ${b.status==='ready'?`<button class="pl-btn main" onclick="dpSaveBundle(${i})">💾 حفظ</button>`:''}
+        <button class="pl-btn" onclick="dpJump('game',${i})"><span class="d" style="background:#6d28d9"></span>🎮 أنشئ لعبة</button>
+        <button class="pl-btn" onclick="dpMarkDone(${i})">⏭️ حضّر الدرس التالي</button>`;
+    }
+    body=`<div class="pl-btnrow">${partBtns}${attach}${live}</div>
+      <div class="pl-btnrow">${main}</div>`;
+  }
+  const filesHtml=`<div class="pl-files-t">📎 مرفقات الدرس${files.length?' ('+egToArabic(files.length)+')':''}</div>
+    <div class="lesson-files-list" data-lfl="${it.lessonId}">${files.map(f=>lessonFileRowHtml(it.lessonId,f)).join('')}</div>`;
+  return `<div class="plan-lesson ${done?'done':''}" data-id="${it.lessonId}">
+    <div class="plan-lesson-top">
+      <div class="plan-chk" title="أنجزت الدرس" onclick="dpMarkDone(${i})">${done?'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</div>
+      <div class="pl-tt">
+        <div class="pl-unit">الصف ${egToArabic(it.gradeNum)} · ${escHtml(it.subject)} · ${escHtml(it.unit)}</div>
+        <div class="plan-lesson-nm">${escHtml(it.lesson)}</div>
+      </div>
+      ${st}
+    </div>
+    ${ready}
+    ${body}
+    ${files.length?filesHtml:''}
+  </div>`;
+}
+
 async function renderDailyPrep(){
   const card=document.getElementById('daily-prep-card');
   if(!card)return;
@@ -14558,54 +14701,9 @@ async function renderDailyPrep(){
       <div class="loader-squares dp-mini-squares"><div class="lsq lsq-1"></div><div class="lsq lsq-2"></div><div class="lsq lsq-3"></div><div class="lsq lsq-4"></div><div class="lsq lsq-5"></div><div class="lsq lsq-6"></div><div class="lsq lsq-7"></div><div class="lsq lsq-8"></div><div class="lsq lsq-9"></div></div>
       <div><div class="dp-working-title">${title}</div><div class="dp-working-sub">${escHtml(sub||'')}</div></div>
     </div>`;
-  document.getElementById('dp-items').innerHTML=items.map((it,i)=>{
-    const b=dpBundle(it.lessonId);
-    let st,actions;
-    if(b.status==='working'){
-      st='<span class="dp-status wait">⏳ قيد التحضير</span>';
-      actions=miniLoader('⏳ الدرس قيد التحضير — لا تغلق الصفحة',(b.prog||'يبدأ…'));
-    }else if(b.status==='saving'){
-      st='<span class="dp-status wait">⬆️ جارٍ الحفظ</span>';
-      actions=miniLoader('⬆️ جارٍ حفظ التحضير في بطاقة الدرس…',(b.prog||''));
-    }else if(b.status==='ready'){
-      const inc=b.missing&&b.missing.length;
-      st=inc?'<span class="dp-status wait">جاهز جزئياً ⚠️</span>':'<span class="dp-status ready">التحضير جاهز ✅</span>';
-      actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
-        ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
-        <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ</button>
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>
-        <button class="dp-btn live" onclick="liveStartFromItem(${i})">🎬 ابدأ الحصة</button>`;
-    }else if(b.status==='saved'){
-      const incS=b.missing&&b.missing.length;
-      st='';
-      actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
-        ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>
-        <button class="dp-btn live" onclick="liveStartFromItem(${i})">🎬 ابدأ الحصة</button>`;
-    }else{
-      st='<span class="dp-status wait">بانتظارك</span>';
-      actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
-    }
-    return `<div class="dp-item">
-      <div class="dp-item-top">
-        <div><div class="dp-lesson">📗 ${escHtml(it.lesson)}</div>
-        <div class="dp-meta">الصف ${egToArabic(it.gradeNum)} · ${escHtml(it.subject)} · ${escHtml(it.unit)}</div></div>
-        ${st}
-      </div>
-      <div class="dp-actions">
-        ${actions}
-        ${(b.status==='ready'||b.status==='saved')?`<button class="dp-btn done-btn" onclick="dpMarkDone(${i})">⏭️ حضّر الدرس التالي</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  document.getElementById('dp-items').innerHTML=items.map((it,i)=>dpLessonCardHtml(it,i,miniLoader)).join('');
   window._dpItems=items;
-  // وهج زر الخطة لجذب المعلم عند الدخول (إن لم يزره بعد في هذه الجلسة)
-  try{
-    if(!sessionStorage.getItem('dpGlowSeen')&&!document.getElementById('page-tracker').classList.contains('active')){
-      const nb=document.querySelector('.nav-btn[data-page="timetable"]');
-      if(nb)nb.classList.add('nav-glow');
-    }
-  }catch(e){}
+  // لم يعد هناك زر «الجدول» يُومَض إليه — بطاقة التحضير تعيش في «يومي» نفسه
 }
 
 // ✨ التحضير الشامل المترابط: خطة → عرض مبني عليها → تقييم لأهدافها → إنفوجرافيك ملخّص
@@ -16133,7 +16231,7 @@ const AI_TASKS=[
   {k:'presentation',n:'العرض التقديمي',        d:'بناء شرائح متسلسلة، يستفيد من نموذج قوي'},
   {k:'exam',        n:'مولّد الاختبارات',      d:'صياغة أسئلة دقيقة'},
   {k:'game',        n:'محتوى الألعاب',         d:'أسئلة قصيرة — يكفيها نموذج متوسط'},
-  {k:'chat',        n:'محادثة فهيم',           d:'ردود قصيرة متكرّرة — أوفر مرشّح للتخفيف'},
+  {k:'chat',        n:'محادثة خُطّة AI',           d:'ردود قصيرة متكرّرة — أوفر مرشّح للتخفيف'},
   {k:'summary',     n:'تلخيص صفحات الدرس',     d:'قراءة صفحات وإخراج نصّ قصير — مرشّح للتخفيف'},
   {k:'extract',     n:'استخراج الدروس',        d:'مهمّة إدارية تُنفَّذ مرّة واحدة'},
   {k:'segment',     n:'تقسيم الكتاب',          d:'مهمّة إدارية تُنفَّذ مرّة واحدة'}
