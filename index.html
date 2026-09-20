@@ -3108,7 +3108,9 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- 🕹️ ألعابي المحفوظة -->
-  <div class="eg-card" id="eg-mygames-card" style="display:none">
+  <!-- ألعابي المحفوظة: كانت مخفيةً إلى أن يُختار وضع «لعبة»، فلا ترى المعلّم
+       ما حفظه أصلاً. تُعرض الآن دائماً عند فتح الاستوديو (كما في cycle1). -->
+  <div class="eg-card" id="eg-mygames-card">
     <div class="eg-step-title">🕹️ ألعابي المحفوظة</div>
     <div id="gm-mylist"></div>
   </div>
@@ -12726,6 +12728,7 @@ async function egInit(){
   const ok=await egApplyConfig();
   if(!ok)return;
   egCreditRender();
+  try{gmLoadMyGames();}catch(e){}
   const gsel=document.getElementById('eg-grade');
   let grades=[];
   if(isAdmin())grades=[5,6,7,8,9,10,11,12];
@@ -12752,7 +12755,6 @@ async function egSetMode(mode){
   document.getElementById('eg-mode-btn-info').classList.toggle('active',mode==='info');
   document.getElementById('eg-mode-btn-game').classList.toggle('active',mode==='game');
   if(mode==='game'){gmLoadThemes();gmLoadMyGames();}
-  document.getElementById('eg-mygames-card').style.display=mode==='game'?'block':'none';
   const single=egSingleCombo();
   if(single){
     // صف ومادة واحدة: اختيار تلقائي وإخفاء الخطوة الأولى
@@ -13688,7 +13690,7 @@ async function gmSave(){
       title,template:gmTpl,theme_id:themeSel,content:{structure:GM_STRUCT[gmTpl],items,groupNames:GM_STRUCT[gmTpl]==='groups'?gmGroupNames:undefined}
     });
     if(error)throw error;
-    gmLoadMyGames();
+    gmLoadMyGames(true);
   }catch(e){uiBusyDone();toast('تعذّر حفظ اللعبة',true);console.warn('gmSave',e);return;}
   // درس واحد؟ تُرفق نسخة اللعبة (ملف يعمل بلا إنترنت) في بطاقة الدرس تلقائياً
   const ids=Object.keys(egSelected);
@@ -13714,8 +13716,13 @@ async function gmSave(){
     toast('💾 حُفظت اللعبة في ألعابك','ok');
   }
 }
-async function gmLoadMyGames(){
-  const box=document.getElementById('gm-mylist');
+let _gmMyGamesAt=0;
+async function gmLoadMyGames(force){
+  const box=document.getElementById('gm-mylist');if(!box)return;
+  if(!currentUser||!currentUser.id){box.innerHTML='';return;}
+  // القائمة لا تتغيّر إلا بحفظٍ أو حذفٍ منّا — لا نعيد جلبها قبل دقيقة إلا عند التغيير
+  if(!force&&box.dataset.loaded&&Date.now()-_gmMyGamesAt<60000)return;
+  _gmMyGamesAt=Date.now();box.dataset.loaded='1';
   try{
     const{data}=await sb.from('games').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
     if(!data||!data.length){box.innerHTML='<div class="lib-empty">📭 لا توجد ألعاب محفوظة بعد</div>';return;}
@@ -13743,7 +13750,13 @@ async function gmOpenSaved(id){
 }
 async function gmDeleteSaved(id,btn){
   if(!(await uiConfirm('حذف اللعبة','هل تريد حذف هذه اللعبة نهائياً؟')))return;
-  try{await sb.from('games').delete().eq('id',id);btn.closest('.gm-row').remove();}catch(e){toast('تعذّر الحذف',true);}
+  // فحص error لازم: supabase-js لا يرمي عند فشل الاستعلام، فكان الصف يُزال من
+  // الشاشة وقد يبقى في القاعدة فيعود عند إعادة التحميل
+  try{
+    const{error}=await sb.from('games').delete().eq('id',id);
+    if(error)throw error;
+    btn.closest('.gm-row').remove();
+  }catch(e){toast('تعذّر الحذف — تحقّق من الاتصال',true);}
 }
 // ─ التشغيل ─
 function gmPlay(){
