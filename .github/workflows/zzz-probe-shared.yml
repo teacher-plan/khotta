@@ -1,0 +1,31 @@
+name: zzz probe shared
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: فحص المحفوظات المشتركة
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          raw() {
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")"
+          }
+          echo "════ امتلاء الأعمدة في shared_preps ════"
+          raw "select count(*) as rows_total, count(grade) as has_grade, count(subject) as has_subject, count(slides) as has_slides, count(info_b64) as has_info, count(exam_html) as has_exam from shared_preps;" \
+            | jq -r '.[] | "الصفوف:\(.rows_total) | لها grade:\(.has_grade) | لها subject:\(.has_subject) | عروض:\(.has_slides) | ملخصات:\(.has_info) | تقييم:\(.has_exam)"'
+
+          echo
+          echo "════ التوزيع على الصفوف والمواد ════"
+          raw "select grade, subject, count(*) as cnt from shared_preps group by grade, subject order by cnt desc limit 15;" \
+            | jq -r 'if length==0 then "لا صفوف بعد" else .[] | "ص\(.grade) | \(.subject) | \(.cnt)" end'
+
+          echo
+          echo "════ التقييمات ════"
+          raw "select count(*) as ratings from shared_prep_ratings;" \
+            | jq -r '.[] | "عدد التقييمات:\(.ratings)"'
