@@ -11,28 +11,27 @@ jobs:
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
           set -uo pipefail
-          q() {
-            echo "─── $2 ───"
+          raw() {
             curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
               -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-              --data-binary "$(jq -Rs '{query: .}' <<< "$1")" | python3 -m json.tool
-            echo
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")"
           }
 
-          q "select semester, grade, subject, book_no, count(*) as lessons, count(page) as with_page, count(*)-count(page) as missing_page from curriculum where grade between 1 and 4 group by semester, grade, subject, book_no order by grade, subject, semester, book_no;" \
-            "١) تغطية أرقام الصفحات لكل كتاب (الحلقة الأولى)"
+          echo "════ ١) تغطية أرقام صفحات الدروس (الحلقة الأولى) ════"
+          raw "select grade, subject, book_no, count(*) as lessons, count(page) as with_page, count(*)-count(page) as missing_page from curriculum where grade between 1 and 4 group by grade, subject, book_no order by grade, subject, book_no;" \
+            | jq -r '.[] | "ص\(.grade) | \(.subject) | كتاب\(.book_no) | دروس:\(.lessons) | لها صفحة:\(.with_page) | بلا صفحة:\(.missing_page)"'
 
-          q "select grade, subject, semester, book_no, base_path, page_count, offset_pages, updated_at from book_sources where grade in ('1','2','3','4') order by grade, subject, semester, book_no;" \
-            "٢) صفوف book_sources الموجودة للحلقة الأولى"
+          echo
+          echo "════ ٢) حالة رفع الكتب المطلوبة في المنهج ════"
+          raw "select c.grade, c.subject, c.book_no, count(*) as lessons, case when max(bs.base_path) is null then 'غير مرفوع' when max(bs.page_count) is null then 'ناقص' else 'مرفوع' end as status from curriculum c left join book_sources bs on bs.grade=c.grade::text and bs.subject=c.subject and bs.semester=c.semester and bs.book_no=c.book_no where c.grade between 1 and 4 group by c.grade, c.subject, c.book_no order by status, c.grade, c.subject;" \
+            | jq -r '.[] | "\(.status) | ص\(.grade) | \(.subject) | كتاب\(.book_no) | \(.lessons) درس"'
 
-          q "select c.semester, c.grade, c.subject, c.book_no, count(*) as lessons, max(bs.base_path) as base_path, max(bs.page_count) as page_count, case when max(bs.base_path) is null then 'غير مرفوع (لا مصدر)' when max(bs.page_count) is null then 'ناقص (لا عدد صفحات)' else 'مرفوع' end as status from curriculum c left join book_sources bs on bs.grade=c.grade::text and bs.subject=c.subject and bs.semester=c.semester and bs.book_no=c.book_no where c.grade between 1 and 4 group by c.semester, c.grade, c.subject, c.book_no order by status desc, c.grade, c.subject;" \
-            "٣) الكتب المطلوبة في المنهج وحالة رفعها"
+          echo
+          echo "════ ٣) كتب مرفوعة لكنها غير مستعملة في أي درس (زائدة) ════"
+          raw "select bs.grade, bs.subject, bs.book_no, bs.page_count from book_sources bs where bs.grade in ('1','2','3','4') and not exists (select 1 from curriculum c where c.grade::text=bs.grade and c.subject=bs.subject and c.semester=bs.semester and c.book_no=bs.book_no) order by bs.grade, bs.subject;" \
+            | jq -r 'if length==0 then "لا يوجد" else .[] | "ص\(.grade) | \(.subject) | كتاب\(.book_no) | \(.page_count) صفحة" end'
 
-          q "select bs.grade, bs.subject, bs.semester, bs.book_no, bs.base_path, bs.page_count, (select count(*) from storage.objects o where o.bucket_id='library-files' and o.name like bs.base_path || '/%') as files_in_storage from book_sources bs where bs.grade in ('1','2','3','4') order by bs.grade, bs.subject, bs.book_no;" \
-            "٤) هل الصور موجودة فعلاً في التخزين؟ (تحقّق حقيقي لا ادّعاء)"
-
-          q "select grade, count(*) as rows from book_sources group by grade order by 1;" \
-            "٥) توزيع صفوف book_sources على كل الصفوف (للمقارنة مع الحلقة الثانية)"
-
-          q "select distinct semester from curriculum where grade between 1 and 4 order by 1;" \
-            "٦) الفصول الدراسية الموجودة في منهج الحلقة الأولى"
+          echo
+          echo "════ ٤) إجمالي دروس الحلقة الأولى وكم منها بلا رقم صفحة ════"
+          raw "select count(*) as total_lessons, count(page) as with_page, count(*)-count(page) as missing_page, count(distinct (grade, subject, book_no)) as books from curriculum where grade between 1 and 4;" \
+            | jq -r '.[] | "إجمالي الدروس:\(.total_lessons) | لها صفحة:\(.with_page) | بلا صفحة:\(.missing_page) | عدد الكتب:\(.books)"'
