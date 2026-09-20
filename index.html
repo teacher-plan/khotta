@@ -1000,6 +1000,7 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .dp-status.wait{background:rgba(184,134,11,.1);color:var(--gold);border:1px solid rgba(184,134,11,.3);}
 .dp-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
 .dp-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .15s;}
+.dp-btn.live{background:linear-gradient(135deg,var(--kh-red-deep),var(--kh-red-d) 60%,var(--red));color:#fff;border-color:transparent;}
 .dp-btn:hover{border-color:var(--gold);transform:translateY(-1px);}
 .dp-btn.main{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-color:transparent;}
 .dp-btn.done-btn{background:linear-gradient(135deg,#35603A,#487848);color:#fff;border-color:transparent;margin-right:auto;}
@@ -1705,6 +1706,175 @@ input,textarea,select{font-size:16px !important;}
 .stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.6),transparent 45%),var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:0 3px 12px rgba(42,26,26,.07);overflow:hidden;}
 .stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,rgba(184,134,11,.15),rgba(184,134,11,.6) 50%,rgba(184,134,11,.15));}
 .stat-card .stat-card-value{font-size:26px;font-weight:800;}
+</style>
+<style id="live-css">
+/* ── وضع الحصة الحية — لوحة تحكم ثابتة أعلى الشاشة، وما تحتها لعرض المرفقات ──
+   البار عنصر جذري (لا داخل المسرح) ليبقى فوق العرض التقديمي واللعبة أثناء تشغيلهما */
+/* المتغيّر يشمل النتوء الآن — كل عنصرٍ يرتكز عليه (live-body وlive-view
+   وgm-stage-bg وlb-pop) يتحرّك معه تلقائياً بلا تعديلٍ منفرد لكلٍّ منها؛
+   لو أُضيف الحشو للبار وحده لبقيت هذه العناصر تبدأ من ٦٤px القديمة
+   فتُغطّى جزئياً بالبار الأطول تحت النتوء. */
+:root{--live-bar-h:calc(64px + env(safe-area-inset-top))}
+@media(max-width:640px){:root{--live-bar-h:calc(56px + env(safe-area-inset-top))}}
+#live-bar{position:fixed;top:0;inset-inline:0;height:var(--live-bar-h);z-index:4400;display:none;align-items:center;gap:9px;padding:env(safe-area-inset-top) 12px 0;
+  background:linear-gradient(135deg,var(--kh-red-deep),var(--kh-red-d) 60%,var(--red));color:#fff;box-shadow:0 3px 20px rgba(48,24,0,.35)}
+#live-bar.on{display:flex}
+.lb-cls{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:none;max-width:24vw}
+.lb-cls b{font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+.lb-cls span{font-size:10.5px;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+.lb-sep{width:1px;height:26px;background:rgba(255,255,255,.22);flex:none}
+.lb-tools{display:flex;align-items:center;gap:7px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.lb-tools::-webkit-scrollbar{display:none}
+.lb-btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;
+  border-radius:11px;padding:8px 12px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;flex:none;transition:.15s}
+.lb-btn:hover{background:rgba(255,255,255,.2)}
+.lb-btn.on{background:#fff;color:var(--kh-red-deep);border-color:#fff}
+.lb-btn.end{background:rgba(0,0,0,.24);border-color:rgba(255,255,255,.22);margin-inline-start:auto}
+.lb-btn svg{flex:none}
+.lb-clock{font-variant-numeric:tabular-nums;font-size:15.5px;font-weight:800;letter-spacing:.5px;min-width:50px;text-align:center}
+.lb-clock.run{color:#FFE9A8}
+.lb-clock.zero{color:#FFC7BD}
+/* على الجوال: أيقونات فقط ليتّسع كل شيء بلا تمرير أفقي — الساعة تبقى بالأرقام */
+@media(max-width:700px){
+  #live-bar{gap:6px;padding:0 8px}
+  .lb-btn .lbl{display:none}
+  .lb-btn{padding:8px 10px}
+  .lb-cls{max-width:26vw}
+  .lb-cls span{display:none}
+  .lb-cls b{font-size:12.5px}
+  .lb-tools{gap:5px}
+  .lb-clock{font-size:14px;min-width:44px}
+  .lb-sep{display:none}
+  .lb-pop{inset-inline:8px!important;min-width:0;max-width:none}
+}
+#live-bar.tick-flash{animation:lbFlash .45s ease 3}
+@keyframes lbFlash{0%,100%{box-shadow:0 3px 20px rgba(48,24,0,.35)}50%{box-shadow:0 3px 0 6px rgba(232,195,74,.55)}}
+/* توجيه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — نبضٌ مستمر وفقّاعة
+   رسالةٍ بجانبه، يبقيان حتى تضغط الزرّ نفسه (لا مهلة زمنية). */
+.lb-fs-hint{animation:lbFsHint 1.4s ease infinite}
+@keyframes lbFsHint{0%,100%{box-shadow:0 0 0 0 rgba(255,233,168,.65)}50%{box-shadow:0 0 0 8px rgba(255,233,168,0)}}
+@media(prefers-reduced-motion:reduce){.lb-fs-hint{animation:none}}
+/* position:fixed لا relative-to-wrap: .lb-tools تفرض overflow-y:auto ضمنياً
+   بسبب overflow-x:auto عليها (قاعدة CSS)، فتقصّ أي فائضٍ رأسي داخلها مهما
+   كان absolute. الإحداثيات تُحسب في JS (liveFsHintPosition) من مكان الزرّ. */
+.lb-fs-bubble{position:fixed;background:#fff;color:var(--kh-ink);font-size:12px;font-weight:800;
+  padding:8px 13px;border-radius:11px;box-shadow:0 10px 24px rgba(0,0,0,.28);
+  max-width:min(240px,80vw);white-space:normal;text-align:center;display:none;z-index:4500}
+.lb-fs-bubble.on{display:block}
+.lb-fs-bubble::before{content:'';position:absolute;top:-5px;left:var(--arrow-left,50%);width:11px;height:11px;
+  background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+/* لوحات منسدلة من البار — تظهر فوق أي مرفق مفتوح لأن البار نفسه فوق الجميع */
+.lb-pop{position:absolute;top:calc(var(--live-bar-h) - 5px);min-width:236px;max-width:min(440px,92vw);
+  background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:13px;box-shadow:0 18px 46px rgba(48,24,0,.34);color:var(--kh-ink);display:none;text-align:start}
+.lb-pop.on{display:block}
+.lb-pop-t{font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:9px}
+.lb-mins{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.lb-mins button{border:1.5px solid var(--border);background:var(--card);border-radius:9px;padding:6px 13px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--kh-ink);cursor:pointer}
+.lb-mins button:hover{border-color:var(--red);color:var(--kh-red-d)}
+.lb-pop-row{display:flex;gap:8px}
+.lb-pop-btn{flex:1;border:none;border-radius:10px;padding:9px;background:linear-gradient(135deg,var(--red),var(--kh-red-d));color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.lb-pop-btn.ghost{background:var(--card);color:var(--kh-ink);border:1.5px solid var(--border)}
+.lb-pop-btn.star{background:linear-gradient(160deg,#E8C34A,#C0A848);color:#5C4813}
+.lb-pop-btn.hidden{display:none}
+.lb-pick-disp{font-size:19px;font-weight:800;color:var(--kh-ink);min-height:52px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;padding:9px;background:var(--card);border-radius:12px;text-align:center}
+.lb-pick-disp.spin{color:var(--kh-red-d)}
+.live-qs{display:flex;flex-wrap:wrap;gap:7px;max-height:46vh;overflow-y:auto}
+.live-qs-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--kh-ink);cursor:pointer;transition:.15s}
+.live-qs-chip:active{transform:scale(.96)}
+.live-qs-chip:hover{border-color:var(--red)}
+.live-qs-chip span{background:var(--card);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--kh-red-d);font-weight:800}
+#live-quiet-flash{position:fixed;inset:0;z-index:4390;background:var(--kh-olive);opacity:0;pointer-events:none;transition:opacity .25s}
+#live-quiet-flash.on{opacity:.94;animation:liveQuietPulse 1.4s ease}
+@keyframes liveQuietPulse{0%,100%{opacity:0}15%,70%{opacity:.94}}
+@media(prefers-reduced-motion:reduce){#live-bar.tick-flash,#live-quiet-flash.on{animation:none}}
+
+/* عارض صورة بملء الشاشة — الملخص صار عريضاً (١٦:٩) فلا تكفيه نافذة ضيّقة */
+#img-full{position:fixed;inset:0;z-index:4350;background:rgba(20,14,8,.95);display:none;align-items:center;justify-content:center;padding:52px 16px 16px}
+#img-full.on{display:flex}
+#img-full img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.imgf-x{position:absolute;top:12px;inset-inline-end:14px;width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.12);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.imgf-x:hover{background:rgba(255,255,255,.24)}
+.imgf-t{position:absolute;top:18px;inset-inline-start:16px;color:#fff;font-size:13px;font-weight:800;opacity:.9;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* المسرح: كل ما تحت البار مخصّص لمرفقات الدرس */
+#live-stage{position:fixed;inset:0;z-index:950;background:var(--bg);display:none}
+#live-stage.on{display:block}
+/* سبورة الصف: خلفية خضراء داكنة بنقشة غبار طباشير خفيفة (::before) بدل
+   الخلفية الفاتحة المعتادة — إحساس المعلّمة أنها واقفة أمام سبورتها،
+   لا شاشةً بيضاء عادية. */
+#live-body{position:absolute;top:var(--live-bar-h);inset-inline:0;bottom:0;overflow:auto;padding:20px 16px 28px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% -10%,#2b4a37,#1a3324 65%)}
+#live-body::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:3px 3px}
+.lv-launch{position:relative;width:100%;max-width:940px;margin:0 auto}
+.lv-board-head{text-align:center;margin-bottom:20px}
+.lv-board-title{font-family:var(--disp);font-size:clamp(24px,3.6vw,38px);font-weight:800;color:#FBF8F0;
+  text-shadow:0 2px 10px rgba(0,0,0,.4);letter-spacing:.2px;line-height:1.3}
+.lv-board-date{font-size:13px;font-weight:700;color:rgba(251,248,240,.68);margin-top:7px;font-variant-numeric:tabular-nums}
+.lv-board-obj{font-size:12.5px;font-weight:700;color:rgba(251,248,240,.85);margin-top:10px;line-height:1.8;
+  max-width:60ch;margin-inline:auto}
+.lv-launch-h{font-size:12px;font-weight:800;color:rgba(251,248,240,.55);margin-bottom:12px;text-align:center}
+.lv-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,240px));gap:13px;justify-content:center}
+.lv-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:18px;padding:19px 17px 15px;font-family:inherit;text-align:start;cursor:pointer;color:var(--kh-ink);transition:.15s;overflow:hidden;min-height:132px}
+.lv-tile::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:var(--tc,var(--red))}
+.lv-tile:hover{transform:translateY(-3px);border-color:var(--tc,var(--red));box-shadow:0 10px 24px rgba(48,24,0,.12)}
+.lv-tile .ic{color:var(--tc,var(--red));display:inline-flex}
+.lv-tile .nm{font-size:15px;font-weight:800;line-height:1.5}
+.lv-tile .mt{font-size:11px;color:var(--muted);margin-top:auto;line-height:1.7}
+.lv-empty{max-width:520px;margin:8vh auto 0;text-align:center;background:var(--surface);border:2px dashed var(--border);border-radius:20px;padding:34px 24px}
+.lv-empty h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.lv-empty p{font-size:12.5px;color:var(--muted);line-height:2}
+/* عارض المرفق: يملأ كل المساحة تحت البار وله زر إغلاق للعودة */
+#live-view{position:absolute;top:var(--live-bar-h);inset-inline:0;bottom:0;background:var(--bg);display:none;flex-direction:column;z-index:6}
+#live-view.on{display:flex}
+.lv-vhead{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border-bottom:1.5px solid var(--border);flex:none}
+.lv-vtitle{flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--kh-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-vx{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--kh-red-d);
+  font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.lv-vx:hover{border-color:var(--red);background:var(--surface)}
+.lv-vbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;padding:10px;background:#151009}
+.lv-vbody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block}
+/* نشرة الكتاب: صفحتان متلاصقتان بخيطٍ فاصل يوحي بكعب الكتاب.
+   والحشو يُلغى في وضع الكتاب: الصفحتان تحتاجان كل بكسلٍ على شاشة العرض. */
+.lv-vbody:has(.lv-spread){padding:4px;align-items:center}
+.lv-spread{display:flex;gap:2px;align-items:stretch;justify-content:center;
+  max-width:100%;max-height:100%;transform:scale(var(--z,1));transform-origin:center center;
+  transition:transform .25s ease;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 10px 34px rgba(0,0,0,.5)}
+.lv-spread img{max-width:50%;max-height:100%;width:auto;object-fit:contain;border-radius:0;
+  background:#fff;-webkit-user-drag:none;user-select:none}
+.lv-spread.one img{max-width:100%}
+/* كتاب الإنجليزية يُفتح من اليسار: الحاوية ترث rtl من الصفحة فينقلب ترتيبها،
+   وltr يعيده. وبهذا يبقى ترتيب العناصر في الكود واحداً للكتابين. */
+.lv-spread.ltr{direction:ltr}
+/* الخيط الفاصل بين الصفحتين — كعب الكتاب. والظلّ يقع في الوسط دائماً،
+   فلا يتأثّر باتجاه الكتاب: الصفحة اليسرى تُظلّل يمينها والعكس. */
+.lv-spread:not(.one) img:first-child{box-shadow:inset -8px 0 14px -10px rgba(0,0,0,.45)}
+.lv-spread:not(.one) img:last-child{box-shadow:inset 8px 0 14px -10px rgba(0,0,0,.45)}
+.lv-vbody.zoomed{align-items:flex-start;justify-content:flex-start;cursor:grab}
+@media(prefers-reduced-motion:reduce){.lv-spread{transition:none}}
+.lv-vbody iframe{width:100%;height:100%;border:none;background:#fff;border-radius:8px}
+.lv-pages{display:flex;align-items:center;justify-content:center;gap:11px;padding:9px;background:var(--surface);border-top:1.5px solid var(--border);flex:none}
+.lv-pages button{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 15px;font-family:inherit;font-size:13px;font-weight:800;color:var(--kh-ink);cursor:pointer}
+.lv-pages button:hover:not(:disabled){border-color:var(--red);color:var(--kh-red-d)}
+.lv-pages button:disabled{opacity:.35;cursor:default}
+.lv-pages .lv-sep{width:1.5px;height:22px;background:var(--border);flex:none;margin:0 3px}
+.lv-pages button.z{padding:8px 12px;min-width:42px}
+.lv-pages .n.z{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+@media(max-width:560px){
+  .lv-pages{gap:6px;padding:7px 5px;flex-wrap:wrap}
+  .lv-pages button{padding:7px 11px;font-size:12px}
+  .lv-pages button.z{min-width:38px;padding:7px 9px}
+}
+.lv-pages .n{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:78px;text-align:center}
+/* اللعبة تُزاح تحت البار ليبقى تحكّم المعلم ظاهراً أثناء التشغيل */
+#gm-stage-bg.live-embed{top:var(--live-bar-h)}
+.hidden{display:none}
+.lb-pop-btn.hidden{display:none}
+
+
 </style>
 <style id="orb-css">
 .orb-t{font-size:12.5px;font-weight:800;margin:14px 0 8px;color:var(--text)}
@@ -2972,6 +3142,7 @@ input,textarea,select{font-size:16px !important;}
       <button class="eg-export" style="flex:2" id="dpb-save-btn" onclick="dpSaveBundle()">💾 حفظ في بطاقة الدرس</button>
       <button class="eg-regen" style="flex:1" onclick="dpEditPlanFromBundle()">✏️ تعديل الخطة</button>
       <button class="eg-regen" style="flex:1" onclick="dpPrintPlan()">🖨️ طباعة الخطة</button>
+      <button class="eg-export" style="flex:1" onclick="if(typeof window._dpBundleIdx==='number'){dpCloseBundle();liveStartFromItem(window._dpBundleIdx);}">🎬 ابدأ الحصة الحية</button>
     </div>
     <!-- ⭐ تقييم التحضير المشترك (يظهر للمستورد فقط) -->
     <div id="dpb-rating" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center">
@@ -14204,13 +14375,15 @@ async function renderDailyPrep(){
       actions=`<button class="dp-btn ready-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
         ${inc?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
         <button class="dp-btn main" onclick="dpSaveBundle(${i})">💾 حفظ</button>
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>`;
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>
+        <button class="dp-btn live" onclick="liveStartFromItem(${i})">🎬 ابدأ الحصة</button>`;
     }else if(b.status==='saved'){
       const incS=b.missing&&b.missing.length;
       st='';
       actions=`<button class="dp-btn" onclick="dpOpenBundle(${i})">👁️ معاينة</button>
         ${incS?`<button class="dp-btn prep-pulse" onclick="dpCompleteMissing(${i})">🔁 أكمل الناقص</button>`:''}
-        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>`;
+        <button class="dp-btn game-cta" onclick="dpJump('game',${i})">🎮 أنشئ لعبة</button>
+        <button class="dp-btn live" onclick="liveStartFromItem(${i})">🎬 ابدأ الحصة</button>`;
     }else{
       st='<span class="dp-status wait">بانتظارك</span>';
       actions=`<button class="dp-btn prep-pulse" onclick="dpPrepareAll(${i})">✨ حضّر الدرس من أجلي</button>`;
@@ -16198,6 +16371,434 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 })();
 
+
+// ═══════════ وضع الحصة الحية — منقول من cycle1.html وموصول ببيانات الحلقة الثانية ═══════════
+// تكييفات متعمّدة (راجع تقرير الجلسة):
+// 1) لا يوجد في هذا الملف نظام «نجوم» مُخزَّن (starClassObj/starArr) — استُبدل
+//    بعدّاد جلسة محلي liveStarTally (لا يُحفظ في القاعدة)، يُصفَّر بإغلاق الحصة.
+// 2) لا يوجد game_id لكل درس — بدّلت بلاطة «اللعبة التعليمية» ببلاطتي
+//    «عرض الشرائح» و«أسئلة تقييم سريعة» من حزمة dpBundle (dpOpenBundleIt).
+// 3) صفحات الكتاب تُجلب عبر dpLessonImages (موجودة أصلاً في هذا الملف
+//    وتقرأ من book_sources بنفس فكرة c1LessonBookImages).
+let liveCtx=null,liveTimerSec=300,liveTimerRunning=false,liveTimerHandle=null,_liveShuffleT=null;
+let _liveBook=null,_liveBookAt=-1,_liveBookLoading=false,_liveBookError=false;
+let liveStarTally={}; // {classId:{studentId:count}} — عدّاد الحصة الحالية فقط، لا يُحفظ
+
+function liveFindLessonMeta(lessonId){
+  if(!teacherConfig||!Array.isArray(teacherConfig.grades))return null;
+  for(let gi=0;gi<teacherConfig.grades.length;gi++){
+    const g=teacherConfig.grades[gi];
+    for(const u of (g.units||[])){
+      for(const l of (u.lessons||[])){
+        if(l.id===lessonId)return{gi,gradeNum:Number(g.num||g.grade),subject:g.subject||teacherConfig.subject||'',unit:u.name,lesson:l.name};
+      }
+    }
+  }
+  return null;
+}
+function liveClassObj(classId){
+  if(!teacherConfig||!Array.isArray(teacherConfig.grades))return null;
+  for(let gi=0;gi<teacherConfig.grades.length;gi++){
+    const g=teacherConfig.grades[gi];
+    for(const c of (g.classes||[])){
+      if(c.id===classId)return{id:c.id,name:c.name,gi,gradeNum:Number(g.num||g.grade),subject:g.subject||teacherConfig.subject||''};
+    }
+  }
+  return null;
+}
+// نقطة الدخول من بطاقة الدرس (dp-item) — تفتح مباشرة إن كانت شعبة واحدة،
+// وإلا تعرض قائمة اختيار الشعبة (بديل clsPickGo من cycle1.html)
+function liveStartFromItem(i){
+  const it=(window._dpItems||[])[i];if(!it)return;
+  const meta=liveFindLessonMeta(it.lessonId);
+  const gi=meta?meta.gi:0;
+  const g=teacherConfig.grades[gi];
+  const classes=(g&&g.classes)||[];
+  if(!classes.length){toast('لا توجد شعب مضافة لهذا الصف',true);return;}
+  if(classes.length===1){liveOpen(classes[0].id,it.subject,it.lessonId);return;}
+  liveClsPickOpen(classes,it.subject,it.lessonId);
+}
+function liveClsPickOpen(classes,subject,lessonId){
+  document.getElementById('live-clspick-list').innerHTML=classes.map(c=>
+    `<button class="dp-btn main" style="width:100%" onclick="liveClsPickGo('${c.id}','${escAttr(subject)}','${lessonId}')">${escHtml(c.name||c.id)}</button>`
+  ).join('');
+  document.getElementById('live-clspick-bg').style.display='flex';
+}
+function liveClsPickClose(){document.getElementById('live-clspick-bg').style.display='none';}
+function liveClsPickGo(classId,subject,lessonId){liveClsPickClose();liveOpen(classId,subject,lessonId);}
+
+function liveOpen(classId,subject,lessonId){
+  const cls=liveClassObj(classId);
+  if(!cls)return;
+  const meta=lessonId?liveFindLessonMeta(lessonId):null;
+  liveCtx={classId,subject:subject||cls.subject,lessonId:lessonId||null,gradeNum:cls.gradeNum,unit:meta&&meta.unit,lessonName:meta&&meta.lesson};
+  _liveBook=null;_liveBookAt=-1;_liveBookLoading=false;_liveBookError=false;
+  document.getElementById('live-cls-nm').textContent=(cls.name||'')+' · '+liveCtx.subject;
+  document.getElementById('live-lesson-nm').textContent=liveCtx.lessonName||'';
+  liveTimerReset();
+  const disp=document.getElementById('live-pick-disp');
+  disp.textContent='اضغط «اسحب اسماً»';disp.removeAttribute('data-idx');
+  document.getElementById('live-pick-star').classList.add('hidden');
+  liveRenderQuickStars();
+  lbPopCloseAll();
+  liveViewClose(true);
+  document.getElementById('live-bar').classList.add('on');
+  document.getElementById('live-stage').classList.add('on');
+  document.body.style.overflow='hidden';
+  liveRenderLauncher();
+  liveLoadBook();
+  liveFsHint();
+}
+function liveFsHintPosition(){
+  const btn=document.getElementById('lb-fs-btn'),bub=document.getElementById('lb-fs-bubble');
+  if(!btn||!bub||!bub.classList.contains('on'))return;
+  const r=btn.getBoundingClientRect();
+  bub.style.top=(r.bottom+10)+'px';
+  bub.style.left='0px';
+  const w=bub.offsetWidth;
+  let left=r.left+r.width/2-w/2;
+  left=Math.max(8,Math.min(left,window.innerWidth-8-w));
+  bub.style.left=left+'px';
+  bub.style.setProperty('--arrow-left',(r.left+r.width/2-left)+'px');
+}
+function liveFsHint(){
+  document.getElementById('lb-fs-btn')?.classList.add('lb-fs-hint');
+  const bub=document.getElementById('lb-fs-bubble');
+  if(!bub)return;
+  bub.classList.add('on');
+  liveFsHintPosition();
+  window.addEventListener('resize',liveFsHintPosition);
+}
+function liveFsHintDismiss(){
+  document.getElementById('lb-fs-btn')?.classList.remove('lb-fs-hint');
+  document.getElementById('lb-fs-bubble')?.classList.remove('on');
+  window.removeEventListener('resize',liveFsHintPosition);
+}
+function liveClose(){
+  document.getElementById('live-stage').classList.remove('on');
+  document.getElementById('live-bar').classList.remove('on');
+  document.body.style.overflow='';
+  lbPopCloseAll();
+  liveViewClose(true);
+  liveTimerPause();
+  clearInterval(_liveShuffleT);
+  liveCtx=null;
+  liveStarTally={};
+  liveFsHintDismiss();
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+}
+function liveFullscreenToggle(){
+  liveFsHintDismiss();
+  if(document.fullscreenElement){document.exitFullscreen().catch(()=>{});return;}
+  document.documentElement.requestFullscreen().catch(()=>{toast('تعذّر تفعيل ملء الشاشة على هذا الجهاز',true);});
+}
+function lbPopCloseAll(){
+  document.querySelectorAll('.lb-pop').forEach(p=>p.classList.remove('on'));
+  ['lb-timer-btn','lb-pick-btn','lb-stars-btn'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('on');});
+}
+function lbPop(which){
+  const pop=document.getElementById('lb-pop-'+which);
+  const btn=document.getElementById('lb-'+which+'-btn');
+  const wasOpen=pop.classList.contains('on');
+  lbPopCloseAll();
+  if(wasOpen)return;
+  pop.classList.add('on');
+  if(btn)btn.classList.add('on');
+  if(which==='stars')liveRenderQuickStars();
+}
+document.addEventListener('click',e=>{
+  const bar=document.getElementById('live-bar');
+  if(!bar||!bar.classList.contains('on'))return;
+  if(!bar.contains(e.target))lbPopCloseAll();
+});
+
+// ── صفحات الدرس من الكتاب — عبر dpLessonImages (مصدر book_sources بالحلقة الثانية) ──
+async function liveLoadBook(){
+  if(!liveCtx||!liveCtx.lessonId||_liveBookLoading)return;
+  _liveBookLoading=true;_liveBookError=false;
+  const forLesson=liveCtx.lessonId;
+  const it={gradeNum:liveCtx.gradeNum,subject:liveCtx.subject,unit:liveCtx.unit,lesson:liveCtx.lessonName};
+  try{
+    const imgs=await Promise.race([
+      dpLessonImages(it),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))
+    ]);
+    if(liveCtx&&liveCtx.lessonId===forLesson){
+      _liveBook=imgs||[];
+      if(!_liveBook.length)_liveBookError=true;
+      liveRenderLauncher();
+    }
+  }catch(e){
+    if(liveCtx&&liveCtx.lessonId===forLesson){_liveBook=[];_liveBookError=true;liveRenderLauncher();}
+  }
+  finally{_liveBookLoading=false;}
+}
+function liveRetryBook(){_liveBookError=false;liveLoadBook();liveRenderLauncher();}
+
+// ── شاشة المرفقات ──
+const LV_IC={
+  book:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4zm11 1.5V8h2.5L15 5.5zM7 12h10v1.6H7V12zm0 3.4h10V17H7v-1.6z"/></svg>',
+  slides:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M3 4h18v11H3V4zm8 13h2v2.2l3.2 1.9-1 1.7L12 21l-3.2 1.8-1-1.7L11 19.2V17z"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 3v5h5V6H6zm7 0v2h5V6h-5zm0 4v2h5v-2h-5zM6 13v2h12v-2H6zm0 4v2h12v-2H6z"/></svg>',
+  exam:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M9 2h6a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1V4a2 2 0 0 1 2-2zm0 3h6V4H9v1zM7 12l2 2 4-4 1.4 1.4-5.4 5.4L5.6 13.4 7 12z"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 2.5L18.5 9H14V4.5z"/></svg>',
+};
+function liveRenderLauncher(){
+  const box=document.getElementById('live-body');if(!box)return;
+  const id=liveCtx&&liveCtx.lessonId;
+  const b=id?dpBundle(id):{status:'idle'};
+  const head=`<div class="lv-board-head">
+      <div class="lv-board-title">${escHtml(liveCtx.lessonName||'الحصة الحية')}</div>
+      <div class="lv-board-date">${egToArabic(new Date().toLocaleDateString('ar-OM-u-nu-arab',{weekday:'long',day:'numeric',month:'long'}))}${liveCtx.unit?' · '+escHtml(liveCtx.unit):''}</div>
+    </div>`;
+  const tiles=[];
+  if(id){
+    if(_liveBook&&_liveBook.length)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:egToArabic(_liveBook.length)+' صفحة من كتاب الطالب',fn:'liveOpenBook()'});
+    else if(_liveBookLoading)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:'يجري تحضيرها…',dis:true});
+    else if(_liveBookError)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:'تعذّر تحضيرها — اضغط لإعادة المحاولة',fn:'liveRetryBook()'});
+    if(b.infoBranded)tiles.push({c:'#C8A03C',ic:'info',nm:'ملخص الدرس',mt:'إنفوجرافيك بمقاس الشاشة',fn:'liveOpenInfo()'});
+    if((b.slideImgs&&b.slideImgs.some(Boolean))||(b.slides&&b.slides.length))tiles.push({c:'#8b5cf6',ic:'slides',nm:'عرض الشرائح',mt:'العرض التقديمي المبني على الخطة',fn:'liveOpenSlides()'});
+    if(b.examHtml)tiles.push({c:'#2E7D32',ic:'exam',nm:'أسئلة تقييم',mt:'أسئلة سريعة على الدرس',fn:'liveOpenExam()'});
+    (lessonFiles[id]||[]).forEach((f,fi)=>tiles.push({c:'#5C7038',ic:'file',nm:f.name,mt:'ملف مرفق',fn:`liveOpenFile(${fi})`}));
+  }
+  if(!tiles.length){
+    box.innerHTML=`<div class="lv-launch">${head}<div class="lv-empty">
+      <h3>لا مرفقات لهذا الدرس بعد</h3>
+      <p>لوحة التحكم أعلاه جاهزة: المؤقّت وإشارة الهدوء والقرعة والنجوم.<br>لإضافة عرض أو ملخص أو تقييم، حضّرها من بطاقة الدرس في «☀️ مساعد التحضير اليومي».</p>
+    </div></div>`;
+    return;
+  }
+  box.innerHTML=`<div class="lv-launch">${head}<div class="lv-launch-h">مرفقات الدرس — اضغط لعرضها بملء الشاشة</div><div class="lv-tiles">${
+    tiles.map(t=>`<button class="lv-tile" style="--tc:${t.c}${t.dis?';opacity:.55':''}" ${t.dis?'disabled':`onclick="${t.fn}"`}>
+      <span class="ic">${LV_IC[t.ic]}</span><span class="nm">${escHtml(t.nm)}</span><span class="mt">${escHtml(t.mt)}</span></button>`).join('')
+  }</div></div>`;
+}
+function liveViewOpen(title,html,showPages){
+  document.getElementById('lv-vtitle').textContent=title||'';
+  document.getElementById('lv-vbody').innerHTML=html;
+  document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
+  document.getElementById('live-view').classList.add('on');
+  lbPopCloseAll();
+}
+function liveViewClose(silent){
+  const v=document.getElementById('live-view');
+  if(v){v.classList.remove('on');document.getElementById('lv-vbody').innerHTML='';}
+  const gm=document.getElementById('gm-stage-bg');
+  if(gm&&gm.classList.contains('live-embed')){gm.classList.remove('live-embed');if(gm.style.display==='flex')gmClose();}
+  if(!silent&&liveCtx)liveRenderLauncher();
+}
+function liveShowLauncher(){liveViewClose();}
+function liveOpenInfo(){
+  const b=dpBundle(liveCtx.lessonId);
+  if(!b.infoBranded)return;
+  liveViewOpen('ملخص الدرس',`<img src="${escAttr(b.infoBranded)}" alt="ملخص الدرس">`,false);
+}
+function liveOpenSlides(){
+  const b=dpBundle(liveCtx.lessonId);
+  let html='';
+  if(b.slideImgs&&b.slideImgs.some(Boolean)){
+    html=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:14px;overflow:auto;width:100%;height:100%;background:#151009">${
+      b.slideImgs.map((im,j)=>im?`<img src="${escAttr(im)}" style="width:100%;border-radius:10px" alt="شريحة ${j+1}">`:'').join('')
+    }</div>`;
+  }else if(b.slides&&b.slides.length){
+    html=`<div style="overflow:auto;width:100%;height:100%;padding:18px;background:var(--surface)">${
+      b.slides.map((s,j)=>`<div style="border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;background:var(--card)"><b style="color:var(--gold)">${egToArabic(j+1)}. ${escHtml(s.title||'')}</b><div style="font-size:14px;line-height:2;margin-top:6px">${(s.bullets||[]).map(x=>'• '+escHtml(x)).join('<br>')}</div></div>`).join('')
+    }</div>`;
+  }
+  if(!html)return;
+  liveViewOpen('عرض الشرائح',html,false);
+}
+function liveOpenExam(){
+  const b=dpBundle(liveCtx.lessonId);
+  if(!b.examHtml)return;
+  liveViewOpen('أسئلة تقييم',`<div style="overflow:auto;width:100%;height:100%;padding:20px;font-size:15px;line-height:2.1;background:var(--surface);color:var(--text)">${b.examHtml}</div>`,false);
+}
+function liveOpenFile(fi){
+  const f=(lessonFiles[liveCtx.lessonId]||[])[fi];if(!f)return;
+  const u=f.viewLink||f.previewLink||f.downloadLink||'';
+  const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
+  const embed=/drive\.google\.com\/file\/d\//.test(u)?u.replace(/\/view(\?[^#]*)?$/,'/preview'):u;
+  liveViewOpen(f.name,isImg?`<img src="${escAttr(u)}" alt="${escHtml(f.name||'')}">`:`<iframe src="${escAttr(embed)}" allow="autoplay"></iframe>`,false);
+}
+/* ══ عرض الكتاب: صفحتان كالكتاب المفتوح — منقول حرفياً عن cycle1.html ══ */
+let _liveBookZoom=1;
+const LV_ZOOMS=[1,1.5,2,3];
+function _lvLtr(){return /إنجليز|english/i.test((liveCtx&&liveCtx.subject)||'');}
+function liveOpenBook(){
+  if(!_liveBook||!_liveBook.length)return;
+  _liveBookAt=0;_liveBookZoom=1;
+  liveViewOpen('صفحات الكتاب','',true);
+  liveBookRender();
+}
+function _lvSpreadOf(i){return Math.floor(i/2)*2;}
+function liveBookRender(){
+  const body=document.getElementById('lv-vbody');
+  const a=_lvSpreadOf(_liveBookAt), b=a+1;
+  const total=_liveBook.length;
+  const one=b>=total;
+  const img=(i)=>`<img src="${_liveBook[i]}" alt="صفحة ${i+1}" draggable="false">`;
+  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()?' ltr':''}" style="--z:${_liveBookZoom}">`
+    +(one?img(a):img(a)+img(b))+`</div>`;
+  body.classList.toggle('zoomed',_liveBookZoom>1);
+  document.getElementById('lv-page-n').textContent=
+    one?egToArabic(a+1)+' / '+egToArabic(total)
+       :egToArabic(a+1)+'–'+egToArabic(b+1)+' / '+egToArabic(total);
+  document.getElementById('lv-page-prev').disabled=a<=0;
+  document.getElementById('lv-page-next').disabled=b>=total-1;
+  const zl=document.getElementById('lv-zoom-lbl');
+  if(zl)zl.textContent=egToArabic(Math.round(_liveBookZoom*100))+'٪';
+  const zo=document.getElementById('lv-zoom-out');if(zo)zo.disabled=_liveBookZoom<=LV_ZOOMS[0];
+  const zi=document.getElementById('lv-zoom-in');if(zi)zi.disabled=_liveBookZoom>=LV_ZOOMS[LV_ZOOMS.length-1];
+  for(const n of [b+1,b+2]){const u=_liveBook[n];if(u){const im=new Image();im.src=u;}}
+}
+function liveBookGo(d){
+  if(!_liveBook)return;
+  const n=_lvSpreadOf(_liveBookAt)+d*2;
+  if(n<0||n>=_liveBook.length)return;
+  _liveBookAt=n;_liveBookZoom=1;liveBookRender();
+  document.getElementById('lv-vbody').scrollTo({top:0,left:0});
+}
+function liveBookZoom(d){
+  const i=LV_ZOOMS.indexOf(_liveBookZoom);
+  const n=Math.min(LV_ZOOMS.length-1,Math.max(0,(i<0?0:i)+d));
+  if(LV_ZOOMS[n]===_liveBookZoom)return;
+  _liveBookZoom=LV_ZOOMS[n];liveBookRender();
+}
+(function lvBookGestures(){
+  const body=document.getElementById('lv-vbody');
+  if(!body)return;
+  let x0=null,y0=null;
+  const active=()=>!document.getElementById('lv-pages')?.classList.contains('hidden')
+                 && document.getElementById('live-view')?.classList.contains('on');
+  body.addEventListener('touchstart',e=>{
+    if(!active()||e.touches.length!==1||_liveBookZoom>1)return;
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY;
+  },{passive:true});
+  body.addEventListener('touchend',e=>{
+    if(x0==null)return;
+    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
+    x0=null;
+    if(Math.abs(dx)<55||Math.abs(dy)>Math.abs(dx))return;
+    liveBookGo((dx>0)===_lvLtr()?1:-1);
+  },{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(!active())return;
+    if(e.key==='ArrowRight')liveBookGo(_lvLtr()?1:-1);
+    else if(e.key==='ArrowLeft')liveBookGo(_lvLtr()?-1:1);
+    else if(e.key==='+'||e.key==='=')liveBookZoom(1);
+    else if(e.key==='-')liveBookZoom(-1);
+  });
+})();
+function liveTimerRender(){
+  const m=String(Math.floor(liveTimerSec/60)).padStart(2,'0');
+  const s=String(liveTimerSec%60).padStart(2,'0');
+  const el=document.getElementById('live-timer-disp');
+  if(el){
+    el.textContent=m+':'+s;
+    el.classList.toggle('run',liveTimerRunning&&liveTimerSec>0);
+    el.classList.toggle('zero',liveTimerSec<=0);
+  }
+}
+function liveTimerSetMin(mins){liveTimerPause();liveTimerSec=mins*60;liveTimerRender();}
+function liveTimerReset(){liveTimerPause();liveTimerSec=300;liveTimerRender();}
+function liveTimerToggle(){if(liveTimerRunning)liveTimerPause();else liveTimerStart();}
+function liveTimerStart(){
+  if(liveTimerRunning||liveTimerSec<=0)return;
+  liveTimerRunning=true;
+  const btn=document.getElementById('live-timer-toggle-btn');if(btn)btn.textContent='إيقاف مؤقت';
+  liveTimerRender();
+  liveTimerHandle=setInterval(()=>{
+    liveTimerSec--;liveTimerRender();
+    if(liveTimerSec<=0){liveTimerPause();liveTimerDone();}
+  },1000);
+}
+function liveTimerPause(){
+  liveTimerRunning=false;clearInterval(liveTimerHandle);
+  const btn=document.getElementById('live-timer-toggle-btn');if(btn)btn.textContent='ابدأ';
+  liveTimerRender();
+}
+function liveTimerDone(){
+  try{zzfx(1.1,.05,539,0,.04,.29,1,1.92,0,0,567,.02,.02,0,0,0,.04);}catch(e){}
+  const bar=document.getElementById('live-bar');
+  if(bar){bar.classList.add('tick-flash');setTimeout(()=>bar.classList.remove('tick-flash'),1500);}
+  liveAnnounce('انتهى الوقت يا طلاب');
+}
+// نطقٌ عبر قارئ المتصفح المدمج (Web Speech API) — بلا استدعاء ذكاء اصطناعي
+function liveAnnounce(text){
+  try{
+    if(!('speechSynthesis' in window))return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ar-SA';u.rate=0.95;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function liveQuiet(){
+  const ov=document.getElementById('live-quiet-flash');
+  ov.classList.remove('on');void ov.offsetWidth;ov.classList.add('on');
+  try{zzfx(1.1,.05,660,.02,.3,.6,0,1.8,0,0,0,0,.05,0,0,0,0,.8,.3);}catch(e){}
+  setTimeout(()=>ov.classList.remove('on'),1400);
+}
+function livePick(){
+  if(!liveCtx)return;
+  const list=(students[liveCtx.classId]||[]);
+  const names=list.map(s=>s.name);
+  if(!names.length){toast('لا قائمة طلاب لهذه الشعبة',true);return;}
+  const disp=document.getElementById('live-pick-disp');
+  document.getElementById('live-pick-star').classList.add('hidden');
+  let ticks=0;const maxTicks=18+Math.floor(Math.random()*8);
+  clearInterval(_liveShuffleT);
+  disp.classList.add('spin');
+  _liveShuffleT=setInterval(()=>{
+    disp.textContent=names[Math.floor(Math.random()*names.length)];
+    ticks++;
+    if(ticks>=maxTicks){
+      clearInterval(_liveShuffleT);
+      const finalIdx=Math.floor(Math.random()*names.length);
+      disp.textContent=names[finalIdx];
+      disp.dataset.idx=finalIdx;
+      disp.classList.remove('spin');
+      document.getElementById('live-pick-star').classList.remove('hidden');
+      try{zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);}catch(e){}
+    }
+  },80);
+}
+function livePickGiveStar(){
+  if(!liveCtx)return;
+  const disp=document.getElementById('live-pick-disp');
+  const idx=Number(disp.dataset.idx);
+  if(Number.isNaN(idx))return;
+  const st=(students[liveCtx.classId]||[])[idx];
+  if(st)liveGiveStar(liveCtx.classId,st.id);
+}
+// «نجمة» = عدّاد تشجيع محلي لهذه الحصة فقط (لا يوجد نظام نجوم/تحفيز
+// محفوظ في هذا الملف)؛ يُصفَّر تلقائياً عند إنهاء الحصة (liveClose)
+function liveGiveStar(classId,studentId){
+  if(!liveStarTally[classId])liveStarTally[classId]={};
+  liveStarTally[classId][studentId]=(liveStarTally[classId][studentId]||0)+1;
+  try{zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);}catch(e){}
+  liveRenderQuickStars();
+}
+function liveRenderQuickStars(){
+  if(!liveCtx)return;
+  const list=students[liveCtx.classId]||[];
+  const box=document.getElementById('live-quickstars');
+  if(!list.length){box.innerHTML='<div class="lv-empty" style="margin:0;padding:16px">لا قائمة طلاب لهذه الشعبة بعد.</div>';return;}
+  const tally=liveStarTally[liveCtx.classId]||{};
+  box.innerHTML=list.map(s=>`<button class="live-qs-chip" onclick="liveGiveStar('${liveCtx.classId}','${s.id}')">${escHtml(s.name)}<span>${egToArabic(tally[s.id]||0)}</span></button>`).join('');
+}
+
+// عارض الصورة بملء الشاشة (مرفق مع الحصة الحية — لعرض الإنفوجرافيك خارجها عند الحاجة)
+function imgFullOpen(src,title){
+  document.getElementById('imgf-img').src=src||'';
+  document.getElementById('imgf-title').textContent=title||'';
+  document.getElementById('img-full').classList.add('on');
+}
+function imgFullClose(){
+  document.getElementById('img-full').classList.remove('on');
+  document.getElementById('imgf-img').src='';
+}
+
 </script>
 <!-- مودال معاينة السلوك -->
 <div id="bprev-modal" class="bprev-modal" style="display:none" onclick="closeBehaviorPreview(event)">
@@ -16228,5 +16829,97 @@ window.addEventListener('DOMContentLoaded',()=>{
     </div>
   </div>
 </div>
+
+<!-- ══ وضع الحصة الحية (مُنقول من cycle1.html — انظر liveOpen في JS) ══ -->
+<!-- عارض الصورة بملء الشاشة (ملخص الدرس خارج الحصة الحية) -->
+<div id="img-full" onclick="if(event.target===this)imgFullClose()">
+  <div class="imgf-t" id="imgf-title"></div>
+  <button class="imgf-x" onclick="imgFullClose()" aria-label="إغلاق">✕</button>
+  <img id="imgf-img" alt=""/>
+</div>
+
+<div id="live-quiet-flash"></div>
+<!-- لوحة تحكم الحصة: ثابتة أعلى الشاشة وتبقى فوق أي مرفق قيد التشغيل -->
+<div id="live-bar">
+  <div class="lb-cls"><b id="live-cls-nm"></b><span id="live-lesson-nm"></span></div>
+  <div class="lb-sep"></div>
+  <div class="lb-tools">
+    <button class="lb-btn" id="lb-att-btn" onclick="liveShowLauncher()" title="مرفقات الدرس">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h7l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg><span class="lbl">المرفقات</span></button>
+    <button class="lb-btn" id="lb-timer-btn" onclick="lbPop('timer')" title="مؤقّت النشاط">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 22a9 9 0 1 1 0-18 9 9 0 0 1 0 18zm1-9.4V8h-2v5.4l3.8 2.3 1-1.7L13 12.6zM9 2h6v2H9z"/></svg><span class="lb-clock" id="live-timer-disp">05:00</span></button>
+    <button class="lb-btn" onclick="liveQuiet()" title="إشارة الهدوء">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M7 4a3 3 0 0 1 6 0v6.2l5.1 1.5c1.2.35 1.9 1.6 1.55 2.8l-1.3 4.4A4 4 0 0 1 14.5 22h-3.2a6 6 0 0 1-4.24-1.76L2.3 15.5a1.7 1.7 0 0 1 2.4-2.4L7 15.4V4z"/></svg><span class="lbl">هدوء</span></button>
+    <button class="lb-btn" id="lb-pick-btn" onclick="lbPop('pick')" title="قرعة عشوائية">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 3.5A1.5 1.5 0 1 0 8 9.5a1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-8 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4-4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg><span class="lbl">قرعة</span></button>
+    <button class="lb-btn" id="lb-stars-btn" onclick="lbPop('stars')" title="نجوم سريعة">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg><span class="lbl">نجوم</span></button>
+    <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm16 0h-2v4h-4v2h6v-6z"/></svg><span class="lbl">ملء الشاشة</span></button>
+  </div>
+  <button class="lb-btn end" onclick="liveClose()" title="إنهاء الحصة">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm5.6 3.6L14.2 8l3 3H8v2h9.2l-3 3 1.4 1.4L21 12l-5.4-5.4z"/></svg><span class="lbl">إنهاء الحصة</span></button>
+
+  <div class="lb-pop" id="lb-pop-timer" style="inset-inline-start:12px">
+    <div class="lb-pop-t">مدّة النشاط</div>
+    <div class="lb-mins">
+      <button onclick="liveTimerSetMin(1)">١ د</button>
+      <button onclick="liveTimerSetMin(3)">٣ د</button>
+      <button onclick="liveTimerSetMin(5)">٥ د</button>
+      <button onclick="liveTimerSetMin(10)">١٠ د</button>
+      <button onclick="liveTimerSetMin(15)">١٥ د</button>
+    </div>
+    <div class="lb-pop-row">
+      <button class="lb-pop-btn" id="live-timer-toggle-btn" onclick="liveTimerToggle()">ابدأ</button>
+      <button class="lb-pop-btn ghost" onclick="liveTimerReset()">إعادة ضبط</button>
+    </div>
+  </div>
+  <div class="lb-pop" id="lb-pop-pick" style="inset-inline-start:12px">
+    <div class="lb-pop-t">قرعة عشوائية بين طلاب الشعبة</div>
+    <div class="lb-pick-disp" id="live-pick-disp">اضغط «اسحب اسماً»</div>
+    <div class="lb-pop-row">
+      <button class="lb-pop-btn" onclick="livePick()">اسحب اسماً</button>
+      <button class="lb-pop-btn star hidden" id="live-pick-star" onclick="livePickGiveStar()">امنحه نجمة</button>
+    </div>
+  </div>
+  <div class="lb-pop" id="lb-pop-stars" style="inset-inline-start:12px">
+    <div class="lb-pop-t">اضغط على الاسم لمنح نجمة فورية (تُعدّ لهذه الحصة فقط)</div>
+    <div class="live-qs" id="live-quickstars"></div>
+  </div>
+</div>
+<!-- فقّاعة تنبيه ملء الشاشة — خارج live-bar عمداً كي لا يقصّها overflow-x:auto
+     الخاص بـ.lb-tools (يفرض overflow-y:auto ضمناً فيقصّ أي فائضٍ رأسي). -->
+<div class="lb-fs-bubble" id="lb-fs-bubble">فعّل وضع ملء الشاشة لتجربة أفضل</div>
+
+<div id="live-stage">
+  <div id="live-body"></div>
+  <div id="live-view">
+    <div class="lv-vhead">
+      <div class="lv-vtitle" id="lv-vtitle"></div>
+      <button class="lv-vx" onclick="liveViewClose()" title="رجوع للمرفقات" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="lv-vbody" id="lv-vbody"></div>
+    <div class="lv-pages hidden" id="lv-pages">
+      <button onclick="liveBookGo(-1)" id="lv-page-prev">السابقة</button>
+      <span class="n" id="lv-page-n"></span>
+      <button onclick="liveBookGo(1)" id="lv-page-next">التالية</button>
+      <span class="lv-sep"></span>
+      <button class="z" onclick="liveBookZoom(-1)" id="lv-zoom-out" title="تصغير" aria-label="تصغير">−</button>
+      <span class="n z" id="lv-zoom-lbl">١٠٠٪</span>
+      <button class="z" onclick="liveBookZoom(1)" id="lv-zoom-in" title="تكبير" aria-label="تكبير">+</button>
+      <button class="z" onclick="liveFullscreenToggle()" title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button>
+    </div>
+  </div>
+</div>
+
+<!-- اختيار الشعبة عند تعدّد شعب نفس الصف (بديل clsPick من cycle1.html) -->
+<div class="modal-bg" id="live-clspick-bg" style="display:none" onclick="if(event.target===this)liveClsPickClose()">
+  <div class="modal" style="max-width:360px">
+    <h3 style="margin:0 0 12px;color:var(--gold)">اختر الشعبة</h3>
+    <div id="live-clspick-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="modal-cancel" style="margin-top:12px;width:100%" onclick="liveClsPickClose()">إلغاء</button>
+  </div>
+</div>
+
 </body>
 </html>
