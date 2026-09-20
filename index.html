@@ -6265,7 +6265,8 @@ function ywRenderNowCard(){
       <div class="r">تبقّى ${egToArabic(rem)} دقيقة</div>
       <div class="rail-bar"><i style="width:${pct}%"></i></div>
       <div class="rail-now-btns">
-        <button class="solid" onclick="ywGoPlanLesson((typeof dpNextLessons==='function'&&dpNextLessons()[0]||{}).lessonId)">التحضير اليومي</button>
+        <button class="solid" onclick="ywLiveStartNow('${escAttr(current.classKey)}')">ابدأ الحصة</button>
+        <button onclick="ywGoPlanLesson((typeof dpNextLessons==='function'&&dpNextLessons()[0]||{}).lessonId)">التحضير اليومي</button>
       </div>
     </div>`;
     return;
@@ -6278,11 +6279,29 @@ function ywRenderNowCard(){
         <div class="t">الحصة ${next.period.num} — قادمة</div>
         <div class="b">${escHtml(cls?cls.name:next.classKey)}</div>
         <div class="r">تبدأ بعد ${egToArabic(mins)} دقيقة</div>
+        <div class="rail-now-btns">
+          <button class="solid" onclick="ywLiveStartNow('${escAttr(next.classKey)}')">ابدأ الحصة</button>
+        </div>
       </div>`;
       return;
     }
   }
   box.innerHTML='';
+}
+// «ابدأ الحصة» من بطاقة الحصة الجارية/القادمة — يفتح وضع الحصة الحية مباشرةً
+// للشعبة المجدولة الآن. يحاول أولاً ربطها بأول درسٍ غير منجز في صفّ الشعبة،
+// وإن تعذّر ذلك يفتح الوضع الحي للشعبة/المادة بلا درس (liveOpen يقبل lessonId فارغاً).
+function ywLiveStartNow(classKey){
+  if(!classKey||typeof liveOpen!=='function')return;
+  const cls=(typeof liveClassObj==='function')?liveClassObj(classKey):null;
+  if(!cls){toast('لم يتم العثور على هذه الشعبة ضمن صفوفك',true);return;}
+  let lessonId=null,subject=cls.subject;
+  try{
+    const nx=(typeof dpNextLessons==='function')?dpNextLessons():[];
+    const hit=nx.find(x=>x.gi===cls.gi)||nx.find(x=>Number(x.gradeNum)===Number(cls.gradeNum)&&x.subject===cls.subject);
+    if(hit){lessonId=hit.lessonId;subject=hit.subject||subject;}
+  }catch(e){}
+  liveOpen(classKey,subject,lessonId);
 }
 // دروسك القادمة — أول درسٍ غير منجز لكل صفّ/مادة، من نفس بيانات قسم الخطة
 function ywRenderLessons(){
