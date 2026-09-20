@@ -1131,6 +1131,14 @@ tbody tr.today{background:rgba(240,192,96,.06);}
 .eg-mode-lbl{font-weight:800;font-size:14px;color:var(--text);}
 .eg-mode-sub{font-size:11px;color:var(--muted);text-align:center;}
 /* ═ 🎮 قسم الألعاب ═ */
+.gm-reco{background:linear-gradient(135deg,rgba(109,40,217,.10),rgba(139,92,246,.14));border:1.5px solid var(--gold);border-radius:14px;padding:13px 16px;margin-bottom:14px;}
+.gm-reco.hidden{display:none;}
+.gm-reco-t{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;}
+.gm-reco-t>span{font-size:22px;line-height:1.2;flex:none;}
+.gm-reco-t b{display:block;font-size:14.5px;color:var(--text);margin-bottom:2px;}
+.gm-reco-t div>span{font-size:12.5px;color:var(--muted);line-height:1.6;}
+.gm-reco-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.gm-reco-btns .eg-generate{margin:0;}
 .gm-tpl-row{display:flex;gap:10px;flex-wrap:wrap;}
 .gm-tpl-btn{flex:1;min-width:140px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 10px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;}
 .gm-tpl-btn:hover{border-color:var(--gold);transform:translateY(-2px);}
@@ -3066,7 +3074,18 @@ input,textarea,select{font-size:16px !important;}
 
   <!-- ٣) خيارات اللعبة -->
   <div class="eg-card" id="eg-game-options-card" style="display:none">
-    <div class="eg-step-title">٣. اختر قالب اللعبة</div>
+    <!-- الاقتراح الذكي: يقرأ الدرس المختار ويرشّح القالب الأنسب مع سببه،
+         وزرّ «إنشاء سريع» يتّخذ كل القرارات (قالب/مستوى/عدد/ثيم) دفعةً واحدة -->
+    <div id="gm-reco" class="gm-reco hidden">
+      <div class="gm-reco-t"><span>✨</span><div>
+        <b id="gm-reco-name"></b>
+        <span id="gm-reco-why"></span></div></div>
+      <div class="gm-reco-btns">
+        <button type="button" class="eg-regen" onclick="gmRecoApply()">اعتمد الاقتراح</button>
+        <button type="button" class="eg-generate" onclick="gmQuick()">⚡ إنشاء سريع — كل القرارات عنّي</button>
+      </div>
+    </div>
+    <div class="eg-step-title">٣. اختر قالب اللعبة ومستوى الأسئلة</div>
     <div class="gm-tpl-row">
       <button type="button" class="gm-tpl-btn active" data-tpl="wheel" onclick="gmPickTpl('wheel')"><span class="gm-tpl-ic">🎡</span><span class="gm-tpl-lbl">العجلة</span><span class="gm-tpl-sub">تدور وتختار سؤالاً عشوائياً</span></button>
       <button type="button" class="gm-tpl-btn" data-tpl="match" onclick="gmPickTpl('match')"><span class="gm-tpl-ic">🃏</span><span class="gm-tpl-lbl">المطابقة</span><span class="gm-tpl-sub">طابق المفهوم بمعناه</span></button>
@@ -3083,6 +3102,14 @@ input,textarea,select{font-size:16px !important;}
       <div style="flex:1;min-width:0">
         <label class="eg-lbl">عدد العناصر</label>
         <input type="number" id="gm-count" min="3" max="15" value="6" style="width:100%">
+      </div>
+      <div style="flex:1;min-width:0">
+        <label class="eg-lbl">مستوى الأسئلة</label>
+        <select id="gm-level-sel" style="width:100%">
+          <option value="سهل">سهل — تثبيت الأساسيات</option>
+          <option value="متوسط" selected>متوسّط — المستوى المعتاد للصف</option>
+          <option value="متقدم">متقدّم — تحدٍّ للمتفوّقين</option>
+        </select>
       </div>
     </div>
     <label class="eg-lbl" style="margin-top:10px">🎨 الثيم</label>
@@ -3108,7 +3135,9 @@ input,textarea,select{font-size:16px !important;}
   </div>
 
   <!-- 🕹️ ألعابي المحفوظة -->
-  <div class="eg-card" id="eg-mygames-card" style="display:none">
+  <!-- ألعابي المحفوظة: كانت مخفيةً إلى أن يُختار وضع «لعبة»، فلا ترى المعلّم
+       ما حفظه أصلاً. تُعرض الآن دائماً عند فتح الاستوديو (كما في cycle1). -->
+  <div class="eg-card" id="eg-mygames-card">
     <div class="eg-step-title">🕹️ ألعابي المحفوظة</div>
     <div id="gm-mylist"></div>
   </div>
@@ -6265,7 +6294,8 @@ function ywRenderNowCard(){
       <div class="r">تبقّى ${egToArabic(rem)} دقيقة</div>
       <div class="rail-bar"><i style="width:${pct}%"></i></div>
       <div class="rail-now-btns">
-        <button class="solid" onclick="ywGoPlanLesson((typeof dpNextLessons==='function'&&dpNextLessons()[0]||{}).lessonId)">التحضير اليومي</button>
+        <button class="solid" onclick="ywLiveStartNow('${escAttr(current.classKey)}')">ابدأ الحصة</button>
+        <button onclick="ywGoPlanLesson((typeof dpNextLessons==='function'&&dpNextLessons()[0]||{}).lessonId)">التحضير اليومي</button>
       </div>
     </div>`;
     return;
@@ -6278,11 +6308,29 @@ function ywRenderNowCard(){
         <div class="t">الحصة ${next.period.num} — قادمة</div>
         <div class="b">${escHtml(cls?cls.name:next.classKey)}</div>
         <div class="r">تبدأ بعد ${egToArabic(mins)} دقيقة</div>
+        <div class="rail-now-btns">
+          <button class="solid" onclick="ywLiveStartNow('${escAttr(next.classKey)}')">ابدأ الحصة</button>
+        </div>
       </div>`;
       return;
     }
   }
   box.innerHTML='';
+}
+// «ابدأ الحصة» من بطاقة الحصة الجارية/القادمة — يفتح وضع الحصة الحية مباشرةً
+// للشعبة المجدولة الآن. يحاول أولاً ربطها بأول درسٍ غير منجز في صفّ الشعبة،
+// وإن تعذّر ذلك يفتح الوضع الحي للشعبة/المادة بلا درس (liveOpen يقبل lessonId فارغاً).
+function ywLiveStartNow(classKey){
+  if(!classKey||typeof liveOpen!=='function')return;
+  const cls=(typeof liveClassObj==='function')?liveClassObj(classKey):null;
+  if(!cls){toast('لم يتم العثور على هذه الشعبة ضمن صفوفك',true);return;}
+  let lessonId=null,subject=cls.subject;
+  try{
+    const nx=(typeof dpNextLessons==='function')?dpNextLessons():[];
+    const hit=nx.find(x=>x.gi===cls.gi)||nx.find(x=>Number(x.gradeNum)===Number(cls.gradeNum)&&x.subject===cls.subject);
+    if(hit){lessonId=hit.lessonId;subject=hit.subject||subject;}
+  }catch(e){}
+  liveOpen(classKey,subject,lessonId);
 }
 // دروسك القادمة — أول درسٍ غير منجز لكل صفّ/مادة، من نفس بيانات قسم الخطة
 function ywRenderLessons(){
@@ -12707,6 +12755,7 @@ async function egInit(){
   const ok=await egApplyConfig();
   if(!ok)return;
   egCreditRender();
+  try{gmLoadMyGames();}catch(e){}
   const gsel=document.getElementById('eg-grade');
   let grades=[];
   if(isAdmin())grades=[5,6,7,8,9,10,11,12];
@@ -12733,7 +12782,6 @@ async function egSetMode(mode){
   document.getElementById('eg-mode-btn-info').classList.toggle('active',mode==='info');
   document.getElementById('eg-mode-btn-game').classList.toggle('active',mode==='game');
   if(mode==='game'){gmLoadThemes();gmLoadMyGames();}
-  document.getElementById('eg-mygames-card').style.display=mode==='game'?'block':'none';
   const single=egSingleCombo();
   if(single){
     // صف ومادة واحدة: اختيار تلقائي وإخفاء الخطوة الأولى
@@ -12847,6 +12895,7 @@ function egToggleLesson(cb){
     }
   }
   egUpdateCount();
+  if(typeof gmRecoRender==='function')gmRecoRender();
 }
 function egLessonType(lid,t,on){
   const c=egSelected[lid];if(!c)return;
@@ -13533,6 +13582,70 @@ function gmPickTpl(t){
   // بنية المحتوى تغيّرت؟ نفرغ المحرر (البنى غير متوافقة)
   if(GM_STRUCT[t]!==prevStruct&&gmItems.length){gmItems=[];document.getElementById('eg-game-result-card').style.display='none';}
 }
+/* ═ الاقتراح الذكي + الإنشاء السريع — منقولان من cycle1 (gmRecommend/gmQuick)
+   والمنطق واحد؛ المصدر هنا egSelected بدل studioSelectedLessons. ═ */
+const GM_NAMES={wheel:'العجلة',match:'المطابقة',quiz:'اختبار السرعة',balloon:'فرقع البالون',box:'افتح الصندوق',memory:'بطاقات الذاكرة',groups:'فرز المجموعات',millionaire:'من سيربح المليون',race:'سباق الفريقين',boxes:'كنوز وقنابل'};
+function gmLevel(){const el=document.getElementById('gm-level-sel');return el?el.value:'متوسط';}
+function gmRecommend(){
+  const ls=Object.values(egSelected||{});
+  if(!ls.length)return null;
+  const txt=((ls[0].name||'')+' '+(ls[0].unit||'')).toLowerCase();
+  const subj=(document.getElementById('eg-subject')||{}).value||'';
+  const has=(...ws)=>ws.some(w=>txt.includes(w));
+  if(has('مفرد','معنى','معاني','مصطلح','مرادف','ضد','كلمات و'))
+    return{tpl:'match',why:'الدرس يقوم على ربط الكلمة بمعناها — والمطابقة تجعل هذا الربط هو اللعب نفسه.'};
+  if(has('تصنيف','أنواع','مجموعات','يصنف','فرز'))
+    return{tpl:'groups',why:'الدرس يقوم على التصنيف — وفرز المجموعات يجعل الطالب يُصنّف بيده لا يشاهد.'};
+  if(has('مراجعة','تقويم','اختبار الوحدة','ختام'))
+    return{tpl:'millionaire',why:'درس مراجعة — والمليونير يغطّي أسئلةً كثيرة متدرّجةً بحماس المسرح.'};
+  if(has('جمع','طرح','ضرب','قسمة','عمليات','مسائل','حساب','معادل','دالة'))
+    return{tpl:'quiz',why:'طلاقة العمليات تحتاج تمريناً موقوتاً — واختبار السرعة يبنيها سؤالاً بعد سؤال.'};
+  if(has('قصة','قصّة','نص الاستماع','حكاية','نصّ'))
+    return{tpl:'box',why:'درسٌ نصّيّ — وفتح الصناديق يُبقي التشويق حاضراً بين أسئلة الفهم.'};
+  if(has('تجربة','مختبر','ظاهرة','تفاعل'))
+    return{tpl:'memory',why:'المفاهيم المخبرية تحتاج تكرار تعرّض — وبطاقات الذاكرة تُعيد عرضها مرّاتٍ بلا ملل.'};
+  if(subj.includes('رياض'))
+    return{tpl:'race',why:'في الرياضيات ينفع حماس الفريقين — السباق يجعل كل إجابةٍ خطوةً مرئية للأمام.'};
+  return{tpl:'wheel',why:'العجلة أعمّ القوالب وأسلمها لهذا الدرس — وكل دورةٍ تختار سؤالاً وطالباً عشوائياً.'};
+}
+function gmRecoRender(){
+  const box=document.getElementById('gm-reco');
+  if(!box)return;
+  const r=gmRecommend();
+  if(!r){box.classList.add('hidden');return;}
+  box.classList.remove('hidden');
+  const nm=document.getElementById('gm-reco-name');if(nm)nm.textContent='الاقتراح الذكي: لعبة '+(GM_NAMES[r.tpl]||r.tpl);
+  const wy=document.getElementById('gm-reco-why');if(wy)wy.textContent=r.why;
+  box.dataset.tpl=r.tpl;
+}
+function gmRecoApply(){
+  const box=document.getElementById('gm-reco');
+  if(box&&box.dataset.tpl){gmPickTpl(box.dataset.tpl);toast('اختير القالب المقترح — عدّل ما تشاء ثم ولّد','ok');}
+}
+/* ثيمٌ يُختار بمادة الدرس: المشاهد المدمجة موسومةٌ بموادّها أصلاً */
+function gmAutoTheme(){
+  const subj=(document.getElementById('eg-subject')||{}).value||'';
+  const list=(typeof gmThemes!=='undefined'&&gmThemes)||[];
+  const t=list.find(x=>x.subj&&subj&&(subj.includes(x.subj)||x.subj.includes(subj)))
+        ||list.find(x=>x.subj==='عامّ')||list[0];
+  return t?t.id:'';
+}
+/* ⚡ الوضع السريع: قالبٌ مقترح + مستوى متوسط + ٦ عناصر + ثيم المادة، ثم
+   التوليد فوراً. كل قرارٍ اتُّخذ عن المعلّم يبقى قابلاً للتعديل بعد التوليد. */
+function gmQuick(){
+  if(!Object.keys(egSelected||{}).length){toast('اختر درساً أولاً',true);return;}
+  const r=gmRecommend();
+  if(r)gmPickTpl(r.tpl);
+  const lv=document.getElementById('gm-level-sel');if(lv)lv.value='متوسط';
+  const ct=document.getElementById('gm-count');if(ct)ct.value='6';
+  if(typeof gmForcedTheme!=='function'||!gmForcedTheme(gmTpl)){
+    const th=gmAutoTheme();
+    const sel=document.getElementById('gm-theme');
+    if(th&&sel){sel.value=th;if(typeof gmRenderThemeGrid==='function')gmRenderThemeGrid();}
+  }
+  toast('⚡ اختير القالب والثيم تلقائياً — جاري التوليد…','ok');
+  gmGenerate();
+}
 async function gmGenerate(){
   const lessons=Object.values(egSelected);
   if(!lessons.length){toast('اختر درساً واحداً على الأقل',true);return;}
@@ -13548,7 +13661,7 @@ async function gmGenerate(){
     const semester=(typeof teacherConfig!=='undefined'&&teacherConfig&&teacherConfig.semester)||'الفصل الأول';
     let vis=null;try{vis=await egVisionImages(grade,subject,semester);}catch(e){}
     const{data,error}=await sb.functions.invoke('generate-game-content',{
-      body:{grade,subject,lessonNames:lessons.map(l=>l.name),structure:GM_STRUCT[gmTpl],count,images:(vis&&vis.images)||[]}
+      body:{grade,subject,lessonNames:lessons.map(l=>l.name),structure:GM_STRUCT[gmTpl],count,level:gmLevel(),images:(vis&&vis.images)||[]}
     });
     if(!error&&data&&data.items){
       items=data.items;
@@ -13669,7 +13782,7 @@ async function gmSave(){
       title,template:gmTpl,theme_id:themeSel,content:{structure:GM_STRUCT[gmTpl],items,groupNames:GM_STRUCT[gmTpl]==='groups'?gmGroupNames:undefined}
     });
     if(error)throw error;
-    gmLoadMyGames();
+    gmLoadMyGames(true);
   }catch(e){uiBusyDone();toast('تعذّر حفظ اللعبة',true);console.warn('gmSave',e);return;}
   // درس واحد؟ تُرفق نسخة اللعبة (ملف يعمل بلا إنترنت) في بطاقة الدرس تلقائياً
   const ids=Object.keys(egSelected);
@@ -13695,8 +13808,13 @@ async function gmSave(){
     toast('💾 حُفظت اللعبة في ألعابك','ok');
   }
 }
-async function gmLoadMyGames(){
-  const box=document.getElementById('gm-mylist');
+let _gmMyGamesAt=0;
+async function gmLoadMyGames(force){
+  const box=document.getElementById('gm-mylist');if(!box)return;
+  if(!currentUser||!currentUser.id){box.innerHTML='';return;}
+  // القائمة لا تتغيّر إلا بحفظٍ أو حذفٍ منّا — لا نعيد جلبها قبل دقيقة إلا عند التغيير
+  if(!force&&box.dataset.loaded&&Date.now()-_gmMyGamesAt<60000)return;
+  _gmMyGamesAt=Date.now();box.dataset.loaded='1';
   try{
     const{data}=await sb.from('games').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
     if(!data||!data.length){box.innerHTML='<div class="lib-empty">📭 لا توجد ألعاب محفوظة بعد</div>';return;}
@@ -13724,7 +13842,13 @@ async function gmOpenSaved(id){
 }
 async function gmDeleteSaved(id,btn){
   if(!(await uiConfirm('حذف اللعبة','هل تريد حذف هذه اللعبة نهائياً؟')))return;
-  try{await sb.from('games').delete().eq('id',id);btn.closest('.gm-row').remove();}catch(e){toast('تعذّر الحذف',true);}
+  // فحص error لازم: supabase-js لا يرمي عند فشل الاستعلام، فكان الصف يُزال من
+  // الشاشة وقد يبقى في القاعدة فيعود عند إعادة التحميل
+  try{
+    const{error}=await sb.from('games').delete().eq('id',id);
+    if(error)throw error;
+    btn.closest('.gm-row').remove();
+  }catch(e){toast('تعذّر الحذف — تحقّق من الاتصال',true);}
 }
 // ─ التشغيل ─
 function gmPlay(){

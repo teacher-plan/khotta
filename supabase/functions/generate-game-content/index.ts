@@ -65,6 +65,14 @@ Deno.serve(async (req) => {
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
     const structure = ["pairs", "quiz", "items", "groups"].includes(b.structure) ? b.structure : "quiz";
     const count = Math.max(3, Math.min(15, parseInt(b.count) || 6));
+    // مستوى الأسئلة: كان يُرسَل من الواجهة (cycle1 وindex) ويُتجاهَل هنا صامتاً،
+    // فيخرج المحتوى بمستوى واحد مهما اختارت المعلّمة. يُقرأ الآن ويُحقن في المُوجّه.
+    const LEVELS: Record<string, string> = {
+      "سهل": "مستوى الأسئلة: سهل — تثبيت الأساسيات: مفاهيم مباشرة وصياغة قصيرة، بلا خطوات مركّبة.",
+      "متوسط": "مستوى الأسئلة: متوسّط — المستوى المعتاد للصف: فهم وتطبيق بخطوةٍ أو خطوتين.",
+      "متقدم": "مستوى الأسئلة: متقدّم — تحدٍّ للمتفوّقين: تحليل وربط واستنتاج وخطوات مركّبة.",
+    };
+    const levelNote = LEVELS[String(b.level || "").trim()] || LEVELS["متوسط"];
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 12) : [];
     const bookContext = String(b.bookContext || "").slice(0, 4000);
     if (!lessonNames.length) return json({ error: "no_lessons" }, 400);
@@ -100,7 +108,8 @@ Deno.serve(async (req) => {
         ? "الصور المرفقة صفحات هذا الدرس من كتاب الطالب المعتمد — ابنِ المحتوى من مفاهيمها وأمثلتها الفعلية حصراً."
         : "لا صور مرفقة من الكتاب — بناءً على خبرتك بمنهج كامبردج المعتمد في سلطنة عُمان لهذا الصف والمادة، توقّع المحتوى الفعلي المرجّح لهذا الدرس تحديداً (لا محتوى عام) واستخدمه مباشرة بثقة.",
       structureNotes[structure],
-      `أنشئ ${count} عنصراً بالضبط. عربية فصحى سليمة، بلا تكرار، متدرجة السهولة.`,
+      levelNote,
+      `أنشئ ${count} عنصراً بالضبط. عربية فصحى سليمة، بلا تكرار، متدرجة السهولة ضمن المستوى المطلوب.`,
       `أعد JSON فقط بهذا الشكل حصراً: ${schemas[structure]}`,
     ].filter(Boolean).join("\n");
 
