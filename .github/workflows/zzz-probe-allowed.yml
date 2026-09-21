@@ -1,0 +1,36 @@
+name: zzz probe allowed
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: فحص
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          raw() {
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              --data-binary "$(jq -Rs '{query: .}' <<< "$1")"
+          }
+          echo "════ هل توجد تكرارات باختلاف حالة الأحرف؟ (يجب أن تكون فارغة) ════"
+          raw "select lower(email) as e, count(*) as n, array_agg(email) as variants from allowed_emails group by lower(email) having count(*) > 1;" \
+            | jq -r 'if length==0 then "✅ لا تكرارات — الفهرس الفريد آمن" else .[] | "⚠️ \(.e): \(.n) نسخ → \(.variants)" end'
+
+          echo
+          echo "════ صفوف بلا expires_at (صلاحية دائمة) ════"
+          raw "select cycle, count(*) filter (where expires_at is null) as permanent, count(*) as total from allowed_emails group by cycle;" \
+            | jq -r '.[] | "\(.cycle): دائم \(.permanent) من \(.total)"'
+
+          echo
+          echo "════ السياسات الحالية على allowed_emails ════"
+          raw "select policyname, cmd from pg_policies where tablename='allowed_emails' order by cmd, policyname;" \
+            | jq -r '.[] | "\(.cmd): \(.policyname)"'
+
+          echo
+          echo "════ سياسة الاستبيانات ════"
+          raw "select policyname, cmd, qual from pg_policies where tablename='c1_survey_responses';" \
+            | jq -r '.[] | "\(.cmd) \(.policyname): \(.qual)"'
