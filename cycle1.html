@@ -3619,6 +3619,13 @@ function toast(msg,kind){
   clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='',2600);
 }
 
+// ══ الحلقة الفعّالة ══
+// تُشتقّ من عمود cycle في allowed_emails بعد الدخول (انظر afterAuth).
+// القيمة الافتراضية 'cycle1' مقصودة: أيّ فشلٍ في القراءة يُبقي سلوك اليوم
+// كما هو تماماً لمعلّمات الحلقة الأولى.
+let APP_CYCLE='cycle1';
+const CYCLE_GRADES={cycle1:[1,2,3,4],main:[5,6,7,8,9,10,11,12]};
+function cycleGrades(cy){return CYCLE_GRADES[cy||APP_CYCLE]||CYCLE_GRADES.cycle1;}
 // ══ الأقسام — تُفعَّل واحداً واحداً مع البناء ══
 // built:true = قسم جاهز له صفحة | built:false = قادم (يظهر باهتاً في اللوحة)
 const C1_ICONS={spark:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2zm7 12l.9 3.1L23 18l-3.1.9L19 22l-.9-3.1L15 18l3.1-.9L19 14z"/></svg>`,game:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5zm1 3v2H6v2h2v2h2v-2h2v-2h-2V9H8zm8.5 1a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-2.5 3a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg>`,star:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg>`,chart:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M3 3h2v16h16v2H3V3zm4 10h3v5H7v-5zm5-4h3v9h-3V9zm5-4h3v13h-3V5z"/></svg>`,cal:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zM5 9h14v11H5V9zm2 3v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2z"/></svg>`,fox:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2l1.6 4.9L18.5 8.5 13.6 10 12 15l-1.6-5L5.5 8.5l4.9-1.6L12 2zM5 14l.9 2.6L8.5 17.5 5.9 18.4 5 21l-.9-2.6L1.5 17.5l2.6-.9L5 14zm13 1l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/></svg>`,
@@ -3630,23 +3637,27 @@ archive:`<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><pa
 };
 const DEMO_SECTIONS=['yawmi','plan','studio','students','reserve','fahim','ach','shared','lib'];
 const C1_SECTIONS=[
-  {id:'yawmi', ic:'cal', nm:'يومي',    lv:'مسار يومك وحصصك ومفكرتك',      built:true},
-  {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true},
-  {id:'studio',ic:'game',nm:'الاستوديو', lv:'ألعاب متقدمة وإنفوجرافيك بالذكاء الاصطناعي', built:true},
-  {id:'students', ic:'star', nm:'طلابي', lv:'نجوم التميّز ومخالفات السلوك', built:true},
-  {id:'reserve',ic:'shield',nm:'حصص الاحتياط', lv:'أنشطة جاهزة تغرس قيمة وتملأ الوقت', built:true},
-  {id:'fahim', ic:'fox',   nm:'خُطّة AI', lv:'مساعدٌ ذكيٌّ عامّ',              built:true},
-  {id:'ach',   ic:'trophy',nm:'إنجازاتك', lv:'إنجازاتك ومبادراتك المهنية',   built:true},
-  {id:'shared',ic:'archive', nm:'المحفوظات', lv:'ألعاب وملخصات جاهزة من معلمات الحلقة', built:true},
-  {id:'lib',   ic:'book',  nm:'المكتبة', lv:'شاركي إبداعك مع معلمات مادتك', built:true},
-  {id:'msgs',  ic:'mail',  nm:'المراسلات', lv:'رسائل الإدارة واستبياناتك', built:true},
+  {id:'yawmi', ic:'cal', nm:'يومي',    lv:'مسار يومك وحصصك ومفكرتك',      built:true, cy:'both'},
+  {id:'plan',  ic:'chart', nm:'الخطة',   lv:'وحدات ودروس موادك',            built:true, cy:'both'},
+  {id:'studio',ic:'game',nm:'الاستوديو', lv:'ألعاب متقدمة وإنفوجرافيك بالذكاء الاصطناعي', built:true, cy:'both'},
+  {id:'students', ic:'star', nm:'طلابي', lv:'نجوم التميّز ومخالفات السلوك', built:true, cy:'both'},
+  {id:'reserve',ic:'shield',nm:'حصص الاحتياط', lv:'أنشطة جاهزة تغرس قيمة وتملأ الوقت', built:true, cy:'both'},
+  {id:'fahim', ic:'fox',   nm:'خُطّة AI', lv:'مساعدٌ ذكيٌّ عامّ',              built:true, cy:'both'},
+  {id:'ach',   ic:'trophy',nm:'إنجازاتك', lv:'إنجازاتك ومبادراتك المهنية',   built:true, cy:'both'},
+  {id:'shared',ic:'archive', nm:'المحفوظات', lv:'ألعاب وملخصات جاهزة من معلمات الحلقة', built:true, cy:'both'},
+  {id:'lib',   ic:'book',  nm:'المكتبة', lv:'شاركي إبداعك مع معلمات مادتك', built:true, cy:'both'},
+  {id:'msgs',  ic:'mail',  nm:'المراسلات', lv:'رسائل الإدارة واستبياناتك', built:true, cy:'both'},
 ];
+// بوّابة الأقسام حسب الحلقة: cy='both' يعني يظهر للحلقتين، وهو حال كل الأقسام
+// اليوم — فالتصفية أدناه بلا أثرٍ إطلاقاً على ما تراه معلّمة الحلقة الأولى.
+// أُضيفت الآلية فقط ليُمكن لاحقاً قصرُ قسمٍ على حلقةٍ بعينها بتعديل حرفٍ واحد.
+function c1Sections(){return C1_SECTIONS.filter(s=>!s.cy||s.cy==='both'||s.cy===APP_CYCLE);}
 function c1Board(open){
   const b=document.getElementById('c1-board');
   if(!open){b.classList.remove('open');return;}
   const cur=(document.querySelector('.page.active')||{}).id;
   const hasUnreadMsgs=c1Notifs.some(n=>!n.read);
-  document.getElementById('c1b-grid').innerHTML=C1_SECTIONS.filter(s=>!KH_DEMO||DEMO_SECTIONS.includes(s.id)).map(s=>{
+  document.getElementById('c1b-grid').innerHTML=c1Sections().filter(s=>!KH_DEMO||DEMO_SECTIONS.includes(s.id)).map(s=>{
     if(!s.built)return `<div class="c1b-tile soon"><span class="soon-b">قريباً</span><span class="ic">${C1_ICONS[s.ic]||""}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></div>`;
     const dot=(s.id==='msgs'&&hasUnreadMsgs)?'<span class="c1b-dot"></span>':'';
     return `<button class="c1b-tile ${('page-'+s.id)===cur?'now':''}" onclick="c1Go('${s.id}')">${dot}<span class="ic">${C1_ICONS[s.ic]||''}</span><span class="nm">${s.nm}</span><span class="lv">${s.lv}</span></button>`;
@@ -3744,7 +3755,7 @@ async function forgotPassword(){
     // عبر دالّة الحافة لا مباشرةً: سوبابيز لا يعرف حلقاتنا، فالنداء المباشر
     // كان يرسل الرابط لحساب المشرف ولمعلّمات الحلقة الأخرى أيضاً.
     const{error}=await sb.functions.invoke('request-password-reset',
-      {body:{email,cycle:'cycle1'}});
+      {body:{email,cycle:APP_CYCLE}});
     if(error)throw error;
     const wa='https://wa.me/'+ADMIN_WA+'?text='+encodeURIComponent('السلام عليكم، لم تصلني رسالة استعادة كلمة المرور. بريدي: '+email);
     box.innerHTML='إن كان هذا البريد مسجّلاً فستصلكِ رسالةٌ فيها رابط. '
@@ -3939,6 +3950,10 @@ async function afterAuth(session){
       }
       if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — ادخلي من الموقع الرئيسي');return;}
     }
+    // الحلقة الفعّالة من صفّ المعلّمة. لا تتغيّر اليوم عن 'cycle1' لأن البوّابة
+    // أعلاه ما زالت تمنع حسابات الحلقة الثانية عمداً؛ وحين يُفتح الباب لهم
+    // لاحقاً يكفي رفع ذلك الشرط وحده. القيمة المجهولة تبقى 'cycle1'.
+    if(allowed&&allowed.cycle&&CYCLE_GRADES[allowed.cycle])APP_CYCLE=allowed.cycle;
   }catch(e){await sb.auth.signOut();showLogin('تعذّر التحقق، حاولي مجدداً');return;}
   // ⚠️ لا ندخل التطبيق بملف مجهول الحال. supabase-js لا يرمي استثناءً عند فشل
   // الشبكة بل يُرجع {data:null,error} — ولو عاملناه كـ«معلمة جديدة» لظهر معالج
@@ -4269,9 +4284,8 @@ function newClsTaken(g){
   return new Set((gr&&gr.classes||[]).map(c=>Number(c.num)||0));
 }
 function newClsRender(){
-  const G=['الأول','الثاني','الثالث','الرابع'];
-  document.getElementById('newcls-grades').innerHTML=G.map((nm,i)=>
-    `<button type="button" class="chip ${newCls.g===i+1?'sel':''}" onclick="newClsPickGrade(${i+1})">الصف ${nm}</button>`).join('');
+  document.getElementById('newcls-grades').innerHTML=cycleGrades().map(g=>
+    `<button type="button" class="chip ${newCls.g===g?'sel':''}" onclick="newClsPickGrade(${g})">الصف ${gradeName(g)}</button>`).join('');
 
   const secBox=document.getElementById('newcls-secs'),note=document.getElementById('newcls-sec-note');
   if(!newCls.g){
@@ -4288,7 +4302,7 @@ function newClsRender(){
   }
 
   document.getElementById('newcls-subs').innerHTML=newCls.g
-    ? C1_SUBJECTS.map(s=>
+    ? subjectsForGrade(newCls.g,newClsRender).map(s=>
         `<button type="button" class="chip olv ${newCls.subs.includes(s)?'sel':''}"
           onclick="newClsToggleSub('${escJs(s)}')">${escHtml(s)}</button>`).join('')
     : '<span class="acct-note" style="margin:0">اختاري الصف أولاً</span>';
@@ -4353,7 +4367,7 @@ async function newClsSave(){
   if(c1AllClasses().some(c=>c.id===id)){toast('هذه الشعبة موجودةٌ لديكِ أصلاً',true);return;}
   const students=newCls.stu.map(s=>s.trim()).filter(Boolean);
   const cls={
-    id,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,
+    id,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,
     color:C1_CLS_COLORS[c1AllClasses().length%C1_CLS_COLORS.length],
     subjects:subs.slice(),students,
   };
@@ -5180,6 +5194,37 @@ const C1_SUBJECTS=['الهوية والمواطنة','ديني حياتي','أح
 // مسارات تخزين آمنة (ASCII) لكل مادة — مخزن Supabase Storage يرفض المفاتيح العربية المُرمَّزة (%XX)
 const C1_SUBJECT_SLUG={'الهوية والمواطنة':'identity','ديني حياتي':'religion','أحب لغتي':'arabic','اللغة الإنجليزية':'english','الرياضيات':'math','العلوم':'science','عالمي الرقمي':'digital'};
 function libSubjSlug(s){return C1_SUBJECT_SLUG[s]||'subject';}
+// ══ مواد الصف ══
+// الحلقة الأولى: تُرجَع C1_SUBJECTS نفسها بترتيبها نفسه — لا استعلام، ولا أيّ
+// فرقٍ عمّا كان. أمّا صفوف الحلقة الثانية فموادّها تختلف من صفٍّ لآخر، فتُشتقّ
+// من جدول curriculum (مواد مميّزة لهذا الصف وفصل المعلّمة) عبر القارئ المخزَّن
+// c1Ref نفسه. القراءة غير متزامنة، فتُرجَع [] أوّل مرّة ثمّ يُستدعى onReady
+// لإعادة الرسم حين تصل القائمة.
+const _c1GradeSubj={};
+function c1SubjectsOfGrade(semester,grade){
+  return c1Ref('curriculum','subjects|'+semester+'|'+grade,async()=>{
+    const{data,error}=await sb.from('curriculum').select('subject').eq('semester',semester).eq('grade',String(grade)).order('sort');
+    if(error)return null;
+    const out=[];
+    (data||[]).forEach(r=>{if(r.subject&&!out.includes(r.subject))out.push(r.subject);});
+    return out;
+  });
+}
+function subjectsForGrade(grade,onReady){
+  const g=Number(grade);
+  if(CYCLE_GRADES.cycle1.includes(g))return C1_SUBJECTS;
+  const k=String(g);
+  if(_c1GradeSubj[k])return _c1GradeSubj[k];
+  const sem=profile&&profile.semester||'الفصل الأول';
+  try{
+    c1SubjectsOfGrade(sem,g).then(list=>{
+      if(!list||!list.length)return;
+      _c1GradeSubj[k]=list;
+      if(typeof onReady==='function')onReady();
+    }).catch(function(){});
+  }catch(e){}
+  return [];
+}
 const C1_CLS_COLORS=['#D86048','#487848','#C0A848','#8A5030','#A83030','#5F8A8B'];
 const TT_DAYS=[{id:'sun',nm:'الأحد'},{id:'mon',nm:'الاثنين'},{id:'tue',nm:'الثلاثاء'},{id:'wed',nm:'الأربعاء'},{id:'thu',nm:'الخميس'}];
 const TT_FALLBACK={assembly:['07:00','07:20'],periods:[['07:20','08:00'],['08:00','08:40'],['08:40','09:20'],['09:40','10:20'],['10:20','11:00'],['11:00','11:40'],['11:40','12:20'],['12:20','13:00']],breakAfter:3,breakTime:['09:20','09:40']};
@@ -5242,14 +5287,14 @@ function suRender(){
   }else if(suStep===2){
     el.innerHTML='<div class="su-card">'+steps+'<h2>صفوفك</h2><div class="d">اختاري الصفوف التي تدرّسينها</div>'
       +'<div class="chip-row" style="margin-bottom:14px">'
-      +[1,2,3,4].map(n=>'<button class="chip '+(suGrades.includes(n)?'sel':'')+'" onclick="suToggleGrade('+n+')">الصف '+['الأول','الثاني','الثالث','الرابع'][n-1]+'</button>').join('')
+      +cycleGrades().map(n=>'<button class="chip '+(suGrades.includes(n)?'sel':'')+'" onclick="suToggleGrade('+n+')">الصف '+gradeName(n)+'</button>').join('')
       +'</div>'
       +'<div class="c1-mrow"><button class="c1-mbtn no" onclick="suStep=1;suRender()">رجوع</button>'
       +'<button class="c1-mbtn go" onclick="suNext2()">التالي: المواد والشعب</button></div></div>';
   }else if(suStep===3){
     if(!suActive||!suGrades.includes(suActive))suActive=suGrades[0];
     const d=suData[suActive];
-    const gname=['الأول','الثاني','الثالث','الرابع'][suActive-1];
+    const gname=gradeName(suActive);
     const focus=window._suFocus;
     // مربعات الشعب الثماني الجاهزة
     const tiles=[...Array(8)].map((_,i)=>{
@@ -5265,7 +5310,7 @@ function suRender(){
       const sec=d.secs[n];
       if(sec&&sec.sel){
         subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي تدرّسينها لشعبة <b>'+gname+'/'+'١٢٣٤٥٦٧٨'[n-1]+'</b>؟</div>'
-          +'<div class="subj-grid">'+C1_SUBJECTS.map(sub=>{
+          +'<div class="subj-grid">'+subjectsForGrade(suActive,suRender).map(sub=>{
             const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
             const sel=sec.subjects.includes(sub);
             return '<button class="subj-card '+(sel?'sel':'')+'" style="--sc:'+cc[0]+';--sc2:'+cc[1]+'" onclick="suSecSubj('+n+',\''+sub+'\')"><span class="cband"></span><span class="nm">'+sub+'</span><span class="tick">✓</span></button>';
@@ -5277,7 +5322,7 @@ function suRender(){
       +'<div class="su-grade-tabs">'+suGrades.map(g=>{
         const dd=suData[g];
         const done=dd&&Object.values(dd.secs).some(x=>x.sel)&&Object.values(dd.secs).every(x=>!x.sel||x.subjects.length);
-        return '<button class="su-gt '+(g===suActive?'on':'')+'" onclick="suGradeTab('+g+')">الصف '+['الأول','الثاني','الثالث','الرابع'][g-1]+(done?'<span class="ok">✓</span>':'')+'</button>';
+        return '<button class="su-gt '+(g===suActive?'on':'')+'" onclick="suGradeTab('+g+')">الصف '+gradeName(g)+(done?'<span class="ok">✓</span>':'')+'</button>';
       }).join('')+'</div>'
       +'<div class="sec-grid">'+tiles+'</div>'
       +subjBox
@@ -5315,7 +5360,7 @@ function suRender(){
     const classes=suBuildClasses();
     const totalStudents=classes.reduce((s,c)=>s+(suRosters[c.id]||[]).filter(Boolean).length,0);
     const gradesHtml=suGrades.map(g=>{
-      const gname=['الأول','الثاني','الثالث','الرابع'][g-1];
+      const gname=gradeName(g);
       const gcls=classes.filter(c=>c.g===g);
       if(!gcls.length)return '';
       return '<div class="su-prev-g"><b>الصف '+gname+'</b>'
@@ -5340,7 +5385,7 @@ function suBuildClasses(){
     for(let n=1;n<=8;n++){
       const sec=d.secs[n];
       if(sec&&sec.sel&&sec.subjects.length){
-        out.push({id:'c1g'+g+'s'+n,name:['الأول','الثاني','الثالث','الرابع'][g-1]+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+        out.push({id:'c1g'+g+'s'+n,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
       }
     }
   }
@@ -5917,7 +5962,10 @@ function buildUnitsFromRows(rows,semester,subject){
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
 let planGrade=null,planSubject=null,planUnitIdx=null,todayCache=null,todayAttachLessonId=null;
-const PLAN_GNAMES=['الأول','الثاني','الثالث','الرابع'];
+// أسماء الصفوف ١–١٢. الأربعة الأولى كما كانت حرفاً بحرف، والبقيّة مطابقة
+// لأسماء الحلقة الثانية في index.html.
+const PLAN_GNAMES=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'];
+function gradeName(g){return PLAN_GNAMES[Number(g)-1]||String(g||'');}
 function planGradesList(){return (profile.grades||[]).filter(g=>(g.classes||[]).length).map(g=>g.num).sort((a,b)=>a-b);}
 function planSubjectsFor(g){
   const gr=(profile.grades||[]).find(x=>x.num===g);if(!gr)return[];
@@ -5942,7 +5990,7 @@ function planRender(){
   empty.classList.add('hidden');body.classList.remove('hidden');
   if(!planGrade||!grades.includes(planGrade))planGrade=grades[0];
   document.getElementById('plan-grade-sel').innerHTML=grades.map(g=>
-    `<option value="${g}" ${g===planGrade?'selected':''}>الصف ${PLAN_GNAMES[g-1]}</option>`
+    `<option value="${g}" ${g===planGrade?'selected':''}>الصف ${gradeName(g)}</option>`
   ).join('');
   const subs=planSubjectsFor(planGrade);
   if(!subs.length){
@@ -7096,7 +7144,7 @@ function starRender(){
   if(!starClass)starClass=localStorage.getItem('c1_star_c')||null;
   if(!starGrade||!grades.includes(starGrade))starGrade=grades[0];
   document.getElementById('stu-grade-sel').innerHTML=grades.map(g=>
-    `<option value="${g}" ${g===starGrade?'selected':''}>الصف ${PLAN_GNAMES[g-1]}</option>`
+    `<option value="${g}" ${g===starGrade?'selected':''}>الصف ${gradeName(g)}</option>`
   ).join('');
   const classes=starClassesOf(starGrade);
   if(!classes.length){
@@ -9233,7 +9281,7 @@ function studioRender(){
   const grades=planGradesList();
   if(!studioGrade||!grades.includes(studioGrade))studioGrade=grades[0]||null;
   document.getElementById('studio-grade-sel').innerHTML=grades.length
-    ?grades.map(g=>`<option value="${g}" ${g===studioGrade?'selected':''}>الصف ${PLAN_GNAMES[g-1]}</option>`).join('')
+    ?grades.map(g=>`<option value="${g}" ${g===studioGrade?'selected':''}>الصف ${gradeName(g)}</option>`).join('')
     :'<option value="">أكملي إعداد صفوفك أولاً</option>';
   studioRenderSubjects();
   gmLoadThemes();
@@ -9937,7 +9985,7 @@ async function gmLoadMyGames(force){
     if(!data||!data.length){box.innerHTML='<div class="plan-empty-card">لا توجد ألعاب محفوظة بعد</div>';return;}
     box.innerHTML=data.map(g=>`<div class="gm-row" style="cursor:pointer" onclick="gmOpenSaved('${g.id}')">
       <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(g.title||g.lesson||'لعبة')}</div>
-      <div style="font-size:11px;color:var(--muted)">${escHtml(PLAN_GNAMES[Number(g.grade)-1]||'')} · ${escHtml(g.subject||'')}</div></div>
+      <div style="font-size:11px;color:var(--muted)">${escHtml(gradeName(g.grade))} · ${escHtml(g.subject||'')}</div></div>
       <button class="arc-btn" style="flex:none;padding:4px 9px" onclick="event.stopPropagation();gmDownloadSaved('${g.id}')">⬇</button>
       <button class="arc-btn del" style="flex:none;padding:4px 9px" onclick="event.stopPropagation();gmDeleteSaved('${g.id}',this)">✕</button></div>`).join('');
   }catch(e){box.innerHTML='';}
@@ -10794,8 +10842,8 @@ async function behLoadTypes(){
   if(behTypesLoaded)return;
   behTypesLoaded=true;
   try{
-    const data=await c1Ref('violation_types','cycle1',async()=>{
-      const{data,error}=await sb.from('violation_types').select('name').eq('cycle','cycle1').eq('active',true).order('sort_order');
+    const data=await c1Ref('violation_types',APP_CYCLE,async()=>{
+      const{data,error}=await sb.from('violation_types').select('name').eq('cycle',APP_CYCLE).eq('active',true).order('sort_order');
       return error?null:(data||[]);
     });
     behTypes=(data||[]).map(r=>r.name);
@@ -10925,7 +10973,7 @@ function fhContext(){
     if(profile.semester)parts.push('الفصل الدراسي: '+profile.semester);
     if(profile.grades&&profile.grades.length){
       parts.push('صفوفها وشعبها ومواد كل شعبة: '+profile.grades.map(g=>
-        'الصف '+PLAN_GNAMES[g.num-1]+': '+(g.classes||[]).map(c=>c.name+' ('+(c.subjects||[]).join('، ')+' — '+(c.students||[]).length+' طالباً)').join('، ')
+        'الصف '+gradeName(g.num)+': '+(g.classes||[]).map(c=>c.name+' ('+(c.subjects||[]).join('، ')+' — '+(c.students||[]).length+' طالباً)').join('، ')
       ).join(' | '));
     }
     // أسماء الطالبات كاملةً لكل شعبة: بدونها لا يعرف المساعد من في الصفّ،
@@ -10953,7 +11001,7 @@ function fhContext(){
         const units=profile.plan_units[key]||[];
         let total=0,done=0;
         units.forEach(u=>(u.lessons||[]).forEach(l=>{total++;if(planGet(l.id).done)done++;}));
-        if(total)prog.push('الصف '+PLAN_GNAMES[Number(g)-1]+' '+subj+': أنجزت '+done+' من '+total+' درساً');
+        if(total)prog.push('الصف '+gradeName(g)+' '+subj+': أنجزت '+done+' من '+total+' درساً');
       });
       if(prog.length)parts.push('تقدم خطتها الدراسية: '+prog.join(' | '));
     }catch(e){}
@@ -11484,7 +11532,7 @@ function guideOpen(){
   c1Board(false);
   document.getElementById('guide-body').innerHTML=
     `<div class="guide-lead">منصّتك مبنية على فكرة واحدة: كل ما تحتاجينه لدرس اليوم في مكان واحد، جاهزاً قبل أن تدخلي الصف. تبدأ رحلتك من «يومي»، وتتفرّع منها الأقسام التالية.</div>`
-    +C1_SECTIONS.map(s=>{
+    +c1Sections().map(s=>{
       const g=C1_GUIDE[s.id];if(!g)return'';
       return `<div class="guide-sec">
         <div class="guide-ic">${C1_ICONS[s.ic]||''}</div>
@@ -11514,7 +11562,7 @@ function shRender(){
   const subs=planSubjectsFor(shGrade);
   if(!subs.includes(shSubject))shSubject=subs[0]||null;
   const gs=document.getElementById('sh-grade-sel');
-  gs.innerHTML=grades.map(g=>`<option value="${g}" ${g===shGrade?'selected':''}>الصف ${PLAN_GNAMES[g-1]||g}</option>`).join('');
+  gs.innerHTML=grades.map(g=>`<option value="${g}" ${g===shGrade?'selected':''}>الصف ${gradeName(g)}</option>`).join('');
   const ss=document.getElementById('sh-subj-sel');
   ss.innerHTML=subs.map(s=>`<option value="${escHtml(s)}" ${s===shSubject?'selected':''}>${escHtml(s)}</option>`).join('');
   // القائمة المخصّصة تُزامن نفسها عبر MutationObserver داخل c1SelectEnhance
