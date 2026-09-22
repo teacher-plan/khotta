@@ -1029,10 +1029,12 @@ body.inapp #c1-budget-btn{display:flex}
 /* عارض المرفق: يملأ كل المساحة تحت البار وله زر إغلاق للعودة */
 #live-view{position:absolute;top:var(--live-bar-h);inset-inline:0;bottom:0;background:var(--bg);display:none;flex-direction:column;z-index:6}
 #live-view.on{display:flex}
-.lv-vhead{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border-bottom:1.5px solid var(--border);flex:none}
-.lv-vtitle{flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lv-vx{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--red-d);
-  font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+/* لا شريط عنوانٍ علويّ: المرفق يُفتح ملء المساحة (من الأعلى للأسفل)،
+   ويطفو زرّ الخروج وحده في الزاوية العليا (البدء = يمينٌ في RTL). */
+.lv-vhead{position:absolute;top:10px;inset-inline-start:12px;z-index:9}
+.lv-vtitle{display:none}
+.lv-vx{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--red-d);
+  font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 .lv-vx:hover{border-color:var(--red);background:var(--surface)}
 .lv-vbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;background:#151009;touch-action:none}
 .lv-vbody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block}
@@ -1058,19 +1060,23 @@ body.inapp #c1-budget-btn{display:flex}
 .lv-vbody.zoomed.panning{cursor:grabbing}
 @media(prefers-reduced-motion:reduce){.lv-spread{transition:none}}
 .lv-vbody iframe{width:100%;height:100%;border:none;background:#fff;border-radius:8px}
-.lv-pages{display:flex;align-items:center;justify-content:center;gap:11px;padding:9px;background:var(--surface);border-top:1.5px solid var(--border);flex:none}
-.lv-pages button{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 15px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
+/* شريط التنقّل جانبيّ عائم (لا سفليّ) — عموديّ على حافة الجهة المنتهية
+   (يسارٌ في RTL)، فتظهر الصفحة كاملةً من الأعلى للأسفل بلا شريطٍ يقتطع. */
+.lv-pages{position:absolute;top:50%;inset-inline-end:10px;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 8px;
+  background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+  box-shadow:0 8px 26px rgba(0,0,0,.35);z-index:7;max-height:88%;overflow:auto}
+.lv-pages button{border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer;min-width:64px;text-align:center}
 .lv-pages button:hover:not(:disabled){border-color:var(--red);color:var(--red-d)}
 .lv-pages button:disabled{opacity:.35;cursor:default}
-.lv-pages .lv-sep{width:1.5px;height:22px;background:var(--border);flex:none;margin:0 3px}
-.lv-pages button.z{padding:8px 12px;min-width:42px}
-.lv-pages .n.z{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.lv-pages .lv-sep{width:26px;height:1.5px;background:var(--border);flex:none;margin:2px 0}
+.lv-pages button.z{padding:8px 10px;min-width:44px}
+.lv-pages .n.z{min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.lv-pages .n{font-size:12px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:44px;text-align:center;line-height:1.5}
 @media(max-width:560px){
-  .lv-pages{gap:6px;padding:7px 5px;flex-wrap:wrap}
-  .lv-pages button{padding:7px 11px;font-size:12px}
-  .lv-pages button.z{min-width:38px;padding:7px 9px}
+  .lv-pages{gap:5px;padding:8px 6px}
+  .lv-pages button{padding:7px 8px;font-size:11.5px;min-width:56px}
 }
-.lv-pages .n{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:78px;text-align:center}
 /* طبقة الكتابة بالقلم: كنفسٌ داخل .lv-spread فيرث نفس تحويل التكبير/التحريك
    تلقائياً (لا حساب إحداثياتٍ يدويّ عند التكبير). pointer-events مغلقةٌ إلا
    في وضع القلم، فتمرّ لمسات الإصبع (تكبير/تحريك/تقليب) من تحتها دون عائق —
@@ -1081,7 +1087,7 @@ body.inapp #c1-budget-btn{display:flex}
 #lv-pen-btn.on{background:var(--red);color:#fff;border-color:var(--red)}
 /* لوحة القلم عائمةٌ فوق شريط التنقّل (لا شريطٌ ثانٍ يزحزح الصفحة) — تظهر
    بانزلاقٍ لطيف، بأسلوب لوحات iPadOS، فيبقى تصميم أسفل العارض متناسقاً. */
-.lv-pen-bar{position:absolute;left:50%;transform:translateX(-50%) translateY(10px);
+.lv-pen-bar{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);
   display:flex;align-items:center;gap:12px;padding:9px 15px;background:var(--card);
   border:1.5px solid var(--border);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.4);
   z-index:8;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;flex-wrap:wrap;max-width:94vw;justify-content:center}
@@ -4280,7 +4286,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='7a2e5eb';
+const KH_BUILD='22e61ab';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9507,14 +9513,7 @@ function lvInkPointerUp(e){
 }
 function lvPenSyncUI(){
   document.getElementById('lv-pen-btn')?.classList.toggle('on',_lvPenOn);
-  const bar=document.getElementById('lv-pen-bar');
-  if(bar){
-    // ترتفع اللوحة العائمة فوق شريط التنقّل مهما تغيّر ارتفاعه (قد يلتفّ
-    // على الشاشات الضيّقة) — قياسٌ لحظيّ بدل رقمٍ ثابت قد يتراكب.
-    const pagesH=document.getElementById('lv-pages')?.offsetHeight||60;
-    bar.style.bottom=(pagesH+12)+'px';
-    bar.classList.toggle('show',_lvPenOn);
-  }
+  document.getElementById('lv-pen-bar')?.classList.toggle('show',_lvPenOn);
   lvInkCanvas()?.classList.toggle('on',_lvPenOn);
 }
 function lvPenToggle(){_lvPenOn=!_lvPenOn;lvPenSyncUI();}
