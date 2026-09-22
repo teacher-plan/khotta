@@ -3747,6 +3747,9 @@ function trackUsage(eventType,featureName){
 }
 function c1Go(id){
   trackUsage('feature_used',id);
+  // مؤقّت «يومي» كان يبقى دائراً بعد الخروج من القسم: دورةٌ كل ٣٠ ثانية
+  // تستدعي ttNowState وتكتب في DOM لا يراه أحد. يُوقف كما يُوقف مؤقّت الذكر.
+  if(id!=='yawmi'){clearInterval(ywTick);ywTick=null;ywDhikrStop();}
   c1Board(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('page-'+id);
@@ -4916,6 +4919,16 @@ async function ywRenderTT(){
   ywRenderNowCard();
   ttMarkLive(await ttNowState());
 }
+// الدرس المقابل للحصة الجارية: أوّل درسٍ لم تُنجزه هذه الشعبة — منطق بطاقة
+// اليوم نفسه، لكن بصفّ الحصة ومادّتها لا بمحدَّد قسم الخطة. وبدونه كان زر
+// «ابدأ الحصة» يفتح مسرحاً فارغاً: لا مخرجات ولا صفحات كتاب ولا ملخص.
+function ywNowLessonId(classId,subject){
+  const g=c1GradeOf(classId);
+  if(!g||!subject)return'';
+  const units=(profile.plan_units&&profile.plan_units[planKey(g.num,subject)])||[];
+  for(const u of units)for(const l of u.lessons)if(!planGet(l.id).classes[classId])return l.id;
+  return'';
+}
 // بطاقة الحصة الجارية فوق الجدول — الفعل الأهم في اليوم
 async function ywRenderNowCard(){
   const box=document.getElementById('yw-now-card');if(!box)return;
@@ -4929,7 +4942,7 @@ async function ywRenderNowCard(){
     <div class="r">تبقّى ${egArNum(st.rem)} دقيقة</div>
     <div class="rail-bar"><i style="width:${pct}%"></i></div>
     <div class="rail-now-btns">
-      <button class="solid" data-c="${escHtml(st.v.c)}" data-s="${escHtml(st.v.s)}" onclick="liveOpenFromBtn(this)">${khG('ابدئي','ابدأ')} الحصة</button>
+      <button class="solid" data-c="${escAttr(st.v.c)}" data-s="${escAttr(st.v.s)}" data-l="${escAttr(ywNowLessonId(st.v.c,st.v.s))}" onclick="liveOpenFromBtn(this)">${khG('ابدئي','ابدأ')} الحصة</button>
       <button onclick="prepOpen('${escJs(st.v.c)}','${escJs(st.v.s)}')">تحضير الحصة</button>
     </div>
   </div>`;
@@ -5043,17 +5056,22 @@ async function prepOpen(classId,subject){
     const key=planKey(g.num,subject);
     let units=(profile.plan_units&&profile.plan_units[key])||[];
     // إن لم تُفتح الخطة لهذه المادة من قبل، نجلب الدروس من قاعدة البيانات مباشرة (نفس نمط قسم الألعاب)
+    let prepLoadErr=false;
     if(!units.length){
       try{
         const semester=profile.semester||'الفصل الأول';
         const data=await c1Curriculum(semester,subject,g.num);
-        if(data&&data.length){
+        if(data==null)prepLoadErr=true;
+        else if(data.length){
           units=buildUnitsFromRows(data,semester,subject);
           profile.plan_units={...(profile.plan_units||{}),[key]:units};
         }
-      }catch(e){}
+      }catch(e){prepLoadErr=true;}
     }
-    lessonName=units.length?'أُنجزت كل الدروس المرفوعة لهذه الشعبة — '+khG('أحسنتِ','أحسنت')+'!':'لا دروس مرفوعة لهذه المادة بعد';
+    // فشل الطلب لا يُقال عنه «لا دروس مرفوعة» — مع زرٍّ يُعيد المحاولة
+    lessonName=prepLoadErr
+      ?'تعذّر تحميل الدروس — '+khG('أعيدي','أعِد')+' المحاولة <button class="pl-btn" style="margin-inline-start:8px" onclick="prepOpen(\''+escJs(classId)+'\',\''+escJs(subject)+'\')">إعادة المحاولة</button>'
+      :(units.length?'أُنجزت كل الدروس المرفوعة لهذه الشعبة — '+khG('أحسنتِ','أحسنت')+'!':'لا دروس مرفوعة لهذه المادة بعد');
     outer:
     for(const u of units){
       for(const l of u.lessons){
@@ -6114,22 +6132,28 @@ async function planRenderUnits(){
   let units=(profile.plan_units&&profile.plan_units[key])||[];
   const classes=planClassesFor(planGrade,planSubject);
   const box=document.getElementById('plan-sections');
+  // «فارغ» و«فشل الطلب» كانا رسالةً واحدة: c1Curriculum يُعيد null عند الخطأ،
+  // فكانت المعلّمة على شبكةٍ متقطّعة تقرأ «لا دروس مرفوعة» وتظنّ المنهج لم يُرفع.
+  let planLoadErr=false;
   if(!units.length){
     box.innerHTML='<div class="plan-empty-card">يجري البحث عن دروس هذه المادة...</div>';
     try{
       const semester=profile.semester||'الفصل الأول';
       const data=await c1Curriculum(semester,planSubject,planGrade);
-      if(data&&data.length){
+      if(data==null)planLoadErr=true;
+      else if(data.length){
         units=buildUnitsFromRows(data,semester,planSubject);
         profile.plan_units={...(profile.plan_units||{}),[key]:units};
       }
-    }catch(e){}
+    }catch(e){planLoadErr=true;}
   }
   const totalLessons=units.reduce((s,u)=>s+u.lessons.length,0);
   const doneLessons=units.reduce((s,u)=>s+u.lessons.filter(l=>planGet(l.id).done).length,0);
   document.getElementById('plan-count').textContent=totalLessons?`${escHtml(String(doneLessons))}/${escHtml(String(totalLessons))} درس منجز`:'';
   if(!units.length){
-    box.innerHTML='<div class="plan-empty-card">لا دروس مرفوعة لهذه المادة بعد — سيرفعها المشرف قريباً.</div>';
+    box.innerHTML=planLoadErr
+      ?'<div class="plan-empty-card">تعذّر تحميل الدروس — '+khG('أعيدي','أعِد')+' المحاولة<div style="margin-top:10px"><button class="pl-btn" onclick="planRenderUnits()">إعادة المحاولة</button></div></div>'
+      :'<div class="plan-empty-card">لا دروس مرفوعة لهذه المادة بعد — سيرفعها المشرف قريباً.</div>';
     return;
   }
   // الوحدة المفتوحة: أول وحدة غير مكتملة افتراضياً — المعلمة تصل لموضعها بلا بحث
@@ -8968,7 +8992,7 @@ function starStageClose(){document.getElementById('star-stage').classList.remove
 // ═══════════ وضع الحصة الحية — لوحة تحكم ثابتة + مساحة عرض المرفقات ═══════════
 let liveCtx=null,liveTimerSec=300,liveTimerRunning=false,liveTimerHandle=null,_liveShuffleT=null;
 let _liveBook=null,_liveBookAt=-1,_liveBookLoading=false,_liveBookError=false;
-function liveOpenFromBtn(btn){liveOpen(btn.dataset.c,btn.dataset.s);}
+function liveOpenFromBtn(btn){liveOpen(btn.dataset.c,btn.dataset.s,btn.dataset.l||null);}
 function liveOpen(classId,subject,lessonId){
   const cls=starClassObj(classId);
   if(!cls)return;
@@ -9083,10 +9107,14 @@ async function liveLoadBook(){
       // فشلٌ صامت سابقاً: لا صفحات ولا رسالة، فتظنّ المعلمة أن المرفق ما يزال يُحضَّر إلى الأبد.
       // الآن كل فشلٍ (مصدرٌ ناقص/خطأ شبكة/مهلة) يظهر برسالةٍ صريحة بدل الاختفاء بصمت.
       if(!_liveBook.length)_liveBookError=true;
+      // القفل يُرفع قبل الرسم لا بعده: liveRenderLauncher يفحص _liveBookLoading
+      // قبل _liveBookError، فلو رسمنا والقفل قائم ظلّت البلاطة على «يجري
+      // تحضيرها…» ولم يظهر زر إعادة المحاولة أبداً.
+      _liveBookLoading=false;
       liveRenderLauncher();
     }
   }catch(e){
-    if(liveCtx&&liveCtx.lessonId===forLesson){_liveBook=[];_liveBookError=true;liveRenderLauncher();}
+    if(liveCtx&&liveCtx.lessonId===forLesson){_liveBook=[];_liveBookError=true;_liveBookLoading=false;liveRenderLauncher();}
   }
   finally{_liveBookLoading=false;}
 }
@@ -11698,7 +11726,10 @@ async function shLoad(){
   // ٢) التحديث بالخلفية
   try{
     let q=sb.from('c1_shared_assets').select('*').eq('subject',shSubject).eq('grade',String(shGrade));
+    // 'الكل' لا يعني كل الأنواع: shAutoPublish ينشر prep وslides أيضاً،
+    // وslides لا معاينة له ولا حفظ في هذا القسم — فلا يُعرض.
     if(shKind!=='all')q=q.eq('kind',shKind);
+    else q=q.in('kind',['game','info','prep']);
     const{data,error}=await q.order('created_at',{ascending:false}).limit(200);
     if(error)throw error;
     const items=data||[];
@@ -11744,13 +11775,14 @@ function shRenderList(){
 // يُرفع إليه الملخص فعلاً)، وما سواه لا يُعرض بتة.
 const SH_IMG_RE=/^https:\/\/[A-Za-z0-9.\-]+\/storage\/v1\/object\/public\/library-files\//;
 function shImgUrlOk(u){return typeof u==='string'&&SH_IMG_RE.test(u);}
+const SH_KIND_LBL={game:'لعبة',info:'ملخص',prep:'تحضير'};
 function shCardHtml(it){
   const mine=it.user_id===currentUser.id;
   const thumb=it.kind==='info'&&shImgUrlOk(it.image_url)
     ? `<img src="${escAttr(it.image_url)}" alt="ملخص ${escAttr(it.lesson)}" loading="lazy">`
     : `<svg viewBox="0 0 24 24" fill="currentColor" width="34" height="34"><path d="M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM8 13H6v2H4v-2H2v-2h2V9h2v2h2v2zm7 2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>`;
   return `<div class="sh-item">
-    <div class="sh-thumb">${thumb}<span class="sh-kind">${it.kind==='game'?'لعبة':'ملخص'}</span></div>
+    <div class="sh-thumb">${thumb}<span class="sh-kind">${SH_KIND_LBL[it.kind]||'ملف'}</span></div>
     <div class="sh-body">
       <div class="sh-nm">${escHtml(it.title||it.lesson)}</div>
       <div class="sh-by">بواسطة ${escHtml(it.uploader_name||'معلمة')}</div>
@@ -11765,6 +11797,17 @@ function shCardHtml(it){
 function shFind(id){return shItems.find(x=>x.id===id);}
 async function shPreview(id){
   const it=shFind(id);if(!it)return;
+  // التحضير نوعٌ ثالث: حمولته خطة درسٍ لا عناصر لعبة، فمعاينته بعارض الخطة
+  // نفسه. وبدون هذا كان يُعالَج لعبةً فتُفتح لعبةٌ فارغة.
+  if(it.kind==='prep'){
+    if(!it.content){toast('لا تحضير لمعاينته',true);return;}
+    document.getElementById('today-modal-title').textContent='تحضير الدرس — '+(it.lesson||'');
+    document.getElementById('today-modal-body').innerHTML=
+      `<div class="plan-empty-card" style="margin-bottom:10px">هذه خطةٌ جهّزتها ${escHtml(it.uploader_name||'زميلة')}</div>`
+      +renderPrepHtml(it.content);
+    document.getElementById('today-modal').classList.add('open');
+    return;
+  }
   if(it.kind==='info'){
     if(!shImgUrlOk(it.image_url)){toast('رابط الملخص غير صالح',true);return;}
     imgFullOpen(it.image_url,'ملخص — '+it.lesson);return;
@@ -11796,7 +11839,13 @@ async function shSave(id,btn){
   if(!target){toast('لم نجد هذا الدرس في خطتك — '+khG('افتحي','افتح')+' قسم الخطة لهذه المادة أولاً',true);return;}
   shBusy=true;if(btn){btn.disabled=true;btn.textContent='يحفظ...';}
   try{
-    if(it.kind==='info'){
+    if(it.kind==='prep'){
+      // التحضير يُتبنّى كما يتبنّاه المسار التلقائي (shAdopt): يُكتب في حالة
+      // الدرس مع أثر صاحبته. وكان يُدرَج في games بـtemplate=undefined —
+      // والعمود NOT NULL، فيفشل الإدراج وتقرأ المعلّمة «تعذّر الحفظ».
+      if(!it.content)throw new Error('no content');
+      await planSetState(target.id,{prep:it.content,prep_at:new Date().toISOString(),prep_from:it.uploader_name||'زميلة'});
+    }else if(it.kind==='info'){
       // إشارة لا نسخة: مسار الملخص صار ثابتاً لا يُكتب فوقه (c1InfoPath)، فإعادة
       // توليد صاحبته تُنشئ ملفاً جديداً ولا تمسّ هذا. والنسخ هنا كان سيُضاعف
       // المساحة بعدد الحافظات بلا فائدة — الصورة نفسها لكل من حفظتها.
