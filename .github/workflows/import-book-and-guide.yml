@@ -1,0 +1,149 @@
+# استيراد كتاب طالبٍ ودليل معلمٍ معاً (أي صفٍّ/حلقة) — بيدٍ لا تلقائياً.
+#
+# نفس سبب import-teacher-guides.yml: مصادر الكتب (Google Drive) خارج نطاق
+# الشبكة المسموح بها من بيئة العمل التفاعلية، فتُنجَز هنا حيث الشبكة مفتوحة.
+# يُنزَّل كل ملفٍّ عبر gdown، يُحوَّل لصور صفحاتٍ عبر pdftoppm، تُرفع الصور
+# لمخزن Supabase، ثم يُسجَّل صفٌّ في book_sources (كتاب الطالب) وteacher_guides
+# (دليل المعلم) بحالة 'uploaded'. التقطيع (segment-book) ومطابقة الفهرس
+# (index-teacher-guide) تبقيان خطوتين يدويتين لاحقاً من لوحة الإدارة — تحتاجان
+# جلسة مشرفٍ حقيقية ومراجعةً بشرية قبل الاعتماد.
+name: Import book + teacher guide (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      grade:
+        description: 'رقم الصف (١-١٢)'
+        required: true
+      subject:
+        description: 'اسم المادة كما يظهر في curriculum.subject'
+        required: true
+      semester:
+        description: 'الفصل الدراسي'
+        required: true
+        default: 'الفصل الأول'
+      book_no:
+        description: 'رقم الكتاب (١ افتراضياً؛ فقط للحلقة الأولى قد يتعدد)'
+        required: true
+        default: '1'
+      student_book_drive_id:
+        description: 'معرّف ملف كتاب الطالب على Google Drive (اتركه فارغاً لتخطّي الكتاب)'
+        required: false
+        default: ''
+      teacher_guide_drive_id:
+        description: 'معرّف ملف دليل المعلم على Google Drive (اتركه فارغاً لتخطّي الدليل)'
+        required: false
+        default: ''
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تثبيت الأدوات
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          pip install --quiet gdown
+
+      - name: استيراد
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          BUCKET: library-files
+          GRADE: ${{ inputs.grade }}
+          SUBJECT: ${{ inputs.subject }}
+          SEMESTER: ${{ inputs.semester }}
+          BOOK_NO: ${{ inputs.book_no }}
+          SB_ID: ${{ inputs.student_book_drive_id }}
+          TG_ID: ${{ inputs.teacher_guide_drive_id }}
+        run: |
+          set -uo pipefail
+
+          echo "── جلب مفتاح service_role ──"
+          KEYS_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys")
+          SERVICE_KEY=$(echo "$KEYS_JSON" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          if [ -z "$SERVICE_KEY" ] || [ "$SERVICE_KEY" = "null" ]; then
+            echo "::error::تعذّر جلب مفتاح service_role"; exit 1
+          fi
+          SUBJECT_ESC=$(printf '%s' "$SUBJECT" | sed "s/'/''/g")
+          SLUG=$(printf '%s|%s|%s' "$GRADE" "$SUBJECT" "$SEMESTER" | md5sum | cut -c1-10)
+          fail=0
+
+          upload_pages(){
+            # $1=pdf path  $2=storage base path  → يطبع عدد الصفحات المرفوعة على stdout
+            local pdf="$1" base="$2"
+            rm -rf /tmp/pages && mkdir -p /tmp/pages
+            pdftoppm -jpeg -r 110 "$pdf" /tmp/pages/p >/dev/null 2>&1
+            local cnt=0
+            for f in $(ls /tmp/pages/p-*.jpg 2>/dev/null | sort -V); do
+              cnt=$((cnt+1)); mv "$f" "/tmp/pages/p${cnt}.jpg"
+            done
+            if [ "$cnt" -eq 0 ]; then echo 0; return; fi
+            local uploaded=0
+            for p in $(seq 1 "$cnt"); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' \
+                -X POST "https://$REF.supabase.co/storage/v1/object/$BUCKET/${base}/p${p}.jpg" \
+                -H "Authorization: Bearer $SERVICE_KEY" -H "Content-Type: image/jpeg" -H "x-upsert: true" \
+                --data-binary "@/tmp/pages/p${p}.jpg")
+              if [ "$code" = "200" ] || [ "$code" = "201" ]; then uploaded=$((uploaded+1)); fi
+            done
+            echo "$uploaded"
+          }
+
+          if [ -n "$SB_ID" ]; then
+            echo "════════ كتاب الطالب ════════"
+            base="books/manual-${SLUG}"
+            rm -f /tmp/book.pdf
+            if gdown "https://drive.google.com/uc?id=${SB_ID}" -O /tmp/book.pdf --quiet && head -c4 /tmp/book.pdf | grep -q "%PDF"; then
+              N=$(pdfinfo /tmp/book.pdf 2>/dev/null | awk -F': *' '/^Pages/{print $2}')
+              echo "  عدد الصفحات: $N"
+              up=$(upload_pages /tmp/book.pdf "$base")
+              echo "  رُفع $up من $N صفحة"
+              if [ "$up" -gt 0 ]; then
+                q="insert into public.book_sources (grade, subject, semester, book_no, base_path, page_count, offset_pages)
+                   values ('${GRADE}', '${SUBJECT_ESC}', '${SEMESTER}', ${BOOK_NO}, '${base}', ${up}, 1)
+                   on conflict (grade, subject, semester, book_no) do update
+                   set base_path=excluded.base_path, page_count=excluded.page_count, offset_pages=1, updated_at=now();"
+                body=$(jq -Rs '{query: .}' <<< "$q")
+                code=$(curl -s -o /tmp/resp1.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+                  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body")
+                if [ "$code" = "200" ] || [ "$code" = "201" ]; then echo "✅ سُجِّل في book_sources"; else echo "❌ فشل تسجيل book_sources ($code)"; cat /tmp/resp1.json; fail=1; fi
+              else
+                echo "❌ لم تُرفع أي صفحة — لا يُسجَّل مصدر ناقص"; fail=1
+              fi
+            else
+              echo "❌ فشل تنزيل كتاب الطالب (drive_id=$SB_ID)"; fail=1
+            fi
+          else
+            echo "(تخطّي كتاب الطالب — لا معرّف)"
+          fi
+
+          if [ -n "$TG_ID" ]; then
+            echo "════════ دليل المعلم ════════"
+            base="teacher-guides/manual-${SLUG}"
+            rm -f /tmp/guide.pdf
+            if gdown "https://drive.google.com/uc?id=${TG_ID}" -O /tmp/guide.pdf --quiet && head -c4 /tmp/guide.pdf | grep -q "%PDF"; then
+              N=$(pdfinfo /tmp/guide.pdf 2>/dev/null | awk -F': *' '/^Pages/{print $2}')
+              echo "  عدد الصفحات: $N"
+              up=$(upload_pages /tmp/guide.pdf "$base")
+              echo "  رُفع $up من $N صفحة"
+              if [ "$up" -gt 0 ]; then
+                q="insert into public.teacher_guides (semester, grade, subject, base_path, page_count, offset_pages, status)
+                   values ('${SEMESTER}', ${GRADE}, '${SUBJECT_ESC}', '${base}', ${up}, 1, 'uploaded')
+                   on conflict (grade, subject, semester) do update
+                   set base_path=excluded.base_path, page_count=excluded.page_count, offset_pages=1, status='uploaded', updated_at=now();"
+                body=$(jq -Rs '{query: .}' <<< "$q")
+                code=$(curl -s -o /tmp/resp2.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+                  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body")
+                if [ "$code" = "200" ] || [ "$code" = "201" ]; then echo "✅ سُجِّل في teacher_guides"; else echo "❌ فشل تسجيل teacher_guides ($code)"; cat /tmp/resp2.json; fail=1; fi
+              else
+                echo "❌ لم تُرفع أي صفحة — لا يُسجَّل دليل ناقص"; fail=1
+              fi
+            else
+              echo "❌ فشل تنزيل دليل المعلم (drive_id=$TG_ID)"; fail=1
+            fi
+          else
+            echo "(تخطّي دليل المعلم — لا معرّف)"
+          fi
+
+          exit $fail
