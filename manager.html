@@ -12796,9 +12796,13 @@ async function ref_addManualRegistration(){
 let ref_pageViewsSince=null;
 async function ref_loadPageViews(){
   try{
-    const{count,error}=await sb.from('page_views').select('id',{count:'exact',head:true}).eq('page','cycle1-landing');
+    // العدّاد يتبع النطاق المختار: كان يقرأ cycle1-landing دائماً، فكانت
+    // زيارات صفحة ما بعد الحلقة الأولى تُسجَّل ولا تظهر في أي مكان، ونسبةُ
+    // تحويلها تُحسب من زيارات حلقةٍ أخرى.
+    const pv=ref_SCOPE_PAGE[ref_cycleScope]||'cycle1-landing';
+    const{count,error}=await sb.from('page_views').select('id',{count:'exact',head:true}).eq('page',pv);
     if(!error)ref_pageViewsCount=count;
-    const{data:first}=await sb.from('page_views').select('created_at').eq('page','cycle1-landing').order('created_at',{ascending:true}).limit(1).maybeSingle();
+    const{data:first}=await sb.from('page_views').select('created_at').eq('page',pv).order('created_at',{ascending:true}).limit(1).maybeSingle();
     ref_pageViewsSince=first?first.created_at:null;
   }catch(e){}
 }
@@ -12847,6 +12851,7 @@ const ref_stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 ال
 const ref_SCOPE_STAGES={cycle1:['cycle1'],post:['5-9','10-12']};
 const ref_SCOPE_LABEL={cycle1:'الحلقة الأولى',post:'ما بعد الحلقة الأولى',all:'كل الحلقات'};
 const ref_SCOPE_LANDING={cycle1:'/cycle1-landing.html',post:'/landing.html'};
+const ref_SCOPE_PAGE={cycle1:'cycle1-landing',post:'cycle2-landing'};
 let ref_cycleScope=localStorage.getItem('kh_cycle_scope')||'cycle1';
 if(!ref_SCOPE_LABEL[ref_cycleScope])ref_cycleScope='cycle1';
 
@@ -12861,6 +12866,9 @@ function ref_setCycleScope(scope,btn){
   document.querySelectorAll('#page-referrals #cycle-seg button').forEach(b=>b.classList.toggle('active',b===btn));
   ref_syncScopeUI();
   ref_renderDataTab();ref_renderFinanceTab();ref_renderOverviewTab();ref_renderAccountsTab();ref_renderFriendsTable();
+  // عدّاد الزيارات صار تابعاً للنطاق، فيُعاد تحميله عند تبديله — وإلا بقي
+  // رقم النطاق السابق معروضاً تحت عنوان النطاق الجديد.
+  ref_loadPageViews().then(()=>{try{ref_renderOverviewTab();}catch(e){}});
 }
 function ref_syncScopeUI(){
   document.querySelectorAll('#page-referrals #cycle-seg button').forEach(b=>b.classList.toggle('active',b.dataset.scope===ref_cycleScope));
