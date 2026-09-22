@@ -4229,7 +4229,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='2807dfd';
+const KH_BUILD='e08d074';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -4960,6 +4960,10 @@ async function ywRenderNowCard(){
   const st=await ttNowState();
   if(!st.live||!st.v){box.innerHTML='';return;}
   const c=c1AllClasses().find(x=>x.id===st.v.c);
+  // تحديث plan_units قبل حساب معرّف الدرس: بدونه يُبنى زرّ «ابدأ الحصة»
+  // على منهجٍ قديمٍ مخزَّن قد يكون استُبدل، فيفتح حصةً بلا صفحات كتاب.
+  const _g=c1GradeOf(st.v.c);
+  if(_g)await planUnitsRefresh(_g.num,st.v.s);
   const pct=Math.round((1-st.rem/st.len)*100);
   box.innerHTML=`<div class="rail-now-card">
     <div class="t">الحصة ${egArNum(st.p+1)} — جارية الآن</div>
@@ -5080,19 +5084,12 @@ async function prepOpen(classId,subject){
   if(g){
     const key=planKey(g.num,subject);
     let units=(profile.plan_units&&profile.plan_units[key])||[];
-    // إن لم تُفتح الخطة لهذه المادة من قبل، نجلب الدروس من قاعدة البيانات مباشرة (نفس نمط قسم الألعاب)
+    // تحديثٌ دائم لا فقط أول مرة (planUnitsRefresh) — نفس سبب إصلاحها في
+    // planRenderUnits وywRenderNowCard: منهجٌ يُعاد تصحيحه يُبطل المخزَّن.
     let prepLoadErr=false;
-    if(!units.length){
-      try{
-        const semester=profile.semester||'الفصل الأول';
-        const data=await c1Curriculum(semester,subject,g.num);
-        if(data==null)prepLoadErr=true;
-        else if(data.length){
-          units=buildUnitsFromRows(data,semester,subject);
-          profile.plan_units={...(profile.plan_units||{}),[key]:units};
-        }
-      }catch(e){prepLoadErr=true;}
-    }
+    const fresh=await planUnitsRefresh(g.num,subject);
+    if(fresh.length)units=fresh;
+    else if(!units.length)prepLoadErr=true;
     // فشل الطلب لا يُقال عنه «لا دروس مرفوعة» — مع زرٍّ يُعيد المحاولة
     lessonName=prepLoadErr
       ?'تعذّر تحميل الدروس — '+khG('أعيدي','أعِد')+' المحاولة <button class="pl-btn" style="margin-inline-start:8px" onclick="prepOpen(\''+escJs(classId)+'\',\''+escJs(subject)+'\')">إعادة المحاولة</button>'
@@ -6153,6 +6150,25 @@ function buildUnitsFromRows(rows,semester,subject){
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
+// يُحدَّث دوماً من curriculum الحيّ بدل الثقة بالمخزَّن في ملفّ المعلّمة:
+// منهجٌ يُعاد تصحيحه من لوحة الإدارة (اعتماد تقطيعٍ نهائي بعد مسودة) يُبدّل
+// نصوص الوحدات/الدروس، فتتحوّل معرّفات plan_units المحفوظة سابقاً إلى
+// مراجع ميتة لا تطابق شيئاً في curriculum — هذا فعلياً ما عطّل صفحات
+// الكتاب في الحصة الحية لرياضيات صف٧ (خطةٌ بُنيت على تقطيعٍ أوّلي، ثم
+// اعتُمد تقطيعٌ نهائي بنصٍّ مختلف).
+async function planUnitsRefresh(grade,subject){
+  const key=planKey(grade,subject);
+  try{
+    const semester=profile.semester||'الفصل الأول';
+    const data=await c1Curriculum(semester,subject,grade,'*',true);
+    if(data&&data.length){
+      const units=buildUnitsFromRows(data,semester,subject);
+      profile.plan_units={...(profile.plan_units||{}),[key]:units};
+      return units;
+    }
+  }catch(e){}
+  return(profile.plan_units&&profile.plan_units[key])||[];
+}
 let planGrade=null,planSubject=null,planUnitIdx=null,todayCache=null,todayAttachLessonId=null;
 // أسماء الصفوف ١–١٢. الأربعة الأولى كما كانت حرفاً بحرف، والبقيّة مطابقة
 // لأسماء الحلقة الثانية في index.html.
@@ -6219,18 +6235,20 @@ async function planRenderUnits(){
   // «فارغ» و«فشل الطلب» كانا رسالةً واحدة: c1Curriculum يُعيد null عند الخطأ،
   // فكانت المعلّمة على شبكةٍ متقطّعة تقرأ «لا دروس مرفوعة» وتظنّ المنهج لم يُرفع.
   let planLoadErr=false;
-  if(!units.length){
-    box.innerHTML='<div class="plan-empty-card">يجري البحث عن دروس هذه المادة...</div>';
-    try{
-      const semester=profile.semester||'الفصل الأول';
-      const data=await c1Curriculum(semester,planSubject,planGrade);
-      if(data==null)planLoadErr=true;
-      else if(data.length){
-        units=buildUnitsFromRows(data,semester,planSubject);
-        profile.plan_units={...(profile.plan_units||{}),[key]:units};
-      }
-    }catch(e){planLoadErr=true;}
-  }
+  // نجلب المنهج الحيّ دوماً لا فقط أول مرة: منهجٌ يُعاد تصحيحه من لوحة
+  // الإدارة (اعتماد تقطيعٍ نهائي بعد مسودة) يُبدّل نصوص الدروس، فيتحوّل
+  // plan_units المخزَّن سابقاً في ملفّ المعلّمة إلى معرّفات ميتة لا تطابق
+  // شيئاً — هذا فعلياً ما عطّل صفحات الكتاب في الحصة الحية لرياضيات صف٧.
+  if(units.length)box.innerHTML='';else box.innerHTML='<div class="plan-empty-card">يجري البحث عن دروس هذه المادة...</div>';
+  try{
+    const semester=profile.semester||'الفصل الأول';
+    const data=await c1Curriculum(semester,planSubject,planGrade,'*',true);
+    if(data==null){if(!units.length)planLoadErr=true;}
+    else if(data.length){
+      units=buildUnitsFromRows(data,semester,planSubject);
+      profile.plan_units={...(profile.plan_units||{}),[key]:units};
+    }
+  }catch(e){if(!units.length)planLoadErr=true;}
   const totalLessons=units.reduce((s,u)=>s+u.lessons.length,0);
   const doneLessons=units.reduce((s,u)=>s+u.lessons.filter(l=>planGet(l.id).done).length,0);
   document.getElementById('plan-count').textContent=totalLessons?`${escHtml(String(doneLessons))}/${escHtml(String(totalLessons))} درس منجز`:'';
@@ -6962,15 +6980,7 @@ async function todayCtx(){
       }
     }
   }catch(e){}
-  const key=planKey(grade,subject);
-  let units=(profile.plan_units&&profile.plan_units[key])||[];
-  if(!units.length){
-    try{
-      const semester=profile.semester||'الفصل الأول';
-      const data=await c1Curriculum(semester,subject,grade);
-      if(data&&data.length){units=buildUnitsFromRows(data,semester,subject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
-    }catch(e){}
-  }
+  let units=await planUnitsRefresh(grade,subject);
   // مع شعبة محددة نتتبع تقدّمها وحدها، وبدونها نتتبع حالة الدرس العامة
   let lessonId=null,lessonName=null,unitName=null;
   outer: for(const u of units){
@@ -9509,15 +9519,7 @@ async function studioRenderLessons(){
   const sel=document.getElementById('studio-lesson-sel');
   if(!studioGrade||!studioSubject){sel.innerHTML='<option value="">'+khG('اختاري','اختر')+' صفاً ومادة أولاً</option>';studioLessonName=null;studioLessons=[];return;}
   sel.innerHTML='<option value="">يجري تحميل الدروس...</option>';
-  const key=planKey(studioGrade,studioSubject);
-  let units=(profile.plan_units&&profile.plan_units[key])||[];
-  if(!units.length){
-    try{
-      const semester=profile.semester||'الفصل الأول';
-      const data=await c1Curriculum(semester,studioSubject,studioGrade);
-      if(data&&data.length){units=buildUnitsFromRows(data,semester,studioSubject);profile.plan_units={...(profile.plan_units||{}),[key]:units};}
-    }catch(e){}
-  }
+  const units=await planUnitsRefresh(studioGrade,studioSubject);
   const lessons=[];
   units.forEach(u=>(u.lessons||[]).forEach(l=>lessons.push({name:l.name,unit:u.name})));
   studioLessons=lessons;
