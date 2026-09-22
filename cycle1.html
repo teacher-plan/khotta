@@ -9592,7 +9592,17 @@ function lvPenClear(){
     }else if(pts.size===2){
       dragPan=null;
       const arr=[...pts.values()];
-      pinch={d0:Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y),zoom0:_liveBookZoom,panX0:_liveBookPanX,panY0:_liveBookPanY};
+      const f0x=(arr[0].x+arr[1].x)/2, f0y=(arr[0].y+arr[1].y)/2;   // نقطة تماسّ الإصبعين
+      // مركز التخطيط الثابت للنشرة = مركزها الظاهر ناقص الإزاحة الحالية
+      // (التكبير حول المركز لا يُزيح المركز، والإزاحة وحدها تُحرّكه).
+      const sp=spreadEl();
+      const rc=sp?sp.getBoundingClientRect():{left:0,top:0,width:0,height:0};
+      const lcx=(rc.left+rc.width/2)-_liveBookPanX, lcy=(rc.top+rc.height/2)-_liveBookPanY;
+      const z0=_liveBookZoom||1;
+      // موضع النقطة (تحت الإصبعين) في إحداثيات المحتوى غير المكبَّر — تبقى
+      // مثبَّتةً تحت الإصبعين طوال التكبير، فيتم التكبير فعلياً في موضعهما.
+      const dcx=(f0x-lcx-_liveBookPanX)/z0, dcy=(f0y-lcy-_liveBookPanY)/z0;
+      pinch={d0:Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y),zoom0:z0,lcx,lcy,dcx,dcy};
       spreadEl()?.classList.add('panning');
     }
   });
@@ -9602,8 +9612,14 @@ function lvPenClear(){
     if(pts.size===2&&pinch){
       const arr=[...pts.values()];
       const d=Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y);
+      const fx=(arr[0].x+arr[1].x)/2, fy=(arr[0].y+arr[1].y)/2;     // موضع الإصبعين الآن
       _liveBookZoom=Math.max(1,Math.min(LV_ZOOM_MAX,pinch.zoom0*(d/pinch.d0)));
-      _liveBookPanX=_liveBookZoom<=1?0:pinch.panX0;_liveBookPanY=_liveBookZoom<=1?0:pinch.panY0;
+      if(_liveBookZoom<=1){_liveBookPanX=0;_liveBookPanY=0;}
+      else{
+        // نُبقي نقطة المحتوى تحت الإصبعين: تكبيرٌ في موضعهما + متابعةٌ لتحرّكهما
+        _liveBookPanX=fx-pinch.lcx-_liveBookZoom*pinch.dcx;
+        _liveBookPanY=fy-pinch.lcy-_liveBookZoom*pinch.dcy;
+      }
       clampPan();
       body.classList.toggle('zoomed',_liveBookZoom>1);
       applyVars();
