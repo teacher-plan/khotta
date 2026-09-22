@@ -4019,11 +4019,14 @@ async function afterAuth(session){
         await sb.auth.signOut();
         showLogin('هذا البريد غير مصرّح له بالدخول');return;
       }
-      if(allowed.cycle!=='cycle1'){await sb.auth.signOut();showLogin('هذا حساب الحلقة الثانية — '+khG('ادخلي','ادخل')+' من الموقع الرئيسي');return;}
+      // البوّابة: تُقبل الحلقات التي يعرفها التطبيق (مفاتيح CYCLE_GRADES) لا
+      // 'cycle1' وحدها. وما عداها — غائبةً كانت أو فارغةً أو قيمةً مجهولة —
+      // يُرفض صراحةً؛ فالدخول بحلقةٍ لا يعرفها التطبيق يعني صفوفاً خاطئة.
+      if(!allowed.cycle||!CYCLE_GRADES[allowed.cycle]){await sb.auth.signOut();showLogin('حسابك غير مربوطٍ بحلقةٍ معروفة — راجع الإدارة');return;}
     }
-    // الحلقة الفعّالة من صفّ المعلّمة. لا تتغيّر اليوم عن 'cycle1' لأن البوّابة
-    // أعلاه ما زالت تمنع حسابات الحلقة الثانية عمداً؛ وحين يُفتح الباب لهم
-    // لاحقاً يكفي رفع ذلك الشرط وحده. القيمة المجهولة تبقى 'cycle1'.
+    // الحلقة الفعّالة من صفّ المعلّمة. الشرط نفسه المذكور أعلاه حرفاً بحرف:
+    // ما اجتاز البوّابة بحلقةٍ معروفة يضبطها هنا، والمشرف (الذي يتخطّى
+    // البوّابة) يبقى على الافتراضي 'cycle1' إن لم يكن له صفٌّ معروف.
     if(allowed&&allowed.cycle&&CYCLE_GRADES[allowed.cycle])APP_CYCLE=allowed.cycle;
   }catch(e){await sb.auth.signOut();showLogin('تعذّر التحقق، '+khG('حاولي','حاول')+' مجدداً');return;}
   // ⚠️ لا ندخل التطبيق بملف مجهول الحال. supabase-js لا يرمي استثناءً عند فشل
@@ -4206,7 +4209,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='3b108a5';
+const KH_BUILD='b4ba233';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -4378,9 +4381,10 @@ function newClsRender(){
   }
 
   document.getElementById('newcls-subs').innerHTML=newCls.g
-    ? subjectsForGrade(newCls.g,newClsRender).map(s=>
+    ? (subjectsForGrade(newCls.g,newClsRender).map(s=>
         `<button type="button" class="chip olv ${newCls.subs.includes(s)?'sel':''}"
           onclick="newClsToggleSub('${escJs(s)}')">${escHtml(s)}</button>`).join('')
+       ||subjectsNotice(newCls.g))
     : '<span class="acct-note" style="margin:0">'+khG('اختاري','اختر')+' الصف أولاً</span>';
 
   document.getElementById('newcls-list').innerHTML=newCls.stu.length
@@ -5309,6 +5313,30 @@ function libSubjSlug(s){
 // c1Ref نفسه. القراءة غير متزامنة، فتُرجَع [] أوّل مرّة ثمّ يُستدعى onReady
 // لإعادة الرسم حين تصل القائمة.
 const _c1GradeSubj={};
+// حالة القراءة لكلّ مفتاح: 'loading' | 'empty' | 'error' | 'ready'
+// تُستعمل لعرض «يحمّل المواد…» بدل صندوقٍ فارغٍ يبدو كأنّ الصفّ بلا مواد.
+const _c1GradeSubjState={};
+// الفصل الدراسي المعتمد في قراءة المواد: أثناء الإعداد لم يُحفظ الفصل في
+// الملف بعد، فالمختار في المعالج (suSem) هو الصحيح.
+function c1SubjSem(){
+  try{if(!profile.setupDone&&typeof suSem==='string'&&suSem)return suSem;}catch(e){}
+  return (profile&&profile.semester)||'الفصل الأول';
+}
+function c1GradeSubjKey(grade){return c1SubjSem()+'|'+Number(grade);}
+// 'ready' لصفوف الحلقة الأولى دائماً (لا استعلام أصلاً)
+function subjectsState(grade){
+  const g=Number(grade);
+  if(CYCLE_GRADES.cycle1.includes(g))return 'ready';
+  return _c1GradeSubjState[c1GradeSubjKey(g)]||'loading';
+}
+// رسالةٌ صريحة تحلّ محلّ قائمة المواد حين لا تكون جاهزة (أو '' إن كانت)
+function subjectsNotice(grade){
+  const st=subjectsState(grade);
+  if(st==='loading')return '<span class="acct-note" style="margin:0">… يحمّل المواد</span>';
+  if(st==='empty')return '<span class="acct-note" style="margin:0">لا توجد مواد مسجّلة لهذا الصف في المنهج. '+khG('اختاري','اختر')+' صفاً آخر أو '+khG('راسلي','راسل')+' الإدارة.</span>';
+  if(st==='error')return '<span class="acct-note" style="margin:0">تعذّر تحميل مواد هذا الصف — '+khG('تحققي','تحقق')+' من الاتصال ثم '+khG('أعيدي','أعد')+' المحاولة.</span>';
+  return '';
+}
 function c1SubjectsOfGrade(semester,grade){
   return c1Ref('curriculum','subjects|'+semester+'|'+grade,async()=>{
     const{data,error}=await sb.from('curriculum').select('subject').eq('semester',semester).eq('grade',String(grade)).order('sort');
@@ -5321,16 +5349,24 @@ function c1SubjectsOfGrade(semester,grade){
 function subjectsForGrade(grade,onReady){
   const g=Number(grade);
   if(CYCLE_GRADES.cycle1.includes(g))return C1_SUBJECTS;
-  const k=String(g);
+  const sem=c1SubjSem();
+  const k=c1GradeSubjKey(g);
   if(_c1GradeSubj[k])return _c1GradeSubj[k];
-  const sem=profile&&profile.semester||'الفصل الأول';
-  try{
-    c1SubjectsOfGrade(sem,g).then(list=>{
-      if(!list||!list.length)return;
-      _c1GradeSubj[k]=list;
-      if(typeof onReady==='function')onReady();
-    }).catch(function(){});
-  }catch(e){}
+  // استعلامٌ واحدٌ لكلّ مفتاح: ما دامت الحالة مسجّلة فالقراءة جرت أو تجري
+  if(!_c1GradeSubjState[k]){
+    _c1GradeSubjState[k]='loading';
+    try{
+      c1SubjectsOfGrade(sem,g).then(list=>{
+        if(!list){_c1GradeSubjState[k]='error';}
+        else if(!list.length){_c1GradeSubjState[k]='empty';}
+        else{_c1GradeSubj[k]=list;_c1GradeSubjState[k]='ready';}
+        if(typeof onReady==='function')onReady();
+      }).catch(function(){
+        _c1GradeSubjState[k]='error';
+        if(typeof onReady==='function')onReady();
+      });
+    }catch(e){_c1GradeSubjState[k]='error';}
+  }
   return [];
 }
 const C1_CLS_COLORS=['#D86048','#487848','#C0A848','#8A5030','#A83030','#5F8A8B'];
@@ -5391,6 +5427,12 @@ function suRender(){
       +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
       +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
       +'</div></div>'
+      // سؤال المخاطبة — للحلقة الثانية وحدها. الحلقة الأولى خطابها مؤنّثٌ
+      // ثابت فلا يُعرض لها شيء، ولا يتغيّر في معالجها حرف.
+      +(APP_CYCLE==='cycle1'?'':
+        '<div class="fld"><label>طريقة المخاطبة</label><div class="chip-row">'
+        +[['f','معلّمة'],['m','معلّم']].map(x=>'<button class="chip '+(khGender===x[0]?'sel':'')+'" onclick="suPickGender(\''+x[0]+'\')">'+x[1]+'</button>').join('')
+        +'</div><small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">يحدّد صيغة خطاب المنصّة لك ولطلابك — ويمكن تغييره لاحقاً من قائمة الحساب</small></div>')
       +'<button class="c1-mbtn go" style="width:100%;margin-top:14px;padding:13px" onclick="suNext1()">التالي: الصفوف</button></div>';
   }else if(suStep===2){
     el.innerHTML='<div class="su-card">'+steps+'<h2>صفوفك</h2><div class="d">'+khG('اختاري','اختر')+' الصفوف التي '+khG('تدرّسينها','تدرّسها')+'</div>'
@@ -5417,8 +5459,11 @@ function suRender(){
       const n=Number(focus.split('-')[1]);
       const sec=d.secs[n];
       if(sec&&sec.sel){
+        const _subs=subjectsForGrade(suActive,suRender);
+        const _note=_subs.length?'':subjectsNotice(suActive);
         subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي '+khG('تدرّسينها','تدرّسها')+' لشعبة <b>'+gname+'/'+'١٢٣٤٥٦٧٨'[n-1]+'</b>؟</div>'
-          +'<div class="subj-grid">'+subjectsForGrade(suActive,suRender).map(sub=>{
+          +_note
+          +'<div class="subj-grid">'+_subs.map(sub=>{
             const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
             const sel=sec.subjects.includes(sub);
             return '<button class="subj-card '+(sel?'sel':'')+'" style="--sc:'+cc[0]+';--sc2:'+cc[1]+'" onclick="suSecSubj('+n+',\''+sub+'\')"><span class="cband"></span><span class="nm">'+sub+'</span><span class="tick">✓</span></button>';
@@ -5719,12 +5764,27 @@ function suGradeTab(g){
   }
   suActive=g;suRender();
 }
+/* اختيار المخاطبة داخل المعالج — نفس آليّة changeGender: ضبطٌ محلّي ثم
+   khApplyGender لتحديث النصوص الثابتة المرسومة فوراً. الحفظ في الخادم يجري
+   مع بقيّة الإعداد في suFinish (حفظٌ واحد لا اثنان)، وchangeGender يبقى
+   طريق التصحيح لاحقاً. */
+function suPickGender(g){
+  if(APP_CYCLE==='cycle1')return;
+  // ما كُتب في الحقول يُلتقط قبل إعادة الرسم وإلا مُسح
+  const nEl=document.getElementById('su-name');if(nEl)suName=nEl.value;
+  const sEl=document.getElementById('su-school');if(sEl)suSchool=sEl.value;
+  khSetGender(g);
+  khApplyGender();
+  suRender();
+}
 function suNext1(){
   suName=(document.getElementById('su-name').value||'').trim();
   if(!suName){toast(''+khG('اكتبي','اكتب')+' اسمك أولاً',true);return;}
   suSchool=(document.getElementById('su-school').value||'').trim();
   if(!suSchool){toast(''+khG('اكتبي','اكتب')+' اسم المدرسة',true);return;}
   if(!suSem){toast(''+khG('اختاري','اختر')+' الفصل الدراسي',true);return;}
+  // لا افتراض هنا: خطأ التخمين يعني خطاباً مقلوباً طوال اليوم
+  if(APP_CYCLE!=='cycle1'&&!khGender){toast('اختر طريقة المخاطبة: معلّم أو معلّمة',true);return;}
   suStep=2;suRender();
 }
 function suToggleGrade(n){
@@ -5751,7 +5811,10 @@ async function suFinish(){
   // اسم المدرسة يُخزَّن ضمن ach_profile نفسه الذي تقرأ منه الشهادة (certItemFor)
   // حتى لا نُحدث مصدرين مختلفين لنفس المعطى
   const ap={...achProfile(),school:suSchool};
-  const _ok=await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap},'يحفظ إعدادك');
+  // teacher_gender لا يُضاف إطلاقاً في الحلقة الأولى: حمولة الحفظ هناك تبقى
+  // كما هي حرفاً بحرف.
+  const _extra=(APP_CYCLE!=='cycle1'&&khGender)?{teacher_gender:khGender}:{};
+  const _ok=await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap,..._extra},'يحفظ إعدادك');
   // أخطرُ حفظٍ في التطبيق: مسحُ suData/suRosters يمحو كلَّ ما أدخلته في
   // الإعداد. لو لم يصل الخادمَ لضاع عملُ ربع ساعةٍ بلا رجعة.
   if(!_ok)return;
