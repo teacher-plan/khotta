@@ -9,6 +9,6 @@ jobs:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
-          q="select email, updated_at, data->>'semester' as semester, jsonb_pretty(data->'teacher_config') as teacher_config from public.cycle1_profiles where email in ('t1@khotati.app','t2@khotati.app','Xx@y.com') order by updated_at desc;"
+          q="select email, updated_at from public.cycle1_profiles where updated_at > now() - interval '2 days' order by updated_at desc limit 20;"
           body=$(jq -Rs '{query: .}' <<< "$q")
           curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq .
