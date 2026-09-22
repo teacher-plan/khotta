@@ -6337,7 +6337,11 @@ function prepRenderGuideStatus(){
   if(!prepGuide){status.textContent='لا يوجد دليل معلمٍ مرفوع لهذا النطاق بعد — ارفعي ملف PDF';idxBtn.style.display='none';return;}
   const map={uploaded:'⬆️ مرفوع — لم تُطابَق فهرسه بعد',indexing:'⏳ تجري المطابقة الآن…',indexed:'✅ تمّت مطابقة الفهرس',index_failed:'❌ فشلت المطابقة — أعيدي المحاولة'};
   status.textContent=map[prepGuide.status]||prepGuide.status;
-  idxBtn.style.display=(prepGuide.status==='uploaded'||prepGuide.status==='index_failed')?'inline-block':'none';
+  // زرّ إعادة المطابقة يبقى متاحاً حتى بعد النجاح: قد تظهر دروسٌ ناقصة
+  // بعد إصلاح خوارزمية المطابقة (كما وقع فعلاً)، فتحتاج معلمةٌ العودة
+  // وإعادة المطابقة بلا مسحٍ يدويّ للدليل وإعادة رفعه.
+  idxBtn.style.display='inline-block';
+  idxBtn.textContent=prepGuide.status==='indexed'?'إعادة المطابقة بالذكاء الاصطناعي':'مطابقة الفهرس بالذكاء الاصطناعي';
 }
 // رفع دليل المعلم PDF → صور صفحات (نفس مسار segUploadAndSegment لكتاب
 // الطالب) → تسجيل صف في teacher_guides.
