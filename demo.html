@@ -1070,13 +1070,21 @@ body.inapp #c1-budget-btn{display:flex}
 .lv-ink{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none}
 .lv-ink.on{pointer-events:auto;cursor:crosshair}
 #lv-pen-btn.on{background:var(--red);color:#fff;border-color:var(--red)}
-.lv-pen-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 10px;background:var(--surface);border-top:1.5px solid var(--border);flex:none;flex-wrap:wrap}
-.lv-pen-colors{display:flex;gap:7px}
-.lv-pen-swatch{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;background:var(--c);cursor:pointer;padding:0;box-sizing:border-box}
+/* لوحة القلم عائمةٌ فوق شريط التنقّل (لا شريطٌ ثانٍ يزحزح الصفحة) — تظهر
+   بانزلاقٍ لطيف، بأسلوب لوحات iPadOS، فيبقى تصميم أسفل العارض متناسقاً. */
+.lv-pen-bar{position:absolute;left:50%;transform:translateX(-50%) translateY(10px);
+  display:flex;align-items:center;gap:12px;padding:9px 15px;background:var(--card);
+  border:1.5px solid var(--border);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.4);
+  z-index:8;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;flex-wrap:wrap;max-width:94vw;justify-content:center}
+.lv-pen-bar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+@media(prefers-reduced-motion:reduce){.lv-pen-bar{transition:none}}
+.lv-pen-colors{display:flex;gap:8px}
+.lv-pen-swatch{width:28px;height:28px;border-radius:50%;border:2.5px solid transparent;background:var(--c);cursor:pointer;padding:0;box-sizing:border-box}
 .lv-pen-swatch.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--card)}
-.lv-pen-tool{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:6px 13px;font-size:15px;cursor:pointer;line-height:1}
-.lv-pen-tool.on{background:var(--red);border-color:var(--red);filter:brightness(1.15)}
-#lv-pen-width{width:110px;accent-color:var(--red)}
+.lv-pen-sep{width:1.5px;height:24px;background:var(--border);flex:none}
+.lv-pen-tool{border:1.5px solid var(--border);background:var(--surface);border-radius:11px;padding:7px 13px;font-size:16px;cursor:pointer;line-height:1}
+.lv-pen-tool.on{background:var(--red);border-color:var(--red);filter:brightness(1.1)}
+#lv-pen-width{width:104px;accent-color:var(--red)}
 /* اللعبة تُزاح تحت البار ليبقى تحكّم المعلمة ظاهراً أثناء التشغيل */
 #gm-stage-bg.live-embed{top:var(--live-bar-h)}
 
@@ -3463,15 +3471,17 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <span class="lv-sep"></span>
       <button class="z" id="lv-pen-btn" onclick="lvPenToggle()" title="القلم" aria-label="القلم">✏️</button>
     </div>
-    <div class="lv-pen-bar hidden" id="lv-pen-bar">
+    <div class="lv-pen-bar" id="lv-pen-bar">
       <div class="lv-pen-colors">
-        <button class="lv-pen-swatch on" style="--c:#e11d3c" onclick="lvPenColor('#e11d3c',this)"></button>
-        <button class="lv-pen-swatch" style="--c:#1d6fe1" onclick="lvPenColor('#1d6fe1',this)"></button>
-        <button class="lv-pen-swatch" style="--c:#1fa851" onclick="lvPenColor('#1fa851',this)"></button>
-        <button class="lv-pen-swatch" style="--c:#f2a90a" onclick="lvPenColor('#f2a90a',this)"></button>
-        <button class="lv-pen-swatch" style="--c:#111" onclick="lvPenColor('#111',this)"></button>
+        <button class="lv-pen-swatch on" style="--c:#e11d3c" onclick="lvPenColor('#e11d3c',this)" aria-label="أحمر"></button>
+        <button class="lv-pen-swatch" style="--c:#1d6fe1" onclick="lvPenColor('#1d6fe1',this)" aria-label="أزرق"></button>
+        <button class="lv-pen-swatch" style="--c:#1fa851" onclick="lvPenColor('#1fa851',this)" aria-label="أخضر"></button>
+        <button class="lv-pen-swatch" style="--c:#f2a90a" onclick="lvPenColor('#f2a90a',this)" aria-label="أصفر"></button>
+        <button class="lv-pen-swatch" style="--c:#111" onclick="lvPenColor('#111',this)" aria-label="أسود"></button>
       </div>
+      <span class="lv-pen-sep"></span>
       <input type="range" id="lv-pen-width" min="1" max="12" value="3" oninput="lvPenWidth(this.value)" title="سُمك القلم">
+      <span class="lv-pen-sep"></span>
       <button class="lv-pen-tool" id="lv-pen-erase-btn" onclick="lvPenErase()" title="الممحاة" aria-label="الممحاة">🧽</button>
       <button class="lv-pen-tool" onclick="lvPenUndo()" title="تراجع" aria-label="تراجع">↩︎</button>
       <button class="lv-pen-tool" onclick="lvPenClear()" title="مسح الكل" aria-label="مسح الكل">🗑️</button>
@@ -4261,7 +4271,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='dc8074c';
+const KH_BUILD='81a825c';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9300,6 +9310,8 @@ function liveViewOpen(title,html,showPages){
   document.getElementById('lv-vtitle').textContent=title||'';
   document.getElementById('lv-vbody').innerHTML=html;
   document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
+  // القلم خاصٌّ بعارض الكتاب فقط: لا يبقى ظاهراً فوق ملخّصٍ أو لعبةٍ أو ملف
+  if(!showPages){_lvPenOn=false;lvPenSyncUI();}
   document.getElementById('live-view').classList.add('on');
   lbPopCloseAll();
 }
@@ -9379,6 +9391,7 @@ function liveBookRender(){
   // نحمّل النشرة التالية مسبقاً حتى ينتقل التصفّح بلا انتظار أمام الطالبات
   for(const n of [b+1,b+2]){const u=_liveBook[n];if(u){const im=new Image();im.src=u;}}
   lvInkSetup();
+  lvPenSyncUI();
 }
 function liveBookGo(d){
   if(!_liveBook)return;
@@ -9401,13 +9414,27 @@ function liveBookZoom(d){
 // والإصبع يبقى للتصفّح والتكبير بلا تعارض. كنفسٌ داخل .lv-spread فيرث
 // تحويل التكبير/التحريك تلقائياً، فلا حساب إحداثياتٍ يدويّ عند التكبير. ═══
 function lvInkCanvas(){return document.getElementById('lv-ink');}
+let _lvRO=null;
+// حجم مخزن الرسم يُؤخذ من offsetWidth/Height (حجم التخطيط، لا يتأثّر بتحويل
+// التكبير) لا من getBoundingClientRect (يشمل scale فيضاعف المخزن خطأً).
+// وResizeObserver يُعيد الضبط بعد تحميل صور الصفحتين: قبل تحميلها تكون
+// الحاوية منهارةً (٠×٠)، فلو ضُبط المخزن حينها بقي ١×١ ثم مُطّط بالـCSS
+// لملء الصفحة كاملة — فيظهر أوّل خطٍّ وكأنه صبغ الصفحة بأكملها (العطل
+// الذي ظهر فعلاً). الآن يُصحَّح حجمه فور اكتمال التخطيط.
+function _lvInkResize(){
+  const cv=lvInkCanvas();if(!cv)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=Math.max(1,Math.round(cv.offsetWidth*dpr)), h=Math.max(1,Math.round(cv.offsetHeight*dpr));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  lvInkRedraw();
+}
 function lvInkSetup(){
   const cv=lvInkCanvas();if(!cv)return;
-  const rect=cv.getBoundingClientRect();
-  const dpr=window.devicePixelRatio||1;
-  cv.width=Math.max(1,Math.round(rect.width*dpr));
-  cv.height=Math.max(1,Math.round(rect.height*dpr));
-  lvInkRedraw();
+  if(typeof ResizeObserver!=='undefined'){
+    if(!_lvRO)_lvRO=new ResizeObserver(()=>_lvInkResize());
+    _lvRO.disconnect();_lvRO.observe(cv);
+  }
+  _lvInkResize();
 }
 function lvInkDrawStroke(ctx,s,W,H){
   if(!s.pts.length)return;
@@ -9429,6 +9456,7 @@ function lvInkRedraw(){
 }
 function lvInkPos(cv,e){
   const rect=cv.getBoundingClientRect();
+  if(!rect.width||!rect.height)return[0,0];              // قبل التخطيط: لا نُنتج NaN
   return[(e.clientX-rect.left)/rect.width,(e.clientY-rect.top)/rect.height];
 }
 function lvInkPointerDown(e,cv){
@@ -9451,12 +9479,19 @@ function lvInkPointerUp(e){
   (_lvStrokes[a]=_lvStrokes[a]||[]).push(_lvCurStroke);
   _lvCurStroke=null;
 }
-function lvPenToggle(){
-  _lvPenOn=!_lvPenOn;
+function lvPenSyncUI(){
   document.getElementById('lv-pen-btn')?.classList.toggle('on',_lvPenOn);
-  document.getElementById('lv-pen-bar')?.classList.toggle('hidden',!_lvPenOn);
+  const bar=document.getElementById('lv-pen-bar');
+  if(bar){
+    // ترتفع اللوحة العائمة فوق شريط التنقّل مهما تغيّر ارتفاعه (قد يلتفّ
+    // على الشاشات الضيّقة) — قياسٌ لحظيّ بدل رقمٍ ثابت قد يتراكب.
+    const pagesH=document.getElementById('lv-pages')?.offsetHeight||60;
+    bar.style.bottom=(pagesH+12)+'px';
+    bar.classList.toggle('show',_lvPenOn);
+  }
   lvInkCanvas()?.classList.toggle('on',_lvPenOn);
 }
+function lvPenToggle(){_lvPenOn=!_lvPenOn;lvPenSyncUI();}
 function lvPenColor(c,btn){
   _lvPenColorVal=c;_lvPenErasing=false;
   document.querySelectorAll('.lv-pen-swatch').forEach(b=>b.classList.remove('on'));
@@ -9510,8 +9545,13 @@ function lvPenClear(){
     _liveBookPanX=Math.max(-max,Math.min(max,_liveBookPanX));
     _liveBookPanY=Math.max(-max,Math.min(max,_liveBookPanY));
   }
+  // التنقّل/التكبير للّمس (الإصبع) فقط: القلم والفأرة للكتابة. هكذا يبقى
+  // التكبير بإصبعين عاملاً حتى في وضع القلم — الكنفس يلتقط أحداث اللمس
+  // (pointer-events:auto) لكنها تصعد هنا بالتفويض فتُعالَج كتصفّح، والقلم
+  // وحده يُمرَّر لمعالج الحبر.
   body.addEventListener('pointerdown',e=>{
-    if(!active()||e.pointerType==='pen'||e.target.id==='lv-ink')return;
+    if(!active()||e.pointerType!=='touch')return;
+    if(_lvCurStroke)return;                                // القلم يكتب: نتجاهل لمسة الراحة (منع تنقّلٍ عرضيّ)
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){
       swipeX0=e.clientX;swipeY0=e.clientY;
