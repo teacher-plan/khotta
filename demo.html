@@ -4280,7 +4280,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='21847bf';
+const KH_BUILD='fec85ba';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9566,10 +9566,18 @@ function lvPenClear(){
     sp.style.setProperty('--px',_liveBookPanX+'px');
     sp.style.setProperty('--py',_liveBookPanY+'px');
   }
+  // حدُّ التحريك من مقدار تجاوز الصفحة المكبَّرة لحدود العارض فعلياً، لا رقماً
+  // ثابتاً: النشرة مركزيّةٌ وتُكبَّر حول مركزها، فما يفيض عن كل جهةٍ =
+  // (الحجم المكبَّر − حجم العارض)/٢، وهو أقصى إزاحةٍ تُظهر تلك الحافة كاملة.
+  // (الرقم الثابت السابق كان يمنع بلوغ الحافتين عند التكبير الأقصى.)
   function clampPan(){
-    const max=220*_liveBookZoom;
-    _liveBookPanX=Math.max(-max,Math.min(max,_liveBookPanX));
-    _liveBookPanY=Math.max(-max,Math.min(max,_liveBookPanY));
+    const sp=spreadEl();if(!sp)return;
+    const sw=sp.offsetWidth,sh=sp.offsetHeight;         // حجم التخطيط (بلا scale)
+    const vw=body.clientWidth,vh=body.clientHeight;
+    const maxX=Math.max(0,(sw*_liveBookZoom-vw)/2)+8;   // +هامشٌ يسيرٌ يُظهر الحافة كاملة
+    const maxY=Math.max(0,(sh*_liveBookZoom-vh)/2)+8;
+    _liveBookPanX=Math.max(-maxX,Math.min(maxX,_liveBookPanX));
+    _liveBookPanY=Math.max(-maxY,Math.min(maxY,_liveBookPanY));
   }
   // التنقّل/التكبير للّمس (الإصبع) فقط: القلم والفأرة للكتابة. هكذا يبقى
   // التكبير بإصبعين عاملاً حتى في وضع القلم — الكنفس يلتقط أحداث اللمس
