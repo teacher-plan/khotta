@@ -6287,9 +6287,10 @@ function prepInit(){
   gs.value=nums.includes(Number(cur))?cur:'';
   prepReloadSubjects();
 }
-// مواد الصف: نفس مصدر segReloadSubjects — قائمة الحلقة الأولى الثابتة
-// لصفوف ١-٤، وإلا استعلامٌ عن جدول subjects (صفوف الحلقة الثانية، لكل
-// صفٍّ موادّه المختلفة فعلياً).
+// مواد الصف: قائمة الحلقة الأولى الثابتة لصفوف ١-٤، وإلا موادّ curriculum
+// الفعلية لهذا الصف والفصل — لا جدول subjects (ذاك لإعداد المعلمة عند
+// التسجيل، وقد لا يضمّ مادةً قُطّع كتابها لتوّه دون تسجيلها هناك أيضاً؛
+// هذه اللوحة تُعِدّ تحاضير لما هو موجودٌ فعلاً في curriculum فقط).
 async function prepReloadSubjects(){
   const grade=document.getElementById('prep-grade').value;
   const semester=document.getElementById('prep-semester').value;
@@ -6298,7 +6299,7 @@ async function prepReloadSubjects(){
   let subs=[];
   if(!grade){ssel.innerHTML='<option value="">المادة</option>';prepScopeChanged();return;}
   if(Number(grade)<=4){subs=FIRST_CYCLE_SUBJECTS.slice();}
-  else{try{const{data}=await sb.from('subjects').select('subject,sort').eq('grade',Number(grade)).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
+  else{try{const{data}=await sb.from('curriculum').select('subject,sort').eq('grade',Number(grade)).eq('semester',semester).order('sort');subs=[...new Set((data||[]).map(r=>r.subject))];}catch(e){}}
   ssel.innerHTML='<option value="">المادة</option>'+subs.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
   ssel.value=subs.includes(cur)?cur:'';
   prepScopeChanged();
