@@ -6216,12 +6216,12 @@ async function mc1LoadStorage(force){
       '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center;color:'+r.budgetCol+';font-weight:800">'+(r.hasBudget?r.budgetPct+'٪':'—')+'</td>'+
       '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center">'+
         (r.uid
-          ? '<button onclick="mc1ExpandStorage(\''+r.uid+'\',\''+escHtml(r.name).replace(/'/g,"\\'")+'\')" style="padding:6px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:\'Cairo\',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer">توسعة</button>'
+          ? '<button onclick="mc1ExpandStorage(\''+escJs(r.uid)+'\',\''+escJs(r.name)+'\')" style="padding:6px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:\'Cairo\',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer">توسعة</button>'
           : '—')+
       '</td>'+
       '<td style="padding:9px;border:1px solid #E3DCC9;text-align:center">'+
         (r.uid
-          ? '<button onclick="mc1ExpandBudget(\''+r.uid+'\',\''+escHtml(r.name).replace(/'/g,"\\'")+'\')" style="padding:6px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:\'Cairo\',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer">توسعة</button>'
+          ? '<button onclick="mc1ExpandBudget(\''+escJs(r.uid)+'\',\''+escJs(r.name)+'\')" style="padding:6px 12px;border:1.5px solid #E3DCC9;border-radius:8px;background:#fff;font-family:\'Cairo\',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer">توسعة</button>'
           : '—')+
       '</td></tr>'
     ).join('')||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#7A715B">لا حسابات حلقة أولى بعد</td></tr>';
@@ -7598,7 +7598,7 @@ function gcfgRender(){
   const c=gcfg[tpl]||{};
   const box=document.getElementById('gcfg-body');if(!box)return;
   const themeCards=[['','كلاسيكي','🎨','']].concat(gmThemes.map(t=>[t.id,t.name,t.emoji,t.bg_url]))
-    .map(([id,nm,em,bg])=>`<button type="button" class="gm-theme-card ${((c.theme||'')===id)?'on':''}" data-id="${escHtml(id)}" onclick="gcfgPickTheme('${escHtml(id)}')">
+    .map(([id,nm,em,bg])=>`<button type="button" class="gm-theme-card ${((c.theme||'')===id)?'on':''}" data-id="${escHtml(id)}" onclick="gcfgPickTheme('${escJs(id)}')">
       <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div><div class="nm">${escHtml(em||'')} ${escHtml(nm)}</div></button>`).join('');
   const opts=(GCFG_OPTS[tpl]||[]).map(([k,lbl,def,min,max])=>`<div style="flex:1;min-width:150px">
       <label class="eg-lbl">${lbl}</label>
@@ -7888,7 +7888,7 @@ function renderMsgTeachers(users){
         ${email?`<div class="user-email">${escHtml(email)}</div>`:''}
         ${subject?`<div class="user-meta">${escHtml(subject)}</div>`:''}
       </div>
-      <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="openMsgModal('${escHtml(u.id)}','${escHtml(name)}','${escHtml(email)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
+      <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="openMsgModal('${escJs(u.id)}','${escJs(name)}','${escJs(email)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
     </div>`;
   }).join('');
 }
@@ -7996,7 +7996,7 @@ async function loadAnnouncements(){
         </div>
         <div class="ann-item-body">${escHtml(a.body)}</div>
         ${canEdit?`<div class="ann-item-actions">
-          <button class="ann-edit-btn" style="display:flex;align-items:center;gap:4px" onclick="editAnnouncement(${a.id},'${escHtml(a.title)}','${escHtml(a.body)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> تعديل</button>
+          <button class="ann-edit-btn" style="display:flex;align-items:center;gap:4px" onclick="editAnnouncement(${a.id},'${escJs(a.title)}','${escJs(a.body)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> تعديل</button>
           <button class="ann-del-btn" style="display:flex;align-items:center;gap:4px" onclick="deleteAnnouncement(${a.id})"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg> حذف</button>
         </div>`:''}
       </div>`;
@@ -8251,11 +8251,11 @@ function renderUsersList(users){
       </div>
       ${!isAdminUser?`
         <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
-          <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px" onclick="openMsgModal('${escHtml(u.id)}','${escHtml(name)}','${escHtml(email)}')"> <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
+          <button class="user-msg-btn" style="display:flex;align-items:center;gap:5px" onclick="openMsgModal('${escJs(u.id)}','${escJs(name)}','${escJs(email)}')"> <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg> رسالة</button>
           ${waNum?`<a href="https://wa.me/${waNum}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:5px;background:#25D366;color:#fff;text-decoration:none;justify-content:center;padding:5px 10px;border-radius:6px;font-size:11px;font-family:'Cairo',sans-serif;font-weight:700"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.52 3.449A11.94 11.94 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg> واتساب</a>`:''}
           ${enabled
-            ?`<button class="user-disable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escHtml(u.id)}','${escHtml(name)}',false)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg> تعطيل</button>`
-            :`<button class="user-enable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escHtml(u.id)}','${escHtml(name)}',true)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> تفعيل</button>`
+            ?`<button class="user-disable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escJs(u.id)}','${escJs(name)}',false)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM4 12a8 8 0 0 1 11.32-7.25L4.75 15.32A7.96 7.96 0 0 1 4 12zm8 8a8 8 0 0 1-4.75-1.57l10.57-10.57A8 8 0 0 1 12 20z"/></svg> تعطيل</button>`
+            :`<button class="user-enable-btn" style="display:flex;align-items:center;gap:5px" onclick="toggleUserAccess('${escJs(u.id)}','${escJs(name)}',true)"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> تفعيل</button>`
           }
         </div>
       `:''}
@@ -10994,8 +10994,8 @@ function c2TeachersTableHtml(sorted,weekAgo,bannedSet){
       const acctCell=isAdminUser
         ? '<span style="color:var(--gold);font-size:11px;font-weight:700">مشرف</span>'
         : (enabled
-          ? `<button class="user-disable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escHtml(p.id)}','${escHtml(name).replace(/'/g,"\\'")}',false)">تعطيل</button>`
-          : `<button class="user-enable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escHtml(p.id)}','${escHtml(name).replace(/'/g,"\\'")}',true)">تفعيل</button>`);
+          ? `<button class="user-disable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escJs(p.id)}','${escJs(name)}',false)">تعطيل</button>`
+          : `<button class="user-enable-btn" style="font-size:10.5px;padding:4px 9px;white-space:nowrap" onclick="toggleUserAccess('${escJs(p.id)}','${escJs(name)}',true)">تفعيل</button>`);
       return `<tr style="${!enabled&&!isAdminUser?'opacity:.55':''}">
         <td style="color:var(--muted)">${i+1}</td>
         <td style="font-weight:700">${escHtml(name)}</td>
@@ -12308,7 +12308,7 @@ function showSurveyModal(survey){
       <div class="survey-modal-opts">
         ${q.options.map(o=>`
           <label class="survey-modal-opt" id="opt_${q.id}_${escHtml(o).replace(/\s/g,'_')}">
-            <input type="radio" name="q_${q.id}" value="${escHtml(o)}" onchange="selectSurveyOpt('${q.id}','${escHtml(o)}',this)"/>
+            <input type="radio" name="q_${q.id}" value="${escHtml(o)}" onchange="selectSurveyOpt('${q.id}','${escJs(o)}',this)"/>
             ${escHtml(o)}
           </label>
         `).join('')}
@@ -13053,7 +13053,7 @@ function ref_renderDataTab(){
           </a>
           ${r.payment_followup_at?'<span style="position:absolute;bottom:-2px;left:-2px;width:14px;height:14px;background:#2E7D32;border-radius:50%;border:2px solid var(--panel,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#fff">✓</span>':''}
         </span>
-        <button title="حذف" onclick="ref_deleteRegistration(${r.id},'${escHtml(r.name).replace(/'/g,"\\'")}')" class="row-delete-btn">✕</button>
+        <button title="حذف" onclick="ref_deleteRegistration(${Number(r.id)||0})" class="row-delete-btn">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -13354,7 +13354,12 @@ function ref_renderAccountsTab(){
   }).join('');
 }
 
-async function ref_deleteRegistration(id,name){
+// الاسم لا يُمرَّر من HTML: كان يُحقن داخل onclick بتهريبٍ لا يشمل علامة
+// الاقتباس المزدوجة، وهو نصٌّ يكتبه أيُّ زائرٍ في صفحة الهبوط بحساب anon —
+// فكان أيُّ أحدٍ على الإنترنت يُنفّذ شيفرةً في جلسة المشرف. الآن يُمرَّر
+// المعرّف الرقميّ وحده ويُجلب الاسم من البيانات المحمَّلة أصلاً.
+async function ref_deleteRegistration(id){
+  const name=((ref_scopedRegs()||[]).find(x=>String(x.id)===String(id))||{}).name||'';
   if(!confirm(`حذف تسجيل "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.`))return;
   const{error}=await sb.from('pre_registrations').delete().eq('id',id);
   if(error){alert('فشل الحذف: '+error.message);return;}
@@ -13585,13 +13590,13 @@ function renderSchoolsList(){
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
         <div style="font-weight:800;color:var(--text);font-size:15px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="var(--gold)" width="16" height="16"><path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg> ${i+1}. ${escHtml(s.name)}</div>
-        <button class="user-disable-btn" style="display:flex;align-items:center;gap:4px;flex-shrink:0" onclick="deleteSchool(${s.id},'${escHtml(s.name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
+        <button class="user-disable-btn" style="display:flex;align-items:center;gap:4px;flex-shrink:0" onclick="deleteSchool(${s.id},'${escJs(s.name)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
       </div>
       <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;background:var(--surface);border-radius:8px;padding:10px">
         <span style="color:var(--muted)">المستخدم:</span><strong dir="ltr" style="text-align:right;font-family:monospace">${escHtml(s.username)}</strong>
       </div>
       ${structInfo}
-      <button class="grade-btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="resetSchoolPassword(${s.id},'${escHtml(s.username).replace(/'/g,"\\'")}','${escHtml(s.name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 1a5 5 0 0 0-5 5v3H5v12h14V9h-2V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg> إعادة تعيين كلمة المرور</button>
+      <button class="grade-btn" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="resetSchoolPassword(${s.id},'${escJs(s.username)}','${escJs(s.name)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 1a5 5 0 0 0-5 5v3H5v12h14V9h-2V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg> إعادة تعيين كلمة المرور</button>
     </div>`;
   }).join('');
 }
@@ -13626,7 +13631,7 @@ function promoRenderList(){
       <div style="font-size:13px;color:var(--muted);line-height:1.7;background:var(--surface);border-radius:8px;padding:10px;margin-bottom:8px">${escHtml(t.quote)}</div>
       <div style="display:flex;gap:8px">
         <button class="grade-btn" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--gold);font-weight:700;font-size:12px" onclick="promoTogglePublish(${t.id},${!t.is_published})">${t.is_published?'إخفاء':'نشر'}</button>
-        <button class="user-disable-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px" onclick="promoDeleteTestimonial(${t.id},'${escHtml(t.teacher_name).replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
+        <button class="user-disable-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px" onclick="promoDeleteTestimonial(${t.id},'${escJs(t.teacher_name)}')"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> حذف</button>
       </div>
     </div>`).join('');
 }
@@ -13740,7 +13745,7 @@ function renderViolationTypesList(){
       <button onclick="toggleViolationTypeActive(${vt.id},${!vt.active})" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;color:${vt.active?'var(--muted)':'var(--green)'};cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px">
         ${vt.active?'<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 6.5c3.79 0 7.17 2.13 8.82 5.5-.59 1.22-1.42 2.27-2.41 3.12l1.41 1.41c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l1.65 1.65c.64-.12 1.3-.22 1.99-.22zM2.71 3.46l2.16 2.16C3.18 7.07 1.83 8.92 1 11.5 2.73 16.39 7 19.5 12 19.5c1.6 0 3.15-.34 4.55-.94l3.07 3.07L21 20.31 4.31 2 2.71 3.46zm7.7 7.7 2.13 2.13c.06-.21.11-.43.11-.65 0-1.1-.89-2-2-2-.22 0-.44.05-.65.11l.41.41z"/></svg> إخفاء':'<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> إظهار'}
       </button>
-      <button onclick="deleteViolationType(${vt.id},'${escHtml(vt.name).replace(/'/g,"\\'")}')" style="background:rgba(192,57,43,.08);border:1px solid var(--red);border-radius:8px;padding:6px 8px;color:var(--red);cursor:pointer;display:flex;align-items:center">
+      <button onclick="deleteViolationType(${vt.id},'${escJs(vt.name)}')" style="background:rgba(192,57,43,.08);border:1px solid var(--red);border-radius:8px;padding:6px 8px;color:var(--red);cursor:pointer;display:flex;align-items:center">
         <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       </button>
     </div>
@@ -14661,6 +14666,19 @@ function egToArabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨�
 // أكثر من ١٦٠ موضعاً عبر كل صفحات الإدارة (المدارس، الإحالات، المراسلات،
 // جداول المعلّمات...). أُعيدت هنا حرفياً كما كانت.
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* escHtml لا تُهرّب «"» — فهي صالحة لنصّ العنصر لا لداخل خاصيةٍ مقتبسة.
+   وداخل onclick="fn('…')" نحتاج طبقتين بالترتيب: ① تهريب نصّ JS، ثم
+   ② تهريب HTML شاملاً «"» التي تُنهي الخاصية وتفتح وسماً جديداً.
+   منقولة عن cycle1.html حيث كُتبت أصلاً. */
+function escJs(s){
+  return String(s==null?'':s)
+    .replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+    .replace(/\r/g,'\\r').replace(/\n/g,'\\n')
+    .replace(new RegExp(String.fromCharCode(0x2028),'g'),'\\u2028')
+    .replace(new RegExp(String.fromCharCode(0x2029),'g'),'\\u2029')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 // ⏳ مؤشر انشغال يبقى حتى النهاية — بدل الرسائل العابرة الموهِمة بالانتهاء
 // (سقطت هذه الدوالّ الأربع سهواً مع نفس الحذف السابق، بلا علاقةٍ بالاستوديو)
 let _uiBusyWatch=null;
