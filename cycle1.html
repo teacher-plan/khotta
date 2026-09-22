@@ -9162,15 +9162,19 @@ function liveOpenInfo(){
   if(!st.info_url)return;
   liveViewOpen('ملخص الدرس',`<img src="${escAttr(st.info_url)}" alt="ملخص الدرس">`,false);
 }
+// رابطٌ يُوضع في src ينفّذ ما فيه إن كان javascript: — والتهريب وحده لا يمنعه،
+// فنقصره على https ورابط صورةٍ مُضمَّنة.
+function liveSrcOk(u){return typeof u==='string'&&(/^https:\/\//i.test(u)||/^data:image\//i.test(u));}
 function liveOpenFile(fi){
   const f=(planGet(liveCtx.lessonId).files||[])[fi];if(!f)return;
   const u=f.viewLink||f.previewLink||'';
+  if(!liveSrcOk(u)){toast('رابط الملف غير صالح',true);return;}
   // ملفٌ من تخزيننا الخاص: رابطٌ مباشر للملف نفسه لا صفحة عرض Drive —
   // الصورة تُعرض بوسم <img> (يحترم max-height:100% من .lv-vbody img)
   // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
   // بلا أي تصغير، مهما كانت أبعادها.
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
-  liveViewOpen(f.name,isImg?`<img src="${u}" alt="${escHtml(f.name||'')}">`:`<iframe src="${filePreviewSrc(u,f.name)}" allow="autoplay"></iframe>`,false);
+  liveViewOpen(f.name,isImg?`<img src="${escAttr(u)}" alt="${escAttr(f.name||'')}">`:`<iframe src="${escAttr(filePreviewSrc(u,f.name))}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
@@ -11735,10 +11739,15 @@ function shRenderList(){
     }).join('')}
   </div>`).join('');
 }
+// رابط الملخص يُدرجه أي معلّمة في صفّها، ويوضع في src — فلا يكفي التهريب:
+// نتحقّق أنه رابط تخزينٍ عامّ من باكِت library-files (وهو الباكِت الذي
+// يُرفع إليه الملخص فعلاً)، وما سواه لا يُعرض بتة.
+const SH_IMG_RE=/^https:\/\/[A-Za-z0-9.\-]+\/storage\/v1\/object\/public\/library-files\//;
+function shImgUrlOk(u){return typeof u==='string'&&SH_IMG_RE.test(u);}
 function shCardHtml(it){
   const mine=it.user_id===currentUser.id;
-  const thumb=it.kind==='info'&&it.image_url
-    ? `<img src="${escHtml(it.image_url)}" alt="ملخص ${escHtml(it.lesson)}" loading="lazy">`
+  const thumb=it.kind==='info'&&shImgUrlOk(it.image_url)
+    ? `<img src="${escAttr(it.image_url)}" alt="ملخص ${escAttr(it.lesson)}" loading="lazy">`
     : `<svg viewBox="0 0 24 24" fill="currentColor" width="34" height="34"><path d="M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM8 13H6v2H4v-2H2v-2h2V9h2v2h2v2zm7 2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>`;
   return `<div class="sh-item">
     <div class="sh-thumb">${thumb}<span class="sh-kind">${it.kind==='game'?'لعبة':'ملخص'}</span></div>
@@ -11756,7 +11765,10 @@ function shCardHtml(it){
 function shFind(id){return shItems.find(x=>x.id===id);}
 async function shPreview(id){
   const it=shFind(id);if(!it)return;
-  if(it.kind==='info'){imgFullOpen(it.image_url,'ملخص — '+it.lesson);return;}
+  if(it.kind==='info'){
+    if(!shImgUrlOk(it.image_url)){toast('رابط الملخص غير صالح',true);return;}
+    imgFullOpen(it.image_url,'ملخص — '+it.lesson);return;
+  }
   cyBusy('يجهّز اللعبة');
   try{
     await gmLoadThemes();
@@ -11871,6 +11883,11 @@ function libMySubjects(){
 // معاينة داخل بطاقة المكتبة — صورة تُعرض مباشرة، PDF بعارض المتصفح المدمج، Word/Excel/PowerPoint عبر عارض جوجل
 const LIB_FILE_ICON=`<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 2.5L18.5 9H14V4.5zM8 13h8v1.5H8V13zm0 3h8v1.5H8V16z"/></svg>`;
 const LIB_DL_ICON=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.5l3.5-3.5L17 11.5 12 16.5 7 11.5l1.5-1.5L12 13.5V3zM5 19h14v2H5z"/></svg>`;
+// file_type يأتي من صفٍّ تُدرجه أي معلّمة، ولا قيدَ عليه في الجدول ولا تحقّقَ
+// في السياسة — وهو يُستخدم هنا صنفَ CSS لا نصاً. فحصرُه في قائمةٍ معروفة
+// أسلمُ من التهريب: ما ليس منها يصير 'other'، فلا تُبنى السمة من مُدخَل.
+const LIB_TYPES=['pdf','word','excel','ppt','image','other'];
+function libTypeClass(t){return LIB_TYPES.indexOf(t)>=0?t:'other';}
 function libThumbHtml(it){
   if(it.file_type==='image'&&it.file_url)return `<img src="${escAttr(it.file_url)}" alt="" loading="lazy"/>`;
   return LIB_FILE_ICON;
@@ -11979,7 +11996,7 @@ async function libRenderItems(){
       <div class="lib-body">
         <div class="lib-card-title">${escHtml(it.title)}</div>
         <div class="lib-card-meta">
-          <span class="lib-type-tag t-${it.file_type||'other'}">${typeLbl[it.file_type]||'ملف'}</span>
+          <span class="lib-type-tag t-${libTypeClass(it.file_type)}">${typeLbl[libTypeClass(it.file_type)]}</span>
           <span>${escHtml(it.uploader_name||'معلمة')} · ${c1Date(it.created_at)}</span>
         </div>
       </div>
