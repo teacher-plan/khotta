@@ -1,0 +1,18 @@
+name: zzz probe g7 math pages
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          q="select id, unit, lesson, sort, page, book_no from public.curriculum where grade=7 and subject='الرياضيات' and semester='الفصل الأول' order by sort limit 5;"
+          body=$(jq -Rs '{query: .}' <<< "$q")
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq .
+          echo "── book_sources ──"
+          q2="select grade, subject, semester, book_no, base_path, page_count, offset_pages from public.book_sources where grade='7' and subject='الرياضيات' and semester='الفصل الأول';"
+          body2=$(jq -Rs '{query: .}' <<< "$q2")
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body2" | jq .
