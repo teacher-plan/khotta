@@ -1025,15 +1025,16 @@ body.inapp #c1-budget-btn{display:flex}
 .lv-vx{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--red-d);
   font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
 .lv-vx:hover{border-color:var(--red);background:var(--surface)}
-.lv-vbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;padding:10px;background:#151009}
+.lv-vbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;background:#151009;touch-action:none}
 .lv-vbody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block}
 /* نشرة الكتاب: صفحتان متلاصقتان بخيطٍ فاصل يوحي بكعب الكتاب.
    والحشو يُلغى في وضع الكتاب: الصفحتان تحتاجان كل بكسلٍ على شاشة العرض. */
 .lv-vbody:has(.lv-spread){padding:4px;align-items:center}
 .lv-spread{display:flex;gap:2px;align-items:stretch;justify-content:center;
-  max-width:100%;max-height:100%;transform:scale(var(--z,1));transform-origin:center center;
+  max-width:100%;max-height:100%;transform:translate(var(--px,0px),var(--py,0px)) scale(var(--z,1));transform-origin:center center;
   transition:transform .25s ease;background:#fff;border-radius:10px;overflow:hidden;
   box-shadow:0 10px 34px rgba(0,0,0,.5)}
+.lv-spread.panning{transition:none}
 .lv-spread img{max-width:50%;max-height:100%;width:auto;object-fit:contain;border-radius:0;
   background:#fff;-webkit-user-drag:none;user-select:none}
 .lv-spread.one img{max-width:100%}
@@ -1044,7 +1045,8 @@ body.inapp #c1-budget-btn{display:flex}
    فلا يتأثّر باتجاه الكتاب: الصفحة اليسرى تُظلّل يمينها والعكس. */
 .lv-spread:not(.one) img:first-child{box-shadow:inset -8px 0 14px -10px rgba(0,0,0,.45)}
 .lv-spread:not(.one) img:last-child{box-shadow:inset 8px 0 14px -10px rgba(0,0,0,.45)}
-.lv-vbody.zoomed{align-items:flex-start;justify-content:flex-start;cursor:grab}
+.lv-vbody.zoomed{cursor:grab}
+.lv-vbody.zoomed.panning{cursor:grabbing}
 @media(prefers-reduced-motion:reduce){.lv-spread{transition:none}}
 .lv-vbody iframe{width:100%;height:100%;border:none;background:#fff;border-radius:8px}
 .lv-pages{display:flex;align-items:center;justify-content:center;gap:11px;padding:9px;background:var(--surface);border-top:1.5px solid var(--border);flex:none}
@@ -1060,6 +1062,21 @@ body.inapp #c1-budget-btn{display:flex}
   .lv-pages button.z{min-width:38px;padding:7px 9px}
 }
 .lv-pages .n{font-size:12.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;min-width:78px;text-align:center}
+/* طبقة الكتابة بالقلم: كنفسٌ داخل .lv-spread فيرث نفس تحويل التكبير/التحريك
+   تلقائياً (لا حساب إحداثياتٍ يدويّ عند التكبير). pointer-events مغلقةٌ إلا
+   في وضع القلم، فتمرّ لمسات الإصبع (تكبير/تحريك/تقليب) من تحتها دون عائق —
+   كنظام أبل تماماً: القلم يكتب، الإصبع يتصفّح، بلا تعارضٍ بينهما. */
+.lv-spread{position:relative}
+.lv-ink{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none}
+.lv-ink.on{pointer-events:auto;cursor:crosshair}
+#lv-pen-btn.on{background:var(--red);color:#fff;border-color:var(--red)}
+.lv-pen-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 10px;background:var(--surface);border-top:1.5px solid var(--border);flex:none;flex-wrap:wrap}
+.lv-pen-colors{display:flex;gap:7px}
+.lv-pen-swatch{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;background:var(--c);cursor:pointer;padding:0;box-sizing:border-box}
+.lv-pen-swatch.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--card)}
+.lv-pen-tool{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:6px 13px;font-size:15px;cursor:pointer;line-height:1}
+.lv-pen-tool.on{background:var(--red);border-color:var(--red);filter:brightness(1.15)}
+#lv-pen-width{width:110px;accent-color:var(--red)}
 /* اللعبة تُزاح تحت البار ليبقى تحكّم المعلمة ظاهراً أثناء التشغيل */
 #gm-stage-bg.live-embed{top:var(--live-bar-h)}
 
@@ -3443,6 +3460,21 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <span class="n z" id="lv-zoom-lbl">١٠٠٪</span>
       <button class="z" onclick="liveBookZoom(1)" id="lv-zoom-in" title="تكبير" aria-label="تكبير">+</button>
       <button class="z" onclick="liveFullscreenToggle()" title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button>
+      <span class="lv-sep"></span>
+      <button class="z" id="lv-pen-btn" onclick="lvPenToggle()" title="القلم" aria-label="القلم">✏️</button>
+    </div>
+    <div class="lv-pen-bar hidden" id="lv-pen-bar">
+      <div class="lv-pen-colors">
+        <button class="lv-pen-swatch on" style="--c:#e11d3c" onclick="lvPenColor('#e11d3c',this)"></button>
+        <button class="lv-pen-swatch" style="--c:#1d6fe1" onclick="lvPenColor('#1d6fe1',this)"></button>
+        <button class="lv-pen-swatch" style="--c:#1fa851" onclick="lvPenColor('#1fa851',this)"></button>
+        <button class="lv-pen-swatch" style="--c:#f2a90a" onclick="lvPenColor('#f2a90a',this)"></button>
+        <button class="lv-pen-swatch" style="--c:#111" onclick="lvPenColor('#111',this)"></button>
+      </div>
+      <input type="range" id="lv-pen-width" min="1" max="12" value="3" oninput="lvPenWidth(this.value)" title="سُمك القلم">
+      <button class="lv-pen-tool" id="lv-pen-erase-btn" onclick="lvPenErase()" title="الممحاة" aria-label="الممحاة">🧽</button>
+      <button class="lv-pen-tool" onclick="lvPenUndo()" title="تراجع" aria-label="تراجع">↩︎</button>
+      <button class="lv-pen-tool" onclick="lvPenClear()" title="مسح الكل" aria-label="مسح الكل">🗑️</button>
     </div>
   </div>
 </div>
@@ -4229,7 +4261,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='e08d074';
+const KH_BUILD='dc8074c';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9304,15 +9336,21 @@ function liveOpenFile(fi){
    صفحتين، فعرضُ واحدةٍ يقطع التمرين عن نصّه والسؤال عن صورته.
    والأولى على اليمين: الكتاب العربيّ يُفتح من اليمين، وعكسُها يربك
    الطالبة التي تتابع في نسختها. */
-let _liveBookZoom=1;
+let _liveBookZoom=1,_liveBookPanX=0,_liveBookPanY=0;
 const LV_ZOOMS=[1,1.5,2,3];
+const LV_ZOOM_MAX=4;
+// حبر القلم لكل نشرة صفحات: مفتاحه رقم أول صفحةٍ في النشرة (_lvSpreadOf)،
+// يُمسح عند فتح كتابٍ جديد ويبقى محفوظاً عند التنقّل بين صفحات نفس الدرس.
+let _lvStrokes={},_lvCurStroke=null;
+let _lvPenOn=false,_lvPenColorVal='#e11d3c',_lvPenWidthVal=3,_lvPenErasing=false;
 /* كتاب الإنجليزية يُفتح من اليسار كسائر الكتب اللاتينية، فأولى صفحتيه على
    اليسار وتقليبُه إلى الأمام يسار — عكس بقيّة المواد. ولولا هذا الاستثناء
    لعُرض مقلوباً أمام الطالبة التي تتابع في نسختها الورقية. */
 function _lvLtr(){return /إنجليز|english/i.test((liveCtx&&liveCtx.subject)||'');}
 function liveOpenBook(){
   if(!_liveBook||!_liveBook.length)return;
-  _liveBookAt=0;_liveBookZoom=1;
+  _liveBookAt=0;_liveBookZoom=1;_liveBookPanX=0;_liveBookPanY=0;
+  _lvStrokes={};_lvCurStroke=null;_lvPenOn=false;_lvPenErasing=false;
   liveViewOpen('صفحات الكتاب','',true);
   liveBookRender();
 }
@@ -9325,8 +9363,9 @@ function liveBookRender(){
   const img=(i)=>`<img src="${_liveBook[i]}" alt="صفحة ${i+1}" draggable="false">`;
   // الترتيب واحدٌ في الحالتين (الأقدم أولاً)، والاتجاه هو ما يقلبه: الحاوية
   // ترث rtl من الصفحة فيظهر أوّلُ عنصرٍ يميناً، و.ltr تجعله يساراً.
-  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()?' ltr':''}" style="--z:${_liveBookZoom}">`
-    +(one?img(a):img(a)+img(b))+`</div>`;
+  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()?' ltr':''}" style="--z:${_liveBookZoom};--px:${_liveBookPanX}px;--py:${_liveBookPanY}px">`
+    +(one?img(a):img(a)+img(b))
+    +`<canvas class="lv-ink${_lvPenOn?' on':''}" id="lv-ink"></canvas></div>`;
   body.classList.toggle('zoomed',_liveBookZoom>1);
   document.getElementById('lv-page-n').textContent=
     one?egArNum(a+1)+' / '+egArNum(total)
@@ -9339,13 +9378,13 @@ function liveBookRender(){
   const zi=document.getElementById('lv-zoom-in');if(zi)zi.disabled=_liveBookZoom>=LV_ZOOMS[LV_ZOOMS.length-1];
   // نحمّل النشرة التالية مسبقاً حتى ينتقل التصفّح بلا انتظار أمام الطالبات
   for(const n of [b+1,b+2]){const u=_liveBook[n];if(u){const im=new Image();im.src=u;}}
+  lvInkSetup();
 }
 function liveBookGo(d){
   if(!_liveBook)return;
   const n=_lvSpreadOf(_liveBookAt)+d*2;
   if(n<0||n>=_liveBook.length)return;
-  _liveBookAt=n;_liveBookZoom=1;liveBookRender();
-  document.getElementById('lv-vbody').scrollTo({top:0,left:0});
+  _liveBookAt=n;_liveBookZoom=1;_liveBookPanX=0;_liveBookPanY=0;liveBookRender();
 }
 /* التكبير يمسّ الصفحتين وحدهما لا الصفحة كلّها: تكبيرُ المتصفّح يُضخّم
    الأزرار والشريط معها فيضيع مكان الضغط، والمعلّمة أمام صفٍّ لا وقت
@@ -9354,28 +9393,171 @@ function liveBookZoom(d){
   const i=LV_ZOOMS.indexOf(_liveBookZoom);
   const n=Math.min(LV_ZOOMS.length-1,Math.max(0,(i<0?0:i)+d));
   if(LV_ZOOMS[n]===_liveBookZoom)return;
-  _liveBookZoom=LV_ZOOMS[n];liveBookRender();
+  _liveBookZoom=LV_ZOOMS[n];
+  if(_liveBookZoom<=1){_liveBookPanX=0;_liveBookPanY=0;}
+  liveBookRender();
 }
-/* السحب والمفاتيح: المعلّمة واقفةٌ أمام صفٍّ ويدها على اللوح أو الجهاز —
+// ═══ حبر القلم فوق صفحات الكتاب — نفس مبدأ أبل: القلم (أو الفأرة) يكتب،
+// والإصبع يبقى للتصفّح والتكبير بلا تعارض. كنفسٌ داخل .lv-spread فيرث
+// تحويل التكبير/التحريك تلقائياً، فلا حساب إحداثياتٍ يدويّ عند التكبير. ═══
+function lvInkCanvas(){return document.getElementById('lv-ink');}
+function lvInkSetup(){
+  const cv=lvInkCanvas();if(!cv)return;
+  const rect=cv.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(rect.width*dpr));
+  cv.height=Math.max(1,Math.round(rect.height*dpr));
+  lvInkRedraw();
+}
+function lvInkDrawStroke(ctx,s,W,H){
+  if(!s.pts.length)return;
+  ctx.save();
+  ctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
+  ctx.strokeStyle=s.color;ctx.lineWidth=s.width*(window.devicePixelRatio||1);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  s.pts.forEach((p,i)=>{const x=p[0]*W,y=p[1]*H;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  ctx.stroke();
+  ctx.restore();
+}
+function lvInkRedraw(){
+  const cv=lvInkCanvas();if(!cv)return;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const a=_lvSpreadOf(_liveBookAt);
+  ((_lvStrokes[a]||[])).forEach(s=>lvInkDrawStroke(ctx,s,cv.width,cv.height));
+}
+function lvInkPos(cv,e){
+  const rect=cv.getBoundingClientRect();
+  return[(e.clientX-rect.left)/rect.width,(e.clientY-rect.top)/rect.height];
+}
+function lvInkPointerDown(e,cv){
+  if(e.pointerType==='touch')return;                    // الإصبع لا يكتب أبداً
+  try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  _lvCurStroke={color:_lvPenErasing?'#000':_lvPenColorVal,width:_lvPenErasing?Math.max(14,_lvPenWidthVal*4):_lvPenWidthVal,erase:_lvPenErasing,pts:[lvInkPos(cv,e)]};
+  e.preventDefault();
+}
+function lvInkPointerMove(e,cv){
+  if(!_lvCurStroke||e.pointerType==='touch')return;
+  const evs=(e.getCoalescedEvents&&e.getCoalescedEvents())||[e];
+  for(const ev of evs)_lvCurStroke.pts.push(lvInkPos(cv,ev));
+  lvInkRedraw();
+  lvInkDrawStroke(cv.getContext('2d'),_lvCurStroke,cv.width,cv.height);
+  e.preventDefault();
+}
+function lvInkPointerUp(e){
+  if(!_lvCurStroke)return;
+  const a=_lvSpreadOf(_liveBookAt);
+  (_lvStrokes[a]=_lvStrokes[a]||[]).push(_lvCurStroke);
+  _lvCurStroke=null;
+}
+function lvPenToggle(){
+  _lvPenOn=!_lvPenOn;
+  document.getElementById('lv-pen-btn')?.classList.toggle('on',_lvPenOn);
+  document.getElementById('lv-pen-bar')?.classList.toggle('hidden',!_lvPenOn);
+  lvInkCanvas()?.classList.toggle('on',_lvPenOn);
+}
+function lvPenColor(c,btn){
+  _lvPenColorVal=c;_lvPenErasing=false;
+  document.querySelectorAll('.lv-pen-swatch').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('lv-pen-erase-btn')?.classList.remove('on');
+}
+function lvPenWidth(v){_lvPenWidthVal=parseInt(v)||3;}
+function lvPenErase(){
+  _lvPenErasing=!_lvPenErasing;
+  document.getElementById('lv-pen-erase-btn')?.classList.toggle('on',_lvPenErasing);
+}
+function lvPenUndo(){
+  const a=_lvSpreadOf(_liveBookAt);
+  if(_lvStrokes[a]&&_lvStrokes[a].length){_lvStrokes[a].pop();lvInkRedraw();}
+}
+function lvPenClear(){
+  const a=_lvSpreadOf(_liveBookAt);
+  _lvStrokes[a]=[];lvInkRedraw();
+}
+(function lvInkWire(){
+  // الكنفس يُستبدل بعنصرٍ جديد مع كل liveBookRender، فربط المستمعين مرّةً
+  // واحدة على body الثابت (تفويضٌ event delegation) أضمن من إعادة ربطها.
+  const body=document.getElementById('lv-vbody');
+  if(!body)return;
+  body.addEventListener('pointerdown',e=>{if(e.target.id==='lv-ink'&&_lvPenOn)lvInkPointerDown(e,e.target);});
+  body.addEventListener('pointermove',e=>{if(e.target.id==='lv-ink'&&_lvPenOn)lvInkPointerMove(e,e.target);});
+  body.addEventListener('pointerup',e=>{if(_lvCurStroke)lvInkPointerUp(e);});
+  body.addEventListener('pointercancel',e=>{if(_lvCurStroke)lvInkPointerUp(e);});
+})();
+/* اللمس والمفاتيح: المعلّمة واقفةٌ أمام صفٍّ ويدها على اللوح أو الجهاز —
    البحثُ عن زرٍّ صغير يقطع الدرس. والاتجاه يتبع اتجاه الكتاب: في العربي
-   السحب يميناً يرجع، وفي الإنجليزي يتقدّم — كما تُقلَّب الورقة بيدها. */
+   السحب يميناً يرجع، وفي الإنجليزي يتقدّم — كما تُقلَّب الورقة بيدها.
+   بإصبعين: تكبيرٌ حرّ (pinch) حول نقطة التماس، لا الأزرار المرحلية وحدها —
+   والبار العلويّ والسفليّ خارج .lv-spread فلا يتأثران بأي تحويلٍ هنا. */
 (function lvBookGestures(){
   const body=document.getElementById('lv-vbody');
   if(!body)return;
-  let x0=null,y0=null;
   const active=()=>!document.getElementById('lv-pages')?.classList.contains('hidden')
                  && document.getElementById('live-view')?.classList.contains('on');
-  body.addEventListener('touchstart',e=>{
-    if(!active()||e.touches.length!==1||_liveBookZoom>1)return;   // مكبَّرةً: السحب تصفّحُ الصورة
-    x0=e.touches[0].clientX;y0=e.touches[0].clientY;
-  },{passive:true});
-  body.addEventListener('touchend',e=>{
-    if(x0==null)return;
-    const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
-    x0=null;
-    if(Math.abs(dx)<55||Math.abs(dy)>Math.abs(dx))return;         // سحبٌ أفقيّ صريح فقط
-    liveBookGo((dx>0)===_lvLtr()?1:-1);
-  },{passive:true});
+  const pts=new Map();
+  let swipeX0=null,swipeY0=null,pinch=null,dragPan=null;
+  function spreadEl(){return body.querySelector('.lv-spread');}
+  function applyVars(){
+    const sp=spreadEl();if(!sp)return;
+    sp.style.setProperty('--z',_liveBookZoom);
+    sp.style.setProperty('--px',_liveBookPanX+'px');
+    sp.style.setProperty('--py',_liveBookPanY+'px');
+  }
+  function clampPan(){
+    const max=220*_liveBookZoom;
+    _liveBookPanX=Math.max(-max,Math.min(max,_liveBookPanX));
+    _liveBookPanY=Math.max(-max,Math.min(max,_liveBookPanY));
+  }
+  body.addEventListener('pointerdown',e=>{
+    if(!active()||e.pointerType==='pen'||e.target.id==='lv-ink')return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){
+      swipeX0=e.clientX;swipeY0=e.clientY;
+      if(_liveBookZoom>1){dragPan={x0:e.clientX,y0:e.clientY,px0:_liveBookPanX,py0:_liveBookPanY};spreadEl()?.classList.add('panning');}
+    }else if(pts.size===2){
+      dragPan=null;
+      const arr=[...pts.values()];
+      pinch={d0:Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y),zoom0:_liveBookZoom,panX0:_liveBookPanX,panY0:_liveBookPanY};
+      spreadEl()?.classList.add('panning');
+    }
+  });
+  body.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2&&pinch){
+      const arr=[...pts.values()];
+      const d=Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y);
+      _liveBookZoom=Math.max(1,Math.min(LV_ZOOM_MAX,pinch.zoom0*(d/pinch.d0)));
+      _liveBookPanX=_liveBookZoom<=1?0:pinch.panX0;_liveBookPanY=_liveBookZoom<=1?0:pinch.panY0;
+      clampPan();
+      body.classList.toggle('zoomed',_liveBookZoom>1);
+      applyVars();
+      const zl=document.getElementById('lv-zoom-lbl');if(zl)zl.textContent=egArNum(Math.round(_liveBookZoom*100))+'٪';
+      e.preventDefault();
+    }else if(pts.size===1&&dragPan){
+      _liveBookPanX=dragPan.px0+(e.clientX-dragPan.x0);
+      _liveBookPanY=dragPan.py0+(e.clientY-dragPan.y0);
+      clampPan();applyVars();
+      e.preventDefault();
+    }
+  });
+  function endPointer(e){
+    pts.delete(e.pointerId);
+    if(pts.size<2)pinch=null;
+    if(pts.size===0){
+      spreadEl()?.classList.remove('panning');
+      if(dragPan){dragPan=null;}
+      else if(swipeX0!=null&&_liveBookZoom<=1){
+        const dx=e.clientX-swipeX0, dy=e.clientY-(swipeY0??e.clientY);
+        if(Math.abs(dx)>=55&&Math.abs(dy)<Math.abs(dx))liveBookGo((dx>0)===_lvLtr()?1:-1);
+      }
+      swipeX0=null;swipeY0=null;
+    }
+  }
+  body.addEventListener('pointerup',endPointer);
+  body.addEventListener('pointercancel',endPointer);
   document.addEventListener('keydown',e=>{
     if(!active())return;
     if(e.key==='ArrowRight')liveBookGo(_lvLtr()?1:-1);
