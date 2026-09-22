@@ -323,6 +323,18 @@ Deno.serve(async (req) => {
       return json({ done: false, exhausted: false, next_from: nextFrom, scanned_to: scannedTo, best_entries: bestSoFar });
     }
 
+    // بلغنا الحدّ الأدنى — لكن فهرساً حقيقياً قد يمتدّ على أكثر من صفحةٍ
+    // واحدة (هذا فعلياً ما وقع: رياضيات صف٧ توقّفت عند ٢٦ من ٤٣ درساً لأن
+    // الدفعة التي وجدت الوحدات ١-٥ تجاوزت الحدّ فأُنهي البحث فوراً، بينما
+    // الوحدات ٦-٨ كانت في الصفحة التالية للفهرس التي لم تُفحص قط). نتابع
+    // حتى دفعتين إضافيتين طالما تُضيفان دروساً جديدة فعلاً، ونتوقف فوراً
+    // إن أضافت دفعةٌ صفراً (أي جاوزنا الفهرس إلى محتوى الدروس العادي).
+    const lookahead = parseInt(String(b.lookahead)) || 0;
+    const nextFrom2 = end + 1;
+    if (lookahead < 2 && nextFrom2 <= lastPage && rawEntries.length > 0) {
+      return json({ done: false, exhausted: false, next_from: nextFrom2, scanned_to: scannedTo, best_entries: entries, lookahead: lookahead + 1 });
+    }
+
     const offsetPages = await computeOffset(entries, guide);
 
     await admin.from("teacher_guides").update({
