@@ -12335,8 +12335,25 @@ async function msgsLoadFeed(force){
     if(mErr)throw mErr;if(sErr)throw sErr;
     let resp=[];
     if(surveys&&surveys.length){
-      const{data}=await sb.from('c1_survey_responses').select('survey_id,user_id,option_index').in('survey_id',surveys.map(s=>s.id));
-      resp=data||[];
+      // كانت تُقرأ صفوفُ الجدول كاملةً — فترى كلُّ معلّمة هويةَ كل مصوِّتة
+      // في كل استبيان. الواجهة لا تحتاج إلا الأعداد وصوتَ نفسها: الأعداد
+      // من دالّة تجميعٍ لا تُعيد هويّةً، والصوتُ الخاص من صفّها وحده.
+      const ids=surveys.map(s=>s.id);
+      const[{data:tal},{data:mineRows}]=await Promise.all([
+        sb.rpc('c1_survey_tallies',{p_survey_ids:ids}),
+        sb.from('c1_survey_responses').select('survey_id,option_index').in('survey_id',ids).eq('user_id',currentUser.id)
+      ]);
+      // يُبنى شكلٌ مكافئ لما كانت تتوقّعه msgsSrvHtml: صفٌّ لكل صوت،
+      // بهويّةٍ وهمية للأصوات الأخرى وبهويّتي الحقيقية لصوتي — فلا يتغيّر
+      // حسابُ النسب ولا تمييزُ خياري.
+      const myMap={};(mineRows||[]).forEach(r=>{myMap[r.survey_id]=r.option_index;});
+      resp=[];
+      (tal||[]).forEach(t=>{
+        const isMine=myMap[t.survey_id]===t.option_index;
+        for(let i=0;i<Number(t.cnt||0);i++)
+          resp.push({survey_id:t.survey_id,option_index:t.option_index,
+                     user_id:(isMine&&i===0)?currentUser.id:('x'+t.survey_id+'_'+t.option_index+'_'+i)});
+      });
     }
     const mySubjects=libMySubjects();
     // ⚠️ ثغرة كانت هنا: الفلتر يتحقق من target_subject فقط، لا من
