@@ -1,0 +1,15 @@
+name: zzz probe cycle2 planstate
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          q="select u.email, p.updated_at, p.data->'plan_state' as plan_state, p.data->>'semester' as semester from public.cycle1_profiles p join auth.users u on u.id=p.user_id where u.email='teacherplane2026project@gmail.com';"
+          body=$(jq -Rs '{query: .}' <<< "$q")
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" > /tmp/out.json
+          jq . /tmp/out.json
