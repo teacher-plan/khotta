@@ -1,0 +1,14 @@
+name: zzz probe table grants
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          q="select table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) as privs from information_schema.role_table_grants where table_schema='public' and grantee in ('authenticated','anon') group by table_name, grantee order by table_name, grantee;"
+          body=$(jq -Rs '{query: .}' <<< "$q")
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]'
