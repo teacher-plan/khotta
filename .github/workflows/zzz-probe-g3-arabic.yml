@@ -1,0 +1,14 @@
+name: zzz probe g3 arabic
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.'; echo; }
+          run "BOOKS" "select grade,subject,semester,book_no,base_path,page_count,offset_pages from book_sources where grade='3' and subject='أحب لغتي';"
+          run "CUR" "select grade,subject,semester,unit,lesson,sort,page,book_no from curriculum where grade=3 and subject='أحب لغتي' order by sort;"
