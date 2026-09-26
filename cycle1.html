@@ -1092,6 +1092,12 @@ body.inapp #c1-budget-btn{display:flex}
 .lv-spread{position:relative}
 .lv-ink{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none}
 .lv-ink.on{pointer-events:auto;cursor:crosshair}
+/* العرض التفاعلي: الطبقة لا تستقبل لمساً أبداً — الرسم يصلها من جسر القلم داخل الإطار */
+.lv-html-wrap{position:relative;width:100%;height:100%}
+.lv-ink.lv-ink-html,.lv-ink.lv-ink-html.on{pointer-events:none;border-radius:8px}
+.lv-pages.htmlmode>:not(#lv-pen-btn){display:none}
+/* في الزاوية السفلية كي لا يغطّي أزرار التنقّل التي تضعها العروض عادةً في منتصف الحافة */
+.lv-pages.htmlmode{top:auto;bottom:18px;transform:none}
 #lv-pen-btn.on,#lv-pen-btn.on:hover{background:var(--red);color:#fff}
 /* لوحة القلم عائمةٌ فوق شريط التنقّل (لا شريطٌ ثانٍ يزحزح الصفحة) — تظهر
    بانزلاقٍ لطيف، بأسلوب لوحات iPadOS، فيبقى تصميم أسفل العارض متناسقاً. */
@@ -7015,9 +7021,34 @@ async function htmlFrame(u){
   const fr=document.createElement('iframe');
   fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals');
   fr.setAttribute('allow','autoplay; fullscreen');
-  fr.srcdoc=await r.text();
+  fr.srcdoc=htmlInjectPenBridge(await r.text());
   fr.addEventListener('load',()=>{try{fr.contentWindow.focus();}catch(e){}});
   return fr;
+}
+/* جسر القلم داخل العرض التفاعلي: الإصبع (والفأرة) يضغطان أزرار العرض كالمعتاد،
+   أمّا القلم الرقمي (pointerType=pen) — والفأرة حين يُفعَّل زرّ القلم — فيُعترض
+   قبل سكربتات الملف (مستمع capture يُسجَّل أوّلاً في <head>) ويُرسَل موضعه إلى
+   الصفحة الأمّ لترسمه على طبقةٍ شفافة فوق الإطار. الإطار معزولٌ بلا
+   allow-same-origin، فلا طريق لقراءة أحداثه من الخارج إلا عبر postMessage. */
+const HTML_PEN_BRIDGE='<script>(function(){var on=false,act=false,lastUp=0;'
+ +'addEventListener("message",function(e){if(e.source===parent&&e.data&&e.data.kh==="penmode")on=!!e.data.on;});'
+ +'function ink(e){return e.pointerType==="pen"||(on&&e.pointerType==="mouse");}'
+ +'function stop(e){e.preventDefault();e.stopImmediatePropagation();}'
+ +'function send(t,e){parent.postMessage({kh:"ink",t:t,x:e.clientX,y:e.clientY,p:e.pressure,pt:e.pointerType},"*");}'
+ +'addEventListener("pointerdown",function(e){if(!ink(e))return;act=true;stop(e);send("down",e);},true);'
+ +'addEventListener("pointermove",function(e){if(!act)return;stop(e);var l=(e.getCoalescedEvents&&e.getCoalescedEvents())||[];if(!l.length)l=[e];for(var i=0;i<l.length;i++)send("move",l[i]);},true);'
+ +'function end(e){if(!act)return;act=false;lastUp=Date.now();stop(e);send("up",e);}'
+ +'addEventListener("pointerup",end,true);addEventListener("pointercancel",end,true);'
+ +'["click","mousedown","mouseup","dblclick","contextmenu"].forEach(function(t){addEventListener(t,function(e){if(act||Date.now()-lastUp<400||e.pointerType==="pen"||(on&&t!=="contextmenu"&&(e.pointerType==="mouse"||!e.pointerType)))stop(e);},true);});'
+ +'function st(e){var t=e.touches&&e.touches[0];if(t&&t.touchType==="stylus")e.preventDefault();}'
+ +'addEventListener("touchstart",st,{capture:true,passive:false});addEventListener("touchmove",st,{capture:true,passive:false});'
+ +'})();<\/script>';
+function htmlInjectPenBridge(src){
+  const m=/<head[^>]*>/i.exec(src);
+  if(m)return src.slice(0,m.index+m[0].length)+HTML_PEN_BRIDGE+src.slice(m.index+m[0].length);
+  const d=/<!doctype[^>]*>/i.exec(src);
+  if(d)return src.slice(0,d.index+d[0].length)+HTML_PEN_BRIDGE+src.slice(d.index+d[0].length);
+  return HTML_PEN_BRIDGE+src;
 }
 let _htmlOpenTok=0;
 function drivePrevOpen(url,name,type){
@@ -9368,6 +9399,7 @@ function liveRenderLauncher(){
 // ── عارض المرفق: يملأ كل ما تحت لوحة التحكم، وزر ✕ يعيد لقائمة المرفقات ──
 function liveViewOpen(title,html,showPages){
   _htmlOpenTok++;   // يُلغي عرض HTML ما زال يُحمَّل إن فُتح مرفقٌ آخر قبله
+  _lvHtmlFrame=null;document.getElementById('lv-pages').classList.remove('htmlmode');
   document.getElementById('lv-vtitle').textContent=title||'';
   document.getElementById('lv-vbody').innerHTML=html;
   document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
@@ -9403,7 +9435,15 @@ function liveOpenFile(fi){
     htmlFrame(u).then(fr=>{
       const body=document.getElementById('lv-vbody');
       if(tok!==_htmlOpenTok||!body||!document.getElementById('live-view').classList.contains('on'))return;
-      body.innerHTML='';body.appendChild(fr);
+      body.innerHTML='';
+      const wrap=document.createElement('div');wrap.className='lv-html-wrap';
+      wrap.appendChild(fr);
+      const cv=document.createElement('canvas');cv.className='lv-ink lv-ink-html';cv.id='lv-ink';
+      wrap.appendChild(cv);body.appendChild(wrap);
+      _lvHtmlFrame=fr;_lvStrokes={};_lvCurStroke=null;_lvPenErasing=false;
+      const rail=document.getElementById('lv-pages');
+      rail.classList.remove('hidden');rail.classList.add('htmlmode');
+      lvInkSetup();
     }).catch(()=>toast('تعذّر فتح العرض',true));
     return;
   }
@@ -9425,6 +9465,9 @@ const LV_ZOOM_MAX=4;
 // حبر القلم لكل نشرة صفحات: مفتاحه رقم أول صفحةٍ في النشرة (_lvSpreadOf)،
 // يُمسح عند فتح كتابٍ جديد ويبقى محفوظاً عند التنقّل بين صفحات نفس الدرس.
 let _lvStrokes={},_lvCurStroke=null;
+let _lvHtmlFrame=null;
+// مفتاح طبقة الرسم: لكل نشرةٍ من الكتاب طبقتها، وللعرض التفاعلي طبقةٌ واحدة
+function _lvInkKey(){return _lvHtmlFrame?'html':_lvSpreadOf(_liveBookAt);}
 let _lvPenOn=false,_lvPenColorVal='#e11d3c',_lvPenWidthVal=3,_lvPenErasing=false;
 /* كتاب الإنجليزية يُفتح من اليسار كسائر الكتب اللاتينية، فأولى صفحتيه على
    اليسار وتقليبُه إلى الأمام يسار — عكس بقيّة المواد. ولولا هذا الاستثناء
@@ -9537,7 +9580,7 @@ function lvInkRedraw(){
   const cv=lvInkCanvas();if(!cv)return;
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,cv.width,cv.height);
-  const a=_lvSpreadOf(_liveBookAt);
+  const a=_lvInkKey();
   ((_lvStrokes[a]||[])).forEach(s=>lvInkDrawStroke(ctx,s,cv.width,cv.height));
 }
 function lvInkPos(cv,e){
@@ -9563,7 +9606,7 @@ function lvInkPointerMove(e,cv){
 }
 function lvInkPointerUp(e){
   if(!_lvCurStroke)return;
-  const a=_lvSpreadOf(_liveBookAt);
+  const a=_lvInkKey();
   (_lvStrokes[a]=_lvStrokes[a]||[]).push(_lvCurStroke);
   _lvCurStroke=null;
 }
@@ -9572,7 +9615,21 @@ function lvPenSyncUI(){
   document.getElementById('lv-pen-bar')?.classList.toggle('show',_lvPenOn);
   lvInkCanvas()?.classList.toggle('on',_lvPenOn);
 }
-function lvPenToggle(){_lvPenOn=!_lvPenOn;lvPenSyncUI();}
+function lvPenToggle(){
+  _lvPenOn=!_lvPenOn;lvPenSyncUI();
+  try{_lvHtmlFrame&&_lvHtmlFrame.contentWindow.postMessage({kh:'penmode',on:_lvPenOn},'*');}catch(e){}
+}
+// ما يرسله جسر القلم من داخل العرض التفاعلي — يُقبل من إطارنا الحالي فقط
+addEventListener('message',e=>{
+  const fr=_lvHtmlFrame,d=e.data;
+  if(!fr||e.source!==fr.contentWindow||!d||d.kh!=='ink')return;
+  const cv=lvInkCanvas();if(!cv)return;
+  const r=fr.getBoundingClientRect();
+  const ev={clientX:r.left+(+d.x||0),clientY:r.top+(+d.y||0),pressure:+d.p||0,pointerType:d.pt==='pen'?'pen':'mouse',pointerId:-1,preventDefault(){}};
+  if(d.t==='down')lvInkPointerDown(ev,cv);
+  else if(d.t==='move')lvInkPointerMove(ev,cv);
+  else if(d.t==='up')lvInkPointerUp(ev);
+});
 function lvPenColor(c,btn){
   _lvPenColorVal=c;_lvPenErasing=false;
   document.querySelectorAll('.lv-pen-swatch').forEach(b=>b.classList.remove('on'));
@@ -9585,11 +9642,11 @@ function lvPenErase(){
   document.getElementById('lv-pen-erase-btn')?.classList.toggle('on',_lvPenErasing);
 }
 function lvPenUndo(){
-  const a=_lvSpreadOf(_liveBookAt);
+  const a=_lvInkKey();
   if(_lvStrokes[a]&&_lvStrokes[a].length){_lvStrokes[a].pop();lvInkRedraw();}
 }
 function lvPenClear(){
-  const a=_lvSpreadOf(_liveBookAt);
+  const a=_lvInkKey();
   _lvStrokes[a]=[];lvInkRedraw();
 }
 (function lvInkWire(){
