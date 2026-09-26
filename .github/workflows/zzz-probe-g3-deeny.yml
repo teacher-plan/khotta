@@ -10,8 +10,4 @@ jobs:
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
           run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'; echo; }
-          run "BOOKS" "select grade,subject,semester,book_no,base_path,page_count,status from book_sources where grade='3' and subject='ديني حياتي';"
-          run "FILES" "select split_part(name,'/',2) as base, count(*) from storage.objects where bucket_id='library-files' and name like 'books/L1o42jrh%' group by 1;"
-          run "GUIDE" "select grade,subject,base_path,status from teacher_guides where grade=3 and subject='ديني حياتي';"
-          run "GUIDE_FILES" "select count(*) from storage.objects where bucket_id='library-files' and name like 'teacher-guides/c1-g3-deeny-sem1/%';"
-          run "CUR" "select book_no,count(*) from curriculum where grade=3 and subject='ديني حياتي' group by 1;"
+          run "BOOKS" "select grade,subject,semester,book_no,base_path,page_count from book_sources where grade='3' and subject='ديني حياتي';"
