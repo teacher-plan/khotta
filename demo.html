@@ -732,7 +732,7 @@ body.inapp #c1-budget-btn{display:flex}
 .cls-pick-row{display:flex;gap:9px;margin-top:12px}
 .cls-pick-btn{flex:1;border:1.5px solid var(--cc,var(--border));border-radius:12px;padding:13px;background:var(--card);color:var(--cc,var(--ink));font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;transition:.15s}
 .cls-pick-btn:hover{background:var(--cc,var(--red));color:#fff}
-#drive-prev-frame{width:100%;height:min(72vh,560px);border:none;border-radius:12px;background:#fff}
+#drive-prev-frame,#drive-prev-html{width:100%;height:min(72vh,560px);border:none;border-radius:12px;background:#fff}
 
 /* ── بطاقة اليوم — تحضير مباشر بضغطة زر ── */
 /* ══ بار الخطة — كولاج ورقيّ ══
@@ -4286,7 +4286,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='22e61ab';
+const KH_BUILD='b8483ad';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -6953,10 +6953,14 @@ function planAttach(id){
     const f=inp.files[0];if(!f)return;
     cyBusy('يرفع الملف');
     try{
-      const result=await storageUpload(f,f.name,'lesson_attachment');
+      // سياسة التخزين ترفض ‎.html‎ (كي لا يُستضاف على نطاقنا ما يُنفَّذ في المتصفح)،
+      // فيُرفع العرض التفاعلي نصّاً ‎.txt‎ ويُعرض لاحقاً في إطارٍ معزول (htmlFrame).
+      const isHtml=HTML_EXT_RE.test(f.name);
+      const up=isHtml?new File([f],f.name+'.txt',{type:'text/plain'}):f;
+      const result=await storageUpload(up,up.name,'lesson_attachment');
       if(!result)return;
       const st=planGet(id);
-      const files=[...(st.files||[]),{name:f.name,type:f.type,size:f.size,path:result.path,viewLink:result.viewLink,previewLink:result.previewLink}];
+      const files=[...(st.files||[]),{name:f.name,type:isHtml?'text/html':f.type,size:f.size,path:result.path,viewLink:result.viewLink,previewLink:result.previewLink,...(isHtml?{html:true}:{})}];
       await planSetState(id,{files});
       planRenderUnits();
       toast('أُرفق الملف بالدرس','ok');
@@ -6988,8 +6992,37 @@ function filePreviewSrc(url,name){
   const isOffice=OFFICE_EXT_RE.test(name||'')||OFFICE_EXT_RE.test(url||'');
   return isOffice?'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(url):url;
 }
+const HTML_EXT_RE=/\.x?html?$/i;
+function isHtmlAttachment(f){return !!f&&(!!f.html||HTML_EXT_RE.test(f.name||''));}
+// sandbox بلا allow-same-origin: أصلٌ معتم منفصل، فلا يقرأ الملفُّ جلسةَ المعلّمة
+// ولا تخزينها ولا يتحكّم بالصفحة الأمّ — تعمل سكربتاته وأزراره داخل إطاره فقط.
+async function htmlFrame(u){
+  const r=await fetch(u);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const fr=document.createElement('iframe');
+  fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals');
+  fr.setAttribute('allow','autoplay; fullscreen');
+  fr.srcdoc=await r.text();
+  fr.addEventListener('load',()=>{try{fr.contentWindow.focus();}catch(e){}});
+  return fr;
+}
+let _htmlOpenTok=0;
 function drivePrevOpen(url,name,type){
   const u=url||'';
+  const oldHtml=document.getElementById('drive-prev-html');if(oldHtml)oldHtml.remove();
+  if(HTML_EXT_RE.test(name||'')||type==='text/html'){
+    const frame=document.getElementById('drive-prev-frame');
+    document.getElementById('drive-prev-title').textContent=name||'معاينة الملف';
+    document.getElementById('drive-prev-img').style.display='none';
+    frame.style.display='none';frame.src='about:blank';
+    document.getElementById('drive-prev-modal').classList.add('open');
+    const tok=++_htmlOpenTok;
+    htmlFrame(u).then(fr=>{
+      if(tok!==_htmlOpenTok||!document.getElementById('drive-prev-modal').classList.contains('open'))return;
+      fr.id='drive-prev-html';frame.parentNode.insertBefore(fr,frame);
+    }).catch(()=>toast('تعذّر فتح العرض',true));
+    return;
+  }
   const isImg=/^image\//.test(type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name||'');
   document.getElementById('drive-prev-title').textContent=name||'معاينة الملف';
   const img=document.getElementById('drive-prev-img'),frame=document.getElementById('drive-prev-frame');
@@ -7001,6 +7034,7 @@ function drivePrevOpen(url,name,type){
 }
 function drivePrevClose(){
   document.getElementById('drive-prev-modal').classList.remove('open');
+  _htmlOpenTok++;const oldHtml=document.getElementById('drive-prev-html');if(oldHtml)oldHtml.remove();
   document.getElementById('drive-prev-frame').src='about:blank';
   document.getElementById('drive-prev-img').src='';
 }
@@ -9306,7 +9340,7 @@ function liveRenderLauncher(){
     else if(_liveBookError)tiles.push({c:'#8A5030',ic:'book',nm:'صفحات الكتاب',mt:'تعذّر تحضيرها — '+khG('اضغطي','اضغط')+' لإعادة المحاولة',fn:'liveRetryBook()'});
     if(st.info_url)tiles.push({c:'#C8A03C',ic:'info',nm:'ملخص الدرس',mt:'إنفوجرافيك بمقاس الشاشة',fn:'liveOpenInfo()'});
     if(st.game_id)tiles.push({c:'#8b5cf6',ic:'game',nm:'اللعبة التعليمية',mt:'تفتح بملء المساحة',fn:'liveOpenGame()'});
-    (st.files||[]).forEach((f,fi)=>tiles.push({c:'#5C7038',ic:'file',nm:f.name,mt:'ملف مرفق',fn:`liveOpenFile(${fi})`}));
+    (st.files||[]).forEach((f,fi)=>tiles.push({c:'#5C7038',ic:'file',nm:f.name,mt:isHtmlAttachment(f)?'عرضٌ تفاعلي':'ملف مرفق',fn:`liveOpenFile(${fi})`}));
   }
   if(!tiles.length){
     box.innerHTML=`<div class="lv-launch">${head}<div class="lv-empty">
@@ -9322,6 +9356,7 @@ function liveRenderLauncher(){
 }
 // ── عارض المرفق: يملأ كل ما تحت لوحة التحكم، وزر ✕ يعيد لقائمة المرفقات ──
 function liveViewOpen(title,html,showPages){
+  _htmlOpenTok++;   // يُلغي عرض HTML ما زال يُحمَّل إن فُتح مرفقٌ آخر قبله
   document.getElementById('lv-vtitle').textContent=title||'';
   document.getElementById('lv-vbody').innerHTML=html;
   document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
@@ -9351,6 +9386,16 @@ function liveOpenFile(fi){
   const f=(planGet(liveCtx.lessonId).files||[])[fi];if(!f)return;
   const u=f.viewLink||f.previewLink||'';
   if(!liveSrcOk(u)){toast('رابط الملف غير صالح',true);return;}
+  if(isHtmlAttachment(f)){
+    liveViewOpen(f.name,'<div style="color:#fff;opacity:.7;font-weight:700">يُحضَّر العرض…</div>',false);
+    const tok=++_htmlOpenTok;
+    htmlFrame(u).then(fr=>{
+      const body=document.getElementById('lv-vbody');
+      if(tok!==_htmlOpenTok||!body||!document.getElementById('live-view').classList.contains('on'))return;
+      body.innerHTML='';body.appendChild(fr);
+    }).catch(()=>toast('تعذّر فتح العرض',true));
+    return;
+  }
   // ملفٌ من تخزيننا الخاص: رابطٌ مباشر للملف نفسه لا صفحة عرض Drive —
   // الصورة تُعرض بوسم <img> (يحترم max-height:100% من .lv-vbody img)
   // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
