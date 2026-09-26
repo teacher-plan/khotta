@@ -11,8 +11,8 @@ jobs:
         run: |
           run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'; echo; }
 
-          run "أعمدة profiles" "select column_name, data_type from information_schema.columns where table_name='profiles' order by ordinal_position;"
+          run "عيّنة cycle1_profiles.data (مفتاح واحد)" "select email, jsonb_pretty(data) from cycle1_profiles limit 1;"
 
-          run "أعمدة cycle1_profiles" "select column_name, data_type from information_schema.columns where table_name='cycle1_profiles' order by ordinal_position;"
+          run "قيم cycle في allowed_emails" "select distinct cycle from allowed_emails;"
 
-          run "أعمدة allowed_emails" "select column_name, data_type from information_schema.columns where table_name='allowed_emails' order by ordinal_position;"
+          run "عدد allowed_emails النشطة حسب cycle" "select cycle, count(*) from allowed_emails where expires_at is null or expires_at>now() group by cycle;"
