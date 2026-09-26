@@ -1,0 +1,70 @@
+name: zzz exec cycle1 unused cleanup
+on: workflow_dispatch
+jobs:
+  exec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: cleanup
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          run_sql(){ body=$(jq -Rs '{query: .}' <<< "$1"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body"; }
+
+          SUBJ_FILTER="subject in ('الرياضيات','العلوم','اللغة الإنجليزية')"
+
+          echo "── جلب مفتاح service_role ──"
+          KEYS_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys")
+          SERVICE_KEY=$(echo "$KEYS_JSON" | jq -r '.[] | select(.name=="service_role") | .api_key')
+
+          echo "── حجم Storage قبل ──"
+          run_sql "select pg_size_pretty(sum((metadata->>'size')::bigint)) from storage.objects where bucket_id='library-files';" | jq .
+
+          echo "── قائمة الكتب المستهدفة (book_sources) ──"
+          BOOK_PATHS=$(run_sql "select base_path from book_sources where grade::int between 1 and 4 and $SUBJ_FILTER;" | jq -r '.[].base_path')
+          echo "$BOOK_PATHS"
+
+          echo "── قائمة الأدلة المستهدفة (teacher_guides) ──"
+          GUIDE_PATHS=$(run_sql "select base_path from teacher_guides where grade between 1 and 4 and $SUBJ_FILTER;" | jq -r '.[].base_path')
+          echo "$GUIDE_PATHS"
+
+          total_deleted=0
+          for base in $BOOK_PATHS $GUIDE_PATHS; do
+            echo "═ $base ═"
+            offset=0
+            while true; do
+              body=$(jq -n --arg p "$base" '{prefix:$p, limit:1000, offset:'"$offset"'}')
+              names=$(curl -s -X POST "https://$REF.supabase.co/storage/v1/object/list/library-files" \
+                -H "Authorization: Bearer $SERVICE_KEY" -H "Content-Type: application/json" --data-binary "$body" \
+                | jq -r --arg p "$base" '.[] | ($p+"/"+.name)')
+              cnt=$(echo "$names" | grep -c . || true)
+              if [ "$cnt" -eq 0 ]; then break; fi
+              del_body=$(echo "$names" | jq -Rs 'split("\n") | map(select(length>0)) | {prefixes: .}')
+              code=$(curl -s -o /tmp/del.json -w '%{http_code}' -X DELETE "https://$REF.supabase.co/storage/v1/object/library-files" \
+                -H "Authorization: Bearer $SERVICE_KEY" -H "Content-Type: application/json" --data-binary "$del_body")
+              echo "  حُذف دفعة من $cnt ملف ($code)"
+              total_deleted=$((total_deleted+cnt))
+              offset=$((offset+1000))
+              if [ "$cnt" -lt 1000 ]; then break; fi
+            done
+          done
+          echo "إجمالي الملفات المحذوفة: $total_deleted"
+
+          echo "── حذف صفوف book_sources ──"
+          run_sql "delete from public.book_sources where grade::int between 1 and 4 and $SUBJ_FILTER;" | jq .
+
+          echo "── حذف صفوف teacher_guides ──"
+          run_sql "delete from public.teacher_guides where grade between 1 and 4 and $SUBJ_FILTER;" | jq .
+
+          echo "── حذف صفوف curriculum ──"
+          run_sql "delete from public.curriculum where grade between 1 and 4 and $SUBJ_FILTER;" | jq .
+
+          echo "── فحص أمان: lesson_prep_generations مرتبطة بالنطاق (للاطلاع) ──"
+          run_sql "select count(*) from lesson_prep_generations where grade between 1 and 4 and $SUBJ_FILTER;" | jq .
+
+          echo "── فحص أمان: games مرتبطة بالنطاق (للاطلاع) ──"
+          run_sql "select count(*) from games where grade::int between 1 and 4 and $SUBJ_FILTER;" | jq .
+
+          echo "── حجم Storage بعد ──"
+          run_sql "select pg_size_pretty(sum((metadata->>'size')::bigint)) from storage.objects where bucket_id='library-files';" | jq .
