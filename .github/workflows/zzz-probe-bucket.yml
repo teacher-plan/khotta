@@ -10,11 +10,7 @@ jobs:
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
           run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'; echo; }
-          run "BUCKETS" "select id, public, file_size_limit, allowed_mime_types from storage.buckets;"
-          SK=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
-          echo '<!doctype html><p>hi</p>' > t.html
-          echo "════ UPLOAD_TEST (service role) ════"
-          curl -s -X POST "https://$REF.supabase.co/storage/v1/object/user-files/zz-probe/test.html" -H "Authorization: Bearer $SK" -H "Content-Type: text/html" --data-binary @t.html; echo
-          echo "════ SERVE_TEST ════"
-          curl -s -D - -o /dev/null "https://$REF.supabase.co/storage/v1/object/public/user-files/zz-probe/test.html" | grep -i -E "^HTTP|content-type|content-security"
-          curl -s -X DELETE "https://$REF.supabase.co/storage/v1/object/user-files" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -d '{"prefixes":["zz-probe/test.html"]}'; echo
+          run "POLICIES" "select policyname, cmd, qual, with_check from pg_policies where schemaname='storage' and tablename='objects';"
+          run "USER_FILES_POL" "select policyname, cmd, with_check from pg_policies where tablename='user_files';"
+          run "HTML_UPLOADS" "select name, metadata->>'mimetype' mt, created_at from storage.objects where bucket_id='user-files' and (name ilike '%.htm%' or metadata->>'mimetype' ilike '%html%') order by created_at desc limit 5;"
+          run "RECENT_USERFILES" "select name, metadata->>'mimetype' mt, created_at from storage.objects where bucket_id='user-files' order by created_at desc limit 5;"
