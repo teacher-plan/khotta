@@ -1,0 +1,34 @@
+name: zzz probe bandwidth
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          echo "════ organizations ════"
+          ORG=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/organizations")
+          echo "$ORG" | jq -c '.[] | {id, name}'
+          ORG_ID=$(echo "$ORG" | jq -r '.[0].id')
+          echo
+
+          echo "════ usage عبر project (v1/projects/{ref}) ════"
+          curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF" | jq .
+
+          echo "════ محاولة نقطة usage الرسمية ════"
+          curl -s -o /tmp/u1.json -w 'HTTP %{http_code}\n' -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/usage"
+          cat /tmp/u1.json | jq . 2>/dev/null || cat /tmp/u1.json
+          echo
+
+          echo "════ محاولة organizations/{id}/usage ════"
+          curl -s -o /tmp/u2.json -w 'HTTP %{http_code}\n' -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/organizations/$ORG_ID/usage"
+          cat /tmp/u2.json | jq . 2>/dev/null || cat /tmp/u2.json
+          echo
+
+          echo "════ محاولة billing/usage على المؤسسة ════"
+          curl -s -o /tmp/u3.json -w 'HTTP %{http_code}\n' -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/organizations/$ORG_ID/billing/usage"
+          cat /tmp/u3.json | jq . 2>/dev/null || cat /tmp/u3.json
+          echo
