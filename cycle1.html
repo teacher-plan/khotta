@@ -978,6 +978,7 @@ body.inapp #c1-budget-btn{display:flex}
 .lb-pop-btn.hidden{display:none}
 .lb-pick-disp{font-size:19px;font-weight:800;color:var(--ink);min-height:52px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;padding:9px;background:var(--card);border-radius:12px;text-align:center}
 .lb-pick-disp.spin{color:var(--red-d)}
+#lb-pop-pick{width:260px;max-width:calc(100vw - 24px);padding:0;background:none;border:0;box-shadow:none}
 .live-qs{display:flex;flex-wrap:wrap;gap:7px;max-height:46vh;overflow-y:auto}
 .live-qs-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;transition:.15s}
 .live-qs-chip:active{transform:scale(.96)}
@@ -3457,11 +3458,13 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     </div>
   </div>
   <div class="lb-pop" id="lb-pop-pick" style="inset-inline-start:12px">
-    <div class="lb-pop-t">قرعة عشوائية بين طلاب الشعبة</div>
-    <div class="lb-pick-disp" id="live-pick-disp" data-kh-g="اضغطي «اسحبي اسماً»|اضغط «اسحب اسماً»">اضغطي «اسحبي اسماً»</div>
-    <div class="lb-pop-row">
-      <button class="lb-pop-btn" onclick="livePick()" data-kh-g="اسحبي اسماً|اسحب اسماً">اسحبي اسماً</button>
-      <button class="lb-pop-btn star hidden" id="live-pick-star" onclick="livePickGiveStar()" data-kh-g="امنحيها نجمة|امنحه نجمة">امنحيها نجمة</button>
+    <div class="gm-pick-panel live-pick-panel">
+      <div class="gm-pick-slot"><div class="gm-pick-strip" id="live-pick-strip"><div class="gm-pick-row">؟</div></div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <button class="gm-btn" style="flex:1;padding:8px 10px;font-size:13px" id="live-pick-go" onclick="livePick()" data-kh-g="اختاري|اختر">اختاري</button>
+        <span id="live-pick-count" style="font-size:11px;color:#8a7c68;font-weight:700;white-space:nowrap"></span>
+      </div>
+      <button class="lb-pop-btn star hidden" id="live-pick-star" style="width:100%;margin-top:8px" onclick="livePickGiveStar()" data-kh-g="امنحيها نجمة|امنحه نجمة">امنحيها نجمة</button>
     </div>
   </div>
   <div class="lb-pop" id="lb-pop-stars" style="inset-inline-start:12px">
@@ -9195,9 +9198,7 @@ function liveOpen(classId,subject,lessonId){
   document.getElementById('live-cls-nm').textContent=cls.name+' · '+subject;
   document.getElementById('live-lesson-nm').textContent=(l&&l.name)||'';
   liveTimerReset();
-  const disp=document.getElementById('live-pick-disp');
-  disp.textContent=''+khG('اضغطي','اضغط')+' «'+khG('اسحبي','اسحب')+' اسماً»';disp.removeAttribute('data-idx');
-  document.getElementById('live-pick-star').classList.add('hidden');
+  livePickReset();
   liveRenderQuickStars();
   lbPopCloseAll();
   liveViewClose(true);
@@ -9773,36 +9774,70 @@ function liveQuiet(){
   c1Sound('quiet',()=>{try{zzfx(1.1,.05,660,.02,.3,.6,0,1.8,0,0,0,0,.05,0,0,0,0,.8,.3);}catch(e){}});
   setTimeout(()=>ov.classList.remove('on'),1400);
 }
+// القرعة نفسها المستخدمة داخل الألعاب (gmPickDraw): شريط أسماء يدور ويتباطأ، ودورٌ عادل
+// يومي لا يتكرّر فيه الاسم حتى يمرّ الجميع — ويتشارك السجلّ اليومي مع قرعة الألعاب
+let _livePickIdx=null;
+function livePickReset(){
+  _livePickIdx=null;
+  const strip=document.getElementById('live-pick-strip');
+  strip.style.transition='none';strip.style.transform='translateY(0)';
+  strip.innerHTML='<div class="gm-pick-row">؟</div>';
+  document.getElementById('live-pick-star').classList.add('hidden');
+  document.getElementById('live-pick-go').disabled=false;
+  livePickRefresh();
+}
+function livePickRefresh(){
+  if(!liveCtx)return;
+  const list=gmPickClassStudents(liveCtx.classId);
+  let picked=[];
+  try{picked=JSON.parse(localStorage.getItem(gmPickDayKey(liveCtx.classId))||'[]');}catch(e){}
+  picked=picked.filter(id=>list.some(s=>s.id===id));
+  document.getElementById('live-pick-count').textContent='أجاب اليوم: '+egToArabic(picked.length)+' / '+egToArabic(list.length);
+}
 function livePick(){
   if(!liveCtx)return;
-  const cls=starClassObj(liveCtx.classId);
-  const names=(cls&&cls.students)||[];
-  if(!names.length){toast('لا قائمة طلاب لهذه الشعبة',true);return;}
-  const disp=document.getElementById('live-pick-disp');
+  const cid=liveCtx.classId;
+  const list=gmPickClassStudents(cid);
+  if(!list.length){toast('لا قائمة طلاب لهذه الشعبة',true);return;}
+  const key=gmPickDayKey(cid);
+  let picked=[];
+  try{picked=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+  picked=picked.filter(id=>list.some(s=>s.id===id));
+  let pool=list.filter(s=>!picked.includes(s.id));
+  let cycled=false;
+  if(!pool.length){pool=list.slice();picked=[];cycled=true;}
+  const chosen=pool[Math.floor(Math.random()*pool.length)];
+  picked.push(chosen.id);
+  try{localStorage.setItem(key,JSON.stringify(picked));}catch(e){}
+  const strip=document.getElementById('live-pick-strip');
+  const go=document.getElementById('live-pick-go');
   document.getElementById('live-pick-star').classList.add('hidden');
-  let ticks=0;const maxTicks=18+Math.floor(Math.random()*8);
-  clearInterval(_liveShuffleT);
-  disp.classList.add('spin');
-  _liveShuffleT=setInterval(()=>{
-    disp.textContent=names[Math.floor(Math.random()*names.length)];
-    ticks++;
-    if(ticks>=maxTicks){
-      clearInterval(_liveShuffleT);
-      const finalIdx=Math.floor(Math.random()*names.length);
-      disp.textContent=names[finalIdx];
-      disp.dataset.idx=finalIdx;
-      disp.classList.remove('spin');
-      document.getElementById('live-pick-star').classList.remove('hidden');
-      starDing();
-    }
-  },80);
+  _livePickIdx=null;
+  go.disabled=true;
+  const ROW=52,DUR=2000;
+  const rows=[];
+  const shuffled=list.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  for(let i=0;rows.length<16;i++)rows.push(gmPickShort(shuffled[i%shuffled.length].name));
+  rows.push(gmPickShort(chosen.name));
+  strip.style.transition='none';strip.style.transform='translateY(0)';
+  strip.innerHTML=rows.map((n,i)=>`<div class="gm-pick-row${i===rows.length-1?' winner':''}">${escHtml(n)}</div>`).join('');
+  void strip.offsetWidth;
+  strip.style.transition='transform '+DUR+'ms cubic-bezier(.15,.85,.25,1)';
+  strip.style.transform='translateY(-'+((rows.length-1)*ROW)+'px)';
+  let d=60,t=0;
+  while(t<DUR-260){setTimeout(()=>gmSound('pop'),t);t+=d;d*=1.18;}
+  setTimeout(()=>{
+    gmSound('ok');
+    livePickRefresh();
+    if(cycled)toast('مرّ الجميع — بدأت جولة عادلة جديدة','ok');
+    _livePickIdx=Number(chosen.id);
+    document.getElementById('live-pick-star').classList.remove('hidden');
+    go.disabled=false;
+  },DUR+80);
 }
 function livePickGiveStar(){
-  if(!liveCtx)return;
-  const disp=document.getElementById('live-pick-disp');
-  const idx=Number(disp.dataset.idx);
-  if(Number.isNaN(idx))return;
-  starTap(liveCtx.classId,idx);
+  if(!liveCtx||_livePickIdx==null)return;
+  starTap(liveCtx.classId,_livePickIdx);
   liveRenderQuickStars();
 }
 function liveRenderQuickStars(){
