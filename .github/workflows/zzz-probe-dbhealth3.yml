@@ -1,0 +1,34 @@
+name: zzz probe dbhealth3
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?' | head -40; echo; }
+          echo "════ PROJECT ════"; curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF" | jq -c '{status,region}'
+          echo "════ SEC_ADVISOR ════"; curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/advisors/security" | jq -c '.lints[]? | {level,name,detail:(.detail[0:160])}' | sort | uniq -c | sort -rn | head -30
+          echo "════ PERF_ADVISOR ════"; curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/advisors/performance" | jq -c '.lints[]? | {level,name}' | sort | uniq -c | sort -rn | head -20
+          run "DB_SIZE" "select pg_size_pretty(pg_database_size(current_database())) db, (select pg_size_pretty(sum((metadata->>'size')::bigint)) from storage.objects) storage;"
+          run "TOP_TABLES" "select relname, pg_size_pretty(pg_total_relation_size(c.oid)) sz, n_live_tup live, n_dead_tup dead from pg_class c join pg_stat_user_tables s on s.relid=c.oid order by pg_total_relation_size(c.oid) desc limit 12;"
+          run "CONNECTIONS" "select state, count(*) from pg_stat_activity group by 1;"
+          run "LONG_QUERIES" "select pid, now()-query_start dur, left(query,80) q from pg_stat_activity where state='active' and now()-query_start > interval '30 seconds';"
+          run "CRON_JOBS" "select jobname, schedule, active from cron.job order by 1;"
+          run "CRON_FAIL_24H" "select j.jobname, count(*) filter (where r.status='failed') fails, count(*) runs, max(r.end_time) last from cron.job j left join cron.job_run_details r on r.jobid=j.jobid and r.start_time>now()-interval '24 hours' group by 1 order by 1;"
+          run "CRON_LAST_ERR" "select j.jobname, left(r.return_message,140) msg, r.end_time from cron.job_run_details r join cron.job j on j.jobid=r.jobid where r.status='failed' order by r.end_time desc limit 5;"
+          run "HEALTH_LATEST" "select component, status, max(checked_at) last from health_checks where checked_at>now()-interval '6 hours' group by 1,2 order by 1;"
+          run "ERRORS_24H" "select function_name, count(*), max(occurred_at) from error_logs where occurred_at>now()-interval '24 hours' group by 1 order by 2 desc limit 10;"
+          run "ERR_SAMPLE" "select function_name, left(error_message,160) m, occurred_at from error_logs order by occurred_at desc limit 5;"
+          run "RLS_OFF" "select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;"
+          run "NO_PK" "select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not exists(select 1 from pg_constraint k where k.conrelid=c.oid and k.contype='p');"
+          run "BOOKS_NO_FILES" "select b.grade,b.subject,b.book_no,b.base_path from book_sources b where not exists(select 1 from storage.objects o where o.bucket_id='library-files' and o.name like b.base_path||'/%');"
+          run "GUIDES_NO_FILES" "select g.grade,g.subject,g.base_path from teacher_guides g where not exists(select 1 from storage.objects o where o.bucket_id='library-files' and o.name like g.base_path||'/%');"
+          run "ORPHAN_BOOK_DIRS" "select split_part(name,'/',2) d, count(*) from storage.objects o where bucket_id='library-files' and name like 'books/%' and not exists(select 1 from book_sources b where o.name like b.base_path||'/%') group by 1;"
+          run "ORPHAN_GUIDE_DIRS" "select split_part(name,'/',2) d, count(*) from storage.objects o where bucket_id='library-files' and name like 'teacher-guides/%' and not exists(select 1 from teacher_guides g where o.name like g.base_path||'/%') group by 1;"
+          run "ACTIVE_USERS" "select count(*) filter (where expires_at is null or expires_at>now()) active, count(*) total from allowed_emails;"
+          run "LAST_LOGIN" "select max(last_sign_in_at) from auth.users;"
+          run "HTTP_RESPONSE_SIZE" "select pg_size_pretty(pg_total_relation_size('net._http_response')), (select count(*) from net._http_response);"
