@@ -7422,6 +7422,36 @@ function zzfx(...t){
   const bf=gmAC.createBuffer(1,h,R);bf.getChannelData(0).set(k);
   const src=gmAC.createBufferSource();src.buffer=bf;src.connect(gmAC.destination);src.start();
 }
+/* ══ حزمة أصوات خُطّة ══
+   أصواتٌ مُركّبة خصيصاً للمنصة (tools/sfx/synth.py) ومحفوظة بجانب الصفحة في sfx/:
+   تُحمَّل مرةً وتُفكّ إلى AudioBuffer، فيُشغَّل الصوت لحظة الضغط بلا تأخّر
+   ولا طلب شبكةٍ جديد، ويمكن تشغيل عدّة نسخٍ متراكبة (بالونات متتالية مثلاً).
+   ZzFX يبقى احتياطاً إن لم يكتمل التحميل بعد أو تعذّر. */
+const KH_SFX_KINDS=['timeup','ok','bad','pop','click','win','big','ding','quiet','flip','whoosh','tick','tock','spin','streak','countdown','reveal','drop'];
+let _khSfxBuf={},_khSfxLoading=null;
+function khSfxUrl(k){return 'sfx/'+k+'.mp3?v='+KH_BUILD;}
+function khSfxLoad(){
+  if(_khSfxLoading)return _khSfxLoading;
+  if(!gmAC){try{gmAC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return Promise.resolve();}}
+  _khSfxLoading=Promise.all(KH_SFX_KINDS.map(k=>fetch(khSfxUrl(k)).then(r=>r.ok?r.arrayBuffer():null)
+    .then(ab=>ab&&new Promise((res,rej)=>gmAC.decodeAudioData(ab,res,rej)))
+    .then(b=>{if(b)_khSfxBuf[k]=b;}).catch(()=>{})));
+  return _khSfxLoading;
+}
+// يُعيد true إن شُغِّل الصوت من الحزمة، وfalse ليتولّى الاحتياط
+function khSfxPlay(kind,vol){
+  const b=_khSfxBuf[kind];
+  if(!b||!gmAC){khSfxLoad();return false;}
+  try{
+    if(gmAC.state==='suspended')gmAC.resume();
+    const src=gmAC.createBufferSource(),g=gmAC.createGain();
+    src.buffer=b;g.gain.value=vol==null?.6:vol;
+    src.connect(g);g.connect(gmAC.destination);src.start();
+    return src;
+  }catch(e){return false;}
+}
+// تحميلٌ مبكّر في وقت فراغ المتصفح كي تكون أول نجمة/إشارة هدوء مسموعة فوراً
+(window.requestIdleCallback||(f=>setTimeout(f,2500)))(()=>khSfxLoad());
 // أصوات مخصصة يرفعها المشرف (game-sfx/c1_<kind>.mp3) — الأولوية لها، وZzFX احتياط دائم
 let _c1SfxAvail={};
 async function c1SfxHas(kind){
@@ -7433,6 +7463,7 @@ async function c1SfxHas(kind){
   return _c1SfxAvail[kind];
 }
 async function c1Sound(kind,fallback){
+  if(khSfxPlay(kind,.65))return;
   // في التجربة لا خادم، وأصواتُ zzfx مُركّبةٌ في الصفحة فتعمل بلا شبكة
   if(!KH_DEMO&&await c1SfxHas(kind)){
     try{
@@ -8853,7 +8884,7 @@ function fcGo(d){
   const n=Math.min(facts.length-1,Math.max(0,rssCtx.i+d));
   if(n===rssCtx.i)return;
   rssCtx.i=n;
-  try{zzfx(1,.05,880,0,.03,.14,1,1.6,0,0,180,.03);}catch(e){}
+  if(!khSfxPlay('flip',.6))try{zzfx(1,.05,880,0,.03,.14,1,1.6,0,0,180,.03);}catch(e){}
   fcShow(false);
 }
 
@@ -8913,7 +8944,7 @@ function acToggle(secs){
   _acTimer=setInterval(()=>{
     _acLeft--;acPaint();
     if(_acLeft<=0){acStopTimer();_acLeft=0;
-      try{zzfx(1.3,.05,180,.02,.1,.4,1,1.4,-3,0,0,0,0,0,0,.1,0,.7,.08);}catch(e){}
+      if(!khSfxPlay('timeup',.7))try{zzfx(1.3,.05,180,.02,.1,.4,1,1.4,-3,0,0,0,0,0,0,.1,0,.7,.08);}catch(e){}
       const bb=document.getElementById('ac-tbtn');if(bb)bb.textContent=''+khG('أعيدي','أعد')+'';
     }
   },1000);
@@ -8939,6 +8970,7 @@ const CH_NAMES=['الفريق الأول','الفريق الثاني','الفر�
 let chCtx=null,_chTimer=null,_chLeft=0;
 
 function chSound(k){
+  if(khSfxPlay({point:'ok',reveal:'reveal',tick:'tick',end:'timeup',win:'win'}[k]||k,.6))return;
   try{
     if(k==='point')zzfx(1.1,.05,540,0,.05,.18,1,1.7,0,0,320,.05,0,0,0,0,0,.9,.04);
     else if(k==='reveal')zzfx(1,.05,880,0,.04,.2,1,1.6,0,0,180,.04);
@@ -9823,7 +9855,7 @@ function liveTimerPause(){
   liveTimerRender();
 }
 function liveTimerDone(){
-  starBig();
+  c1Sound('timeup',starBig);
   const bar=document.getElementById('live-bar');
   if(bar){bar.classList.add('tick-flash');setTimeout(()=>bar.classList.remove('tick-flash'),1500);}
   liveAnnounce('انتهى الوقت يا طلاب');
@@ -10205,7 +10237,7 @@ function gmHexA(hex,a){
 }
 
 let gmMuted=localStorage.getItem('gmMuted')==='1';
-const GM_SFX_KINDS=['ok','bad','pop','win','spin'];
+const GM_SFX_KINDS=['ok','bad','pop','win','spin','big','flip','whoosh','tick','tock','streak','countdown','reveal','drop','click'];
 const GM_MUSIC_KEY='music';
 let gmSfx={},gmSfxT={},GM_OPT={},gmSfxLoaded=false;
 function gmSfxUrl(kind){return sb.storage.from('library-files').getPublicUrl('game-sfx/'+kind+'.mp3').data.publicUrl;}
@@ -10219,53 +10251,27 @@ function gmPrimeAudio(a){
     else{a.volume=v;}
   }catch(e){}
 }
-function gmLoadSfx(){
-  if(gmSfxLoaded)return;
-  gmSfxLoaded=true;
-  GM_SFX_KINDS.forEach(k=>{
-    const a=new Audio();
-    a.preload='auto';
-    a.oncanplaythrough=()=>{if(!gmSfx[k]){gmSfx[k]=a;gmPrimeAudio(a);}};
-    a.onerror=()=>{gmSfx[k]=null;};
-    a.src=gmSfxUrl(k)+'?v='+(localStorage.getItem('gmSfxV')||'1');
-  });
-}
-function gmLoadSfxT(tpl){
-  if(gmSfxT[tpl])return;
-  const bag={};gmSfxT[tpl]=bag;
-  GM_SFX_KINDS.forEach(k=>{
-    const a=new Audio();
-    a.preload='auto';
-    a.oncanplaythrough=()=>{if(!bag[k]){bag[k]=a;gmPrimeAudio(a);}};
-    a.onerror=()=>{bag[k]=null;};
-    a.src=sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl+'?v='+(localStorage.getItem('gmSfxV')||'1');
-  });
-}
+function gmLoadSfx(){khSfxLoad();}
+function gmLoadSfxT(tpl){}
 // مستويات صوت اللعبة. كانت المؤثرات ٠٫٩ والموسيقى ٠٫٢٥ — عالية في صف مكبّر
 // الصوت. المؤثر يبقى فوق الموسيقى بفارق واضح كي يُسمَع الفوز فوق الخلفية.
 const GM_VOL_SFX=.45, GM_VOL_MUSIC=.10;
 let gmLiveSnd=[];
+let _gmSpinSrc=null;
 function gmSound(kind){
   if(gmMuted)return;
   const stg=document.getElementById('gm-stage-bg');
   if(stg&&stg.style.display!=='flex')return;
   try{
-    // العجلة: تُعاد نفس النسخة المحمَّلة والمهيَّأة سلفاً بدل استنساخها — الاستنساخ
-    // يفقد التهيئة السابقة فيعيد فكّ الترميز من الصفر، وهذا سبب التأخّر المسموع
-    if(kind==='spin'){
-      const a=(gmSfxT[gmTpl]||{}).spin||gmSfx.spin;
-      if(a){a.currentTime=0;a.volume=GM_VOL_SFX;a.play().catch(()=>{});return;}
-      zzfx(.8,.05,270,0,.09,.14,1,1.9,0,0,-63,.03);return;
-    }
-    gmLiveSnd=gmLiveSnd.filter(x=>!x.ended&&!x.paused);
-    const at=(gmSfxT[gmTpl]||{})[kind];
-    if(at){const c=at.cloneNode();c.volume=GM_VOL_SFX;gmLiveSnd.push(c);c.play().catch(()=>{});return;}
-    const a=gmSfx[kind];
-    if(a){const c=a.cloneNode();c.volume=GM_VOL_SFX;gmLiveSnd.push(c);c.play().catch(()=>{});return;}
-    if(kind==='ok')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);
+    // طقطقة العجلة صوتٌ طويل: لا تتراكب نسختان إن ضُغط التدوير مجدداً
+    if(kind==='spin'){try{_gmSpinSrc&&_gmSpinSrc.stop();}catch(e){}}
+    const src=khSfxPlay(kind,GM_VOL_SFX*1.5);
+    if(src){if(kind==='spin')_gmSpinSrc=src;return;}
+    if(kind==='spin')zzfx(.8,.05,270,0,.09,.14,1,1.9,0,0,-63,.03);
+    else if(kind==='ok'||kind==='streak'||kind==='drop')zzfx(1,.05,1675,0,.06,.24,1,1.82,0,0,837,.06);
     else if(kind==='bad')zzfx(1.4,.05,144,.01,0,.25,1,1.3,-4,0,0,0,0,0,0,.1,0,.6,.06);
-    else if(kind==='pop')zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);
-    else if(kind==='win')zzfx(1.1,.05,539,0,.04,.29,1,1.92,0,0,567,.02,.02,0,0,0,.04);
+    else if(kind==='win'||kind==='big')zzfx(1.1,.05,539,0,.04,.29,1,1.92,0,0,567,.02,.02,0,0,0,.04);
+    else zzfx(1,.05,975,0,.01,.08,1,1.5,0,0,0,0,0,0,0,0,0,.7,.02);
   }catch(e){}
 }
 const GM_IC_SOUND='<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
@@ -10747,7 +10753,7 @@ function gmClose(){
   try{gmLiveSnd.forEach(a=>{a.pause();a.currentTime=0;});gmLiveSnd=[];}catch(e){}
   // صوت العجلة (spin) يُشغَّل من نسخته الأصلية مباشرة بلا استنساخ ولا تسجيل في
   // gmLiveSnd (انظر gmSound)، فلا تعرف الحلقة أعلاه إيقافه — يُوقَف صراحة هنا
-  try{const sp=(gmSfxT[gmTpl]||{}).spin||gmSfx.spin;if(sp){sp.pause();sp.currentTime=0;}}catch(e){}
+  try{_gmSpinSrc&&_gmSpinSrc.stop();}catch(e){}
   const bg=document.getElementById('gm-stage-bg');
   bg.style.display='none';
   document.getElementById('gm-stage-body').innerHTML='';
@@ -10780,8 +10786,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   const bg=theme&&theme.bg_url?await gmFetchB64(theme.bg_url):null;
   const sfx={};
   for(const k of GM_SFX_KINDS){
-    let d=await gmFetchB64(sb.storage.from('library-files').getPublicUrl('game-sfx/tpl/'+tpl+'/'+k+'.mp3').data.publicUrl);
-    if(!(d&&d.startsWith('data:audio')))d=await gmFetchB64(gmSfxUrl(k));
+    const d=await gmFetchB64(new URL(khSfxUrl(k),location.href).href);
     if(d&&d.startsWith('data:audio'))sfx[k]=d;
   }
   const musicB64=await gmFetchB64(gmSfxUrl(GM_MUSIC_KEY));
