@@ -20,11 +20,11 @@
 --   • agent-daily-summary (يومياً): تقريرٌ واحدٌ في اليوم أصلاً، لا داعي لمسّه.
 -- ════════════════════════════════════════════════════════════════════
 
-select cron.alter_job(job_id, schedule := '0 * * * *')
+select cron.alter_job(jobid, schedule := '0 * * * *')
   from cron.job where jobname = 'agent-health-check';
 
-select cron.alter_job(job_id, schedule := '0 * * * *')
+select cron.alter_job(jobid, schedule := '0 * * * *')
   from cron.job where jobname = 'agent-autonomous-scheduler';
 
-select cron.alter_job(job_id, schedule := '0 */12 * * *')
+select cron.alter_job(jobid, schedule := '0 */12 * * *')
   from cron.job where jobname = 'agent-database-capacity-monitor';
