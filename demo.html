@@ -1095,7 +1095,10 @@ body.inapp #c1-budget-btn{display:flex}
 /* العرض التفاعلي: الطبقة لا تستقبل لمساً أبداً — الرسم يصلها من جسر القلم داخل الإطار */
 .lv-html-wrap{position:relative;width:100%;height:100%}
 .lv-ink.lv-ink-html,.lv-ink.lv-ink-html.on{pointer-events:none;border-radius:8px}
-.lv-pages.htmlmode>:not(#lv-pen-btn){display:none}
+.lv-pages.htmlmode>:not(#lv-pen-btn):not(#lv-ink-clear){display:none}
+.lv-pages:not(.htmlmode) #lv-ink-clear{display:none}
+/* باهتٌ ما دام لا شيء مكتوب، ويتّقد مع أول خطّ */
+.lv-pages #lv-ink-clear:not(:disabled){color:#FFB4A6}
 /* في الزاوية السفلية كي لا يغطّي أزرار التنقّل التي تضعها العروض عادةً في منتصف الحافة */
 .lv-pages.htmlmode{top:auto;bottom:18px;transform:none}
 #lv-pen-btn.on,#lv-pen-btn.on:hover{background:var(--red);color:#fff}
@@ -3505,6 +3508,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button class="z" onclick="liveFullscreenToggle()" title="ملء الشاشة" aria-label="ملء الشاشة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <span class="lv-sep"></span>
       <button class="z" id="lv-pen-btn" onclick="lvPenToggle()" title="القلم" aria-label="القلم"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.1-4.4L15.6 5.1a2.1 2.1 0 013 3L8.1 18.6 4 20z"/><path d="M13.6 7.1l3 3"/></svg></button>
+      <button id="lv-ink-clear" onclick="lvPenClear()" title="مسح الكتابة" aria-label="مسح الكتابة" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
     </div>
     <div class="lv-pen-bar" id="lv-pen-bar">
       <div class="lv-pen-colors">
@@ -9577,7 +9581,12 @@ function lvInkDrawStroke(ctx,s,W,H){
   }
   ctx.restore();
 }
+function lvInkClearSync(){
+  const b=document.getElementById('lv-ink-clear');
+  if(b)b.disabled=!(_lvStrokes[_lvInkKey()]||[]).length;
+}
 function lvInkRedraw(){
+  lvInkClearSync();
   const cv=lvInkCanvas();if(!cv)return;
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,cv.width,cv.height);
@@ -9610,6 +9619,7 @@ function lvInkPointerUp(e){
   const a=_lvInkKey();
   (_lvStrokes[a]=_lvStrokes[a]||[]).push(_lvCurStroke);
   _lvCurStroke=null;
+  lvInkClearSync();
 }
 function lvPenSyncUI(){
   document.getElementById('lv-pen-btn')?.classList.toggle('on',_lvPenOn);
