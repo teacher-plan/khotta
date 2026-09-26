@@ -10474,6 +10474,7 @@ function gmPickTpl(t){
   gmRenderThemeGrid();
   if(GM_STRUCT[t]!==prevStruct&&gmItems.length){gmItems=[];document.getElementById('studio-game-result-card').classList.add('hidden');}
 }
+let _gmGenBusy=false;
 async function gmGenerate(){
   const lessons=studioSelectedLessons();
   if(!lessons.length){toast(''+khG('اختاري','اختر')+' درساً أولاً',true);return;}
@@ -10488,8 +10489,13 @@ async function gmGenerate(){
   const grade=String(studioGrade||''),subject=studioSubject||'';
   const count=Math.max(5,Math.min(20,parseInt(document.getElementById('gm-count').value)||6));
   const btn=document.querySelector('#studio-game-options-card .eg-generate');
+  if(_gmGenBusy)return;
+  _gmGenBusy=true;
+  const tpl=gmTpl;
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري توليد المحتوى من الدرس...';}
-  uiBusy('يولّد محتوى اللعبة من الدرس…');
+  // شارةٌ صغيرة لا شاشةٌ حاجبة: التوليد يستغرق دقيقة أحياناً، والمعلّمة
+  // تواصل عملها في بقية الأقسام، ثم تعود فتجد المحتوى جاهزاً للمراجعة
+  cyBusyLight('يولّد محتوى اللعبة من الدرس…');
   let items=null,reason='';
   try{
     const lId=c1LessonIdByName(grade,subject,lessons[0].unit,lessons[0].name);
@@ -10506,17 +10512,23 @@ async function gmGenerate(){
       reason=(await c1FnErr(_r))||'خطأ في الاتصال';
     }
   }catch(e){reason=String(e);}
-  uiBusyDone();
+  cyBusyLightDone();
+  _gmGenBusy=false;
   if(btn){btn.disabled=false;btn.textContent=''+khG('ولّدي','ولّد')+' محتوى اللعبة';}
   if(!items){
     toast(c1ErrMsg(reason,'تعذّر توليد محتوى اللعبة — '+khG('تحقّقي','تحقّق')+' من الاتصال و'+khG('أعيدي','أعد')+' المحاولة.'),true);
     return;
   }
+  // إن بدّلت القالبَ أثناء الانتظار، يعود للقالب الذي وُلِّد له المحتوى
+  if(gmTpl!==tpl)gmPickTpl(tpl);
   gmItems=items;
   gmRenderEditor();
-  document.getElementById('studio-game-result-card').classList.remove('hidden');
-  document.getElementById('studio-game-result-card').scrollIntoView({behavior:'smooth'});
-  toast('✅ تم توليد محتوى اللعبة — '+khG('راجعيه','راجعه')+' ثم '+khG('شغّلي','شغّل')+'','ok');
+  const card=document.getElementById('studio-game-result-card');
+  card.classList.remove('hidden');
+  const inStudio=!!card.closest('.page.active');
+  if(inStudio)card.scrollIntoView({behavior:'smooth'});
+  toast(inStudio?'✅ تم توليد محتوى اللعبة — '+khG('راجعيه','راجعه')+' ثم '+khG('شغّلي','شغّل')+''
+    :'✅ محتوى اللعبة جاهز في الاستوديو — '+khG('افتحيه','افتحه')+' للمراجعة','ok');
 }
 function gmRenderEditor(){
   const st=GM_STRUCT[gmTpl];
