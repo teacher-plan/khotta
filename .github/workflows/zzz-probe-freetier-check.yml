@@ -1,1 +1,22 @@
-bmFtZTogenp6IHByb2JlIGZyZWV0aWVyIGNoZWNrCm9uOiB3b3JrZmxvd19kaXNwYXRjaApqb2JzOgogIHByb2JlOgogICAgcnVucy1vbjogdWJ1bnR1LWxhdGVzdAogICAgc3RlcHM6CiAgICAgIC0gbmFtZTogcXVlcnkKICAgICAgICBlbnY6CiAgICAgICAgICBUT0tFTjogJHt7IHNlY3JldHMuU1VQQUJBU0VfQUNDRVNTX1RPS0VOIH19CiAgICAgICAgICBSRUY6IG1rZHNubmZra2R3ZGt5d253bmpoCiAgICAgICAgcnVuOiB8CiAgICAgICAgICBydW4oKXsgZWNobyAi4pWk4pWkIDwkMSA+PSI7IGJvZHk9JChqcSAtUnMgJ3txdWVyeTogLn0nIDw8PCAiJDIiKTsgY3VybCAtcyAtWCBQT1NUICJodHRwczovL2FwaS5zdXBhYmFzZS5jb20vdjEvcHJvamVjdHMvJFJFRi9kYXRhYmFzZS9xdWVyeSIgLUggIkF1dGhvcml6YXRpb246IEJlYXJlciAkVE9LRU4iIC1IICJDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24iIC0tZGF0YS1iaW5hcnkgIiRib2R5IiB8IGpxIC1jICcuW10/JzsgZWNobzsgfQoKICAgICAgICAgIHJ1biAi2K3YrNmFIFN0b3JhZ2Ug2KfZhNil2KzZhdin2YTZiiIgInNlbGVjdCBwZ19zaXplX3ByZXR0eShzdW0oKG1ldGFkYXRhLT4+J3NpemUnKTo6YmlnaW50KSkgZnJvbSBzdG9yYWdlLm9iamVjdHMgd2hlcmUgYnVja2V0X2lkPSdsaWJyYXJ5LWZpbGVzJzsiCgogICAgICAgICAgcnVuICLYrdis2YUgU3RvcmFnZSDYqNin2YTYqNin2YrYqiIgInNlbGVjdCBwZ19zaXplX3ByZXR0eShzdW0oKG1ldGFkYXRhLT4+J3NpemUnKTo6YmlnaW50KSkgZnJvbSBzdG9yYWdlLm9iamVjdHM7IgoKICAgICAgICAgIHJ1biAi2K3YrNmFINmC2KfYudiv2Kkg2KfZhNio2YrYp9mG2KfYqiDZg9mE2YrYp9mLIiAic2VsZWN0IHBnX3NpemVfcHJldHR5KHBnX2RhdGFiYXNlX3NpemUoY3VycmVudF9kYXRhYmFzZSgpKSk7IgoKICAgICAgICAgIHJ1biAi2LnYr9ivIGFsbG93ZWRfZW1haWxzINin2YTZhdmB2LnZhNipINit2KfZhNmK2KfZiyIgInNlbGVjdCBjb3VudCgqKSBmcm9tIGFsbG93ZWRfZW1haWxzIHdoZXJlIGV4cGlyZXNfYXQgaXMgbnVsbCBvciBleHBpcmVzX2F0Pm5vdygpOyIKCiAgICAgICAgICBydW4gIti52K/YryDYtNi12YHZiiBhdXRoLnVzZXJzINmD2YQiICJzZWxlY3QgY291bnQoKikgZnJvbSBhdXRoLnVzZXJzOyIKCiAgICAgICAgICBydW4gIti52K/YryDYtNi12YHZiiBhdXRoLnVzZXJzINin2YTZhti02LfZitmGINii2K7YsSAzMCDZitmI2YXYp9mLICjZitmC2KfYsdioIE1BVSkiICJzZWxlY3QgY291bnQoKikgZnJvbSBhdXRoLnVzZXJzIHdoZXJlIGxhc3Rfc2lnbl9pbl9hdCA+IG5vdygpIC0gaW50ZXJ2YWwgJzMwIGRheXMnOyIKCiAgICAgICAgICBydW4gIti52K/YryB0YWJsZXMgKGZvciByb3cgY291bnQgc2FuaXR5KSIgInNlbGVjdCBjb3VudCgqKSBmcm9tIGN1cnJpY3VsdW07IgoK
+name: zzz probe freetier check
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'; echo; }
+
+          run "حجم Storage الإجمالي" "select pg_size_pretty(sum((metadata->>'size')::bigint)) from storage.objects;"
+
+          run "حجم قاعدة البيانات كلياً" "select pg_size_pretty(pg_database_size(current_database()));"
+
+          run "عدد allowed_emails الفعلية حالياً" "select count(*) from allowed_emails where expires_at is null or expires_at>now();"
+
+          run "عدد auth.users كل" "select count(*) from auth.users;"
+
+          run "عدد auth.users النشطين آخر 30 يوماً (يقارب MAU)" "select count(*) from auth.users where last_sign_in_at > now() - interval '30 days';"
