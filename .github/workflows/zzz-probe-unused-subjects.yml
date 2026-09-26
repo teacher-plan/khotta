@@ -1,0 +1,29 @@
+name: zzz probe unused subjects
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run(){ echo "════ $1 ════"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'; echo; }
+
+          run "كل مواد book_sources للحلقة الأولى (صف 1-4) مع base_path" "select grade, subject, semester, book_no, base_path from book_sources where grade::int between 1 and 4 order by grade, subject;"
+
+          run "كل مواد teacher_guides للحلقة الأولى (صف 1-4)" "select grade, subject, semester, base_path from teacher_guides where grade between 1 and 4 order by grade, subject;"
+
+          run "المواد المسجّلة فعلياً لدى الحسابات النشطة (من ملفات المعلمات)" "
+          select distinct sub
+          from allowed_emails ae
+          join cycle1_profiles p on p.email = ae.email
+          , jsonb_array_elements(coalesce(p.data->'grades','[]'::jsonb)) g
+          , jsonb_array_elements(coalesce(g->'classes','[]'::jsonb)) c
+          , jsonb_array_elements_text(coalesce(c->'subjects','[]'::jsonb)) sub
+          where (ae.expires_at is null or ae.expires_at > now())
+          order by sub;
+          "
+
+          run "curriculum: صفوف الحلقة الأولى (1-4) حسب المادة (عدد)" "select grade, subject, semester, count(*) from curriculum where grade between 1 and 4 group by grade,subject,semester order by grade,subject;"
