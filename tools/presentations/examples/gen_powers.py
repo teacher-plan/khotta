@@ -11,10 +11,12 @@ X = '<span class="x">×</span>'
 EQ = '<span class="eq">=</span>'
 PL = '<span class="x">+</span>'
 def M(*parts, cls=''): return f'<span class="m {cls}">' + ' '.join(parts) + '</span>'
-def R(v, k=2):  # جذرٌ من اليمين لليسار: الرمز يميناً، والخط العلوي يمتدّ يساراً فوق العدد
+def R(v, k=2):  # جذرٌ مرسوم من اليمين لليسار: ذيلٌ صغير يميناً ثم نزولٌ فصعودٌ متّصل بالخط العلوي فوق العدد
     v=str(v)
     inner = N(v[1:]) if v.startswith('−') else a(v)
-    return f'<span class="rt">' + (f'<i class="ri">{a(k)}</i>' if k==3 else '') + f'<span class="rs">√</span><span class="ov">{inner}</span></span>'
+    idx = f'<i class="ri">{a(k)}</i>' if k==3 else ''
+    return (f'<span class="rt">{idx}<svg class="rsv" viewBox="0 0 32 64" preserveAspectRatio="none" aria-hidden="true">'
+            f'<path d="M31 38 L25 34 L15 62 L1 1.5"/></svg><span class="ov">{inner}</span></span>')
 def rep(b, n): return X.join(P(b) for _ in range(n))
 
 MODES = {'i': ('أنا', 'المعلّم يحلّ ويشرح', '👨‍🏫', 'i'), 'we': ('نحن', 'نحلّ معاً', '🤝', 'we'), 'u': ('أنتم', 'دوركم الآن', '✍️', 'u')}
@@ -77,11 +79,11 @@ EXTRA_CSS = '''
 .kk{font-family:var(--fh);font-size:clamp(20px,3.2vh,34px)}
 .even{color:var(--ink2);font-size:clamp(18px,2.8vh,30px)}.odd{color:var(--exp);font-size:clamp(18px,2.8vh,30px)}
 button.flip{font:inherit;color:inherit;cursor:pointer}
-.rt{display:inline-flex;align-items:flex-start;direction:rtl;unicode-bidi:isolate;position:relative}
-.rt .rs{font-family:Tahoma,sans-serif;font-weight:400;transform:scale(-1,1.15);color:var(--ink)}
-.rt .ov{border-top:.07em solid var(--ink);padding:0 .08em;margin-inline-start:-.04em;display:inline-flex;direction:rtl}
-.ng{direction:rtl;unicode-bidi:isolate;display:inline-flex}.ng i{font-style:normal}
-.rt .ri{font-style:normal;font-size:.42em;color:var(--exp);position:absolute;right:.05em;top:-.05em}
+.rt{display:inline-flex;align-items:stretch;direction:rtl;unicode-bidi:isolate;position:relative;margin-inline-end:.08em;color:var(--ink)}
+.rt .rsv{width:.5em;flex:none;overflow:visible;margin-inline-start:.02em}
+.rt .rsv path{fill:none;stroke:currentColor;stroke-width:.075em;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.rt .ov{border-top:.075em solid currentColor;padding:.06em .12em 0;display:inline-flex;align-items:baseline;direction:rtl;line-height:1.08}
+.rt .ri{font-style:normal;font-size:.4em;font-weight:700;color:var(--exp);position:absolute;right:-.02em;top:.1em;line-height:1}
 '''
 EXTRA_JS = '''
   // بطاقات المربعات: ضغطة تكشف، و«اكشف الكل»
@@ -107,9 +109,7 @@ base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>القوى والجذور — الصف السابع</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
-<style>{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
