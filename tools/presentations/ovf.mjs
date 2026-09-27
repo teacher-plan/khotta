@@ -5,7 +5,7 @@ const b=await chromium.launch();
 for(const f of process.argv.slice(2))for(const [w,h] of [[1280,720],[1366,768]]){
 const p=await b.newPage({viewport:{width:w,height:h}});
 await p.setContent(fs.readFileSync(f,'utf8'));await p.waitForTimeout(300);
-const r=await p.evaluate(()=>{const out=[];const H=innerHeight-64,W=innerWidth;
+const r=await p.evaluate(()=>{const out=[];const H=innerHeight,W=innerWidth;
  document.querySelectorAll('.slide').forEach((s,i)=>{
   s.querySelectorAll('.st,.st-t').forEach(e=>e.classList.add('in'));
   s.querySelectorAll('.flip').forEach(e=>e.classList.add('open'));

@@ -115,11 +115,9 @@ html = f'''<!DOCTYPE html>
 {chr(10).join(S)}
 </div>
 <canvas id="fx"></canvas>
-<nav class="bar">
-  <button id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+<nav class="nav2" aria-label="التنقّل بين الشرائح">
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-  <span class="cnt" id="cnt"></span><div class="prog"><i id="pg"></i></div>
-  <button id="next" class="next" aria-label="التالي">التالي <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
 <script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script></body></html>'''
 open(os.path.join(HERE,'القوى_والجذور_عرض_تفاعلي.html'), 'w', encoding='utf-8').write(html)

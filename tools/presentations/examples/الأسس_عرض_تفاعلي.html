@@ -99,7 +99,7 @@ body{font-family:var(--fb);color:var(--ink);
 /* هامش الدفتر الأحمر */
 body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;width:2px;background:#F2B8B0;pointer-events:none}
 
-.deck{position:fixed;inset:0 0 64px 0}
+
 .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
   padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
 .slide.on{opacity:1;pointer-events:auto;transform:none}
@@ -203,15 +203,15 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .who{font-size:clamp(14px,2vh,20px);color:var(--ink2);font-weight:700}
 
 /* ─ الشريط السفلي ─ */
-.bar{position:fixed;inset-inline:0;bottom:0;height:64px;display:flex;align-items:center;gap:12px;padding:0 18px;background:rgba(251,252,254,.92);border-top:1.5px solid var(--line);backdrop-filter:blur(6px);z-index:5}
-.bar button{width:48px;height:48px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.bar button:hover{border-color:var(--ink2)}
-.bar button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
-.bar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.bar .next{background:var(--ink);color:#fff;border-color:var(--ink);width:auto;padding:0 20px;gap:8px;font-family:var(--fh);font-weight:800;font-size:17px}
-.prog{flex:1;height:8px;background:#E3EAF4;border-radius:99px;overflow:hidden}
-.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--base),var(--exp));border-radius:99px;transition:width .4s}
-.cnt{font-family:var(--fh);font-weight:800;color:var(--ink2);min-width:64px;text-align:center}
+.deck{position:fixed;inset:0}
+/* زرّا التنقّل فقط: صغيران عائمان في الزاوية السفلية اليمنى — لا يحجبان المحتوى،
+   ولا يتعارضان مع زرّ القلم الذي تضعه الحصة الحية في الزاوية اليسرى */
+.nav2{position:fixed;bottom:14px;right:14px;display:flex;gap:8px;z-index:5;opacity:.55;transition:opacity .25s}
+.nav2:hover,.nav2:focus-within{opacity:1}
+.nav2 button{width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:rgba(255,255,255,.92);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(15,36,71,.15)}
+.nav2 button.next{background:var(--ink);border-color:var(--ink);color:#fff}
+.nav2 button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
+.nav2 svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:9}
 @media (max-width:760px){.q{grid-template-columns:1fr}.tree{width:80vw}.tree.small{width:44vw}body::before{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -518,12 +518,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 </div>
 
 <canvas id="fx"></canvas>
-<nav class="bar">
-  <button id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+<nav class="nav2" aria-label="التنقّل بين الشرائح">
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-  <span class="cnt" id="cnt"></span>
-  <div class="prog"><i id="pg"></i></div>
-  <button id="next" class="next" aria-label="التالي">التالي <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
 
 <script>
@@ -564,10 +561,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     if(cur>0)go(cur-1,true);
   }
   function ui(){
-    document.getElementById('cnt').textContent=ar(cur+1)+' / '+ar(slides.length);
     var st=steps(slides[cur]),done=st.filter(function(e){return e.classList.contains('in');}).length;
     var f=(cur+(st.length?done/st.length:1))/slides.length;
-    document.getElementById('pg').style.width=Math.max(3,f*100)+'%';
   }
   function ar(n){return String(n).replace(/\d/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});}
 
@@ -591,9 +586,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   // ─ التحكم ─
   document.getElementById('next').onclick=next;
   document.getElementById('prev').onclick=prev;
-  document.getElementById('fs').onclick=function(){
-    var d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen().catch(function(){});
-  };
+
   document.addEventListener('keydown',function(e){
     if(e.key==='ArrowLeft'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){e.preventDefault();next();}
     else if(e.key==='ArrowRight'||e.key==='PageUp'||e.key==='Backspace'){e.preventDefault();prev();}

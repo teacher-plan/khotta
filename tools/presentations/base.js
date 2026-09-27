@@ -36,10 +36,8 @@
     if(cur>0)go(cur-1,true);
   }
   function ui(){
-    document.getElementById('cnt').textContent=ar(cur+1)+' / '+ar(slides.length);
     var st=steps(slides[cur]),done=st.filter(function(e){return e.classList.contains('in');}).length;
     var f=(cur+(st.length?done/st.length:1))/slides.length;
-    document.getElementById('pg').style.width=Math.max(3,f*100)+'%';
   }
   function ar(n){return String(n).replace(/\d/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});}
 
@@ -63,9 +61,7 @@
   // ─ التحكم ─
   document.getElementById('next').onclick=next;
   document.getElementById('prev').onclick=prev;
-  document.getElementById('fs').onclick=function(){
-    var d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen().catch(function(){});
-  };
+
   document.addEventListener('keydown',function(e){
     if(e.key==='ArrowLeft'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){e.preventDefault();next();}
     else if(e.key==='ArrowRight'||e.key==='PageUp'||e.key==='Backspace'){e.preventDefault();prev();}
