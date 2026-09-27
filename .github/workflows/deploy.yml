@@ -4,6 +4,11 @@ on:
   push:
     branches: ['main']
   workflow_dispatch:
+    inputs:
+      preview_ref:
+        description: 'فرع المعاينة (يُنشر تحت /preview/)'
+        required: false
+        default: 'claude/wizardly-brahmagupta-zzk93i'
 
 permissions:
   contents: read
@@ -35,6 +40,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # نسخة المعاينة: فرع العمل يُنشر تحت /preview/ على النطاق نفسه، فيدخلها
+      # المشرف بحسابه الحقيقي ويعاين التعديلات قبل دمجها للجميع. المعلّمات لا
+      # يصلن إليها إلا بالرابط المباشر، ولا تمسّ الصفحات الرئيسية.
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: ${{ github.event.inputs.preview_ref || 'claude/wizardly-brahmagupta-zzk93i' }}
+          path: preview
+      - name: Prepare preview
+        run: |
+          if [ -d preview ]; then
+            rm -rf preview/.git preview/.github preview/supabase
+            # لا تُفهرَس نسخة المعاينة في محركات البحث
+            for f in preview/*.html; do sed -i 's#<head>#<head><meta name="robots" content="noindex,nofollow">#' "$f"; done
+            echo "preview: $(ls preview | wc -l) files"
+          fi
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

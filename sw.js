@@ -1,5 +1,5 @@
 // ══ Service Worker - خطتي الفصلية ══
-const CACHE_NAME = 'khotta-b8483ad'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
+const CACHE_NAME = 'khotta-787d28a'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
 self.addEventListener('install', e => {
   // تجهيز الصفحة الرئيسية في الكاش فور التثبيت — حتى أول فتحة بعد التحديث تكون فورية
@@ -52,6 +52,8 @@ self.addEventListener('fetch', e => {
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return; // خارجي → الشبكة كالعادة
+  // نسخة المعاينة (/preview/) تُجلب من الشبكة دائماً: يرى المشرف آخر تعديلٍ فوراً
+  if (url.pathname.startsWith('/preview/')) return;
 
   const isHTML = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
