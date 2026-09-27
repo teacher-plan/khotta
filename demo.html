@@ -996,9 +996,13 @@ body.inapp #c1-budget-btn{display:flex}
 .live-qs-chip:active{transform:scale(.96)}
 .live-qs-chip:hover{border-color:var(--red)}
 .live-qs-chip span{background:var(--card);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--red-d);font-weight:800}
-#live-quiet-flash{position:fixed;inset:0;z-index:4390;background:var(--olive);opacity:0;pointer-events:none;transition:opacity .25s}
-#live-quiet-flash.on{opacity:.94;animation:liveQuietPulse 1.4s ease}
-@keyframes liveQuietPulse{0%,100%{opacity:0}15%,70%{opacity:.94}}
+#live-quiet-flash{position:fixed;inset:0;z-index:4390;background:radial-gradient(circle at 50% 50%,#E0243C,#9E0E22);opacity:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center}
+#live-quiet-flash b{color:#fff;font-size:clamp(90px,22vw,300px);font-weight:900;letter-spacing:.02em;text-shadow:0 10px 40px rgba(0,0,0,.35)}
+#live-quiet-flash.on{animation:liveQuietPulse 3s ease both}
+#live-quiet-flash.on b{animation:liveQuietWord 3s ease both}
+@keyframes liveQuietPulse{0%{opacity:0}6%{opacity:1;filter:brightness(1)}18%{filter:brightness(1.35)}30%{filter:brightness(1)}42%{filter:brightness(1.35)}54%,88%{opacity:1;filter:brightness(1)}100%{opacity:0}}
+@keyframes liveQuietWord{0%{transform:scale(.6)}10%{transform:scale(1.08)}18%,85%{transform:scale(1)}100%{transform:scale(.95)}}
 @media(prefers-reduced-motion:reduce){#live-bar.tick-flash,#live-quiet-flash.on{animation:none}}
 
 /* عارض صورة بملء الشاشة — الملخص صار عريضاً (١٦:٩) فلا تكفيه نافذة ضيّقة */
@@ -3652,7 +3656,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   <img id="imgf-img" alt=""/>
 </div>
 
-<div id="live-quiet-flash"></div>
+<div id="live-quiet-flash"><b>هدوء</b></div>
 <!-- لوحة تحكم الحصة: ثابتة أعلى الشاشة وتبقى فوق أي مرفق قيد التشغيل -->
 <div id="live-bar">
   <button class="lb-cls" id="lb-cls-btn" onclick="lbPop('cls')" title="تغيير الشعبة" aria-haspopup="true"><b><span id="live-cls-nm"></span><svg class="lb-cls-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></b><span id="live-lesson-nm"></span></button>
@@ -10128,7 +10132,7 @@ function liveQuiet(){
   ov.classList.remove('on');void ov.offsetWidth;ov.classList.add('on');
   // تشغيلٌ فوري من الذاكرة؛ إن لم يكتمل التحميل بعد فالاحتياط المركّب فوراً (بلا انتظار شبكة)
   if(!khSfxPlay('quiet',.8)){try{zzfx(1.2,0,880,0,.08,.5,0,1.6,0,0,0,0,.08,0,0,0,0,.9,.2);}catch(e){}}
-  setTimeout(()=>ov.classList.remove('on'),1400);
+  clearTimeout(ov._t);ov._t=setTimeout(()=>ov.classList.remove('on'),3000);
 }
 // القرعة نفسها المستخدمة داخل الألعاب (gmPickDraw): شريط أسماء يدور ويتباطأ، ودورٌ عادل
 // يومي لا يتكرّر فيه الاسم حتى يمرّ الجميع — ويتشارك السجلّ اليومي مع قرعة الألعاب
