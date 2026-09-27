@@ -256,7 +256,7 @@ html = f'''<!DOCTYPE html>
 <title>القوى والجذور — الصف السابع</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
-<style>{base_css}{EXTRA_CSS}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}</style></head><body>
+<style>{base_css}{EXTRA_CSS}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
@@ -267,6 +267,6 @@ html = f'''<!DOCTYPE html>
   <span class="cnt" id="cnt"></span><div class="prog"><i id="pg"></i></div>
   <button id="next" class="next" aria-label="التالي">التالي <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
-<script>{base_js}</script></body></html>'''
+<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script></body></html>'''
 open(os.path.join(HERE,'القوى_والجذور_عرض_تفاعلي.html'), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')

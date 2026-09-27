@@ -182,6 +182,61 @@ h2{font-size:clamp(34px,6.6vh,74px)}
 .timer{font-size:clamp(19px,2.9vh,32px)}
 .cnt{font-size:18px;color:var(--ink2)}
 .bar .next{font-size:19px}
+/* ═══ طبقة الزينة: بسيطة وجذّابة، ولا تمسّ منطقة المحتوى ولا تباينه ═══
+   كل الزينة في الأطراف وبشفافية، والمحتوى يبقى على خلفيةٍ فاتحة صافية. */
+:root{--p1:#FFD166;--p2:#06D6A0;--p3:#4CC9F0;--p4:#F78C6B;--p5:#B388EB;--p6:#FF7AA2}
+
+/* بقع لونية ناعمة في الخلفية (ثابتة، خلف كل شيء) */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(38vmax 30vmax at 102% -6%,rgba(76,201,240,.16),transparent 70%),
+    radial-gradient(34vmax 28vmax at -6% 104%,rgba(255,209,102,.20),transparent 70%),
+    radial-gradient(26vmax 22vmax at 104% 104%,rgba(247,140,107,.12),transparent 70%)}
+.deck{z-index:1}
+
+/* رموز الزوايا: تُولَّد في deco.js لكل شريحة بألوانٍ ومواضع متغيّرة */
+.dz{position:absolute;pointer-events:none;font-family:var(--fh);font-weight:900;line-height:1;opacity:.5;z-index:0;
+  animation:dzFloat 6s ease-in-out infinite}
+.slide>*:not(.dz){position:relative;z-index:1}
+@keyframes dzFloat{50%{transform:translateY(-8px) rotate(var(--r2,6deg))}}
+
+/* قلم التحديد تحت العنوان */
+.slide h2{isolation:isolate}
+.slide h2::after{content:'';position:absolute;z-index:-1;inset-inline:6%;bottom:.02em;height:.34em;border-radius:.3em;
+  background:var(--hl,rgba(255,209,102,.55));transform:skewX(-12deg);transform-origin:right;animation:hlIn .7s .15s cubic-bezier(.2,.9,.3,1) both}
+@keyframes hlIn{from{transform:scaleX(0) skewX(-12deg)}}
+.slide:not(.on) h2::after{animation:none}
+
+/* شريط لاصق على البطاقات */
+.box{position:relative}
+.box::before{content:'';position:absolute;top:-12px;left:50%;width:74px;height:22px;margin-left:-37px;border-radius:3px;
+  background:var(--tape,rgba(76,201,240,.55));transform:rotate(-3deg);box-shadow:0 2px 4px rgba(0,0,0,.06)}
+.row>.st:nth-child(2n) .box::before,.row>.box:nth-child(2n)::before{--tape:rgba(255,122,162,.5);transform:rotate(4deg)}
+.row>.st:nth-child(3n) .box::before,.row>.box:nth-child(3n)::before{--tape:rgba(6,214,160,.5)}
+.flip.box::before,.pw .box::before{display:none}
+
+/* بطاقات الأسئلة: شريطٌ ملوّن رفيع يمين كل خيار */
+.ch{position:relative;overflow:hidden}
+.ch::before{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:10px;background:var(--cc,#4CC9F0)}
+.q .ch:nth-child(1){--cc:#4CC9F0}.q .ch:nth-child(2){--cc:#FF7AA2}.q .ch:nth-child(3){--cc:#FFD166}.q .ch:nth-child(4){--cc:#06D6A0}
+
+/* الغلاف والشرائح الفاصلة */
+.cover h1{background:linear-gradient(100deg,var(--ink) 30%,#1E6FD9 55%,var(--ink) 80%);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:shine 6s linear infinite}
+@keyframes shine{to{background-position:-200% 0}}
+.cover .tag,.divider .tag{background:var(--ink);color:#fff;border-color:var(--ink)}
+.divider::before{content:'';position:absolute;inset-inline:0;top:0;height:1.4vh;background:linear-gradient(90deg,var(--p1),var(--p4),var(--p6),var(--p5),var(--p3),var(--p2))}
+.plan div{border-top:6px solid var(--pc,var(--p3))}
+.plan div:nth-child(2){--pc:var(--p6)}.plan div:nth-child(3){--pc:var(--p1)}.plan div:nth-child(4){--pc:var(--p2)}.plan div:nth-child(5){--pc:var(--p5)}.plan div:nth-child(6){--pc:var(--p4)}
+
+/* شارات أنا/نحن/أنتم: ظلٌّ ملوّن خفيف */
+.mode{box-shadow:0 5px 0 currentColor}
+.qbadge{box-shadow:0 4px 0 #8E2A18}
+
+/* الاحتفال عند الإجابة الصحيحة: نجمة تتوهّج بجانب الخيار */
+.ch.ok::after{content:'⭐';position:absolute;inset-inline-end:14px;top:50%;transform:translateY(-50%);font-size:.7em;animation:pop .5s}
+
+@media (prefers-reduced-motion:reduce){.dz,.cover h1{animation:none}}
+@media print{.dz,body::after{display:none}}
 </style>
 </head>
 <body>
@@ -493,6 +548,32 @@ h2{font-size:clamp(34px,6.6vh,74px)}
       if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
   }
   go(0);
+})();
+</script>
+<script>/* رموز رياضية ملوّنة في زوايا كل شريحة — مواضع وألوان تتغيّر بين الشرائح،
+   وتبقى دائماً في الأطراف (لا تقترب من منطقة المحتوى الوسطى). */
+(function(){
+  var SYM=['+','×','÷','=','√','٪','△','○','□','٢','٣','π','∞','★'];
+  var COL=['#FFB703','#06D6A0','#4CC9F0','#F78C6B','#B388EB','#FF7AA2','#FFD166'];
+  var SPOTS=[[4,6],[88,5],[3,78],[90,80],[46,3],[93,42],[2,44],[70,90],[22,90]];
+  document.querySelectorAll('.slide').forEach(function(s,i){
+    var n=5;
+    for(var k=0;k<n;k++){
+      var sp=SPOTS[(i*3+k*2)%SPOTS.length],d=document.createElement('span');
+      d.className='dz';d.setAttribute('aria-hidden','true');
+      d.textContent=SYM[(i*5+k*3)%SYM.length];
+      d.style.color=COL[(i+k)%COL.length];
+      d.style.fontSize=(4+((i+k*7)%4)*1.3)+'vh';
+      d.style.left=sp[0]+'%';d.style.top=sp[1]+'%';
+      d.style.transform='rotate('+(((i*37+k*53)%40)-20)+'deg)';
+      d.style.setProperty('--r2',(((i+k)%2)?8:-8)+'deg');
+      d.style.animationDelay=(-k*1.3)+'s';
+      s.insertBefore(d,s.firstChild);
+    }
+    // لون قلم التحديد يتبدّل بين الشرائح
+    var hl=['rgba(255,209,102,.6)','rgba(76,201,240,.35)','rgba(255,122,162,.35)','rgba(6,214,160,.35)','rgba(179,136,235,.35)'][i%5];
+    s.style.setProperty('--hl',hl);
+  });
 })();
 </script>
 </body>
