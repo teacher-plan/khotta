@@ -1,0 +1,135 @@
+
+/* ورقة رياضيات بمربعات: خلفية فاتحة واضحة على البروجكتر، والحبر أزرق داكن.
+   الأساس دائماً بالأزرق المخضرّ، والأس بالمرجاني — لونان ثابتان في كل الشرائح
+   حتى يربط الطالب بين اللون والدور. */
+:root{
+  --paper:#FBFCFE; --grid:#DCE6F2; --ink:#16325C; --ink2:#4A6285;
+  --base:#0E7C86; --exp:#E0533D; --gold:#E9A23B; --good:#1C9A55; --bad:#D63B3B;
+  --card:#FFFFFF; --line:#C9D6E6; --lcm:#7A3FD1; --gcd:#E08A00;
+  --fh:'Noto Kufi Arabic','Tajawal',Tahoma,sans-serif; --fb:'Tajawal','Noto Kufi Arabic',Tahoma,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);color:var(--ink);
+  background:var(--paper) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/34px 34px,
+             linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/34px 34px;
+  background-color:var(--paper);-webkit-user-select:none;user-select:none}
+/* هامش الدفتر الأحمر */
+body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;width:2px;background:#F2B8B0;pointer-events:none}
+
+.deck{position:fixed;inset:0 0 64px 0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
+  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
+.slide.on{opacity:1;pointer-events:auto;transform:none}
+.slide.gone{transform:translateX(4vw)}
+
+.tag{font-family:var(--fh);font-weight:800;font-size:clamp(14px,1.8vh,20px);color:var(--ink2);letter-spacing:.3px;background:#EAF1FA;border:1.5px solid var(--line);padding:.35em 1em;border-radius:99px}
+h1{font-family:var(--fh);font-weight:900;font-size:clamp(56px,13vh,150px);line-height:1.1}
+h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-height:1.3;text-align:center;text-wrap:balance}
+.lead{font-size:clamp(20px,3.3vh,36px);font-weight:700;color:var(--ink2);text-align:center;max-width:32ch;line-height:1.7;text-wrap:balance}
+.note{font-size:clamp(17px,2.6vh,28px);font-weight:700;background:#FFF6E3;border:2px dashed var(--gold);border-radius:18px;padding:.6em 1.1em;line-height:1.7;text-align:center}
+
+/* ─ الرياضيات ─ */
+.m{font-family:var(--fh);font-weight:900;direction:rtl;unicode-bidi:isolate;white-space:nowrap;display:inline-flex;align-items:baseline;gap:.28em}
+.m .x{color:#8BA0BD;font-weight:800}
+.m .eq{color:#8BA0BD}
+.b{color:var(--base);position:relative;display:inline-flex;align-items:flex-start;direction:rtl;unicode-bidi:isolate}
+.b sup{color:var(--exp);font-size:.52em;margin-inline-start:.04em;position:relative;top:-.05em;line-height:1}
+.big{font-size:clamp(46px,10vh,120px)}
+.mid{font-size:clamp(30px,6vh,68px)}
+.sm{font-size:clamp(24px,4.4vh,48px)}
+.res{color:var(--ink)}
+.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 8px 0 #E3EAF4,0 18px 40px rgba(22,50,92,.08)}
+.row{display:flex;gap:2.4vw;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:1.6vh;text-align:center}
+
+/* الظهور خطوةً خطوة */
+.st{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .45s,transform .55s cubic-bezier(.2,1.3,.4,1);visibility:hidden}
+.st.in{opacity:1;transform:none;visibility:visible}
+
+/* ضمّ ٥×٥×٥ إلى ٥³ */
+.merge{display:inline-flex;align-items:baseline;gap:.28em;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .f{display:inline-block;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .count{display:none;color:var(--exp);font-size:.52em;position:relative;top:-.55em;margin-inline-start:-.2em}
+/* مرحلتان: تنزلق الأعداد نحو الأوّل وتذوب، ثم تُزال فيظهر الأس مكانها */
+.merge.go .f:not(:first-child),.merge.go .x{opacity:0;transform:translateX(60px) scale(.3)}
+.merge.done .f:not(:first-child),.merge.done .x{display:none}
+.merge.done .count{display:inline-block;animation:pop .5s}
+.merge.done{animation:pop .5s}
+.lbls{display:flex;gap:3vw}
+.lbl{display:flex;flex-direction:column;align-items:center;gap:.5vh;font-weight:800;font-size:clamp(18px,2.8vh,30px)}
+.lbl b{font-family:var(--fh);font-size:1.6em}
+.lbl.base b{color:var(--base)}.lbl.exp b{color:var(--exp)}
+.lbl small{font-weight:700;color:var(--ink2);font-size:.75em}
+
+/* ─ شجرة العوامل ─ */
+.tree{width:min(46vw,560px);height:auto;overflow:visible}
+.tree line{stroke:#9FB3CC;stroke-width:5;stroke-linecap:round;stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset .6s ease-out}
+.tree .n circle{fill:#fff;stroke:var(--ink);stroke-width:3.5}
+.tree .n text{font-family:var(--fh);font-weight:900;font-size:30px;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.tree .p circle{fill:var(--base);stroke:#0A5E66}
+.tree .p text{fill:#fff}
+.tree .lv{opacity:0;transition:opacity .4s .25s}
+.tree .lv.in{opacity:1}
+.tree .lv.in line{stroke-dashoffset:0}
+.tree .lv.in .p circle{animation:glow 1.6s .5s 2}
+@keyframes glow{50%{stroke-width:10;stroke:#7FE3EA}}
+.tree.small{width:min(28vw,340px)}
+
+/* ─ جدول العوامل (م.م.ص / ع.م.ك) ─ */
+.ft{border-collapse:separate;border-spacing:.7vw 1vh}
+.ft th{font-family:var(--fh);font-weight:800;font-size:clamp(16px,2.6vh,28px);color:var(--ink2);padding:0 .6vw}
+.ft td{min-width:7.5vw;height:9vh;background:#fff;border:2.5px solid var(--line);border-radius:16px;text-align:center;vertical-align:middle;
+  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:all .45s}
+.ft td.num{background:#EAF1FA;color:var(--ink)}
+.ft td.empty{background:transparent;border-style:dashed;color:#B8C6D8}
+.ft.lcm td.pick-l{background:#F1E8FF;border-color:var(--lcm);box-shadow:0 0 0 4px rgba(122,63,209,.18);transform:scale(1.07)}
+.ft.gcd td.pick-g{background:#FFF1D6;border-color:var(--gcd);box-shadow:0 0 0 4px rgba(224,138,0,.2);transform:scale(1.07)}
+.ft.gcd td.nc{opacity:.28;filter:grayscale(1)}
+.ans{font-size:clamp(30px,6vh,64px);padding:1.4vh 2vw;border-radius:20px;border:3px solid}
+.ans.l{border-color:var(--lcm);background:#F7F1FF}.ans.g{border-color:var(--gcd);background:#FFF7E6}
+.ans .k{font-family:var(--fh);font-size:.62em;font-weight:900;margin-inline-end:.4em}
+.ans.l .k{color:var(--lcm)}.ans.g .k{color:var(--gcd)}
+.rule{font-weight:800;font-size:clamp(17px,2.6vh,28px);padding:.5em 1em;border-radius:14px;text-align:center}
+.rule.l{background:#F1E8FF;color:#4F2596}.rule.g{background:#FFF1D6;color:#7A4A00}
+
+/* ─ الأسئلة ─ */
+.q{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.8vh 1.6vw;width:min(900px,86vw)}
+.ch{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.6vh,60px);color:var(--ink);background:#fff;border:3px solid var(--line);border-radius:22px;
+  padding:1.6vh 1vw;cursor:pointer;box-shadow:0 7px 0 #D4DFEC;transition:transform .12s,box-shadow .12s,background .3s,border-color .3s;display:flex;justify-content:center}
+.ch:hover{transform:translateY(-3px)}
+.ch:active{transform:translateY(5px);box-shadow:0 2px 0 #D4DFEC}
+.ch.ok{background:#E3F7EA;border-color:var(--good);box-shadow:0 7px 0 #9ED9B6;animation:pop .45s}
+.ch.no{background:#FDE7E7;border-color:var(--bad);box-shadow:0 7px 0 #F0AFAF;animation:shake .4s}
+.ch.dim{opacity:.35}
+.fb{min-height:5vh;font-size:clamp(20px,3.2vh,34px);font-weight:800;text-align:center}
+.fb.ok{color:var(--good)}.fb.no{color:var(--bad)}
+@keyframes pop{40%{transform:scale(1.08)}}
+@keyframes shake{25%{transform:translateX(-10px)}50%{transform:translateX(9px)}75%{transform:translateX(-5px)}}
+.qbadge{font-family:var(--fh);font-weight:900;background:var(--exp);color:#fff;border-radius:99px;padding:.3em 1em;font-size:clamp(15px,2.2vh,24px)}
+
+/* بطاقات «اضغط لتكشف» */
+.flip{cursor:pointer;min-width:24vw}
+.flip .hid{display:none}
+.flip.open .hid{display:flex;animation:pop .4s}
+.flip.open .tap{display:none}
+.tap{font-size:clamp(15px,2.2vh,22px);font-weight:800;color:var(--ink2);opacity:.8}
+
+/* ─ الغلاف ─ */
+.cover h1 .b sup{font-size:.48em}
+.cover .ttl{display:flex;align-items:baseline;gap:.3em}
+.who{font-size:clamp(14px,2vh,20px);color:var(--ink2);font-weight:700}
+
+/* ─ الشريط السفلي ─ */
+.bar{position:fixed;inset-inline:0;bottom:0;height:64px;display:flex;align-items:center;gap:12px;padding:0 18px;background:rgba(251,252,254,.92);border-top:1.5px solid var(--line);backdrop-filter:blur(6px);z-index:5}
+.bar button{width:48px;height:48px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bar button:hover{border-color:var(--ink2)}
+.bar button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
+.bar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bar .next{background:var(--ink);color:#fff;border-color:var(--ink);width:auto;padding:0 20px;gap:8px;font-family:var(--fh);font-weight:800;font-size:17px}
+.prog{flex:1;height:8px;background:#E3EAF4;border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--base),var(--exp));border-radius:99px;transition:width .4s}
+.cnt{font-family:var(--fh);font-weight:800;color:var(--ink2);min-width:64px;text-align:center}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9}
+@media (max-width:760px){.q{grid-template-columns:1fr}.tree{width:80vw}.tree.small{width:44vw}body::before{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

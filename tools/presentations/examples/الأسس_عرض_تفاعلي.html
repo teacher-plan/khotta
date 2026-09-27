@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الأسس — الصف السابع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ورقة رياضيات بمربعات: خلفية فاتحة واضحة على البروجكتر، والحبر أزرق داكن.
+   الأساس دائماً بالأزرق المخضرّ، والأس بالمرجاني — لونان ثابتان في كل الشرائح
+   حتى يربط الطالب بين اللون والدور. */
+:root{
+  --paper:#FBFCFE; --grid:#DCE6F2; --ink:#16325C; --ink2:#4A6285;
+  --base:#0E7C86; --exp:#E0533D; --gold:#E9A23B; --good:#1C9A55; --bad:#D63B3B;
+  --card:#FFFFFF; --line:#C9D6E6; --lcm:#7A3FD1; --gcd:#E08A00;
+  --fh:'Noto Kufi Arabic','Tajawal',Tahoma,sans-serif; --fb:'Tajawal','Noto Kufi Arabic',Tahoma,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);color:var(--ink);
+  background:var(--paper) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/34px 34px,
+             linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/34px 34px;
+  background-color:var(--paper);-webkit-user-select:none;user-select:none}
+/* هامش الدفتر الأحمر */
+body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;width:2px;background:#F2B8B0;pointer-events:none}
+
+.deck{position:fixed;inset:0 0 64px 0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
+  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
+.slide.on{opacity:1;pointer-events:auto;transform:none}
+.slide.gone{transform:translateX(4vw)}
+
+.tag{font-family:var(--fh);font-weight:800;font-size:clamp(14px,1.8vh,20px);color:var(--ink2);letter-spacing:.3px;background:#EAF1FA;border:1.5px solid var(--line);padding:.35em 1em;border-radius:99px}
+h1{font-family:var(--fh);font-weight:900;font-size:clamp(56px,13vh,150px);line-height:1.1}
+h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-height:1.3;text-align:center;text-wrap:balance}
+.lead{font-size:clamp(20px,3.3vh,36px);font-weight:700;color:var(--ink2);text-align:center;max-width:32ch;line-height:1.7;text-wrap:balance}
+.note{font-size:clamp(17px,2.6vh,28px);font-weight:700;background:#FFF6E3;border:2px dashed var(--gold);border-radius:18px;padding:.6em 1.1em;line-height:1.7;text-align:center}
+
+/* ─ الرياضيات ─ */
+.m{font-family:var(--fh);font-weight:900;direction:rtl;unicode-bidi:isolate;white-space:nowrap;display:inline-flex;align-items:baseline;gap:.28em}
+.m .x{color:#8BA0BD;font-weight:800}
+.m .eq{color:#8BA0BD}
+.b{color:var(--base);position:relative;display:inline-flex;align-items:flex-start;direction:rtl;unicode-bidi:isolate}
+.b sup{color:var(--exp);font-size:.52em;margin-inline-start:.04em;position:relative;top:-.05em;line-height:1}
+.big{font-size:clamp(46px,10vh,120px)}
+.mid{font-size:clamp(30px,6vh,68px)}
+.sm{font-size:clamp(24px,4.4vh,48px)}
+.res{color:var(--ink)}
+.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 8px 0 #E3EAF4,0 18px 40px rgba(22,50,92,.08)}
+.row{display:flex;gap:2.4vw;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:1.6vh;text-align:center}
+
+/* الظهور خطوةً خطوة */
+.st{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .45s,transform .55s cubic-bezier(.2,1.3,.4,1);visibility:hidden}
+.st.in{opacity:1;transform:none;visibility:visible}
+
+/* ضمّ ٥×٥×٥ إلى ٥³ */
+.merge{display:inline-flex;align-items:baseline;gap:.28em;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .f{display:inline-block;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .count{display:none;color:var(--exp);font-size:.52em;position:relative;top:-.55em;margin-inline-start:-.2em}
+/* مرحلتان: تنزلق الأعداد نحو الأوّل وتذوب، ثم تُزال فيظهر الأس مكانها */
+.merge.go .f:not(:first-child),.merge.go .x{opacity:0;transform:translateX(60px) scale(.3)}
+.merge.done .f:not(:first-child),.merge.done .x{display:none}
+.merge.done .count{display:inline-block;animation:pop .5s}
+.merge.done{animation:pop .5s}
+.lbls{display:flex;gap:3vw}
+.lbl{display:flex;flex-direction:column;align-items:center;gap:.5vh;font-weight:800;font-size:clamp(18px,2.8vh,30px)}
+.lbl b{font-family:var(--fh);font-size:1.6em}
+.lbl.base b{color:var(--base)}.lbl.exp b{color:var(--exp)}
+.lbl small{font-weight:700;color:var(--ink2);font-size:.75em}
+
+/* ─ شجرة العوامل ─ */
+.tree{width:min(46vw,560px);height:auto;overflow:visible}
+.tree line{stroke:#9FB3CC;stroke-width:5;stroke-linecap:round;stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset .6s ease-out}
+.tree .n circle{fill:#fff;stroke:var(--ink);stroke-width:3.5}
+.tree .n text{font-family:var(--fh);font-weight:900;font-size:30px;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.tree .p circle{fill:var(--base);stroke:#0A5E66}
+.tree .p text{fill:#fff}
+.tree .lv{opacity:0;transition:opacity .4s .25s}
+.tree .lv.in{opacity:1}
+.tree .lv.in line{stroke-dashoffset:0}
+.tree .lv.in .p circle{animation:glow 1.6s .5s 2}
+@keyframes glow{50%{stroke-width:10;stroke:#7FE3EA}}
+.tree.small{width:min(28vw,340px)}
+
+/* ─ جدول العوامل (م.م.ص / ع.م.ك) ─ */
+.ft{border-collapse:separate;border-spacing:.7vw 1vh}
+.ft th{font-family:var(--fh);font-weight:800;font-size:clamp(16px,2.6vh,28px);color:var(--ink2);padding:0 .6vw}
+.ft td{min-width:7.5vw;height:9vh;background:#fff;border:2.5px solid var(--line);border-radius:16px;text-align:center;vertical-align:middle;
+  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:all .45s}
+.ft td.num{background:#EAF1FA;color:var(--ink)}
+.ft td.empty{background:transparent;border-style:dashed;color:#B8C6D8}
+.ft.lcm td.pick-l{background:#F1E8FF;border-color:var(--lcm);box-shadow:0 0 0 4px rgba(122,63,209,.18);transform:scale(1.07)}
+.ft.gcd td.pick-g{background:#FFF1D6;border-color:var(--gcd);box-shadow:0 0 0 4px rgba(224,138,0,.2);transform:scale(1.07)}
+.ft.gcd td.nc{opacity:.28;filter:grayscale(1)}
+.ans{font-size:clamp(30px,6vh,64px);padding:1.4vh 2vw;border-radius:20px;border:3px solid}
+.ans.l{border-color:var(--lcm);background:#F7F1FF}.ans.g{border-color:var(--gcd);background:#FFF7E6}
+.ans .k{font-family:var(--fh);font-size:.62em;font-weight:900;margin-inline-end:.4em}
+.ans.l .k{color:var(--lcm)}.ans.g .k{color:var(--gcd)}
+.rule{font-weight:800;font-size:clamp(17px,2.6vh,28px);padding:.5em 1em;border-radius:14px;text-align:center}
+.rule.l{background:#F1E8FF;color:#4F2596}.rule.g{background:#FFF1D6;color:#7A4A00}
+
+/* ─ الأسئلة ─ */
+.q{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.8vh 1.6vw;width:min(900px,86vw)}
+.ch{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.6vh,60px);color:var(--ink);background:#fff;border:3px solid var(--line);border-radius:22px;
+  padding:1.6vh 1vw;cursor:pointer;box-shadow:0 7px 0 #D4DFEC;transition:transform .12s,box-shadow .12s,background .3s,border-color .3s;display:flex;justify-content:center}
+.ch:hover{transform:translateY(-3px)}
+.ch:active{transform:translateY(5px);box-shadow:0 2px 0 #D4DFEC}
+.ch.ok{background:#E3F7EA;border-color:var(--good);box-shadow:0 7px 0 #9ED9B6;animation:pop .45s}
+.ch.no{background:#FDE7E7;border-color:var(--bad);box-shadow:0 7px 0 #F0AFAF;animation:shake .4s}
+.ch.dim{opacity:.35}
+.fb{min-height:5vh;font-size:clamp(20px,3.2vh,34px);font-weight:800;text-align:center}
+.fb.ok{color:var(--good)}.fb.no{color:var(--bad)}
+@keyframes pop{40%{transform:scale(1.08)}}
+@keyframes shake{25%{transform:translateX(-10px)}50%{transform:translateX(9px)}75%{transform:translateX(-5px)}}
+.qbadge{font-family:var(--fh);font-weight:900;background:var(--exp);color:#fff;border-radius:99px;padding:.3em 1em;font-size:clamp(15px,2.2vh,24px)}
+
+/* بطاقات «اضغط لتكشف» */
+.flip{cursor:pointer;min-width:24vw}
+.flip .hid{display:none}
+.flip.open .hid{display:flex;animation:pop .4s}
+.flip.open .tap{display:none}
+.tap{font-size:clamp(15px,2.2vh,22px);font-weight:800;color:var(--ink2);opacity:.8}
+
+/* ─ الغلاف ─ */
+.cover h1 .b sup{font-size:.48em}
+.cover .ttl{display:flex;align-items:baseline;gap:.3em}
+.who{font-size:clamp(14px,2vh,20px);color:var(--ink2);font-weight:700}
+
+/* ─ الشريط السفلي ─ */
+.bar{position:fixed;inset-inline:0;bottom:0;height:64px;display:flex;align-items:center;gap:12px;padding:0 18px;background:rgba(251,252,254,.92);border-top:1.5px solid var(--line);backdrop-filter:blur(6px);z-index:5}
+.bar button{width:48px;height:48px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bar button:hover{border-color:var(--ink2)}
+.bar button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
+.bar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bar .next{background:var(--ink);color:#fff;border-color:var(--ink);width:auto;padding:0 20px;gap:8px;font-family:var(--fh);font-weight:800;font-size:17px}
+.prog{flex:1;height:8px;background:#E3EAF4;border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--base),var(--exp));border-radius:99px;transition:width .4s}
+.cnt{font-family:var(--fh);font-weight:800;color:var(--ink2);min-width:64px;text-align:center}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9}
+@media (max-width:760px){.q{grid-template-columns:1fr}.tree{width:80vw}.tree.small{width:44vw}body::before{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ═══ طبقة «الصف كلّه يرى»: خطوط أكبر وتباين أعلى (تُطبَّق فوق التصميم) ═══
+   الألوان داكنة بما يكفي لتباينٍ ≥ ٤٫٥:١ على الخلفية الفاتحة حتى على بروجكتر باهت. */
+:root{--ink:#0F2447;--ink2:#2E4468;--base:#0A6770;--exp:#C63A22;--lcm:#6A2FC4;--gcd:#B86A00;--good:#15803D;--bad:#C0262D;--line:#B7C7DB;--grid:#E3EBF5}
+.slide{padding:2vh 4vw 1.5vh 3.5vw;gap:2vh}
+h1{font-size:clamp(64px,15vh,170px)}
+h2{font-size:clamp(34px,6.6vh,74px)}
+.lead{font-size:clamp(24px,4.1vh,46px);max-width:36ch;color:var(--ink2)}
+.tag{font-size:clamp(17px,2.3vh,25px)}
+.big{font-size:clamp(58px,12.5vh,146px)}
+.mid{font-size:clamp(38px,7.8vh,88px)}
+.sm{font-size:clamp(30px,5.8vh,64px)}
+.m .x,.m .eq{color:#5B6F92}
+.note{font-size:clamp(21px,3.3vh,36px);border-width:3px}
+.rule{font-size:clamp(21px,3.3vh,36px)}
+.ans{font-size:clamp(36px,7.4vh,80px)}
+.ch{font-size:clamp(34px,6.8vh,74px);border-width:3.5px}
+.fb{font-size:clamp(24px,3.9vh,42px)}
+.qbadge{font-size:clamp(18px,2.7vh,30px)}
+.lbl{font-size:clamp(22px,3.4vh,38px)}
+.tap{font-size:clamp(18px,2.7vh,28px)}
+.who{font-size:clamp(16px,2.3vh,24px)}
+.ft th{font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
+.ft td{font-size:clamp(32px,6.4vh,70px);height:10.5vh;min-width:9vw}
+.tree .n text{font-size:34px}
+.tree{width:min(50vw,620px)}.tree.small{width:min(32vw,380px)}
+.box{border-width:3px;padding:2vh 2.2vw}
+.mode{font-size:clamp(19px,2.9vh,32px)}
+.ask{font-size:clamp(22px,3.5vh,38px)}
+.hint,.layers small{font-size:clamp(18px,2.7vh,28px);color:var(--ink2)}
+.rd{font-size:clamp(20px,3.1vh,34px);color:var(--ink2)}
+.plan div{font-size:clamp(18px,2.9vh,30px)}
+.exit .st>div{font-size:clamp(24px,4.1vh,44px)}
+.sq .n{font-size:clamp(24px,4.4vh,46px)}.sq .v{font-size:clamp(22px,4vh,42px)}
+.sqs.c4 .n{font-size:clamp(40px,7.2vh,78px)}.sqs.c4 .v{font-size:clamp(36px,6.6vh,70px)}
+.fac{font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
+.pairs{font-size:clamp(24px,4vh,44px)}
+.kk{font-size:clamp(24px,3.9vh,42px)}
+.even,.odd{font-size:clamp(21px,3.3vh,36px)}
+.timer{font-size:clamp(19px,2.9vh,32px)}
+.cnt{font-size:18px;color:var(--ink2)}
+.bar .next{font-size:19px}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- ١ الغلاف -->
+<section class="slide cover">
+  <span class="tag">الصف السابع · الوحدة ١ · الدرس ١-٥</span>
+  <div class="ttl"><h1>الأسس</h1><h1 class="m"><span class="b">٥<sup>٣</sup></span></h1></div>
+  <p class="lead">كيف نكتب الضرب المتكرر باختصار… ونستخدمه لإيجاد م.م.ص و ع.م.ك</p>
+  <p class="who">اضغط «التالي» أو المسافة للبدء</p>
+</section>
+
+<!-- ٢ الصورة الأسية -->
+<section class="slide">
+  <h2>الصورة الأسية</h2>
+  <p class="lead st">عددٌ مضروبٌ في نفسه عدة مرات يمكن كتابته باختصار:</p>
+  <div class="box st"><span class="m big"><span class="merge" id="mg1"><span class="f b">٥</span><span class="x">×</span><span class="f b">٥</span><span class="x">×</span><span class="f b">٥</span><span class="count">٣</span></span></span></div>
+  <div class="st" data-act="mg1:done"><span class="m mid"><span class="res">تُكتب</span> <span class="b">٥<sup>٣</sup></span> <span class="res">وتُقرأ: ٥ أُس ٣</span></span></div>
+  <div class="lbls st">
+    <div class="lbl base"><b>٥</b>الأساس<small>العدد المضروب</small></div>
+    <div class="lbl exp"><b>٣</b>الأس<small>عدد مرات الضرب</small></div>
+  </div>
+</section>
+
+<!-- ٣ سؤال -->
+<section class="slide">
+  <span class="qbadge">سؤال سريع ⚡</span>
+  <h2>اكتب بالصورة الأسية: <span class="m"><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span></span></h2>
+  <div class="q" data-ok="0">
+    <button class="ch"><span class="m"><span class="b">٣<sup>٤</sup></span></span></button>
+    <button class="ch"><span class="m"><span class="b">٤<sup>٣</sup></span></span></button>
+    <button class="ch"><span class="m">١٢</span></button>
+    <button class="ch"><span class="m">٣ <span class="x">×</span> ٤</span></button>
+  </div>
+  <div class="fb" data-why="العدد ٣ تكرّر ٤ مرات: الأساس ٣ والأس ٤"></div>
+</section>
+
+<!-- ٤ شجرة العوامل ٢٤ -->
+<section class="slide">
+  <h2>شجرة العوامل</h2>
+  <p class="lead st">نحلّل العدد حتى نصل إلى أعداد <b style="color:var(--base)">أولية</b> فقط، ثم نكتبه بالصورة الأسية</p>
+  <div class="row" style="align-items:center">
+    <svg class="tree" viewBox="0 0 440 300">
+      <g class="lv in"><g class="n"><circle cx="220" cy="40" r="32"/><text x="220" y="40">٢٤</text></g></g>
+      <g class="lv st-t"><line x1="220" y1="72" x2="130" y2="128"/><line x1="220" y1="72" x2="310" y2="128"/>
+        <g class="n"><circle cx="130" cy="150" r="30"/><text x="130" y="150">٤</text></g><g class="n"><circle cx="310" cy="150" r="30"/><text x="310" y="150">٦</text></g></g>
+      <g class="lv st-t"><line x1="130" y1="180" x2="80" y2="234"/><line x1="130" y1="180" x2="180" y2="234"/><line x1="310" y1="180" x2="260" y2="234"/><line x1="310" y1="180" x2="360" y2="234"/>
+        <g class="n p"><circle cx="80" cy="258" r="28"/><text x="80" y="258">٢</text></g><g class="n p"><circle cx="180" cy="258" r="28"/><text x="180" y="258">٢</text></g>
+        <g class="n p"><circle cx="260" cy="258" r="28"/><text x="260" y="258">٢</text></g><g class="n p"><circle cx="360" cy="258" r="28"/><text x="360" y="258">٣</text></g></g>
+    </svg>
+    <div class="col">
+      <div class="box st"><span class="m mid">٢٤ <span class="eq">=</span> <span class="b">٢</span><span class="x">×</span><span class="b">٢</span><span class="x">×</span><span class="b">٢</span><span class="x">×</span><span class="b">٣</span></span></div>
+      <div class="box st" style="border-color:var(--base)"><span class="m mid">٢٤ <span class="eq">=</span> <span class="b">٢<sup>٣</sup></span><span class="x">×</span><span class="b">٣</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ٥ تدرّب: ١٢٠ و ١٣٦ -->
+<section class="slide">
+  <h2>حلّل بشجرة العوامل</h2>
+  <div class="row">
+    <div class="col box">
+      <svg class="tree small" viewBox="0 0 440 400">
+        <g class="lv in"><g class="n"><circle cx="220" cy="40" r="34"/><text x="220" y="40">١٢٠</text></g></g>
+        <g class="lv st-t"><line x1="220" y1="74" x2="130" y2="124"/><line x1="220" y1="74" x2="310" y2="124"/>
+          <g class="n"><circle cx="130" cy="150" r="30"/><text x="130" y="150">١٠</text></g><g class="n"><circle cx="310" cy="150" r="30"/><text x="310" y="150">١٢</text></g></g>
+        <g class="lv st-t"><line x1="130" y1="180" x2="80" y2="232"/><line x1="130" y1="180" x2="175" y2="232"/><line x1="310" y1="180" x2="265" y2="232"/><line x1="310" y1="180" x2="360" y2="232"/>
+          <g class="n p"><circle cx="80" cy="258" r="27"/><text x="80" y="258">٢</text></g><g class="n p"><circle cx="175" cy="258" r="27"/><text x="175" y="258">٥</text></g>
+          <g class="n p"><circle cx="265" cy="258" r="27"/><text x="265" y="258">٣</text></g><g class="n"><circle cx="360" cy="258" r="27"/><text x="360" y="258">٤</text></g></g>
+        <g class="lv st-t"><line x1="360" y1="285" x2="320" y2="336"/><line x1="360" y1="285" x2="400" y2="336"/>
+          <g class="n p"><circle cx="320" cy="362" r="27"/><text x="320" y="362">٢</text></g><g class="n p"><circle cx="400" cy="362" r="27"/><text x="400" y="362">٢</text></g></g>
+      </svg>
+      <div class="st"><span class="m sm">١٢٠ <span class="eq">=</span> <span class="b">٢<sup>٣</sup></span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٥</span></span></div>
+    </div>
+    <div class="col box">
+      <svg class="tree small" viewBox="0 0 440 400">
+        <g class="lv in"><g class="n"><circle cx="220" cy="40" r="34"/><text x="220" y="40">١٣٦</text></g></g>
+        <g class="lv st-t"><line x1="220" y1="74" x2="130" y2="124"/><line x1="220" y1="74" x2="310" y2="124"/>
+          <g class="n p"><circle cx="130" cy="150" r="30"/><text x="130" y="150">٢</text></g><g class="n"><circle cx="310" cy="150" r="30"/><text x="310" y="150">٦٨</text></g></g>
+        <g class="lv st-t"><line x1="310" y1="180" x2="265" y2="232"/><line x1="310" y1="180" x2="360" y2="232"/>
+          <g class="n p"><circle cx="265" cy="258" r="27"/><text x="265" y="258">٢</text></g><g class="n"><circle cx="360" cy="258" r="27"/><text x="360" y="258">٣٤</text></g></g>
+        <g class="lv st-t"><line x1="360" y1="285" x2="320" y2="336"/><line x1="360" y1="285" x2="400" y2="336"/>
+          <g class="n p"><circle cx="320" cy="362" r="27"/><text x="320" y="362">٢</text></g><g class="n p"><circle cx="400" cy="362" r="27"/><text x="400" y="362">١٧</text></g></g>
+      </svg>
+      <div class="st"><span class="m sm">١٣٦ <span class="eq">=</span> <span class="b">٢<sup>٣</sup></span><span class="x">×</span><span class="b">١٧</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ٦ من الصورة الأسية إلى العدد -->
+<section class="slide">
+  <h2>ما العدد الذي تمثّله كل عملية؟</h2>
+  <p class="lead">اضغط على البطاقة لتكشف الحل</p>
+  <div class="row">
+    <div class="box col flip"><span class="m mid"><span class="b">٢<sup>٢</sup></span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٥</span></span>
+      <span class="tap">👆 اضغط للحل</span><span class="hid col"><span class="m sm" style="color:var(--ink2)">٢<span class="x">×</span>٢<span class="x">×</span>٣<span class="x">×</span>٥</span><span class="m mid res">= ٦٠</span></span></div>
+    <div class="box col flip"><span class="m mid"><span class="b">٢<sup>٣</sup></span><span class="x">×</span><span class="b">٧<sup>٢</sup></span></span>
+      <span class="tap">👆 اضغط للحل</span><span class="hid col"><span class="m sm" style="color:var(--ink2)">٢<span class="x">×</span>٢<span class="x">×</span>٢<span class="x">×</span>٧<span class="x">×</span>٧</span><span class="m mid res">= ٣٩٢</span></span></div>
+    <div class="box col flip"><span class="m mid"><span class="b">٣</span><span class="x">×</span><span class="b">١١<sup>٢</sup></span></span>
+      <span class="tap">👆 اضغط للحل</span><span class="hid col"><span class="m sm" style="color:var(--ink2)">٣<span class="x">×</span>١١<span class="x">×</span>١١</span><span class="m mid res">= ٣٦٣</span></span></div>
+  </div>
+</section>
+
+<!-- ٧ سؤال -->
+<section class="slide">
+  <span class="qbadge">سؤال سريع ⚡</span>
+  <h2>ما قيمة <span class="m"><span class="b">٢<sup>٤</sup></span></span> ؟</h2>
+  <div class="q" data-ok="1">
+    <button class="ch"><span class="m">٨</span></button>
+    <button class="ch"><span class="m">١٦</span></button>
+    <button class="ch"><span class="m">٦</span></button>
+    <button class="ch"><span class="m">٢٤</span></button>
+  </div>
+  <div class="fb" data-why="٢ × ٢ × ٢ × ٢ = ١٦ — وليس ٢ × ٤"></div>
+</section>
+
+<!-- ٨ م.م.ص وع.م.ك لـ ٤٥ و ٧٥ -->
+<section class="slide">
+  <h2>م.م.ص و ع.م.ك للعددين ٤٥ و ٧٥</h2>
+  <table class="ft st" id="t1">
+    <tr><th></th><th>العامل ٣</th><th>العامل ٥</th></tr>
+    <tr><td class="num">٤٥</td><td class="pick-l pick-g"><span class="m"><span class="b">٣<sup>٢</sup></span></span></td><td class="pick-g"><span class="m"><span class="b">٥</span></span></td></tr>
+    <tr><td class="num">٧٥</td><td><span class="m"><span class="b">٣</span></span></td><td class="pick-l"><span class="m"><span class="b">٥<sup>٢</sup></span></span></td></tr>
+  </table>
+  <div class="row">
+    <div class="col">
+      <div class="rule l st" data-act="t1:lcm">م.م.ص: نأخذ <b>الأس الأكبر</b> لكل عامل</div>
+      <div class="ans l st"><span class="k">م.م.ص</span><span class="m"><span class="b">٣<sup>٢</sup></span><span class="x">×</span><span class="b">٥<sup>٢</sup></span> <span class="eq">=</span> ٢٢٥</span></div>
+    </div>
+    <div class="col">
+      <div class="rule g st" data-act="t1:-lcm,gcd">ع.م.ك: نأخذ <b>الأس الأصغر</b> للعوامل المشتركة</div>
+      <div class="ans g st"><span class="k">ع.م.ك</span><span class="m"><span class="b">٣</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ١٥</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ٩ ٩٠ و ١٤٠ -->
+<section class="slide">
+  <h2>م.م.ص و ع.م.ك للعددين ٩٠ و ١٤٠</h2>
+  <table class="ft st" id="t2">
+    <tr><th></th><th>٢</th><th>٣</th><th>٥</th><th>٧</th></tr>
+    <tr><td class="num">٩٠</td><td class="pick-g"><span class="m"><span class="b">٢</span></span></td><td class="pick-l nc"><span class="m"><span class="b">٣<sup>٢</sup></span></span></td><td class="pick-l pick-g"><span class="m"><span class="b">٥</span></span></td><td class="empty nc">—</td></tr>
+    <tr><td class="num">١٤٠</td><td class="pick-l"><span class="m"><span class="b">٢<sup>٢</sup></span></span></td><td class="empty nc">—</td><td><span class="m"><span class="b">٥</span></span></td><td class="pick-l nc"><span class="m"><span class="b">٧</span></span></td></tr>
+  </table>
+  <div class="row">
+    <div class="ans l st" data-act="t2:lcm"><span class="k">م.م.ص</span><span class="m"><span class="b">٢<sup>٢</sup></span><span class="x">×</span><span class="b">٣<sup>٢</sup></span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٧</span> <span class="eq">=</span> ١٢٦٠</span></div>
+    <div class="ans g st" data-act="t2:-lcm,gcd"><span class="k">ع.م.ك</span><span class="m"><span class="b">٢</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ١٠</span></div>
+  </div>
+  <div class="note st">لاحظ: لم نأخذ <b>٣</b> ولا <b>٧</b> في ع.م.ك لأنهما غير مشتركين بين العددين</div>
+</section>
+
+<!-- ١٠ تحدٍّ -->
+<section class="slide">
+  <span class="qbadge">تحدٍّ 🏆</span>
+  <h2>إذا كان <span class="m">١٢ <span class="eq">=</span> <span class="b">٢<sup>٢</sup></span><span class="x">×</span><span class="b">٣</span></span> و <span class="m">١٨ <span class="eq">=</span> <span class="b">٢</span><span class="x">×</span><span class="b">٣<sup>٢</sup></span></span><br>فما <span style="color:var(--lcm)">م.م.ص</span> للعددين؟</h2>
+  <div class="q" data-ok="2">
+    <button class="ch"><span class="m">٦</span></button>
+    <button class="ch"><span class="m">٢١٦</span></button>
+    <button class="ch"><span class="m">٣٦</span></button>
+    <button class="ch"><span class="m">٣٠</span></button>
+  </div>
+  <div class="fb" data-why="الأس الأكبر لكل عامل: &lt;span class=&quot;m&quot;&gt;&lt;span class=&quot;b&quot;&gt;٢&lt;sup&gt;٢&lt;/sup&gt;&lt;/span&gt;&lt;span class=&quot;x&quot;&gt;×&lt;/span&gt;&lt;span class=&quot;b&quot;&gt;٣&lt;sup&gt;٢&lt;/sup&gt;&lt;/span&gt; = ٤ × ٩ = ٣٦&lt;/span&gt; — أما ع.م.ك فهو ٢ × ٣ = ٦"></div>
+</section>
+
+<!-- ١١ الأعداد الأولية -->
+<section class="slide">
+  <h2>عددان أوليان: ٣٧ و ٤٧</h2>
+  <div class="row">
+    <div class="box col st" style="border-color:var(--gcd);min-width:30vw">
+      <div class="rule g">ع.م.ك لعددين أوليين</div>
+      <span class="m big" style="color:var(--gcd)">١</span>
+      <span class="lead">لا عامل مشترك بينهما سوى الواحد</span>
+    </div>
+    <div class="box col st" style="border-color:var(--lcm);min-width:30vw">
+      <div class="rule l">م.م.ص لعددين أوليين</div>
+      <span class="m mid">٣٧ <span class="x">×</span> ٤٧</span>
+      <span class="m mid" style="color:var(--lcm)">= ١٧٣٩</span>
+      <span class="lead">حاصل ضرب العددين</span>
+    </div>
+  </div>
+</section>
+
+<!-- ١٢ الخلاصة -->
+<section class="slide">
+  <h2>الخلاصة</h2>
+  <div class="row" style="max-width:1100px">
+    <div class="box col st" style="flex:1;min-width:240px"><span class="m mid"><span class="b">٥<sup>٣</sup></span></span><b style="font-size:clamp(17px,2.6vh,26px)">الأساس ٥ مضروبٌ في نفسه ٣ مرات</b></div>
+    <div class="box col st" style="flex:1;min-width:240px"><span style="font-size:clamp(30px,5vh,52px)">🌳</span><b style="font-size:clamp(17px,2.6vh,26px)">شجرة العوامل تنتهي بأعداد أولية</b></div>
+    <div class="box col st" style="flex:1;min-width:240px;border-color:var(--lcm)"><b style="color:var(--lcm);font-family:var(--fh);font-size:clamp(20px,3.2vh,32px)">م.م.ص</b><b style="font-size:clamp(17px,2.6vh,26px)">الأس الأكبر لكل عامل</b></div>
+    <div class="box col st" style="flex:1;min-width:240px;border-color:var(--gcd)"><b style="color:var(--gcd);font-family:var(--fh);font-size:clamp(20px,3.2vh,32px)">ع.م.ك</b><b style="font-size:clamp(17px,2.6vh,26px)">الأس الأصغر للعوامل المشتركة فقط</b></div>
+  </div>
+  <p class="who st">المحتوى مأخوذ من ورقة «درسي في صفحة» — إعداد: أ. أرخية السعدي</p>
+</section>
+
+</div>
+
+<canvas id="fx"></canvas>
+<nav class="bar">
+  <button id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <span class="cnt" id="cnt"></span>
+  <div class="prog"><i id="pg"></i></div>
+  <button id="next" class="next" aria-label="التالي">التالي <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+</nav>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),cur=0;
+  // الخطوات: عناصر .st، ومستويات الشجرة .st-t بترتيب ظهورها في الشريحة
+  function steps(s){return [].slice.call(s.querySelectorAll('.st,.st-t'));}
+  function act(el,on){
+    var a=el.getAttribute('data-act');if(!a)return;
+    var p=a.split(':'),t=document.getElementById(p[0]);if(!t)return;
+    p[1].split(',').forEach(function(c){
+      var rm=c.charAt(0)==='-',k=rm?c.slice(1):c;
+      if(on)t.classList.toggle(k,!rm);else t.classList.toggle(k,rm);
+    });
+  }
+  function show(el,on){
+    el.classList.toggle('in',on);
+    var a=el.getAttribute('data-act');
+    if(a&&/:done$/.test(a)){var m=document.getElementById(a.split(':')[0]);
+      if(on){m.classList.add('go');setTimeout(function(){if(el.classList.contains('in'))m.classList.add('done');},650);}
+      else m.classList.remove('go','done');return;}
+    act(el,on);
+  }
+  function go(i,fromBack){
+    i=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
+    var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
+    cur=i;ui();
+  }
+  function next(){
+    var h=steps(slides[cur]).filter(function(e){return !e.classList.contains('in');});
+    if(h.length){show(h[0],true);tone('step');ui();return;}
+    if(cur<slides.length-1){go(cur+1);tone('slide');}
+  }
+  function prev(){
+    var v=steps(slides[cur]).filter(function(e){return e.classList.contains('in');});
+    if(v.length){show(v[v.length-1],false);ui();return;}
+    if(cur>0)go(cur-1,true);
+  }
+  function ui(){
+    document.getElementById('cnt').textContent=ar(cur+1)+' / '+ar(slides.length);
+    var st=steps(slides[cur]),done=st.filter(function(e){return e.classList.contains('in');}).length;
+    var f=(cur+(st.length?done/st.length:1))/slides.length;
+    document.getElementById('pg').style.width=Math.max(3,f*100)+'%';
+  }
+  function ar(n){return String(n).replace(/\d/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});}
+
+  // ─ الأسئلة ─
+  document.querySelectorAll('.q').forEach(function(q){
+    var ok=+q.getAttribute('data-ok'),fb=q.nextElementSibling,bs=[].slice.call(q.querySelectorAll('.ch'));
+    bs.forEach(function(b,i){b.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(q.classList.contains('solved'))return;
+      if(i===ok){
+        q.classList.add('solved');b.classList.add('ok');bs.forEach(function(x){if(x!==b)x.classList.add('dim');});
+        fb.className='fb ok';fb.innerHTML='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();
+      }else{
+        b.classList.remove('no');void b.offsetWidth;b.classList.add('no');
+        fb.className='fb no';fb.textContent='✘ حاول مرة أخرى';tone('no');
+      }
+    });});
+  });
+  document.querySelectorAll('.flip').forEach(function(f){f.addEventListener('click',function(e){e.stopPropagation();if(!f.classList.contains('open')){f.classList.add('open');tone('ok');}});});
+
+  // ─ التحكم ─
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('fs').onclick=function(){
+    var d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen().catch(function(){});
+  };
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowLeft'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){e.preventDefault();next();}
+    else if(e.key==='ArrowRight'||e.key==='PageUp'||e.key==='Backspace'){e.preventDefault();prev();}
+  });
+  // السحب بالإصبع: يساراً = التالي، يميناً = السابق (كتقليب صفحة عربية)
+  var sx=null,sy=null;
+  document.getElementById('deck').addEventListener('pointerdown',function(e){if(e.pointerType==='touch'){sx=e.clientX;sy=e.clientY;}});
+  document.getElementById('deck').addEventListener('pointerup',function(e){
+    if(sx==null)return;var dx=e.clientX-sx,dy=e.clientY-sy;sx=null;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.3){dx<0?next():prev();}
+  });
+
+  // ─ أصوات مُركّبة (لا ملفات) ─
+  var AC=null;
+  function tone(k){
+    try{
+      AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+      var seq={ok:[[1047,0],[1568,.09]],no:[[196,0],[165,.12]],step:[[880,0]],slide:[[660,0],[990,.05]]}[k]||[];
+      seq.forEach(function(n){
+        var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+n[1];
+        o.type=k==='no'?'triangle':'sine';o.frequency.value=n[0];
+        var v=k==='step'?.05:k==='slide'?.06:.16,d=k==='no'?.25:.35;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+        o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02);
+      });
+    }catch(e){}
+  }
+  // ─ احتفال بسيط ─
+  function confetti(){
+    var c=document.getElementById('fx'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+    var cols=['#0E7C86','#E0533D','#E9A23B','#7A3FD1','#1C9A55'],P=[];
+    for(var i=0;i<120;i++)P.push({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*16,vy:-Math.random()*15-4,r:Math.random()*7+4,c:cols[i%5],a:Math.random()*6});
+    var t=0;(function f(){x.clearRect(0,0,c.width,c.height);P.forEach(function(p){p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.a+=.2;
+      x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
+      if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
+  }
+  go(0);
+})();
+</script>
+</body>
+</html>

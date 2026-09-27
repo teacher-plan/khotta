@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>القوى والجذور — الصف السابع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ورقة رياضيات بمربعات: خلفية فاتحة واضحة على البروجكتر، والحبر أزرق داكن.
+   الأساس دائماً بالأزرق المخضرّ، والأس بالمرجاني — لونان ثابتان في كل الشرائح
+   حتى يربط الطالب بين اللون والدور. */
+:root{
+  --paper:#FBFCFE; --grid:#DCE6F2; --ink:#16325C; --ink2:#4A6285;
+  --base:#0E7C86; --exp:#E0533D; --gold:#E9A23B; --good:#1C9A55; --bad:#D63B3B;
+  --card:#FFFFFF; --line:#C9D6E6; --lcm:#7A3FD1; --gcd:#E08A00;
+  --fh:'Noto Kufi Arabic','Tajawal',Tahoma,sans-serif; --fb:'Tajawal','Noto Kufi Arabic',Tahoma,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);color:var(--ink);
+  background:var(--paper) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/34px 34px,
+             linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/34px 34px;
+  background-color:var(--paper);-webkit-user-select:none;user-select:none}
+/* هامش الدفتر الأحمر */
+body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;width:2px;background:#F2B8B0;pointer-events:none}
+
+.deck{position:fixed;inset:0 0 64px 0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
+  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
+.slide.on{opacity:1;pointer-events:auto;transform:none}
+.slide.gone{transform:translateX(4vw)}
+
+.tag{font-family:var(--fh);font-weight:800;font-size:clamp(14px,1.8vh,20px);color:var(--ink2);letter-spacing:.3px;background:#EAF1FA;border:1.5px solid var(--line);padding:.35em 1em;border-radius:99px}
+h1{font-family:var(--fh);font-weight:900;font-size:clamp(56px,13vh,150px);line-height:1.1}
+h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-height:1.3;text-align:center;text-wrap:balance}
+.lead{font-size:clamp(20px,3.3vh,36px);font-weight:700;color:var(--ink2);text-align:center;max-width:32ch;line-height:1.7;text-wrap:balance}
+.note{font-size:clamp(17px,2.6vh,28px);font-weight:700;background:#FFF6E3;border:2px dashed var(--gold);border-radius:18px;padding:.6em 1.1em;line-height:1.7;text-align:center}
+
+/* ─ الرياضيات ─ */
+.m{font-family:var(--fh);font-weight:900;direction:rtl;unicode-bidi:isolate;white-space:nowrap;display:inline-flex;align-items:baseline;gap:.28em}
+.m .x{color:#8BA0BD;font-weight:800}
+.m .eq{color:#8BA0BD}
+.b{color:var(--base);position:relative;display:inline-flex;align-items:flex-start;direction:rtl;unicode-bidi:isolate}
+.b sup{color:var(--exp);font-size:.52em;margin-inline-start:.04em;position:relative;top:-.05em;line-height:1}
+.big{font-size:clamp(46px,10vh,120px)}
+.mid{font-size:clamp(30px,6vh,68px)}
+.sm{font-size:clamp(24px,4.4vh,48px)}
+.res{color:var(--ink)}
+.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 8px 0 #E3EAF4,0 18px 40px rgba(22,50,92,.08)}
+.row{display:flex;gap:2.4vw;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:1.6vh;text-align:center}
+
+/* الظهور خطوةً خطوة */
+.st{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .45s,transform .55s cubic-bezier(.2,1.3,.4,1);visibility:hidden}
+.st.in{opacity:1;transform:none;visibility:visible}
+
+/* ضمّ ٥×٥×٥ إلى ٥³ */
+.merge{display:inline-flex;align-items:baseline;gap:.28em;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .f{display:inline-block;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge .count{display:none;color:var(--exp);font-size:.52em;position:relative;top:-.55em;margin-inline-start:-.2em}
+/* مرحلتان: تنزلق الأعداد نحو الأوّل وتذوب، ثم تُزال فيظهر الأس مكانها */
+.merge.go .f:not(:first-child),.merge.go .x{opacity:0;transform:translateX(60px) scale(.3)}
+.merge.done .f:not(:first-child),.merge.done .x{display:none}
+.merge.done .count{display:inline-block;animation:pop .5s}
+.merge.done{animation:pop .5s}
+.lbls{display:flex;gap:3vw}
+.lbl{display:flex;flex-direction:column;align-items:center;gap:.5vh;font-weight:800;font-size:clamp(18px,2.8vh,30px)}
+.lbl b{font-family:var(--fh);font-size:1.6em}
+.lbl.base b{color:var(--base)}.lbl.exp b{color:var(--exp)}
+.lbl small{font-weight:700;color:var(--ink2);font-size:.75em}
+
+/* ─ شجرة العوامل ─ */
+.tree{width:min(46vw,560px);height:auto;overflow:visible}
+.tree line{stroke:#9FB3CC;stroke-width:5;stroke-linecap:round;stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset .6s ease-out}
+.tree .n circle{fill:#fff;stroke:var(--ink);stroke-width:3.5}
+.tree .n text{font-family:var(--fh);font-weight:900;font-size:30px;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.tree .p circle{fill:var(--base);stroke:#0A5E66}
+.tree .p text{fill:#fff}
+.tree .lv{opacity:0;transition:opacity .4s .25s}
+.tree .lv.in{opacity:1}
+.tree .lv.in line{stroke-dashoffset:0}
+.tree .lv.in .p circle{animation:glow 1.6s .5s 2}
+@keyframes glow{50%{stroke-width:10;stroke:#7FE3EA}}
+.tree.small{width:min(28vw,340px)}
+
+/* ─ جدول العوامل (م.م.ص / ع.م.ك) ─ */
+.ft{border-collapse:separate;border-spacing:.7vw 1vh}
+.ft th{font-family:var(--fh);font-weight:800;font-size:clamp(16px,2.6vh,28px);color:var(--ink2);padding:0 .6vw}
+.ft td{min-width:7.5vw;height:9vh;background:#fff;border:2.5px solid var(--line);border-radius:16px;text-align:center;vertical-align:middle;
+  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:all .45s}
+.ft td.num{background:#EAF1FA;color:var(--ink)}
+.ft td.empty{background:transparent;border-style:dashed;color:#B8C6D8}
+.ft.lcm td.pick-l{background:#F1E8FF;border-color:var(--lcm);box-shadow:0 0 0 4px rgba(122,63,209,.18);transform:scale(1.07)}
+.ft.gcd td.pick-g{background:#FFF1D6;border-color:var(--gcd);box-shadow:0 0 0 4px rgba(224,138,0,.2);transform:scale(1.07)}
+.ft.gcd td.nc{opacity:.28;filter:grayscale(1)}
+.ans{font-size:clamp(30px,6vh,64px);padding:1.4vh 2vw;border-radius:20px;border:3px solid}
+.ans.l{border-color:var(--lcm);background:#F7F1FF}.ans.g{border-color:var(--gcd);background:#FFF7E6}
+.ans .k{font-family:var(--fh);font-size:.62em;font-weight:900;margin-inline-end:.4em}
+.ans.l .k{color:var(--lcm)}.ans.g .k{color:var(--gcd)}
+.rule{font-weight:800;font-size:clamp(17px,2.6vh,28px);padding:.5em 1em;border-radius:14px;text-align:center}
+.rule.l{background:#F1E8FF;color:#4F2596}.rule.g{background:#FFF1D6;color:#7A4A00}
+
+/* ─ الأسئلة ─ */
+.q{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.8vh 1.6vw;width:min(900px,86vw)}
+.ch{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.6vh,60px);color:var(--ink);background:#fff;border:3px solid var(--line);border-radius:22px;
+  padding:1.6vh 1vw;cursor:pointer;box-shadow:0 7px 0 #D4DFEC;transition:transform .12s,box-shadow .12s,background .3s,border-color .3s;display:flex;justify-content:center}
+.ch:hover{transform:translateY(-3px)}
+.ch:active{transform:translateY(5px);box-shadow:0 2px 0 #D4DFEC}
+.ch.ok{background:#E3F7EA;border-color:var(--good);box-shadow:0 7px 0 #9ED9B6;animation:pop .45s}
+.ch.no{background:#FDE7E7;border-color:var(--bad);box-shadow:0 7px 0 #F0AFAF;animation:shake .4s}
+.ch.dim{opacity:.35}
+.fb{min-height:5vh;font-size:clamp(20px,3.2vh,34px);font-weight:800;text-align:center}
+.fb.ok{color:var(--good)}.fb.no{color:var(--bad)}
+@keyframes pop{40%{transform:scale(1.08)}}
+@keyframes shake{25%{transform:translateX(-10px)}50%{transform:translateX(9px)}75%{transform:translateX(-5px)}}
+.qbadge{font-family:var(--fh);font-weight:900;background:var(--exp);color:#fff;border-radius:99px;padding:.3em 1em;font-size:clamp(15px,2.2vh,24px)}
+
+/* بطاقات «اضغط لتكشف» */
+.flip{cursor:pointer;min-width:24vw}
+.flip .hid{display:none}
+.flip.open .hid{display:flex;animation:pop .4s}
+.flip.open .tap{display:none}
+.tap{font-size:clamp(15px,2.2vh,22px);font-weight:800;color:var(--ink2);opacity:.8}
+
+/* ─ الغلاف ─ */
+.cover h1 .b sup{font-size:.48em}
+.cover .ttl{display:flex;align-items:baseline;gap:.3em}
+.who{font-size:clamp(14px,2vh,20px);color:var(--ink2);font-weight:700}
+
+/* ─ الشريط السفلي ─ */
+.bar{position:fixed;inset-inline:0;bottom:0;height:64px;display:flex;align-items:center;gap:12px;padding:0 18px;background:rgba(251,252,254,.92);border-top:1.5px solid var(--line);backdrop-filter:blur(6px);z-index:5}
+.bar button{width:48px;height:48px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bar button:hover{border-color:var(--ink2)}
+.bar button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
+.bar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bar .next{background:var(--ink);color:#fff;border-color:var(--ink);width:auto;padding:0 20px;gap:8px;font-family:var(--fh);font-weight:800;font-size:17px}
+.prog{flex:1;height:8px;background:#E3EAF4;border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--base),var(--exp));border-radius:99px;transition:width .4s}
+.cnt{font-family:var(--fh);font-weight:800;color:var(--ink2);min-width:64px;text-align:center}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9}
+@media (max-width:760px){.q{grid-template-columns:1fr}.tree{width:80vw}.tree.small{width:44vw}body::before{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.c-i{color:#2563EB}.c-we{color:#16A34A}.c-u{color:#EA580C}.c-b{color:var(--base)}.c-exp{color:var(--exp)}
+.mode{display:flex;align-items:center;gap:.6em;padding:.45em 1.2em;border-radius:99px;font-size:clamp(16px,2.4vh,26px);border:3px solid;background:#fff}
+.mode .ic{font-size:1.3em}.mode b{font-family:var(--fh);font-weight:900;font-size:1.25em}.mode small{font-weight:700;color:var(--ink2)}
+.mode.i{border-color:#2563EB;color:#2563EB}.mode.we{border-color:#16A34A;color:#16A34A}.mode.u{border-color:#EA580C;color:#EA580C}
+.slide:has(.mode.i){background:linear-gradient(90deg,transparent 0 calc(100% - 14px),#2563EB 0) }
+.slide:has(.mode.we){background:linear-gradient(90deg,transparent 0 calc(100% - 14px),#16A34A 0)}
+.slide:has(.mode.u){background:linear-gradient(90deg,transparent 0 calc(100% - 14px),#EA580C 0)}
+.ask{font-size:clamp(18px,2.8vh,30px);font-weight:800;color:#16A34A}
+.hint{font-size:clamp(14px,2vh,20px);font-weight:700;color:var(--ink2)}
+.divider h2{font-size:clamp(30px,6vh,64px)}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.4vh 1.2vw;width:min(1100px,90vw)}
+.plan div{background:#fff;border:2.5px solid var(--line);border-radius:16px;padding:1.4vh 1vw;font-weight:800;font-size:clamp(15px,2.3vh,24px);display:flex;flex-direction:column;gap:.3em;align-items:center;text-align:center}
+.plan b{font-family:var(--fh);color:var(--exp);font-size:1.3em}
+.grid{display:grid;gap:5px}.grid i{display:block;width:clamp(26px,5.5vh,58px);aspect-ratio:1;border-radius:7px;background:#CFE9EC;border:2px solid var(--base)}
+.g5{grid-template-columns:repeat(5,auto)}.g3{grid-template-columns:repeat(3,auto)}
+.grid.st i{opacity:0;transform:scale(.3);transition:all .3s}
+.grid.st.in i{opacity:1;transform:none}
+.grid.st.in i:nth-child(1){transition-delay:0.00s}.grid.st.in i:nth-child(2){transition-delay:0.05s}.grid.st.in i:nth-child(3){transition-delay:0.10s}.grid.st.in i:nth-child(4){transition-delay:0.15s}.grid.st.in i:nth-child(5){transition-delay:0.20s}.grid.st.in i:nth-child(6){transition-delay:0.25s}.grid.st.in i:nth-child(7){transition-delay:0.30s}.grid.st.in i:nth-child(8){transition-delay:0.35s}.grid.st.in i:nth-child(9){transition-delay:0.40s}.grid.st.in i:nth-child(10){transition-delay:0.45s}.grid.st.in i:nth-child(11){transition-delay:0.50s}.grid.st.in i:nth-child(12){transition-delay:0.55s}.grid.st.in i:nth-child(13){transition-delay:0.60s}.grid.st.in i:nth-child(14){transition-delay:0.65s}.grid.st.in i:nth-child(15){transition-delay:0.70s}.grid.st.in i:nth-child(16){transition-delay:0.75s}.grid.st.in i:nth-child(17){transition-delay:0.80s}.grid.st.in i:nth-child(18){transition-delay:0.85s}.grid.st.in i:nth-child(19){transition-delay:0.90s}.grid.st.in i:nth-child(20){transition-delay:0.95s}.grid.st.in i:nth-child(21){transition-delay:1.00s}.grid.st.in i:nth-child(22){transition-delay:1.05s}.grid.st.in i:nth-child(23){transition-delay:1.10s}.grid.st.in i:nth-child(24){transition-delay:1.15s}.grid.st.in i:nth-child(25){transition-delay:1.20s}
+.g3 i{background:#FCE3DD;border-color:var(--exp)}
+.layers small{font-weight:800;color:var(--ink2);font-size:clamp(14px,2vh,20px)}
+.pw{display:flex;flex-direction:column;gap:1.6vh;width:min(1150px,92vw)}
+.pwr{display:flex;align-items:center;justify-content:space-between;gap:2vw;background:#fff;border:2.5px solid var(--line);border-radius:18px;padding:1.4vh 2vw}
+.rd{font-size:clamp(16px,2.5vh,26px);font-weight:700;color:var(--ink2)}.rd b{color:var(--exp)}
+.timer{display:flex;align-items:center;gap:.8em;border:3px solid #EA580C;background:#FFF4EC;color:#9A3412;border-radius:16px;padding:.4em 1.1em;font-family:var(--fh);font-weight:900;cursor:pointer;font-size:clamp(16px,2.4vh,26px)}
+.timer .tt{font-size:1.5em;font-variant-numeric:tabular-nums;min-width:3.2ch}
+.timer.run{background:#EA580C;color:#fff}.timer.end{animation:shake .4s 3;background:#D63B3B;border-color:#D63B3B;color:#fff}
+.sqs{display:grid;grid-template-columns:repeat(10,1fr);gap:1vh .7vw;width:min(1200px,94vw)}
+.sqs.c10{grid-template-columns:repeat(5,1fr);width:min(900px,90vw)}.sqs.c4{grid-template-columns:repeat(4,1fr);width:min(1000px,90vw)}
+.sq{display:flex;flex-direction:column;align-items:center;gap:.3vh;background:#fff;border:2.5px solid var(--line);border-radius:14px;padding:1vh .3vw;cursor:pointer;font-family:var(--fh);font-weight:900;box-shadow:0 5px 0 #DCE5F0}
+.sq .n{font-size:clamp(20px,3.6vh,38px);color:var(--base)}
+.sq .v{font-size:clamp(18px,3.2vh,34px);color:var(--exp);min-height:1.3em;visibility:hidden}
+.sq.open{background:#FFF7F4;border-color:var(--exp)}.sq.open .v{visibility:visible;animation:pop .4s}
+.sqs.c4 .n{font-size:clamp(34px,6vh,64px)}.sqs.c4 .v{font-size:clamp(30px,5.4vh,58px)}
+.reveal-all{font-family:var(--fh);font-weight:800;background:none;border:2px dashed var(--ink2);color:var(--ink2);border-radius:12px;padding:.4em 1.2em;cursor:pointer;font-size:clamp(14px,2vh,20px)}
+.chips{display:flex;gap:.8vw;flex-wrap:wrap;justify-content:center}
+.blank{display:inline-flex;min-width:1.6em;justify-content:center;border:3px dashed var(--exp);border-radius:12px;color:var(--exp);padding:0 .2em}
+.e2{color:var(--exp);font-size:.55em;position:relative;top:-.8em}
+.arrow{font-size:clamp(26px,4.6vh,48px);color:var(--ink2);transform:rotate(-90deg)}
+.exit{display:flex;flex-direction:column;gap:1.4vh;width:min(900px,90vw)}
+.exit .st>div{display:flex;align-items:center;gap:1em;background:#fff;border:2.5px solid var(--line);border-radius:16px;padding:1.2vh 1.4vw;font-weight:800;font-size:clamp(20px,3.3vh,36px)}
+.exit b{font-family:var(--fh);background:var(--ink);color:#fff;border-radius:50%;width:1.6em;height:1.6em;display:flex;align-items:center;justify-content:center;flex:none}
+.pairs{display:flex;flex-direction:column;gap:.6vh;font-family:var(--fh);font-weight:900;font-size:clamp(20px,3.4vh,36px)}
+.pairs span{background:#EAF1FA;border-radius:10px;padding:.1em .8em}.pairs .self{background:#FDE7E2;color:var(--exp);border:2px solid var(--exp)}
+.fac{font-weight:800;font-size:clamp(17px,2.7vh,28px);color:var(--ink2)}
+.kk{font-family:var(--fh);font-size:clamp(20px,3.2vh,34px)}
+.even{color:var(--ink2);font-size:clamp(18px,2.8vh,30px)}.odd{color:var(--exp);font-size:clamp(18px,2.8vh,30px)}
+button.flip{font:inherit;color:inherit;cursor:pointer}
+.rt{display:inline-flex;align-items:flex-start;direction:rtl;unicode-bidi:isolate;position:relative}
+.rt .rs{font-family:Tahoma,sans-serif;font-weight:400;transform:scale(-1,1.15);color:var(--ink)}
+.rt .ov{border-top:.07em solid var(--ink);padding:0 .08em;margin-inline-start:-.04em;display:inline-flex;direction:rtl}
+.ng{direction:rtl;unicode-bidi:isolate;display:inline-flex}.ng i{font-style:normal}
+.rt .ri{font-style:normal;font-size:.42em;color:var(--exp);position:absolute;right:.05em;top:-.05em}
+/* ═══ طبقة «الصف كلّه يرى»: خطوط أكبر وتباين أعلى (تُطبَّق فوق التصميم) ═══
+   الألوان داكنة بما يكفي لتباينٍ ≥ ٤٫٥:١ على الخلفية الفاتحة حتى على بروجكتر باهت. */
+:root{--ink:#0F2447;--ink2:#2E4468;--base:#0A6770;--exp:#C63A22;--lcm:#6A2FC4;--gcd:#B86A00;--good:#15803D;--bad:#C0262D;--line:#B7C7DB;--grid:#E3EBF5}
+.slide{padding:2vh 4vw 1.5vh 3.5vw;gap:2vh}
+h1{font-size:clamp(64px,15vh,170px)}
+h2{font-size:clamp(34px,6.6vh,74px)}
+.lead{font-size:clamp(24px,4.1vh,46px);max-width:36ch;color:var(--ink2)}
+.tag{font-size:clamp(17px,2.3vh,25px)}
+.big{font-size:clamp(58px,12.5vh,146px)}
+.mid{font-size:clamp(38px,7.8vh,88px)}
+.sm{font-size:clamp(30px,5.8vh,64px)}
+.m .x,.m .eq{color:#5B6F92}
+.note{font-size:clamp(21px,3.3vh,36px);border-width:3px}
+.rule{font-size:clamp(21px,3.3vh,36px)}
+.ans{font-size:clamp(36px,7.4vh,80px)}
+.ch{font-size:clamp(34px,6.8vh,74px);border-width:3.5px}
+.fb{font-size:clamp(24px,3.9vh,42px)}
+.qbadge{font-size:clamp(18px,2.7vh,30px)}
+.lbl{font-size:clamp(22px,3.4vh,38px)}
+.tap{font-size:clamp(18px,2.7vh,28px)}
+.who{font-size:clamp(16px,2.3vh,24px)}
+.ft th{font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
+.ft td{font-size:clamp(32px,6.4vh,70px);height:10.5vh;min-width:9vw}
+.tree .n text{font-size:34px}
+.tree{width:min(50vw,620px)}.tree.small{width:min(32vw,380px)}
+.box{border-width:3px;padding:2vh 2.2vw}
+.mode{font-size:clamp(19px,2.9vh,32px)}
+.ask{font-size:clamp(22px,3.5vh,38px)}
+.hint,.layers small{font-size:clamp(18px,2.7vh,28px);color:var(--ink2)}
+.rd{font-size:clamp(20px,3.1vh,34px);color:var(--ink2)}
+.plan div{font-size:clamp(18px,2.9vh,30px)}
+.exit .st>div{font-size:clamp(24px,4.1vh,44px)}
+.sq .n{font-size:clamp(24px,4.4vh,46px)}.sq .v{font-size:clamp(22px,4vh,42px)}
+.sqs.c4 .n{font-size:clamp(40px,7.2vh,78px)}.sqs.c4 .v{font-size:clamp(36px,6.6vh,70px)}
+.fac{font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
+.pairs{font-size:clamp(24px,4vh,44px)}
+.kk{font-size:clamp(24px,3.9vh,42px)}
+.even,.odd{font-size:clamp(21px,3.3vh,36px)}
+.timer{font-size:clamp(19px,2.9vh,32px)}
+.cnt{font-size:18px;color:var(--ink2)}
+.bar .next{font-size:19px}
+</style></head><body>
+<div class="deck" id="deck">
+<section class="slide cover"><span class="tag">الصف السابع · الدرس ١-٦</span>
+<div class="ttl"><h1>القوى والجذور</h1></div>
+<div class="row" style="gap:3vw"><span class="m big"><span class="b">٥<sup>٢</sup></span></span><span class="m big"><span class="b">٥<sup>٣</sup></span></span><span class="m big"><span class="b">٥<sup>٤</sup></span></span></div>
+<p class="lead">نتعلّم معاً ثم نتدرّب: <b class="c-i">أنا</b> ← <b class="c-we">نحن</b> ← <b class="c-u">أنتم</b></p></section>
+<section class="slide divider"><span class="tag">الحصة الأولى · ٤٠ دقيقة</span><h2>قوّة العدد، والمربعات والمكعبات</h2>
+<div class="plan">
+<div><b>٥ د</b>تهيئة: مربّع من البلاط</div><div><b>١٠ د</b>مفهوم القوّة: التربيع والتكعيب</div>
+<div><b>١٠ د</b>إيجاد قيمة القوّة: أنا ← نحن ← أنتم</div><div><b>١٠ د</b>المربعات والمكعبات في مدى</div><div><b>٥ د</b>بطاقة الخروج</div></div></section>
+<section class="slide "><span class="qbadge">تهيئة 🤔</span><h2>كم بلاطةً نحتاج لنبني مربّعاً ضلعه ٥ بلاطات؟</h2>
+<div class="row" style="align-items:center"><div class="grid g5 st" id="g5"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="col"><div class="st "><span class="m mid"><span class="b">٥</span> <span class="x">×</span> <span class="b">٥</span> <span class="eq">=</span> ٢٥</span></div><div class="st "><span class="m mid"><span class="b">٥<sup>٢</sup></span> <span class="eq">=</span> ٢٥</span></div><div class="st "><p class="lead">لذلك نسمّي ٢٥ <b class="c-b">مربّع العدد ٥</b></p></div></div></div></section>
+<section class="slide "><h2>قوّة العدد</h2><p class="lead st">عملية ضرب العدد في نفسه عدّة مرات</p>
+<div class="pw">
+<div class="st "><div class="pwr"><span class="m sm"><span class="b">٥<sup>٢</sup></span> <span class="eq">=</span> <span class="b">٥</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ٢٥</span><span class="rd">يُقرأ: ٥ <b>تربيع</b> — ٢٥ مربّع العدد ٥</span></div></div>
+<div class="st "><div class="pwr"><span class="m sm"><span class="b">٥<sup>٣</sup></span> <span class="eq">=</span> <span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ١٢٥</span><span class="rd">يُقرأ: ٥ <b>تكعيب</b> — ١٢٥ مكعّب العدد ٥</span></div></div>
+<div class="st "><div class="pwr"><span class="m sm"><span class="b">٥<sup>٤</sup></span> <span class="eq">=</span> <span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ٦٢٥</span><span class="rd">يُقرأ: <b>القوّة الرابعة</b> للعدد ٥، أو ٥ أُس ٤</span></div></div>
+</div></section>
+<section class="slide "><h2>لماذا نقول «تكعيب»؟</h2><p class="lead">المكعّب طبقاتٌ متطابقة: كل طبقة مربّع</p>
+<div class="row layers"><div class="st "><div class="col"><div class="grid g3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>طبقة ١</small></div></div><div class="st "><div class="col"><div class="grid g3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>طبقة ٢</small></div></div><div class="st "><div class="col"><div class="grid g3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>طبقة ٣</small></div></div></div>
+<div class="st "><span class="m mid"><span class="b">٣<sup>٣</sup></span> <span class="eq">=</span> ٣ طبقات <span class="x">×</span> ٩ <span class="eq">=</span> ٢٧</span></div></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>أوجد قيمة: <span class="m "><span class="b">٩<sup>٢</sup></span></span> و <span class="m "><span class="b">٧<sup>٣</sup></span></span></h2>
+<div class="row"><div class="box " style=""><div class="col"><span class="m mid"><span class="b">٩<sup>٢</sup></span></span><div class="st "><span class="m sm"><span class="b">٩</span><span class="x">×</span><span class="b">٩</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٨١</span></div></div></div>
+<div class="box " style=""><div class="col"><span class="m mid"><span class="b">٧<sup>٣</sup></span></span><div class="st "><span class="m sm"><span class="b">٧</span><span class="x">×</span><span class="b">٧</span><span class="x">×</span><span class="b">٧</span></span></div><div class="st "><span class="m sm"><span class="eq">=</span> ٤٩ <span class="x">×</span> ٧</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٣٤٣</span></div></div></div></div>
+<div class="st "><div class="note">الأس يخبرنا <b>كم مرّة</b> نكتب الأساس ثم نضرب — لا نضرب الأساس في الأس!</div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>معاً: <span class="m "><span class="b">١٠<sup>٥</sup></span></span> و <span class="m "><span class="b">٣<sup>٤</sup></span></span></h2>
+<div class="row"><div class="box " style=""><div class="col"><p class="ask">كم مرّة نكتب العدد ١٠؟</p><div class="st "><span class="m sm"><span class="b">١٠</span><span class="x">×</span><span class="b">١٠</span><span class="x">×</span><span class="b">١٠</span><span class="x">×</span><span class="b">١٠</span><span class="x">×</span><span class="b">١٠</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ١٠٠٠٠٠</span></div><div class="st "><small class="hint">لاحظ: خمسة أصفار = الأس ٥</small></div></div></div>
+<div class="box " style=""><div class="col"><p class="ask">وهنا؟</p><div class="st "><span class="m sm"><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span></span></div><div class="st "><span class="m sm"><span class="eq">=</span> ٩ <span class="x">×</span> ٩</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٨١</span></div></div></div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><button class="timer" data-s="120"><span class="tt">٢:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button><h2>أوجد قيمة <span class="m "><span class="b">٦<sup>٢</sup></span></span></h2><div class="q" data-ok="1"><button class="ch"><span class="m ">١٢</span></button><button class="ch"><span class="m ">٣٦</span></button><button class="ch"><span class="m ">٨</span></button><button class="ch"><span class="m ">٦٦</span></button></div><div class="fb" data-why="٦ × ٦ = ٣٦"></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><h2>أوجد قيمة <span class="m "><span class="b">٢<sup>٥</sup></span></span></h2><div class="q" data-ok="2"><button class="ch"><span class="m ">١٠</span></button><button class="ch"><span class="m ">٢٥</span></button><button class="ch"><span class="m ">٣٢</span></button><button class="ch"><span class="m ">١٦</span></button></div><div class="fb" data-why="٢ × ٢ × ٢ × ٢ × ٢ = ٣٢"></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><h2>أوجد قيمة <span class="m "><span class="b">٤<sup>٣</sup></span></span></h2><div class="q" data-ok="1"><button class="ch"><span class="m ">١٢</span></button><button class="ch"><span class="m ">٦٤</span></button><button class="ch"><span class="m ">١٦</span></button><button class="ch"><span class="m ">٤٣</span></button></div><div class="fb" data-why="٤ × ٤ × ٤ = ١٦ × ٤ = ٦٤"></div></section>
+<section class="slide "><h2>احفظ الأعداد المربّعة حتى مربّع ٢٠</h2><p class="lead">اضغط على العدد ليظهر مربّعه — أو اكشفها كلّها</p>
+<div class="sqs"><button class="sq"><span class="n">١</span><span class="v">١</span></button><button class="sq"><span class="n">٢</span><span class="v">٤</span></button><button class="sq"><span class="n">٣</span><span class="v">٩</span></button><button class="sq"><span class="n">٤</span><span class="v">١٦</span></button><button class="sq"><span class="n">٥</span><span class="v">٢٥</span></button><button class="sq"><span class="n">٦</span><span class="v">٣٦</span></button><button class="sq"><span class="n">٧</span><span class="v">٤٩</span></button><button class="sq"><span class="n">٨</span><span class="v">٦٤</span></button><button class="sq"><span class="n">٩</span><span class="v">٨١</span></button><button class="sq"><span class="n">١٠</span><span class="v">١٠٠</span></button><button class="sq"><span class="n">١١</span><span class="v">١٢١</span></button><button class="sq"><span class="n">١٢</span><span class="v">١٤٤</span></button><button class="sq"><span class="n">١٣</span><span class="v">١٦٩</span></button><button class="sq"><span class="n">١٤</span><span class="v">١٩٦</span></button><button class="sq"><span class="n">١٥</span><span class="v">٢٢٥</span></button><button class="sq"><span class="n">١٦</span><span class="v">٢٥٦</span></button><button class="sq"><span class="n">١٧</span><span class="v">٢٨٩</span></button><button class="sq"><span class="n">١٨</span><span class="v">٣٢٤</span></button><button class="sq"><span class="n">١٩</span><span class="v">٣٦١</span></button><button class="sq"><span class="n">٢٠</span><span class="v">٤٠٠</span></button></div><button class="reveal-all">اكشف الكل</button></section>
+<section class="slide "><h2>احفظ الأعداد المكعّبة حتى مكعّب ١٠</h2><p class="lead">اضغط على العدد ليظهر مكعّبه</p>
+<div class="sqs c10"><button class="sq cu"><span class="n">١</span><span class="v">١</span></button><button class="sq cu"><span class="n">٢</span><span class="v">٨</span></button><button class="sq cu"><span class="n">٣</span><span class="v">٢٧</span></button><button class="sq cu"><span class="n">٤</span><span class="v">٦٤</span></button><button class="sq cu"><span class="n">٥</span><span class="v">١٢٥</span></button><button class="sq cu"><span class="n">٦</span><span class="v">٢١٦</span></button><button class="sq cu"><span class="n">٧</span><span class="v">٣٤٣</span></button><button class="sq cu"><span class="n">٨</span><span class="v">٥١٢</span></button><button class="sq cu"><span class="n">٩</span><span class="v">٧٢٩</span></button><button class="sq cu"><span class="n">١٠</span><span class="v">١٠٠٠</span></button></div><button class="reveal-all">اكشف الكل</button></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>اكتب كلّ الأعداد المربّعة من ١٠٠ إلى ٢٠٠</h2>
+<div class="st "><p class="lead">أبدأ من أوّل عددٍ مربّعه ١٠٠ وأصعد حتى أتجاوز ٢٠٠:</p></div>
+<div class="row"><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٠<sup>٢</sup></span> <span class="eq">=</span> ١٠٠</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١١<sup>٢</sup></span> <span class="eq">=</span> ١٢١</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٢<sup>٢</sup></span> <span class="eq">=</span> ١٤٤</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٣<sup>٢</sup></span> <span class="eq">=</span> ١٦٩</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٤<sup>٢</sup></span> <span class="eq">=</span> ١٩٦</span></div></div><div class="st "><div class="box " style="opacity:.5"><span class="m sm"><span class="b">١٥<sup>٢</sup></span> <span class="eq">=</span> ٢٢٥</span></div></div></div>
+<div class="st "><div class="ans l" style="border-color:var(--base);background:#EAF7F8"><span class="m sm">١٠٠ ، ١٢١ ، ١٤٤ ، ١٦٩ ، ١٩٦</span></div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>الأعداد المربّعة من ٣٠٠ إلى ٤٠٠</h2><p class="ask">من أين نبدأ؟ ما أوّل عددٍ مربّعه أكبر من ٣٠٠؟</p>
+<div class="row"><div class="st "><div class="box " style="opacity:.45"><span class="m sm"><span class="b">١٧<sup>٢</sup></span> <span class="eq">=</span> ٢٨٩</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٨<sup>٢</sup></span> <span class="eq">=</span> ٣٢٤</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">١٩<sup>٢</sup></span> <span class="eq">=</span> ٣٦١</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">٢٠<sup>٢</sup></span> <span class="eq">=</span> ٤٠٠</span></div></div><div class="st "><div class="box " style="opacity:.45"><span class="m sm"><span class="b">٢١<sup>٢</sup></span> <span class="eq">=</span> ٤٤١</span></div></div></div>
+<div class="st "><div class="ans l" style="border-color:var(--base);background:#EAF7F8"><span class="m sm">٣٢٤ ، ٣٦١ ، ٤٠٠</span></div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><button class="timer" data-s="120"><span class="tt">٢:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button><h2>ما الأعداد المكعّبة بين ١٠٠ و ٦٠٠؟</h2><div class="q" data-ok="0"><button class="ch"><span class="m ">١٢٥ ، ٢١٦ ، ٣٤٣ ، ٥١٢</span></button><button class="ch"><span class="m ">١٠٠ ، ٢٠٠ ، ٤٠٠</span></button><button class="ch"><span class="m ">١٢١ ، ١٤٤ ، ١٦٩</span></button><button class="ch"><span class="m ">١٢٥ ، ٢٥٠ ، ٥٠٠</span></button></div><div class="fb" data-why="٥³ = ١٢٥ ، ٦³ = ٢١٦ ، ٧³ = ٣٤٣ ، ٨³ = ٥١٢"></div></section>
+<section class="slide "><span class="qbadge">بطاقة الخروج 🎫</span><h2>أجب في دفترك قبل الخروج</h2>
+<div class="exit"><div class="st "><div><b>١</b>أوجد قيمة <span class="m "><span class="b">٨<sup>٢</sup></span></span></div></div><div class="st "><div><b>٢</b>أوجد قيمة <span class="m "><span class="b">٣<sup>٣</sup></span></span></div></div><div class="st "><div><b>٣</b>اكتب الأعداد المربّعة من ٥٠ إلى ١٠٠</div></div></div>
+<button class="flip box col" style="min-width:40vw"><span class="tap">👆 اضغط لإظهار الإجابات</span><span class="hid col"><span class="m sm">٦٤</span><span class="m sm">٢٧</span><span class="m sm">٦٤ ، ٨١ ، ١٠٠</span></span></button></section>
+<section class="slide divider"><span class="tag">الحصة الثانية · ٤٠ دقيقة</span><h2>نقارن القوى، ونستفيد منها، ونكتشف الجذور</h2>
+<div class="plan">
+<div><b>٥ د</b>إحماء: تحدّي المربعات السريع</div><div><b>٧ د</b>أيّ القوّتين أكبر؟</div>
+<div><b>٦ د</b>نستخدم حقيقةً لنجد غيرها</div><div><b>٦ د</b>العدد المفقود</div><div><b>١٢ د</b>الجذور التربيعية والتكعيبية</div><div><b>٤ د</b>بطاقة الخروج</div></div></section>
+<section class="slide "><span class="qbadge">إحماء ⚡</span><h2>مَن يجيب أوّلاً؟</h2><div class="sqs c4"><button class="sq"><span class="n"><span class="m "><span class="b">٧<sup>٢</sup></span></span></span><span class="v">٤٩</span></button><button class="sq"><span class="n"><span class="m "><span class="b">١٢<sup>٢</sup></span></span></span><span class="v">١٤٤</span></button><button class="sq"><span class="n"><span class="m "><span class="b">١٥<sup>٢</sup></span></span></span><span class="v">٢٢٥</span></button><button class="sq"><span class="n"><span class="m "><span class="b">٩<sup>٢</sup></span></span></span><span class="v">٨١</span></button><button class="sq"><span class="n"><span class="m "><span class="b">١٣<sup>٢</sup></span></span></span><span class="v">١٦٩</span></button><button class="sq"><span class="n"><span class="m "><span class="b">٢٠<sup>٢</sup></span></span></span><span class="v">٤٠٠</span></button><button class="sq"><span class="n"><span class="m "><span class="b">١١<sup>٢</sup></span></span></span><span class="v">١٢١</span></button><button class="sq"><span class="n"><span class="m "><span class="b">١٦<sup>٢</sup></span></span></span><span class="v">٢٥٦</span></button></div></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>أيّهما أكبر: <span class="m "><span class="b">٣<sup>٥</sup></span></span> أم <span class="m "><span class="b">٥<sup>٣</sup></span></span> ؟</h2>
+<div class="row"><div class="box " style=""><div class="col"><span class="m mid"><span class="b">٣<sup>٥</sup></span></span><div class="st "><span class="m sm"><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٢٤٣</span></div></div></div>
+<div class="box " style=""><div class="col"><span class="m mid"><span class="b">٥<sup>٣</sup></span></span><div class="st "><span class="m sm"><span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ١٢٥</span></div></div></div></div>
+<div class="st "><div class="note">إذن <span class="m "><span class="b">٣<sup>٥</sup></span></span> أكبر — لا نحكم بالنظر إلى الأس أو الأساس وحده، بل <b>نحسب القيمة</b> ثم نقارن</div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>أيّهما أكبر: <span class="m "><span class="b">٥<sup>٤</sup></span></span> أم <span class="m "><span class="b">٤<sup>٥</sup></span></span> ؟</h2><p class="ask">توقّعوا أولاً… ثم نحسب معاً</p>
+<div class="row"><div class="box " style=""><div class="col"><span class="m mid"><span class="b">٥<sup>٤</sup></span></span><div class="st "><span class="m sm"><span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span><span class="x">×</span><span class="b">٥</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٦٢٥</span></div></div></div>
+<div class="box " style=""><div class="col"><span class="m mid"><span class="b">٤<sup>٥</sup></span></span><div class="st "><span class="m sm"><span class="b">٤</span><span class="x">×</span><span class="b">٤</span><span class="x">×</span><span class="b">٤</span><span class="x">×</span><span class="b">٤</span><span class="x">×</span><span class="b">٤</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ١٠٢٤</span></div></div></div></div>
+<div class="st "><div class="note"><span class="m "><span class="b">٤<sup>٥</sup></span></span> أكبر</div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><button class="timer" data-s="120"><span class="tt">٢:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button><h2>أيّهما أكبر: <span class="m "><span class="b">٢<sup>٦</sup></span></span> أم <span class="m "><span class="b">٦<sup>٢</sup></span></span> ؟</h2><div class="q" data-ok="0"><button class="ch"><span class="m "><span class="b">٢<sup>٦</sup></span></span></button><button class="ch"><span class="m "><span class="b">٦<sup>٢</sup></span></span></button><button class="ch">متساويان</button></div><div class="fb" data-why="٢ أُس ٦ = ٦٤ و ٦ تربيع = ٣٦ ، إذن ٢ أُس ٦ أكبر"></div></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>إذا علمت أن <span class="m "><span class="b">٢<sup>١٠</sup></span> <span class="eq">=</span> ١٠٢٤</span> فأوجد <span class="m "><span class="b">٢<sup>١١</sup></span></span></h2>
+<div class="st "><p class="lead"><span class="m "><span class="b">٢<sup>١١</sup></span></span> تعني أننا ضربنا العدد ٢ مرّةً <b>إضافية</b></p></div>
+<div class="st "><div class="box " style=""><span class="m mid"><span class="b">٢<sup>١١</sup></span> <span class="eq">=</span> <span class="b">٢<sup>١٠</sup></span> <span class="x">×</span> ٢ <span class="eq">=</span> ١٠٢٤ <span class="x">×</span> ٢ <span class="eq">=</span> ٢٠٤٨</span></div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>ومنها: <span class="m "><span class="b">٢<sup>١٢</sup></span></span> و <span class="m "><span class="b">٢<sup>٩</sup></span></span></h2>
+<div class="row"><div class="box " style=""><div class="col"><p class="ask">مرّتان إضافيتان…</p><div class="st "><span class="m sm"><span class="b">٢<sup>١٢</sup></span> <span class="eq">=</span> ١٠٢٤ <span class="x">×</span> ٢ <span class="x">×</span> ٢</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٤٠٩٦</span></div></div></div>
+<div class="box " style=""><div class="col"><p class="ask">مرّة أقل… فنقسم!</p><div class="st "><span class="m sm"><span class="b">٢<sup>٩</sup></span> <span class="eq">=</span> ١٠٢٤ ÷ ٢</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٥١٢</span></div></div></div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><h2>استخدم <span class="m "><span class="b">٢<sup>١٠</sup></span> <span class="eq">=</span> ١٠٢٤</span> لإيجاد <span class="m "><span class="b">٢<sup>٨</sup></span></span></h2><div class="q" data-ok="0"><button class="ch"><span class="m ">٢٥٦</span></button><button class="ch"><span class="m ">٥١٢</span></button><button class="ch"><span class="m ">٢٠٤٨</span></button><button class="ch"><span class="m ">١٠٢٢</span></button></div><div class="fb" data-why="مرّتان أقل: ١٠٢٤ ÷ ٢ ÷ ٢ = ٢٥٦"></div></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>أوجد العدد المفقود: <span class="m "><span class="b">٣<sup>٢</sup></span> <span class="x">+</span> <span class="b">٤<sup>٢</sup></span> <span class="eq">=</span> <span class="blank">؟</span><sup class="e2">٢</sup></span></h2>
+<div class="row"><div class="st "><div class="box " style=""><span class="m sm"><span class="b">٣<sup>٢</sup></span> <span class="eq">=</span> ٩</span></div></div><div class="st "><div class="box " style=""><span class="m sm"><span class="b">٤<sup>٢</sup></span> <span class="eq">=</span> ١٦</span></div></div></div>
+<div class="st "><div class="box " style=""><span class="m mid">٩ <span class="x">+</span> ١٦ <span class="eq">=</span> ٢٥</span></div></div>
+<div class="st "><div class="box " style="border-color:var(--base)"><span class="m mid">٢٥ <span class="eq">=</span> <span class="b">٥<sup>٢</sup></span></span></div></div>
+<div class="st "><div class="note">أيّ عددٍ مربّعه ٢٥؟ إنه <b>٥</b> — لذلك نحتاج أن نحفظ المربعات!</div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>معاً: <span class="m "><span class="b">٨<sup>٢</sup></span> <span class="x">+</span> <span class="b">٦<sup>٢</sup></span> <span class="eq">=</span> <span class="blank">؟</span><sup class="e2">٢</sup></span></h2>
+<div class="st "><div class="box " style=""><span class="m mid">٦٤ <span class="x">+</span> ٣٦ <span class="eq">=</span> ١٠٠</span></div></div><div class="st "><div class="box " style="border-color:var(--base)"><span class="m mid">١٠٠ <span class="eq">=</span> <span class="b">١٠<sup>٢</sup></span></span></div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><button class="timer" data-s="180"><span class="tt">٣:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button><h2><span class="m "><span class="b">١٢<sup>٢</sup></span> <span class="x">+</span> <span class="b">٥<sup>٢</sup></span> <span class="eq">=</span> <span class="blank">؟</span><sup class="e2">٢</sup></span></h2><div class="q" data-ok="1"><button class="ch"><span class="m ">١٧</span></button><button class="ch"><span class="m ">١٣</span></button><button class="ch"><span class="m ">١٦٩</span></button><button class="ch"><span class="m ">١٤</span></button></div><div class="fb" data-why="١٤٤ + ٢٥ = ١٦٩ = ١٣ × ١٣"></div></section>
+<section class="slide "><h2>الجذر التربيعي: العملية العكسية للتربيع</h2>
+<div class="row"><div class="st "><div class="box " style=""><div class="col"><span class="m sm"><span class="b">٥<sup>٢</sup></span> <span class="eq">=</span> <span class="b">٥</span><span class="x">×</span><span class="b">٥</span> <span class="eq">=</span> ٢٥</span><span class="m sm"><span class="b"><span>(<span class="ng"><i>−</i>٥</span>)</span><sup>٢</sup></span> <span class="eq">=</span> <span class="ng"><i>−</i>٥</span> <span class="x">×</span> <span class="ng"><i>−</i>٥</span> <span class="eq">=</span> ٢٥</span></div></div></div>
+<div class="st "><div class="box " style="border-color:var(--base)"><div class="col"><span class="m mid"><span class="rt"><span class="rs">√</span><span class="ov">٢٥</span></span> <span class="eq">=</span> ٥ ، <span class="ng"><i>−</i>٥</span></span><small class="hint">للجذر التربيعي قيمتان: موجبة وسالبة</small></div></div></div></div>
+<div class="st "><div class="note">هل يوجد جذر تربيعي لعدد سالب؟ <b>لا</b> — لأن ناتج ضرب عددين متشابهين في الإشارة موجبٌ دائماً</div></div></section>
+<section class="slide "><h2>الجذر التكعيبي: العملية العكسية للتكعيب</h2>
+<div class="row"><div class="st "><div class="box " style=""><div class="col"><span class="m sm"><span class="b">٥<sup>٣</sup></span> <span class="eq">=</span> ١٢٥</span><span class="arrow">↩</span><span class="m mid"><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov">١٢٥</span></span> <span class="eq">=</span> ٥</span></div></div></div>
+<div class="st "><div class="box " style="border-color:var(--exp)"><div class="col"><span class="m sm"><span class="b"><span>(<span class="ng"><i>−</i>٥</span>)</span><sup>٣</sup></span> <span class="eq">=</span> <span class="ng"><i>−</i>١٢٥</span></span><span class="arrow">↩</span><span class="m mid"><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov"><span class="ng"><i>−</i>١٢٥</span></span></span> <span class="eq">=</span> <span class="ng"><i>−</i>٥</span></span></div></div></div></div>
+<div class="st "><div class="note">لاحظ: <b>يمكن</b> كتابة عددٍ سالب تحت الجذر التكعيبي، والإجابة تكون سالبة</div></div></section>
+<section class="slide "><div class="mode i"><span class="ic">👨‍🏫</span><b>أنا</b><small>المعلّم يحلّ ويشرح</small></div><h2>أوجد: <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">٩</span></span></span> و <span class="m "><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov">٢٧</span></span></span></h2>
+<div class="row"><div class="box " style=""><div class="col"><span class="m mid"><span class="rt"><span class="rs">√</span><span class="ov">٩</span></span></span><div class="st "><p class="ask" style="color:#2563EB">ما العدد الذي مربّعه ٩؟</p></div><div class="st "><span class="m sm"><span class="b">٣<sup>٢</sup></span> <span class="eq">=</span> ٩ و <span class="b"><span>(<span class="ng"><i>−</i>٣</span>)</span><sup>٢</sup></span> <span class="eq">=</span> ٩</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٣ ، <span class="ng"><i>−</i>٣</span></span></div></div></div>
+<div class="box " style=""><div class="col"><span class="m mid"><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov">٢٧</span></span></span><div class="st "><p class="ask" style="color:#2563EB">ما العدد الذي مكعّبه ٢٧؟</p></div><div class="st "><span class="m sm"><span class="b">٣</span><span class="x">×</span><span class="b">٣</span><span class="x">×</span><span class="b">٣</span> <span class="eq">=</span> ٢٧</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ٣</span></div></div></div></div></section>
+<section class="slide "><div class="mode we"><span class="ic">🤝</span><b>نحن</b><small>نحلّ معاً</small></div><h2>معاً: <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">١٩٦</span></span></span> و <span class="m "><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov"><span class="ng"><i>−</i>٢٧</span></span></span></span></h2>
+<div class="row"><div class="box " style=""><div class="col"><p class="ask">ابحثوا في جدول المربعات…</p><div class="st "><span class="m sm"><span class="b">١٤<sup>٢</sup></span> <span class="eq">=</span> ١٩٦</span></div><div class="st "><span class="m mid res"><span class="eq">=</span> ١٤ ، <span class="ng"><i>−</i>١٤</span></span></div></div></div>
+<div class="box " style=""><div class="col"><p class="ask">عددٌ سالب تحت الجذر التكعيبي؟</p><div class="st "><span class="m sm"><span class="ng"><i>−</i>٣</span> <span class="x">×</span> <span class="ng"><i>−</i>٣</span> <span class="x">×</span> <span class="ng"><i>−</i>٣</span> <span class="eq">=</span> <span class="ng"><i>−</i>٢٧</span></span></div><div class="st "><span class="m mid res"><span class="eq">=</span> <span class="ng"><i>−</i>٣</span></span></div></div></div></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><button class="timer" data-s="120"><span class="tt">٢:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button><h2>ما قيمة <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">٨١</span></span></span> ؟</h2><div class="q" data-ok="0"><button class="ch"><span class="m ">٩ ، <span class="ng"><i>−</i>٩</span></span></button><button class="ch"><span class="m ">٩</span></button><button class="ch"><span class="m ">٤٠٫٥</span></button><button class="ch"><span class="m ">٨١ ، <span class="ng"><i>−</i>٨١</span></span></button></div><div class="fb" data-why="لأن ٩ × ٩ = ٨١ و (−٩) × (−٩) = ٨١"></div></section>
+<section class="slide "><div class="mode u"><span class="ic">✍️</span><b>أنتم</b><small>دوركم الآن</small></div><h2>ما قيمة <span class="m "><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov">١٠٠٠</span></span></span> ؟</h2><div class="q" data-ok="1"><button class="ch"><span class="m ">١٠٠</span></button><button class="ch"><span class="m ">١٠</span></button><button class="ch"><span class="m ">١٠ ، <span class="ng"><i>−</i>١٠</span></span></button><button class="ch"><span class="m ">٣٣٣</span></button></div><div class="fb" data-why="١٠ × ١٠ × ١٠ = ١٠٠٠"></div></section>
+<section class="slide "><span class="qbadge">فكّر 💡</span><h2>هل <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">٩ + ١٦</span></span></span> = <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">٩</span></span> <span class="x">+</span> <span class="rt"><span class="rs">√</span><span class="ov">١٦</span></span></span> ؟</h2>
+<div class="row"><div class="st "><div class="box " style=""><div class="col"><span class="m mid"><span class="rt"><span class="rs">√</span><span class="ov">٩ + ١٦</span></span> <span class="eq">=</span> <span class="rt"><span class="rs">√</span><span class="ov">٢٥</span></span> <span class="eq">=</span> ٥</span></div></div></div><div class="st "><div class="box " style=""><div class="col"><span class="m mid"><span class="rt"><span class="rs">√</span><span class="ov">٩</span></span> <span class="x">+</span> <span class="rt"><span class="rs">√</span><span class="ov">١٦</span></span> <span class="eq">=</span> ٣ <span class="x">+</span> ٤ <span class="eq">=</span> ٧</span></div></div></div></div>
+<div class="st "><div class="note"><b>لا!</b> ٥ ≠ ٧ — لا يمكن توزيع الجذر على الجمع الذي بداخله</div></div></section>
+<section class="slide "><span class="qbadge">فكّر 💡</span><h2>هل صحيحٌ أن للعدد المربّع عدداً <b class="c-exp">فردياً</b> من العوامل دائماً؟</h2>
+<div class="row"><div class="st "><div class="box " style=""><div class="col"><b class="kk">١٢ (ليس مربّعاً)</b><div class="pairs"><span>١ × ١٢</span><span>٢ × ٦</span><span>٣ × ٤</span></div><div class="fac">١ ، ٢ ، ٣ ، ٤ ، ٦ ، ١٢</div><b class="even">٦ عوامل ← زوجي</b></div></div></div>
+<div class="st "><div class="box " style="border-color:var(--exp)"><div class="col"><b class="kk">١٦ (مربّع)</b><div class="pairs"><span>١ × ١٦</span><span>٢ × ٨</span><span class="self">٤ × ٤</span></div><div class="fac">١ ، ٢ ، ٤ ، ٨ ، ١٦</div><b class="odd">٥ عوامل ← فردي</b></div></div></div></div>
+<div class="st "><div class="note">نعم! العوامل تأتي أزواجاً، إلا في العدد المربّع: هناك عاملٌ مضروبٌ في نفسه (٤ × ٤) فيُعدّ مرّة واحدة</div></div></section>
+<section class="slide "><span class="qbadge">بطاقة الخروج 🎫</span><h2>أجب في دفترك</h2>
+<div class="exit"><div class="st "><div><b>١</b>أيّهما أكبر: <span class="m "><span class="b">٢<sup>٥</sup></span></span> أم <span class="m "><span class="b">٥<sup>٢</sup></span></span>؟</div></div><div class="st "><div><b>٢</b>أوجد العدد المفقود: <span class="m "><span class="b">٦<sup>٢</sup></span> <span class="x">+</span> <span class="b">٨<sup>٢</sup></span> <span class="eq">=</span> <span class="blank">؟</span><sup class="e2">٢</sup></span></div></div><div class="st "><div><b>٣</b>أوجد <span class="m "><span class="rt"><span class="rs">√</span><span class="ov">٤٩</span></span></span> و <span class="m "><span class="rt"><i class="ri">٣</i><span class="rs">√</span><span class="ov"><span class="ng"><i>−</i>٨</span></span></span></span></div></div></div>
+<button class="flip box col" style="min-width:40vw"><span class="tap">👆 اضغط لإظهار الإجابات</span><span class="hid col"><span class="m sm">٣٢ أكبر من ٢٥ ←  <span class="b">٢<sup>٥</sup></span></span><span class="m sm">٣٦ <span class="x">+</span> ٦٤ <span class="eq">=</span> ١٠٠ <span class="eq">=</span> <span class="b">١٠<sup>٢</sup></span></span><span class="m sm">٧ ، <span class="ng"><i>−</i>٧</span>  ؛  <span class="ng"><i>−</i>٢</span></span></span></button></section>
+<section class="slide "><h2>الخلاصة</h2><div class="row" style="max-width:1150px">
+<div class="st "><div class="box " style="flex:1;min-width:210px"><div class="col"><span class="m mid"><span class="b">٥<sup>٢</sup></span></span><b>تربيع — مربّع العدد</b></div></div></div>
+<div class="st "><div class="box " style="flex:1;min-width:210px"><div class="col"><span class="m mid"><span class="b">٥<sup>٣</sup></span></span><b>تكعيب — مكعّب العدد</b></div></div></div>
+<div class="st "><div class="box " style="flex:1;min-width:210px"><div class="col"><span class="m mid">⚖️</span><b>لنقارن القوى نحسب قيمتها</b></div></div></div>
+<div class="st "><div class="box " style="flex:1;min-width:210px"><div class="col"><span class="m mid"><span class="rt"><span class="rs">√</span><span class="ov">٤٩</span></span> <span class="eq">=</span> ٧ ، <span class="ng"><i>−</i>٧</span></span><b>الجذر يعكس القوّة</b></div></div></div></div>
+<p class="who st">المرجع: ورقة «درسي في صفحة» — الدرس ١-٦ القوى (الأسس) والجذور</p></section>
+</div>
+<canvas id="fx"></canvas>
+<nav class="bar">
+  <button id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <span class="cnt" id="cnt"></span><div class="prog"><i id="pg"></i></div>
+  <button id="next" class="next" aria-label="التالي">التالي <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+</nav>
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),cur=0;
+  // الخطوات: عناصر .st، ومستويات الشجرة .st-t بترتيب ظهورها في الشريحة
+  function steps(s){return [].slice.call(s.querySelectorAll('.st,.st-t'));}
+  function act(el,on){
+    var a=el.getAttribute('data-act');if(!a)return;
+    var p=a.split(':'),t=document.getElementById(p[0]);if(!t)return;
+    p[1].split(',').forEach(function(c){
+      var rm=c.charAt(0)==='-',k=rm?c.slice(1):c;
+      if(on)t.classList.toggle(k,!rm);else t.classList.toggle(k,rm);
+    });
+  }
+  function show(el,on){
+    el.classList.toggle('in',on);
+    var a=el.getAttribute('data-act');
+    if(a&&/:done$/.test(a)){var m=document.getElementById(a.split(':')[0]);
+      if(on){m.classList.add('go');setTimeout(function(){if(el.classList.contains('in'))m.classList.add('done');},650);}
+      else m.classList.remove('go','done');return;}
+    act(el,on);
+  }
+  function go(i,fromBack){
+    i=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
+    var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
+    cur=i;ui();
+  }
+  function next(){
+    var h=steps(slides[cur]).filter(function(e){return !e.classList.contains('in');});
+    if(h.length){show(h[0],true);tone('step');ui();return;}
+    if(cur<slides.length-1){go(cur+1);tone('slide');}
+  }
+  function prev(){
+    var v=steps(slides[cur]).filter(function(e){return e.classList.contains('in');});
+    if(v.length){show(v[v.length-1],false);ui();return;}
+    if(cur>0)go(cur-1,true);
+  }
+  function ui(){
+    document.getElementById('cnt').textContent=ar(cur+1)+' / '+ar(slides.length);
+    var st=steps(slides[cur]),done=st.filter(function(e){return e.classList.contains('in');}).length;
+    var f=(cur+(st.length?done/st.length:1))/slides.length;
+    document.getElementById('pg').style.width=Math.max(3,f*100)+'%';
+  }
+  function ar(n){return String(n).replace(/\d/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});}
+
+  // ─ الأسئلة ─
+  document.querySelectorAll('.q').forEach(function(q){
+    var ok=+q.getAttribute('data-ok'),fb=q.nextElementSibling,bs=[].slice.call(q.querySelectorAll('.ch'));
+    bs.forEach(function(b,i){b.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(q.classList.contains('solved'))return;
+      if(i===ok){
+        q.classList.add('solved');b.classList.add('ok');bs.forEach(function(x){if(x!==b)x.classList.add('dim');});
+        fb.className='fb ok';fb.innerHTML='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();
+      }else{
+        b.classList.remove('no');void b.offsetWidth;b.classList.add('no');
+        fb.className='fb no';fb.textContent='✘ حاول مرة أخرى';tone('no');
+      }
+    });});
+  });
+  
+  // بطاقات المربعات: ضغطة تكشف، و«اكشف الكل»
+  document.querySelectorAll('.sq').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();if(!b.classList.contains('open')){b.classList.add('open');tone('step');}});});
+  document.querySelectorAll('.reveal-all').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();
+    b.parentNode.querySelectorAll('.sq').forEach(function(x,i){setTimeout(function(){x.classList.add('open');},i*60);});tone('ok');});});
+  // مؤقّت «أنتم»
+  document.querySelectorAll('.timer').forEach(function(t){
+    var total=+t.dataset.s,left=total,iv=null,tt=t.querySelector('.tt'),tl=t.querySelector('.tl');
+    function fmt(s){return ar(Math.floor(s/60))+':'+ar(String(s%60).padStart(2,'0'));}
+    t.addEventListener('click',function(e){e.stopPropagation();
+      if(iv){clearInterval(iv);iv=null;t.classList.remove('run');tl.textContent='▶ استئناف';return;}
+      if(left<=0){left=total;t.classList.remove('end');}
+      t.classList.add('run');tl.textContent='⏸ إيقاف';
+      iv=setInterval(function(){left--;tt.textContent=fmt(left);if(left<=5&&left>0)tone('step');
+        if(left<=0){clearInterval(iv);iv=null;t.classList.remove('run');t.classList.add('end');tl.textContent='انتهى الوقت! ⟲';tone('no');}},1000);
+    });
+  });
+
+  document.querySelectorAll('.flip').forEach(function(f){f.addEventListener('click',function(e){e.stopPropagation();if(!f.classList.contains('open')){f.classList.add('open');tone('ok');}});});
+
+  // ─ التحكم ─
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('fs').onclick=function(){
+    var d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen().catch(function(){});
+  };
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowLeft'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){e.preventDefault();next();}
+    else if(e.key==='ArrowRight'||e.key==='PageUp'||e.key==='Backspace'){e.preventDefault();prev();}
+  });
+  // السحب بالإصبع: يساراً = التالي، يميناً = السابق (كتقليب صفحة عربية)
+  var sx=null,sy=null;
+  document.getElementById('deck').addEventListener('pointerdown',function(e){if(e.pointerType==='touch'){sx=e.clientX;sy=e.clientY;}});
+  document.getElementById('deck').addEventListener('pointerup',function(e){
+    if(sx==null)return;var dx=e.clientX-sx,dy=e.clientY-sy;sx=null;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.3){dx<0?next():prev();}
+  });
+
+  // ─ أصوات مُركّبة (لا ملفات) ─
+  var AC=null;
+  function tone(k){
+    try{
+      AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+      var seq={ok:[[1047,0],[1568,.09]],no:[[196,0],[165,.12]],step:[[880,0]],slide:[[660,0],[990,.05]]}[k]||[];
+      seq.forEach(function(n){
+        var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+n[1];
+        o.type=k==='no'?'triangle':'sine';o.frequency.value=n[0];
+        var v=k==='step'?.05:k==='slide'?.06:.16,d=k==='no'?.25:.35;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+        o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02);
+      });
+    }catch(e){}
+  }
+  // ─ احتفال بسيط ─
+  function confetti(){
+    var c=document.getElementById('fx'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+    var cols=['#0E7C86','#E0533D','#E9A23B','#7A3FD1','#1C9A55'],P=[];
+    for(var i=0;i<120;i++)P.push({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*16,vy:-Math.random()*15-4,r:Math.random()*7+4,c:cols[i%5],a:Math.random()*6});
+    var t=0;(function f(){x.clearRect(0,0,c.width,c.height);P.forEach(function(p){p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.a+=.2;
+      x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
+      if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
+  }
+  go(0);
+})();
+</script></body></html>
