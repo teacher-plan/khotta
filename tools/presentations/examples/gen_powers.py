@@ -2,7 +2,8 @@
 import re, os
 HERE=os.path.dirname(os.path.abspath(__file__)); KIT=os.path.dirname(HERE)
 AR = '٠١٢٣٤٥٦٧٨٩'
-def a(n): return ''.join(AR[int(c)] if c.isdigit() else c for c in str(n))
+def a(n):  # أرقام عربية-هندية — خارج وسوم HTML فقط (لا نمسّ class="e2" ونحوها)
+    return ''.join(seg if seg.startswith('<') else ''.join(AR[int(c)] if c.isdigit() else c for c in seg) for seg in re.split(r'(<[^>]*>)', str(n)))
 def N(v): return f'<span class="ng"><i>−</i>{a(v)}</span>'  # السالب: الإشارة يمين العدد
 def PN(v, e): return f'<span class="b"><span>({N(v)})</span><sup>{a(e)}</sup></span>'
 def P(b, e=None):  # أساس بأسٍّ
@@ -109,7 +110,7 @@ base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>القوى والجذور — الصف السابع</title>
-<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>

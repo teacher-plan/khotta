@@ -60,9 +60,9 @@ S.append(slide(f'''<span class="qbadge">انتبه ⚠️ خطأ شائع</span>
 S.append(slide(f'''{mode('we')}<h2>معاً: {M(P(10,5))} و {M(P(3,4))}</h2>
 <div class="row">{box(f'<div class="col"><p class="ask">كم مرّة نكتب العدد ١٠؟</p>{st(M(rep(10,5),cls="sm"))}{st(M(EQ,"١٠٠٠٠٠",cls="mid res"))}{st('<small class="hint">لاحظ: خمسة أصفار = الأس ٥</small>')}</div>')}
 {box(f'<div class="col"><p class="ask">وهنا؟</p>{st(M(rep(3,4),cls="sm"))}{st(M(EQ,"٩",X,"٩",cls="sm"))}{st(M(EQ,"٨١",cls="mid res"))}</div>')}</div>'''))
-S.append(slide(f'''{mode('u')}{ref('مثل تمرين ٨')}{timer(2)}''' + quiz(f'أوجد قيمة {M(P(3,3))}', [M('٩'), M('٢٧'), M('٦'), M('٣٣')], 1, '٣ × ٣ × ٣ = ٢٧ — وليس ٣ × ٣')))
-S.append(slide(f'''{mode('u')}{ref('مثل تمرين ٨')}''' + quiz(f'أوجد قيمة {M(P(2,5))}', [M('١٠'), M('٢٥'), M('٣٢'), M('١٦')], 2, '٢ × ٢ × ٢ × ٢ × ٢ = ٣٢')))
-S.append(slide(f'''{mode('u')}''' + quiz(f'أوجد قيمة {M(P(4,3))}', [M('١٢'), M('٦٤'), M('١٦'), M('٤٣')], 1, '٤ × ٤ × ٤ = ١٦ × ٤ = ٦٤')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ٨ (ب)')}{timer(2)}''' + quiz(f'أوجد قيمة {M(P(3,3))}', [M('٩'), M('٢٧'), M('٦'), M('٣٣')], 1, '٣ × ٣ × ٣ = ٢٧ — وليس ٣ × ٣')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ٨ (ج)')}''' + quiz(f'أوجد قيمة {M(P(3,4))}', [M('١٢'), M('٢٧'), M('٨١'), M('٦٤')], 2, '٣ × ٣ × ٣ × ٣ = ٩ × ٩ = ٨١ — لاحظ: كل قوّة = السابقة × ٣')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ١٩ (ب)')}''' + quiz(f'أوجد قيمة {M(P(10,3))}', [M('٣٠'), M('١٠٠'), M('١٠٠٠'), M('١٠٣')], 2, 'قاعدة: قوى العدد ١٠ ← عدد الأصفار = الأس')))
 
 # جداول الحفظ
 cards = ''.join(f'<button class="sq"><span class="n">{a(n)}</span><span class="v">{a(n*n)}</span></button>' for n in range(1, 21))
@@ -104,7 +104,7 @@ S.append(slide(f'''{mode('we')}{ref('تمرين ٩ (ج)')}<h2>أيّهما أك�
 <div class="row">{box(f'<div class="col">{M(P(5,4),cls="mid")}{st(M(rep(5,4),cls="sm"))}{st(M(EQ,"٦٢٥",cls="mid res"))}</div>')}
 {box(f'<div class="col">{M(P(4,5),cls="mid")}{st(M(rep(4,5),cls="sm"))}{st(M(EQ,"١٠٢٤",cls="mid res"))}</div>')}</div>
 {st(f'<div class="note">{M(P(4,5))} أكبر</div>')}'''))
-S.append(slide(f'''{mode('u')}{timer(2)}''' + quiz(f'أيّهما أكبر: {M(P(2,6))} أم {M(P(6,2))} ؟', [M(P(2,6)), M(P(6,2)), 'متساويان'], 0, '٢ أس ٦ = ٦٤ و ٦ تربيع = ٣٦ ، إذن ٢ أس ٦ أكبر')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ٩ (ب)')}{timer(2)}''' + quiz(f'أيّهما أكبر: {M(P(12,2))} أم {M(P(2,6))} ؟', [M(P(12,2)), M(P(2,6)), 'متساويان'], 0, '١٢ تربيع = ١٤٤ و ٢ أس ٦ = ٦٤ ، إذن ١٢ تربيع أكبر')))
 
 # ٢^١٠ (تمرين ١٥)
 S.append(slide(f'''{mode('i')}{ref('تمرين ١٥')}<h2>إذا علمت أن {M(P(2,10),EQ,'١٠٢٤')} فأوجد {M(P(2,11))}</h2>
@@ -113,7 +113,7 @@ S.append(slide(f'''{mode('i')}{ref('تمرين ١٥')}<h2>إذا علمت أن {
 S.append(slide(f'''{mode('we')}{ref('تمرين ١٥')}<h2>ومنها: {M(P(2,12))} و {M(P(2,9))}</h2>
 <div class="row">{box(f'<div class="col"><p class="ask">مرّتان إضافيتان…</p>{st(M(P(2,12),EQ,"١٠٢٤",X,"٢",X,"٢",cls="sm"))}{st(M(EQ,"٤٠٩٦",cls="mid res"))}</div>')}
 {box(f'<div class="col"><p class="ask">مرّة أقل… فنقسم!</p>{st(M(P(2,9),EQ,"١٠٢٤","÷","٢",cls="sm"))}{st(M(EQ,"٥١٢",cls="mid res"))}</div>')}</div>'''))
-S.append(slide(f'''{mode('u')}''' + quiz(f'استخدم {M(P(2,10),EQ,"١٠٢٤")} لإيجاد {M(P(2,8))}', [M('٢٥٦'), M('٥١٢'), M('٢٠٤٨'), M('١٠٢٢')], 0, 'مرّتان أقل: ١٠٢٤ ÷ ٢ ÷ ٢ = ٢٥٦')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ٢٠')}''' + quiz(f'{M(P(10,6))} يساوي واحد مليون. كم يساوي؟', [M('١٠٠٠٠٠'), M('١٠٠٠٠٠٠'), M('٦٠'), M('١٠٠٠٠٠٠٠')], 1, 'ستة أصفار: ١٠٠٠٠٠٠ — وبالقاعدة نفسها ١٠ أس ٩ = مليار (تسعة أصفار)')))
 
 # العدد المفقود (تمرين ٣)
 S.append(slide(f'''{mode('i')}{ref('تمرين ٣ (أ)')}<h2>أوجد العدد المفقود: {M(P(3,2),PL,P(4,2),EQ,mk())}</h2>
@@ -144,7 +144,7 @@ S.append(slide(f'''{mode('we')}{ref('تمرينا ١٠ و ١٣')}<h2>معاً: {
 <div class="row">{box(f'<div class="col"><p class="ask">ابحثوا في جدول المربعات…</p>{st(M(P(14,2),EQ,"١٩٦",cls="sm"))}{st(M(EQ,PM(14),cls="mid res"))}</div>')}
 {box(f'<div class="col"><p class="ask">ما العدد الذي مكعّبه ١٠٠٠؟</p>{st(M(rep(10,3),EQ,"١٠٠٠",cls="sm"))}{st(M(EQ,"١٠",cls="mid res"))}</div>')}</div>'''))
 S.append(slide(f'''{mode('u')}{ref('تمرين ١٠')}{timer(2)}''' + quiz(f'ما قيمة {M(R(81))} ؟', [M(PM(9)), M('٩'), M('٤٠٫٥'), M('٨١')], 0, 'لأن ٩ × ٩ = ٨١ و (−٩) × (−٩) = ٨١ — لا تنسَ الجذر السالب!')))
-S.append(slide(f'''{mode('u')}{ref('تمرين ١٣')}''' + quiz(f'ما قيمة {M(R(64,3))} ؟', [M('٨'), M('٤'), M('١٦'), M(PM(4))], 1, '٤ × ٤ × ٤ = ٦٤ — وللجذر التكعيبي قيمة واحدة')))
+S.append(slide(f'''{mode('u')}{ref('تمرين ١٣ (د)')}''' + quiz(f'ما قيمة {M(R("100 − 36"))} ؟', [M(R(100),'−',R(36)), M(PM(8)), M('٦٤'), M(PM(4))], 1, 'نُكمل العملية داخل الجذر أولاً: ١٠٠ − ٣٦ = ٦٤ ، ثم الجذر = ±٨')))
 S.append(slide(f'''{ref('تمرين ٦')}<h2>ماذا يحدث إذا ربّعنا الجذر التربيعي؟</h2>
 <div class="row">{st(box(M(f'({R(36)})<sup class="e2">٢</sup>',EQ,'٣٦',cls="mid")))}{st(box(M(f'({R(196)})<sup class="e2">٢</sup>',EQ,'١٩٦',cls="mid")))}</div>
 {st('<div class="note">تربيع الجذر التربيعي لأيّ عددٍ مربّع يساوي العدد المربّع نفسه — <b>التربيع يلغي الجذر التربيعي</b></div>')}'''))
@@ -181,6 +181,79 @@ S.append(slide(f'''<h2>الخلاصة</h2><div class="row" style="max-width:1150
 {st(box(f'<div class="col">{M(R(25),EQ,PM(5),cls="mid")}<b>للعدد المربّع جذران تربيعيان</b></div>',style="flex:1;min-width:210px"))}
 {st(box(f'<div class="col">{M(R(125,3),EQ,"٥",cls="mid")}<b>جذرٌ تكعيبيٌّ واحد</b></div>',style="flex:1;min-width:210px"))}</div>
 <p class="who st">المراجع: كتاب الطالب ص٣٢–٣٤، دليل المعلم، وورقتا «درسي في صفحة» — الدرس ١-٦ القوى (الأسس) والجذور</p>'''))
+
+
+# ═══════════ ملحق: تمارين كتاب الطالب ص٣٢–٣٤ (القاعدة + أجزاء تُكشف بضغطة) ═══════════
+def ex(num, title, rule, parts, cols=3, note=''):
+    cards=''.join(f'<button class="flip xcard"><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for q,ans in parts)
+    return slide(f'''<div class="xhead"><span class="xnum">📘 تمرين {a(num)}</span><h2>{title}</h2></div>
+<div class="xrule"><b>القاعدة</b><span>{rule}</span></div>
+<div class="xgrid c{cols}">{cards}</div>{f'<p class="hint">{note}</p>' if note else ''}''')
+S.append(slide('''<span class="tag">ملحق · للمراجعة وتصحيح الواجب</span><h2>تمارين كتاب الطالب ص ٣٢–٣٤</h2>
+<p class="lead">لكل تمرين: القاعدة التي نطبّقها، ثم أجزاؤه — اضغط على الجزء ليظهر حلّه</p>''', 'divider'))
+S.append(ex(1,'اكتب أوّل ٢٠ عدداً مربّعاً','مربّع العدد = العدد × نفسه',[(M(P(n,2)),M(a(n*n))) for n in (1,2,3,10,15,20)],note='باقي الأعداد في جدول الحفظ'))
+S.append(ex(2,'اكتب كلّ الأعداد المربّعة في كلّ مدى','ابدأ بأوّل عددٍ مربّعه لا يقلّ عن بداية المدى، واصعد حتى تتجاوز نهايته',
+  [('(أ) من ١٠٠ إلى ٢٠٠',M('١٠٠ ، ١٢١ ، ١٤٤ ، ١٦٩ ، ١٩٦')),('(ب) من ٢٠٠ إلى ٣٠٠',M('٢٢٥ ، ٢٥٦ ، ٢٨٩')),('(ج) من ٣٠٠ إلى ٤٠٠',M('٣٢٤ ، ٣٦١ ، ٤٠٠'))]))
+S.append(ex(3,'أوجد العدد المفقود','احسب المجموع أولاً، ثم ابحث عن العدد الذي مربّعه يساوي المجموع',
+  [(M(P(3,2),PL,P(4,2),EQ,mk()),M('٢٥',EQ,P(5,2))),(M(P(8,2),PL,P(6,2),EQ,mk()),M('١٠٠',EQ,P(10,2))),
+   (M(P(12,2),PL,P(5,2),EQ,mk()),M('١٦٩',EQ,P(13,2))),(M(P(8,2),PL,P(15,2),EQ,mk()),M('٦٤',PL,'٢٢٥',EQ,'٢٨٩',EQ,P(17,2)))],cols=2))
+S.append(ex(4,'اذكر عوامل كلّ عددٍ مربّع، وعدّها','العوامل تأتي أزواجاً، إلا عاملاً مضروباً في نفسه — فعدد عوامل المربّع <b>فردي</b> دائماً',
+  [('١٦','١، ٢، ٤، ٨، ١٦ ← <b>٥</b>'),('٢٥','١، ٥، ٢٥ ← <b>٣</b>'),('٣٦','١، ٢، ٣، ٤، ٦، ٩، ١٢، ١٨، ٣٦ ← <b>٩</b>'),
+   ('٤٩','١، ٧، ٤٩ ← <b>٣</b>'),('٨١','١، ٣، ٩، ٢٧، ٨١ ← <b>٥</b>'),('١٠٠','١، ٢، ٤، ٥، ١٠، ٢٠، ٢٥، ٥٠، ١٠٠ ← <b>٩</b>')]))
+S.append(ex(5,'أوجد قيمة الجذر التربيعي','للعدد المربّع جذران (±) — وإن كان داخل الجذر عملية <b>نُكملها أولاً</b>',
+  [(M(R(81)),M(PM(9))),(M(R(36)),M(PM(6))),(M(R(1)),M(PM(1))),(M(R("29 + 35")),M(R(64),EQ,PM(8))),
+   (M(R("144 + 256")),M(R(400),EQ,PM(20)))],note='(هـ): '+M(P(12,2),PL,P(16,2),EQ,'١٤٤',PL,'٢٥٦',EQ,'٤٠٠')))
+S.append(ex(6,'تربيع الجذر، وجذر المربّع','تربيع الجذر التربيعي لعددٍ مربّع = العدد نفسه، أما الجذر التربيعي لمربّع عدد فهو عددان: موجب وسالب',
+  [(M(f'({R(36)})<sup class="e2">٢</sup>'),M('٣٦')),(M(f'({R(196)})<sup class="e2">٢</sup>'),M('١٩٦')),
+   (M(R('5<sup class="e2">2</sup>')),M(R(25),EQ,PM(5))),(M(R('16<sup class="e2">2</sup>')),M(R(256),EQ,PM(16)))],cols=2))
+S.append(ex(7,'آحاد أوّل عشرة أعداد مربّعة: دائماً، أحياناً، أبداً؟','آحاد المربّع أحد الأرقام: ٠، ١، ٤، ٥، ٦، ٩ فقط',
+  [('(أ) آحاد العدد هو ٥','<b>أحياناً</b> (٢٥)'),('(ب) آحاد العدد هو ٧','<b>أبداً</b>'),('(ج) آحاد العدد عددٌ مربّع','<b>أحياناً</b> (٠، ١، ٤، ٩ نعم — ٥، ٦ لا)'),('(د) آحاد العدد ليس ٣ أو ٨','<b>دائماً</b>')],cols=2))
+S.append(ex(8,'أوجد قيمة كلٍّ مما يلي','كل قوّة = القوّة السابقة × الأساس',
+  [(M(P(3,2)),M('٩')),(M(P(3,3)),M('٢٧')),(M(P(3,4)),M('٨١')),(M(P(3,5)),M('٢٤٣'))],cols=4))
+S.append(ex(9,'أيّ العددين أكبر؟','لا نحكم بالنظر — نحسب قيمة كل قوّة ثم نقارن',
+  [(M(P(3,5),'أم',P(5,3)),M('٢٤٣ > ١٢٥ ←',P(3,5))),(M(P(12,2),'أم',P(2,6)),M('١٤٤ > ٦٤ ←',P(12,2))),(M(P(5,4),'أم',P(4,5)),M('٦٢٥ < ١٠٢٤ ←',P(4,5)))],
+  note='(ب) كما قرأتُها في الصفحة: '+M(P(12,2))+' أم '+M(P(2,6))+' — تأكّد منها في الكتاب'))
+S.append(ex(10,'أوجد قيمة الجذر التربيعي','استخدم جدول المربعات عكسياً، ولا تنسَ الجذر السالب',
+  [(M(R(n)),M(PM(int(n**.5)))) for n in (9,36,81,196,225,400)]))
+S.append(ex(13,'أوجد قيمة كلٍّ مما يلي','الجذر التكعيبي: العدد الذي مكعّبه يساوي ما تحت الجذر (قيمة واحدة)',
+  [(M(R(27,3)),M('٣')),(M(R(125,3)),M('٥')),(M(R(1000,3)),M('١٠')),(M(R("100 − 36")),M(R(64),EQ,PM(8)))],cols=2))
+S.append(ex(15,'استخدم الحقيقة '+M(P(2,10),EQ,'١٠٢٤'),'مرّة إضافية ← نضرب في ٢ ، مرّة أقل ← نقسم على ٢',
+  [(M(P(2,11)),M('١٠٢٤',X,'٢',EQ,'٢٠٤٨')),(M(P(2,12)),M('١٠٢٤',X,'٤',EQ,'٤٠٩٦')),(M(P(2,9)),M('١٠٢٤','÷','٢',EQ,'٥١٢'))]))
+S.append(ex(16,'جذور مجموع المكعبات','جذر مجموع مكعبات الأعداد من ١ إلى ن = ١ + ٢ + … + ن',
+  [(M(P(1,3),PL,P(2,3)),M('٩')),(M(R("1 + 8")),M(PM(3))),(M(R("1 + 8 + 27")),M(R(36),EQ,PM(6))),(M(R("1 + 8 + 27 + 64")),M(R(100),EQ,PM(10))),
+   ('(د) مكعبات ١ إلى ٥',M(R(225),EQ,PM(15)))],note='الطريقة السهلة: ١ + ٢ + ٣ + ٤ + ٥ = ١٥'))
+S.append(ex(17,'أوجد العدد المربّع العشرين والثلاثين والخمسين','مربّع العشرات: نربّع الرقم ثم نضيف صفرين',
+  [(M(P(20,2)),M('٤٠٠')),(M(P(30,2)),M('٩٠٠')),(M(P(50,2)),M('٢٥٠٠'))]))
+S.append(ex(18,'أوجد ثلاثة أعدادٍ مربّعة مجموعها ١٢٥','جرّب من الأكبر: خذ مربّعاً كبيراً ثم أكمل الباقي بمربّعين',
+  [('الحل الأوّل',M('١٠٠',PL,'١٦',PL,'٩')),('الحل الثاني',M('٦٤',PL,'٣٦',PL,'٢٥'))],cols=2,note=M(P(10,2),PL,P(4,2),PL,P(3,2),EQ,'١٢٥')+' &nbsp;و&nbsp; '+M(P(8,2),PL,P(6,2),PL,P(5,2),EQ,'١٢٥')))
+S.append(ex(19,'أوجد قيمة كلٍّ مما يلي','قوى العدد ١٠: عدد الأصفار = الأس',
+  [(M(P(10,2)),M('١٠٠')),(M(P(10,3)),M('١٠٠٠')),(M(P(10,4)),M('١٠٠٠٠'))]))
+S.append(ex(20,'المليون والمليار','القاعدة نفسها: عدد الأصفار = الأس',
+  [(M(P(10,6)),M('١٠٠٠٠٠٠')+'<small>مليون</small>'),(M(P(10,9)),M('١٠٠٠٠٠٠٠٠٠')+'<small>مليار</small>')],cols=2))
+S.append(slide(f'''<span class="qbadge">ألغاز الكتاب 🧩</span><h2>تمارين ١١ و ١٢ و ١٤</h2>
+<div class="xrule"><b>القاعدة</b><span>اكتب قائمة المربعات أو المكعبات في المدى المطلوب، ثم طبّق الشرط</span></div>
+<div class="xgrid c3">
+<button class="flip xcard"><span class="xq">١١ مريم: بين ٢٥٠ و ٣٥٠، وجذره التربيعي صحيح</span><span class="tap">👆</span><span class="hid xa">{M('٢٥٦ ، ٢٨٩ ، ٣٢٤')}</span></button>
+<button class="flip xcard"><span class="xq">١٢ حسن: فرديّ أصغر من ٥٠٠، وجذره التكعيبي صحيح — أكبر عدد؟</span><span class="tap">👆</span><span class="hid xa">{M('٣٤٣')}</span></button>
+<button class="flip xcard"><span class="xq">١٤ سناء: أصغر من ٣٠٠، مربّع ومكعّب معاً</span><span class="tap">👆</span><span class="hid xa">{M('١ ، ٦٤')}</span></button></div>'''))
+
+EXTRA_CSS_LESSON_X = '''
+.xhead{display:flex;align-items:center;gap:1.4vw;justify-content:center;flex-wrap:wrap}
+.xnum{font-family:var(--fh);font-weight:700;font-size:clamp(20px,3.2vh,34px);background:var(--ink);color:#fff;border-radius:99px;padding:.25em 1em}
+.xhead h2{font-size:clamp(28px,5.2vh,58px)}
+.xrule{display:flex;align-items:center;gap:1em;background:#FFF6E3;border:3px solid #E9A23B;border-radius:18px;padding:1.1vh 1.6vw;width:min(1150px,92vw);font-weight:700;font-size:clamp(19px,3.1vh,33px);line-height:1.55}
+.xrule b{flex:none;background:#E9A23B;color:#fff;border-radius:12px;padding:.15em .7em;font-family:var(--fh)}
+.xgrid{display:grid;gap:1.6vh 1.4vw;width:min(1150px,92vw)}
+.xgrid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.xgrid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.xgrid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.xgrid.c4 .xq{font-size:clamp(18px,3vh,32px)}
+.xcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8vh;background:#fff;border:3px solid var(--line);border-radius:18px;padding:1.4vh 1vw;cursor:pointer;font-family:var(--fb);color:var(--ink);box-shadow:0 6px 0 #D4DFEC;min-height:13vh}
+.xq{font-weight:700;font-size:clamp(20px,3.4vh,38px);line-height:1.5;text-align:center}
+.xq .m{font-size:1.15em}
+.xa{font-weight:700;font-size:clamp(19px,3.2vh,35px);color:var(--good);text-align:center;line-height:1.5;flex-direction:column;align-items:center}
+.xa .m{color:var(--good)}.xa small{font-size:.6em;color:var(--ink2)}
+.xcard.open{border-color:var(--good);background:#F2FBF5}
+.xcard .tap{font-size:clamp(16px,2.3vh,24px)}
+'''
 
 EXTRA_CSS_LESSON = '''
 .h1s{font-size:clamp(48px,10vh,112px)!important}
