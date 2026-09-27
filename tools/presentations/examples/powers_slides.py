@@ -7,23 +7,20 @@ def ref(t): return f'<span class="ref">📘 {t}</span>'
 def mk(): return '<span class="blank">؟</span><sup class="e2">٢</sup>'
 
 S = []
-# ═══ الغلاف ═══
+# ═══ الشريحة الأولى: العنوان + أهداف الدرس بصيغة «أنا أستطيع» (من نقاط التعلّم في دليل المعلم) ═══
+CAN = ['أكتب الضرب المتكرر بالصورة الأسية، وأميّز <b class="c-b">الأساس</b> من <b class="c-exp">الأس</b>',
+       'أجد قيمة القوى ذهنياً بسرعة ودقة، وأقارن بين قوّتين',
+       'أتذكّر الأعداد المربّعة حتى <b>٢٠ × ٢٠ = ٤٠٠</b> ومكعبات الأعداد ١ – ٥',
+       f'أجد الجذر التربيعي للعدد المربّع {M(R(25),EQ,PM(5))} والجذر التكعيبي {M(R(125,3),EQ,"٥")}']
 S.append(slide(f'''<span class="tag">الصف السابع · الدرس ١-٦ · كتاب الطالب ص ٣٢–٣٤</span>
-<div class="ttl"><h1>القوى والجذور</h1></div>
-<div class="row" style="gap:3vw">{M(P(5,2),cls="big")}{M(P(5,3),cls="big")}{M(R(25),cls="big")}</div>
-<p class="lead">نتعلّم معاً ثم نتدرّب: <b class="c-i">أنا</b> ← <b class="c-we">نحن</b> ← <b class="c-u">أنتم</b></p>''', 'cover'))
+<h1 class="h1s">القوى والجذور</h1>
+<div class="can"><b class="can-t">في نهاية هذا الدرس…</b>{''.join(f'<div><span class="can-i">✔</span><span><b>أنا أستطيع</b> أن {t}</span></div>' for t in CAN)}</div>''', 'cover'))
 
-# ═══ الأهداف والمفردات (من دليل المعلم) ═══
-S.append(slide(f'''<h2>ماذا سنتعلّم؟</h2>
-<div class="row" style="align-items:flex-start;max-width:1200px">
-<div class="goals">
-{st('<div>🎯 أكتب الضرب المتكرر بالصورة الأسية، وأفرّق بين <b class="c-b">الأساس</b> و<b class="c-exp">الأس</b></div>')}
-{st('<div>🎯 أحفظ المربعات حتى <b>٢٠ × ٢٠ = ٤٠٠</b> وجذورها التربيعية، والمكعبات وجذورها</div>')}
-{st('<div>🎯 أعرف أن للعدد المربّع <b>جذرين تربيعيين</b>: أحدهما موجب والآخر سالب</div>')}
-{st('<div>🎯 أحسب القوى والجذور ذهنياً بسرعة ودقة — <b>بلا آلة حاسبة</b></div>')}
-</div>
-{st('<div class="vocab"><b>المفردات</b><div><span>قوى العدد</span><i>power</i></div><div><span>مربّع العدد</span><i>square</i></div><div><span>الجذر التربيعي</span><i>square root</i></div><div><span>الأُسس</span><i>indices</i></div><div><span>مكعّب العدد</span><i>cube</i></div><div><span>الجذر التكعيبي</span><i>cube root</i></div></div>')}
-</div>'''))
+# ═══ المفردات (من دليل المعلم) ═══
+S.append(slide(f'''<h2>مفردات الدرس</h2>
+{st('<div class="vocab wide"><div><span>قوى العدد</span><i>power</i></div><div><span>مربّع العدد</span><i>square</i></div><div><span>الجذر التربيعي</span><i>square root</i></div><div><span>الأُسس</span><i>indices</i></div><div><span>مكعّب العدد</span><i>cube</i></div><div><span>الجذر التكعيبي</span><i>cube root</i></div></div>')}
+<div class="row">{M(P(5,2),cls="mid")}{M(P(5,3),cls="mid")}{M(R(25),cls="mid")}{M(R(125,3),cls="mid")}</div>
+<p class="lead">نتعلّم معاً ثم نتدرّب: <b class="c-i">أنا</b> ← <b class="c-we">نحن</b> ← <b class="c-u">أنتم</b></p>'''))
 
 # ═══ الحصة الأولى ═══
 S.append(slide(f'''<span class="tag">الحصة الأولى · ٤٠ دقيقة</span><h2>قوّة العدد، والمربعات والمكعبات</h2>
@@ -186,6 +183,14 @@ S.append(slide(f'''<h2>الخلاصة</h2><div class="row" style="max-width:1150
 <p class="who st">المراجع: كتاب الطالب ص٣٢–٣٤، دليل المعلم، وورقتا «درسي في صفحة» — الدرس ١-٦ القوى (الأسس) والجذور</p>'''))
 
 EXTRA_CSS_LESSON = '''
+.h1s{font-size:clamp(48px,10vh,112px)!important}
+.can{background:#fff;border:3px solid var(--line);border-radius:22px;padding:1.6vh 2vw;display:flex;flex-direction:column;gap:1.2vh;width:min(1150px,92vw);box-shadow:0 8px 0 #E3EAF4}
+.can-t{font-family:var(--fh);font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
+.can>div{display:flex;align-items:center;gap:.8em;font-weight:800;font-size:clamp(20px,3.4vh,37px);line-height:1.55}
+.can-i{flex:none;width:1.5em;height:1.5em;border-radius:50%;background:var(--good);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8em}
+.can b{color:var(--ink)}.can .c-b{color:var(--base)}.can .c-exp{color:var(--exp)}
+.vocab.wide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2vh 2.4vw;width:min(1100px,90vw);padding:2vh 2vw}
+.vocab.wide div{font-size:clamp(22px,3.8vh,40px)}
 .ref{font-family:var(--fh);font-weight:800;font-size:clamp(15px,2.2vh,22px);color:#0A6770;background:#E4F4F5;border:2px solid #9ED5D9;border-radius:99px;padding:.2em .9em}
 .goals{display:flex;flex-direction:column;gap:1.4vh;flex:1.4;min-width:340px}
 .goals .st>div{background:#fff;border:3px solid var(--line);border-radius:16px;padding:1.2vh 1.3vw;font-weight:800;font-size:clamp(19px,3.1vh,33px);line-height:1.6}
