@@ -52,6 +52,8 @@ self.addEventListener('fetch', e => {
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return; // خارجي → الشبكة كالعادة
+  // نسخة المعاينة (/preview/) تُجلب من الشبكة دائماً: يرى المشرف آخر تعديلٍ فوراً
+  if (url.pathname.startsWith('/preview/')) return;
 
   const isHTML = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
