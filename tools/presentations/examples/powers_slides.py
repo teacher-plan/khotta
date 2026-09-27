@@ -10,7 +10,7 @@ S = []
 # ═══ الشريحة الأولى: العنوان + أهداف الدرس بصيغة «أنا أستطيع» (من نقاط التعلّم في دليل المعلم) ═══
 CAN = ['أكتب الضرب المتكرر بالصورة الأسية، وأميّز <b class="c-b">الأساس</b> من <b class="c-exp">الأس</b>',
        'أجد قيمة القوى ذهنياً بسرعة ودقة، وأقارن بين قوّتين',
-       'أتذكّر الأعداد المربّعة حتى <b>٢٠ × ٢٠ = ٤٠٠</b> ومكعبات الأعداد ١ – ٥',
+       'أتذكّر الأعداد المربّعة حتى <b>٢٠ × ٢٠ = ٤٠٠</b> ومكعبات الأعداد ١ – ١٠',
        f'أجد الجذر التربيعي للعدد المربّع {M(R(25),EQ,PM(5))} والجذر التكعيبي {M(R(125,3),EQ,"٥")}']
 S.append(slide(f'''<span class="tag">الصف السابع · الدرس ١-٦ · كتاب الطالب ص ٣٢–٣٤</span>
 <h1 class="h1s">القوى والجذور</h1>
@@ -68,8 +68,8 @@ S.append(slide(f'''{mode('u')}{ref('تمرين ١٩ (ب)')}''' + quiz(f'أوجد
 cards = ''.join(f'<button class="sq pw2"><span class="n">{M(P(n,2),EQ)}</span><span class="v">{a(n*n)}</span></button>' for n in range(1, 21))
 S.append(slide(f'''<h2>احفظ الأعداد المربّعة حتى مربّع ٢٠</h2><p class="lead">اضغط على العدد ليظهر مربّعه — أو اكشفها كلّها {ref('تمرين ١')}</p>
 <div class="sqs">{cards}</div><button class="reveal-all">اكشف الكل</button>'''))
-cards = ''.join(f'<button class="sq cu pw2"><span class="n">{M(P(n,3),EQ)}</span><span class="v">{a(n**3)}</span></button>' for n in range(1, 6))
-S.append(slide(f'''<h2>احفظ مكعبات الأعداد ١ – ٥</h2><p class="lead">اضغط على القوّة ليظهر ناتجها {ref('كتاب الطالب ص ٣٢')}</p>
+cards = ''.join(f'<button class="sq cu pw2"><span class="n">{M(P(n,3),EQ)}</span><span class="v">{a(n**3)}</span></button>' for n in range(1, 11))
+S.append(slide(f'''<h2>احفظ مكعبات الأعداد ١ – ١٠</h2><p class="lead">اضغط على القوّة ليظهر ناتجها {ref('كتاب الطالب ص ٣٢')}</p>
 <div class="sqs c5">{cards}</div><button class="reveal-all">اكشف الكل</button>'''))
 
 # المربعات في مدى (تمرين ٢)
@@ -259,7 +259,7 @@ EXTRA_CSS_LESSON = '''
 .sq.pw2 .n{font-size:clamp(20px,3.6vh,38px)}
 .sq.pw2 .n .m{gap:.18em}
 .sqs.c5{grid-template-columns:repeat(5,minmax(0,1fr));width:min(1100px,90vw)}
-.sqs.c5 .n{font-size:clamp(34px,6.4vh,70px)}.sqs.c5 .v{font-size:clamp(34px,6.4vh,70px)}
+.sqs.c5 .n{font-size:clamp(30px,5.2vh,56px)}.sqs.c5 .v{font-size:clamp(30px,5.2vh,56px)}
 .h1s{font-size:clamp(48px,10vh,112px)!important}
 .can{background:#fff;border:3px solid var(--line);border-radius:22px;padding:1.6vh 2vw;display:flex;flex-direction:column;gap:1.2vh;width:min(1150px,92vw);box-shadow:0 8px 0 #E3EAF4}
 .can-t{font-family:var(--fh);font-size:clamp(20px,3.2vh,34px);color:var(--ink2)}
