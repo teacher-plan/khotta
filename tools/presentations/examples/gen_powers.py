@@ -1,5 +1,6 @@
-# مولّد عرض «القوى والجذور» — يعيد استخدام محرّك عرض «الأسس» (base.css / base.js)
-import re, os
+# مولّد العروض التفاعلية — يعيد استخدام محرّك عرض «الأسس» (base.css / base.js)
+# python3 gen_powers.py [ملف_المحتوى.py] [اسم_الخرج.html] [عنوان الصفحة]   — الافتراضي: درس «القوى والجذور»
+import re, os, sys
 HERE=os.path.dirname(os.path.abspath(__file__)); KIT=os.path.dirname(HERE)
 AR = '٠١٢٣٤٥٦٧٨٩'
 def a(n):  # أرقام عربية-هندية — خارج وسوم HTML فقط (لا نمسّ class="e2" ونحوها)
@@ -30,7 +31,11 @@ def slide(inner, cls=''): return f'<section class="slide {cls}">{inner}</section
 def st(inner, tag='div', cls=''): return f'<{tag} class="st {cls}">{inner}</{tag}>'
 def box(inner, cls='', style=''): return f'<div class="box {cls}" style="{style}">{inner}</div>'
 
-exec(open(os.path.join(HERE,'powers_slides.py'),encoding='utf-8').read())
+SLIDES = sys.argv[1] if len(sys.argv) > 1 else 'powers_slides.py'
+OUT = sys.argv[2] if len(sys.argv) > 2 else 'القوى_والجذور_عرض_تفاعلي.html'
+TITLE = sys.argv[3] if len(sys.argv) > 3 else 'القوى والجذور — الصف السابع'
+exec(open(os.path.join(HERE,'common_slides.py'),encoding='utf-8').read())
+exec(open(os.path.join(HERE,SLIDES),encoding='utf-8').read())
 
 EXTRA_CSS = '''
 .c-i{color:#2563EB}.c-we{color:#16A34A}.c-u{color:#EA580C}.c-b{color:var(--base)}.c-exp{color:var(--exp)}
@@ -109,8 +114,8 @@ base_js = open(os.path.join(KIT,'base.js'),encoding='utf-8').read()
 base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  document.querySelectorAll('.flip')")
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>القوى والجذور — الصف السابع</title>
-<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
+<title>{TITLE}</title>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
@@ -120,5 +125,5 @@ html = f'''<!DOCTYPE html>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
 <script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script></body></html>'''
-open(os.path.join(HERE,'القوى_والجذور_عرض_تفاعلي.html'), 'w', encoding='utf-8').write(html)
+open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')

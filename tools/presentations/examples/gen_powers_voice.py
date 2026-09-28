@@ -1,6 +1,7 @@
 # تعليق صوتي مشكول بأسلوب سرديّ لفيديو الدرس ١-٦ «القوى والجذور» — مجاني عبر edge-tts، مع معالجة صوتية لليوتيوب.
 # pip install edge-tts mutagen imageio-ffmpeg
 # SSL_CERT_FILE=/root/.ccr/ca-bundle.crt python3 gen_powers_voice.py [الصوت] [مجلد] [أرقام المشاهد…]
+# لدرسٍ آخر: LINES=narration_order.py python3 gen_powers_voice.py ar-EG-ShakirNeural صوت_ترتيب_العمليات
 import asyncio, json, os, ssl, sys, subprocess, edge_tts, imageio_ffmpeg
 from mutagen.mp3 import MP3
 if os.environ.get('SSL_CERT_FILE'):  # خلف وكيلٍ بشهادةٍ خاصة
@@ -37,4 +38,6 @@ async def main():
     if not ONLY:
         json.dump({'voice': VOICE, 'durations': durs, 'lines': LINES}, open(os.path.join(OUT, 'durations.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(VOICE, durs)
+if os.environ.get('LINES'):  # نصّ درسٍ آخر: ملف يعرّف LINES
+    exec(open(os.path.join(HERE, os.environ['LINES']), encoding='utf-8').read())
 asyncio.run(main())

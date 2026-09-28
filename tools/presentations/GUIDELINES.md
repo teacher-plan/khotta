@@ -70,6 +70,8 @@
 - `deco.css` / `deco.js` — طبقة اللمسات الجمالية (إلزامية، تُضاف بعد `big.css`).
 - `snap.mjs` — لقطات لشرائح مختارة مكشوفة الخطوات: `node tools/presentations/snap.mjs ملف.html مجلد 2 5 9`.
 - `examples/powers_slides.py` — محتوى شرائح درس ١-٦ (نموذجٌ لملف محتوى درس؛ انسخه لكل درس جديد).
+- `examples/common_slides.py` — دوالّ مشتركة لكل الدروس (`ex()`, `ref()`, `PM()`, أنماط الملحق).
+- درسٌ جديد: ملف محتوى مثل `examples/order_slides.py` ثم `python3.12 gen_powers.py order_slides.py <خرج>.html "<العنوان>"`؛ الملخّص مثل `gen_order_summary.py`؛ الفيديو: نصّ مثل `narration_order.py` ومصدر مثل `gen_order_video_dc.py`.
 - `examples/gen_powers.py` — المولّد (دالّات `P`, `R`, `N`, `PN`, `mode`, `timer`, `quiz`, `st`, `box`) — انسخه لدرسٍ جديد.
 - `examples/*.html` — العرضان المسلَّمان: «الأسس» و«القوى والجذور» (الصف السابع).
 
