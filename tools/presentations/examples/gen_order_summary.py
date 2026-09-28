@@ -7,6 +7,7 @@ _src = open(os.path.join(HERE, 'gen_powers_summary.py'), encoding='utf-8').read(
 exec(_src.split('HEAD = ')[0])                               # a, N, P, M, X, EQ, PL, R …
 exec('CSS = ' + _src.split('CSS = ')[1].split('\nout = ')[0])  # نفس هوية ورقة «القوى والجذور»
 
+exec(open(os.path.join(HERE, 'order_building.py'), encoding='utf-8').read())
 DV = '<span class="x">÷</span>'; MI = '<span class="x">−</span>'
 def U(*p): return '<span class="now">' + ' '.join(a(x) if not str(x).startswith('<') else x for x in p) + '</span>'
 def BR(*p): return '<span class="brk">(' + ' '.join(a(x) if not str(x).startswith('<') else x for x in p) + ')</span>'
@@ -18,20 +19,11 @@ HEAD = f'''<header><div class="hd"><b>الصف السابع</b><span>الوحد�
 <div class="goal">🎯 أحلّ مسألةً فيها أكثر من عملية حسابية بالترتيب الصحيح، وأضع الأقواس في مكانها المناسب</div>'''
 FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٥ ودليل المعلم — عن ورقة «درسي في صفحة» إعداد أ. أرخية السعدي — ارجع لكتاب النشاط ص ٢٥ لمزيد من التمارين</footer>'
 
-MAN = '''<svg class="man" viewBox="0 0 220 300" aria-hidden="true">
-<circle cx="110" cy="52" r="40" stroke="#2563EB"/><text x="110" y="64" fill="#2563EB" class="mt">( )</text>
-<path d="M92 104 L110 92 L128 104" stroke="#C7361B"/><text x="110" y="128" fill="#C7361B" class="mt2">أس</text>
-<line x1="110" y1="92" x2="110" y2="205" stroke="#14305C"/>
-<line x1="40" y1="150" x2="180" y2="150" stroke="#7A3FD1"/><text x="26" y="161" fill="#7A3FD1" class="mt">÷</text><text x="194" y="161" fill="#7A3FD1" class="mt">×</text>
-<line x1="110" y1="205" x2="60" y2="270" stroke="#1B7A3E"/><line x1="110" y1="205" x2="160" y2="270" stroke="#1B7A3E"/>
-<text x="46" y="297" fill="#1B7A3E" class="mt">−</text><text x="174" y="297" fill="#1B7A3E" class="mt">+</text></svg>'''
 
 page = f'''<section class="page">{HEAD}
 <div class="card"><h3>ترتيب العمليات الحسابية</h3>
-<div class="two ordw"><div class="ord">
-<div class="o1"><b>١</b>فكّ <b>الأقواس</b> ( )</div><div class="o2"><b>٢</b><b>الأسس والجذور</b></div>
-<div class="o3"><b>٣</b><b>الضرب والقسمة</b> ← من اليمين إلى اليسار</div><div class="o4"><b>٤</b><b>الجمع والطرح</b> ← من اليمين إلى اليسار</div></div>
-<div class="mancol">{MAN}<small>من الرأس إلى القدمين</small></div></div>
+<div class="two ordw"><div class="bld">{building()}</div>
+<div class="mini chant"><b>🎵 نردّدها معاً</b>{''.join(f'<span>{l}</span>' for l in CHANT)}</div></div>
 <p>• يتّفق علماء الرياضيات في كل العالم على هذا الترتيب، فتُحلّ المسألة بالطريقة نفسها ونحصل على <b>الناتج نفسه</b>.</p></div>
 
 <div class="card"><h3>أمثلة محلولة (مثال ١-٧)</h3><div class="three">
@@ -75,6 +67,7 @@ CSS += r'''
 .mancol{flex:1;display:flex;flex-direction:column;align-items:center;gap:1mm}.mancol small{font-size:10pt;color:#4A5E80}
 .man{width:30mm;height:auto}.man circle,.man line,.man path{fill:none;stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
 .man .mt{font-family:'Readex Pro',sans-serif;font-weight:700;font-size:34px;text-anchor:middle}.man .mt2{font-family:'Readex Pro',sans-serif;font-weight:600;font-size:20px;text-anchor:middle}
+.bld{font-size:12.5pt;flex:1.5;display:flex;justify-content:center}.chant{flex:1;gap:2mm;justify-content:center}.chant b{font-size:12pt;color:#4A5E80}.chant span{font-weight:700;font-size:12.5pt;line-height:1.6;text-align:center}
 .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3mm}
 .three .mini{align-items:stretch;gap:1mm}.three .mini>b{align-self:center}
 .sr{display:flex;align-items:center;justify-content:space-between;gap:2mm;font-size:12pt}

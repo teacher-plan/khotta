@@ -43,22 +43,11 @@ S.append(slide(f'''<h2>لماذا نحتاج إلى ترتيبٍ متّفقٍ ع
 {st('<div class="note">ترتيب العمليات طريقةٌ يتّفق عليها علماء الرياضيات في <b>كل العالم</b> — فتُحلّ أيّ مسألة بالطريقة نفسها في أيّ مكان، ونحصل على <b>الناتج نفسه</b></div>')}'''))
 
 # ═══ القاعدة + الرجل (من ورقة الملخّص) ═══
-MAN = '''<svg class="man" viewBox="0 0 220 300" aria-hidden="true">
-<circle cx="110" cy="52" r="40" class="o1s"/><text x="110" y="64" class="mt o1t">( )</text>
-<path d="M92 104 L110 92 L128 104" class="o2s"/><text x="110" y="128" class="mt2 o2t">أس</text>
-<line x1="110" y1="92" x2="110" y2="205" class="bd"/>
-<line x1="40" y1="150" x2="180" y2="150" class="o3s"/><text x="28" y="160" class="mt o3t">÷</text><text x="192" y="160" class="mt o3t">×</text>
-<line x1="110" y1="205" x2="60" y2="270" class="o4s"/><line x1="110" y1="205" x2="160" y2="270" class="o4s"/>
-<text x="46" y="296" class="mt o4t">−</text><text x="174" y="296" class="mt o4t">+</text></svg>'''
+exec(open(os.path.join(HERE, 'order_building.py'), encoding='utf-8').read())   # «عمارة العمليات»
 S.append(slide(f'''<h2>ترتيب العمليات الحسابية</h2>
-<div class="row" style="align-items:center">
-<div class="ord">
-{st('<div class="o1"><b>١</b><span>فكّ <b>الأقواس</b> ( )</span></div>')}
-{st('<div class="o2"><b>٢</b><span><b>الأسس والجذور</b></span></div>')}
-{st('<div class="o3"><b>٣</b><span><b>الضرب والقسمة</b> ← من اليمين إلى اليسار</span></div>')}
-{st('<div class="o4"><b>٤</b><span><b>الجمع والطرح</b> ← من اليمين إلى اليسار</span></div>')}
-</div>
-{st(f'<div class="col">{MAN}<small class="hint">من الرأس إلى القدمين!</small></div>')}</div>'''))
+<div class="row" style="align-items:center;gap:3vw">
+<div style="font-size:clamp(24px,4.6vh,50px)">{building(lambda i, h: st(h))}</div>
+{st('<div class="chant"><b>🎵 نردّدها معاً</b>' + ''.join(f'<span>{l}</span>' for l in CHANT) + '</div>')}</div>'''))
 
 # ═══ الخطأ الشائع (دليل المعلم) ═══
 S.append(slide(f'''<span class="qbadge">انتبه ⚠️ خطأ شائع</span><h2>اقرأ المسألة <b class="c-exp">كاملةً</b> قبل أن تبدأ!</h2>
@@ -128,9 +117,7 @@ S.append(slide(f'''<span class="qbadge">بطاقة الخروج 🎫</span><h2>�
 S.append(slide(f'''<span class="qbadge" style="background:#0A6770;box-shadow:0 4px 0 #05393E">الواجب المنزلي 🏠</span><h2>قبل الحصة القادمة</h2>
 <div class="exit">{st('<div><b>١</b>حلّ صفحة ٢٥ في كتاب النشاط</div>')}{st('<div><b>٢</b>أكمل أجزاء تمرين ١ في كتاب الطالب ص ٣٥</div>')}</div>'''))
 S.append(slide(f'''<h2>الخلاصة</h2>
-<div class="ord">
-<div class="o1"><b>١</b><span>الأقواس</span></div><div class="o2"><b>٢</b><span>الأسس والجذور</span></div>
-<div class="o3"><b>٣</b><span>الضرب والقسمة ← من اليمين</span></div><div class="o4"><b>٤</b><span>الجمع والطرح ← من اليمين</span></div></div>
+<div style="font-size:clamp(20px,3.6vh,40px)">{building(sub=False)}</div>
 {st('<div class="note">اقرأ المسألة كاملةً، وضع خطاً تحت العملية ذات الأولوية، ثم احسب خطوةً خطوة</div>')}
 <p class="who st">المراجع: كتاب الطالب ص٣٥، دليل المعلم ص٣٣، وورقة «درسي في صفحة» ١-٧ — إعداد أ. أرخية السعدي</p>'''))
 
@@ -185,5 +172,9 @@ EXTRA_CSS_OWN = '''
 .man .mt{font-family:var(--fh);font-weight:900;font-size:34px;text-anchor:middle}.man .mt2{font-family:var(--fh);font-weight:800;font-size:20px;text-anchor:middle}
 .man .o1t{fill:#2563EB}.man .o2t{fill:var(--exp)}.man .o3t{fill:#7A3FD1}.man .o4t{fill:var(--good)}
 .exit .kb{font-style:normal;color:var(--exp);font-weight:900}
+.chant{display:flex;flex-direction:column;gap:1.4vh;background:#FFF6E3;border:3px dashed var(--gold);border-radius:22px;padding:2vh 2vw;max-width:34vw;text-align:center}
+.chant b{font-family:var(--fh);font-size:clamp(20px,3vh,32px);color:var(--ink2)}
+.chant span{font-weight:800;font-size:clamp(20px,3.3vh,36px);line-height:1.6}
+.hl2{color:var(--exp)}
 .who2{font-family:var(--fh);font-weight:900;font-size:clamp(22px,3.6vh,38px)}
 '''

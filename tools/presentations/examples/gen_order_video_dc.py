@@ -4,6 +4,7 @@
 import os, json, re
 HERE = os.path.dirname(os.path.abspath(__file__))
 T = open(os.path.join(HERE, 'فيديو_القوى_والجذور.dc.html'), encoding='utf-8').read()
+exec(open(os.path.join(HERE, 'order_building.py'), encoding='utf-8').read())   # «عمارة العمليات»
 DURS = json.load(open(os.path.join(HERE, 'صوت_ترتيب_العمليات', 'durations.json')))['durations']
 
 def b(base, e): return f'<span class="b">{base}<sup>{e}</sup></span>'
@@ -41,10 +42,10 @@ SC.append(scene(1, f'''{h2('مسألةٌ واحدة… وجوابان؟')}
 {fu(m(e(b('٦','٢'),PL,'٨',DV,'٢'), 96), 1.5)}
 <div style="display: flex; gap: 40px">{card('<div style="font-size: 30px; font-weight: 700">سناء</div>' + m('٢٢', 72), 8.5, False)}{card('<div style="font-size: 30px; font-weight: 700">خديجة</div>' + m('٤٠', 72), 12, True)}</div>
 {fu('<span class="hl">مَن منهما على صواب؟</span>', 16.5, 'font-size: 34px; font-weight: 700')}''', 32))
+D2 = [11.6, 13.5, 15.6, 19.6]
 SC.append(scene(2, f'''{h2('ترتيب العمليات الحسابية')}
-<div style="display: flex; align-items: center; gap: 60px"><div style="display: flex; flex-direction: column; gap: 14px">{ordrows([8.5, 10.5, 12.5, 14.5])}</div>
-{fu(MAN + '<div style="font-size: 24px; color: #3B5480">من الرأس إلى القدمين</div>', 21, 'display: flex; flex-direction: column; align-items: center; gap: 8px', 'pop')}</div>
-{fu('المتساوية في الأولوية: <b>من اليمين إلى اليسار</b>', 16.5, 'font-size: 30px; padding: 10px 28px; border-radius: 40px; background: #FFF4D6; border: 2px solid #F2C94C')}''', 24))
+{fu('<div style="font-size: 36px">' + building(lambda i, h: fu(h, D2[i]), sub=False) + '</div>', 7.5, '', 'pop')}
+{fu('وفي الطابق الواحد: <b>من اليمين إلى اليسار ←</b> كما نقرأ', 23, 'font-size: 30px; padding: 10px 28px; border-radius: 40px; background: #FFF4D6; border: 2px solid #F2C94C')}''', 20))
 SC.append(scene(3, f'''{h2('مثال (أ)')}
 {fu(m(e('٣',PL,'٤',X,'٥'), 96), .5)}
 <div style="display: flex; flex-direction: column; gap: 22px; align-items: stretch; padding: 26px 40px; border-radius: 24px; background: #FFFFFF; border: 2px solid #C9D6E8">
@@ -76,9 +77,9 @@ SC.append(scene(8, f'''{h2('ضع الأقواس ليكون الناتج صحيح
 <div style="display: flex; flex-direction: column; gap: 18px; align-items: center">{fu(m(e('٣',X,'٢',PL,'١',EQ,'٩'), 60), 5)}{fu(m(e('٣',X,nw('(٢ + ١)'),EQ,'٣',X,'٣',EQ,'٩'), 54, '; color: #1B7A3E'), 10, cls='pop')}</div>
 <div style="display: flex; flex-direction: column; gap: 18px; align-items: center">{fu(m(e('٥',PL,b('٢','٢'),EQ,'٤٩'), 60), 16.5)}{fu(m(e(nw(b('(٥ + ٢)','٢')),EQ,b('٧','٢'),EQ,'٤٩'), 54, '; color: #1B7A3E'), 22, cls='pop')}</div></div>
 {fu('حدِّد ما يجب أن يحدث أولاً… ثم تأكّد بالحساب', 26, 'font-size: 30px; color: #3B5480')}''', 44))
-SC.append(scene(9, f'''<h2 class="pop" style="margin: 0; font-size: 64px"><span class="hl">تذكّروا الترتيب دائماً</span></h2>
-<div style="display: flex; flex-direction: column; gap: 12px">{ordrows([1, 2.5, 4, 5.5], 30)}</div>
-{fu('راجعوا ورقة الملخّص · كتاب النشاط ص ٢٥', 9.5, 'font-size: 28px; color: #3B5480')}''', 24))
+SC.append(scene(9, f'''<h2 class="pop" style="margin: 0; font-size: 56px"><span class="hl">تذكّروا عمارة العمليات</span></h2>
+<div style="font-size: 32px">{building(lambda i, h: fu(h, [1, 2.5, 4, 5.5][i]), sub=False)}</div>
+{fu('راجعوا ورقة الملخّص · كتاب النشاط ص ٢٥', 9.5, 'font-size: 28px; color: #3B5480')}''', 18))
 
 a = T.index('<sc-if value="{{s0}}"'); z = T.index('\n</div>\n\n<div style="height: 88px')
 out = T[:a] + ''.join(SC) + T[z:]
