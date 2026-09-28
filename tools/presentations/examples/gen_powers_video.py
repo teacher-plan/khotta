@@ -24,7 +24,7 @@ html = f'''<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <div class="stage" dir="rtl" style="width:1280px;height:720px;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column">
 <div style="height:64px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:#14305C;color:#fff">
 <div style="font-size:22px;font-weight:700">الدرس ١-٦: القوى والجذور</div><div style="font-size:18px;opacity:.85">الصف السابع · الوحدة الأولى</div></div>
-<div style="flex-grow:1;position:relative;display:flex;align-items:center;justify-content:center;padding:24px 64px">{''.join(scenes)}</div>
+<div id="mid" style="flex-grow:1;min-height:0;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:24px 64px">{''.join(scenes)}</div>
 <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:24px;padding:0 40px;background:#fff;border-top:2px solid #C9D6E8">
 <div style="flex-grow:1;display:flex;flex-direction:column;gap:10px"><div style="height:8px;border-radius:4px;background:#E3EAF3;overflow:hidden;display:flex"><div id="bar" style="height:8px;width:0;background:#C7361B"></div></div>
 <div style="display:flex;gap:8px">{dots}</div></div><div class="m" id="cnt" style="font-size:22px;color:#3B5480"></div></div>
@@ -39,7 +39,9 @@ window.seek = (i, t) => {{  // المشهد i عند الزمن t (ms) — لق�
   const sc = document.querySelectorAll('.sc');
   if (i !== cur) {{ sc.forEach((s, k) => s.style.display = k === i ? 'flex' : 'none'); cur = i;
     document.querySelectorAll('.dt').forEach((d, k) => d.classList.toggle('on', k === i));
-    document.getElementById('cnt').textContent = ar(i + 1) + ' / ' + ar(sc.length); }}
+    document.getElementById('cnt').textContent = ar(i + 1) + ' / ' + ar(sc.length);
+    const s = sc[i], H = document.getElementById('mid').clientHeight - 32; s.style.transform = 'none';  // تصغير المشهد إن زاد عن المساحة
+    if (s.scrollHeight > H) s.style.transform = 'scale(' + (H / s.scrollHeight) + ')'; }}
   sc[i].getAnimations({{subtree: true}}).forEach(a => {{ a.pause(); a.currentTime = t; }});
   const done = DURS.slice(0, i).reduce((a, b) => a + b, 0) + t;
   document.getElementById('bar').style.width = (done / TOT * 100) + '%';

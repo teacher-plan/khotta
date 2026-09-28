@@ -79,6 +79,6 @@
 
 ## ٨. فيديو الدرس بتعليقٍ صوتي (عند الطلب)
 - مشاهد قصيرة (٩ تقريباً) من ورقة الملخّص نفسها وبنفس اصطلاحات قسم ٤، وتعليقٌ صوتي **عربيّ مشكول بالكامل** (الأرقام بالحروف).
-- الصوت مجاني عبر `edge-tts` بصوتٍ عُماني `ar-OM-AbdullahNeural` بسرعة −٨٪: `examples/gen_powers_voice.py` ← `صوت/*.mp3` + `durations.json` (خلف الوكيل: `SSL_CERT_FILE=/root/.ccr/ca-bundle.crt`).
+- الصوت مجاني عبر `edge-tts` بصوتٍ مصري `ar-EG-ShakirNeural` (اختيار الأستاذ عيسى) بسرعة −٦٪ ونصٍّ سرديٍّ تفاعليّ، ومعالجة صوتية بمستوى يوتيوب (−١٤ LUFS، ٤٨ كيلوهرتز): `examples/gen_powers_voice.py` ← `صوت/*.mp3` + `durations.json` (خلف الوكيل: `SSL_CERT_FILE=/root/.ccr/ca-bundle.crt`).
 - مدة كل مشهد = طول تعليقه + ١٫٥ ث. مصدر التصميم `examples/فيديو_القوى_والجذور.dc.html`، ثم `examples/gen_powers_video.py` ← صفحة مشاهد مستقلة، ثم
-  `node tools/presentations/video.mjs <مشاهد>.html <مجلد_الصوت> <خرج>.mp4` (ffmpeg من `pip install imageio-ffmpeg`) ← MP4 ‏1280×720 H.264 + AAC صالح للواتساب.
+  `node tools/presentations/video.mjs <مشاهد>.html <مجلد_الصوت> <خرج>.mp4` (ffmpeg من `pip install imageio-ffmpeg`) ← MP4 ‏1920×1080 H.264 + AAC ستيريو، صالح ليوتيوب والواتساب.
