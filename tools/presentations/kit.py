@@ -15,12 +15,14 @@ def ar(n): return ''.join(AR[int(c)] if c.isdigit() else c for c in str(n))
 
 ap = argparse.ArgumentParser()
 ap.add_argument('out'); ap.add_argument('--code', required=True); ap.add_argument('--title', required=True)
-ap.add_argument('--meta', required=True); ap.add_argument('--slides', type=int, required=True); ap.add_argument('--minutes', required=True)
-ap.add_argument('--deck', required=True); ap.add_argument('--video', required=True)
+ap.add_argument('--meta', required=True); ap.add_argument('--slides', type=int, required=True); ap.add_argument('--minutes', default='')
+ap.add_argument('--deck-note', default='')
+ap.add_argument('--deck', required=True); ap.add_argument('--video')  # اختياري (صفحات المراجعة بلا فيديو)
 ap.add_argument('--sheets', nargs='+', required=True); ap.add_argument('--pdf', required=True)
 A = ap.parse_args()
 os.makedirs(A.out, exist_ok=True)
-shutil.copy(A.deck, os.path.join(A.out, 'deck.html')); shutil.copy(A.video, os.path.join(A.out, 'video.mp4'))
+shutil.copy(A.deck, os.path.join(A.out, 'deck.html'))
+if A.video: shutil.copy(A.video, os.path.join(A.out, 'video.mp4'))
 shutil.copy(A.pdf, os.path.join(A.out, 'summary.pdf'))
 for i, s in enumerate(A.sheets, 1): shutil.copy(s, os.path.join(A.out, f'sheet{i}.png'))
 
@@ -32,6 +34,13 @@ def btn(src, name, label, cls='save'):
 sheets = ''.join(f'<figure><img src="sheet{i}.png" alt="ورقة الملخّص، الصفحة {ar(i)}"><figcaption>الصفحة {ar(i)}</figcaption>'
                  f'{btn(f"sheet{i}.png", f"ملخص_{base}_{i}.png", f"حفظ الصفحة {ar(i)}")}</figure>' for i in range(1, len(A.sheets) + 1))
 
+VIDEO = (f'''<section id="video">
+  <h2><b>٢</b>فيديو الدرس</h2>
+  <p>{html.escape(A.minutes)} بالتعليق الصوتي، ودقّة 1080p — صالح لليوتيوب والواتساب.</p>
+  <video controls preload="metadata" src="video.mp4"></video>
+  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}</div>
+</section>
+''' if A.video else '')
 page = f'''<title>تحضير درس {T}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&family=Cairo:wght@700&display=swap">
@@ -80,19 +89,13 @@ figcaption{{font-size:14px;color:var(--muted)}}
 
 <section id="deck">
   <h2><b>١</b>العرض التفاعلي</h2>
-  <p>{ar(A.slides)} شريحة لحصة مدّتها ٤٠ دقيقة. التنقّل بالزرّين في الزاوية السفلية اليمنى، أو بالأسهم، أو بالسحب بالإصبع.</p>
+  <p>{ar(A.slides)} شريحة{A.deck_note or ' لحصة مدّتها ٤٠ دقيقة'}. التنقّل بالزرّين في الزاوية السفلية اليمنى، أو بالأسهم، أو بالسحب بالإصبع.</p>
   <div class="acts"><a class="btn" href="deck.html">افتح العرض التفاعلي ←</a>{btn("deck.html", NAMES["deck"], "حفظ العرض في الملفات")}</div>
 </section>
 
-<section id="video">
-  <h2><b>٢</b>فيديو الدرس</h2>
-  <p>{html.escape(A.minutes)} بالتعليق الصوتي، ودقّة 1080p — صالح لليوتيوب والواتساب.</p>
-  <video controls preload="metadata" src="video.mp4"></video>
-  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}</div>
-</section>
-
+{VIDEO}
 <section id="sheet">
-  <h2><b>٣</b>ورقة الملخّص للطلاب</h2>
+  <h2><b>{'٣' if A.video else '٢'}</b>ورقة الملخّص للطلاب</h2>
   <p>صورٌ لمجموعة الصف، وملف PDF للطباعة.</p>
   <div class="sheets">{sheets}</div>
   <div class="acts">{btn("summary.pdf", NAMES["pdf"], "حفظ الملخّص PDF")}</div>
