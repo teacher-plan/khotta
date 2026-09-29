@@ -1,30 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════════
-   نظام التصميم المشترك — أنشطة الحلقة الثانية (١٠–١٧ سنة)
+   نظام التصميم — أنشطة الحلقة الثانية (١٠–١٧ سنة)
    ───────────────────────────────────────────────────────────────────
-   كل نشاطٍ يستورد هذا الملف ثم يُعرّف لونيه الخاصّين فقط:
-       :root{--a:#لون; --a2:#لون}
-   فتتبدّل الهويّة كاملةً بلا تكرار سطرٍ واحد من التنسيق.
-
-   قيدان يحكمان كل قرارٍ هنا:
-   ١) الشاشة الصفّية: النشاط يُعرض على بروجكتر تراه طالبةٌ في آخر الصف،
-      فأصغر خطٍّ هنا ١٨px، والأزرار لا تقلّ عن ٥٦px ارتفاعاً.
-   ٢) لا اتصال: لا خطوط من الشبكة ولا صور مرتبطة ولا مكتبات. المدارس
-      التي بُني لها هذا القسم تُقطع عنها الشبكة في منتصف الحصّة.
+   هويّة «المختبر الحديث»: خلفيةٌ فاتحة بتدرّجاتٍ لونية ناعمة تتحرّك ببطء
+   من لون النشاط، وبطاقاتٌ زجاجية بظلالٍ عميقة، وخطّ Readex Pro مضمَّن
+   (fonts.css — لا شبكة)، وأزرارٌ بتدرّجٍ وتوهّج. الطلاب الأكبر يحكمون على
+   النشاط من شكله في أول ثانية: هذا يجب أن يبدو أداةً جادّة لا لعبة أطفال.
+   قيود الصف باقية: أصغر خطٍّ ١٦px، وأزرار ≥ ٥٢px، وتباينٌ عالٍ للبروجكتر.
+   كل نشاطٍ يعرّف لونيه فقط: :root{--a;--a2} عبر Kit.build.
    ═══════════════════════════════════════════════════════════════════ */
+@import url('fonts.css');
 
 :root{
-  /* هويّة «المختبر»: أبرد وأحدّ من أنشطة الحلقة الأولى الدافئة — طلابٌ أكبر
-     يرون فيها أداة عملٍ جادّة لا لعبة أطفال، مع بقاء الوضوح الصفّي نفسه. */
-  --a:#1F5FD1; --a2:#133E8C;          /* لونا النشاط — يُعاد تعريفهما في كل ملف */
-  --sand:#EDF1F6; --ink:#0E1B2E; --paper:#FFFFFF;
-  --gold:#F2B233; --terra:#E4572E; --teal:#127C8A; --red:#B3243B;
-  --ok:#1E8A55; --warn:#C7811C;
-  --line:rgba(14,27,46,.13);
-  --sh:0 4px 0 rgba(14,27,46,.14), 0 14px 32px rgba(14,27,46,.12);
-  --r:14px;
-  /* الخط: مكدّسٌ من خطوط النظام. أيُّ خطٍّ من الشبكة يسقط الوعد بالعمل
-     دون اتصال، ويظهر بديلاً قبيحاً في أسوأ لحظة — أمام الصف. */
-  --f:'Segoe UI','Tahoma','Geneva Pro','Noto Sans Arabic','Arial',sans-serif;
+  --a:#4F46E5; --a2:#3730A3;
+  --sand:#F3F5FB; --ink:#0F172A; --paper:#FFFFFF;
+  --gold:#F5B82E; --terra:#EF5B3A; --teal:#0E9AA7; --red:#DC2F4B;
+  --ok:#12A366; --warn:#E08A0B;
+  --muted:#5B6782;
+  --line:rgba(15,23,42,.10);
+  --glass:rgba(255,255,255,.78);
+  --sh:0 1px 2px rgba(15,23,42,.06),0 10px 30px -8px rgba(15,23,42,.18);
+  --sh2:0 2px 4px rgba(15,23,42,.06),0 24px 48px -12px rgba(15,23,42,.28);
+  --r:20px;
+  --f:'Readex Pro','KDigits','Segoe UI','Tahoma','Noto Sans Arabic',sans-serif;
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -33,181 +30,187 @@ body{
   margin:0;font-family:var(--f);direction:rtl;text-align:right;
   color:var(--ink);background:var(--sand);
   overflow:hidden;display:flex;flex-direction:column;
-  font-size:clamp(17px,1.5vw,21px);line-height:1.65;
+  font-size:clamp(16px,1.45vw,20px);line-height:1.65;font-weight:400;
   -webkit-font-smoothing:antialiased;
 }
+b,strong{font-weight:600}
 
-/* ══ المشهد الخلفي ══
-   يُرسم بـSVG داخل الملف. الطبقة الهادئة فوقه ضرورة لا زينة: النص فوق
-   مشهدٍ ملوّن يصير غير مقروءٍ من آخر الصف، والوضوح هنا يسبق الجمال. */
+/* ══ الخلفية: مشهد النشاط + توهّجاتٌ لونية تتنفّس ببطء ══ */
 .scene{position:fixed;inset:0;z-index:0;overflow:hidden}
-.scene svg{width:100%;height:100%;display:block}
-.scene::after{content:'';position:absolute;inset:0;
-  background:radial-gradient(120% 90% at 50% 45%,rgba(248,250,253,.72),rgba(248,250,253,.30) 55%,transparent 78%)}
+.scene svg{width:100%;height:100%;display:block;opacity:.55}
+.scene::before{content:'';position:absolute;inset:-20%;z-index:1;
+  background:
+    radial-gradient(40% 35% at 15% 20%,color-mix(in srgb,var(--a) 22%,transparent),transparent 70%),
+    radial-gradient(38% 40% at 85% 80%,color-mix(in srgb,var(--a2) 18%,transparent),transparent 70%),
+    radial-gradient(30% 30% at 80% 15%,rgba(245,184,46,.14),transparent 70%);
+  animation:drift 22s ease-in-out infinite alternate}
+.scene::after{content:'';position:absolute;inset:0;z-index:2;
+  background-image:radial-gradient(rgba(15,23,42,.07) 1px,transparent 1.2px);background-size:26px 26px;
+  mask-image:radial-gradient(80% 70% at 50% 45%,#000,transparent)}
+@keyframes drift{to{transform:translate(4%,-3%) scale(1.06)}}
 
 /* ══ الهيكل ══ */
 .top{position:relative;z-index:5;display:flex;align-items:center;gap:10px;
-  padding:10px 16px;background:rgba(248,250,253,.86);backdrop-filter:blur(6px);
-  border-bottom:2px solid var(--line);flex:none}
-.top .nm{font-weight:800;font-size:19px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* safe center: التوسيط العادي يقصّ أعلى المحتوى حين يفيض — فيختفي عنوان
-   الجولة ولا سبيل للوصول إليه لأن التمرير لا يطال ما فوق نقطة البداية. */
+  padding:10px 18px;background:var(--glass);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);
+  border-bottom:1px solid var(--line);flex:none}
+.top .nm{font-weight:700;font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:10px}
+.top .nm::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--a);box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 22%,transparent);flex:none}
 .stage{position:relative;z-index:4;flex:1;min-height:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:safe center;padding:clamp(12px,2.4vw,30px);gap:18px;overflow:auto}
-.bottom{position:relative;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  padding:10px 16px;background:rgba(248,250,253,.86);backdrop-filter:blur(6px);
-  border-top:2px solid var(--line);flex:none}
+  align-items:center;justify-content:safe center;padding:clamp(14px,2.4vw,32px);gap:18px;overflow:auto}
+.bottom{position:relative;z-index:5;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 18px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);flex:none}
 
 /* ══ الأزرار ══ */
-.btn{appearance:none;border:2px solid var(--ink);border-radius:14px;cursor:pointer;
-  font-family:inherit;font-weight:800;font-size:18px;padding:13px 20px;min-height:56px;
-  background:var(--paper);color:var(--ink);box-shadow:0 4px 0 rgba(14,27,46,.22);
-  transition:transform .08s,box-shadow .08s,background .15s;display:inline-flex;
-  align-items:center;justify-content:center;gap:9px}
-.btn:hover{background:#fff}
-.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(14,27,46,.22)}
-.btn:focus-visible{outline:4px solid var(--gold);outline-offset:3px}
-.btn[disabled]{opacity:.4;cursor:default;transform:none;box-shadow:0 4px 0 rgba(14,27,46,.22)}
-.btn.p{background:var(--a);color:#fff}          /* رئيسي */
-.btn.p:hover{background:var(--a2)}
-.btn.g{background:var(--gold)}                   /* تنبيه لطيف */
-.btn.sm{font-size:15.5px;padding:8px 13px;min-height:44px;border-width:2px;border-radius:11px}
-.btn.ic{padding:0;width:48px;min-height:48px;font-size:20px}
-.btn.big{font-size:clamp(21px,2.6vw,30px);padding:18px 40px;min-height:70px;border-radius:18px}
+.btn{appearance:none;border:1.5px solid var(--line);border-radius:14px;cursor:pointer;
+  font-family:inherit;font-weight:600;font-size:17px;padding:12px 20px;min-height:54px;
+  background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06),0 4px 12px -4px rgba(15,23,42,.14);
+  transition:transform .12s,box-shadow .15s,background .15s,border-color .15s;display:inline-flex;
+  align-items:center;justify-content:center;gap:9px;line-height:1.35}
+.btn:hover{border-color:color-mix(in srgb,var(--a) 45%,transparent);transform:translateY(-1px);box-shadow:0 2px 4px rgba(15,23,42,.06),0 10px 22px -8px color-mix(in srgb,var(--a) 45%,transparent)}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn:focus-visible{outline:3px solid color-mix(in srgb,var(--a) 60%,white);outline-offset:3px}
+.btn[disabled]{opacity:.38;cursor:default;transform:none;box-shadow:none}
+.btn.p{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border-color:transparent;
+  box-shadow:0 10px 26px -8px color-mix(in srgb,var(--a) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.p:hover{filter:brightness(1.07)}
+.btn.g{background:linear-gradient(135deg,#FFD66B,var(--gold));border-color:transparent;color:#3B2A00}
+.btn.sm{font-size:15px;padding:7px 13px;min-height:42px;border-radius:11px}
+.btn.ic{padding:0;width:46px;min-height:46px;font-size:19px}
+.btn.big{font-size:clamp(19px,2.3vw,27px);padding:16px 38px;min-height:66px;border-radius:18px}
 
 /* ══ البطاقات ══ */
-.card{background:var(--paper);border:2px solid var(--ink);border-radius:var(--r);
-  box-shadow:var(--sh);padding:clamp(16px,2.4vw,30px)}
-.chip{display:inline-flex;align-items:center;gap:7px;background:var(--paper);
-  border:2px solid var(--ink);border-radius:99px;padding:6px 14px;font-size:15.5px;font-weight:800}
-.chip b{color:var(--a2)}
+.card,.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:clamp(16px,2.4vw,30px)}
+.panel{width:100%;max-width:1100px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.9);
+  border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:15px;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.chip b{color:var(--a);font-weight:700}
 
 /* ══ شاشة البداية ══ */
-.start{max-width:1000px;width:100%;text-align:center;animation:up .45s both}
-.start h1{font-size:clamp(30px,5.2vw,60px);margin:0 0 6px;line-height:1.22}
-.start .sub{font-size:clamp(17px,2vw,23px);opacity:.85;margin:0 auto 18px;max-width:66ch}
+.start{max-width:1000px;width:100%;text-align:center;animation:up .6s cubic-bezier(.2,.9,.3,1) both}
+.start h1{font-size:clamp(34px,5.8vw,68px);margin:0 0 8px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+  background:linear-gradient(120deg,var(--ink) 20%,var(--a) 60%,var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.start .sub{font-size:clamp(17px,2vw,23px);color:var(--muted);margin:0 auto 22px;max-width:62ch;font-weight:400}
 .start .meta{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:24px}
 .start .go{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-.emblem{width:clamp(96px,13vw,150px);height:clamp(96px,13vw,150px);margin:0 auto 12px;display:block}
+.emblem2{width:clamp(96px,12vw,140px);height:clamp(96px,12vw,140px);margin:0 auto 14px;border-radius:32px;display:grid;place-items:center;
+  font-size:clamp(52px,7vw,80px);line-height:1;background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--a) 14%,white));
+  box-shadow:var(--sh2),inset 0 1px 0 #fff;border:1px solid var(--line);animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px) rotate(-2deg)}}
+.lvls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.lvls .btn{min-width:130px;flex-direction:column;gap:0;line-height:1.2}
+.lvls .btn small{font-size:12.5px;font-weight:500;opacity:.8}
 
-/* ══ لوحة المعلّمة ══
-   دُرجٌ جانبيّ لا نافذة: النافذة تُغطّي النشاط فتفقد المعلّمة موضعها،
-   والدرج يُفتح ويُغلق وهي واقفةٌ أمام الصف. */
-/* الدرج مثبّتٌ عند الحافة البادئة — وهي في RTL الحافة اليمنى. وtranslateX
-   لا يعرف الاتجاه: القيمة السالبة تدفع يساراً دائماً، فكانت تدفع الدرج
-   المغلق إلى وسط الشاشة حيث يبتلع كل ضغطة. الموجبة هي الصحيحة هنا.
-   وvisibility تُغلق الباب على أي بقيّةٍ من التقاط الضغطات. */
+/* ══ لوحة المعلّم ══ */
 .tp{position:fixed;inset-block:0;inset-inline-start:0;width:min(560px,94vw);z-index:60;
-  background:var(--paper);border-inline-end:4px solid var(--ink);box-shadow:0 0 40px rgba(14,27,46,.4);
+  background:#fff;box-shadow:0 0 60px rgba(15,23,42,.3);
   transform:translateX(102%);visibility:hidden;
-  transition:transform .28s,visibility 0s .28s;overflow:auto;padding:20px 22px 40px}
-.tp.on{transform:none;visibility:visible;transition:transform .28s,visibility 0s}
-.tp h2{margin:0 0 4px;font-size:26px}
-.tp h3{margin:22px 0 6px;font-size:19px;color:var(--a2);
-  border-inline-start:6px solid var(--a);padding-inline-start:10px}
+  transition:transform .3s cubic-bezier(.2,.9,.3,1),visibility 0s .3s;overflow:auto;padding:22px 24px 40px}
+.tp.on{transform:none;visibility:visible;transition:transform .3s cubic-bezier(.2,.9,.3,1),visibility 0s}
+.tp h2{margin:0 0 4px;font-size:25px;font-weight:700}
+.tp h3{margin:22px 0 6px;font-size:17px;color:var(--a2);font-weight:700;
+  border-inline-start:4px solid var(--a);padding-inline-start:10px}
 .tp ul,.tp ol{margin:0;padding-inline-start:22px}
 .tp li{margin-bottom:7px}
 .tp .x{position:absolute;inset-block-start:14px;inset-inline-end:14px}
-.veil{position:fixed;inset:0;background:rgba(14,27,46,.5);z-index:55;opacity:0;
+.veil{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);z-index:55;opacity:0;
   pointer-events:none;transition:opacity .28s}
 .veil.on{opacity:1;pointer-events:auto}
 
 /* ══ المؤقّت ══ */
 .timer{display:flex;align-items:center;gap:10px}
-.timer .t{font-size:clamp(26px,3.6vw,46px);font-weight:800;font-variant-numeric:tabular-nums;
-  min-width:3.6ch;text-align:center;letter-spacing:1px}
-.timer.low .t{color:var(--red);animation:pulse .9s infinite}
-.ring{--p:1;width:clamp(64px,8vw,104px);height:clamp(64px,8vw,104px);border-radius:50%;flex:none;
-  background:conic-gradient(var(--a) calc(var(--p)*360deg),rgba(14,27,46,.12) 0);
-  display:grid;place-items:center;border:2px solid var(--ink)}
-.ring i{width:76%;height:76%;border-radius:50%;background:var(--paper);display:grid;place-items:center;
-  font-size:clamp(19px,2.4vw,30px);font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+.ring{--p:1;width:clamp(66px,8vw,104px);height:clamp(66px,8vw,104px);border-radius:50%;flex:none;
+  background:conic-gradient(var(--a) calc(var(--p)*360deg),rgba(15,23,42,.08) 0);
+  display:grid;place-items:center;box-shadow:var(--sh);transition:background .3s}
+.ring i{width:80%;height:80%;border-radius:50%;background:#fff;display:grid;place-items:center;
+  font-size:clamp(19px,2.3vw,29px);font-weight:700;font-style:normal;font-variant-numeric:tabular-nums}
+.timer.low .ring{background:conic-gradient(var(--red) calc(var(--p)*360deg),rgba(220,47,75,.12) 0);animation:beat 1s ease infinite}
+.timer.low .ring i{color:var(--red)}
+@keyframes beat{0%{transform:scale(1.07)}40%{transform:scale(1)}}
 
-/* ══ لوحة النقاط ══ */
-.teams{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-.team{background:var(--paper);border:2px solid var(--ink);border-radius:16px;padding:11px 14px;
-  min-width:170px;box-shadow:0 4px 0 rgba(14,27,46,.18)}
-.team .hd{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.team .dot{width:17px;height:17px;border-radius:50%;border:2px solid var(--ink);flex:none}
-.team .nm2{font-weight:800;font-size:17px;flex:1;border:0;background:transparent;font-family:inherit;
+/* ══ لوحة الفرق ══ */
+.teams{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.team{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 14px;
+  min-width:160px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:transform .3s}
+.team::before{content:'';position:absolute;inset-inline:0;top:0;height:4px;background:var(--tc,var(--a))}
+.team .hd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.team .dot{width:12px;height:12px;border-radius:50%;flex:none}
+.team .nm2{font-weight:600;font-size:16px;flex:1;border:0;background:transparent;font-family:inherit;
   color:inherit;min-width:0;padding:2px 4px;border-radius:6px}
 .team .nm2:focus{outline:2px solid var(--a);background:#fff}
-.team .sc{font-size:34px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;line-height:1}
-.team .ops{display:flex;gap:6px;justify-content:center;margin-top:8px}
-.team .ops button{width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;
-  background:var(--sand);font-size:20px;font-weight:800;cursor:pointer;font-family:inherit}
-.team .ops button:hover{background:#fff}
-.team.lead{border-color:var(--gold);box-shadow:0 0 0 4px rgba(242,178,51,.4),0 4px 0 rgba(14,27,46,.18)}
-
-/* نقاطُ القيم: الفوز هنا ليس للأسرع. هذه الأزرار تجعل التعاون والاحترام
-   قابلَين للمكافأة بضغطةٍ واحدة، وإلا بقيا شعاراً في لوحة المعلّمة. */
+.team .sc{font-size:34px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;line-height:1.1}
+.team .ops{display:flex;gap:6px;justify-content:center;margin-top:6px}
+.team .ops button{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;
+  background:var(--sand);font-size:19px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink)}
+.team .ops button:hover{background:#fff;border-color:var(--a)}
+.team.lead{box-shadow:0 0 0 3px var(--gold),var(--sh2);transform:translateY(-3px)}
+.team.lead .sc::after{content:' 👑';font-size:.55em}
 .vals{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
-.vals button{border:2px solid var(--ink);border-radius:99px;background:var(--paper);
-  padding:7px 14px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;min-height:44px}
-.vals button:hover{background:var(--gold)}
+.vals button{border:1px solid var(--line);border-radius:99px;background:#fff;
+  padding:7px 14px;font-family:inherit;font-weight:500;font-size:14.5px;cursor:pointer;min-height:42px;color:var(--ink)}
+.vals button:hover{background:color-mix(in srgb,var(--gold) 30%,white);border-color:var(--gold)}
 
 /* ══ التغذية الراجعة ══ */
 .fb{position:fixed;inset-block-end:26px;inset-inline:0;margin:auto;width:max-content;max-width:90vw;
-  z-index:70;background:var(--ok);color:#fff;border:2px solid var(--ink);border-radius:99px;
-  padding:14px 30px;font-size:clamp(18px,2.2vw,26px);font-weight:800;box-shadow:var(--sh);
-  opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none}
+  z-index:70;background:var(--ok);color:#fff;border-radius:99px;
+  padding:13px 30px;font-size:clamp(17px,2vw,24px);font-weight:600;box-shadow:var(--sh2);
+  opacity:0;transform:translateY(20px) scale(.96);transition:.3s cubic-bezier(.2,.9,.3,1);pointer-events:none}
 .fb.on{opacity:1;transform:none}
 .fb.warn{background:var(--warn)}
-.fb.info{background:var(--a)}
+.fb.info{background:linear-gradient(135deg,var(--a),var(--a2))}
 
-/* ══ شاشة التأمّل الختامي ══ */
+/* ══ التأمّل الختامي ══ */
 .reflect{max-width:900px;text-align:center;animation:up .5s both}
-.reflect h2{font-size:clamp(26px,4vw,44px);margin:0 0 14px}
+.reflect h2{font-size:clamp(28px,4vw,46px);margin:0 0 14px;font-weight:700}
 .reflect .qs{display:grid;gap:12px;margin:18px 0 24px;text-align:start}
-.reflect .qs div{background:var(--paper);border:2px solid var(--ink);border-radius:14px;
-  padding:14px 18px;font-size:clamp(17px,2vw,22px);font-weight:700;
-  display:flex;gap:12px;align-items:flex-start}
+.reflect .qs div{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh);
+  padding:14px 18px;font-size:clamp(17px,2vw,22px);font-weight:500;display:flex;gap:12px;align-items:flex-start}
 .reflect .qs b{color:var(--a);flex:none;font-size:1.15em}
 
-/* ══ وضع العرض ══
-   ليس تكبيراً للخط فحسب: كل ما يخصّ إعداد المعلّمة يختفي، فلا يرى الصفُّ
-   إلا النشاط. ما بقي ظاهراً بقي عمداً. */
+/* ══ وضع العرض ══ */
 body.present .top,body.present .hide-present{display:none!important}
 body.present .stage{padding:clamp(16px,3vw,44px)}
-body.present{font-size:clamp(19px,1.85vw,26px)}
-body.present .btn{font-size:20px;min-height:62px}
-body.present .team .sc{font-size:44px}
+body.present{font-size:clamp(18px,1.8vw,25px)}
+body.present .btn{font-size:19px;min-height:60px}
+body.present .team .sc{font-size:42px}
+@media(pointer:coarse){.btn{min-height:58px}.btn.ic{width:54px;min-height:54px}}
 
-@media(pointer:coarse){.btn{min-height:62px}.btn.ic{width:56px;min-height:56px}}
-
-/* ══ زر الخروج من ملء الشاشة — يظهر فقط أثناء وضع ملء الشاشة الفعلي ══ */
 .kit-exit-fs{position:fixed;top:12px;left:12px;z-index:9999;display:none;
-  appearance:none;border:2px solid var(--ink);border-radius:11px;cursor:pointer;
-  font-family:inherit;font-weight:800;font-size:14px;padding:8px 13px;min-height:38px;
-  background:var(--paper);color:var(--ink);box-shadow:0 3px 0 rgba(14,27,46,.22)}
+  appearance:none;border:1px solid var(--line);border-radius:11px;cursor:pointer;
+  font-family:inherit;font-weight:600;font-size:14px;padding:8px 13px;min-height:38px;
+  background:#fff;color:var(--ink);box-shadow:var(--sh)}
 .kit-exit-fs.on{display:inline-flex;align-items:center;gap:6px}
-.kit-exit-fs:hover{background:#fff}
-.kit-exit-fs:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(14,27,46,.22)}
 
-/* ══ الحركة: هادئة ومحدودة ══
-   الوميض والحركة الدائمة تُتعب الانتباه وتؤذي الحسّاسين للضوء. كل حركةٍ
-   هنا تنتهي، ولا شيء يتكرّر بلا توقّف إلا نبضةُ آخر عشر ثوانٍ. */
+/* ══ عناصر مشتركة ══ */
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}
+.col{display:flex;flex-direction:column;gap:14px;align-items:center}
+.big-q{font-size:clamp(22px,3.1vw,40px);font-weight:600;line-height:1.5;text-align:center;text-wrap:balance}
+.muted{color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border-radius:99px;padding:5px 16px;font-weight:600;font-size:14.5px;box-shadow:0 6px 16px -6px color-mix(in srgb,var(--a) 70%,transparent)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;width:100%;max-width:1100px}
+.opts .btn{min-height:78px;font-size:clamp(16px,1.9vw,22px);white-space:normal;text-align:center;flex-direction:column}
+.opts .btn small{font-size:.72em;color:var(--muted);font-weight:500}
+.opts .btn.right{background:#E3F7EE;border-color:var(--ok)}
+.opts .btn.wrong{background:#FDE7EB;border-color:var(--red)}
+.explain{background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--a) 7%,white));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);border-inline-start:5px solid var(--a);
+  border-radius:16px;padding:14px 20px;font-size:clamp(16px,1.9vw,22px);width:100%;max-width:1100px;animation:up .4s both;box-shadow:var(--sh)}
+.explain b{color:var(--a2)}
+.progress{display:flex;gap:6px;justify-content:center}
+.progress i{width:28px;height:6px;border-radius:99px;background:rgba(15,23,42,.12)}
+.progress i.on{background:var(--a)}
+.progress i.done{background:color-mix(in srgb,var(--a) 45%,white)}
+
+/* قُصاصات الاحتفال */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall 2.6s cubic-bezier(.2,.6,.4,1) forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
+
 @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-@keyframes pop{0%{transform:scale(.86)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.86);opacity:0}60%{transform:scale(1.04);opacity:1}100%{transform:scale(1)}}
 @keyframes pulse{50%{opacity:.45}}
 @keyframes shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-5px)}}
-.pop{animation:pop .3s both}
+.pop{animation:pop .35s both}
 .shake{animation:shake .4s}
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
-
-/* ══ إضافات الحلقة الثانية ══ */
-.emblem2{font-size:clamp(64px,9vw,110px);line-height:1;margin-bottom:8px}
-.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}
-.col{display:flex;flex-direction:column;gap:12px;align-items:center}
-.panel{background:var(--paper);border:2px solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);padding:clamp(14px,2.2vw,28px);width:100%;max-width:1100px}
-.big-q{font-size:clamp(22px,3.2vw,42px);font-weight:800;line-height:1.45;text-align:center}
-.muted{opacity:.72}
-.tag{display:inline-block;background:var(--a);color:#fff;border-radius:99px;padding:4px 14px;font-weight:800;font-size:15px}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;width:100%;max-width:1100px}
-.opts .btn{min-height:78px;font-size:clamp(17px,2vw,24px);line-height:1.4;white-space:normal;text-align:center}
-.opts .btn.right{background:#DDF3E6;border-color:var(--ok)}
-.opts .btn.wrong{background:#FBE3E6;border-color:var(--red)}
-.explain{background:#F4F8FF;border:2px solid var(--a);border-radius:12px;padding:14px 18px;font-size:clamp(17px,2vw,23px);width:100%;max-width:1100px;animation:up .3s both}
-.explain b{color:var(--a2)}

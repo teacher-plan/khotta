@@ -7,20 +7,20 @@
 <link rel="stylesheet" href="_kit.css"/>
 <style>
 .locks{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.lk{width:64px;height:74px;border:2px solid var(--ink);border-radius:12px;background:var(--paper);display:grid;place-items:center;font-size:30px;font-weight:800}
+.lk{width:64px;height:74px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:grid;place-items:center;font-size:30px;font-weight:700}
 .lk.on{background:var(--a);color:#fff}
 .lk.done{background:#DDF3E6;border-color:var(--ok);color:var(--ok)}
 .pad{display:grid;grid-template-columns:repeat(5,minmax(58px,76px));gap:8px;justify-content:center}
 .pad .btn{min-height:64px;font-size:28px}
 .wheel{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:980px}
-.wheel span{display:flex;flex-direction:column;align-items:center;border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;min-width:34px;background:#fff;font-weight:800;font-size:clamp(15px,1.6vw,20px)}
+.wheel span{display:flex;flex-direction:column;align-items:center;border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;min-width:34px;background:#fff;font-weight:700;font-size:clamp(15px,1.6vw,20px)}
 .wheel span i{font-style:normal;color:var(--a);border-top:1px solid var(--line);width:100%;text-align:center}
-.cipher{font-size:clamp(46px,7vw,90px);font-weight:900;letter-spacing:.25em;color:var(--a2)}
+.cipher{font-size:clamp(46px,7vw,90px);font-weight:700;letter-spacing:.25em;color:var(--a2)}
 .magic{display:grid;grid-template-columns:repeat(3,clamp(70px,9vw,110px));gap:6px;justify-content:center}
-.magic div{aspect-ratio:1;border:2px solid var(--ink);border-radius:10px;display:grid;place-items:center;font-size:clamp(30px,4.4vw,54px);font-weight:900;background:#fff}
+.magic div{aspect-ratio:1;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:clamp(30px,4.4vw,54px);font-weight:700;background:#fff}
 .magic div.q{background:var(--gold)}
 .code{display:flex;gap:10px;justify-content:center}
-.code div{width:clamp(60px,8vw,96px);height:clamp(74px,10vw,118px);border:3px solid var(--ink);border-radius:14px;background:#fff;display:grid;place-items:center;font-size:clamp(40px,6vw,74px);font-weight:900}
+.code div{width:clamp(60px,8vw,96px);height:clamp(74px,10vw,118px);border:1px solid var(--line);border-radius:14px;background:#fff;display:grid;place-items:center;font-size:clamp(40px,6vw,74px);font-weight:700}
 .treasure{font-size:clamp(90px,14vw,170px);line-height:1;animation:pop .6s both}
 </style>
 </head>
@@ -37,7 +37,7 @@
 const ABC = 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي'.split(' ');
 const shift = w => w.split('').map(c => { const i = ABC.indexOf(c); return i < 0 ? c : ABC[(i + 1) % ABC.length]; }).join('');
 // تسع ← ثشغ (كل حرفٍ مُزاحٌ حرفاً واحداً للأمام) — الجواب ٩
-const LOCKS = [
+const LOCKS_N = [
   { name: 'باب الشيفرة', ans: 9, hint: 'كل حرفٍ في الرسالة هو الحرف الذي يليه في الأبجدية. ارجعوا حرفاً واحداً.',
     why: 'ث ← ت ، ش ← س ، غ ← ع = «تسع». الرقم ٩.',
     html: () => `<div class="big-q">وجد الحارس رسالةً على جدار البرج… كل حرفٍ فيها مُزاحٌ بطريقةٍ واحدة.</div>
@@ -67,6 +67,39 @@ const LOCKS = [
       <div class="treasure" style="font-size:clamp(80px,11vw,140px)">🕘</div>
       <div class="big-q" style="font-size:clamp(20px,2.5vw,32px)">بعد <b>١٠٠ ساعة</b> بالضبط — إلى أيّ رقمٍ سيشير عقرب الساعات؟</div>` },
 ];
+
+/* ── المستوى المتقدّم: أربعة أقفال أصعب (كل الإجابات مُتحقَّقٌ منها) ── */
+const shiftK = (w, k) => w.split('').map(c => { const i = ABC.indexOf(c); return i < 0 ? c : ABC[(i + k) % ABC.length]; }).join('');
+const LOCKS_A = [
+  // ○●●○ بالنظام الثنائي: ٤ + ٢ = ٦
+  { name: 'مصابيح البرج', ans: 6, hint: 'كل مصباحٍ له قيمة: ٨ ثم ٤ ثم ٢ ثم ١ (من اليسار). اجمعوا قيم المضاءة فقط.',
+    why: 'هذا هو النظام الثنائي الذي تفكّر به الحواسيب: ○●●○ = ٠×٨ + ١×٤ + ١×٢ + ٠×١ = ٦.',
+    html: () => `<div class="big-q">أربعة مصابيح على البرج. المضاء ● والمطفأ ○. قيمها من اليسار: ٨ ، ٤ ، ٢ ، ١</div>
+      <div style="direction:ltr;font-size:clamp(60px,9vw,120px);letter-spacing:.15em;line-height:1">○●●○</div>
+      <div class="muted" style="direction:ltr;font-weight:700;font-size:clamp(18px,2vw,24px);letter-spacing:.9em">8 4 2 1</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">أيّ رقمٍ تمثّله المصابيح؟</div>` },
+  // أ يقول: ب كاذب — ب يقول: ج كاذب — ج يقول: أ وب كلاهما كاذبان ← الصادق الوحيد: ب (٢)
+  { name: 'الحرّاس الثلاثة', ans: 2, hint: 'افترضوا أن الحارس ٣ صادق… هل يتناقض ذلك مع ما يقوله الحارس ١؟',
+    why: 'لو صدق الحارس ٣ لكان ١ و٢ كاذبَين، لكنّ كذب ١ يعني أن ٢ صادق — تناقض. إذن ٣ كاذب، فكلام ٢ («٣ كاذب») صحيح: ٢ صادق، و١ كاذب لأنه قال إن ٢ كاذب. الحارس الصادق: ٢.',
+    html: () => `<div class="big-q">ثلاثة حرّاس: كلٌّ منهم إمّا صادقٌ دائماً أو كاذبٌ دائماً.</div>
+      <div class="panel" style="font-size:clamp(19px,2.3vw,29px);line-height:2">
+      🛡️ الحارس ١: «الحارس ٢ كاذب».<br>🛡️ الحارس ٢: «الحارس ٣ كاذب».<br>🛡️ الحارس ٣: «الحارسان ١ و٢ كلاهما كاذبان».</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">رقم الحارس الصادق هو رقم القفل. من هو؟</div>` },
+  // ١ ١ ٢ ٣ ٥ ٨ ١٣ ٢١ ← التالي ٣٤ ← آحاده ٤
+  { name: 'نقوش فيبوناتشي', ans: 4, hint: 'كل عددٍ = مجموع العددين قبله.',
+    why: 'متتالية فيبوناتشي: ١٣ + ٢١ = ٣٤، ورقم آحاده ٤. وتظهر هذه المتتالية في الطبيعة: بذور زهرة الشمس وتفرّع الأغصان.',
+    html: () => `<div class="big-q">نقشٌ على الجدار:</div>
+      <div class="cipher" style="letter-spacing:.1em;font-size:clamp(32px,5vw,62px)">١ ، ١ ، ٢ ، ٣ ، ٥ ، ٨ ، ١٣ ، ٢١ ، ؟</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">ما رقم الآحاد في العدد التالي؟</div>` },
+  // «سبع» مُزاحة ٣ أحرف: س←ض ، ب←ج ، ع←ق = ضجق — الجواب ٧
+  { name: 'الشيفرة المجهولة', ans: 7, hint: 'الحرف الأول أصله «س». كم حرفاً بين س والحرف المكتوب؟ طبّقوا الإزاحة نفسها على الباقي.',
+    why: `س ← ض إزاحة ٣ أحرف. نرجع ٣ أحرف في كلٍّ: ض←س ، ج←ب ، ق←ع = «سبع». الرقم ٧. هكذا كان يشفّر يوليوس قيصر رسائله قبل ألفي سنة.`,
+    html: () => `<div class="big-q">رسالةٌ مشفّرة بإزاحةٍ مجهولة — بلا جدول هذه المرّة!</div>
+      <div class="cipher">${shiftK('سبع', 3)}</div>
+      <div class="panel" style="font-size:clamp(17px,2vw,24px);text-align:center">🔎 وجد المحقّقون أن الحرف الأول أصله <b>«س»</b>.<br><span class="muted">${ABC.join(' ')}</span></div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">الكلمة عدد. ما هو؟</div>` },
+];
+let LOCKS = LOCKS_N;
 
 const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE6F2"/><stop offset="1" stop-color="#F3E7D2"/></linearGradient></defs>
@@ -101,7 +134,8 @@ function home() {
   idx = 0; got = []; hints = 0; if (timer) timer.pause();
   K.start({ emblem: '🏰', sub: 'أربعة أقفال، وأربعة ألغاز، ورمزٌ واحد يفتح البوّابة. هل يخرج فريقكم أولاً؟',
     meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '٢٠ – ٣٠ دقيقة'], ['المهارة', 'التفكير المنطقي'], ['القيمة', 'المثابرة والتعاون']],
-    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; lock(); } });
+    levels: [['n', 'متوسّط', 'الصفوف ٥ – ٧'], ['a', 'متقدّم', 'الصفوف ٨ – ١٠']],
+    teams: [3, [2, 3, 4, 5]], onGo: (n, lv) => { teams = null; home.n = n; LOCKS = lv === 'a' ? LOCKS_A : LOCKS_N; lock(); } });
 }
 
 function locksRow() {

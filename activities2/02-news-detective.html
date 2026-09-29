@@ -6,17 +6,17 @@
 <title>محقّق الأخبار</title>
 <link rel="stylesheet" href="_kit.css"/>
 <style>
-.post{background:#fff;border:2px solid var(--ink);border-radius:16px;box-shadow:var(--sh);max-width:900px;width:100%;overflow:hidden;animation:up .35s both}
+.post{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh);max-width:900px;width:100%;overflow:hidden;animation:up .35s both}
 .post .hd{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .post .av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:var(--sand);flex:none}
-.post .who{font-weight:800;font-size:clamp(16px,1.7vw,20px)}
+.post .who{font-weight:700;font-size:clamp(16px,1.7vw,20px)}
 .post .when{font-size:14px;opacity:.65}
 .post .ver{color:var(--a);font-size:.9em}
 .post .body{padding:16px 18px;font-size:clamp(20px,2.6vw,32px);font-weight:700;line-height:1.55}
 .post .media{margin:0 18px 14px;border-radius:12px;background:#E6ECF4;padding:22px;text-align:center;font-size:clamp(16px,1.8vw,21px);color:#3A4A62}
 .post .ft{display:flex;gap:18px;padding:10px 18px;border-top:1px solid var(--line);font-size:15px;opacity:.7}
 .flags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:1100px}
-.flags button{border:2px solid var(--ink);border-radius:99px;background:#fff;padding:8px 14px;font:inherit;font-weight:800;font-size:clamp(14px,1.5vw,17px);cursor:pointer;min-height:44px}
+.flags button{border:1px solid var(--line);border-radius:99px;background:#fff;padding:8px 14px;font:inherit;font-weight:700;font-size:clamp(14px,1.5vw,17px);cursor:pointer;min-height:44px}
 .flags button.on{background:var(--gold)}
 .flags button.hit{background:#DDF3E6;border-color:var(--ok)}
 .flags button.miss{background:#FFF2D6;border-style:dashed}
@@ -40,6 +40,7 @@ const FLAGS = {
   src: 'مصدر مجهول', emo: 'لغة عاطفية أو مبالغة', share: 'يطلب النشر فوراً', date: 'تاريخ قديم أو غائب',
   num: 'أرقام أو وعود لا تُصدَّق', img: 'صورة خارج سياقها', ad: 'مصلحة أو إعلان', data: 'يطلب بيانات شخصية',
   ai: 'علامات تزييف بالذكاء الاصطناعي', link: 'رابط غريب',
+  cause: 'سببٌ ونتيجة بلا دليل', graph: 'رسمٌ أو رقمٌ مضلِّل', few: 'عيّنة صغيرة جداً',
 };
 // v: ok موثوق | bad مضلِّل | chk يحتاج تحقّقاً — f: العلامات الموجودة فعلاً
 const POSTS = [
@@ -47,7 +48,7 @@ const POSTS = [
     body: 'عاااجل!! شرب الماء البارد بعد الأكل يسبّب أمراضاً خطيرة 😱 انشرها لكل من تحب قبل أن تُحذف!!',
     v: 'bad', f: ['src', 'emo', 'share'],
     why: 'حسابٌ بلا جهةٍ معروفة، وعلامات تعجّب ورعب، وطلب نشرٍ عاجل «قبل أن تُحذف» — وهذه حيلةٌ لنشر الشائعة قبل التفكير. لا دراسة ولا طبيب ولا رابط.' },
-  { av: '🌦️', who: 'الأرصاد الجوية ✔', when: 'اليوم ٧:٠٠ ص', ver: true,
+  { av: '🌦️', who: 'الأرصاد الجوية', when: 'اليوم ٧:٠٠ ص', ver: true,
     body: 'تشير التوقّعات إلى أجواءٍ ماطرة ورذاذ على محافظة ظفار خلال موسم الخريف، مع انخفاضٍ في مدى الرؤية على المرتفعات.',
     v: 'ok', f: [],
     why: 'حسابٌ رسميّ موثَّق، ولغةٌ هادئة دقيقة، ومعلومةٌ متّسقة مع ما نعرفه: الخريف في ظفار موسم رذاذٍ وضباب. لا مبالغة ولا طلب نشر.' },
@@ -78,7 +79,7 @@ const POSTS = [
     media: '🎬 فيديو قصير: حركة الشفاه لا تطابق الصوت تماماً، والصوت آليٌّ قليلاً',
     v: 'chk', f: ['ai', 'src', 'emo'],
     why: 'قد يكون مقطعاً مزيّفاً بالذكاء الاصطناعي (تزييف عميق): الشفاه لا تطابق الصوت، والمصدر مجهول. قرارٌ بهذا الحجم يُعلَن رسمياً — نبحث عنه في الحسابات الرسمية أولاً.' },
-  { av: '📚', who: 'مكتبة المدرسة ✔', when: 'الأحد ٨:٣٠ ص', ver: true,
+  { av: '📚', who: 'مكتبة المدرسة', when: 'الأحد ٨:٣٠ ص', ver: true,
     body: 'يبدأ معرض الكتاب المدرسي في ساحة المدرسة يوم الأربعاء القادم من الساعة ٩ صباحاً. ننتظركم!',
     v: 'ok', f: [],
     why: 'مصدرٌ رسمي قريب نعرفه، وتفاصيل محدّدة (المكان، اليوم، الساعة)، ولا شيء يطلب منّا إلا الحضور.' },
@@ -87,6 +88,43 @@ const POSTS = [
     v: 'bad', f: ['num', 'emo', 'link', 'date'],
     why: 'هذا «طُعم نقرات»: عنوانٌ يثير الفضول ليجعلك تضغط فيربح صاحبه من المشاهدات. «٩٠٪» رقمٌ بلا مصدر، ولا تاريخ.' },
 ];
+/* المستوى المتقدّم: تضليلٌ «ذكي» لا تكشفه علامات التعجّب — إحصاءات ورسوم
+   وسببيّة مزعومة. هنا تُختبر مهارة التفكير لا مجرّد الحذر. */
+const POSTS_A = [
+  { av: '🍳', who: 'نصائح دراسية', when: 'أمس', ver: false,
+    body: 'دراسة: الطلاب الذين يتناولون الإفطار يحصلون على درجات أعلى. إذن الإفطار وحده يرفع درجاتك!',
+    v: 'chk', f: ['cause'],
+    why: 'الارتباط ليس سببيّة! ربما الطلاب الذين يفطرون ينامون مبكراً ولديهم روتينٌ منظّم — وهذا ما يرفع الدرجات. الإفطار مفيد، لكن «وحده يرفع درجاتك» قفزةٌ بلا دليل.' },
+  { av: '📊', who: 'موقع مقارنات', when: 'اليوم', ver: false,
+    body: 'انظروا الفرق الهائل! هاتف (أ) أسرع بكثير من هاتف (ب) 🚀',
+    media: '📈 رسمٌ بياني: عمود (أ) ثلاثة أضعاف طول عمود (ب)… لكن المحور يبدأ من ٩٥ لا من صفر (السرعتان ٩٨ و٩٦)',
+    v: 'bad', f: ['graph', 'emo'],
+    why: 'الرسم مضلِّل: بدء المحور من ٩٥ يجعل فرقاً صغيراً (٩٨ مقابل ٩٦ ≈ ٢٪) يبدو ثلاثة أضعاف. اقرأ الأرقام دائماً لا أطوال الأعمدة.' },
+  { av: '🧴', who: 'متجر مستحضرات', when: 'منذ يومين', ver: true,
+    body: '٩ من كل ١٠ مستخدمين أكّدوا أن كريمنا الجديد أفضل كريم جرّبوه!',
+    media: '🔍 التفاصيل الصغيرة أسفل الإعلان: «شملت التجربة ١٠ أشخاص من موظّفي الشركة»',
+    v: 'bad', f: ['few', 'ad', 'num'],
+    why: '«٩ من ١٠» تبدو مقنعة، لكن العيّنة ١٠ أشخاص فقط، وكلّهم موظّفون في الشركة نفسها! العيّنة الصغيرة والمنحازة لا تمثّل الناس.' },
+  { av: '🌡️', who: 'مدوّن طقس', when: '٣ يوليو', ver: false,
+    body: 'اليوم كان بارداً على غير العادة في مدينتي… إذن لا يوجد احترار عالمي!',
+    v: 'bad', f: ['few', 'cause'],
+    why: 'يومٌ واحد في مدينةٍ واحدة لا يقول شيئاً عن مناخ الأرض. الطقس = حالة يومية، والمناخ = متوسّط عقودٍ في العالم كلّه. استنتاجٌ كبير من عيّنةٍ صغيرة جداً.' },
+  { av: '🏥', who: 'وزارة الصحة', when: '١٥ مايو', ver: true,
+    body: 'تنبيه: ارتفاع درجات الحرارة هذا الأسبوع. ننصح بشرب الماء بانتظام وتجنّب الشمس المباشرة بين ١١ صباحاً و٣ عصراً.',
+    v: 'ok', f: [],
+    why: 'جهةٌ رسمية مختصّة، ونصائح معقولة ومحدّدة، وتاريخ واضح، ولا مبالغة ولا طلب نشر أو شراء.' },
+  { av: '🎮', who: 'خبير_ألعاب', when: 'اليوم', ver: false,
+    body: 'أثبتت الأبحاث أن الألعاب الإلكترونية تزيد الذكاء! (المصدر: دراسة على فئران)',
+    v: 'chk', f: ['cause', 'few'],
+    why: 'نتيجة على الفئران لا تنطبق على البشر تلقائياً، و«تزيد الذكاء» تعميم. بعض الألعاب قد تنمّي مهاراتٍ محدّدة — لكن نحتاج دراسةً على البشر قبل الحكم.' },
+  { av: '📰', who: 'صحيفة إلكترونية', when: '٢٠١٦', ver: true,
+    body: 'عاجل: إغلاق الطريق الرئيسي المؤدّي إلى المدينة بسبب أعمال الصيانة.',
+    media: '🔁 أعاد أحدهم نشره اليوم في مجموعة الحيّ',
+    v: 'chk', f: ['date'],
+    why: 'الخبر صحيحٌ في وقته — عام ٢٠١٦! إعادة نشر الأخبار القديمة كأنها جديدة من أشهر أنواع التضليل. انظر إلى التاريخ دائماً.' },
+  ...POSTS.slice(6, 8),
+];
+let POOL = POSTS;
 const ROUNDS = 8, SECS = 60;
 const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <rect width="1600" height="900" fill="#E9EFF7"/>
@@ -113,13 +151,14 @@ K = Kit.build({
     close: ['ما الأسئلة الثلاثة التي تسألها قبل أن تنشر أي خبر؟', 'لماذا ينشر بعض الناس أخباراً كاذبة؟', 'ماذا تفعل إن أرسل لك صديقٌ خبراً مشكوكاً فيه؟'],
   },
 });
-bag = K.Bag(POSTS);
+bag = K.Bag(POOL);
 
 function home() {
   round = 0; if (timer) timer.pause();
   K.start({ emblem: '🕵️', sub: 'منشوراتٌ تصلكم كل يوم… أيّها صادق؟ وأيّها مصنوعٌ ليخدعكم؟ ابحثوا عن علامات التحذير أولاً.',
     meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٠ دقيقة'], ['المهارة', 'الثقافة الإعلامية'], ['القيمة', 'التثبّت قبل النشر']],
-    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; play(); } });
+    levels: [['n', 'أساسي', 'الإشاعات والاحتيال'], ['a', 'متقدّم', 'إحصاءات ورسوم وسببيّة']],
+    teams: [3, [2, 3, 4, 5]], onGo: (n, lv) => { teams = null; home.n = n; POOL = lv === 'a' ? POSTS_A : POSTS; bag = K.Bag(POOL); play(); } });
 }
 
 function play() {
@@ -131,7 +170,7 @@ function play() {
     <div class="when">${Kit.esc(cur.when)}</div></div></div>
     <div class="body">${Kit.esc(cur.body)}</div>${cur.media ? `<div class="media">${Kit.esc(cur.media)}</div>` : ''}
     <div class="ft"><span>♡ إعجاب</span><span>↻ إعادة نشر</span><span>💬 تعليق</span></div></div>
-    <div class="muted" style="font-weight:800">🔎 ما علامات التحذير التي تجدونها؟</div>`;
+    <div class="muted" style="font-weight:700">🔎 ما علامات التحذير التي تجدونها؟</div>`;
   const fl = K.el('div', 'flags');
   Object.entries(FLAGS).forEach(([k, t]) => {
     const b = K.el('button', '', t); b.dataset.k = k;
