@@ -137,7 +137,7 @@
   }
 
   /* ── الفرق والنقاط ── */
-  const TEAM_COLORS = ['#487848', '#D9A93C', '#2F7D74', '#D86048', '#6B4E9E', '#B0721A'];
+  const TEAM_COLORS = ['#4F46E5', '#E08A0B', '#0E9AA7', '#DC2F4B', '#12A366', '#9333EA'];
   const TEAM_NAMES = ['الفريق الأول', 'الفريق الثاني', 'الفريق الثالث', 'الفريق الرابع', 'الفريق الخامس', 'الفريق السادس'];
   function Teams(host, n) {
     let list = [], pending = null;   // pending: القيمة المنتظرة إسنادها لفريق
@@ -153,6 +153,7 @@
       host.innerHTML = '';
       list.forEach((t, i) => {
         const c = el('div', 'team' + (t.score === top && top > 0 ? ' lead' : ''));
+        c.style.setProperty('--tc', t.color);
         c.innerHTML = `<div class="hd"><span class="dot" style="background:${t.color}"></span>
           <input class="nm2" value="${esc(t.name)}" aria-label="اسم الفريق"/></div>
           <div class="sc">${AR(t.score)}</div>
@@ -236,8 +237,21 @@
   /* ── التأمّل الختامي ──
      ينتهي كل نشاطٍ به بلا استثناء: النشاط بلا سؤالِ «ماذا تعلّمنا؟» يبقى
      تسليةً، والفرق بين الاثنين هو هذه الشاشة. */
+  /* قُصاصات احتفالٍ خفيفة — تُرسم بعناصر DOM وتزول وحدها */
+  function confetti(n) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = el('div', 'confetti'); document.body.appendChild(box);
+    for (let i = 0; i < (n || 90); i++) {
+      const c = el('i'); c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = TEAM_COLORS[i % TEAM_COLORS.length];
+      c.style.animationDelay = Math.random() * .6 + 's'; c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      box.appendChild(c);
+    }
+    setTimeout(() => box.remove(), 3600);
+  }
   function reflect(stage, data, onAgain) {
     stage.innerHTML = '';
+    confetti();
     const box = el('div', 'reflect');
     box.innerHTML = `<h2>ماذا تعلّمنا اليوم؟</h2>
       <div class="chip" style="margin-bottom:6px">القيمة: <b>${esc(data.value || '')}</b></div>
@@ -323,15 +337,28 @@
           b.onclick = () => { n = v; SFX.tap(); pick(); }; host.appendChild(b); }); };
         pick(); s.appendChild(opts);
       }
+      let lv = o.levels ? o.levels[0][0] : null;
+      if (o.levels) {
+        const lb = el('div', 'card');
+        lb.style.cssText = 'margin-bottom:22px;display:flex;flex-direction:column;gap:10px;align-items:center';
+        lb.innerHTML = `<div style="font-weight:700">مستوى التحدّي</div><div class="lvls"></div>`;
+        const host = lb.querySelector('.lvls');
+        const pick = () => { host.innerHTML = ''; o.levels.forEach(([k, t, d]) => {
+          const b = el('button', 'btn' + (lv === k ? ' p' : ''), `${esc(t)}<small>${esc(d || '')}</small>`);
+          b.onclick = () => { lv = k; SFX.tap(); pick(); }; host.appendChild(b); }); };
+        pick(); s.appendChild(lb);
+      }
       if (o.extra) s.appendChild(o.extra);
       const go = el('div', 'go');
       const b1 = el('button', 'btn p big', 'ابدأ النشاط');
-      b1.onclick = () => { SFX.ok(); o.onGo(n); };
+      b1.onclick = () => { SFX.ok(); o.onGo(n, lv); };
       const b2 = el('button', 'btn big', G('تعليمات المعلّمة', 'تعليمات المعلّم'));
       b2.onclick = () => tp.open();
       go.append(b1, b2); s.appendChild(go);
       stage.appendChild(s);
     };
+    api.confetti = confetti;
+    api.progress = (total, at) => `<div class="progress">${Array.from({ length: total }, (_, i) => `<i class="${i < at ? 'done' : i === at ? 'on' : ''}"></i>`).join('')}</div>`;
     /* مؤقّتٌ جاهز بحلقته — يُضاف إلى أي حاوية */
     api.ringTimer = function (host, secs, onEnd) {
       const ring = el('div', 'ring', '<i></i>');
@@ -343,5 +370,5 @@
     return api;
   }
 
-  global.Kit = { G, GEN, build, AR, esc, el, $, shuffle, Bag, SFX, say, Timer, Teams, valuesRow, TEAM_COLORS };
+  global.Kit = { G, GEN, confetti, build, AR, esc, el, $, shuffle, Bag, SFX, say, Timer, Teams, valuesRow, TEAM_COLORS };
 })(window);

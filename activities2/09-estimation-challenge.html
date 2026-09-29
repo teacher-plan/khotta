@@ -7,14 +7,14 @@
 <link rel="stylesheet" href="_kit.css"/>
 <style>
 .est{display:grid;gap:10px;width:100%;max-width:900px}
-.est .r{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:10px 14px}
-.est input{direction:ltr;font:inherit;font-size:clamp(20px,2.4vw,28px);font-weight:800;padding:8px 12px;border:2px solid var(--ink);border-radius:10px;width:100%;text-align:center}
-.est .pts{font-weight:900;font-size:22px;min-width:5ch;text-align:center}
-.est .nm{font-weight:800}
-.ans{font-size:clamp(34px,5.4vw,66px);font-weight:900;color:var(--a2);text-align:center;animation:pop .5s both}
+.est .r{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.est input{direction:ltr;font:inherit;font-size:clamp(20px,2.4vw,28px);font-weight:700;padding:8px 12px;border:1px solid var(--line);border-radius:10px;width:100%;text-align:center}
+.est .pts{font-weight:700;font-size:22px;min-width:5ch;text-align:center}
+.est .nm{font-weight:700}
+.ans{font-size:clamp(34px,5.4vw,66px);font-weight:700;color:var(--a2);text-align:center;animation:pop .5s both}
 .steps{display:grid;gap:8px;width:100%;max-width:1000px}
-.steps div{background:#fff;border:2px solid var(--line);border-inline-start:8px solid var(--a);border-radius:10px;padding:10px 14px;font-size:clamp(16px,1.9vw,22px);font-weight:700}
-.scale{font-weight:800;text-align:center}
+.steps div{background:#fff;border:1px solid var(--line);border-inline-start:8px solid var(--a);border-radius:10px;padding:10px 14px;font-size:clamp(16px,1.9vw,22px);font-weight:700}
+.scale{font-weight:700;text-align:center}
 </style>
 </head>
 <body>
@@ -46,6 +46,22 @@ const QS = [
   { q: 'كم حبّة أرزٍ في كيس وزنه كيلوغرام واحد؟', a: 45000, unit: 'حبّة',
     steps: ['وزن حبّة الأرز نحو ٠٫٠٢ إلى ٠٫٠٢٥ غرام.', '١٠٠٠ غرام ÷ ٠٫٠٢٢ غرام ≈ ٤٥ ألف حبّة (بين ٤٠ و٥٠ ألفاً حسب النوع).'] },
 ];
+/* المستوى المتقدّم: أسئلةٌ متعدّدة الخطوات تحتاج علوماً ووحدات */
+const QS_A = [
+  { q: 'كم لتراً من الماء يملأ مسبحاً أولمبياً (٥٠م × ٢٥م × عمق ٢م)؟', a: 2500000, unit: 'لتر',
+    steps: ['الحجم = ٥٠ × ٢٥ × ٢ = ٢٥٠٠ متر مكعب.', 'المتر المكعب = ١٠٠٠ لتر.', '٢٥٠٠ × ١٠٠٠ = ٢٫٥ مليون لتر.'] },
+  { q: 'كم ثانيةً يستغرق ضوء الشمس ليصل إلى الأرض؟', a: 500, unit: 'ثانية',
+    steps: ['بُعد الشمس عن الأرض نحو ١٥٠ مليون كم.', 'سرعة الضوء نحو ٣٠٠ ألف كم في الثانية.', '١٥٠٬٠٠٠٬٠٠٠ ÷ ٣٠٠٬٠٠٠ = ٥٠٠ ثانية ≈ ٨ دقائق و٢٠ ثانية. الشمس التي تراها هي شمس «قبل ٨ دقائق»!'] },
+  { q: 'كم مرّةً ترمش عيناك في يومٍ واحد (١٦ ساعة يقظة)؟', a: 16000, unit: 'رمشة',
+    steps: ['يرمش الإنسان نحو ١٥–٢٠ مرّة في الدقيقة (لنأخذ ١٧).', '١٧ × ٦٠ = ١٠٢٠ في الساعة.', '١٠٢٠ × ١٦ ≈ ١٦ ألف رمشة.'] },
+  { q: 'كم كيلومتراً تقطع الأرض في مدارها حول الشمس في يومٍ واحد؟', a: 2580000, unit: 'كم',
+    steps: ['نصف قطر المدار ≈ ١٥٠ مليون كم، ومحيطه = ٢ × ٣٫١٤ × ١٥٠ مليون ≈ ٩٤٢ مليون كم.', 'تقطعه في ٣٦٥ يوماً تقريباً.', '٩٤٢ مليون ÷ ٣٦٥ ≈ ٢٫٦ مليون كم في اليوم — وأنت جالسٌ في مكانك!'] },
+  { q: 'كم سنتيمتراً ينمو شعر رأسك في سنةٍ واحدة؟', a: 15, unit: 'سم',
+    steps: ['ينمو الشعر نحو ١ إلى ١٫٥ سم في الشهر.', '١٫٢٥ × ١٢ ≈ ١٥ سم في السنة.'] },
+  { q: 'كم يوماً تحتاج لعدّ مليون بصوتٍ عالٍ دون توقّف (عددٌ كل ثانيتين تقريباً)؟', a: 23, unit: 'يوماً',
+    steps: ['الأعداد الكبيرة طويلة النطق (سبعمئة وخمسون ألفاً…)، فلنقل ثانيتين للعدد.', '١٬٠٠٠٬٠٠٠ × ٢ = ٢ مليون ثانية.', '٢٬٠٠٠٬٠٠٠ ÷ ٨٦٤٠٠ ≈ ٢٣ يوماً بلا نومٍ ولا أكل!'] },
+  ...QS.slice(0, 2),
+];
 function score(g, a) { if (!(g > 0)) return 0; const r = Math.max(g / a, a / g); return r <= 2 ? 3 : r <= 5 ? 2 : r <= 10 ? 1 : 0; }
 const fmt = n => Kit.AR(Math.round(n).toLocaleString('en').replace(/,/g, '٬'));
 const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -70,13 +86,14 @@ K = Kit.build({
     close: ['ما الافتراض الذي أثّر في جوابكم أكثر؟', 'لماذا يكون التقدير مفيداً حتى لو لم يكن دقيقاً؟', 'أين تحتاج التقدير في حياتك؟ (الوقت، المال، المسافة…)'],
   },
 });
-bag = K.Bag(QS);
+let bagQ = QS; bag = K.Bag(QS);
 
 function home() {
   if (timer) timer.pause(); round = 0;
   K.start({ emblem: '🧮', sub: 'أسئلةٌ لا يعرف جوابها أحد… لكن العقل الذكي يقترب منها بالتفكير. من الأقرب؟',
     meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٠ دقيقة'], ['المهارة', 'التقدير والحسّ العددي'], ['القيمة', 'التفكير المنهجي']],
-    teams: [3, [2, 3, 4, 5, 6]], onGo: n => { teams = null; home.n = n; play(); } });
+    levels: [['n', 'أساسي', 'خطوة أو خطوتان'], ['a', 'متقدّم', 'علوم ووحدات وخطوات متعدّدة']],
+    teams: [3, [2, 3, 4, 5, 6]], onGo: (n, lv) => { teams = null; home.n = n; bag = K.Bag(lv === 'a' ? QS_A : QS); play(); } });
 }
 
 function play() {

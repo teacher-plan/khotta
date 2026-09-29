@@ -15,13 +15,13 @@
 .grid .trail{background:#DCE8FB}
 .grid .crash{background:#FBE3E6;animation:shake .4s}
 .prog{display:flex;flex-direction:column;gap:12px;min-width:min(420px,92vw);max-width:520px;flex:1}
-.cmds{direction:ltr;display:flex;flex-wrap:wrap;gap:8px;min-height:76px;background:#fff;border:2px dashed var(--ink);border-radius:14px;padding:10px;align-content:flex-start}
-.cmds span{border:2px solid var(--ink);border-radius:10px;padding:6px 12px;font-size:26px;font-weight:900;background:var(--sand);display:inline-flex;align-items:center;gap:4px}
+.cmds{direction:ltr;display:flex;flex-wrap:wrap;gap:8px;min-height:76px;background:#fff;border:1.5px dashed var(--line);border-radius:14px;padding:10px;align-content:flex-start}
+.cmds span{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:26px;font-weight:700;background:var(--sand);display:inline-flex;align-items:center;gap:4px}
 .cmds span.run{background:var(--gold)}
 .cmds span small{font-size:17px;color:var(--a2)}
 .keys{direction:ltr;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .keys .btn{font-size:30px;min-height:66px}
-.meter{font-weight:800}
+.meter{font-weight:700}
 .meter b{color:var(--a2)}
 </style>
 </head>
@@ -36,7 +36,7 @@
    الشبكة تُعرض ltr دائماً كي يطابق السهم ➡ الحركة يميناً على الشاشة.
    كل مستوى محلولٌ مسبقاً (الحلّ في التعليق) ضمن حدّ الأوامر.
    ═══════════════════════════════════════════════════════════════════ */
-const LEVELS = [
+const BASE = [
   // ➡×٥
   { name: 'الخطوة الأولى', start: [5, 0], goal: [5, 5], walls: [], max: 6, tip: 'كم خطوةً يحتاج الروبوت؟' },
   // ⬆×٣ ، ➡×٥ ، ⬆×٢
@@ -48,6 +48,23 @@ const LEVELS = [
   // ➡ ⬇ ➡ ⬇ ... درج: (➡ ⬇)×٥ لكن بلا تكرار مجموعات: ١٠ أوامر، الحدّ ١٠
   { name: 'الدرج', start: [0, 0], goal: [5, 5], walls: [[0, 2], [1, 3], [2, 4], [3, 5], [1, 0], [2, 1], [3, 2], [4, 3], [5, 4]], max: 10, tip: 'لاحظوا النمط: خطوةٌ يميناً ثم خطوةٌ لأسفل… هل يتكرّر؟' },
 ];
+/* خبير — كلها محلولة بحلّالٍ شامل (BFS) والحدّ = أقلّ عددٍ ممكن من الأوامر */
+const EXPERT = [
+  // ➡×٥ ⬇×٢ ⬅×٥ ⬇×٣ ⬆×٣ ➡×٣
+  { name: 'الأفعى', start: [0, 0], goal: [2, 3], key: [5, 0], walls: [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [4, 4]], max: 6, tip: 'المفتاح في الزاوية البعيدة… والطريق إليه يلتفّ كالأفعى.' },
+  // ⬅ ⬆×٥ ⬅×٢ ⬇×٥ ⬅×٢ ⬆×٥
+  { name: 'الأعمدة', start: [5, 5], goal: [0, 0], walls: [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [4, 5]], max: 6, tip: 'ستة أوامر بالضبط — لا مجال لأمرٍ زائد!' },
+  // ⬇×٣ ➡×٣ ⬆×٥
+  { name: 'الخروج من الحصن', start: [2, 2], goal: [0, 5], key: [5, 5], walls: [[1, 1], [1, 2], [1, 3], [2, 1], [2, 3], [3, 1], [3, 3], [0, 4], [1, 4], [2, 4], [4, 3], [4, 4]], max: 3, tip: 'ثلاثة أوامر فقط! فكّروا بالتكرار قبل أي شيء.' },
+];
+/* اقرأ البرنامج: البرنامج مكتوب، والصف يتوقّع أين سيقف الروبوت قبل التشغيل */
+const PREDICT = [
+  // (٥،٠) ⬆×٣ ← (٢،٠) ➡×٢ ← (٢،٢) ⬇ ← (٣،٢) ➡×٢ ← (٣،٤)
+  { name: 'اقرأ البرنامج', predict: true, start: [5, 0], walls: [[4, 2], [1, 3]], prog: [{ d: '⬆', n: 3 }, { d: '➡', n: 2 }, { d: '⬇', n: 1 }, { d: '➡', n: 2 }], tip: 'لا تشغّلوا! نفّذوه في عقولكم: أين سيقف الروبوت؟ اضغطوا المربّع.' },
+  // (٠،٠) ➡×٣ ⬇×٥ ⬅×٢ ⬆×٢ ← (٣،١)
+  { name: 'اقرأ البرنامج', predict: true, start: [0, 0], walls: [[2, 2], [4, 4]], prog: [{ d: '➡', n: 3 }, { d: '⬇', n: 5 }, { d: '⬅', n: 2 }, { d: '⬆', n: 2 }], tip: 'تتبّعوا بأعينكم خطوةً خطوة، ثم اضغطوا المربّع الذي سيقف فيه.' },
+];
+let LEVELS = BASE;
 const DIRS = { '⬆': [-1, 0], '⬇': [1, 0], '⬅': [0, -1], '➡': [0, 1] };
 const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <rect width="1600" height="900" fill="#EAF0F8"/>
@@ -56,7 +73,7 @@ const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" 
   </g>
 </svg>`;
 
-let K, teams, lv = 0, prog = [], running = false;
+let lv0 = 'b', K, teams, lv = 0, prog = [], running = false;
 K = Kit.build({
   title: 'برمج الروبوت', accent: '#0E7C66', accent2: '#08584A', scene: SCENE,
   onRestart: () => home(),
@@ -78,7 +95,10 @@ function home() {
   lv = 0;
   K.start({ emblem: '🤖', sub: 'اكتبوا للروبوت برنامجاً من الأسهم يوصله إلى الهدف — بأقلّ عددٍ من الأوامر.',
     meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٥ دقيقة'], ['المهارة', 'التفكير الحاسوبي'], ['القيمة', 'الدقّة والتصحيح']],
-    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; level(); } });
+    levels: [['b', 'مبتدئ', 'أساسيات الأوامر'], ['m', 'متقدّم', 'قراءة البرامج + التكرار'], ['x', 'خبير', 'أقلّ عدد ممكن من الأوامر']],
+    teams: [3, [2, 3, 4, 5]], onGo: (n, lv) => { teams = null; home.n = n;
+      LEVELS = lv === 'x' ? [PREDICT[1], ...EXPERT] : lv === 'm' ? [PREDICT[0], BASE[2], BASE[3], BASE[4]] : BASE.slice(0, 3);
+      lv0 = lv; level(); } });
 }
 
 function cellCls(L, r, c, trail, crash, hasKey) {
@@ -103,11 +123,51 @@ function drawGrid(host, L, pos, trail, crash, hasKey) {
 }
 const count = () => prog.length;
 
+function simulate(L, pr) {
+  let p = L.start.slice();
+  for (const c of pr) for (let k = 0; k < c.n; k++) { const [dr, dc] = DIRS[c.d]; p = [p[0] + dr, p[1] + dc]; }
+  return p;
+}
+function predictLevel() {
+  const L = LEVELS[lv], end = simulate(L, L.prog);
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1200px';
+  w.innerHTML = `${K.progress(LEVELS.length, lv)}<div class="row"><span class="tag">🔮 ${L.name}</span></div><div class="muted" style="font-weight:600">💡 ${Kit.esc(L.tip)}</div>`;
+  const lab = K.el('div', 'lab');
+  const grid = K.el('div', 'grid'); lab.appendChild(grid);
+  const pr = K.el('div', 'prog');
+  pr.innerHTML = `<div class="meter">البرنامج:</div><div class="cmds">${L.prog.map(p => `<span>${p.d}${p.n > 1 ? `<small>×${Kit.AR(p.n)}</small>` : ''}</span>`).join('')}</div>`;
+  const run = K.el('button', 'btn p big', '▶ شغّل للتحقّق'); run.disabled = true;
+  pr.appendChild(run); lab.appendChild(pr); w.appendChild(lab);
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  K.stage.appendChild(w);
+  if (!teams) teams = K.Teams(tb, home.n || 3); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'توقّعٌ صحيح'], [1, 'شرح التتبّع']]));
+  let guess = null;
+  const G = { goal: [-9, -9], walls: L.walls };
+  const draw = (pos, trail) => { drawGrid(grid, G, pos, trail || [], null, true);
+    if (guess) grid.children[guess[0] * 6 + guess[1]].style.boxShadow = 'inset 0 0 0 4px var(--gold)'; };
+  draw(L.start);
+  grid.onclick = e => { const i = [...grid.children].indexOf(e.target.closest('div')); if (i < 0) return;
+    guess = [Math.floor(i / 6), i % 6]; K.SFX.tap(); run.disabled = false; draw(L.start); };
+  run.onclick = async () => {
+    run.disabled = true; grid.onclick = null;
+    let p = L.start.slice(), trail = [p.slice()];
+    for (const c of L.prog) for (let k = 0; k < c.n; k++) { await new Promise(r => setTimeout(r, 330)); const [dr, dc] = DIRS[c.d]; p = [p[0] + dr, p[1] + dc]; trail.push(p.slice()); K.SFX.tick(); draw(p, trail); }
+    const ok = guess[0] === end[0] && guess[1] === end[1];
+    ok ? (K.SFX.win(), K.say('توقّعٌ دقيق! عقولكم نفّذت البرنامج بنجاح 🧠')) : (K.SFX.soft(), K.say('ليس هنا — أين أخطأنا في التتبّع؟', 'warn'));
+    const nx = K.el('button', 'btn p big', 'التالي ←');
+    nx.onclick = () => { K.SFX.tap(); lv++; level(); };
+    w.insertBefore(nx, tb);
+  };
+}
+
 function level() {
+  if (LEVELS[lv] && LEVELS[lv].predict) return predictLevel();
   const L = LEVELS[lv]; prog = []; running = false;
   K.stage.innerHTML = '';
   const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1200px';
-  w.innerHTML = `<div class="row"><span class="tag">المستوى ${Kit.AR(lv + 1)} من ${Kit.AR(LEVELS.length)} — ${L.name}</span></div>
+  w.innerHTML = `${K.progress(LEVELS.length, lv)}<div class="row"><span class="tag">المستوى ${Kit.AR(lv + 1)} من ${Kit.AR(LEVELS.length)} — ${L.name}</span></div>
     <div class="muted" style="font-weight:700">💡 ${Kit.esc(L.tip)}</div>`;
   const lab = K.el('div', 'lab');
   const grid = K.el('div', 'grid'); lab.appendChild(grid);
