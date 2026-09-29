@@ -6,9 +6,9 @@ def mk(): return '<span class="blank">؟</span><sup class="e2">٢</sup>'
 def puzzle(who, ic, q, ans):
     return f'<button class="flip box col puz"><span class="who2">{ic} {who}</span><span class="pq">{q}</span><span class="tap">👆 اضغط للحل</span><span class="hid col">{ans}</span></button>'
 
-def ex(num, title, rule, parts, cols=3, note=''):
+def ex(num, title, rule, parts, cols=3, note='', src='تمرين'):  # src: «تمرين» لكتاب الطالب، «نشاط ص ٢٥ · تمرين» لكتاب النشاط
     cards=''.join(f'<button class="flip xcard"><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for q,ans in parts)
-    return slide(f'''<div class="xhead"><span class="xnum">📘 تمرين {a(num)}</span><h2>{title}</h2></div>
+    return slide(f'''<div class="xhead"><span class="xnum">📘 {src} {a(num)}</span><h2>{title}</h2></div>
 <div class="xrule"><b>القاعدة</b><span>{rule}</span></div>
 <div class="xgrid c{cols}">{cards}</div>{f'<p class="hint">{note}</p>' if note else ''}''')
 
