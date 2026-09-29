@@ -1132,6 +1132,9 @@ body.inapp #c1-budget-btn{display:flex}
 .lv-pages #lv-ink-clear:not(:disabled){color:#FFB4A6}
 /* في الزاوية السفلية كي لا يغطّي أزرار التنقّل التي تضعها العروض عادةً في منتصف الحافة */
 .lv-pages.htmlmode{top:auto;bottom:18px;transform:none}
+/* صورةٌ مرفقة واحدة: لا صفحات للتقليب، فيبقى التكبير والقلم والمسح فقط */
+.lv-pages.imgmode>#lv-page-prev,.lv-pages.imgmode>#lv-page-n,.lv-pages.imgmode>#lv-page-next,.lv-pages.imgmode>#lv-sep-pg{display:none}
+.lv-pages.imgmode #lv-ink-clear{display:flex}
 #lv-pen-btn.on,#lv-pen-btn.on:hover{background:var(--red);color:#fff}
 /* لوحة القلم عائمةٌ فوق شريط التنقّل (لا شريطٌ ثانٍ يزحزح الصفحة) — تظهر
    بانزلاقٍ لطيف، بأسلوب لوحات iPadOS، فيبقى تصميم أسفل العارض متناسقاً. */
@@ -3750,7 +3753,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button onclick="liveBookGo(-1)" id="lv-page-prev" title="السابقة" aria-label="الصفحات السابقة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <span class="n" id="lv-page-n"></span>
       <button onclick="liveBookGo(1)" id="lv-page-next" title="التالية" aria-label="الصفحات التالية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <span class="lv-sep"></span>
+      <span class="lv-sep" id="lv-sep-pg"></span>
       <button class="z" onclick="liveBookZoom(1)" id="lv-zoom-in" title="تكبير" aria-label="تكبير"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8.3v5.4M8.3 11h5.4"/></svg></button>
       <span class="n z" id="lv-zoom-lbl">١٠٠٪</span>
       <button class="z" onclick="liveBookZoom(-1)" id="lv-zoom-out" title="تصغير" aria-label="تصغير"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M8.3 11h5.4"/></svg></button>
@@ -9725,7 +9728,7 @@ function liveRenderLauncher(){
 // ── عارض المرفق: يملأ كل ما تحت لوحة التحكم، وزر ✕ يعيد لقائمة المرفقات ──
 function liveViewOpen(title,html,showPages){
   _htmlOpenTok++;   // يُلغي عرض HTML ما زال يُحمَّل إن فُتح مرفقٌ آخر قبله
-  _lvHtmlFrame=null;document.getElementById('lv-pages').classList.remove('htmlmode');
+  _lvHtmlFrame=null;document.getElementById('lv-pages').classList.remove('htmlmode','imgmode');
   document.getElementById('lv-vtitle').textContent=title||'';
   document.getElementById('lv-vbody').innerHTML=html;
   document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
@@ -9746,7 +9749,7 @@ function liveShowLauncher(){liveViewClose();}
 function liveOpenInfo(){
   const st=planGet(liveCtx.lessonId);
   if(!st.info_url)return;
-  liveViewOpen('ملخص الدرس',`<img src="${escAttr(st.info_url)}" alt="ملخص الدرس">`,false);
+  liveOpenImage('ملخص الدرس',st.info_url);
 }
 // رابطٌ يُوضع في src ينفّذ ما فيه إن كان javascript: — والتهريب وحده لا يمنعه،
 // فنقصره على https ورابط صورةٍ مُضمَّنة.
@@ -9778,7 +9781,8 @@ function liveOpenFile(fi){
   // بدل <iframe> التي تُحمّل الصورة بحجمها الطبيعي داخل مستندها الخاص
   // بلا أي تصغير، مهما كانت أبعادها.
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
-  liveViewOpen(f.name,isImg?`<img src="${escAttr(u)}" alt="${escAttr(f.name||'')}">`:`<iframe src="${escAttr(filePreviewSrc(u,f.name))}" allow="autoplay"></iframe>`,false);
+  if(isImg){liveOpenImage(f.name,u);return;}
+  liveViewOpen(f.name,`<iframe src="${escAttr(filePreviewSrc(u,f.name))}" allow="autoplay"></iframe>`,false);
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
@@ -9799,8 +9803,22 @@ let _lvPenOn=false,_lvPenColorVal='#e11d3c',_lvPenWidthVal=3,_lvPenErasing=false
    اليسار وتقليبُه إلى الأمام يسار — عكس بقيّة المواد. ولولا هذا الاستثناء
    لعُرض مقلوباً أمام الطالبة التي تتابع في نسختها الورقية. */
 function _lvLtr(){return /إنجليز|english/i.test((liveCtx&&liveCtx.subject)||'');}
+// الصور المرفقة (والملخّص) تُعرض في عارض الكتاب نفسه كصفحةٍ واحدة: تكبيرٌ
+// بالأزرار وبإصبعين وتحريك، والقلم يكتب فوقها — بلا نسخةٍ ثانية من المنطق.
+let _lvImgPages=null;
+function _lvPg(){return _lvImgPages||_liveBook||[];}
+function liveOpenImage(title,url){
+  if(!liveSrcOk(url)){toast('رابط الصورة غير صالح',true);return;}
+  _lvImgPages=[url];
+  _liveBookAt=0;_liveBookZoom=1;_liveBookPanX=0;_liveBookPanY=0;
+  _lvStrokes={};_lvCurStroke=null;_lvPenOn=false;_lvPenErasing=false;
+  liveViewOpen(title,'',true);
+  document.getElementById('lv-pages').classList.add('imgmode');
+  liveBookRender();
+}
 function liveOpenBook(){
   if(!_liveBook||!_liveBook.length)return;
+  _lvImgPages=null;
   _liveBookAt=0;_liveBookZoom=1;_liveBookPanX=0;_liveBookPanY=0;
   _lvStrokes={};_lvCurStroke=null;_lvPenOn=false;_lvPenErasing=false;
   liveViewOpen('صفحات الكتاب','',true);
@@ -9810,12 +9828,12 @@ function _lvSpreadOf(i){return Math.floor(i/2)*2;}      // أول صفحةٍ ف�
 function liveBookRender(){
   const body=document.getElementById('lv-vbody');
   const a=_lvSpreadOf(_liveBookAt), b=a+1;
-  const total=_liveBook.length;
+  const P=_lvPg(),total=P.length;
   const one=b>=total;                                    // آخر صفحةٍ فردية: وحدها
-  const img=(i)=>`<img src="${_liveBook[i]}" alt="صفحة ${i+1}" draggable="false">`;
+  const img=(i)=>`<img src="${escAttr(P[i])}" alt="صفحة ${i+1}" draggable="false">`;
   // الترتيب واحدٌ في الحالتين (الأقدم أولاً)، والاتجاه هو ما يقلبه: الحاوية
   // ترث rtl من الصفحة فيظهر أوّلُ عنصرٍ يميناً، و.ltr تجعله يساراً.
-  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()?' ltr':''}" style="--z:${_liveBookZoom};--px:${_liveBookPanX}px;--py:${_liveBookPanY}px">`
+  body.innerHTML=`<div class="lv-spread${one?' one':''}${_lvLtr()&&!_lvImgPages?' ltr':''}" style="--z:${_liveBookZoom};--px:${_liveBookPanX}px;--py:${_liveBookPanY}px">`
     +(one?img(a):img(a)+img(b))
     +`<canvas class="lv-ink${_lvPenOn?' on':''}" id="lv-ink"></canvas></div>`;
   body.classList.toggle('zoomed',_liveBookZoom>1);
@@ -9829,14 +9847,14 @@ function liveBookRender(){
   const zo=document.getElementById('lv-zoom-out');if(zo)zo.disabled=_liveBookZoom<=LV_ZOOMS[0];
   const zi=document.getElementById('lv-zoom-in');if(zi)zi.disabled=_liveBookZoom>=LV_ZOOMS[LV_ZOOMS.length-1];
   // نحمّل النشرة التالية مسبقاً حتى ينتقل التصفّح بلا انتظار أمام الطالبات
-  for(const n of [b+1,b+2]){const u=_liveBook[n];if(u){const im=new Image();im.src=u;}}
+  for(const n of [b+1,b+2]){const u=P[n];if(u){const im=new Image();im.src=u;}}
   lvInkSetup();
   lvPenSyncUI();
 }
 function liveBookGo(d){
-  if(!_liveBook)return;
+  const P=_lvPg();if(!P.length)return;
   const n=_lvSpreadOf(_liveBookAt)+d*2;
-  if(n<0||n>=_liveBook.length)return;
+  if(n<0||n>=P.length)return;
   _liveBookAt=n;_liveBookZoom=1;_liveBookPanX=0;_liveBookPanY=0;liveBookRender();
 }
 /* التكبير يمسّ الصفحتين وحدهما لا الصفحة كلّها: تكبيرُ المتصفّح يُضخّم
