@@ -51,8 +51,9 @@ VIDEO = (f'''<section id="video">
   <h2><b>٢</b>فيديو الدرس</h2>
   <p>{html.escape(A.minutes)} بالتعليق الصوتي، ودقّة 1080p — صالح لليوتيوب والواتساب.</p>
   <video controls preload="metadata" src="video.mp4"></video>
-  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}<a class="save" href="video.mp4" target="_blank" rel="noopener" download="{NAMES["video"]}">فتح الملف مباشرة ↗</a></div>
-  <p>إن لم يعمل «حفظ الفيديو»: اضغط «فتح الملف مباشرة»، ثم زرّ المشاركة في المشغّل ← Drive.</p>
+  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}</div>
+  <div class="acts"><button type="button" class="btn" id="vdrive">حفظ الفيديو في Drive ↑</button></div>
+  <p class="msg" id="vmsg" role="status" aria-live="polite"></p>
 </section>
 ''' if A.video else '')
 page = f'''<title>تحضير درس {T}</title>
@@ -192,6 +193,33 @@ figcaption{{font-size:14px;color:var(--muted)}}
       }}
     }}
     up.disabled = false; up.textContent = 'أعد الرفع (يتخطّى الموجود)';
+  }});
+}})();
+(async function () {{  // زرّ الفيديو: رفعٌ مباشر إلى مجلد الدرس في Drive بحساب المعلّم (ملفٌ كبير يمرّ كملفٍ لا كنص)
+  const K = window.KIT_DRIVE, b = document.getElementById('vdrive'), m = document.getElementById('vmsg');
+  if (!b) return;
+  const v = K && K.files.find(function (f) {{ return f.src === 'video.mp4'; }});
+  let mcp = null;
+  try {{ mcp = window.claude && window.claude.use ? await window.claude.use('mcp') : null; }} catch (e) {{ mcp = null; }}
+  if (!mcp || !v) {{ b.hidden = true; return; }}
+  const S = 'Google Drive';
+  b.addEventListener('click', async function () {{
+    b.disabled = true; m.className = 'msg'; m.textContent = 'فحص المجلد…';
+    try {{
+      const ex = await mcp.callTool(S, 'search_files', {{ query: "title = '" + v.title.split("'").join('') + "' and parentId = '" + K.folder + "'", excludeContentSnippets: true }}, {{ cache: false }});
+      const pl = ex && ex.payload, list = pl && (pl.files || (Array.isArray(pl) ? pl : null));
+      if (list && list.length) {{ m.textContent = 'الفيديو موجود في مجلد الدرس ✓'; return; }}
+      let files = false;
+      try {{ const lt = await mcp.listTools(); files = !!(lt && lt.fileArgs); }} catch (e) {{ files = false; }}
+      m.textContent = 'جارٍ رفع الفيديو إلى Drive… (قد يستغرق دقيقة)';
+      const blob = await (await fetch('video.mp4')).blob();
+      await mcp.callTool(S, 'create_file', {{ title: v.title, parentId: K.folder, contentMimeType: 'video/mp4', disableConversionToGoogleType: true,
+        base64Content: {{ $file: {{ data: blob, name: 'video.mp4', type: 'video/mp4' }} }} }});
+      m.textContent = 'تمّ رفع الفيديو إلى مجلد الدرس ✓';
+    }} catch (e) {{
+      const c = e && e.code;
+      m.textContent = (c === 'capability_disabled' ? 'هذا العرض لا يسمح برفع ملفٍ كبير إلى Drive' : 'تعذّر رفع الفيديو') + ' [' + (c || (e && e.name) || 'خطأ') + (e && e.message ? ': ' + e.message : '') + ']';
+    }} finally {{ b.disabled = false; }}
   }});
 }})();
 </script>
