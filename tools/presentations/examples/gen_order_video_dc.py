@@ -86,7 +86,6 @@ out = T[:a] + ''.join(SC) + T[z:]
 N = len(DURS)
 out = out.replace('الدرس ١-٦: القوى والجذور', 'الدرس ١-٧: ترتيب العمليات الحسابية').replace('<title>فيديو القوى والجذور</title>', '<title>فيديو ترتيب العمليات</title>')
 out = re.sub(r'const DURS = \[[^\]]*\]', 'const DURS = ' + json.dumps(DURS), out)
-out = out.replace('>الصف السابع · الوحدة الأولى<', '>الصف السابع · الوحدة الأولى · إعداد: أ. عيسى الحارثي<')  # اسم المعلّم المُعِدّ في شريط العنوان
 out = out.replace('hint-placeholder-count="9"', f'hint-placeholder-count="{N}"').replace('const N = 9,', 'const N = DURS.length,')
 out = out.replace('this.state.scene < 8', 'this.state.scene < DURS.length - 1').replace('Math.min(8, i)', 'Math.min(DURS.length - 1, i)').replace('s === 8 &&', 's === DURS.length - 1 &&')
 out = out.replace("audioSrc: 'audio/powers_'", "audioSrc: 'audio/powers_'")  # أسماء ملفات الصوت نفسها: powers_01.mp3 …

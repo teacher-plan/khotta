@@ -18,9 +18,9 @@ def R(v, k=2):
             f'<span class="ov">{inner}</span></span>')
 
 HEAD = lambda part: f'''<header><div class="hd"><b>الصف السابع</b><span>الوحدة الأولى: الأعداد الصحيحة والقوى والجذور</span>
-<span>الدرس ١-٦: القوى والجذور — {part}</span></div><div class="logo">{M(P(5,2))}{M(R(25))}</div></header>
+<span>الدرس ١-٦: القوى والجذور — {part} · إعداد: أ. عيسى الحارثي</span></div><div class="logo">{M(P(5,2))}{M(R(25))}</div></header>
 <div class="goal">🎯 أجد قوى العدد وجذوره، وأتذكّر المربعات حتى {M(P(20,2))} ومكعبات الأعداد ١ – ١٠</div>'''
-FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٢–٣٤ — احتفظ بهذه الورقة وراجعها قبل الاختبار</footer>'
+FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٢–٣٤ — إعداد: أ. عيسى الحارثي — احتفظ بهذه الورقة وراجعها قبل الاختبار</footer>'
 
 sq = ''.join(f'<div>{M(P(n,2),EQ,n*n)}</div>' for n in range(1, 21))
 cu = ''.join(f'<div>{M(P(n,3),EQ,n**3)}</div>' for n in range(1, 11))

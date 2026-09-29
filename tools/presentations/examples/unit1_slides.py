@@ -17,12 +17,14 @@ S = []
 # ═══ الغلاف ═══
 S.append(slide('''<span class="tag">الصف السابع · مراجعة الوحدة الأولى</span>
 <h1 class="h1s">الأعداد الصحيحة والقوى والجذور</h1>
-<div class="can"><b class="can-t">نراجع قواعد الوحدة كلّها في خمسة أجزاء:</b>
+<p class="lead" style="font-size:clamp(26px,4.8vh,56px)">إعداد: أ. عيسى الحارثي</p>''', 'cover'))
+S.append(slide('''<h2>نراجع قواعد الوحدة كلّها في خمسة أجزاء</h2>
+<div class="can">
 <div><span class="can-i">١</span><span>الأعداد الصحيحة: الطرح، والضرب والقسمة</span></div>
 <div><span class="can-i">٢</span><span>المضاعفات والعوامل والعوامل المشتركة</span></div>
 <div><span class="can-i">٣</span><span>اختبارات قابلية القسمة</span></div>
 <div><span class="can-i">٤</span><span>الأعداد الأولية، والعوامل الأولية، والعامل المشترك الأكبر والمضاعف المشترك الأصغر</span></div>
-<div><span class="can-i">٥</span><span>القوى والجذور</span></div></div>''', 'cover'))
+<div><span class="can-i">٥</span><span>القوى والجذور</span></div></div>'''))
 
 # ═══ ١ الأعداد الصحيحة ═══
 S.append(SEC(1, 'الأعداد الصحيحة', ['طرح عددٍ سالب', 'إشارة ناتج الضرب والقسمة']))
@@ -65,12 +67,14 @@ TESTS = [('٢', 'الآحاد زوجي: ٠، ٢، ٤، ٦، ٨'), ('٣', 'مجم
          ('٥', 'الآحاد ٠ أو ٥'), ('٦', 'يقبل القسمة على ٢ وعلى ٣ معاً'), ('٨', 'العدد المكوَّن من آخر ثلاثة أرقام يقبل القسمة على ٨'),
          ('٩', 'مجموع الأرقام يقبل القسمة على ٩'), ('١٠', 'الآحاد ٠'), ('١٠٠', 'آخر رقمين ٠٠')]
 S.append(SEC(3, 'اختبارات قابلية القسمة', ['اختبارات بسيطة للقسمة على ٢، ٣، ٤، ٥، ٦، ٨، ٩، ١٠، ١٠٠', 'نطبّقها على عددٍ واحد']))
-S.append(slide(f'''{RULE(6, 'هناك اختباراتٌ بسيطة لقابلية القسمة — اضغط على البطاقة لتظهر القاعدة')}
-<div class="xgrid c3">{''.join(f'<button class="flip xcard dv"><span class="xq">يقبل القسمة على <b>{n}</b></span><span class="tap">👆</span><span class="hid xa">{t}</span></button>' for n, t in TESTS)}</div>'''))
+for part in (TESTS[:4], TESTS[4:8], TESTS[8:]):   # أربع بطاقات في الشريحة ليبقى الخط كبيراً
+    S.append(slide(f'''{RULE(6, 'اختباراتٌ بسيطة لقابلية القسمة — اضغط على البطاقة')}
+<div class="xgrid c{2 if len(part) > 1 else 1}">{''.join(f'<button class="flip xcard dv"><span class="xq">يقبل القسمة على <b>{n}</b></span><span class="tap">👆</span><span class="hid xa">{t}</span></button>' for n, t in part)}</div>'''))
 RES = [('٢', 1, 'الآحاد ٢ زوجي'), ('٣', 1, '٣ + ٧ + ٢ = ١٢'), ('٤', 1, '٧٢ ÷ ٤ = ١٨'), ('٥', 0, 'الآحاد ليس ٠ أو ٥'), ('٦', 1, 'يقبل ٢ و ٣'),
        ('٨', 0, '٣٧٢ ÷ ٨ = ٤٦ والباقي ٤'), ('٩', 0, 'مجموع الأرقام ١٢'), ('١٠', 0, 'الآحاد ليس ٠'), ('١٠٠', 0, 'آخر رقمين ليسا ٠٠')]
-S.append(slide(f'''{mode('we')}<h2>معاً: هل يقبل العدد <b class="c-exp">٣٧٢</b> القسمة على…؟</h2>
-<div class="xgrid c3">{''.join(f'<button class="flip xcard dv"><span class="xq">على <b>{n}</b>؟</span><span class="tap">👆</span><span class="hid xa {"yes" if ok else "no"}">{"✔ نعم" if ok else "✘ لا"}<small>{w}</small></span></button>' for n, ok, w in RES)}</div>'''))
+for part in (RES[:6], RES[6:]):
+    S.append(slide(f'''<div class="row hdr">{mode('we')}<h2>هل يقبل <b class="c-exp">٣٧٢</b> القسمة على…؟</h2></div>
+<div class="xgrid c3">{''.join(f'<button class="flip xcard dv"><span class="xq">على <b>{n}</b>؟</span><span class="tap">👆</span><span class="hid xa {"yes" if ok else "no"}">{"✔ نعم" if ok else "✘ لا"}<small>{w}</small></span></button>' for n, ok, w in part)}</div>'''))
 S.append(slide(f'''{mode('u')}{timer(1)}''' + quiz('هل يقبل العدد ٥٤٠ القسمة على ٩؟', ['نعم', 'لا'], 0, 'مجموع أرقامه ٥ + ٤ + ٠ = ٩ ، و ٩ يقبل القسمة على ٩')))
 
 # ═══ ٤ الأعداد الأولية ═══
@@ -94,10 +98,10 @@ document.querySelectorAll('.svbtn').forEach(function(b){{b.addEventListener('cli
  var p=+b.dataset.p;cs.forEach(function(c){{var n=+c.dataset.n;c.classList.remove('cur');if(n===p)c.classList.add('cur');else if(n%p===0)c.classList.add('out');}});
 }});}});}})();</script>'''))
 S.append(slide(f'''{RULE(9, 'يمكنك كتابة كلّ عددٍ صحيحٍ موجب في صورة ناتج ضرب أعدادٍ أوليّة')}
-<div class="row" style="align-items:center">
 {box(STEPS(STP('نقسم على ٢', M('٥٠٠', DV, '٢', EQ, '٢٥٠', cls="sm")), STP('على ٢ مرة أخرى', M('٢٥٠', DV, '٢', EQ, '١٢٥', cls="sm")),
- STP('على ٥', M('١٢٥', DV, '٥', EQ, '٢٥', cls="sm")), STP('على ٥', M('٢٥', DV, '٥', EQ, '٥', cls="sm")), STP('على ٥', M('٥', DV, '٥', EQ, '١', cls="sm"))))}
-<div class="col">{st(box(M('٥٠٠', EQ, '٢', X, '٢', X, '٥', X, '٥', X, '٥', cls="sm")))}{st(box(M('٥٠٠', EQ, P(2, 2), X, P(5, 3), cls="mid"), style="border-color:var(--base)"))}</div></div>'''))
+ STP('على ٥', M('١٢٥', DV, '٥', EQ, '٢٥', cls="sm")), STP('على ٥', M('٢٥', DV, '٥', EQ, '٥', cls="sm")), STP('على ٥', M('٥', DV, '٥', EQ, '١', cls="sm"))))}'''))
+S.append(slide(f'''{RULE(9, 'نكتب العدد ناتجَ ضرب أعدادٍ أوليّة، ثم نختصره بالأسس')}
+{st(box(M('٥٠٠', EQ, '٢', X, '٢', X, '٥', X, '٥', X, '٥', cls="mid")))}{st(box(M('٥٠٠', EQ, P(2, 2), X, P(5, 3), cls="big"), style="border-color:var(--base)"))}'''))
 S.append(slide(f'''{RULE(10, 'يمكن استخدام نواتج ضرب العوامل الأوليّة لإيجاد <b class="c-gcd">العامل المشترك الأكبر</b> و<b class="c-lcm">المضاعف المشترك الأصغر</b>')}
 <div class="row">{st(box(M('١٢', EQ, P(2, 2), X, '٣', cls="sm")))}{st(box(M('١٨', EQ, '٢', X, P(3, 2), cls="sm")))}</div>
 <div class="row">
@@ -134,13 +138,13 @@ SK = ['جمع الأعداد الصحيحة، وطرحها، وضربها، وق
 def CHECK(items, start):
     return ''.join(f'<button class="ck"><span class="cb">{a(start + i)}</span><span>{t}</span></button>' for i, t in enumerate(items))
 CKJS = "<script>document.querySelectorAll('.ck').forEach(function(b){b.onclick=function(e){e.stopPropagation();b.classList.toggle('ok');};});</script>"
-S.append(slide(f'''<span class="qbadge">تقييمٌ ذاتي ✅</span><h2>يجب أن أكون قادراً على… (١)</h2><p class="hint">اضغط على ما تتقنه ليصبح أخضر</p>
-<div class="cks">{CHECK(SK[:7], 1)}</div>'''))
-S.append(slide(f'''<span class="qbadge">تقييمٌ ذاتي ✅</span><h2>يجب أن أكون قادراً على… (٢)</h2><p class="hint">ما بقي أبيض: راجعه في ورقة الملخّص</p>
-<div class="cks">{CHECK(SK[7:], 8)}</div>{CKJS}'''))
+for k in range(0, len(SK), 4):   # أربعة بنود في الشريحة ليبقى الخط كبيراً
+    last = k + 4 >= len(SK)
+    S.append(slide(f'''<div class="row hdr"><span class="qbadge">تقييمٌ ذاتي ✅</span><span class="tag">اضغط على ما تتقنه ليصبح أخضر</span></div><h2>يجب أن أكون قادراً على… ({a(k // 4 + 1)})</h2>
+<div class="cks">{CHECK(SK[k:k+4], k + 1)}</div>{CKJS if last else ''}'''))
 S.append(slide(f'''<h2>أحسنتم! 🎉</h2>
 <div class="note">راجعوا ورقة ملخّص الوحدة: كل قاعدة ومعها مثالٌ محلول</div>
-<p class="who st">المرجع: كتاب الطالب — صفحة ملخّص الوحدة الأولى «الأعداد الصحيحة والقوى والجذور»</p>'''))
+<p class="hint st">المرجع: كتاب الطالب — صفحة ملخّص الوحدة الأولى — إعداد: أ. عيسى الحارثي</p>'''))
 
 EXTRA_CSS_OWN = '''
 .brk{display:inline-flex;gap:.2em;align-items:baseline;direction:rtl;unicode-bidi:isolate}

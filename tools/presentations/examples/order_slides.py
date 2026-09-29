@@ -209,6 +209,6 @@ EXTRA_CSS_OWN = '''
 .chant b{font-family:var(--fh);font-size:clamp(20px,3vh,32px);color:var(--ink2)}
 .chant span{font-weight:800;font-size:clamp(20px,3.3vh,36px);line-height:1.6}
 .hl2{color:var(--exp)}
-.hdr{align-items:center;gap:1.4vw;flex-wrap:nowrap}
+
 .who2{font-family:var(--fh);font-weight:900;font-size:clamp(22px,3.6vh,38px)}
 '''

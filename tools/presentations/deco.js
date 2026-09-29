@@ -23,3 +23,25 @@
     s.style.setProperty('--hl',hl);
   });
 })();
+
+// صمّام الأمان: إن تجاوز محتوى شريحةٍ ارتفاع الشاشة (مع كشف كل الخطوات والبطاقات) صُغِّر قليلاً — حتى ٠٫٨٥ فقط
+(function(){
+  function fitAll(){
+    document.querySelectorAll('.slide').forEach(function(s){
+      s.style.setProperty('--fit',1);
+      var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
+      for(var k=0;k<3;k++){
+        var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
+        [].forEach.call(s.children,function(c){var b=c.getBoundingClientRect();if(!b.height)return;top=Math.min(top,b.top);bot=Math.max(bot,b.bottom);lf=Math.min(lf,b.left);rt=Math.max(rt,b.right);});
+        var H=r.height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),W=r.width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+        var f=+(s.style.getPropertyValue('--fit')||1),need=Math.min(H/(bot-top),W/(rt-lf));
+        if(need>=1)break;
+        s.style.setProperty('--fit',Math.max(.85,f*need*.99).toFixed(3));
+      }
+      fl.forEach(function(e){e.classList.remove('open');});
+    });
+  }
+  window.__fitAll=fitAll;fitAll();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
+  var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(fitAll,150);});
+})();
