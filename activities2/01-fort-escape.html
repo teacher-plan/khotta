@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>الهروب من القلعة</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.locks{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.lk{width:64px;height:74px;border:2px solid var(--ink);border-radius:12px;background:var(--paper);display:grid;place-items:center;font-size:30px;font-weight:800}
+.lk.on{background:var(--a);color:#fff}
+.lk.done{background:#DDF3E6;border-color:var(--ok);color:var(--ok)}
+.pad{display:grid;grid-template-columns:repeat(5,minmax(58px,76px));gap:8px;justify-content:center}
+.pad .btn{min-height:64px;font-size:28px}
+.wheel{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:980px}
+.wheel span{display:flex;flex-direction:column;align-items:center;border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;min-width:34px;background:#fff;font-weight:800;font-size:clamp(15px,1.6vw,20px)}
+.wheel span i{font-style:normal;color:var(--a);border-top:1px solid var(--line);width:100%;text-align:center}
+.cipher{font-size:clamp(46px,7vw,90px);font-weight:900;letter-spacing:.25em;color:var(--a2)}
+.magic{display:grid;grid-template-columns:repeat(3,clamp(70px,9vw,110px));gap:6px;justify-content:center}
+.magic div{aspect-ratio:1;border:2px solid var(--ink);border-radius:10px;display:grid;place-items:center;font-size:clamp(30px,4.4vw,54px);font-weight:900;background:#fff}
+.magic div.q{background:var(--gold)}
+.code{display:flex;gap:10px;justify-content:center}
+.code div{width:clamp(60px,8vw,96px);height:clamp(74px,10vw,118px);border:3px solid var(--ink);border-radius:14px;background:#fff;display:grid;place-items:center;font-size:clamp(40px,6vw,74px);font-weight:900}
+.treasure{font-size:clamp(90px,14vw,170px);line-height:1;animation:pop .6s both}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — الهروب من القلعة
+   غرفة هروبٍ صفّية: أربعة أقفال في قلعةٍ عُمانية، كل قفلٍ لغزٌ من نوعٍ
+   مختلف (شيفرة، مربّع سحري، استنتاج منطقي، حساب دوري) يعطي رقماً واحداً.
+   الأرقام الأربعة معاً تفتح البوّابة. الفرق تتسابق، والتلميح له ثمن.
+   كل الإجابات محسوبةٌ ومُتحقَّقٌ منها في التعليقات.
+   ═══════════════════════════════════════════════════════════════════ */
+const ABC = 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي'.split(' ');
+const shift = w => w.split('').map(c => { const i = ABC.indexOf(c); return i < 0 ? c : ABC[(i + 1) % ABC.length]; }).join('');
+// تسع ← ثشغ (كل حرفٍ مُزاحٌ حرفاً واحداً للأمام) — الجواب ٩
+const LOCKS = [
+  { name: 'باب الشيفرة', ans: 9, hint: 'كل حرفٍ في الرسالة هو الحرف الذي يليه في الأبجدية. ارجعوا حرفاً واحداً.',
+    why: 'ث ← ت ، ش ← س ، غ ← ع = «تسع». الرقم ٩.',
+    html: () => `<div class="big-q">وجد الحارس رسالةً على جدار البرج… كل حرفٍ فيها مُزاحٌ بطريقةٍ واحدة.</div>
+      <div class="cipher">${shift('تسع')}</div>
+      <div class="muted">جدول المساعدة: الحرف الأصلي ← الحرف في الرسالة</div>
+      <div class="wheel">${ABC.map((c, i) => `<span>${c}<i>${ABC[(i + 1) % ABC.length]}</i></span>`).join('')}</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">فكّوا الشيفرة: الكلمة عددٌ — ما هو؟</div>` },
+  // مربّع سحري ٣×٣ مجموع كل صفٍّ وعمودٍ وقطرٍ ١٥: ٢ ٧ ٦ / ٩ ٥ ١ / ٤ ٣ ٨ — المركز ٥
+  { name: 'قاعة المربّع السحري', ans: 5, hint: 'اجمعوا أي صفٍّ كامل لتعرفوا المجموع الثابت، ثم طبّقوه على الصف الأوسط.',
+    why: 'مجموع كل صف = ٢ + ٧ + ٦ = ١٥. الصف الأوسط: ٩ + ؟ + ١ = ١٥ ← ؟ = ٥. والقطر ٢ + ٥ + ٨ = ١٥ يؤكّد.',
+    html: () => `<div class="big-q">على باب القاعة مربّعٌ سحري: مجموع كل صفٍّ وكل عمودٍ وكل قطرٍ متساوٍ.</div>
+      <div class="magic">${[2,7,6,9,'؟',1,4,3,8].map(v => `<div class="${v === '؟' ? 'q' : ''}">${Kit.AR(v)}</div>`).join('')}</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">ما الرقم المخفي؟</div>` },
+  // خالد ٣ ، أحمد ٧ ، سالم زوجيّ بينهما ومجموع الثلاثة ١٦ ← سالم = ٦
+  { name: 'غرفة الإخوة الثلاثة', ans: 6, hint: 'ابدؤوا بالمجموع: ١٦ − ٣ − ٧.',
+    why: 'مجموع الأعمار ١٦، إذن سالم = ١٦ − ٣ − ٧ = ٦ — وهو فعلاً زوجيّ وبين ٣ و٧.',
+    html: () => `<div class="big-q">ثلاثة إخوة يحرسون الغرفة:</div>
+      <div class="panel" style="font-size:clamp(19px,2.3vw,29px);line-height:1.9">
+      • عمر خالد <b>٣</b> سنوات، وعمر أحمد <b>٧</b> سنوات.<br>
+      • عمر سالم عددٌ <b>زوجيّ</b> يقع بين عمري أخويه.<br>
+      • مجموع أعمار الثلاثة <b>١٦</b> سنة.</div>
+      <div class="big-q" style="font-size:clamp(19px,2.2vw,28px)">كم عمر سالم؟ (ولماذا لا يكفي الشرط الثاني وحده؟)</div>` },
+  // ١٠٠ ساعة = ٨ أيام و٤ ساعات ← ٩ + ٤ = ١ بعد الظهر/الليل (ساعة ١٢)
+  { name: 'ساعة البرج', ans: 1, hint: 'كل ١٢ ساعة يعود العقرب إلى مكانه. كم يبقى من ١٠٠ بعد حذف مضاعفات ١٢؟',
+    why: '١٠٠ = ٨ × ١٢ + ٤. العقرب يدور ٨ دورات كاملة ثم يتقدّم ٤ ساعات: ٩ + ٤ = ١٣ ← الساعة ١.',
+    html: () => `<div class="big-q">ساعة البرج الكبيرة تشير الآن إلى <b>٩:٠٠</b>.</div>
+      <div class="treasure" style="font-size:clamp(80px,11vw,140px)">🕘</div>
+      <div class="big-q" style="font-size:clamp(20px,2.5vw,32px)">بعد <b>١٠٠ ساعة</b> بالضبط — إلى أيّ رقمٍ سيشير عقرب الساعات؟</div>` },
+];
+
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE6F2"/><stop offset="1" stop-color="#F3E7D2"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#sk)"/>
+  <g fill="#D8B98A" stroke="#0E1B2E" stroke-width="5" opacity=".55">
+    <path d="M60 900V520h60v-40h40v40h40v-40h40v40h60v380z"/>
+    <path d="M1300 900V470h50v-40h40v40h40v-40h40v40h50v430z"/>
+    <circle cx="1400" cy="560" r="40" fill="#B89868"/>
+  </g>
+  <rect y="840" width="1600" height="60" fill="#CDB38A" opacity=".7"/>
+</svg>`;
+
+let K, teams, idx = 0, got = [], hints = 0, timer = null;
+K = Kit.build({
+  title: 'الهروب من القلعة', accent: '#8A5A1E', accent2: '#5E3B10', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التفكير المنطقي والرياضي تحت ضغط الوقت، والعمل الجماعي في حلّ المشكلات: فكّ الشيفرة، والأنماط العددية، والاستنتاج من شروطٍ متعدّدة، والحساب الدوري.',
+    tools: 'الشاشة، وورقة وقلم لكل فريق.',
+    groups: 'فرقٌ من ٤–٥ طلاب. الفرق تتسابق على كل قفل، والفريق الأسرع بإجابةٍ صحيحة مع شرحها يأخذ النقطة.',
+    steps: ['نقرأ قصّة القفل ونشغّل المؤقّت.', 'كل فريقٍ يحلّ على ورقته ثم يرفع يده.', 'الفريق الأول يقول الرقم «ويشرح كيف وصل إليه» — لا نقطة بلا شرح.', 'نُدخل الرقم على لوحة الأرقام. الصحيح يفتح القفل.', 'بعد الأقفال الأربعة: نُدخل الرمز الكامل ونفتح البوّابة.'],
+    time: '٢٠–٣٠ دقيقة.',
+    script: 'أنتم محبوسون داخل قلعةٍ قديمة! أمامكم أربعة أقفال، وكل قفلٍ يخفي رقماً. اجمعوا الأرقام الأربعة لتفتحوا البوّابة. انتبهوا: التلميح متاح، لكنه يكلّف فريقكم نقطة.',
+    tips: 'امنعوا الصراخ بالإجابة: الإجابة تُقال فقط بعد رفع اليد. إذا تعثّر الصف كلّه، استخدموا التلميح.',
+    points: 'نقطتان للحلّ الصحيح مع شرحٍ واضح، ونقطة لطريقةٍ ذكية مختلفة. التلميح يخصم نقطة من الفريق الذي طلبه.',
+    levels: 'للصفوف ٥–٦: افتحوا التلميح مبكراً. للصفوف ٩–١٠: اطلبوا من كل فريقٍ أن يؤلّف قفلاً خامساً لفريقٍ آخر.',
+    close: ['أيّ الأقفال كان أصعب؟ ولماذا؟', 'ما الاستراتيجية التي ساعدتكم أكثر: التجريب أم الاستنتاج؟', 'كيف توزّعتم الأدوار داخل الفريق؟'],
+  },
+});
+
+function home() {
+  idx = 0; got = []; hints = 0; if (timer) timer.pause();
+  K.start({ emblem: '🏰', sub: 'أربعة أقفال، وأربعة ألغاز، ورمزٌ واحد يفتح البوّابة. هل يخرج فريقكم أولاً؟',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '٢٠ – ٣٠ دقيقة'], ['المهارة', 'التفكير المنطقي'], ['القيمة', 'المثابرة والتعاون']],
+    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; lock(); } });
+}
+
+function locksRow() {
+  return `<div class="locks">${LOCKS.map((l, i) => `<div class="lk ${i < got.length ? 'done' : i === idx ? 'on' : ''}">${i < got.length ? Kit.AR(got[i]) : '🔒'}</div>`).join('')}</div>`;
+}
+
+function lock() {
+  const L = LOCKS[idx];
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `${locksRow()}<span class="tag">القفل ${Kit.AR(idx + 1)} من ${Kit.AR(LOCKS.length)} — ${L.name}</span>${L.html()}`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, 240, () => K.say('انتهى الوقت! هل نحتاج تلميحاً؟', 'warn'));
+  const hb = K.el('button', 'btn g', '💡 تلميح (−١ نقطة)');
+  hb.onclick = () => { hints++; hb.disabled = true; K.SFX.soft(); const e = K.el('div', 'explain', '<b>تلميح:</b> ' + Kit.esc(L.hint)); w.insertBefore(e, pad); };
+  tr.appendChild(hb);
+  const pad = K.el('div', 'pad');
+  for (let d = 1; d <= 10; d++) {
+    const v = d % 10, b = K.el('button', 'btn', Kit.AR(v));
+    b.onclick = () => tryDigit(v, b, w, pad);
+    pad.appendChild(b);
+  }
+  w.appendChild(pad);
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  K.stage.appendChild(w);
+  if (!teams) teams = K.Teams(tb, home.n || 3); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'حلٌّ صحيح مع شرح'], [1, 'طريقة ذكية'], [1, 'تعاونٌ منظّم']]));
+  timer.start();
+}
+
+function tryDigit(v, b, w, pad) {
+  const L = LOCKS[idx];
+  if (v !== L.ans) { b.classList.add('shake'); K.SFX.soft(); K.say('ليس هذا الرقم — راجعوا خطواتكم.', 'warn'); setTimeout(() => b.classList.remove('shake'), 450); return; }
+  timer.pause(); K.SFX.win(); K.praise();
+  got.push(v);
+  pad.remove();
+  w.querySelector('.locks').outerHTML = locksRow();
+  const e = K.el('div', 'explain', '<b>الحلّ:</b> ' + Kit.esc(L.why)); w.insertBefore(e, w.querySelector('.teams'));
+  const nx = K.el('button', 'btn p big', idx < LOCKS.length - 1 ? 'القفل التالي ←' : 'إلى البوّابة ←');
+  nx.onclick = () => { K.SFX.tap(); idx++; idx < LOCKS.length ? lock() : gate(); };
+  w.insertBefore(nx, w.querySelector('.teams'));
+}
+
+function gate() {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col');
+  let typed = [];
+  const draw = () => w.querySelector('.code').innerHTML = [0, 1, 2, 3].map(i => `<div>${typed[i] != null ? Kit.AR(typed[i]) : ''}</div>`).join('');
+  w.innerHTML = `<div class="treasure">🚪</div><div class="big-q">أدخلوا الرمز الكامل بترتيب الأقفال</div><div class="code"></div>`;
+  const pad = K.el('div', 'pad');
+  for (let d = 1; d <= 10; d++) {
+    const v = d % 10, b = K.el('button', 'btn', Kit.AR(v));
+    b.onclick = () => {
+      if (typed.length >= 4) return; typed.push(v); K.SFX.tap(); draw();
+      if (typed.length === 4) {
+        if (typed.join('') === got.join('')) open(w);
+        else { K.SFX.soft(); K.say('الرمز غير صحيح — تذكّروا ترتيب الأقفال.', 'warn'); setTimeout(() => { typed = []; draw(); }, 900); }
+      }
+    };
+    pad.appendChild(b);
+  }
+  w.appendChild(pad); K.stage.appendChild(w); draw();
+}
+
+function open(w) {
+  K.SFX.win();
+  w.innerHTML = `<div class="treasure">🏆</div><div class="big-q">انفتحت البوّابة! خرجتم من القلعة.</div>
+    <div class="muted">استخدمتم ${Kit.AR(hints)} ${hints === 1 ? 'تلميحاً' : 'تلميحات'}.</div>`;
+  const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => K.reflect({ value: 'المثابرة والتفكير المنظّم', questions: LOCKS.length ? ['أيّ الأقفال كان أصعب؟ ولماذا؟', 'ما الذي فعلتموه حين علقتم؟', 'أين نحتاج في الحياة إلى «فكّ شيفرة» أو استنتاجٍ من شروطٍ متعدّدة؟'] : [] }, home);
+  w.appendChild(nx);
+}
+
+home();
+</script>
+</body>
+</html>

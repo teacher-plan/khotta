@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>الحارس الرقمي</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.pw{direction:ltr;font-family:ui-monospace,Consolas,monospace;font-size:clamp(24px,3.4vw,42px);padding:14px 18px;border:3px solid var(--ink);border-radius:14px;width:min(760px,92vw);text-align:center}
+.meter{width:min(760px,92vw)}
+.meter .bar{height:26px;border:2px solid var(--ink);border-radius:99px;overflow:hidden;background:var(--sand)}
+.meter .bar i{display:block;height:100%;transition:width .3s,background .3s}
+.crack{font-size:clamp(22px,3vw,36px);font-weight:900;text-align:center}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;width:min(900px,94vw)}
+.checks div{border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;background:#fff}
+.checks div.ok{border-color:var(--ok);background:#EAF7EF}
+.samples{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.samples .btn{direction:ltr;font-family:ui-monospace,Consolas,monospace}
+.msg{background:#fff;border:2px solid var(--ink);border-radius:16px;box-shadow:var(--sh);max-width:900px;width:100%;overflow:hidden;animation:up .35s both}
+.msg .hd{background:#F2F5FA;padding:10px 16px;border-bottom:1px solid var(--line);font-weight:800}
+.msg .hd small{display:block;font-weight:600;opacity:.7;direction:ltr;text-align:right}
+.msg .bd{padding:16px 18px;font-size:clamp(19px,2.4vw,29px);font-weight:700;line-height:1.55}
+.msg .lk{direction:ltr;display:inline-block;color:#1F5FD1;text-decoration:underline;font-size:.85em}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — الحارس الرقمي (الأمن السيبراني)
+   جزءان: (١) مختبر كلمات المرور — تكتب الفرق كلماتٍ «مثالية» على الشاشة
+   فيُقدَّر زمن كسرها بالتخمين الآلي ويتّضح أثر الطول والتنوّع.
+   (٢) هل تضغط؟ — رسائل تصيّدٍ متخيَّلة، والقرار: أضغط / أتجاهل وأُبلغ /
+   أتحقّق من المرسل. التقدير تقريبيٌّ عمداً ومصرَّحٌ بذلك: عدد الاحتمالات
+   ÷ ١٠ مليارات تخمين في الثانية (جهازٌ قوي)، والكلمات الشائعة تُكسر فوراً.
+   لا يُحفظ شيءٌ مما يُكتب ولا يُرسَل — ونوصي بألّا يكتب أحدٌ كلمته الحقيقية.
+   ═══════════════════════════════════════════════════════════════════ */
+const COMMON = ['123456', '12345678', '123456789', 'password', 'qwerty', '111111', 'abc123', '000000', 'iloveyou', 'admin', 'oman123', 'muscat'];
+const GPS = 1e10;
+function analyse(p) {
+  const lower = /[a-z]/.test(p), upper = /[A-Z]/.test(p), dig = /[0-9]/.test(p), sym = /[^A-Za-z0-9]/.test(p);
+  const pool = (lower ? 26 : 0) + (upper ? 26 : 0) + (dig ? 10 : 0) + (sym ? 33 : 0);
+  const common = COMMON.includes(p.toLowerCase()) || /^(.)\1+$/.test(p) || /^(0123|1234|abcd)/i.test(p) && p.length < 10;
+  const secs = !p.length || common ? 0 : Math.pow(pool || 1, p.length) / GPS / 2;
+  return { lower, upper, dig, sym, len: p.length, secs, common };
+}
+function human(s) {
+  if (s < 1) return 'أقلّ من ثانية ⚡';
+  const u = [[31557600e9, 'مليار سنة'], [31557600e6, 'مليون سنة'], [31557600e3, 'ألف سنة'], [31557600, 'سنة'], [86400, 'يوم'], [3600, 'ساعة'], [60, 'دقيقة'], [1, 'ثانية']];
+  for (const [d, n] of u) if (s >= d) { const v = s / d; return (v >= 1000 ? 'أكثر من ' + Kit.AR(Math.floor(v).toLocaleString('en')) : 'حوالي ' + Kit.AR(Math.round(v))) + ' ' + n; }
+}
+const MSGS = [
+  { from: 'خدمة العملاء', addr: 'support@bank-secure-login.xyz', body: 'تمّ إيقاف حسابك البنكي مؤقتاً! لتفعيله خلال ٢٤ ساعة أدخل بياناتك:', link: 'bank-secure-login.xyz/verify', v: 'report',
+    why: 'تصيّدٌ كلاسيكي: تهديدٌ بمهلةٍ قصيرة، وعنوانٌ غريب لا يشبه عنوان المصرف، ورابطٌ يطلب البيانات. المصارف لا تطلب كلمة المرور برسالة.' },
+  { from: 'صديقك سالم', addr: 'واتساب — رقمٌ جديد غير محفوظ', body: 'هلا! هذا رقمي الجديد 👋 أرسل لي رمز التحقّق الذي وصلك الآن برسالة، وصلك بالغلط.', v: 'check',
+    why: 'هذه حيلة «سرقة الحساب»: رمز التحقّق مفتاح حسابك، ومن يأخذه يسيطر عليه. نتّصل بصديقنا على رقمه القديم للتأكّد — ولا نرسل الرمز لأحدٍ أبداً.' },
+  { from: 'منصّة الألعاب', addr: 'rewards@game-free-coins.top', body: 'مبروك 🎉 ربحت ٥٠٠٠ جوهرة مجاناً! سجّل الدخول بحسابك خلال ١٠ دقائق لاستلامها:', link: 'game-free-coins.top/login', v: 'report',
+    why: 'جوائز مجانية + مهلة قصيرة + صفحة تسجيل دخولٍ مزيّفة = سرقة حسابك في اللعبة. الشركات الحقيقية تضع الجوائز داخل اللعبة نفسها.' },
+  { from: 'معلّم الرياضيات', addr: 'عبر منصّة المدرسة الرسمية', body: 'تذكير: اختبار الوحدة الثالثة يوم الأحد. راجعوا تمارين الصفحات ٤٠–٤٥.', v: 'ok',
+    why: 'رسالةٌ عبر القناة الرسمية المعروفة، لا تطلب بياناتٍ ولا تضغط بمهلةٍ ولا رابط غريب فيها. آمنة.' },
+  { from: 'شركة التوصيل', addr: 'SMS من رقم دولي', body: 'طردك معلّق في المستودع. ادفع رسوم ٠٫٥٠٠ ريال لإعادة التوصيل:', link: 'deliv-ery-om.info/pay', v: 'report',
+    why: 'رسوم صغيرة جداً تُغري بالدفع دون تفكير، والهدف الحقيقي بيانات البطاقة. هل طلبتَ طرداً أصلاً؟ نتحقّق من تطبيق الشركة الرسمي.' },
+  { from: 'حساب مجهول', addr: 'رسالة خاصة على وسائل التواصل', body: 'شفت صورتك في هذا الفيديو 😂😂 مين نشرها؟', link: 'bit.ly/3xVd9', v: 'report',
+    why: 'فضولٌ مصطنع لتضغط الرابط المختصر المجهول. قد يسرق حسابك أو يثبّت برنامجاً ضاراً. لا نضغط، ونُبلغ عن الحساب.' },
+];
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#E9EEF5"/>
+  <g fill="none" stroke="#127C8A" stroke-width="5" opacity=".14"><path d="M200 300v-60a80 80 0 0 1 160 0v60"/><rect x="170" y="300" width="220" height="170" rx="20"/>
+  <path d="M1300 160l120 50v90c0 90-60 150-120 180-60-30-120-90-120-180v-90z"/></g>
+</svg>`;
+
+let K, teams, bag, round = 0, cur, locked = false, timer;
+K = Kit.build({
+  title: 'الحارس الرقمي', accent: '#127C8A', accent2: '#0B5560', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الأمن السيبراني: فهم ما يجعل كلمة المرور قويّة (الطول أولاً ثم التنوّع وتجنّب الشائع)، وكشف رسائل التصيّد وحيلها (المهلة، الجائزة، الرابط الغريب، طلب الرمز)، والتصرّف الصحيح: لا أضغط، أتحقّق، أُبلغ.',
+    tools: 'الشاشة ولوحة مفاتيح.',
+    groups: 'فرقٌ من ٣–٤ طلاب.',
+    steps: ['الجزء الأول: كل فريقٍ يقترح كلمة مرور ونكتبها على الشاشة (ليست كلمة أحدٍ الحقيقية!).', 'نقارن زمن الكسر: ماذا حدث حين أطلنا الكلمة؟ حين أضفنا رمزاً؟', 'الجزء الثاني: نعرض الرسالة، ونصف دقيقة للفريق: ما الحيلة؟', 'نقرّر: أضغط، أتجاهل وأُبلغ، أم أتحقّق أولاً؟', 'نكشف التحليل.'],
+    time: '٢٠–٢٥ دقيقة.',
+    script: 'اليوم أنتم حرّاس رقميون! المخترقون لا يكسرون الأبواب — بل يخدعون الناس ليفتحوها لهم. سنتعلّم كيف نبني باباً قوياً… وكيف نكشف من يطرق بخدعة.',
+    tips: 'أكّدوا: لا يكتب أحدٌ كلمته الحقيقية أبداً، والصفحة لا تحفظ شيئاً. والنصيحة الذهبية: عبارة مرور طويلة من كلماتٍ عشوائية أقوى من كلمةٍ قصيرة معقّدة.',
+    points: 'نقطتان لأقوى كلمة مرور يسهل تذكّرها، ونقطة لكل حيلة تصيّدٍ يكتشفها فريق، ونقطتان للقرار الصحيح مع تعليل.',
+    levels: 'للصفوف ٥–٦: نركّز على «لا تشارك الرمز» و«لا تضغط رابطاً غريباً». للصفوف ٩–١٠: نشرح المصادقة الثنائية ولماذا تحمي حتى لو سُرقت الكلمة.',
+    close: ['ما الذي يجعل كلمة المرور قويّة فعلاً؟', 'ما العلامات التي تكشف رسالة التصيّد؟', 'ماذا تفعل إن ضغطت رابطاً مشبوهاً بالخطأ؟ (نخبر الكبار، نغيّر الكلمة، نفعّل التحقّق الثنائي)'],
+  },
+});
+bag = K.Bag(MSGS);
+
+function home() {
+  if (timer) timer.pause(); round = 0;
+  K.start({ emblem: '🛡️', sub: 'كم ثانية يحتاج المخترق لكسر كلمة مرورك؟ وهل تكشف الرسالة المزيّفة قبل أن تضغط؟',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '٢٠ – ٢٥ دقيقة'], ['المهارة', 'الأمن الرقمي'], ['القيمة', 'الحذر والمسؤولية']],
+    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; lab(); } });
+}
+
+function lab() {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">الجزء ١ — مختبر كلمات المرور</span><div class="muted" style="font-weight:800">⚠️ لا تكتبوا كلمة مروركم الحقيقية — الصفحة لا تحفظ شيئاً</div>`;
+  const inp = K.el('input', 'pw'); inp.placeholder = 'اكتب كلمة مرور للتجربة'; inp.autocomplete = 'off'; inp.spellcheck = false; w.appendChild(inp);
+  const m = K.el('div', 'meter'); w.appendChild(m);
+  const cr = K.el('div', 'crack'); w.appendChild(cr);
+  const ck = K.el('div', 'checks'); w.appendChild(ck);
+  const smp = K.el('div', 'samples');
+  ['ahmed2012', 'Ahmed2012!', 'qwerty', 'nakhla-bahr-qalaa-shams', 'Tr0ub4dor&3'].forEach(s => { const b = K.el('button', 'btn sm', Kit.esc(s)); b.onclick = () => { inp.value = s; upd(); }; smp.appendChild(b); });
+  w.appendChild(K.el('div', 'muted', 'أمثلة للمقارنة:')); w.appendChild(smp);
+  function upd() {
+    const a = analyse(inp.value), bits = a.secs ? Math.log10(a.secs + 1) : 0;
+    const pct = Math.min(100, bits / 14 * 100), col = a.common || bits < 2 ? '#B3243B' : bits < 6 ? '#C7811C' : bits < 10 ? '#1F5FD1' : '#1E8A55';
+    m.innerHTML = `<div class="bar"><i style="width:${inp.value ? Math.max(6, pct) : 0}%;background:${col}"></i></div>`;
+    cr.innerHTML = inp.value ? (a.common ? '⚡ كلمةٌ شائعة — تُكسر فوراً من قوائم الكلمات المسرّبة' : `⏱️ زمن الكسر التقريبي: <span style="color:${col}">${human(a.secs)}</span>`) : '';
+    ck.innerHTML = [[a.len >= 12, `الطول ١٢ فأكثر (الآن ${Kit.AR(a.len)})`], [a.lower && a.upper, 'حروف صغيرة وكبيرة'], [a.dig, 'أرقام'], [a.sym, 'رموز مثل ! - _ @'], [!a.common && a.len > 0, 'ليست كلمةً شائعة']]
+      .map(([ok, t]) => `<div class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${t}</div>`).join('');
+  }
+  inp.oninput = upd; upd();
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  if (!teams) teams = K.Teams(tb, home.n || 3); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'أقوى كلمة يسهل تذكّرها'], [1, 'ملاحظة ذكية']]));
+  const e = K.el('div', 'explain', '<b>الخلاصة:</b> الطول أقوى سلاح! عبارة مرور من ٤ كلمات عشوائية (مثل nakhla-bahr-qalaa-shams) أقوى من كلمةٍ قصيرة معقّدة وأسهل تذكّراً. ولا تُعِد استعمال الكلمة نفسها في أكثر من موقع. <span class="muted">(التقدير تقريبي: ١٠ مليارات تخمين في الثانية)</span>');
+  w.appendChild(e);
+  const nx = K.el('button', 'btn p big', 'الجزء ٢: هل تضغط؟ ←'); nx.onclick = () => { K.SFX.tap(); play(); }; w.appendChild(nx);
+  K.stage.appendChild(w); setTimeout(() => inp.focus(), 100);
+}
+
+function play() {
+  round++; locked = false; cur = bag.next();
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">الجزء ٢ — هل تضغط؟ (${Kit.AR(round)} من ${Kit.AR(MSGS.length)})</span>
+    <div class="msg"><div class="hd">📩 ${Kit.esc(cur.from)}<small>${Kit.esc(cur.addr)}</small></div>
+    <div class="bd">${Kit.esc(cur.body)}${cur.link ? `<br><span class="lk">${Kit.esc(cur.link)}</span>` : ''}</div></div>`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, 30, () => K.say('ما قراركم؟', 'info'));
+  const op = K.el('div', 'opts');
+  [['ok', '👆 آمنة — أتفاعل معها'], ['check', '🔍 أتحقّق من المرسل أولاً'], ['report', '🚫 لا أضغط، وأحذف وأُبلغ']].forEach(([v, l]) => {
+    const b = K.el('button', 'btn', l); b.onclick = () => decide(v, b, op, w); op.appendChild(b); });
+  w.appendChild(op);
+  const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[1, 'كشف حيلة'], [2, 'قرارٌ صحيح بتعليل']]));
+  K.stage.appendChild(w); timer.start();
+}
+
+function decide(v, b, op, w) {
+  if (locked) return; locked = true; timer.pause();
+  // «أتحقّق» مقبولٌ جزئياً في رسائل التصيّد: حذرٌ صحيح وإن كان الحذف أسلم
+  const ok = v === cur.v || (cur.v === 'report' && v === 'check');
+  [...op.children].forEach(x => { x.disabled = true; });
+  b.classList.add(ok ? 'right' : 'wrong');
+  ok ? (K.SFX.win(), K.praise()) : (K.SFX.soft(), K.encourage());
+  const L = { ok: 'آمنة', check: 'أتحقّق أولاً', report: 'لا أضغط، وأُبلغ' };
+  w.insertBefore(K.el('div', 'explain', `<b>القرار الأفضل: ${L[cur.v]}.</b> ${Kit.esc(cur.why)}`), w.querySelector('.teams'));
+  const nx = K.el('button', 'btn p big', round < MSGS.length ? 'الرسالة التالية ←' : 'ختام النشاط ←');
+  nx.onclick = () => { K.SFX.tap(); round < MSGS.length ? play() : K.reflect({ value: 'الحذر والمسؤولية', questions: ['ما الذي يجعل كلمة المرور قويّة فعلاً؟', 'ما العلامات التي تكشف رسالة التصيّد؟', 'ماذا تفعل إن ضغطت رابطاً مشبوهاً بالخطأ؟'] }, home); };
+  w.insertBefore(nx, w.querySelector('.teams'));
+}
+home();
+</script>
+</body>
+</html>

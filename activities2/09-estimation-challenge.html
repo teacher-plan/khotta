@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>تحدّي التقدير الذكي</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.est{display:grid;gap:10px;width:100%;max-width:900px}
+.est .r{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:10px 14px}
+.est input{direction:ltr;font:inherit;font-size:clamp(20px,2.4vw,28px);font-weight:800;padding:8px 12px;border:2px solid var(--ink);border-radius:10px;width:100%;text-align:center}
+.est .pts{font-weight:900;font-size:22px;min-width:5ch;text-align:center}
+.est .nm{font-weight:800}
+.ans{font-size:clamp(34px,5.4vw,66px);font-weight:900;color:var(--a2);text-align:center;animation:pop .5s both}
+.steps{display:grid;gap:8px;width:100%;max-width:1000px}
+.steps div{background:#fff;border:2px solid var(--line);border-inline-start:8px solid var(--a);border-radius:10px;padding:10px 14px;font-size:clamp(16px,1.9vw,22px);font-weight:700}
+.scale{font-weight:800;text-align:center}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — تحدّي التقدير الذكي (أسئلة فيرمي)
+   أسئلةٌ لا يعرف أحدٌ جوابها حفظاً، لكن يمكن الاقتراب منها بالتفكير:
+   نفكّك السؤال إلى أجزاء نعرفها ونضربها. التقييم بالقرب «النسبي» لا
+   بالفرق: من قدّر ٩٠ والجواب ١٠٠ قريبٌ مثل من قدّر ٩٠٠٠ والجواب ١٠٠٠٠.
+   ٣ نقاط ضمن الضعف، ونقطتان ضمن ٥ أضعاف، ونقطة ضمن ١٠ أضعاف.
+   كل جوابٍ محسوبٌ بخطواته الظاهرة، ومقرّبٌ منطقياً.
+   ═══════════════════════════════════════════════════════════════════ */
+const QS = [
+  { q: 'كم مرّةً ينبض قلبك في يومٍ واحد؟', a: 100800, unit: 'نبضة',
+    steps: ['القلب ينبض قرابة ٧٠ مرّة في الدقيقة (في الراحة).', 'في الساعة: ٧٠ × ٦٠ = ٤٢٠٠ نبضة.', 'في اليوم: ٤٢٠٠ × ٢٤ = ١٠٠٨٠٠ ← نحو ١٠٠ ألف نبضة.'] },
+  { q: 'كم ثانيةً في سنةٍ واحدة (٣٦٥ يوماً)؟', a: 31536000, unit: 'ثانية',
+    steps: ['الساعة = ٦٠ × ٦٠ = ٣٦٠٠ ثانية.', 'اليوم = ٣٦٠٠ × ٢٤ = ٨٦٤٠٠ ثانية.', 'السنة = ٨٦٤٠٠ × ٣٦٥ = ٣١٥٣٦٠٠٠ ← نحو ٣١ مليون ثانية.'] },
+  { q: 'كم ورقة A4 تكفي لتغطية أرضية فصلٍ طوله ٨ أمتار وعرضه ٧ أمتار؟', a: 900, unit: 'ورقة',
+    steps: ['مساحة الأرضية = ٨ × ٧ = ٥٦ متراً مربعاً.', 'ورقة A4 تقريباً ٣٠ سم × ٢١ سم = ٠٫٠٦٣ متر مربع.', '٥٦ ÷ ٠٫٠٦٣ ≈ ٩٠٠ ورقة (أي نحو ١٦ ورقة لكل متر مربع).'] },
+  { q: 'كم خطوةً تمشي لتقطع كيلومتراً واحداً؟', a: 1400, unit: 'خطوة',
+    steps: ['طول خطوة الطالب نحو ٧٠ سنتيمتراً.', 'الكيلومتر = ١٠٠٠ متر = ١٠٠٠٠٠ سنتيمتر.', '١٠٠٠٠٠ ÷ ٧٠ ≈ ١٤٠٠ خطوة.'] },
+  { q: 'لو وقف ٦٠٠ طالبٍ في صفٍّ واحد كتفاً إلى كتف، فكم متراً يكون طوله؟', a: 240, unit: 'متراً',
+    steps: ['عرض كتفي الطالب نحو ٤٠ سنتيمتراً = ٠٫٤ متر.', '٦٠٠ × ٠٫٤ = ٢٤٠ متراً — أطول من ملعبي كرة قدم!'] },
+  { q: 'كم ساعةً عاشها طالبٌ عمره ١٣ سنة بالضبط؟', a: 113958, unit: 'ساعة',
+    steps: ['السنة ≈ ٣٦٥٫٢٥ يوماً (مع السنوات الكبيسة).', '١٣ × ٣٦٥٫٢٥ ≈ ٤٧٤٨ يوماً.', '٤٧٤٨ × ٢٤ ≈ ١١٣٩٥٨ ← نحو ١١٤ ألف ساعة.'] },
+  { q: 'كم مرّةً دارت الأرض حول نفسها منذ وُلد طالبٌ عمره ١٢ سنة؟', a: 4383, unit: 'دورة',
+    steps: ['الأرض تدور حول نفسها مرّة كل يوم تقريباً.', '١٢ سنة × ٣٦٥٫٢٥ يوماً ≈ ٤٣٨٣ يوماً ← ٤٣٨٣ دورة.'] },
+  { q: 'كم حبّة أرزٍ في كيس وزنه كيلوغرام واحد؟', a: 45000, unit: 'حبّة',
+    steps: ['وزن حبّة الأرز نحو ٠٫٠٢ إلى ٠٫٠٢٥ غرام.', '١٠٠٠ غرام ÷ ٠٫٠٢٢ غرام ≈ ٤٥ ألف حبّة (بين ٤٠ و٥٠ ألفاً حسب النوع).'] },
+];
+function score(g, a) { if (!(g > 0)) return 0; const r = Math.max(g / a, a / g); return r <= 2 ? 3 : r <= 5 ? 2 : r <= 10 ? 1 : 0; }
+const fmt = n => Kit.AR(Math.round(n).toLocaleString('en').replace(/,/g, '٬'));
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EEF0F8"/>
+  <g font-family="Tahoma" font-weight="bold" fill="#6B3FD1" opacity=".1" font-size="120"><text x="80" y="220">≈</text><text x="1380" y="780">×</text><text x="1300" y="220">?</text><text x="120" y="780">÷</text></g>
+</svg>`;
+
+let K, teams, bag, round = 0, cur, timer, ROUNDS = 6;
+K = Kit.build({
+  title: 'تحدّي التقدير الذكي', accent: '#6B3FD1', accent2: '#4A2A96', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التقدير والحسّ العددي (أسئلة فيرمي): تفكيك سؤالٍ مجهول إلى أجزاءٍ معروفة، وافتراض قيمٍ معقولة، وضربها للوصول إلى جوابٍ قريب — وهي مهارة العلماء والمهندسين اليومية.',
+    tools: 'الشاشة، وورقة وقلم لكل فريق. (الآلة الحاسبة اختيارية للصفوف العليا.)',
+    groups: 'فرقٌ من ٣–٤ طلاب.',
+    steps: ['نقرأ السؤال. لا أحد يعرف الجواب حفظاً — وهذا هو المقصود!', 'دقيقتان: كل فريقٍ يكتب خطواته وافتراضاته ثم رقماً واحداً.', 'نُدخل تقدير كل فريق.', 'نكشف الجواب وخطوات الوصول إليه.', 'النقاط بالقرب النسبي: ضمن الضعف ٣، ضمن ٥ أضعاف ٢، ضمن ١٠ أضعاف ١.'],
+    time: '١٥–٢٠ دقيقة لستة أسئلة.',
+    script: 'لن أسألكم عن معلوماتٍ محفوظة… سأسألكم أسئلةً لا يعرف جوابها أحد! لكن العقل الذكي يستطيع الاقتراب منها: فكّكوا السؤال إلى أجزاء تعرفونها.',
+    tips: 'اطلبوا من الفريق الفائز أن يشرح افتراضاته — الطريقة أهمّ من الرقم.',
+    points: 'تُحسب آلياً بالقرب النسبي، وتُضاف مباشرةً للوحة الفرق. ونقطة قيمة لأوضح طريقة تفكير.',
+    levels: 'للصفوف ٥–٦: نكتب الخطوة الأولى على السبورة كتلميح. للصفوف ٩–١٠: نطلب مدى (أقلّ وأكثر) بدل رقمٍ واحد، ونناقش مصادر الخطأ.',
+    close: ['ما الافتراض الذي أثّر في جوابكم أكثر؟', 'لماذا يكون التقدير مفيداً حتى لو لم يكن دقيقاً؟', 'أين تحتاج التقدير في حياتك؟ (الوقت، المال، المسافة…)'],
+  },
+});
+bag = K.Bag(QS);
+
+function home() {
+  if (timer) timer.pause(); round = 0;
+  K.start({ emblem: '🧮', sub: 'أسئلةٌ لا يعرف جوابها أحد… لكن العقل الذكي يقترب منها بالتفكير. من الأقرب؟',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٠ دقيقة'], ['المهارة', 'التقدير والحسّ العددي'], ['القيمة', 'التفكير المنهجي']],
+    teams: [3, [2, 3, 4, 5, 6]], onGo: n => { teams = null; home.n = n; play(); } });
+}
+
+function play() {
+  round++; cur = bag.next();
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">السؤال ${Kit.AR(round)} من ${Kit.AR(ROUNDS)}</span><div class="panel big-q">${Kit.esc(cur.q)}</div>`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, 120, () => K.say('انتهى الوقت — أرقامكم من فضلكم!', 'info'));
+  const tbh = K.el('div', 'teams'); tbh.style.display = 'none'; w.appendChild(tbh);
+  if (!teams) teams = K.Teams(tbh, home.n || 3); else teams.mount(tbh);
+  const est = K.el('div', 'est');
+  const ins = teams.list.map(t => {
+    const r = K.el('div', 'r'); r.innerHTML = `<div class="nm" style="color:${t.color}">${Kit.esc(t.name)}</div>`;
+    const i = K.el('input'); i.inputMode = 'decimal'; i.placeholder = 'التقدير'; r.appendChild(i);
+    const p = K.el('div', 'pts', ''); r.appendChild(p); est.appendChild(r); return { i, p };
+  });
+  w.appendChild(est);
+  const rv = K.el('button', 'btn p big', 'اكشف الجواب ←');
+  rv.onclick = () => {
+    timer.pause(); rv.remove(); K.SFX.win();
+    const toNum = s => +String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٬,\s]/g, '').replace('٫', '.');
+    ins.forEach(({ i, p }, k) => { const g = toNum(i.value), s = score(g, cur.a); i.disabled = true; p.textContent = '+' + Kit.AR(s); p.style.color = s ? 'var(--ok)' : 'var(--red)'; if (s) teams.list[k].score += s; });
+    const box = K.el('div', 'col'); box.style.width = '100%';
+    box.innerHTML = `<div class="ans">≈ ${fmt(cur.a)} ${Kit.esc(cur.unit)}</div><div class="steps">${cur.steps.map(s => `<div>${Kit.esc(s)}</div>`).join('')}</div>`;
+    w.insertBefore(box, est.nextSibling);
+    const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+    w.appendChild(K.valuesRow(teams, [[1, 'أوضح طريقة تفكير'], [1, 'افتراضٌ ذكي']]));
+    const nx = K.el('button', 'btn p big', round < ROUNDS ? 'السؤال التالي ←' : 'ختام النشاط ←');
+    nx.onclick = () => { K.SFX.tap(); round < ROUNDS ? play() : K.reflect({ value: 'التفكير المنهجي', questions: ['ما الافتراض الذي أثّر في جوابكم أكثر؟', 'لماذا يكون التقدير مفيداً حتى لو لم يكن دقيقاً؟', 'أين تحتاج التقدير في حياتك؟'] }, home); };
+    w.appendChild(nx);
+  };
+  w.appendChild(rv);
+  w.appendChild(K.el('div', 'scale muted', 'النقاط: ضمن الضعف = ٣ · ضمن ٥ أضعاف = ٢ · ضمن ١٠ أضعاف = ١'));
+  K.stage.appendChild(w); timer.start();
+}
+home();
+</script>
+</body>
+</html>

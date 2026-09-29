@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>مختبر الابتكار</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.stepper{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.stepper span{display:flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:99px;padding:6px 14px;font-weight:800;background:#fff}
+.stepper span.on{background:var(--a);color:#fff;border-color:var(--a)}
+.stepper span.done{opacity:.5}
+.stage-t{font-size:clamp(30px,4.6vw,58px);font-weight:900;text-align:center}
+.prompts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;width:100%;max-width:1100px}
+.prompts div{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:14px 16px;font-size:clamp(17px,2vw,23px);font-weight:700;box-shadow:0 3px 0 rgba(14,27,46,.12)}
+.challenge{font-size:clamp(22px,3vw,38px);font-weight:900;text-align:center;background:#FFF7E6;border:3px solid #C7811C;border-radius:18px;padding:16px 22px;max-width:1050px}
+.twist{font-size:clamp(18px,2.2vw,26px);font-weight:800;text-align:center;background:#F4EEFF;border:2px dashed var(--a);border-radius:14px;padding:12px 18px;animation:pop .4s both}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — مختبر الابتكار (التفكير التصميمي)
+   المراحل الخمس التي تستعملها شركات التصميم: نتعاطف ← نحدّد ← نولّد
+   الأفكار ← نصنع نموذجاً ← نختبر. لكل مرحلةٍ أسئلتها ومؤقّتها، و«بطاقة
+   قيد» عشوائية تُلقى في مرحلة الأفكار لتكسر الحلول المعتادة — فالقيد
+   يولّد الإبداع لا يقتله. وينتهي بجولة معرض يصوّت فيها الصف.
+   ═══════════════════════════════════════════════════════════════════ */
+const CHALLENGES = [
+  'صمّموا طريقةً تجعل طلاب الصف الخامس الجدد يشعرون بالترحيب في أسبوعهم الأول',
+  'صمّموا حلاً يقلّل هدر الطعام في مقصف المدرسة',
+  'صمّموا طريقةً تساعد الطلاب على تذكّر إحضار أدواتهم',
+  'صمّموا فكرةً تجعل انتظار الحافلة المدرسية وقتاً مفيداً وممتعاً',
+  'صمّموا حلاً يساعد جدّاً أو جدّة على استخدام الهاتف الذكي بسهولة',
+  'صمّموا طريقةً تشجّع الطلاب على شرب الماء أكثر في الأيام الحارّة',
+  'صمّموا مساحةً في المدرسة يرتاح فيها الطالب حين يشعر بالتوتّر',
+];
+const TWISTS = [
+  'قيد: يجب ألّا يكلّف أكثر من ريالين', 'قيد: بلا كهرباء ولا شاشات', 'قيد: يعمل في أقلّ من دقيقة',
+  'قيد: يصلح لشخصٍ لا يستطيع القراءة', 'قيد: يُصنع من موادّ معاد تدويرها', 'قيد: يشارك فيه ٣ أشخاصٍ على الأقل',
+  'قيد: يجب أن يجعل الناس يبتسمون', 'قيد: يستوحي فكرته من الطبيعة (نحلة، نخلة، فلج…)',
+];
+const STAGES = [
+  { e: '❤️', n: 'نتعاطف', secs: 240, p: ['من الشخص الذي يعاني من المشكلة؟ صفوه.', 'ماذا يشعر؟ ماذا يقول؟ ماذا يفعل؟', 'اسألوا زميلاً في الصف: متى واجهت هذه المشكلة؟'] },
+  { e: '🎯', n: 'نحدّد', secs: 180, p: ['أكملوا الجملة: «يحتاج ___ إلى طريقةٍ لـ ___ لأن ___».', 'ما السبب الحقيقي وراء المشكلة؟ (اسألوا «لماذا؟» ثلاث مرات)'] },
+  { e: '💡', n: 'نولّد الأفكار', secs: 300, twist: true, p: ['أكبر عددٍ من الأفكار — الكمّ قبل الجودة!', 'لا نقد الآن. الأفكار المجنونة مرحّبٌ بها.', 'اختاروا فكرةً واحدة في آخر دقيقة.'] },
+  { e: '✂️', n: 'نصنع نموذجاً', secs: 360, p: ['ارسموا فكرتكم أو اصنعوها من الورق.', 'نموذجٌ بسيط يكفي — الهدف أن نراه ونجرّبه.', 'أعطوه اسماً.'] },
+  { e: '🧪', n: 'نختبر', secs: 240, p: ['اعرضوا النموذج على فريقٍ آخر في دقيقة.', 'اسألوهم: ما الذي أعجبكم؟ ما الذي نحسّنه؟', 'اكتبوا تحسيناً واحداً ستفعلونه.'] },
+];
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#F1EEF8"/>
+  <g fill="#6B3FD1" opacity=".08"><circle cx="200" cy="180" r="120"/><rect x="1260" y="560" width="240" height="240" rx="40"/><path d="M1350 120l60 110h-120z"/></g>
+</svg>`;
+
+let K, teams, st = 0, ch = '', twist = '', timer, bag, tbag;
+K = Kit.build({
+  title: 'مختبر الابتكار', accent: '#6B3FD1', accent2: '#4A2A96', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التفكير التصميمي وحلّ المشكلات الإبداعي: فهم المستخدم قبل الحلّ، وتحديد المشكلة بدقّة، وتوليد أفكارٍ كثيرة، وصنع نموذجٍ سريع واختباره وتحسينه — دورة الابتكار التي تستعملها الشركات والمهندسون.',
+    tools: 'الشاشة، وأوراق وأقلام ملوّنة ومقصّ وشريط لاصق (وأيّ موادّ بسيطة متاحة).',
+    groups: 'فرقٌ من ٣–٥ طلاب، بأدوار: قائد الوقت، والكاتب، والمصمّم، والمتحدّث.',
+    steps: ['نختار التحدّي (نفسه لكل الفرق أو مختلفاً لكل فريق).', 'نمرّ بالمراحل الخمس بالترتيب، ولكلٍّ مؤقّتها وأسئلتها.', 'في مرحلة الأفكار: نسحب «بطاقة قيد» تغيّر قواعد اللعبة.', 'جولة المعرض: كل فريقٍ يعرض نموذجه في دقيقة.', 'نصوّت على جوائز: الأكثر إبداعاً، والأكثر فائدة، وأفضل نموذج.'],
+    time: '٣٠–٤٠ دقيقة (يمكن تقسيمه على حصتين).',
+    script: 'اليوم أنتم فريق مصمّمين في شركة ابتكار! لن نبدأ بالحلّ… بل بالإنسان: من يعاني؟ وماذا يحتاج فعلاً؟',
+    tips: 'في مرحلة الأفكار: امنعوا النقد تماماً. وفي مرحلة النموذج: ذكّروا أن «البسيط السريع» أفضل من «الجميل المتأخر».',
+    points: 'نقاط القيم خلال المراحل، ثم تصويت المعرض: كل طالبٍ يمنح نقطتين لفريقين غير فريقه.',
+    levels: 'للصفوف ٥–٦: نختصر إلى ثلاث مراحل (نتعاطف، أفكار، نموذج). للصفوف ٩–١٠: نطلب مقابلة مستخدمٍ حقيقي خارج الفريق في مرحلة التعاطف.',
+    close: ['لماذا بدأنا بالإنسان لا بالحلّ؟', 'كيف غيّرت «بطاقة القيد» أفكاركم؟', 'ما الذي تعلّمتموه من الاختبار ولم تتوقّعوه؟'],
+  },
+});
+bag = K.Bag(CHALLENGES); tbag = K.Bag(TWISTS);
+
+function home() {
+  if (timer) timer.pause(); st = 0; twist = '';
+  K.start({ emblem: '🧠', sub: 'خمس مراحل يستعملها المبتكرون حول العالم: نتعاطف، نحدّد، نولّد الأفكار، نصنع نموذجاً، ونختبر.',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '٣٠ – ٤٠ دقيقة'], ['المهارة', 'التفكير التصميمي'], ['القيمة', 'التعاطف والإبداع']],
+    teams: [4, [2, 3, 4, 5, 6]], onGo: n => { teams = null; home.n = n; pickCh(); } });
+}
+
+function pickCh() {
+  ch = bag.next();
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">تحدّي التصميم</span><div class="challenge">🎨 ${Kit.esc(ch)}</div>`;
+  const r = K.el('div', 'row');
+  const a = K.el('button', 'btn', '🎲 تحدٍّ آخر'); a.onclick = () => { K.SFX.tap(); pickCh(); };
+  const b = K.el('button', 'btn p big', 'ابدأ المرحلة الأولى ←'); b.onclick = () => { K.SFX.tap(); stage(); };
+  r.append(a, b); w.appendChild(r); K.stage.appendChild(w);
+}
+
+function stage() {
+  const S = STAGES[st];
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<div class="stepper">${STAGES.map((s, i) => `<span class="${i === st ? 'on' : i < st ? 'done' : ''}">${s.e} ${s.n}</span>`).join('')}</div>
+    <div class="challenge" style="font-size:clamp(17px,2.1vw,25px);padding:10px 16px">${Kit.esc(ch)}</div>
+    <div class="stage-t">${S.e} ${Kit.AR(st + 1)}. ${S.n}</div>
+    <div class="prompts">${S.p.map(p => `<div>${Kit.esc(p)}</div>`).join('')}</div>`;
+  if (S.twist) {
+    const tw = K.el('div', 'col');
+    const b = K.el('button', 'btn g', '🃏 اسحب بطاقة قيد');
+    b.onclick = () => { twist = tbag.next(); K.SFX.star(); tw.innerHTML = `<div class="twist">🃏 ${Kit.esc(twist)}</div>`; };
+    tw.appendChild(b); w.appendChild(tw);
+  } else if (twist) w.appendChild(K.el('div', 'twist', '🃏 ' + Kit.esc(twist)));
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, S.secs, () => K.say(`انتهت مرحلة «${S.n}»!`, 'info'));
+  const pz = K.el('button', 'btn', '⏯'); pz.onclick = () => timer.running ? timer.pause() : timer.start(); tr.appendChild(pz);
+  const add = K.el('button', 'btn sm', '+١ دقيقة'); add.onclick = () => timer.add(60); tr.appendChild(add);
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  if (!teams) teams = K.Teams(tb, home.n || 4); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[1, 'تعاطفٌ عميق'], [1, 'فكرةٌ جريئة'], [1, 'تعاونٌ منظّم'], [1, 'استفاد من الملاحظات']]));
+  const nx = K.el('button', 'btn p big', st < STAGES.length - 1 ? `المرحلة التالية: ${STAGES[st + 1].n} ←` : 'جولة المعرض والتصويت ←');
+  nx.onclick = () => { timer.pause(); K.SFX.tap(); if (st < STAGES.length - 1) { st++; stage(); } else gallery(); };
+  w.insertBefore(nx, tb);
+  K.stage.appendChild(w); timer.start();
+}
+
+function gallery() {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">🖼️ جولة المعرض</span><div class="big-q">كل فريقٍ يعرض نموذجه في دقيقة، ثم نصوّت</div>
+    <div class="muted" style="font-weight:800">اضغطوا الجائزة ثم الفريق الفائز بها</div>`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, 60, () => K.say('انتهت الدقيقة 👏', 'info'));
+  const go = K.el('button', 'btn g', '▶ دقيقة العرض'); go.onclick = () => { timer.reset(60); timer.start(); }; tr.appendChild(go);
+  const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[3, '🏅 الأكثر إبداعاً'], [3, '🏅 الأكثر فائدة'], [3, '🏅 أفضل نموذج'], [2, '🏅 أفضل عرض']]));
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => { timer.pause(); K.reflect({ value: 'التعاطف والإبداع', questions: ['لماذا بدأنا بالإنسان لا بالحلّ؟', 'كيف غيّرت «بطاقة القيد» أفكاركم؟', 'ما الذي تعلّمتموه من الاختبار ولم تتوقّعوه؟'] }, home); };
+  w.appendChild(nx); K.stage.appendChild(w);
+}
+home();
+</script>
+</body>
+</html>

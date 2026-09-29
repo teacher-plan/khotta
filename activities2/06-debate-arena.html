@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>ساحة المناظرة</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.motion{font-size:clamp(26px,4vw,50px);font-weight:900;text-align:center;line-height:1.4;background:#fff;border:3px solid var(--ink);border-radius:18px;padding:20px 26px;box-shadow:var(--sh);max-width:1050px}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:1000px}
+.side{border:2px solid var(--ink);border-radius:16px;padding:14px;text-align:center;background:#fff}
+.side.pro{border-top:10px solid #1E8A55}.side.con{border-top:10px solid #B3243B}
+.side h3{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px)}
+.vote{display:flex;align-items:center;justify-content:center;gap:10px}
+.vote b{font-size:clamp(34px,5vw,60px);min-width:2.2ch;font-variant-numeric:tabular-nums}
+.phases{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.phases span{border:2px solid var(--line);border-radius:99px;padding:5px 12px;font-weight:800;font-size:15px;background:#fff}
+.phases span.on{background:var(--a);color:#fff;border-color:var(--a)}
+.phases span.done{opacity:.45}
+.speaker{font-size:clamp(28px,4.4vw,56px);font-weight:900;text-align:center}
+.peel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:1000px}
+.peel div{background:#F4F8FF;border:2px solid var(--a);border-radius:12px;padding:10px;text-align:center;font-weight:700;font-size:clamp(14px,1.5vw,18px)}
+.peel b{display:block;font-size:1.3em;color:var(--a2)}
+.shift{font-size:clamp(22px,3vw,36px);font-weight:900;text-align:center}
+@media(max-width:700px){.sides,.peel{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — ساحة المناظرة
+   مناظرةٌ منظّمة بأدوارٍ وأزمنةٍ محدّدة، وتصويتٌ قبلها وبعدها: الفائز
+   ليس الأعلى صوتاً بل الفريق الذي «غيّر آراء أكثر». هكذا تُكافأ الحجّة
+   والدليل واحترام الخصم، لا الصراخ. وبنية الحجّة (فكرة، دليل، مثال،
+   ربط) ظاهرةٌ طوال الوقت ليبني عليها المتحدّثون.
+   ═══════════════════════════════════════════════════════════════════ */
+const MOTIONS = [
+  'يجب السماح للطلاب بإحضار الهواتف إلى المدرسة',
+  'الواجبات المنزلية يجب أن تُلغى',
+  'الألعاب الإلكترونية تنفع الطلاب أكثر مما تضرّهم',
+  'يجب أن يتعلّم كل طالبٍ البرمجة كما يتعلّم القراءة',
+  'استخدام الذكاء الاصطناعي في حلّ الواجبات يجعل الطلاب أقلّ تفكيراً',
+  'الزيّ المدرسي الموحّد أفضل من الملابس الحرّة',
+  'التعلّم في المدرسة أفضل من التعلّم عن بُعد',
+  'يجب أن تكون الرياضة حصةً يومية في المدرسة',
+  'وسائل التواصل الاجتماعي تجعلنا أكثر وحدة',
+  'السياحة تنفع القرى الجبلية أكثر مما تضرّها',
+];
+const PHASES = [
+  ['تحضير الفريقين', 180, 'both'], ['افتتاح المؤيّدين', 90, 'pro'], ['افتتاح المعارضين', 90, 'con'],
+  ['أسئلة متبادلة', 90, 'both'], ['ردّ المعارضين', 60, 'con'], ['ردّ المؤيّدين', 60, 'pro'],
+  ['ختام المعارضين', 45, 'con'], ['ختام المؤيّدين', 45, 'pro'],
+];
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EEF0F6"/>
+  <rect x="0" y="0" width="800" height="900" fill="#1E8A55" opacity=".06"/><rect x="800" y="0" width="800" height="900" fill="#B3243B" opacity=".06"/>
+</svg>`;
+
+let K, motion = '', v0 = { pro: 0, con: 0, und: 0 }, v1 = { pro: 0, con: 0, und: 0 }, ph = 0, timer, bag;
+K = Kit.build({
+  title: 'ساحة المناظرة', accent: '#2B3A67', accent2: '#1A2547', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'مهارات الحوار والإقناع: بناء الحجّة بدليل، والاستماع للرأي المخالف والردّ عليه باحترام، والتمييز بين نقد الفكرة ونقد الشخص، وتغيير الرأي حين يقنعنا الدليل.',
+    tools: 'الشاشة، وورقة لكل فريقٍ لتدوين الحجج.',
+    groups: 'فريقان (مؤيّدون ومعارضون) من ٣–٥ متحدّثين، وبقية الصف «جمهور» يصوّت ويطرح أسئلة. الموقف يُحدَّد بالقرعة لا بالرأي الشخصي.',
+    steps: ['نختار القضية بالقرعة.', 'تصويتٌ أول: كم مؤيّداً؟ كم معارضاً؟ كم متردّداً؟', 'نمرّ بالمراحل بالترتيب ولكلٍّ مؤقّتها.', 'تصويتٌ ثانٍ بعد الختام.', 'الفائز هو الفريق الذي كسب أصواتاً أكثر بين التصويتين.'],
+    time: '٢٥–٣٠ دقيقة.',
+    script: 'اليوم ليس المهم رأيك الشخصي — المهم قدرتك على الدفاع عن موقفٍ بالدليل. والفائز ليس من يرفع صوته، بل من يغيّر آراء الجمهور.',
+    tips: 'قاعدتان صارمتان: لا مقاطعة، ونناقش الفكرة لا الشخص. ويمكن إيقاف المؤقّت لتنبيهٍ سريع.',
+    points: 'الفائز يُحسب آلياً من تغيّر الأصوات. ويمكن تكريم «أفضل متحدّث» و«أذكى سؤال» من الجمهور.',
+    levels: 'للصفوف ٥–٦: نختصر المراحل (افتتاح وختام فقط). للصفوف ٩–١٠: نطلب في كل حجّة دليلاً حقيقياً (رقم، دراسة، مثال واقعي).',
+    close: ['أيّ حجّةٍ أقنعتك أكثر؟ ولماذا؟', 'هل غيّرت رأيك؟ ما الذي غيّره؟', 'كيف نختلف في الرأي ونبقى أصدقاء؟'],
+  },
+});
+bag = K.Bag(MOTIONS);
+
+function home() {
+  if (timer) timer.pause();
+  v0 = { pro: 0, con: 0, und: 0 }; v1 = { pro: 0, con: 0, und: 0 }; ph = 0;
+  K.start({ emblem: '⚖️', sub: 'فريقان، وقضيةٌ واحدة، ومراحل بأزمنةٍ محدّدة. الفائز من يغيّر آراء الجمهور بالدليل.',
+    meta: [['الصفوف', '٦ – ١٠'], ['الزمن', '٢٥ – ٣٠ دقيقة'], ['المهارة', 'الحوار والإقناع'], ['القيمة', 'احترام الرأي الآخر']],
+    onGo: () => pick() });
+}
+
+function pick() {
+  motion = bag.next();
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">القضية</span><div class="motion">«${Kit.esc(motion)}»</div>`;
+  const r = K.el('div', 'row');
+  const a = K.el('button', 'btn', '🎲 قضية أخرى'); a.onclick = () => { K.SFX.tap(); pick(); };
+  const b = K.el('button', 'btn p big', 'التصويت الأول ←'); b.onclick = () => { K.SFX.tap(); vote(v0, 'التصويت الأول — قبل المناظرة', phase); };
+  r.append(a, b); w.appendChild(r); K.stage.appendChild(w); K.SFX.ok();
+}
+
+function vote(v, title, next) {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">${title}</span><div class="motion" style="font-size:clamp(20px,2.8vw,34px)">«${Kit.esc(motion)}»</div>
+    <div class="muted" style="font-weight:800">ارفعوا أيديكم — ونُدخل العدد</div>`;
+  const s = K.el('div', 'sides'); s.style.gridTemplateColumns = 'repeat(3,1fr)';
+  [['pro', '👍 مؤيّد', 'pro'], ['und', '🤔 متردّد', ''], ['con', '👎 معارض', 'con']].forEach(([k, l, c]) => {
+    const d = K.el('div', 'side ' + c); d.innerHTML = `<h3>${l}</h3>`;
+    const vr = K.el('div', 'vote');
+    const m = K.el('button', 'btn', '−'), n = K.el('b', '', Kit.AR(v[k])), p = K.el('button', 'btn', '+');
+    m.onclick = () => { v[k] = Math.max(0, v[k] - 1); n.textContent = Kit.AR(v[k]); };
+    p.onclick = () => { v[k]++; n.textContent = Kit.AR(v[k]); K.SFX.tap(); };
+    vr.append(m, n, p); d.appendChild(vr); s.appendChild(d);
+  });
+  w.appendChild(s);
+  const b = K.el('button', 'btn p big', 'متابعة ←'); b.onclick = () => { K.SFX.tap(); next(); }; w.appendChild(b);
+  K.stage.appendChild(w);
+}
+
+function phase() {
+  const [nm, secs, who] = PHASES[ph];
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<div class="phases">${PHASES.map((p, i) => `<span class="${i === ph ? 'on' : i < ph ? 'done' : ''}">${p[0]}</span>`).join('')}</div>
+    <div class="motion" style="font-size:clamp(18px,2.4vw,28px);padding:12px 18px">«${Kit.esc(motion)}»</div>
+    <div class="speaker" style="color:${who === 'pro' ? '#1E8A55' : who === 'con' ? '#B3243B' : 'var(--a2)'}">${who === 'pro' ? '👍 ' : who === 'con' ? '👎 ' : '🗣️ '}${nm}</div>`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, secs, () => K.say('انتهى الوقت — شكراً للمتحدّث 👏', 'info'));
+  const pz = K.el('button', 'btn', '⏯ إيقاف/متابعة'); pz.onclick = () => timer.running ? timer.pause() : timer.start(); tr.appendChild(pz);
+  const add = K.el('button', 'btn sm', '+٣٠ ث'); add.onclick = () => timer.add(30); tr.appendChild(add);
+  const pe = K.el('div', 'peel');
+  pe.innerHTML = `<div><b>١ الفكرة</b>ما حجّتي؟</div><div><b>٢ الدليل</b>رقم، حقيقة، مصدر</div><div><b>٣ المثال</b>من الواقع</div><div><b>٤ الربط</b>لذلك نؤيّد/نعارض</div>`;
+  w.appendChild(pe);
+  const nx = K.el('button', 'btn p big', ph < PHASES.length - 1 ? 'المرحلة التالية ←' : 'التصويت الثاني ←');
+  nx.onclick = () => { timer.pause(); K.SFX.tap(); if (ph < PHASES.length - 1) { ph++; phase(); } else vote(v1, 'التصويت الثاني — بعد المناظرة', result); };
+  w.appendChild(nx);
+  K.stage.appendChild(w); timer.start();
+}
+
+function result() {
+  const dp = v1.pro - v0.pro, dc = v1.con - v0.con;
+  const win = dp === dc ? 'تعادل' : dp > dc ? 'المؤيّدون' : 'المعارضون';
+  const sg = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Kit.AR(Math.abs(n));
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<div class="emblem2">${dp === dc ? '🤝' : '🏆'}</div>
+    <div class="shift">${dp === dc ? 'تعادل! أقنع الفريقان عدداً متساوياً' : `الفائز: ${win}`}</div>
+    <div class="sides"><div class="side pro"><h3>👍 المؤيّدون</h3><div class="shift">${Kit.AR(v0.pro)} ← ${Kit.AR(v1.pro)}</div><b>${sg(dp)} صوت</b></div>
+    <div class="side con"><h3>👎 المعارضون</h3><div class="shift">${Kit.AR(v0.con)} ← ${Kit.AR(v1.con)}</div><b>${sg(dc)} صوت</b></div></div>
+    <div class="explain">الفوز يُحسب بتغيّر الأصوات لا بعددها النهائي: الفريق الذي بدأ بأصواتٍ أقلّ وأقنع المتردّدين والمعارضين قد يفوز.</div>`;
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => K.reflect({ value: 'احترام الرأي الآخر', questions: ['أيّ حجّةٍ أقنعتك أكثر؟ ولماذا؟', 'هل غيّرت رأيك؟ ما الذي غيّره؟', 'كيف نختلف في الرأي ونبقى أصدقاء؟'] }, home);
+  w.appendChild(nx); K.stage.appendChild(w); K.SFX.win();
+}
+home();
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>مهمة إلى المريخ</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.items{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;width:100%;max-width:1150px}
+.it{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:10px;text-align:center;cursor:pointer;font:inherit;box-shadow:0 3px 0 rgba(14,27,46,.14);position:relative}
+.it .e{font-size:clamp(32px,4vw,46px);line-height:1.1}
+.it .n{font-weight:800;font-size:clamp(15px,1.6vw,19px);line-height:1.35}
+.it .kg{font-weight:800;color:var(--a2);font-size:15px}
+.it.on{background:#FFF2D6;border-color:#C7811C;box-shadow:0 0 0 4px rgba(242,178,51,.5)}
+.it.best{outline:4px solid var(--ok);outline-offset:2px}
+.it .sc{position:absolute;top:6px;inset-inline-start:8px;font-weight:900;border-radius:99px;padding:0 9px;color:#fff}
+.load{width:100%;max-width:1000px}
+.load .bar{height:30px;background:var(--sand);border:2px solid var(--ink);border-radius:99px;overflow:hidden}
+.load .bar i{display:block;height:100%;background:var(--a);transition:width .3s}
+.load.over .bar i{background:var(--red)}
+.facts{display:grid;gap:8px;width:100%;max-width:1100px}
+.facts div{background:#fff;border:2px solid var(--line);border-radius:12px;padding:10px 14px;font-size:clamp(15px,1.7vw,19px)}
+.facts b{color:var(--a2)}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — مهمة إلى المريخ (اتخاذ القرار تحت القيود)
+   هبطت المركبة اضطرارياً على بُعد ٦٠ كم من القاعدة، ولا يُحمل إلا ٢٠ كغ.
+   كل فريقٍ يختار حمولته، ثم نكشف تقييم الخبراء لكل غرض مع التعليل العلمي.
+   الحقائق العلمية المستعملة: غلاف المريخ رقيقٌ جداً وأغلبه ثاني أكسيد
+   الكربون (فلا تشتعل أعواد الثقاب ولا ينفع التنفّس)، ولا مجال مغناطيسياً
+   عاماً له (فالبوصلة لا تعمل)، ومتوسط حرارته قرابة −٦٠°م.
+   أفضل حمولةٍ ممكنة تُحسب بالبحث الشامل (٢^١٢ احتمالاً) لا تُكتب يدوياً.
+   ═══════════════════════════════════════════════════════════════════ */
+const LIMIT = 20;
+const ITEMS = [
+  { e: '🫁', n: 'خزّانا أكسجين', kg: 6, v: 15, why: 'الأهمّ على الإطلاق: هواء المريخ رقيقٌ جداً وأغلبه ثاني أكسيد الكربون، فلا حياة بلا أكسجين.' },
+  { e: '💧', n: 'ماء (٦ لترات)', kg: 6, v: 12, why: 'لا ماء سائلاً على سطح المريخ. الإنسان لا يصمد أياماً بلا ماء.' },
+  { e: '📻', n: 'جهاز لاسلكي بطاقة شمسية', kg: 3, v: 9, why: 'الاتصال بالقاعدة قد يعني إنقاذاً سريعاً — والشمس مصدر طاقةٍ متاح.' },
+  { e: '🗺️', n: 'خريطة سطح المنطقة', kg: 1, v: 8, why: 'خفيفة جداً وضرورية للوصول إلى القاعدة عبر ٦٠ كم من التضاريس.' },
+  { e: '🩹', n: 'حقيبة إسعافات', kg: 2, v: 6, why: 'الإصابات واردة في المشي الطويل على صخور وعرة.' },
+  { e: '🍫', n: 'طعام مركّز', kg: 4, v: 6, why: 'يمنح الطاقة للمسير الطويل، لكن الإنسان يصمد بلا طعامٍ أطول من صموده بلا ماءٍ أو هواء.' },
+  { e: '🔥', n: 'مدفأة محمولة', kg: 6, v: 5, why: 'الحرارة قرابة −٦٠°م، لكن بدلة الفضاء تعزل الجسم — مفيدةٌ لا حاسمة، وثقيلة.' },
+  { e: '🪢', n: 'حبل (١٥ متراً)', kg: 2, v: 4, why: 'مفيدٌ لعبور المنحدرات وربط أفراد الفريق معاً.' },
+  { e: '🔦', n: 'مصباح إشارة', kg: 2, v: 5, why: 'يساعد فرق الإنقاذ على رؤيتكم، خصوصاً في الليل.' },
+  { e: '🧭', n: 'بوصلة مغناطيسية', kg: 1, v: 0, why: 'لا تعمل! المريخ بلا مجالٍ مغناطيسيٍّ عامٍ كالأرض، فلا تشير البوصلة إلى الشمال.' },
+  { e: '🧯', n: 'أعواد ثقاب', kg: 1, v: 0, why: 'بلا فائدة: الاشتعال يحتاج أكسجيناً، وهواء المريخ يكاد يخلو منه.' },
+  { e: '🪂', n: 'مظلّة هبوط', kg: 3, v: 1, why: 'قيمتها ضئيلة بعد الهبوط — ربما ظلٌّ أو غطاء، لكنها ثقيلة.' },
+];
+// أفضل حمولة ضمن الحدّ — بحثٌ شامل
+function best() {
+  let bv = -1, bm = 0;
+  for (let m = 0; m < 1 << ITEMS.length; m++) {
+    let kg = 0, v = 0; ITEMS.forEach((it, i) => { if (m >> i & 1) { kg += it.kg; v += it.v; } });
+    if (kg <= LIMIT && v > bv) { bv = v; bm = m; }
+  }
+  return { v: bv, set: ITEMS.map((_, i) => !!(bm >> i & 1)) };
+}
+const BEST = best();
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6E2D6"/><stop offset="1" stop-color="#EAC3A8"/></linearGradient></defs>
+  <rect width="1600" height="900" fill="url(#m)"/>
+  <circle cx="1400" cy="170" r="70" fill="#D9754B" opacity=".35"/>
+  <path d="M0 760q200-60 400 0t400-10 400 20 400-30V900H0z" fill="#C8744A" opacity=".35"/>
+</svg>`;
+
+let K, teams, t = 0, picks = [], timer;
+K = Kit.build({
+  title: 'مهمة إلى المريخ', accent: '#C2502B', accent2: '#8A361C', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'اتخاذ القرار تحت القيود وترتيب الأولويات، وتوظيف المعرفة العلمية (الغلاف الجوي، المغناطيسية، حاجات الإنسان الأساسية) في حلّ مشكلةٍ حقيقية، والتفاوض داخل الفريق.',
+    tools: 'الشاشة، وورقة لكل فريقٍ لكتابة اختياره قبل إدخاله.',
+    groups: 'من فريقين إلى خمسة. كل فريقٍ يقرّر حمولته بالتفاوض الداخلي.',
+    steps: ['نقرأ القصّة والقيد: ٢٠ كغ فقط.', 'خمس دقائق لكل الفرق لاختيار حمولتها على الورق.', 'نُدخل اختيار كل فريقٍ بالترتيب على الشاشة.', 'نكشف تقييم الخبراء لكل غرضٍ وسببه.', 'نقارن النقاط ونناقش: أيّ غرضٍ خدعنا؟'],
+    time: '٢٠–٢٥ دقيقة.',
+    script: 'هبطت مركبتكم اضطرارياً على المريخ، على بُعد ٦٠ كيلومتراً من القاعدة. لا يستطيع فريقكم حمل أكثر من ٢٠ كيلوغراماً. ماذا ستأخذون؟ تذكّروا: المريخ ليس الأرض!',
+    tips: 'الغرضان «الخادعان» (البوصلة وأعواد الثقاب) هما قلب الدرس — لا تكشفوا سرّهما قبل النهاية.',
+    points: 'نقاط كل فريقٍ = مجموع قيمة أغراضه عند الخبراء. ونقطة قيمة لأفضل تعليلٍ علمي.',
+    levels: 'للصفوف ٥–٦: نسمح بـ٢٥ كغ ونلمّح للغلاف الجوي. للصفوف ٩–١٠: نطلب ترتيب الأغراض المختارة حسب الأهمية مع تعليلٍ علمي لكل واحد.',
+    close: ['أيّ غرضٍ فاجأكم تقييمه؟ لماذا؟', 'كيف قرّر فريقكم عند الاختلاف؟', 'ما «القيود» التي نواجهها في حياتنا وتجبرنا على ترتيب الأولويات؟'],
+  },
+});
+
+function home() {
+  if (timer) timer.pause();
+  K.start({ emblem: '🚀', sub: 'هبوطٌ اضطراري على المريخ، و٦٠ كم إلى القاعدة، و٢٠ كغ فقط. ماذا ستحملون؟',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '٢٠ – ٢٥ دقيقة'], ['المهارة', 'اتخاذ القرار'], ['القيمة', 'العمل بروح الفريق']],
+    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; brief(); } });
+}
+
+function brief() {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1150px';
+  w.innerHTML = `<span class="tag">الموقف</span><div class="big-q">اختاروا على الورق حمولتكم — الحدّ <b>${Kit.AR(LIMIT)} كغ</b></div>`;
+  const g = K.el('div', 'items');
+  g.innerHTML = ITEMS.map(it => `<div class="it" style="cursor:default"><div class="e">${it.e}</div><div class="n">${it.n}</div><div class="kg">${Kit.AR(it.kg)} كغ</div></div>`).join('');
+  w.appendChild(g);
+  const tb = K.el('div', 'teams'); tb.style.display = 'none'; w.appendChild(tb);
+  if (!teams) teams = K.Teams(tb, home.n); else teams.mount(tb);
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, 300, () => K.say('انتهى وقت التخطيط!', 'info'));
+  const nx = K.el('button', 'btn p big', 'إدخال اختيارات الفرق ←'); nx.onclick = () => { timer.pause(); t = 0; picks = []; enter(); };
+  w.appendChild(nx); K.stage.appendChild(w); timer.start();
+}
+
+function enter() {
+  const sel = ITEMS.map(() => false), T = teams.list[t];
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1150px';
+  w.innerHTML = `<span class="tag">اختيار <span style="color:#fff">${Kit.esc(T.name)}</span> — ${Kit.AR(t + 1)} من ${Kit.AR(teams.list.length)}</span>`;
+  const ld = K.el('div', 'load'); w.appendChild(ld);
+  const g = K.el('div', 'items'); w.appendChild(g);
+  const nx = K.el('button', 'btn p big', t < teams.list.length - 1 ? 'الفريق التالي ←' : 'كشف تقييم الخبراء ←');
+  function paint() {
+    const kg = ITEMS.reduce((s, it, i) => s + (sel[i] ? it.kg : 0), 0);
+    ld.className = 'load' + (kg > LIMIT ? ' over' : '');
+    ld.innerHTML = `<div style="font-weight:800">الحمولة: ${Kit.AR(kg)} من ${Kit.AR(LIMIT)} كغ ${kg > LIMIT ? '— ثقيلة جداً!' : ''}</div><div class="bar"><i style="width:${Math.min(100, kg / LIMIT * 100)}%"></i></div>`;
+    nx.disabled = kg > LIMIT;
+  }
+  ITEMS.forEach((it, i) => {
+    const b = K.el('button', 'it', `<div class="e">${it.e}</div><div class="n">${it.n}</div><div class="kg">${Kit.AR(it.kg)} كغ</div>`);
+    b.onclick = () => { sel[i] = !sel[i]; b.classList.toggle('on', sel[i]); K.SFX.tap(); paint(); };
+    g.appendChild(b);
+  });
+  nx.onclick = () => { picks[t] = sel.slice(); K.SFX.ok(); if (t < teams.list.length - 1) { t++; enter(); } else reveal(); };
+  w.appendChild(nx); K.stage.appendChild(w); paint();
+}
+
+function reveal() {
+  const scores = picks.map(p => ITEMS.reduce((s, it, i) => s + (p[i] ? it.v : 0), 0));
+  teams.list.forEach((T, i) => { T.score += scores[i]; });
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1150px';
+  w.innerHTML = `<span class="tag">تقييم الخبراء</span><div class="muted" style="font-weight:800">الإطار الأخضر = أفضل حمولةٍ ممكنة (${Kit.AR(BEST.v)} نقطة). الرقم = قيمة الغرض.</div>`;
+  const g = K.el('div', 'items');
+  const order = ITEMS.map((it, i) => i).sort((a, b) => ITEMS[b].v - ITEMS[a].v);
+  order.forEach(i => { const it = ITEMS[i];
+    const c = it.v >= 8 ? '#1E8A55' : it.v >= 4 ? '#C7811C' : '#B3243B';
+    g.appendChild(K.el('div', 'it' + (BEST.set[i] ? ' best' : ''), `<span class="sc" style="background:${c}">${Kit.AR(it.v)}</span><div class="e">${it.e}</div><div class="n">${it.n}</div><div class="kg">${Kit.AR(it.kg)} كغ</div>`)); });
+  w.appendChild(g);
+  const f = K.el('div', 'facts');
+  f.innerHTML = order.map(i => `<div>${ITEMS[i].e} <b>${ITEMS[i].n}:</b> ${ITEMS[i].why}</div>`).join('');
+  w.appendChild(f);
+  const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'أفضل تعليل علمي'], [1, 'تفاوضٌ هادئ']]));
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => K.reflect({ value: 'العمل بروح الفريق', questions: ['أيّ غرضٍ فاجأكم تقييمه؟ لماذا؟', 'كيف قرّر فريقكم عند الاختلاف؟', 'ما «القيود» التي نواجهها في حياتنا وتجبرنا على ترتيب الأولويات؟'] }, home);
+  w.appendChild(nx); K.stage.appendChild(w); K.SFX.win();
+}
+home();
+</script>
+</body>
+</html>
