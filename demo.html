@@ -8811,14 +8811,44 @@ const RS_ACTS=[
   {n:21, f:'21-appreciation-message.html', t:'رسالة تقدير', c:'#D86048', mins:18,
    d:'بطاقة تقديرٍ لزميل — عن فعله لا عن شكله', k:'قيم', v:'اللطف والامتنان'},
 ];
-function rsActUrl(a){return 'activities/'+a.f;}
+/* ═ أنشطة الحلقة الثانية: activities2/ ═
+   مستوى أعلى لطلاب ١٠–١٧ سنة (تقنية، اقتصاد، إعلام، حوار، ابتكار). كل حلقةٍ
+   ترى قائمتها وحدها: معلّمات الحلقة الأولى لا يرين هذه، ومعلّمو الثانية
+   لا يرون أنشطة الأولى. المخاطبة تُمرَّر في الرابط (?g=m|f). */
+const RS_ACTS2=[
+  {n:1, f:'01-fort-escape.html', t:'الهروب من القلعة', c:'#8A5A1E', mins:25,
+   d:'غرفة هروب: شيفرة ومربّع سحري واستنتاج منطقي وساعة البرج', k:'تفكير منطقي', v:'المثابرة والتعاون'},
+  {n:2, f:'02-news-detective.html', t:'محقّق الأخبار', c:'#1F5FD1', mins:18,
+   d:'منشوراتٌ حقيقية الشكل — اكشف علامات التحذير قبل أن تصدّق أو تنشر', k:'ثقافة إعلامية', v:'التثبّت قبل النشر'},
+  {n:3, f:'03-code-the-robot.html', t:'برمج الروبوت', c:'#0E7C66', mins:20,
+   d:'خوارزميات وتكرار وتصحيح أخطاء — برمجة بلا حاسوب', k:'تفكير حاسوبي', v:'الدقّة'},
+  {n:4, f:'04-startup-market.html', t:'سوق المشاريع الناشئة', c:'#6B3FD1', mins:30,
+   d:'مشكلةٌ حقيقية ومورد محدود وعرضٌ في دقيقة وجولة استثمار', k:'ريادة أعمال', v:'المبادرة'},
+  {n:5, f:'05-smart-budget.html', t:'ميزانيتي الذكية', c:'#1E8A55', mins:18,
+   d:'ثلاثة أشهر من القرارات المالية: حاجة أم رغبة؟ ادّخار أم إنفاق؟', k:'ثقافة مالية', v:'ضبط النفس'},
+  {n:6, f:'06-debate-arena.html', t:'ساحة المناظرة', c:'#2B3A67', mins:28,
+   d:'مناظرة منظّمة بمراحل وأزمنة — يفوز من يغيّر آراء الجمهور', k:'حوار وإقناع', v:'احترام الرأي الآخر'},
+  {n:7, f:'07-mars-mission.html', t:'مهمة إلى المريخ', c:'#C2502B', mins:22,
+   d:'٢٠ كغ فقط، والعلم يحدّد ما ينفع وما يخدع', k:'اتخاذ القرار', v:'العمل بروح الفريق'},
+  {n:8, f:'08-cyber-guardian.html', t:'الحارس الرقمي', c:'#127C8A', mins:22,
+   d:'مختبر كلمات المرور وكشف رسائل التصيّد', k:'أمن رقمي', v:'الحذر والمسؤولية'},
+  {n:9, f:'09-estimation-challenge.html', t:'تحدّي التقدير الذكي', c:'#6B3FD1', mins:18,
+   d:'أسئلة فيرمي: كيف تقترب من جوابٍ لا يعرفه أحد', k:'حسّ عددي', v:'التفكير المنهجي'},
+  {n:10, f:'10-innovation-lab.html', t:'مختبر الابتكار', c:'#6B3FD1', mins:35,
+   d:'التفكير التصميمي بخمس مراحل وبطاقة قيد ومعرض', k:'ابتكار', v:'التعاطف والإبداع'},
+];
+function rsIsC2(){return APP_CYCLE!=='cycle1';}
+function rsActs(){return rsIsC2()?RS_ACTS2:RS_ACTS;}
+function rsActKey(n){return (rsIsC2()?'act2_':'act')+n;}
+function rsActUrl(a){return rsIsC2()?'activities2/'+a.f+'?g='+(khTeacherGender()==='m'?'m':'f'):'activities/'+a.f;}
 
 function rsRender(){
   const cnt=document.getElementById('rs-count');
   const grid=document.getElementById('rs-grid');
-  cnt.innerHTML=egArNum(RS_ACTS.length)+' نشاطاً جاهزاً — كلٌّ فيه لوحة '+khG('معلّمةٍ','معلّمٍ')+' ووضع عرضٍ ومؤقّت، ويعمل بلا إنترنت';
-  grid.innerHTML='<div class="rs-grid">'+RS_ACTS.map(a=>{
-    const ago=rsUsedAgo('act'+a.n);
+  const _n=rsActs().length;
+  cnt.innerHTML=egArNum(_n)+(_n>=3&&_n<=10?' أنشطة جاهزة':' نشاطاً جاهزاً')+' — كلٌّ فيه لوحة '+khG('معلّمةٍ','معلّمٍ')+' ووضع عرضٍ ومؤقّت'+(rsIsC2()?' — لمستوى الحلقة الثانية':'، ويعمل بلا إنترنت')+'';
+  grid.innerHTML='<div class="rs-grid">'+rsActs().map(a=>{
+    const ago=rsUsedAgo(rsActKey(a.n));
     return `<button class="rs-card" style="--vc:${a.c}" onclick="rsOpenAct(${a.n})">
       <div class="rs-card-top"><span class="v">${escHtml(a.v)}</span><span class="f">${escHtml(a.k)}</span></div>
       <div class="rs-card-b">
@@ -8836,8 +8866,8 @@ function rsRender(){
 /* يفتح النشاط في تبويبٍ جديد: النشاط صفحةٌ كاملة بملء الشاشة ووضع عرضٍ
    خاصّين بها، وحشرها في إطارٍ داخل المنصة يكسرهما ويحبس مفاتيح التحكم */
 function rsOpenAct(n){
-  const a=RS_ACTS.find(x=>x.n===n);if(!a)return;
-  rsMarkUsed('act'+n);
+  const a=rsActs().find(x=>x.n===n);if(!a)return;
+  rsMarkUsed(rsActKey(n));
   window.open(rsActUrl(a),'_blank');
   rsRender(); // تحديث شارة «استعملتِه»
 }
@@ -8863,9 +8893,9 @@ function rsCardHtml(a){
 // «فاجئيني»: أسرع طريق — ضغطة واحدة تعطيها نشاطاً،
 // ويتجنّب ما استعملته حديثاً حتى لا يتكرّر على الطلاب أنفسهم
 function rsSurprise(){
-  const used=rsUsed(),ago=n=>Date.now()-(used['act'+n]||0);
-  const fresh=RS_ACTS.filter(a=>ago(a.n)>30*864e5);
-  const pool=fresh.length?fresh:RS_ACTS;
+  const used=rsUsed(),ago=n=>Date.now()-(used[rsActKey(n)]||0);
+  const fresh=rsActs().filter(a=>ago(a.n)>30*864e5);
+  const pool=fresh.length?fresh:rsActs();
   rsOpenAct(pool[Math.floor(Math.random()*pool.length)].n);
 }
 

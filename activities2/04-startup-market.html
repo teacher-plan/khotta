@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>سوق المشاريع الناشئة</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;width:100%;max-width:1100px}
+.dealt{background:#fff;border:2px solid var(--ink);border-radius:16px;padding:18px;box-shadow:var(--sh);text-align:center;animation:pop .4s both}
+.dealt .k{font-weight:800;color:var(--a2);margin-bottom:6px}
+.dealt .v{font-size:clamp(20px,2.5vw,30px);font-weight:800;line-height:1.45}
+.canvas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;width:100%;max-width:1100px}
+.canvas div{background:#F4F8FF;border:2px dashed var(--a);border-radius:12px;padding:12px 14px;font-weight:700;font-size:clamp(16px,1.7vw,20px)}
+.canvas b{display:block;color:var(--a2);font-size:1.1em}
+.inv{display:grid;gap:10px;width:100%;max-width:1000px}
+.inv .r{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:12px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:10px 14px}
+.inv .nm{font-weight:800;font-size:19px}
+.bar{height:34px;background:var(--sand);border-radius:99px;overflow:hidden;border:2px solid var(--ink)}
+.bar i{display:block;height:100%;background:var(--a);width:0;transition:width .4s}
+.inv .amt{font-weight:900;font-size:22px;min-width:5ch;text-align:center;font-variant-numeric:tabular-nums}
+.inv .ops{display:flex;gap:6px}
+.inv .ops .btn{min-height:46px;padding:6px 12px;font-size:17px}
+.winner{font-size:clamp(28px,4.2vw,52px);font-weight:900;text-align:center;animation:pop .5s both}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — سوق المشاريع الناشئة (ريادة الأعمال)
+   كل فريقٍ يسحب «مشكلة» حقيقية من بيئته و«مورداً» محدوداً، فيصمّم حلاً
+   على لوحة نموذج العمل المبسّطة، ثم يعرضه في ٦٠ ثانية. في الختام يستثمر
+   الصفّ عملاتٍ افتراضية في مشاريع الآخرين — لا في مشروعه — فيتعلّم أن
+   الفكرة الناجحة هي التي يقتنع بها غيرك لا صاحبها وحده.
+   ═══════════════════════════════════════════════════════════════════ */
+const PROBLEMS = [
+  'طلابٌ ينسون قوارير الماء فيعطشون في الحصص الأخيرة',
+  'طابورٌ طويل عند المقصف يضيّع نصف الفسحة',
+  'أوراقٌ كثيرة تُرمى في المدرسة كل أسبوع',
+  'كبار السنّ في الحيّ يعيشون وحدهم ويحتاجون من يساعدهم',
+  'رطبٌ يتساقط من النخيل في موسمه ويضيع دون أن يُستفاد منه',
+  'زوّار القلاع والحصون لا يعرفون قصصها وتاريخها',
+  'طلابٌ يجدون صعوبة في تنظيم وقت المذاكرة قبل الاختبارات',
+  'حرارة الصيف تجعل ساحة المدرسة غير صالحة للّعب',
+  'ملابس وكتب مستعملة بحالةٍ جيدة تُهمَل في البيوت',
+  'حيواناتٌ أليفة ضائعة في الحيّ لا يُعرف أصحابها',
+];
+const RESOURCES = [
+  'ميزانية ٥٠ ريالاً فقط', 'تطبيق هاتف بسيط', 'ورق وكرتون ومواد معاد تدويرها', 'خمسة متطوّعين يومي الخميس والجمعة',
+  'ركنٌ صغير في ساحة المدرسة', 'حسابٌ على وسائل التواصل', 'طابعة ثلاثية الأبعاد في مختبر المدرسة', 'دعمٌ من مجلس الآباء',
+];
+const CANVAS = [['المشكلة', 'من يعاني منها؟ ومتى؟'], ['الحلّ', 'ما منتجكم أو خدمتكم في جملة واحدة؟'], ['الاسم والشعار', 'اسمٌ قصير سهل التذكّر'],
+  ['العميل', 'من سيستخدمه؟ ومن سيدفع؟'], ['القيمة', 'لماذا يختاركم بدل غيركم؟'], ['التكلفة والدخل', 'ماذا تحتاجون؟ ومن أين يأتي المال؟']];
+const PITCH = 60, DESIGN = 480, BUDGET = 1000;
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EEF1F7"/>
+  <g stroke="#0E1B2E" stroke-width="4" opacity=".12" fill="none"><path d="M120 760l200-180 160 110 240-260 180 120 260-300"/><circle cx="1160" cy="250" r="16" fill="#0E1B2E"/></g>
+</svg>`;
+
+let K, teams, dealt = [], inv = [], cur = 0, timer;
+K = Kit.build({
+  title: 'سوق المشاريع الناشئة', accent: '#6B3FD1', accent2: '#4A2A96', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'ريادة الأعمال والتفكير الإبداعي: تحويل مشكلةٍ حقيقية إلى فكرة مشروع، وفهم العميل والقيمة والتكلفة، ومهارة العرض المقنع في دقيقة، وتقييم أفكار الآخرين بعدل.',
+    tools: 'الشاشة، وورقة كبيرة لكل فريق (لرسم لوحة النموذج).',
+    groups: 'من ٣ إلى ٦ فرق، في كل فريقٍ ٣–٥ طلاب: قائد، ومصمّم، ومحاسب، ومتحدّث.',
+    steps: ['نوزّع على كل فريقٍ مشكلةً ومورداً بالقرعة.', 'ثماني دقائق لتصميم المشروع على لوحة النموذج (الخانات الست).', 'كل فريقٍ يعرض مشروعه في ٦٠ ثانية.', 'جولة الاستثمار: كل فريقٍ يملك ١٠٠٠ عملة يوزّعها على مشاريع الفرق الأخرى فقط.', 'نعلن المشروع الأكثر استثماراً، ونناقش: لماذا أقنعنا؟'],
+    time: '٢٥–٣٥ دقيقة.',
+    script: 'اليوم كل فريقٍ شركةٌ ناشئة! ستحصلون على مشكلةٍ حقيقية ومورداً محدوداً، وعليكم ابتكار مشروعٍ يحلّها. وفي النهاية… المستثمرون هم أنتم!',
+    tips: 'راقبوا الوقت بصرامة؛ الضغط جزءٌ من التجربة. وذكّروا: الاستثمار في مشروع فريقك ممنوع.',
+    points: 'الاستثمار نفسه هو النتيجة. ويمكن منح نقاط قيم: أفضل عرض، وأذكى استخدامٍ للمورد، وأكثر فكرةٍ نفعاً للمجتمع.',
+    levels: 'للصفوف ٥–٦: نملأ ثلاث خانات فقط (المشكلة، الحلّ، العميل). للصفوف ٩–١٠: نضيف سؤال «ما المخاطر؟ وكيف تقيسون النجاح؟».',
+    close: ['ما الذي جعل مشروعاً ما مقنعاً أكثر من غيره؟', 'كيف غيّر المورد المحدود أفكاركم؟', 'ما المشكلة في مجتمعك التي تتمنّى أن تبني لها مشروعاً حقيقياً؟'],
+  },
+});
+
+function home() {
+  if (timer) timer.pause();
+  K.start({ emblem: '🚀', sub: 'مشكلةٌ حقيقية، ومورد محدود، وثماني دقائق لتأسيس شركتكم… ثم يقرّر المستثمرون!',
+    meta: [['الصفوف', '٦ – ١٠'], ['الزمن', '٢٥ – ٣٥ دقيقة'], ['المهارة', 'ريادة الأعمال'], ['القيمة', 'المبادرة وخدمة المجتمع']],
+    teams: [4, [3, 4, 5, 6]], onGo: n => { teams = null; home.n = n; deal(); } });
+}
+
+function deal() {
+  const pb = Kit.shuffle ? K.shuffle(PROBLEMS) : PROBLEMS, rs = K.shuffle(RESOURCES);
+  dealt = Array.from({ length: home.n }, (_, i) => ({ p: pb[i], r: rs[i % rs.length] }));
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">١ · القرعة</span><div class="big-q">مشكلة كل فريق ومورده</div>`;
+  const tb = K.el('div', 'teams'); tb.style.display = 'none'; w.appendChild(tb);
+  if (!teams) teams = K.Teams(tb, home.n); else teams.mount(tb);
+  const cs = K.el('div', 'cards2');
+  dealt.forEach((d, i) => { const c = K.el('div', 'dealt'); c.style.animationDelay = (i * .15) + 's';
+    c.innerHTML = `<div class="k">${Kit.esc(teams.list[i].name)}</div><div class="v">🧩 ${Kit.esc(d.p)}</div><div class="muted" style="margin-top:8px;font-weight:800">🎒 المورد: ${Kit.esc(d.r)}</div>`; cs.appendChild(c); });
+  w.appendChild(cs);
+  const nx = K.el('button', 'btn p big', 'ابدؤوا التصميم ←'); nx.onclick = () => { K.SFX.tap(); design(); }; w.appendChild(nx);
+  K.stage.appendChild(w); K.SFX.win();
+}
+
+function design() {
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">٢ · التصميم — لوحة نموذج العمل</span><div class="big-q" style="font-size:clamp(20px,2.6vw,32px)">املؤوا الخانات الست على ورقتكم</div>`;
+  const cv = K.el('div', 'canvas'); cv.innerHTML = CANVAS.map(([k, q]) => `<div><b>${k}</b>${q}</div>`).join(''); w.appendChild(cv);
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, DESIGN, () => K.say('انتهى وقت التصميم — استعدّوا للعرض!', 'info'));
+  const add = K.el('button', 'btn sm', '+١ دقيقة'); add.onclick = () => timer.add(60); tr.appendChild(add);
+  const nx = K.el('button', 'btn p big', 'إلى العروض ←'); nx.onclick = () => { timer.pause(); cur = 0; pitch(); }; w.appendChild(nx);
+  K.stage.appendChild(w); timer.start();
+}
+
+function pitch() {
+  K.stage.innerHTML = '';
+  const t = teams.list[cur], d = dealt[cur];
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">٣ · العروض — ${Kit.AR(cur + 1)} من ${Kit.AR(teams.list.length)}</span>
+    <div class="winner" style="color:${t.color}">🎤 ${Kit.esc(t.name)}</div>
+    <div class="dealt" style="max-width:800px"><div class="v">🧩 ${Kit.esc(d.p)}</div><div class="muted" style="margin-top:6px;font-weight:800">🎒 ${Kit.esc(d.r)}</div></div>
+    <div class="muted" style="font-weight:800">دقيقةٌ واحدة: المشكلة ← الحلّ ← لماذا نحن؟</div>`;
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, PITCH, () => K.say('انتهت الدقيقة! 👏', 'info'));
+  const go = K.el('button', 'btn g', '▶ ابدأ الدقيقة'); go.onclick = () => { timer.reset(PITCH); timer.start(); }; tr.appendChild(go);
+  const nx = K.el('button', 'btn p big', cur < teams.list.length - 1 ? 'العرض التالي ←' : 'جولة الاستثمار ←');
+  nx.onclick = () => { timer.pause(); K.SFX.tap(); if (cur < teams.list.length - 1) { cur++; pitch(); } else invest(); };
+  w.appendChild(nx); K.stage.appendChild(w);
+}
+
+function invest() {
+  inv = teams.list.map(() => 0);
+  const left = teams.list.map(() => BUDGET);
+  const given = teams.list.map(() => teams.list.map(() => 0));   // given[من][إلى]
+  let from = 0;
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  K.stage.appendChild(w);
+  function paint() {
+    const f = teams.list[from];
+    const max = Math.max(1, ...inv);
+    w.innerHTML = `<span class="tag">٤ · جولة الاستثمار</span>
+      <div class="big-q" style="font-size:clamp(20px,2.6vw,32px)">المستثمر الآن: <span style="color:${f.color}">${Kit.esc(f.name)}</span> — بقي معه <b>${Kit.AR(left[from])}</b> عملة</div>
+      <div class="muted">لا يستثمر الفريق في مشروعه. كل ضغطة = ١٠٠ عملة.</div>`;
+    const box = K.el('div', 'inv');
+    teams.list.forEach((t, i) => {
+      const r = K.el('div', 'r');
+      r.innerHTML = `<div class="nm" style="color:${t.color}">${Kit.esc(t.name)}</div><div class="bar"><i style="width:${inv[i] / max * 100}%;background:${t.color}"></i></div>`;
+      const ops = K.el('div', 'ops');
+      const amt = K.el('span', 'amt', Kit.AR(inv[i])); ops.appendChild(amt);
+      if (i !== from) {
+        const p = K.el('button', 'btn', '+١٠٠'); p.disabled = left[from] < 100;
+        p.onclick = () => { left[from] -= 100; given[from][i] += 100; inv[i] += 100; K.SFX.star(); paint(); };
+        const m = K.el('button', 'btn', '−'); m.disabled = given[from][i] < 100;
+        m.onclick = () => { left[from] += 100; given[from][i] -= 100; inv[i] -= 100; K.SFX.tap(); paint(); };
+        ops.append(p, m);
+      } else ops.appendChild(K.el('span', 'muted', 'مشروعكم'));
+      r.appendChild(ops); box.appendChild(r);
+    });
+    w.appendChild(box);
+    const nx = K.el('button', 'btn p big', from < teams.list.length - 1 ? 'المستثمر التالي ←' : 'إعلان النتائج ←');
+    nx.onclick = () => { K.SFX.tap(); if (from < teams.list.length - 1) { from++; paint(); } else results(); };
+    w.appendChild(nx);
+  }
+  paint();
+}
+
+function results() {
+  const order = teams.list.map((t, i) => ({ t, v: inv[i] })).sort((a, b) => b.v - a.v);
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col');
+  w.innerHTML = `<div class="emblem2">🏆</div><div class="winner" style="color:${order[0].t.color}">${Kit.esc(order[0].t.name)}</div>
+    <div class="big-q" style="font-size:clamp(20px,2.4vw,30px)">جذب أكبر استثمار: ${Kit.AR(order[0].v)} عملة</div>
+    <div class="explain">${order.map((o, i) => `${Kit.AR(i + 1)}. <b>${Kit.esc(o.t.name)}</b> — ${Kit.AR(o.v)} عملة`).join('<br>')}</div>`;
+  const tb = K.el('div', 'teams'); w.appendChild(tb); teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'أفضل عرض'], [2, 'أذكى استخدامٍ للمورد'], [2, 'أكثر نفعاً للمجتمع']]));
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => K.reflect({ value: 'المبادرة وخدمة المجتمع', questions: ['ما الذي جعل مشروعاً ما مقنعاً أكثر من غيره؟', 'كيف غيّر المورد المحدود أفكاركم؟', 'ما المشكلة في مجتمعك التي تتمنّى أن تبني لها مشروعاً حقيقياً؟'] }, home);
+  w.appendChild(nx); K.stage.appendChild(w); K.SFX.win();
+}
+home();
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>برمج الروبوت</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.lab{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;align-items:flex-start;width:100%;max-width:1200px}
+.grid{direction:ltr;display:grid;grid-template-columns:repeat(6,clamp(46px,6.2vw,78px));gap:4px;background:var(--ink);padding:4px;border-radius:14px;box-shadow:var(--sh)}
+.grid div{aspect-ratio:1;background:#F4F7FB;border-radius:8px;display:grid;place-items:center;font-size:clamp(24px,3.4vw,44px);position:relative}
+.grid .w{background:#44546A}
+.grid .g{background:#DDF3E6}
+.grid .k{background:#FFF2D6}
+.grid .trail{background:#DCE8FB}
+.grid .crash{background:#FBE3E6;animation:shake .4s}
+.prog{display:flex;flex-direction:column;gap:12px;min-width:min(420px,92vw);max-width:520px;flex:1}
+.cmds{direction:ltr;display:flex;flex-wrap:wrap;gap:8px;min-height:76px;background:#fff;border:2px dashed var(--ink);border-radius:14px;padding:10px;align-content:flex-start}
+.cmds span{border:2px solid var(--ink);border-radius:10px;padding:6px 12px;font-size:26px;font-weight:900;background:var(--sand);display:inline-flex;align-items:center;gap:4px}
+.cmds span.run{background:var(--gold)}
+.cmds span small{font-size:17px;color:var(--a2)}
+.keys{direction:ltr;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.keys .btn{font-size:30px;min-height:66px}
+.meter{font-weight:800}
+.meter b{color:var(--a2)}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — برمج الروبوت (التفكير الحاسوبي بلا حاسوب)
+   الصف يكتب «برنامجاً» من أسهم، والروبوت ينفّذه خطوةً خطوة. المستويات
+   الأعلى تُحدّد عدد الأوامر فيضطرّ الطلاب لاكتشاف «التكرار» (×٢ ×٣…)
+   بأنفسهم — وهو جوهر البرمجة: وصفُ الحلّ بأقصر تعليماتٍ دقيقة.
+   الشبكة تُعرض ltr دائماً كي يطابق السهم ➡ الحركة يميناً على الشاشة.
+   كل مستوى محلولٌ مسبقاً (الحلّ في التعليق) ضمن حدّ الأوامر.
+   ═══════════════════════════════════════════════════════════════════ */
+const LEVELS = [
+  // ➡×٥
+  { name: 'الخطوة الأولى', start: [5, 0], goal: [5, 5], walls: [], max: 6, tip: 'كم خطوةً يحتاج الروبوت؟' },
+  // ⬆×٣ ، ➡×٥ ، ⬆×٢
+  { name: 'حول الجدار', start: [5, 0], goal: [0, 5], walls: [[5, 2], [4, 2], [3, 2]], max: 5, tip: 'حدّ الأوامر ٥ — جرّبوا أزرار التكرار ×٢ ×٣ ×٥.' },
+  // ➡×٤ ، ⬆×٢ ، ⬅×٣ ، ⬆×٢ ، ➡×٤ ، ⬆
+  { name: 'المتاهة', start: [5, 0], goal: [0, 5], walls: [[4, 0], [4, 1], [4, 2], [4, 3], [2, 2], [2, 3], [2, 4], [2, 5]], max: 8, tip: 'خطّطوا المسار بالإصبع على الشاشة قبل كتابة الأوامر.' },
+  // ⬇×٥ ، ➡×٥ ، ⬆×٥ (يمرّ بالمفتاح)
+  { name: 'المفتاح أولاً', start: [0, 0], goal: [0, 5], key: [5, 5], walls: [[1, 2], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3], [0, 2], [0, 3]], max: 4, tip: 'لا تُفتح البوّابة إلا بعد أخذ المفتاح 🔑.' },
+  // ➡ ⬇ ➡ ⬇ ... درج: (➡ ⬇)×٥ لكن بلا تكرار مجموعات: ١٠ أوامر، الحدّ ١٠
+  { name: 'الدرج', start: [0, 0], goal: [5, 5], walls: [[0, 2], [1, 3], [2, 4], [3, 5], [1, 0], [2, 1], [3, 2], [4, 3], [5, 4]], max: 10, tip: 'لاحظوا النمط: خطوةٌ يميناً ثم خطوةٌ لأسفل… هل يتكرّر؟' },
+];
+const DIRS = { '⬆': [-1, 0], '⬇': [1, 0], '⬅': [0, -1], '➡': [0, 1] };
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EAF0F8"/>
+  <g stroke="#1F5FD1" stroke-width="3" opacity=".12" fill="none">
+    ${Array.from({ length: 30 }, (_, i) => `<path d="M${i * 60} 0v900"/>`).join('')}${Array.from({ length: 16 }, (_, i) => `<path d="M0 ${i * 60}h1600"/>`).join('')}
+  </g>
+</svg>`;
+
+let K, teams, lv = 0, prog = [], running = false;
+K = Kit.build({
+  title: 'برمج الروبوت', accent: '#0E7C66', accent2: '#08584A', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'التفكير الحاسوبي: تحويل الحلّ إلى تعليماتٍ دقيقة مرتّبة (خوارزمية)، واكتشاف التكرار لاختصار البرنامج، وتصحيح الأخطاء (Debugging) حين يصطدم الروبوت.',
+    tools: 'الشاشة. واختيارياً: ورقة لرسم المسار.',
+    groups: 'فرقٌ من ٣–٤. في كل مستوى يُملي فريقٌ برنامجه، والفرق الأخرى تتوقّع: هل سينجح؟',
+    steps: ['نعرض المستوى ونقرأ الحدّ الأقصى للأوامر.', 'دقيقتان للتخطيط على الورق.', 'الفريق يُملي الأوامر ونضغطها بالترتيب (ونستخدم ×٢ ×٣ ×٥ للتكرار).', 'قبل «تشغيل»: الفرق الأخرى تتوقّع النتيجة.', 'إن اصطدم الروبوت: نسأل «في أيّ أمرٍ بدأ الخطأ؟» ونصحّح.'],
+    time: '١٥–٢٥ دقيقة لخمسة مستويات.',
+    script: 'هذا الروبوت ذكيٌّ جداً… لكنه لا يفهم إلا الأوامر الدقيقة! مهمّتكم أن تكتبوا له برنامجاً يوصله إلى الهدف دون أن يصطدم بجدار — وبأقلّ عددٍ من الأوامر.',
+    tips: 'الخطأ هنا جزءٌ من البرمجة لا فشل. امدحوا الفريق الذي يجد مكان الخطأ بسرعة.',
+    points: 'نقطتان لبرنامجٍ ينجح من أوّل تشغيل، ونقطة لتصحيح خطأٍ بدقّة، ونقطة لأقصر برنامج.',
+    levels: 'للصفوف ٥–٦: ابدؤوا بالمستويات ١–٣. للصفوف ٨–١٠: اطلبوا في المستوى الخامس برنامجاً «بفكرة» التكرار: (➡ ثم ⬇) كرّرها ٥ مرات — ونناقش كيف تكتبها لغات البرمجة.',
+    close: ['ما الخوارزمية؟ عبّر بكلماتك.', 'كيف ساعدكم التكرار على اختصار البرنامج؟', 'أين ترى خوارزمياتٍ في حياتك اليومية؟ (وصفة طبخ، طريق المدرسة…)'],
+  },
+});
+
+function home() {
+  lv = 0;
+  K.start({ emblem: '🤖', sub: 'اكتبوا للروبوت برنامجاً من الأسهم يوصله إلى الهدف — بأقلّ عددٍ من الأوامر.',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٥ دقيقة'], ['المهارة', 'التفكير الحاسوبي'], ['القيمة', 'الدقّة والتصحيح']],
+    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; level(); } });
+}
+
+function cellCls(L, r, c, trail, crash, hasKey) {
+  if (crash && crash[0] === r && crash[1] === c) return 'crash';
+  if (L.walls.some(w => w[0] === r && w[1] === c)) return 'w';
+  if (L.goal[0] === r && L.goal[1] === c) return 'g';
+  if (L.key && !hasKey && L.key[0] === r && L.key[1] === c) return 'k';
+  if (trail.some(t => t[0] === r && t[1] === c)) return 'trail';
+  return '';
+}
+function drawGrid(host, L, pos, trail, crash, hasKey) {
+  let h = '';
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) {
+    let ic = '';
+    if (pos[0] === r && pos[1] === c) ic = crash ? '💥' : '🤖';
+    else if (L.walls.some(w => w[0] === r && w[1] === c)) ic = '';
+    else if (L.goal[0] === r && L.goal[1] === c) ic = L.key && !hasKey ? '🔒' : '🏁';
+    else if (L.key && !hasKey && L.key[0] === r && L.key[1] === c) ic = '🔑';
+    h += `<div class="${cellCls(L, r, c, trail, crash, hasKey)}">${ic}</div>`;
+  }
+  host.innerHTML = h;
+}
+const count = () => prog.length;
+
+function level() {
+  const L = LEVELS[lv]; prog = []; running = false;
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1200px';
+  w.innerHTML = `<div class="row"><span class="tag">المستوى ${Kit.AR(lv + 1)} من ${Kit.AR(LEVELS.length)} — ${L.name}</span></div>
+    <div class="muted" style="font-weight:700">💡 ${Kit.esc(L.tip)}</div>`;
+  const lab = K.el('div', 'lab');
+  const grid = K.el('div', 'grid'); lab.appendChild(grid);
+  const pr = K.el('div', 'prog');
+  pr.innerHTML = `<div class="meter">الأوامر: <b class="n">٠</b> من ${Kit.AR(L.max)} كحدٍّ أقصى</div><div class="cmds"></div>`;
+  const keys = K.el('div', 'keys');
+  ['⬅', '⬆', '⬇', '➡'].forEach(d => { const b = K.el('button', 'btn', d); b.onclick = () => add(d); keys.appendChild(b); });
+  [2, 3, 5].forEach(m => { const b = K.el('button', 'btn sm', '×' + Kit.AR(m)); b.style.fontSize = '22px'; b.onclick = () => mult(m); keys.appendChild(b); });
+  const un = K.el('button', 'btn sm', '⌫ تراجع'); un.onclick = () => { if (running) return; prog.pop(); paint(); }; keys.appendChild(un);
+  pr.appendChild(keys);
+  const acts = K.el('div', 'row');
+  const run = K.el('button', 'btn p big', '▶ تشغيل'); run.onclick = () => exec(grid, L, run);
+  const clr = K.el('button', 'btn', 'مسح البرنامج'); clr.onclick = () => { if (running) return; prog = []; paint(); drawGrid(grid, L, L.start, [], null, false); };
+  acts.append(run, clr); pr.appendChild(acts);
+  lab.appendChild(pr); w.appendChild(lab);
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  K.stage.appendChild(w);
+  if (!teams) teams = K.Teams(tb, home.n || 3); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[2, 'نجح من أول تشغيل'], [1, 'وجد الخطأ وصحّحه'], [1, 'أقصر برنامج']]));
+  function paint() {
+    pr.querySelector('.n').textContent = Kit.AR(count());
+    pr.querySelector('.n').style.color = count() > L.max ? 'var(--red)' : '';
+    pr.querySelector('.cmds').innerHTML = prog.map(p => `<span>${p.d}${p.n > 1 ? `<small>×${Kit.AR(p.n)}</small>` : ''}</span>`).join('');
+  }
+  function add(d) { if (running) return; K.SFX.tap(); prog.push({ d, n: 1 }); paint(); }
+  function mult(m) { if (running || !prog.length) return; K.SFX.tap(); prog[prog.length - 1].n = m; paint(); }
+  level.paint = paint;
+  drawGrid(grid, L, L.start, [], null, false);
+}
+
+async function exec(grid, L, run) {
+  if (running || !prog.length) return;
+  if (count() > L.max) { K.SFX.soft(); K.say('البرنامج أطول من الحدّ المسموح — جرّبوا التكرار!', 'warn'); return; }
+  running = true; run.disabled = true;
+  let pos = L.start.slice(), trail = [pos.slice()], hasKey = false;
+  const spans = [...document.querySelectorAll('.cmds span')];
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  drawGrid(grid, L, pos, trail, null, hasKey);
+  for (let i = 0; i < prog.length; i++) {
+    spans.forEach(s => s.classList.remove('run')); spans[i].classList.add('run');
+    for (let k = 0; k < prog[i].n; k++) {
+      await wait(380);
+      const [dr, dc] = DIRS[prog[i].d], np = [pos[0] + dr, pos[1] + dc];
+      const out = np[0] < 0 || np[0] > 5 || np[1] < 0 || np[1] > 5;
+      const wall = !out && L.walls.some(w => w[0] === np[0] && w[1] === np[1]);
+      if (out || wall) { drawGrid(grid, L, pos, trail, pos, hasKey); K.SFX.soft(); K.say(`اصطدم الروبوت عند الأمر رقم ${Kit.AR(i + 1)} — أين الخطأ؟`, 'warn'); return end(false); }
+      pos = np; trail.push(pos.slice()); K.SFX.tick();
+      if (L.key && pos[0] === L.key[0] && pos[1] === L.key[1] && !hasKey) { hasKey = true; K.SFX.star(); }
+      drawGrid(grid, L, pos, trail, null, hasKey);
+    }
+  }
+  const atGoal = pos[0] === L.goal[0] && pos[1] === L.goal[1];
+  if (atGoal && (!L.key || hasKey)) { K.SFX.win(); K.say(`نجح البرنامج بـ${Kit.AR(count())} أوامر!`); return end(true); }
+  K.SFX.soft(); K.say(atGoal ? 'وصل الروبوت… لكن بلا المفتاح!' : 'انتهى البرنامج قبل الوصول للهدف.', 'warn'); end(false);
+  function end(ok) {
+    running = false; run.disabled = false;
+    if (!ok) return;
+    const w = K.stage.querySelector('.col');
+    const nx = K.el('button', 'btn p big', lv < LEVELS.length - 1 ? 'المستوى التالي ←' : 'ختام النشاط ←');
+    nx.onclick = () => { K.SFX.tap(); if (lv < LEVELS.length - 1) { lv++; level(); } else K.reflect({ value: 'الدقّة وتصحيح الأخطاء', questions: ['ما الخوارزمية؟ عبّر بكلماتك.', 'كيف ساعدكم التكرار على اختصار البرنامج؟', 'أين ترى خوارزمياتٍ في حياتك اليومية؟'] }, home); };
+    w.insertBefore(nx, w.querySelector('.teams'));
+  }
+}
+home();
+</script>
+</body>
+</html>

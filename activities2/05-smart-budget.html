@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>ميزانيتي الذكية</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.dash{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:1000px}
+.dash div{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:12px;text-align:center;box-shadow:var(--sh)}
+.dash small{display:block;font-weight:800;opacity:.7}
+.dash b{font-size:clamp(28px,4vw,48px);font-variant-numeric:tabular-nums}
+.goalbar{width:100%;max-width:1000px}
+.goalbar .bar{height:30px;background:var(--sand);border:2px solid var(--ink);border-radius:99px;overflow:hidden}
+.goalbar .bar i{display:block;height:100%;background:var(--ok);transition:width .5s}
+.ev{font-size:clamp(22px,3vw,38px);font-weight:800;text-align:center;line-height:1.5}
+.ch .btn small{display:block;font-size:.72em;opacity:.8;font-weight:700}
+.nw{display:inline-block;border-radius:99px;padding:2px 12px;font-size:.8em;font-weight:800;margin-inline-start:8px}
+.nw.n{background:#DDF3E6;color:var(--ok)}.nw.w{background:#FFF2D6;color:#8A5A00}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — ميزانيتي الذكية (الثقافة المالية)
+   محاكاةٌ صفّية لثلاثة أشهر: مصروفٌ شهري ٢٠ ريالاً، وهدفٌ: درّاجة بـ٣٥
+   ريالاً. تأتي مواقف (رغبات، حاجات، طوارئ، فرص) والصف يصوّت على القرار.
+   ثلاثة عدّادات تتحرّك معاً: الرصيد، والمدّخر، والرضا — فيظهر أن كل
+   قرارٍ ماليّ مقايضة، لا صواب مطلق فيه، وأن الادّخار المبكر يسهّل الطوارئ.
+   الأرقام بسيطة ومقرّبة لتُحسب ذهنياً أمام الصف.
+   ═══════════════════════════════════════════════════════════════════ */
+const ALLOW = 20, GOAL = 35;
+// كل خيار: t نص، m تغيّر الرصيد، s تحويلٌ للادّخار، h الرضا، k حاجة/رغبة للشرح
+const EVENTS = [
+  { m: 1, t: 'وصل مصروف الشهر الأول: ٢٠ ريالاً. كيف نبدأ؟', o: [
+    { t: 'ندّخر ٥ ريالات فوراً قبل أي شراء', s: 5, h: 0 }, { t: 'ندّخر ما يتبقّى آخر الشهر', s: 0, h: 1 }, { t: 'ندّخر ١٠ ريالات', s: 10, h: -1 }],
+    lesson: 'قاعدة «ادفع لنفسك أولاً»: ما يُدَّخر في أول الشهر يُدَّخر فعلاً، وما يُؤجَّل لآخره يضيع غالباً.' },
+  { m: 1, t: 'أصدقاؤك ذاهبون إلى مطعم وجبات سريعة. الوجبة بـ٣ ريالات.', o: [
+    { t: 'أذهب وأطلب وجبة كاملة', m: -3, h: 2, k: 'w' }, { t: 'أذهب وأطلب مشروباً فقط (ريال)', m: -1, h: 1, k: 'w' }, { t: 'أعتذر هذه المرّة', m: 0, h: -1 }],
+    lesson: 'الخروج مع الأصدقاء «رغبة» مشروعة. الذكاء ليس في الحرمان بل في الاختيار: هل هناك طريقةٌ أرخص لنفس المتعة؟' },
+  { m: 1, t: 'انكسرت مسطرتك الهندسية وتحتاجها لاختبار الرياضيات غداً (ريال واحد).', o: [
+    { t: 'أشتريها', m: -1, h: 0, k: 'n' }, { t: 'أستعيرها من أخي', m: 0, h: 0 }, { t: 'أشتري طقماً فاخراً بـ٤ ريالات', m: -4, h: 1, k: 'w' }],
+    lesson: 'هذه «حاجة». لكن حتى الحاجة لها خيارٌ أرخص (الاستعارة) وخيارٌ أغلى تدخل فيه الرغبة (الطقم الفاخر).' },
+  { m: 2, t: 'وصل مصروف الشهر الثاني. ظهرت لعبة إلكترونية جديدة بـ٨ ريالات!', o: [
+    { t: 'أشتريها الآن', m: -8, h: 3, k: 'w' }, { t: 'أنتظر التخفيضات بعد شهر', m: 0, h: -1 }, { t: 'ألعب بها عند صديقي', m: 0, h: 1 }],
+    lesson: 'قاعدة «انتظر ٧٢ ساعة»: كثيرٌ من الرغبات تخفّ بعد أيام. الشراء الفوري للرغبة الكبيرة يؤخّر الهدف الأهم.' },
+  { m: 2, t: 'عرضت عليك جارتك ريالين مقابل مساعدتها في ترتيب مكتبتها يوم الجمعة.', o: [
+    { t: 'أقبل وأدّخر المبلغ كلّه', m: 2, s: 2, h: 0 }, { t: 'أقبل وأصرف المبلغ', m: 2, h: 1 }, { t: 'أرفض، أريد الراحة', m: 0, h: 1 }],
+    lesson: 'الدخل لا يأتي من المصروف فقط. العمل الصغير المشروع يزيد الدخل ويعلّم قيمة المال والجهد.' },
+  { m: 2, t: 'طارئ! تعطّلت سمّاعتك التي تحتاجها للدروس الإلكترونية. إصلاحها ٥ ريالات.', o: [
+    { t: 'أدفع من الرصيد', m: -5, h: 0, k: 'n' }, { t: 'أسحب من المدّخرات', s: -5, h: 0, k: 'n' }, { t: 'أشتري سمّاعة جديدة بـ١٢ ريالاً', m: -12, h: 2, k: 'w' }],
+    lesson: 'لهذا نحتاج «صندوق طوارئ»: من ادّخر مبكراً يواجه المفاجأة دون أن يستدين أو يتوتّر.' },
+  { m: 3, t: 'وصل مصروف الشهر الثالث. المصرف يمنح مكافأة ١٠٪ على المدّخرات إن لم تسحب منها هذا الشهر.', o: [
+    { t: 'أودع ٥ ريالات إضافية وأترك المدّخرات', s: 5, h: 0, bonus: true }, { t: 'أترك المدّخرات كما هي', s: 0, h: 0, bonus: true }, { t: 'أسحب ٥ ريالات لشراء ملابس رياضية', s: -5, h: 2, k: 'w' }],
+    lesson: 'الفائدة/المكافأة تعني أن المال المدّخر «يعمل» لك. كلما ادّخرت أكثر وأبكر، كبرت المكافأة.' },
+  { m: 3, t: 'حملة تبرّع في المدرسة لأسرةٍ محتاجة.', o: [
+    { t: 'أتبرّع بريالين', m: -2, h: 2 }, { t: 'أتبرّع بنصف ريال', m: -0.5, h: 1 }, { t: 'أتبرّع بوقتي في تنظيم الحملة', m: 0, h: 2 }],
+    lesson: 'العطاء جزءٌ من الميزانية الذكية. ولا يكون بالمال وحده: الوقت والجهد عطاءٌ أيضاً.' },
+];
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#EDF3EE"/>
+  <g fill="#1E8A55" opacity=".13"><circle cx="180" cy="200" r="90"/><circle cx="1420" cy="700" r="120"/><rect x="1280" y="120" width="200" height="120" rx="20"/></g>
+</svg>`;
+
+let K, tmr = null, i = 0, bal = 0, sav = 0, hap = 5, month = 0, withdrew = false, log = [];
+K = Kit.build({
+  title: 'ميزانيتي الذكية', accent: '#1E8A55', accent2: '#12603A', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الثقافة المالية: التمييز بين الحاجة والرغبة، والادّخار أولاً، وصندوق الطوارئ، وأثر المكافأة على المدّخرات، وأن كل قرارٍ مالي مقايضة بين الرصيد والهدف والرضا.',
+    tools: 'الشاشة فقط.',
+    groups: 'الصف كلّه «شخصٌ واحد»: نصوّت على كل قرار برفع الأيدي، والأغلبية تقرّر. ويمكن تقسيم الصف إلى مستشارين يدافع كلٌّ عن خيار.',
+    steps: ['نقرأ الموقف والخيارات الثلاثة.', 'نصف دقيقة نقاش: ماذا يربح كل خيار؟ وماذا يخسر؟', 'تصويتٌ برفع الأيدي، ونضغط الخيار الفائز.', 'نقرأ «الدرس المالي» ونلاحظ العدّادات الثلاثة.', 'في النهاية: هل وصلنا إلى ثمن الدرّاجة (٣٥ ريالاً)؟'],
+    time: '١٥–٢٠ دقيقة.',
+    script: 'أنتم اليوم شخصٌ واحد اسمه «فصلنا»! مصروفه ٢٠ ريالاً في الشهر، وحلمه درّاجة ثمنها ٣٥ ريالاً بعد ثلاثة أشهر. كل قرارٍ ستتخذونه سيغيّر رصيده ومدّخراته… وسعادته أيضاً!',
+    tips: 'لا تحكموا على خيارٍ بأنه «خطأ». الهدف أن يرى الطلاب الثمن الخفي لكل قرار.',
+    points: 'لا فرق هنا: الصف كلّه يربح أو يخسر معاً. والنتيجة: الوصول إلى الهدف مع رضا لا يقلّ عن ٥.',
+    levels: 'للصفوف ٥–٦: نركّز على الحاجة والرغبة. للصفوف ٩–١٠: نحسب نسبة الادّخار من الدخل، ونناقش الفائدة المركّبة.',
+    close: ['ما الفرق بين الحاجة والرغبة؟ أعطِ مثالاً من حياتك.', 'لماذا «ادفع لنفسك أولاً»؟', 'ما هدفٌ ماليّ صغير تريد الادّخار له هذا الشهر؟'],
+  },
+});
+const R = v => Kit.AR(String(Math.round(v * 10) / 10).replace('.', '٫'));
+
+function home() {
+  if (tmr) tmr.pause();
+  i = 0; bal = 0; sav = 0; hap = 5; month = 0; withdrew = false; log = [];
+  K.start({ emblem: '💰', sub: 'ثلاثة أشهر، ومصروفٌ ٢٠ ريالاً في الشهر، وحلمٌ واحد: درّاجة بـ٣٥ ريالاً. هل يصل الصف إليه؟',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٠ دقيقة'], ['المهارة', 'الثقافة المالية'], ['القيمة', 'التخطيط وضبط النفس']],
+    onGo: () => step() });
+}
+
+function dash() {
+  const pct = Math.max(0, Math.min(100, sav / GOAL * 100));
+  return `<div class="dash"><div><small>💵 الرصيد</small><b>${R(bal)}</b></div><div><small>🐷 المدّخرات</small><b>${R(sav)}</b></div>
+    <div><small>😊 الرضا</small><b>${Kit.AR(hap)}</b><small>من ١٠</small></div></div>
+    <div class="goalbar"><div class="muted" style="font-weight:800">الهدف: درّاجة بـ${Kit.AR(GOAL)} ريالاً — ادّخرنا ${Kit.AR(Math.round(pct))}٪</div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+}
+
+function step() {
+  const E = EVENTS[i];
+  if (E.m !== month) { month = E.m; bal += ALLOW; withdrew = false; }
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<span class="tag">الشهر ${Kit.AR(E.m)} — الموقف ${Kit.AR(i + 1)} من ${Kit.AR(EVENTS.length)}</span><div class="dw col" style="width:100%">${dash()}</div><div class="ev panel">${Kit.esc(E.t)}</div>`;
+  const ch = K.el('div', 'opts ch');
+  E.o.forEach(o => {
+    const cost = (o.m || 0) - (o.s > 0 ? o.s : 0), afford = bal + cost >= 0 && sav + Math.min(0, o.s || 0) >= 0;
+    const b = K.el('button', 'btn', `${Kit.esc(o.t)}<small>${o.m ? (o.m > 0 ? '+' : '') + R(o.m) + ' رصيد' : ''}${o.s ? ' ' + (o.s > 0 ? '→ ' + R(o.s) + ' للمدّخرات' : R(o.s) + ' من المدّخرات') : ''}${!o.m && !o.s ? 'بلا تكلفة' : ''}</small>`);
+    if (!afford) { b.disabled = true; b.title = 'لا يكفي المال'; }
+    b.onclick = () => choose(E, o, w, ch);
+    ch.appendChild(b);
+  });
+  w.appendChild(ch);
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  if (tmr) tmr.pause();
+  tmr = K.ringTimer(tr, 30, () => K.say('انتهى النقاش — لنصوّت!', 'info')); tmr.start();
+  K.stage.appendChild(w);
+}
+
+function choose(E, o, w, ch) {
+  [...ch.children].forEach(b => b.disabled = true);
+  bal += (o.m || 0) - (o.s > 0 ? o.s : 0);
+  sav += o.s || 0;
+  if ((o.s || 0) < 0) withdrew = true;
+  hap = Math.max(0, Math.min(10, hap + (o.h || 0)));
+  let extra = '';
+  if (o.bonus && !withdrew) { const b = Math.round(sav * 0.1 * 10) / 10; sav += b; extra = `<br>🎉 مكافأة المصرف: +${R(b)} ريال (١٠٪ من المدّخرات).`; }
+  log.push(o);
+  K.SFX.ok();
+  if (tmr) tmr.pause();
+  w.querySelector('.dw').innerHTML = dash();
+  const tag = o.k === 'n' ? '<span class="nw n">حاجة</span>' : o.k === 'w' ? '<span class="nw w">رغبة</span>' : '';
+  const e = K.el('div', 'explain', `<b>اخترنا:</b> ${Kit.esc(o.t)} ${tag}<br><b>الدرس المالي:</b> ${Kit.esc(E.lesson)}${extra}`);
+  w.appendChild(e);
+  const nx = K.el('button', 'btn p big', i < EVENTS.length - 1 ? 'الموقف التالي ←' : 'النتيجة ←');
+  nx.onclick = () => { K.SFX.tap(); i++; i < EVENTS.length ? step() : end(); };
+  w.appendChild(nx);
+}
+
+function end() {
+  if (tmr) tmr.pause();
+  const total = bal + sav, ok = sav >= GOAL || total >= GOAL;
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<div class="emblem2">${sav >= GOAL ? '🚲' : ok ? '🤏' : '🕰️'}</div>${dash()}
+    <div class="explain">${sav >= GOAL ? `<b>وصلنا!</b> المدّخرات تكفي لشراء الدرّاجة، ${hap >= 5 ? 'مع رضا جيد — توازنٌ ممتاز بين الحاضر والمستقبل.' : 'لكن الرضا منخفض — هل حرمنا أنفسنا أكثر من اللازم؟'}`
+      : ok ? `<b>قريبون جداً!</b> المدّخرات وحدها لا تكفي، لكن مع الرصيد المتبقّي نصل إلى ${R(total)} ريالاً. لو ادّخرنا من البداية لكان الطريق أسهل.`
+      : `<b>لم نصل بعد.</b> المجموع ${R(total)} ريالاً من ${Kit.AR(GOAL)}. أيّ القرارات أخذ أكثر من ميزانيتنا؟ نحتاج شهراً إضافياً أو قراراتٍ مختلفة.`}
+      <br><span class="muted">اخترنا ${Kit.AR(log.filter(o => o.k === 'w').length)} رغبات و${Kit.AR(log.filter(o => o.k === 'n').length)} حاجات.</span></div>`;
+  const nx = K.el('button', 'btn p big', 'ختام النشاط ←');
+  nx.onclick = () => K.reflect({ value: 'التخطيط وضبط النفس', questions: ['ما الفرق بين الحاجة والرغبة؟ أعطِ مثالاً من حياتك.', 'لماذا «ادفع لنفسك أولاً»؟', 'ما هدفٌ ماليّ صغير تريد الادّخار له هذا الشهر؟'] }, home);
+  w.appendChild(nx); K.stage.appendChild(w); ok ? K.SFX.win() : K.SFX.soft();
+}
+home();
+</script>
+</body>
+</html>

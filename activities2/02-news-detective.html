@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>محقّق الأخبار</title>
+<link rel="stylesheet" href="_kit.css"/>
+<style>
+.post{background:#fff;border:2px solid var(--ink);border-radius:16px;box-shadow:var(--sh);max-width:900px;width:100%;overflow:hidden;animation:up .35s both}
+.post .hd{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.post .av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:var(--sand);flex:none}
+.post .who{font-weight:800;font-size:clamp(16px,1.7vw,20px)}
+.post .when{font-size:14px;opacity:.65}
+.post .ver{color:var(--a);font-size:.9em}
+.post .body{padding:16px 18px;font-size:clamp(20px,2.6vw,32px);font-weight:700;line-height:1.55}
+.post .media{margin:0 18px 14px;border-radius:12px;background:#E6ECF4;padding:22px;text-align:center;font-size:clamp(16px,1.8vw,21px);color:#3A4A62}
+.post .ft{display:flex;gap:18px;padding:10px 18px;border-top:1px solid var(--line);font-size:15px;opacity:.7}
+.flags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:1100px}
+.flags button{border:2px solid var(--ink);border-radius:99px;background:#fff;padding:8px 14px;font:inherit;font-weight:800;font-size:clamp(14px,1.5vw,17px);cursor:pointer;min-height:44px}
+.flags button.on{background:var(--gold)}
+.flags button.hit{background:#DDF3E6;border-color:var(--ok)}
+.flags button.miss{background:#FFF2D6;border-style:dashed}
+.verd{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.verd .btn{min-width:200px;min-height:70px;font-size:clamp(17px,2vw,24px)}
+.v-ok{background:#DDF3E6}.v-bad{background:#FBE3E6}.v-chk{background:#FFF2D6}
+.verd .btn.picked{outline:5px solid var(--gold);outline-offset:3px}
+</style>
+</head>
+<body>
+<script src="_kit.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   الحلقة الثانية — محقّق الأخبار (الثقافة الإعلامية)
+   منشوراتٌ متخيَّلة كالتي تصل الطلاب يومياً. الفرق تبحث أولاً عن
+   «علامات التحذير» ثم تحكم: موثوق، أم مضلِّل، أم يحتاج تحقّقاً.
+   الهدف ليس حفظ الإجابات بل عادة السؤال: من قال؟ متى؟ وما الدليل؟
+   كل المنشورات والحسابات متخيَّلة، ولا تنسب قولاً لجهةٍ حقيقية.
+   ═══════════════════════════════════════════════════════════════════ */
+const FLAGS = {
+  src: 'مصدر مجهول', emo: 'لغة عاطفية أو مبالغة', share: 'يطلب النشر فوراً', date: 'تاريخ قديم أو غائب',
+  num: 'أرقام أو وعود لا تُصدَّق', img: 'صورة خارج سياقها', ad: 'مصلحة أو إعلان', data: 'يطلب بيانات شخصية',
+  ai: 'علامات تزييف بالذكاء الاصطناعي', link: 'رابط غريب',
+};
+// v: ok موثوق | bad مضلِّل | chk يحتاج تحقّقاً — f: العلامات الموجودة فعلاً
+const POSTS = [
+  { av: '💊', who: 'صحتك_أولاً٢٠٢٤', when: 'قبل ساعة', ver: false,
+    body: 'عاااجل!! شرب الماء البارد بعد الأكل يسبّب أمراضاً خطيرة 😱 انشرها لكل من تحب قبل أن تُحذف!!',
+    v: 'bad', f: ['src', 'emo', 'share'],
+    why: 'حسابٌ بلا جهةٍ معروفة، وعلامات تعجّب ورعب، وطلب نشرٍ عاجل «قبل أن تُحذف» — وهذه حيلةٌ لنشر الشائعة قبل التفكير. لا دراسة ولا طبيب ولا رابط.' },
+  { av: '🌦️', who: 'الأرصاد الجوية ✔', when: 'اليوم ٧:٠٠ ص', ver: true,
+    body: 'تشير التوقّعات إلى أجواءٍ ماطرة ورذاذ على محافظة ظفار خلال موسم الخريف، مع انخفاضٍ في مدى الرؤية على المرتفعات.',
+    v: 'ok', f: [],
+    why: 'حسابٌ رسميّ موثَّق، ولغةٌ هادئة دقيقة، ومعلومةٌ متّسقة مع ما نعرفه: الخريف في ظفار موسم رذاذٍ وضباب. لا مبالغة ولا طلب نشر.' },
+  { av: '📱', who: 'مجموعة «أولياء أمور الصف»', when: 'أُعيد توجيهها عدّة مرّات', ver: false,
+    body: 'صورة شاشة: «تعليق الدراسة غداً في جميع المدارس بسبب الحالة الجوية».',
+    media: '🖼️ صورة لقطة شاشة بلا شعار واضح ولا تاريخ',
+    v: 'chk', f: ['src', 'date'],
+    why: 'قد يكون الخبر صحيحاً وقد لا يكون! «أُعيد توجيهها كثيراً» ولا تاريخ ولا مصدر. الحلّ: نتحقّق من الحساب الرسمي للجهة المسؤولة قبل أن نصدّق أو ننشر.' },
+  { av: '🦈', who: 'غرائب_العالم', when: 'منذ ٣ أيام', ver: false,
+    body: 'صورة حقيقية!! قرشٌ عملاق يسبح قرب أحد الشواطئ القريبة 😨 لا تنزلوا البحر!',
+    media: '🖼️ صورة قرش — (البحث العكسي عنها يُظهر أنها منشورة قبل سنوات في بلدٍ آخر)',
+    v: 'bad', f: ['img', 'emo', 'src'],
+    why: 'الصورة قديمة ومن مكانٍ آخر، أُعيد نشرها بقصّةٍ جديدة. البحث العكسي عن الصور (مثل البحث بالصورة في محرّكات البحث) يكشف هذا في ثوانٍ.' },
+  { av: '😴', who: 'مجلة صحة الأسرة', when: '١٢ مارس', ver: true,
+    body: 'توصي الجمعيات الطبية المتخصّصة بأن ينام المراهقون بين ٨ و١٠ ساعات ليلاً، لأن النوم يؤثّر في التركيز والذاكرة. (رابط التوصية الأصلية مرفق)',
+    v: 'ok', f: [],
+    why: 'تاريخٌ واضح، وجهةٌ معروفة، ورابطٌ للمصدر الأصلي، ولغةٌ متوازنة بلا وعودٍ خارقة. هذه علامات الخبر الموثوق.' },
+  { av: '🎁', who: 'هدايا_مجانية_الآن', when: 'منذ ١٠ دقائق', ver: false,
+    body: 'مبروك 🎉 ربحت رصيد ١٠ ريالات مجاناً! فقط أدخل رقم بطاقة والديك واسم المستخدم وكلمة المرور على الرابط: free-gift-now.xyz',
+    v: 'bad', f: ['data', 'link', 'num', 'src'],
+    why: 'احتيالٌ واضح: لا أحد يمنح هدايا مقابل كلمة المرور أو رقم البطاقة. رابطٌ غريب، وطلب بياناتٍ سرّية. لا نضغط، ونخبر الأهل.' },
+  { av: '🥤', who: 'المؤثّر «فِت_ستار»', when: 'أمس', ver: true,
+    body: 'هذا المشروب غيّر حياتي 💪 يزيد الذكاء ٥٠٪ خلال أسبوع! استخدموا كود الخصم STAR20',
+    v: 'bad', f: ['num', 'ad'],
+    why: 'التوثيق الأزرق يعني أن الحساب لصاحبه — لا أن كلامه صحيح! «يزيد الذكاء ٥٠٪ في أسبوع» رقمٌ لا دليل عليه، وكود الخصم يكشف أنه إعلانٌ يربح منه.' },
+  { av: '🎙️', who: 'حساب مجهول', when: 'قبل ساعتين', ver: false,
+    body: 'مقطع مسرَّب 🔥 مسؤولٌ يعلن إلغاء كل الاختبارات هذا العام!',
+    media: '🎬 فيديو قصير: حركة الشفاه لا تطابق الصوت تماماً، والصوت آليٌّ قليلاً',
+    v: 'chk', f: ['ai', 'src', 'emo'],
+    why: 'قد يكون مقطعاً مزيّفاً بالذكاء الاصطناعي (تزييف عميق): الشفاه لا تطابق الصوت، والمصدر مجهول. قرارٌ بهذا الحجم يُعلَن رسمياً — نبحث عنه في الحسابات الرسمية أولاً.' },
+  { av: '📚', who: 'مكتبة المدرسة ✔', when: 'الأحد ٨:٣٠ ص', ver: true,
+    body: 'يبدأ معرض الكتاب المدرسي في ساحة المدرسة يوم الأربعاء القادم من الساعة ٩ صباحاً. ننتظركم!',
+    v: 'ok', f: [],
+    why: 'مصدرٌ رسمي قريب نعرفه، وتفاصيل محدّدة (المكان، اليوم، الساعة)، ولا شيء يطلب منّا إلا الحضور.' },
+  { av: '🤯', who: 'حقائق_صادمة', when: '—', ver: false,
+    body: '٩٠٪ من الناس لا يعرفون هذه الحيلة البسيطة! السرّ رقم ٧ سيصدمك 😱 اضغط هنا ⬇️',
+    v: 'bad', f: ['num', 'emo', 'link', 'date'],
+    why: 'هذا «طُعم نقرات»: عنوانٌ يثير الفضول ليجعلك تضغط فيربح صاحبه من المشاهدات. «٩٠٪» رقمٌ بلا مصدر، ولا تاريخ.' },
+];
+const ROUNDS = 8, SECS = 60;
+const SCENE = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="1600" height="900" fill="#E9EFF7"/>
+  <g fill="none" stroke="#1F5FD1" stroke-width="5" opacity=".18">
+    <circle cx="200" cy="200" r="110"/><path d="M280 280l110 110" stroke-width="22" stroke-linecap="round"/>
+    <rect x="1250" y="560" width="230" height="160" rx="18"/><path d="M1280 610h170M1280 650h140M1280 690h100"/>
+  </g>
+</svg>`;
+
+let K, teams, bag, round = 0, cur, timer, sel = new Set(), locked = false;
+K = Kit.build({
+  title: 'محقّق الأخبار', accent: '#1F5FD1', accent2: '#133E8C', scene: SCENE,
+  onRestart: () => home(),
+  teacher: {
+    goal: 'الثقافة الإعلامية والتفكير النقدي: يتعلّم الطالب أن يسأل قبل أن يصدّق أو ينشر — من المصدر؟ متى؟ ما الدليل؟ هل يريد صاحبه شيئاً منّي؟',
+    tools: 'الشاشة فقط.',
+    groups: 'فرقٌ من ٣–٤ طلاب.',
+    steps: ['نعرض المنشور ونقرؤه بصوتٍ عالٍ.', 'دقيقة للفرق: ما علامات التحذير فيه؟ نضغط العلامات التي يذكرها الطلاب.', 'نصوّت على الحكم: موثوق، مضلِّل، أم يحتاج تحقّقاً.', 'نكشف التحليل: العلامات الخضراء وجدناها، والصفراء فاتتنا.', 'نمنح النقاط ونكمل.'],
+    time: '١٥–٢٠ دقيقة لثمانية منشورات.',
+    script: 'أنتم اليوم محقّقون في غرفة أخبار. كل يومٍ تصلكم رسائل ومنشورات… بعضها صادق، وبعضها مصنوعٌ ليخدعكم. مهمّتكم: اكتشاف علامات التحذير قبل الحكم.',
+    tips: 'أهمّ درس: «يحتاج تحقّقاً» ليس تهرّباً — هو الموقف الذكي حين لا يكفي الدليل. ونبّهوا إلى أن التوثيق الأزرق لا يعني صحّة الكلام.',
+    points: 'نقطة لكل علامة تحذير صحيحة يذكرها فريق، ونقطتان للحكم الصحيح مع تعليل.',
+    levels: 'للصفوف ٥–٦: نذكر العلامات بصوتٍ عالٍ قبل الضغط. للصفوف ٩–١٠: اطلبوا من كل فريقٍ صياغة منشورٍ مضلِّل ثم يكشفه فريقٌ آخر.',
+    close: ['ما الأسئلة الثلاثة التي تسألها قبل أن تنشر أي خبر؟', 'لماذا ينشر بعض الناس أخباراً كاذبة؟', 'ماذا تفعل إن أرسل لك صديقٌ خبراً مشكوكاً فيه؟'],
+  },
+});
+bag = K.Bag(POSTS);
+
+function home() {
+  round = 0; if (timer) timer.pause();
+  K.start({ emblem: '🕵️', sub: 'منشوراتٌ تصلكم كل يوم… أيّها صادق؟ وأيّها مصنوعٌ ليخدعكم؟ ابحثوا عن علامات التحذير أولاً.',
+    meta: [['الصفوف', '٥ – ١٠'], ['الزمن', '١٥ – ٢٠ دقيقة'], ['المهارة', 'الثقافة الإعلامية'], ['القيمة', 'التثبّت قبل النشر']],
+    teams: [3, [2, 3, 4, 5]], onGo: n => { teams = null; home.n = n; play(); } });
+}
+
+function play() {
+  round++; locked = false; sel = new Set(); cur = bag.next();
+  K.stage.innerHTML = '';
+  const w = K.el('div', 'col'); w.style.width = '100%'; w.style.maxWidth = '1100px';
+  w.innerHTML = `<div class="row"><span class="tag">المنشور ${Kit.AR(round)} من ${Kit.AR(ROUNDS)}</span></div>
+    <div class="post"><div class="hd"><div class="av">${cur.av}</div><div><div class="who">${Kit.esc(cur.who)} ${cur.ver ? '<span class="ver">✔ موثَّق</span>' : ''}</div>
+    <div class="when">${Kit.esc(cur.when)}</div></div></div>
+    <div class="body">${Kit.esc(cur.body)}</div>${cur.media ? `<div class="media">${Kit.esc(cur.media)}</div>` : ''}
+    <div class="ft"><span>♡ إعجاب</span><span>↻ إعادة نشر</span><span>💬 تعليق</span></div></div>
+    <div class="muted" style="font-weight:800">🔎 ما علامات التحذير التي تجدونها؟</div>`;
+  const fl = K.el('div', 'flags');
+  Object.entries(FLAGS).forEach(([k, t]) => {
+    const b = K.el('button', '', t); b.dataset.k = k;
+    b.onclick = () => { if (locked) return; K.SFX.tap(); sel.has(k) ? sel.delete(k) : sel.add(k); b.classList.toggle('on'); };
+    fl.appendChild(b);
+  });
+  w.appendChild(fl);
+  const tr = K.el('div', 'row'); w.appendChild(tr);
+  timer = K.ringTimer(tr, SECS, () => K.say('انتهى وقت التحقيق — ما حكمكم؟', 'info'));
+  const vd = K.el('div', 'verd');
+  [['ok', '✔ موثوق', 'v-ok'], ['bad', '✘ مضلِّل', 'v-bad'], ['chk', '🔍 يحتاج تحقّقاً', 'v-chk']].forEach(([v, l, c]) => {
+    const b = K.el('button', 'btn ' + c, l); b.onclick = () => judge(v, b, w, fl, vd); vd.appendChild(b);
+  });
+  w.appendChild(vd);
+  const tb = K.el('div', 'teams'); w.appendChild(tb);
+  K.stage.appendChild(w);
+  if (!teams) teams = K.Teams(tb, home.n || 3); else teams.mount(tb);
+  w.appendChild(K.valuesRow(teams, [[1, 'اكتشف علامة'], [2, 'حكمٌ صحيح بتعليل'], [1, 'سؤالٌ ذكي']]));
+  timer.start();
+}
+
+function judge(v, btn, w, fl, vd) {
+  if (locked) return; locked = true; timer.pause();
+  btn.classList.add('picked');
+  [...vd.children].forEach(b => { if (b !== btn) b.style.opacity = .45; b.style.pointerEvents = 'none'; });
+  const ok = v === cur.v; ok ? (K.SFX.win(), K.praise()) : (K.SFX.soft(), K.encourage());
+  [...fl.children].forEach(b => {
+    const k = b.dataset.k, real = cur.f.includes(k);
+    if (real && sel.has(k)) b.classList.add('hit');
+    else if (real) b.classList.add('miss');
+    else if (sel.has(k)) b.style.opacity = .4;
+    b.classList.remove('on');
+  });
+  const L = { ok: 'موثوق', bad: 'مضلِّل', chk: 'يحتاج تحقّقاً' };
+  const found = cur.f.filter(k => sel.has(k)).length;
+  const e = K.el('div', 'explain', `<b>الحكم: ${L[cur.v]}.</b> ${Kit.esc(cur.why)}<br>` +
+    (cur.f.length ? `<span class="muted">وجدتم ${Kit.AR(found)} من ${Kit.AR(cur.f.length)} علامات (الأخضر وجدتموه، والأصفر فاتكم).</span>` : '<span class="muted">لا علامات تحذير في هذا المنشور.</span>'));
+  w.insertBefore(e, w.querySelector('.teams'));
+  const nx = K.el('button', 'btn p big', round < ROUNDS ? 'المنشور التالي ←' : 'ختام النشاط ←');
+  nx.onclick = () => { K.SFX.tap(); round < ROUNDS ? play() : K.reflect({ value: 'التثبّت قبل النشر', questions: ['ما الأسئلة الثلاثة التي تسألها قبل أن تنشر أي خبر؟', 'لماذا ينشر بعض الناس أخباراً كاذبة أو مضلِّلة؟', 'ماذا تفعل إن أرسل لك صديقٌ خبراً مشكوكاً فيه؟'] }, home); };
+  w.insertBefore(nx, w.querySelector('.teams'));
+}
+home();
+</script>
+</body>
+</html>
