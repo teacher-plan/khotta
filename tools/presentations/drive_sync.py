@@ -3,7 +3,7 @@
 # python3 tools/presentations/drive_sync.py <مجلد_الخرج> <ملف_الدروس.json>
 # ملف الدروس: [{"name": "١-٦ القوى والجذور", "folder": "<id>", "files": [["<مسار محلي>", "<العنوان في Drive>", "<mime>"], …]}, …]
 # ثم تُنشر بأداة Artifact: file_path=<الخرج>/index.html، root=<الخرج>، files=كل ما سواه،
-# capabilities={"mcp": {"servers": [{"server": "Google Drive", "tools": ["create_file", "search_files"]}]}}
+# capabilities={"downloads": true, "mcp": {"servers": [{"server": "Google Drive", "tools": ["create_file", "search_files"]}]}}
 import html, json, os, shutil, sys
 
 out, spec = sys.argv[1], json.load(open(sys.argv[2], encoding='utf-8'))
@@ -35,6 +35,7 @@ h2{margin:0;font-size:19px}
 ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
 li{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:6px 10px;border-radius:8px;background:var(--soft);min-width:0}
 li b{font-weight:600;overflow-wrap:anywhere}li span{flex:none}
+li{flex-wrap:wrap}.sv{font-size:14px;min-height:40px;padding:6px 14px;background:var(--ok)}
 .ok{color:var(--ok)}.err{color:var(--err)}
 </style>
 <div class="wrap">
@@ -67,6 +68,18 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
     return 'تعذّر الرفع (' + (c || 'خطأ') + ')';
   }
   function b64(buf) { let s = '', a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+  let dl = null;
+  try { dl = await window.claude.use('downloads'); } catch (e) { dl = null; }
+  function offerSave(f, st) {
+    if (!dl || st.parentNode.querySelector('.sv')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'sv'; b.textContent = 'احفظه ثم اختر Drive';
+    b.addEventListener('click', async function () {
+      b.disabled = true;
+      try { await dl.save({ filename: f.title, data: await (await fetch(f.src)).blob() }); b.textContent = 'اختر «Drive» ثم مجلد «' + f.lesson + '» ✓'; }
+      catch (e) { b.disabled = false; b.textContent = e && e.code === 'declined' ? 'أُلغي — اضغط مجدداً' : 'تعذّر الحفظ هنا'; }
+    });
+    st.parentNode.appendChild(b);
+  }
   let running = false;
   async function run() {
     if (running) return; running = true; go.hidden = true;
@@ -92,7 +105,8 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
         st.textContent = 'تمّ ✓'; st.className = 'ok'; done++;
       } catch (e) {
         failed++; st.className = 'err';
-        st.textContent = e && e.code === 'too_big' ? 'كبير جداً لهذا العرض' : why(e);
+        st.textContent = (e && e.code === 'too_big' ? 'هذا العرض لا يرسل ملفاً بهذا الحجم إلى Drive' : why(e)) + (e && e.code && e.code !== 'too_big' ? ' [' + e.code + ']' : '');
+        offerSave(f, st);
         if (e && FATAL.includes(e.code)) fatal = why(e);
       }
     }
