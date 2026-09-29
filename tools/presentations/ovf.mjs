@@ -2,7 +2,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const b=await chromium.launch();
 // الاستخدام: node tools/presentations/ovf.mjs ملف١.html [ملف٢.html…]
-for(const f of process.argv.slice(2))for(const [w,h] of [[1280,720],[1366,768]]){
+for(const f of process.argv.slice(2))for(const [w,h] of [[1280,720],[1366,768],[1024,768],[1920,1080]]){
 const p=await b.newPage({viewport:{width:w,height:h}});
 await p.setContent(fs.readFileSync(f,'utf8'));await p.waitForTimeout(300);
 const r=await p.evaluate(()=>{const out=[];const H=innerHeight,W=innerWidth;

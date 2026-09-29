@@ -31,10 +31,10 @@ def building(wrap=lambda i, h: h, sub=True):
     f3 = _floor('٣', 'الضرب والقسمة', PURPLE, '#F3ECFD', _rooms('×', '÷', PURPLE, '#FFFFFF'))
     f4 = _floor('٤', 'الجمع والطرح', GREEN, '#E6F6EC', _rooms('+', '−', GREEN, '#FFFFFF'))
     floors = [roof, f2, f3, f4]
-    shaft = ('<div style="flex: none; width: 2.4em; display: flex; flex-direction: column; align-items: center; justify-content: space-between; '
+    shaft = ('<div style="flex: none; width: 2.8em; display: flex; flex-direction: column; align-items: center; justify-content: space-between; '
              f'background: #EEF3F9; border: .08em solid #C9D6E8; border-radius: .5em; padding: .35em 0; color: {INK}; font-weight: 800">'
-             '<span style="font-size: .55em">السطح</span><span style="flex: 1; width: .12em; background: #9FB3CC; margin: .2em 0; position: relative"></span>'
-             '<span style="font-size: 1em; line-height: 1">▼</span><span style="font-size: .55em">الأرض</span></div>')
+             '<span style="font-size: .66em">السطح</span><span style="flex: 1; width: .12em; background: #9FB3CC; margin: .2em 0; position: relative"></span>'
+             '<span style="font-size: 1em; line-height: 1">▼</span><span style="font-size: .66em">الأرض</span></div>')
     body = ''.join(wrap(i, f) for i, f in enumerate(floors))
     ground = f'<div style="height: .35em; background: {INK}; border-radius: .2em; margin-top: .15em"></div>'
     cap = (f'<div style="font-size: .62em; font-weight: 700; color: #3B5480; text-align: center">ننزل من <b>السطح</b> إلى <b>الأرض</b> · '

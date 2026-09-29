@@ -16,9 +16,11 @@ CAN = ['أرتّب العمليات: <b class="o1">الأقواس</b> ثم <b cl
        'أُجري العمليات المتساوية في الأولوية <b>من اليمين إلى اليسار</b>',
        'أحلّ مسألةً فيها أكثر من عملية حسابية بعد قراءتها كاملة',
        'أضع الأقواس في المكان المناسب ليصبح الناتج صحيحاً']
-S.append(slide(f'''<span class="tag">الصف السابع · الدرس ١-٧ · كتاب الطالب ص ٣٥</span>
+S.append(slide('''<span class="tag">الصف السابع · الدرس ١-٧</span>
 <h1 class="h1s">ترتيب العمليات الحسابية</h1>
-<div class="can"><b class="can-t">في نهاية هذا الدرس…</b>{''.join(f'<div><span class="can-i">✔</span><span><b>أنا أستطيع</b> أن {t}</span></div>' for t in CAN)}</div>''', 'cover'))
+<p class="lead">كتاب الطالب ص ٣٥</p>''', 'cover'))
+S.append(slide(f'''<h2>في نهاية هذا الدرس…</h2>
+<div class="can">{''.join(f'<div><span class="can-i">✔</span><span><b>أنا أستطيع</b> أن {t}</span></div>' for t in CAN)}</div>'''))
 
 # ═══ المفردات ═══
 S.append(slide(f'''<h2>مفردات الدرس</h2>
@@ -32,7 +34,7 @@ S.append(slide(f'''<span class="tag">حصة واحدة · ٤٠ دقيقة</span>
 <div><b>١٢ د</b>أنا ← نحن ← أنتم</div><div><b>٧ د</b>نشاط «العدد الهدف»</div><div><b>٥ د</b>ضع الأقواس</div><div><b>٣ د</b>بطاقة الخروج</div></div>''', 'divider'))
 
 # ═══ التهيئة: تمرين ٢ (يقترحه الدليل لمناقشة النقطة الأولى) ═══
-S.append(slide(f'''<span class="qbadge">تهيئة 🤔</span>{ref('تمرين ٢')}<h2>أوجدت سناء وخديجة ناتج العملية نفسها</h2>
+S.append(slide(f'''<div class="row hdr"><span class="qbadge">تهيئة 🤔</span>{ref('تمرين ٢')}</div><h2>أوجدت سناء وخديجة ناتج العملية نفسها</h2>
 {st(box(M(P(6,2),PL,'٨',DV,'٢',cls="mid")))}
 <div class="row">{st(box('<div class="col"><span class="who2">🧕 سناء</span><span class="m mid">٢٢</span></div>'))}{st(box('<div class="col"><span class="who2">🧕 خديجة</span><span class="m mid">٤٠</span></div>'))}</div>
 {st('<div class="note">مَن منهما على صواب؟ صوّتوا الآن… وسنعرف الإجابة بعد قليل!</div>')}'''))
@@ -44,27 +46,25 @@ S.append(slide(f'''<h2>لماذا نحتاج إلى ترتيبٍ متّفقٍ ع
 
 # ═══ القاعدة + الرجل (من ورقة الملخّص) ═══
 exec(open(os.path.join(HERE, 'order_building.py'), encoding='utf-8').read())   # «عمارة العمليات»
-S.append(slide(f'''<h2>ترتيب العمليات الحسابية</h2>
-<div class="row" style="align-items:center;gap:3vw">
-<div style="font-size:clamp(24px,4.6vh,50px)">{building(lambda i, h: st(h))}</div>
-{st('<div class="chant"><b>🎵 نردّدها معاً</b>' + ''.join(f'<span>{l}</span>' for l in CHANT) + '</div>')}</div>'''))
+S.append(slide(f'''<div style="font-size:clamp(30px,6.5vh,76px)">{building(lambda i, h: st(h))}</div>'''))
+S.append(slide(f'''<h2>🎵 نردّدها معاً</h2>
+<div class="chant">{''.join(st(f'<span>{l}</span>') for l in CHANT)}</div>'''))
 
 # ═══ الخطأ الشائع (دليل المعلم) ═══
-S.append(slide(f'''<span class="qbadge">انتبه ⚠️ خطأ شائع</span><h2>اقرأ المسألة <b class="c-exp">كاملةً</b> قبل أن تبدأ!</h2>
-{st(box(M('١٢',MI,'٤',X,'٣',cls="mid")))}
+S.append(slide(f'''<div class="row hdr"><span class="qbadge">انتبه ⚠️ خطأ شائع</span>{ref('تمرين ١ (ج)')}</div><h2>اقرأ المسألة <b class="c-exp">كاملةً</b> قبل أن تبدأ!</h2>
 <div class="row">
 {st(box(f'<div class="col"><span class="wrong">✘</span>{M(U('١٢',MI,'٤'),X,'٣',cls="sm")}{M(EQ,'٨',X,'٣',EQ,'٢٤',cls="sm")}<small class="hint">بدأ بالطرح لأنه جاء أولاً</small></div>',style="border-color:var(--bad);background:#FFF5F5"))}
 {st(box(f'<div class="col"><span class="right">✔</span>{M('١٢',MI,U('٤',X,'٣'),cls="sm")}{M(EQ,'١٢',MI,'١٢',EQ,'٠',cls="sm")}<small class="hint">الضرب أولاً، ثم الطرح</small></div>',style="border-color:var(--good);background:#F2FBF5"))}</div>
-{st('<div class="note">حدِّد أولاً العملية ذات <b>الأولوية</b> وضع تحتها خطاً، ثم ابدأ الحل ' + ref('تمرين ١ (ج)') + '</div>')}'''))
+{st('<div class="note">ضع خطاً تحت العملية ذات <b>الأولوية</b> أولاً</div>')}'''))
 
 # ═══ أنا: مثال ١-٧ ═══
-S.append(slide(f'''{mode('i')}{ref('مثال ١-٧ (أ)')}<h2>أوجد ناتج: {M('٣',PL,'٤',X,'٥')}</h2>
+S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('مثال ١-٧ (أ)')}</div><h2>أوجد ناتج: {M('٣',PL,'٤',X,'٥')}</h2>
 {box(STEPS(STP('نُجري الضرب', M('٣',PL,U('٤',X,'٥'),EQ,'٣',PL,'٢٠',cls="sm")), STP('ثم الجمع', M(U('٣',PL,'٢٠'),EQ,'٢٣',cls="sm"),'fin')))}'''))
-S.append(slide(f'''{mode('i')}{ref('مثال ١-٧ (ب)')}<h2>أوجد ناتج: {M('٣٠',DV,BR('٨',MI,'٣'))}</h2>
+S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('مثال ١-٧ (ب)')}</div><h2>أوجد ناتج: {M('٣٠',DV,BR('٨',MI,'٣'))}</h2>
 {box(STEPS(STP('نفكّ الأقواس أولاً', M('٣٠',DV,U(BR('٨',MI,'٣')),EQ,'٣٠',DV,'٥',cls="sm")), STP('ثم القسمة', M(U('٣٠',DV,'٥'),EQ,'٦',cls="sm"),'fin')))}'''))
 
 # ═══ نحن: مثال ١-٧ (ج) ═══
-S.append(slide(f'''{mode('we')}{ref('مثال ١-٧ (ج)')}<h2>معاً: {M(P(3,2),X,'٥',MI,BR('١٩',MI,'٨'))}</h2>
+S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('مثال ١-٧ (ج)')}</div><h2>معاً: {M(P(3,2),X,'٥',MI,BR('١٩',MI,'٨'))}</h2>
 <p class="ask">ما أوّل عمليةٍ ننفّذها؟ ولماذا؟</p>
 {box(STEPS(STP('الأقواس', M(P(3,2),X,'٥',MI,U(BR('١٩',MI,'٨')),EQ,P(3,2),X,'٥',MI,'١١',cls="sm")),
  STP('الأسس', M(U(P(3,2)),X,'٥',MI,'١١',EQ,'٩',X,'٥',MI,'١١',cls="sm")),
@@ -72,36 +72,38 @@ S.append(slide(f'''{mode('we')}{ref('مثال ١-٧ (ج)')}<h2>معاً: {M(P(3,
  STP('الطرح', M(U('٤٥',MI,'١١'),EQ,'٣٤',cls="sm"),'fin')))}'''))
 
 # ═══ أنتم: من تمرين ١ ═══
-S.append(slide(f'''{mode('u')}{ref('تمرين ١ (أ)')}{timer(3)}''' + quiz(f'أوجد ناتج {M("٢",PL,"٧",X,"٥")}', [M('٤٥'), M('٣٧'), M('٢٤'), M('١٤')], 1, '٧ × ٥ = ٣٥ أولاً، ثم ٢ + ٣٥ = ٣٧ — أمّا ٤٥ فخطأ: جمعنا قبل الضرب')))
-S.append(slide(f'''{mode('u')}{ref('تمرين ١ (ز)')}''' + quiz(f'أوجد ناتج {M("٢٠",DV,"٢",PL,"٨")}', [M('٢'), M('١٨'), M('١٤'), M('٢٠')], 1, '٢٠ ÷ ٢ = ١٠ أولاً، ثم ١٠ + ٨ = ١٨ — الناتج ٢ يكون لو وُجدت أقواس: ٢٠ ÷ (٢ + ٨)')))
-S.append(slide(f'''{mode('u')}{ref('تمرين ١ (ل)')}''' + quiz(f'أوجد ناتج {M(f'<span class="b"><span>(٣ + ٢)</span><sup>٢</sup></span>')}', [M('١٣'), M('١٠'), M('٢٥'), M('٧')], 2, 'الأقواس أولاً: ٣ + ٢ = ٥ ، ثم ٥ تربيع = ٢٥ — ولا نربّع كل عددٍ وحده (٩ + ٤ = ١٣ خطأ)')))
+S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ١ (أ)')}{timer(3)}</div>''' + quiz(f'أوجد ناتج {M("٢",PL,"٧",X,"٥")}', [M('٤٥'), M('٣٧'), M('٢٤'), M('١٤')], 1, '٧ × ٥ = ٣٥ أولاً، ثم ٢ + ٣٥ = ٣٧ — أمّا ٤٥ فخطأ: جمعنا قبل الضرب')))
+S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ١ (ز)')}</div>''' + quiz(f'أوجد ناتج {M("٢٠",DV,"٢",PL,"٨")}', [M('٢'), M('١٨'), M('١٤'), M('٢٠')], 1, '٢٠ ÷ ٢ = ١٠ أولاً، ثم ١٠ + ٨ = ١٨ — الناتج ٢ يكون لو وُجدت أقواس: ٢٠ ÷ (٢ + ٨)')))
+S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ١ (ل)')}</div>''' + quiz(f'أوجد ناتج {M(f'<span class="b"><span>(٣ + ٢)</span><sup>٢</sup></span>')}', [M('١٣'), M('١٠'), M('٢٥'), M('٧')], 2, 'الأقواس أولاً: ٣ + ٢ = ٥ ، ثم ٥ تربيع = ٢٥ — ولا نربّع كل عددٍ وحده (٩ + ٤ = ١٣ خطأ)')))
 
 # ═══ العودة إلى التهيئة: من الصواب؟ ═══
-S.append(slide(f'''<span class="qbadge">الآن نعرف! 🎯</span>{ref('تمرين ٢')}<h2>سناء أم خديجة؟</h2>
+S.append(slide(f'''<div class="row hdr"><span class="qbadge">الآن نعرف! 🎯</span>{ref('تمرين ٢')}</div><h2>سناء أم خديجة؟</h2>
 <div class="row">
 {st(box(f'<div class="col"><span class="wrong">✘ سناء ٢٢</span>{M(U(BR(P(6,2),PL,'٨')),DV,'٢',cls="sm")}{M(EQ,'٤٤',DV,'٢',EQ,'٢٢',cls="sm")}<small class="hint">جمعت قبل القسمة</small></div>',style="border-color:var(--bad);background:#FFF5F5"))}
 {st(box(f'<div class="col"><span class="right">✔ خديجة ٤٠</span>{M(U(P(6,2)),PL,U('٨',DV,'٢'),cls="sm")}{M(EQ,'٣٦',PL,'٤',EQ,'٤٠',cls="sm")}<small class="hint">الأسس، ثم القسمة، ثم الجمع</small></div>',style="border-color:var(--good);background:#F2FBF5"))}</div>
-{st('<div class="note">لهذا يتّفق العالم كلّه على ترتيبٍ واحد — حتى لا يصبح للمسألة جوابان!</div>')}'''))
+{st('<div class="note">ترتيبٌ واحد للعالم كلّه ← جوابٌ واحد!</div>')}'''))
 
 # ═══ من اليمين إلى اليسار ═══
-S.append(slide(f'''{mode('we')}{ref('تمرين ٣ (ج)')}<h2>عمليتان من المستوى نفسه: {M('٢٠',MI,'٧',MI,'٢')}</h2>
+S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٣ (ج)')}</div><h2>عمليتان من المستوى نفسه: {M('٢٠',MI,'٧',MI,'٢')}</h2>
 <p class="ask">الطرح والطرح متساويان… فمن أين نبدأ؟</p>
 {box(STEPS(STP('من اليمين أولاً', M(U('٢٠',MI,'٧'),MI,'٢',EQ,'١٣',MI,'٢',cls="sm")), STP('ثم التالي', M(U('١٣',MI,'٢'),EQ,'١١',cls="sm"),'fin')))}
 {st('<div class="note">الجمع والطرح، وكذلك الضرب والقسمة: نُجريها <b>من اليمين إلى اليسار</b> بترتيب ظهورها</div>')}'''))
 
 # ═══ نشاط الدليل: «العدد الهدف» ═══
-S.append(slide(f'''<span class="qbadge">نشاط 🎯</span><h2>لعبة «العدد الهدف»</h2>
+S.append(slide(f'''<div class="row hdr"><span class="qbadge">نشاط 🎯</span>{timer(3)}</div><h2>لعبة «العدد الهدف»</h2>
 <div class="exit">{st('<div><b>١</b><span>طالبٌ يختار <em class="kb">خمسة أرقام مختلفة</em> من ١ إلى ٩</span></div>')}{st('<div><b>٢</b><span>طالبٌ آخر يختار <em class="kb">العدد الهدف</em>: أكبر من ٤٠ وأصغر من ١٠٠</span></div>')}{st('<div><b>٣</b><span>اكتب مسألةً فيها أكثر من عملية ناتجها العدد الهدف: <em class="kb">نقطتان</em> — وبعد ٣ دقائق: الأقرب إلى الهدف <em class="kb">نقطة</em></span></div>')}</div>
-<div class="row" style="align-items:center">{timer(3)}<button class="flip box col"><span class="tap">👆 مثال: الأرقام ٢، ٣، ٥، ٧، ٩ والهدف ٦٤</span><span class="hid col">{M('٧',X,'٩',PL,'٣',MI,'٢',EQ,'٦٣',PL,'٣',MI,'٢',EQ,'٦٤',cls="sm")}</span></button></div>'''))
+'''))
+S.append(slide(f'''<span class="qbadge">نشاط 🎯</span><h2>مثال: الأرقام ٢، ٣، ٥، ٧، ٩ والهدف ٦٤</h2>
+<div class="row" style="align-items:center"><button class="flip box col"><span class="tap">👆 اضغط لإظهار حلٍّ ممكن</span><span class="hid col">{M('٧',X,'٩',PL,'٣',MI,'٢',EQ,'٦٣',PL,'٣',MI,'٢',EQ,'٦٤',cls="sm")}</span></button></div>'''))
 
 # ═══ ضع الأقواس (تمرين ٣) ═══
-S.append(slide(f'''{mode('i')}{ref('تمرين ٣ (أ)')}<h2>ضع الأقواس ليكون الناتج صحيحاً: {M('٣',X,'٢',PL,'١',EQ,'٩')}</h2>
+S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('تمرين ٣ (أ)')}</div><h2>ضع الأقواس: {M('٣',X,'٢',PL,'١',EQ,'٩')}</h2>
 {box(STEPS(STP('بدون أقواس', M('٣',X,'٢',PL,'١',EQ,'٦',PL,'١',EQ,'٧',cls="sm"),'bad'),
  STP('نجرّب الأقواس', M('٣',X,U(BR('٢',PL,'١')),cls="sm")),
  STP('للتأكّد', M('٣',X,'٣',EQ,'٩',cls="sm"),'fin')))}'''))
-S.append(slide(f'''{mode('we')}{ref('تمرين ٣ (ب)')}<h2>معاً: {M('٨',MI,'٣',X,'٢',EQ,'١٠')}</h2><p class="ask">أيّ عمليةٍ نريدها أن تحدث أولاً؟</p>
+S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٣ (ب)')}</div><h2>معاً: {M('٨',MI,'٣',X,'٢',EQ,'١٠')}</h2><p class="ask">أيّ عمليةٍ نريدها أن تحدث أولاً؟</p>
 {box(STEPS(STP('بدون أقواس', M('٨',MI,'٦',EQ,'٢',cls="sm"),'bad'), STP('بالأقواس', M(U(BR('٨',MI,'٣')),X,'٢',cls="sm")), STP('للتأكّد', M('٥',X,'٢',EQ,'١٠',cls="sm"),'fin')))}'''))
-S.append(slide(f'''{mode('u')}{ref('تمرين ٣ (د)')}{timer(2)}''' + quiz(f'أين نضع الأقواس ليكون: {M("٥",PL,P(2,2),EQ,"٤٩")} ؟',
+S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٣ (د)')}{timer(2)}</div>''' + quiz(f'أين نضع الأقواس ليكون: {M("٥",PL,P(2,2),EQ,"٤٩")} ؟',
   [M(f'<span class="b"><span>(٥ + ٢)</span><sup>٢</sup></span>'), M('(٥)',PL,P(2,2)), M('٥',PL,f'<span class="b"><span>(٢)</span><sup>٢</sup></span>')], 0, '(٥ + ٢) تربيع = ٧ تربيع = ٤٩ — بدون أقواس: ٥ + ٤ = ٩')))
 
 # ═══ فكّر (من ورقة الملخّص) ═══
@@ -113,28 +115,31 @@ S.append(slide(f'''<span class="qbadge">فكّر 💡</span><h2>عمليتان �
 # ═══ بطاقة الخروج + الواجب + الخلاصة ═══
 S.append(slide(f'''<span class="qbadge">بطاقة الخروج 🎫</span><h2>أجب في دفترك قبل الخروج</h2>
 <div class="exit">{st(f'<div><b>١</b>أوجد ناتج {M("٣٥",MI,"١٥",DV,"٣")}</div>')}{st(f'<div><b>٢</b>أوجد ناتج {M("٢٠",DV,BR("٢",PL,"٨"))}</div>')}{st(f'<div><b>٣</b>ضع الأقواس: {M("٢٠",MI,"٧",MI,"٢",EQ,"١٥")}</div>')}</div>
+'''))
+S.append(slide(f'''<span class="qbadge">بطاقة الخروج 🎫</span><h2>الإجابات</h2>
 <button class="flip box col" style="min-width:40vw"><span class="tap">👆 اضغط لإظهار الإجابات</span><span class="hid col">{M("٣٥",MI,"٥",EQ,"٣٠",cls="sm")}{M("٢٠",DV,"١٠",EQ,"٢",cls="sm")}{M("٢٠",MI,BR("٧",MI,"٢"),EQ,"١٥",cls="sm")}</span></button>'''))
 S.append(slide(f'''<span class="qbadge" style="background:#0A6770;box-shadow:0 4px 0 #05393E">الواجب المنزلي 🏠</span><h2>قبل الحصة القادمة</h2>
 <div class="exit">{st('<div><b>١</b>حلّ صفحة ٢٥ في كتاب النشاط</div>')}{st('<div><b>٢</b>أكمل أجزاء تمرين ١ في كتاب الطالب ص ٣٥</div>')}</div>'''))
-S.append(slide(f'''<h2>الخلاصة</h2>
-<div style="font-size:clamp(20px,3.6vh,40px)">{building(sub=False)}</div>
-{st('<div class="note">اقرأ المسألة كاملةً، وضع خطاً تحت العملية ذات الأولوية، ثم احسب خطوةً خطوة</div>')}
-<p class="who st">المراجع: كتاب الطالب ص٣٥، دليل المعلم ص٣٣، وورقة «درسي في صفحة» ١-٧ — إعداد أ. رخية السعدي</p>'''))
+S.append(slide(f'''<div style="font-size:clamp(26px,5.5vh,64px)">{building(sub=False)}</div>
+{st('<div class="note">اقرأ كاملةً ← ضع خطاً ← احسب خطوةً خطوة</div>')}'''))
 
 # ═══════════ ملحق: تمارين كتاب الطالب ص٣٥ ═══════════
 S.append(slide('''<span class="tag">ملحق · للمراجعة وتصحيح الواجب</span><h2>تمارين كتاب الطالب ص ٣٥</h2>
-<p class="lead">لكل تمرين: القاعدة التي نطبّقها، ثم أجزاؤه — اضغط على الجزء ليظهر حلّه</p>''', 'divider'))
+<p class="lead">اضغط على الجزء ليظهر حلّه</p>
+<p class="hint">المراجع: كتاب الطالب ص٣٥، دليل المعلم ص٣٣، وورقة «درسي في صفحة» ١-٧ — إعداد أ. رخية السعدي</p>''', 'divider'))
 PW = lambda inner, e: f'<span class="b"><span>{inner}</span><sup>{a(e)}</sup></span>'
+def exs(num, title, rule, parts, per=4):  # أربعة أجزاء في الشريحة (٢×٢) ليبقى الخط كبيراً
+    for k in range(0, len(parts), per): S.append(ex(num, title, rule, parts[k:k+per], cols=2))
 R1 = 'الأقواس ← الأسس ← الضرب والقسمة ← الجمع والطرح (المتساوية من اليمين إلى اليسار)'
-S.append(ex(1, 'أوجد ناتج العمليات الحسابية (أ – ز)', R1, [
+exs(1, 'أوجد ناتج العمليات الحسابية', R1, [
   ('(أ) ' + M('٢',PL,'٧',X,'٥'), M('٢',PL,'٣٥',EQ,'٣٧')),
   ('(ب) ' + M(BR('٢',MI,'٧'),X,'٥'), M(N(5),X,'٥',EQ,N(25))),
   ('(ج) ' + M('١٢',MI,'٤',X,'٣'), M('١٢',MI,'١٢',EQ,'٠')),
   ('(د) ' + M(BR('١٢',MI,'٤'),X,'٣'), M('٨',X,'٣',EQ,'٢٤')),
   ('(هـ) ' + M('٤',X,'٢',PL,'٥',X,'٣'), M('٨',PL,'١٥',EQ,'٢٣')),
   ('(و) ' + M('٤',X,BR('٢',PL,'٥'),X,'٣'), M('٤',X,'٧',X,'٣',EQ,'٨٤')),
-  ('(ز) ' + M('٢٠',DV,'٢',PL,'٨'), M('١٠',PL,'٨',EQ,'١٨'))], cols=4))
-S.append(ex(1, 'أوجد ناتج العمليات الحسابية (ح – س)', R1, [
+  ('(ز) ' + M('٢٠',DV,'٢',PL,'٨'), M('١٠',PL,'٨',EQ,'١٨'))])
+exs(1, 'أوجد ناتج العمليات الحسابية', R1, [
   ('(ح) ' + M('٢٠',DV,BR('٢',PL,'٨')), M('٢٠',DV,'١٠',EQ,'٢')),
   ('(ط) ' + M('٣٥',MI,'١٥',DV,'٣'), M('٣٥',MI,'٥',EQ,'٣٠')),
   ('(ي) ذهنياً ' + M('٤',X,P(2,3)), M('٤',X,'٨',EQ,'٣٢')),
@@ -142,14 +147,14 @@ S.append(ex(1, 'أوجد ناتج العمليات الحسابية (ح – س)'
   ('(ل) ' + M(PW('(٣ + ٢)',2)), M(P(5,2),EQ,'٢٥')),
   ('(م) ' + M('٥٦',MI,PW('(١٢ + ٤)',2)), M('٥٦',MI,'٢٥٦',EQ,N(200))),
   ('(ن) ' + M(BR('٥٦',MI,'١٢'),PL,'٤'), M('٤٤',PL,'٤',EQ,'٤٨')),
-  ('(س) ' + M('١٠٠',MI,PW('(٢٥ − ١٧)',2)), M('١٠٠',MI,'٦٤',EQ,'٣٦'))], cols=4))
+  ('(س) ' + M('١٠٠',MI,PW('(٢٥ − ١٧)',2)), M('١٠٠',MI,'٦٤',EQ,'٣٦'))])
 S.append(ex(2, 'سناء: ٢٢ ، خديجة: ٤٠ — من منهما على صواب؟', 'الأسس أولاً، ثم القسمة، ثم الجمع', [
   (M(P(6,2),PL,'٨',DV,'٢'), M('٣٦',PL,'٤',EQ,'٤٠') + '<small>خديجة على صواب — سناء جمعت قبل القسمة</small>')], cols=2))
-S.append(ex(3, 'ضع الأقواس في المكان المناسب', 'حدِّد العملية التي يجب أن تحدث أولاً وضعها بين قوسين، ثم تأكّد بالحساب', [
+exs(3, 'ضع الأقواس في المكان المناسب', 'حدِّد العملية التي يجب أن تحدث أولاً وضعها بين قوسين، ثم تأكّد بالحساب', [
   ('(أ) ' + M('٣',X,'٢',PL,'١',EQ,'٩'), M('٣',X,BR('٢',PL,'١'),EQ,'٣',X,'٣',EQ,'٩')),
   ('(ب) ' + M('٨',MI,'٣',X,'٢',EQ,'١٠'), M(BR('٨',MI,'٣'),X,'٢',EQ,'٥',X,'٢',EQ,'١٠')),
   ('(ج) ' + M('٢٠',MI,'٧',MI,'٢',EQ,'١٥'), M('٢٠',MI,BR('٧',MI,'٢'),EQ,'٢٠',MI,'٥',EQ,'١٥')),
-  ('(د) ' + M('٥',PL,P(2,2),EQ,'٤٩'), M(PW('(٥ + ٢)',2),EQ,P(7,2),EQ,'٤٩'))], cols=2))
+  ('(د) ' + M('٥',PL,P(2,2),EQ,'٤٩'), M(PW('(٥ + ٢)',2),EQ,P(7,2),EQ,'٤٩'))])
 
 EXTRA_CSS_OWN = '''
 .now{display:inline-flex;gap:.28em;align-items:baseline;border-bottom:.09em solid var(--exp);padding-bottom:.02em}
@@ -172,9 +177,10 @@ EXTRA_CSS_OWN = '''
 .man .mt{font-family:var(--fh);font-weight:900;font-size:34px;text-anchor:middle}.man .mt2{font-family:var(--fh);font-weight:800;font-size:20px;text-anchor:middle}
 .man .o1t{fill:#2563EB}.man .o2t{fill:var(--exp)}.man .o3t{fill:#7A3FD1}.man .o4t{fill:var(--good)}
 .exit .kb{font-style:normal;color:var(--exp);font-weight:900}
-.chant{display:flex;flex-direction:column;gap:1.4vh;background:#FFF6E3;border:3px dashed var(--gold);border-radius:22px;padding:2vh 2vw;max-width:34vw;text-align:center}
+.chant{display:flex;flex-direction:column;gap:2vh;background:#FFF6E3;border:3px dashed var(--gold);border-radius:22px;padding:2vh 2vw;max-width:34vw;text-align:center}
 .chant b{font-family:var(--fh);font-size:clamp(20px,3vh,32px);color:var(--ink2)}
 .chant span{font-weight:800;font-size:clamp(20px,3.3vh,36px);line-height:1.6}
 .hl2{color:var(--exp)}
+.hdr{align-items:center;gap:1.4vw;flex-wrap:nowrap}
 .who2{font-family:var(--fh);font-weight:900;font-size:clamp(22px,3.6vh,38px)}
 '''
