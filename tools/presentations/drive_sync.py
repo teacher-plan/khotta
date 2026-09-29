@@ -2,6 +2,7 @@
 # تلقائياً عند فتحها (بحساب المعلّم، عبر موصل Google Drive) — ويُتخطّى ما رُفع سابقاً.
 # python3 tools/presentations/drive_sync.py <مجلد_الخرج> <ملف_الدروس.json>
 # ملف الدروس: [{"name": "١-٦ القوى والجذور", "folder": "<id>", "files": [["<مسار محلي>", "<العنوان في Drive>", "<mime>"], …]}, …]
+#   بدل "folder" يمكن: "root": "<id>", "path": ["الوحدة الثانية", "٢-١ …"] — تُنشأ المجلدات الناقصة تلقائياً (ويُعاد استعمال الموجود بالاسم نفسه).
 # ثم تُنشر بأداة Artifact: file_path=<الخرج>/index.html، root=<الخرج>، files=كل ما سواه،
 # capabilities={"downloads": true, "mcp": {"servers": [{"server": "Google Drive", "tools": ["create_file", "search_files"]}]}}
 import html, json, os, shutil, sys
@@ -14,7 +15,7 @@ for li, lesson in enumerate(spec, 1):
     for fi, (src, title, mime) in enumerate(lesson['files'], 1):
         pub = f'l{li}_{fi}.{EXT[mime]}'
         shutil.copy(src, os.path.join(out, pub))
-        items.append({'src': pub, 'title': title, 'type': mime, 'folder': lesson['folder'], 'lesson': lesson['name']})
+        items.append({'src': pub, 'title': title, 'type': mime, 'folder': lesson.get('folder', ''), 'root': lesson.get('root', ''), 'path': lesson.get('path', []), 'lesson': lesson['name']})
 
 page = '''<title>رفع التحضيرات إلى Drive</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap">
@@ -80,6 +81,24 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
     });
     st.parentNode.appendChild(b);
   }
+  const FOLDER = 'application/vnd.google-apps.folder', fcache = {};
+  function listOf(pl) { return pl && (pl.files || (Array.isArray(pl) ? pl : null)); }
+  async function folderFor(f) {  // يحلّ مسار المجلد، وينشئ الناقص منه
+    if (f.folder) return f.folder;
+    let parent = f.root, key = f.root;
+    for (const name of f.path) {
+      key += '/' + name;
+      if (!fcache[key]) {
+        const ex = await mcp.callTool(S, 'search_files', { query: "title = '" + name.split("'").join('') + "' and parentId = '" + parent + "' and mimeType = '" + FOLDER + "'", excludeContentSnippets: true }, { cache: false });
+        const got = listOf(ex && ex.payload);
+        if (got && got.length) fcache[key] = got[0].id;
+        else { const cr = await mcp.callTool(S, 'create_file', { title: name, parentId: parent, contentMimeType: FOLDER }); fcache[key] = cr && cr.payload && cr.payload.id; }
+        if (!fcache[key]) throw { code: 'tool_error', message: 'تعذّر إنشاء المجلد ' + name };
+      }
+      parent = fcache[key];
+    }
+    return parent;
+  }
   let running = false;
   async function run() {
     if (running) return; running = true; go.hidden = true;
@@ -92,6 +111,7 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
       status.textContent = 'جارٍ رفع: ' + f.title;
       try {
         st.textContent = 'فحص…'; st.className = '';
+        f.folder = await folderFor(f);
         const ex = await mcp.callTool(S, 'search_files', { query: "title = '" + f.title.split("'").join('') + "' and parentId = '" + f.folder + "'", excludeContentSnippets: true }, { cache: false });
         const pl = ex && ex.payload, found = pl && (pl.files || (Array.isArray(pl) ? pl : null));
         if (found && found.length) { st.textContent = 'موجود ✓'; st.className = 'ok'; skipped++; continue; }

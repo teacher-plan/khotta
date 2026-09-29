@@ -1,6 +1,6 @@
 # ورقة ملخّص الدرس ١-٧ «ترتيب العمليات الحسابية» للطالب — صور + PDF لمجموعة الصف.
 # python3.12 gen_order_summary.py ← node ../sheet.mjs ملخص_ترتيب_العمليات.html ملخصات
-# المراجع: كتاب الطالب ص٣٥، دليل المعلم ص٣٣، ورقة «درسي في صفحة» ١-٧ (إعداد أ. أرخية السعدي).
+# المراجع: كتاب الطالب ص٣٥، دليل المعلم ص٣٣، ورقة «درسي في صفحة» ١-٧ (إعداد أ. رخية السعدي).
 import os
 HERE = os.path.dirname(os.path.abspath(__file__)); KIT = os.path.dirname(HERE)
 _src = open(os.path.join(HERE, 'gen_powers_summary.py'), encoding='utf-8').read()
@@ -17,7 +17,7 @@ def row(lab, expr): return f'<div class="sr"><span class="sl">{lab}</span>{expr}
 HEAD = f'''<header><div class="hd"><b>الصف السابع</b><span>الوحدة الأولى: الأعداد الصحيحة والقوى والجذور</span>
 <span>الدرس ١-٧: ترتيب العمليات الحسابية</span></div><div class="logo">{M('٣',PL,'٤',X,'٥')}{M(EQ,'٢٣')}</div></header>
 <div class="goal">🎯 أحلّ مسألةً فيها أكثر من عملية حسابية بالترتيب الصحيح، وأضع الأقواس في مكانها المناسب</div>'''
-FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٥ ودليل المعلم — عن ورقة «درسي في صفحة» إعداد أ. أرخية السعدي — ارجع لكتاب النشاط ص ٢٥ لمزيد من التمارين</footer>'
+FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٥ ودليل المعلم — عن ورقة «درسي في صفحة» إعداد أ. رخية السعدي — ارجع لكتاب النشاط ص ٢٥ لمزيد من التمارين</footer>'
 
 
 page = f'''<section class="page">{HEAD}
