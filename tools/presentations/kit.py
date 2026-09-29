@@ -51,7 +51,8 @@ VIDEO = (f'''<section id="video">
   <h2><b>٢</b>فيديو الدرس</h2>
   <p>{html.escape(A.minutes)} بالتعليق الصوتي، ودقّة 1080p — صالح لليوتيوب والواتساب.</p>
   <video controls preload="metadata" src="video.mp4"></video>
-  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}</div>
+  <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}<a class="save" href="video.mp4" target="_blank" rel="noopener" download="{NAMES["video"]}">فتح الملف مباشرة ↗</a></div>
+  <p>إن لم يعمل «حفظ الفيديو»: اضغط «فتح الملف مباشرة»، ثم زرّ المشاركة في المشغّل ← Drive.</p>
 </section>
 ''' if A.video else '')
 page = f'''<title>تحضير درس {T}</title>
@@ -94,7 +95,7 @@ figcaption{{font-size:14px;color:var(--muted)}}
 .ul li{{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:6px 10px;border-radius:8px;background:var(--soft)}}
 .ul li b{{font-weight:600}}.ul .ok{{color:var(--ok)}}.ul .err{{color:var(--accent)}}
 .msg{{font-size:14px;color:var(--muted);min-height:1.4em}}
-.hide-saves .save{{display:none}}
+.hide-saves button.save{{display:none}}
 @media (max-width:640px){{.sheets{{grid-template-columns:minmax(0,1fr)}}}}
 </style>
 <div class="wrap" id="app">
@@ -140,7 +141,9 @@ figcaption{{font-size:14px;color:var(--muted)}}
         if (c === 'declined') msg.textContent = 'أُلغي الحفظ.';
         else if (c === 'rate_limited') msg.textContent = 'نافذة حفظٍ أخرى مفتوحة؛ أكملها ثم أعد المحاولة.';
         else if (c === 'fetch') msg.textContent = 'تعذّر تحميل الملف؛ تحقّق من الاتصال ثم أعد المحاولة.';
-        else {{ msg.textContent = 'الحفظ غير متاح في هذا العرض.'; app.classList.add('hide-saves'); }}
+        else if (c === 'too_large') msg.textContent = 'الملف أكبر مما يقبله الحفظ هنا — استخدم «فتح الملف مباشرة».';
+        else if (['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'].includes(c)) {{ msg.textContent = 'الحفظ غير متاح في هذا العرض — استخدم «فتح الملف مباشرة».'; }}
+        else msg.textContent = 'تعذّر الحفظ (' + (c || (e && e.name) || 'خطأ') + (e && e.message ? ': ' + e.message : '') + ') — استخدم «فتح الملف مباشرة».';
       }} finally {{ b.disabled = false; }}
     }});
   }});
