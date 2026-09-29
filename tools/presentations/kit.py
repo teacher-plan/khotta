@@ -4,7 +4,6 @@
 # python3 tools/presentations/kit.py <مجلد_الخرج> --code "١-٧" --title "ترتيب العمليات الحسابية" \
 #   --meta "الصف السابع · الوحدة الأولى · كتاب الطالب ص ٣٥" --slides 28 --minutes "٤ دقائق و٢٠ ثانية" \
 #   --deck examples/ترتيب_العمليات_عرض_تفاعلي.html --video examples/فيديو_ترتيب_العمليات.mp4 \
-#   --sheets examples/ملخصات/ملخص_ترتيب_العمليات_1.png examples/ملخصات/ملخص_ترتيب_العمليات_2.png \
 #   --pdf examples/ملخصات/ملخص_ترتيب_العمليات.pdf
 # ثم يُنشر المجلد بأداة Artifact: file_path=<الخرج>/index.html، root=<الخرج>، files=كل ما سواه،
 # و capabilities={"downloads": true, "mcp": {"servers": [{"server": "Google Drive", "tools": ["create_file", "search_files"]}]}}.
@@ -20,7 +19,8 @@ ap.add_argument('--meta', required=True); ap.add_argument('--slides', type=int, 
 ap.add_argument('--deck-note', default='')
 ap.add_argument('--drive-folder', default='')  # معرّف مجلد الدرس في Google Drive (يُنشأ مسبقاً)
 ap.add_argument('--deck', required=True); ap.add_argument('--video')  # اختياري (صفحات المراجعة بلا فيديو)
-ap.add_argument('--sheets', nargs='+', required=True); ap.add_argument('--pdf', required=True)
+ap.add_argument('--sheets', nargs='*', default=[])  # اختياري: صور الملخّص (المعتمد الآن: PDF فقط)
+ap.add_argument('--pdf', required=True)
 A = ap.parse_args()
 os.makedirs(A.out, exist_ok=True)
 shutil.copy(A.deck, os.path.join(A.out, 'deck.html'))
@@ -113,8 +113,8 @@ figcaption{{font-size:14px;color:var(--muted)}}
 {VIDEO}
 <section id="sheet">
   <h2><b>{'٣' if A.video else '٢'}</b>ورقة الملخّص للطلاب</h2>
-  <p>صورٌ لمجموعة الصف، وملف PDF للطباعة.</p>
-  <div class="sheets">{sheets}</div>
+  <p>{'صورٌ لمجموعة الصف، وملف PDF للطباعة.' if A.sheets else 'ملف PDF واحد جاهز للطباعة وللإرسال في مجموعة الصف.'}</p>
+  {f'<div class="sheets">{sheets}</div>' if A.sheets else ''}
   <div class="acts">{btn("summary.pdf", NAMES["pdf"], "حفظ الملخّص PDF")}</div>
 </section>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
