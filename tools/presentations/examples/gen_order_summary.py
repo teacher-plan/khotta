@@ -15,9 +15,9 @@ def PW(inner, e): return f'<span class="b"><span>{a(inner)}</span><sup>{a(e)}</s
 def row(lab, expr): return f'<div class="sr"><span class="sl">{lab}</span>{expr}</div>'
 
 HEAD = f'''<header><div class="hd"><b>الصف السابع</b><span>الوحدة الأولى: الأعداد الصحيحة والقوى والجذور</span>
-<span>الدرس ١-٧: ترتيب العمليات الحسابية · إعداد: أ. عيسى</span></div><div class="logo">{M('٣',PL,'٤',X,'٥')}{M(EQ,'٢٣')}</div></header>
+<span>الدرس ١-٧: ترتيب العمليات الحسابية · إعداد: أ. عيسى الحارثي</span></div><div class="logo">{M('٣',PL,'٤',X,'٥')}{M(EQ,'٢٣')}</div></header>
 <div class="goal">🎯 أحلّ مسألةً فيها أكثر من عملية حسابية بالترتيب الصحيح، وأضع الأقواس في مكانها المناسب</div>'''
-FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٥ ودليل المعلم — إعداد: أ. عيسى — ارجع لكتاب النشاط ص ٢٥ لمزيد من التمارين</footer>'
+FOOT = '<footer>📘 المرجع: كتاب الطالب ص ٣٥ ودليل المعلم — إعداد: أ. عيسى الحارثي — ارجع لكتاب النشاط ص ٢٥ لمزيد من التمارين</footer>'
 
 
 page = f'''<section class="page">{HEAD}

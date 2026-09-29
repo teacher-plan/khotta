@@ -19,7 +19,7 @@ CAN = ['أرتّب العمليات: <b class="o1">الأقواس</b> ثم <b cl
 S.append(slide('''<span class="tag">الصف السابع · الدرس ١-٧</span>
 <h1 class="h1s">ترتيب العمليات الحسابية</h1>
 <p class="lead">كتاب الطالب ص ٣٥</p>
-<p class="lead" style="font-size:clamp(26px,4.8vh,56px)">إعداد: أ. عيسى</p>''', 'cover'))
+<p class="lead" style="font-size:clamp(26px,4.8vh,56px)">إعداد: أ. عيسى الحارثي</p>''', 'cover'))
 S.append(slide(f'''<h2>في نهاية هذا الدرس…</h2>
 <div class="can">{''.join(f'<div><span class="can-i">✔</span><span><b>أنا أستطيع</b> أن {t}</span></div>' for t in CAN)}</div>'''))
 
@@ -127,7 +127,7 @@ S.append(slide(f'''<div style="font-size:clamp(26px,5.5vh,64px)">{building(sub=F
 # ═══════════ ملحق: تمارين كتاب الطالب ص٣٥ ═══════════
 S.append(slide('''<span class="tag">ملحق · للمراجعة وتصحيح الواجب</span><h2>تمارين كتاب الطالب ص ٣٥</h2>
 <p class="lead">اضغط على الجزء ليظهر حلّه</p>
-<p class="hint">المراجع: كتاب الطالب ص٣٥ ودليل المعلم ص٣٣ — إعداد: أ. عيسى</p>''', 'divider'))
+<p class="hint">المراجع: كتاب الطالب ص٣٥ ودليل المعلم ص٣٣ — إعداد: أ. عيسى الحارثي</p>''', 'divider'))
 PW = lambda inner, e: f'<span class="b"><span>{inner}</span><sup>{a(e)}</sup></span>'
 def exs(num, title, rule, parts, per=4):  # أربعة أجزاء في الشريحة (٢×٢) ليبقى الخط كبيراً
     for k in range(0, len(parts), per): S.append(ex(num, title, rule, parts[k:k+per], cols=2))
