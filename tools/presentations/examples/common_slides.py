@@ -6,6 +6,42 @@ def mk(): return '<span class="bk"><span class="blank">؟</span><sup class="e2">
 def puzzle(who, ic, q, ans):
     return f'<button class="flip box col puz"><span class="who2">{ic} {who}</span><span class="pq">{q}</span><span class="tap">👆 اضغط للحل</span><span class="hid col">{ans}</span></button>'
 
+EXG = {}   # src ← رقم مجموعة التمارين
+def tn(t): return f'<aside class="tnote">{t}</aside>'   # ملاحظة للمعلّم: لا تظهر للطلاب إلا في «وضع المعلّم»
+
+def launch(bk, pages, start=None, mins=10, note=''):
+    # شريحة الانطلاق إلى تمارين الكتاب (bk: 'sb' كتاب الطالب، 'ab' كتاب النشاط) — يصل إليها زرّ الشريط السفلي مباشرةً.
+    # تُترك علامة، ويبنيها gen_powers.py بعد اكتمال الشرائح بأرقام الأسئلة التي تليها (resolve_launch).
+    import json as _j
+    return '<!--LAUNCH ' + _j.dumps({'bk': bk, 'pages': pages, 'start': start, 'mins': mins, 'note': note}, ensure_ascii=False) + '-->'
+
+def launch_slide(c, groups):
+    bk = c['bk']; book = 'كتاب الطالب' if bk == 'sb' else 'كتاب النشاط'
+    lab = {v: k for k, v in EXG.items()}
+    def glab(g):
+        t = lab[g].replace(' · تمرين', '').replace('نشاط ', '')
+        return '' if t == 'تمرين' else t
+    many = len(groups) > 1
+    qs = ''.join((f'<div class="lgrp">' + (f'<span class="lgl">{glab(g)}</span>' if many else '') +
+                  ''.join(f'<button class="lq" data-q="{g}-{n}" data-l="{a(n)}{("  (" + glab(g) + ")") if many and glab(g) else ""}">{a(n)}</button>' for n in ns) + '</div>') for g, ns in groups)
+    return slide(f'''<span class="tag">{'📘' if bk == 'sb' else '📗'} تمارين {book}</span>
+<h2 class="lh">افتحوا {book}، صفحة <span class="lpg">{c['pages']}</span></h2>
+<div class="lstart"><span>ونبدأ الحل من السؤال</span><b class="lnum">{a(c['start']) if c['start'] else '؟'}</b></div>
+<div class="lqs">{qs}</div>
+<div class="row" style="align-items:center"><button class="lgo" hidden>انتقل إلى الحل ←</button>{timer(c['mins'])}</div>''' + tn('اختر رقم السؤال الذي يبدأ منه الطلاب فيظهر لهم كبيراً، ثم «انتقل إلى الحل» عند التصحيح.' + (f'<br>{c["note"]}' if c['note'] else '')), f'launch launch-{bk}" data-bk="{bk}')
+
+def resolve_launch(S):
+    import json as _j
+    for i, x in enumerate(S):
+        if not x.startswith('<!--LAUNCH '): continue
+        c = _j.loads(x[11:-3]); groups = {}
+        for y in S[i + 1:]:
+            if y.startswith('<!--LAUNCH '): break
+            for g, n in re.findall(r'exq-%s-(\d+)-(\d+)' % c['bk'], y):
+                groups.setdefault(int(g), [])
+                if int(n) not in groups[int(g)]: groups[int(g)].append(int(n))
+        S[i] = launch_slide(c, [(g, sorted(ns)) for g, ns in groups.items()])
+
 def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4):
     # src: «تمرين» لكتاب الطالب، «نشاط ص ٢٥ · تمرين» لكتاب النشاط.
     # الخط الكبير: أربعة أجزاء على الأكثر في الشريحة (٢×٢) — التمرين الأطول يُقسَّم تلقائياً على شرائح متتالية.
@@ -15,9 +51,11 @@ def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4):
         chunk = parts[k:k+per]
         cards=''.join(f'<button class="flip xcard"><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for q,ans in chunk)
         last = k + per >= len(parts)
+        bk = 'ab' if src.startswith('نشاط') else 'sb'   # لربط شريحة الانطلاق بسؤالها (jump.js)
+        g = EXG.setdefault('تمرين' if src == 'تمارين' else src, len(EXG))                # مجموعة التمارين (يُعاد الترقيم من ١ في كل مجموعة)
         out.append(slide(f'''<div class="xhead"><span class="xnum">📘 {src} {a(num)}</span><h2>{title}</h2></div>
 <div class="xrule"><b>القاعدة</b><span>{rule}</span></div>
-<div class="xgrid c{min(cols, 2) if len(chunk) > 1 else 1}">{cards}</div>{f'<p class="hint">{note}</p>' if note and last else ''}'''))
+<div class="xgrid c{min(cols, 2) if len(chunk) > 1 else 1}">{cards}</div>{f'<p class="hint">{note}</p>' if note and last else ''}''', f'exs ex-{bk}' + (f' exq-{bk}-{g}-{num}' if k == 0 else '')))
     return '\n'.join(out)
 
 EXTRA_CSS_LESSON_X = '''

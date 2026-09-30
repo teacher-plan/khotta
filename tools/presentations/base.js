@@ -24,6 +24,7 @@
     slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
     var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
     cur=i;ui();
+    document.dispatchEvent(new CustomEvent('deck:slide',{detail:i}));
   }
   function next(){
     var h=steps(slides[cur]).filter(function(e){return !e.classList.contains('in');});
@@ -98,5 +99,6 @@
       x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
       if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
   }
+  window.DECK={go:go,cur:function(){return cur;},n:slides.length};
   go(0);
 })();

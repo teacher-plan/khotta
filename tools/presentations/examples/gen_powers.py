@@ -26,7 +26,7 @@ def mode(k): t, s, ic, c = MODES[k]; return f'<div class="mode {c}"><span class=
 def timer(mins): return f'<button class="timer" data-s="{mins*60}"><span class="tt">{a(mins)}:٠٠</span><span class="tl">▶ ابدأ المؤقّت</span></button>'
 def quiz(q, choices, ok, why, badge=None):
     ch = ''.join(f'<button class="ch">{c}</button>' for c in choices)
-    return (f'<span class="qbadge">{badge}</span>' if badge else '') + f'<h2>{q}</h2><div class="q" data-ok="{ok}">{ch}</div><div class="fb" data-why="{why.replace(chr(34), "&quot;").replace("<","&lt;").replace(">","&gt;")}"></div>'
+    return (f'<span class="qbadge">{badge}</span>' if badge else '') + f'<h2>{q}</h2><div class="q" data-ok="{ok}">{ch}</div><div class="fb" data-why="{why.replace(chr(34), "&quot;").replace("<","&lt;").replace(">","&gt;")}"></div>' + f'<aside class="tnote">الإجابة: {choices[ok]}<br>{why}</aside>'
 def slide(inner, cls=''): return f'<section class="slide {cls}">{inner}</section>'
 def st(inner, tag='div', cls=''): return f'<{tag} class="st {cls}">{inner}</{tag}>'
 def box(inner, cls='', style=''): return f'<div class="box {cls}" style="{style}">{inner}</div>'
@@ -36,6 +36,7 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else 'القوى_والجذور_عرض_ت
 TITLE = sys.argv[3] if len(sys.argv) > 3 else 'القوى والجذور — الصف السابع'
 exec(open(os.path.join(HERE,'common_slides.py'),encoding='utf-8').read())
 exec(open(os.path.join(HERE,SLIDES),encoding='utf-8').read())
+resolve_launch(S)   # شرائح الانطلاق إلى تمارين الكتابين (jump.js)
 
 EXTRA_CSS = '''
 .c-i{color:#2563EB}.c-we{color:#16A34A}.c-u{color:#EA580C}.c-b{color:var(--base)}.c-exp{color:var(--exp)}
@@ -124,6 +125,6 @@ html = f'''<!DOCTYPE html>
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
-<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script></body></html>'''
+<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script></body></html>'''
 open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')
