@@ -11,6 +11,82 @@ import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
 
+/* ══ دليل المعلم ══
+   صفحات الدرس نفسه من دليل المعلم الرسمي (المرفوع والمفهرس من لوحة المشرف)
+   تُقرأ بالرؤية مرّةً واحدة لكل درس، ويُخزَّن ما استُخرج منها (JSON) في
+   library-files/guide-summaries/ — فكل معلّمٍ بعد الأول يأخذه جاهزاً بلا تكلفة.
+   أيّ عطلٍ هنا لا يُفشل التحضير: نكمل بالكتاب وحده كما كان. */
+type Admin = ReturnType<typeof createClient>;
+async function guideContextFor(admin: Admin, st: Record<string, string>, apiKey: string,
+  grade: string, subject: string, unit: string, lesson: string, semester: string): Promise<string> {
+  try {
+    let q = admin.from("curriculum").select("id,semester,unit,lesson").eq("grade", grade).eq("subject", subject).eq("lesson", lesson);
+    if (semester) q = q.eq("semester", semester);
+    const { data: curs } = await q;
+    const cur = (curs || []).find((c: { unit: string }) => !unit || c.unit === unit) || (curs || [])[0];
+    if (!cur) return "";
+    const { data: guide } = await admin.from("teacher_guides").select("id,base_path,page_count,offset_pages,toc")
+      .eq("grade", parseInt(grade)).eq("subject", subject).eq("semester", cur.semester).maybeSingle();
+    if (!guide || !guide.base_path || !Array.isArray(guide.toc)) return "";
+    const cacheKey = `guide-summaries/${guide.id}-${cur.id}.json`;
+    const cached = await admin.storage.from("library-files").download(cacheKey);
+    if (!cached.error && cached.data) { const t = await cached.data.text(); if (t.length > 20) return t; }
+
+    type E = { guide_page?: number; matched_curriculum_id?: number };
+    const toc = (guide.toc as E[]).filter((x) => x.guide_page).sort((a, b) => (a.guide_page || 0) - (b.guide_page || 0));
+    const e = toc.find((x) => x.matched_curriculum_id === cur.id);
+    if (!e) return "";
+    const start = e.guide_page!;
+    let end = guide.page_count || start;
+    for (const x of toc) if ((x.guide_page || 0) > start) { end = x.guide_page! - 1; break; }
+    if (end < start) end = start;
+    const off = guide.offset_pages || 1, images: string[] = [];
+    for (let bp = start; bp <= end && images.length < 12; bp++) {
+      const sheet = bp + off - 1; if (sheet < 1 || sheet > (guide.page_count || 9999)) continue;
+      images.push(admin.storage.from("library-files").getPublicUrl(`${guide.base_path}/p${sheet}.jpg`).data.publicUrl);
+    }
+    if (!images.length) return "";
+
+    const shape = JSON.stringify({
+      learning_points: ["نقاط/أهداف التعلّم كما وردت"], vocabulary: [{ ar: "المصطلح", en: "term" }],
+      prior_knowledge: "التعلّم القبلي المطلوب", resources: ["المواد والأدوات المطلوبة"],
+      starter: "نشاط التهيئة/البداية المقترح في الدليل بتفاصيله", activities: [{ name: "اسم النشاط", detail: "خطواته كما في الدليل" }],
+      misconceptions: [{ error: "الخطأ أو المفهوم الخاطئ الشائع", fix: "كيف يعالجه المعلم" }],
+      differentiation: { support: "دعم المتعثرين", extension: "إثراء المتقدمين" },
+      thinking: ["أسئلة التفكير/الاستقصاء المقترحة"], exercises: [{ ex: "رقم التمرين", note: "التعليق أو الإجابة أو التوجيه" }],
+      assessment: "أفكار التقويم في الدليل", homework: "الواجب المقترح", cross_links: "الربط بالحياة أو المواد الأخرى", other: "أي توجيه آخر مهم",
+    });
+    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Guide Reader" },
+      body: JSON.stringify({
+        model: ensureVision(st.model_guided_prep || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash"),
+        messages: [
+          { role: "system", content: [
+            "أنت تقرأ صفحات دليل المعلم الرسمي (سلطنة عُمان) لدرسٍ واحد وتستخرج كل ما فيه بأمانة ودقة، دون إضافة شيءٍ من عندك.",
+            `الدرس المقصود: «${lesson}»${unit ? ` من وحدة «${unit}»` : ""}. قد تحوي الصفحات أجزاءً من دروسٍ مجاورة — تجاهلها.`,
+            "انقل التفاصيل كما وردت: أرقام التمارين، أسماء الأنشطة، الأخطاء الشائعة، المفردات بالعربية والإنجليزية، والأزمنة إن ذُكرت.",
+            "الحقل الذي لا يرد في الدليل اتركه فارغاً (\"\" أو []). الأرقام بالعربية-الهندية.",
+            `أعد JSON فقط بهذا الشكل: ${shape}`,
+          ].join("\n") },
+          { role: "user", content: [{ type: "text", text: `صفحات دليل المعلم لدرس: ${lesson}` }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))] },
+        ],
+        response_format: { type: "json_object" }, temperature: 0.1, max_tokens: 5000,
+      }),
+    }, { st, task: "guide_read" });
+    if (!r.ok) return "";
+    const j = await r.json();
+    const pp = parseAiJson(j?.choices?.[0]?.message?.content || "");
+    if (!pp.ok) return "";
+    const txt = JSON.stringify(pp.value);
+    await admin.storage.from("library-files").upload(cacheKey, new Blob([txt], { type: "application/json" }), { upsert: true, contentType: "application/json" });
+    return txt;
+  } catch (e) {
+    console.error("guide_context_failed:", String(e));
+    return "";
+  }
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -67,7 +143,9 @@ Deno.serve(async (req) => {
     // ملخص نصي جاهز من صفحات الكتاب (مُعَدّ مسبقاً بدالة summarize-lesson-pages) —
     // بديل أرخص عن إرفاق الصور نفسها في كل استدعاء توليد
     const bookContext = String(b.bookContext || "").slice(0, 4000);
+    const semester = String(b.semester || "");
     if (!lesson) return json({ error: "no_lesson" }, 400);
+    const guideContext = (await guideContextFor(admin, st, apiKey, grade, subject, unit, lesson, semester)).slice(0, 9000);
 
     // عند إرفاق صفحات الكتاب نحتاج نموذجاً يدعم الرؤية
     // مع صفحات الكتاب: نموذج رؤية مضمون (لا نمرّ بـ ai_model النصي)
@@ -91,11 +169,27 @@ Deno.serve(async (req) => {
       summative: [{ q: "سؤال ختامي يقيس مخرجاً محدداً", a: "الإجابة النموذجية", outcome: "المخرج الذي يقيسه" }],
       homework: "واجب منزلي قصير مناسب",
       tip: "نصيحة تربوية خاصة بهذا الدرس",
+      // ── ما يتجاوز الترويسة المعتمدة: كل ما في دليل المعلم ──
+      vocabulary: [{ ar: "المصطلح", en: "term" }],
+      prior_knowledge: "التعلّم القبلي الذي يُبنى عليه الدرس",
+      success_criteria: ["معيار نجاح يلاحظه المعلم"],
+      misconceptions: [{ error: "خطأ شائع متوقّع في هذا الدرس", fix: "كيف يعالجه المعلم عملياً" }],
+      differentiation: { support: "دعم المتعثرين بخطوات محددة", extension: "إثراء المتقدمين بمهمة محددة" },
+      thinking: ["سؤال تفكير عليا أو استقصاء"],
+      exercises: [{ ex: "رقم التمرين في الكتاب", note: "توجيه التنفيذ أو الإجابة أو التعليق" }],
+      cross_links: "الربط بالحياة اليومية والمواد الأخرى",
+      guide_notes: ["أي توجيه مهم آخر من دليل المعلم لم يرد في الحقول السابقة"],
     });
 
     const system = [
       "أنت خبير مناهج وطرائق تدريس متمرس في سلطنة عُمان، تعدّ تحضيراً رسمياً بهيكل منصة نور، مبنياً على أسس تربوية بحتة.",
       "المنهج المعتمد: منهج كامبردج (Cambridge) كما يطبَّق في مدارس سلطنة عُمان — راعِ فلسفته: الفهم العميق، الاستقصاء، وربط التعلم بالحياة.",
+      guideContext
+        ? `ما ورد في دليل المعلم الرسمي لهذا الدرس (JSON مستخرج من صفحاته) — هو المرجع التربوي الأول: خذ منه نقاط التعلّم والأنشطة المقترحة والأخطاء الشائعة والمفردات والتمايز والتعليق على التمارين والواجب، ولا تُسقط شيئاً منه:\n${guideContext}`
+        : "",
+      guideContext
+        ? "المطلوب تحضيرٌ شاملٌ يغطّي كل ما في دليل المعلم، لا الاكتفاء بخانات الترويسة المعتمدة: املأ حقول الترويسة (المخرجات… الواجب) ثم الحقول الإضافية (المفردات، التعلّم القبلي، معايير النجاح، الأخطاء الشائعة، التمايز، أسئلة التفكير، التمارين، الربط، ملاحظات الدليل). ابنِ الإجراءات على أنشطة الدليل نفسها بأسمائها."
+        : "إلى جانب خانات الترويسة املأ الحقول الإضافية (المفردات، التعلّم القبلي، معايير النجاح، الأخطاء الشائعة، التمايز، أسئلة التفكير، التمارين، الربط) بما يناسب محتوى الدرس، واترك guide_notes فارغة.",
       bookContext
         ? `ملخص فعلي لمحتوى هذا الدرس من كتاب الطالب المعتمد — استخدمه كمصدر أساسي حصري (لا من معرفة عامة):\n${bookContext}`
         : images.length
@@ -144,7 +238,7 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 3200,
+          max_tokens: 7000,
         }),
       }, { st, task: "plan" });
       const j = await r.json();
@@ -174,7 +268,7 @@ Deno.serve(async (req) => {
       return refund({ error: "bad_output", detail: attempt.detail }, 502);
     }
     await logAiCost(admin, user.id, "generate-lesson-plan", "text", model, attempt.usage);
-    return json({ plan: attempt.plan, model, usage: attempt.usage });
+    return json({ plan: { ...(attempt.plan as Record<string, unknown>), _guide: !!guideContext }, model, usage: attempt.usage });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
     console.error("server_error:", String(e));

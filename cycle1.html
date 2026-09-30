@@ -7047,6 +7047,15 @@ function planDocx(plan, meta = {}) {
     ], trio.map(() => Math.floor(15100 / trio.length)), { header: true }));
   }
 
+  // ── ما يتجاوز الترويسة: من دليل المعلم ──
+  const voc = (p.vocabulary || []).filter(v => v && (v.ar || v.en));
+  if (voc.length) {
+    body.push(H('المفردات'));
+    body.push(table([['المصطلح', 'بالإنجليزية'], ...voc.map(v => [v.ar || '', v.en || ''])], [9000, 6100], { header: true, zebra: true }));
+  }
+  if (p.prior_knowledge) { body.push(H('التعلّم القبلي')); body.push(P(p.prior_knowledge, { indent: 100 })); }
+  if ((p.success_criteria || []).length) { body.push(H('معايير النجاح')); body.push(bullets(p.success_criteria)); }
+
   // ── التهيئة ──
   if (p.warmup) { body.push(H('التهيئة والتمهيد')); body.push(P(p.warmup, { indent: 100 })); }
 
@@ -7063,6 +7072,18 @@ function planDocx(plan, meta = {}) {
     ], [2700, 1000, 11400], { header: true, zebra: true }));
   }
 
+  const mis = (p.misconceptions || []).filter(x => x && x.error);
+  if (mis.length) {
+    body.push(H('الأخطاء الشائعة ومعالجتها'));
+    body.push(table([['الخطأ الشائع', 'المعالجة'], ...mis.map(x => [x.error || '', x.fix || ''])], [7000, 8100], { header: true, zebra: true }));
+  }
+  const df = p.differentiation || {};
+  if (df.support || df.extension) {
+    body.push(H('التمايز (مراعاة الفروق الفردية)'));
+    body.push(table([['دعم المتعثرين', 'إثراء المتقدمين'], [df.support || '—', df.extension || '—']], [7550, 7550], { header: true }));
+  }
+  if ((p.thinking || []).length) { body.push(H('أسئلة التفكير')); body.push(bullets(p.thinking)); }
+
   // ── التقويم ──
   if (p.formative) { body.push(H('التقويم التكويني')); body.push(P(p.formative, { indent: 100 })); }
   if ((p.summative || []).length) {
@@ -7073,7 +7094,14 @@ function planDocx(plan, meta = {}) {
     ], [5700, 5700, 3700], { header: true, zebra: true }));
   }
 
+  const exs = (p.exercises || []).filter(x => x && (x.ex || x.note));
+  if (exs.length) {
+    body.push(H('تمارين الكتاب'));
+    body.push(table([['التمرين', 'التوجيه / الإجابة'], ...exs.map(x => [x.ex || '', x.note || ''])], [3000, 12100], { header: true, zebra: true }));
+  }
+  if (p.cross_links) { body.push(H('الربط بالحياة والمواد الأخرى')); body.push(P(p.cross_links, { indent: 100 })); }
   if (p.homework) { body.push(H('الواجب المنزلي')); body.push(P(p.homework, { indent: 100 })); }
+  if ((p.guide_notes || []).length) { body.push(H('توجيهات أخرى من دليل المعلم')); body.push(bullets(p.guide_notes)); }
   if (p.tip) {
     body.push(H('نصيحة تربوية'));
     body.push(P(p.tip, { indent: 100, color: MUTED }));
@@ -7192,7 +7220,7 @@ async function planPrepBtn(id){
     const bookContext=await c1BookSummary(id,planGrade,planSubject,l.unit,l.name)||'';
     cyBusyLight('يُعِدّ خطة الدرس... قد يستغرق دقيقة');
     const res=await sb.functions.invoke('generate-lesson-plan',{
-      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,images:[],bookContext}
+      body:{grade:String(planGrade),subject:planSubject,unit:l.unit,lesson:l.name,images:[],bookContext,semester:profile.semester||'الفصل الأول'}
     });
     const{data,error}=res;
     if(error||!data||!data.plan){
@@ -7396,18 +7424,37 @@ async function todayCtx(){
 }
 function renderPrepHtml(plan){
   if(!plan)return'<div class="plan-empty-card">لا تحضير بعد</div>';
-  const sec=(t,b)=>b?`<div class="prep-sec"><div class="prep-sec-t">${t}</div><div class="prep-sec-b">${b}</div></div>`:'';
-  const outcomes=(plan.outcomes||[]).map(o=>`<div>• ${escHtml(o.text||'')} <span style="color:var(--muted);font-size:11px">(${escHtml(o.level||'')})</span></div>`).join('');
-  const procedures=(plan.procedures||[]).map((p,i)=>`<div style="margin-bottom:8px"><b>${escHtml(p.title||('خطوة '+egArNum(i+1)))}</b> ${p.minutes?`<span style="color:var(--muted);font-size:11px">(${egArNum(p.minutes)} د)</span>`:''}<div style="font-size:12.5px;color:var(--muted);margin-top:3px">${escHtml(p.detail||'')}</div></div>`).join('');
-  const summative=(plan.summative||[]).map((q,i)=>`<div style="margin-bottom:6px"><b>س${egArNum(i+1)}:</b> ${escHtml(q.q||'')}<div style="font-size:12px;color:var(--muted)">الإجابة: ${escHtml(q.a||'')}</div></div>`).join('');
+  const E=escHtml,sec=(t,b)=>b?`<div class="prep-sec"><div class="prep-sec-t">${t}</div><div class="prep-sec-b">${b}</div></div>`:'';
+  const list=a=>(a||[]).filter(Boolean).map(x=>`<div>• ${E(typeof x==='string'?x:(x.text||''))}</div>`).join('');
+  const sub=(t,v)=>v?`<div style="margin-top:4px"><b>${t}:</b> ${v}</div>`:'';
+  const outcomes=(plan.outcomes||[]).map(o=>`<div>• ${E(o.text||'')} <span style="color:var(--muted);font-size:11px">(${E(o.level||'')})</span></div>`).join('');
+  const trio=[sub('الاستراتيجيات',E((plan.strategies||[]).join('، '))),sub('المصادر والوسائل',E((plan.resources||[]).join('، '))),sub('المفاهيم',E((plan.concepts||[]).join('، ')))].join('');
+  const vocab=(plan.vocabulary||[]).filter(v=>v&&(v.ar||v.en)).map(v=>`<span style="display:inline-block;border:1px solid var(--border);border-radius:99px;padding:2px 10px;margin:2px">${E(v.ar||'')}${v.en?` <span dir="ltr" style="color:var(--muted)">${E(v.en)}</span>`:''}</span>`).join('');
+  const procedures=(plan.procedures||[]).map((p,i)=>`<div style="margin-bottom:8px"><b>${E(p.title||('خطوة '+egArNum(i+1)))}</b> ${p.minutes?`<span style="color:var(--muted);font-size:11px">(${egArNum(p.minutes)} د)</span>`:''}<div style="font-size:12.5px;color:var(--muted);margin-top:3px">${E(p.detail||'')}</div></div>`).join('');
+  const mis=(plan.misconceptions||[]).filter(m=>m&&m.error).map(m=>`<div style="margin-bottom:6px">⚠️ <b>${E(m.error)}</b><div style="font-size:12.5px;color:var(--muted)">المعالجة: ${E(m.fix||'')}</div></div>`).join('');
+  const d=plan.differentiation||{};
+  const diff=sub('دعم المتعثرين',E(d.support||''))+sub('إثراء المتقدمين',E(d.extension||''));
+  const exs=(plan.exercises||[]).filter(x=>x&&(x.ex||x.note)).map(x=>`<div>• <b>${E(x.ex||'')}</b> — ${E(x.note||'')}</div>`).join('');
+  const summative=(plan.summative||[]).map((q,i)=>`<div style="margin-bottom:6px"><b>س${egArNum(i+1)}:</b> ${E(q.q||'')}<div style="font-size:12px;color:var(--muted)">الإجابة: ${E(q.a||'')}</div></div>`).join('');
   return[
+    plan._guide?'<div class="plan-empty-card" style="margin-bottom:8px">📘 هذا التحضير مبنيٌّ على كتاب الطالب ودليل المعلم معاً</div>':'',
     sec('المخرجات التعليمية',outcomes),
-    sec('التهيئة والتمهيد',escHtml(plan.warmup||'')),
+    sec('الاستراتيجيات والمصادر والمفاهيم',trio),
+    sec('المفردات',vocab),
+    sec('التعلّم القبلي',E(plan.prior_knowledge||'')),
+    sec('معايير النجاح',list(plan.success_criteria)),
+    sec('التهيئة والتمهيد',E(plan.warmup||'')),
     sec('إجراءات الدرس',procedures),
-    sec('التقويم التكويني',escHtml(plan.formative||'')),
+    sec('الأخطاء الشائعة ومعالجتها',mis),
+    sec('التمايز (مراعاة الفروق الفردية)',diff),
+    sec('أسئلة التفكير',list(plan.thinking)),
+    sec('التقويم التكويني',E(plan.formative||'')),
     sec('التقويم الختامي',summative),
-    sec('الواجب المنزلي',escHtml(plan.homework||'')),
-    sec('نصيحة تربوية',escHtml(plan.tip||'')),
+    sec('تمارين الكتاب',exs),
+    sec('الربط بالحياة والمواد الأخرى',E(plan.cross_links||'')),
+    sec('الواجب المنزلي',E(plan.homework||'')),
+    sec('توجيهات أخرى من دليل المعلم',list(plan.guide_notes)),
+    sec('نصيحة تربوية',E(plan.tip||'')),
   ].filter(Boolean).join('');
 }
 let _todaySeq=0;
@@ -7480,7 +7527,9 @@ async function shPoolFetch(lessonId,kinds){
       .eq('lesson_id',lessonId).in('kind',kinds).order('created_at',{ascending:false});
     if(error||!data)return{};
     const byKind={};
-    for(const r of data)(byKind[r.kind]=byKind[r.kind]||[]).push(r);
+    // التحضير القديم (قبل قراءة دليل المعلم) لا يُتبنّى: ينقصه نصف ما في الدليل،
+    // فيُولَّد الجديد الشامل حتى يكتمل التنوّع بنسخٍ من الصيغة الجديدة.
+    for(const r of data){if(r.kind==='prep'&&!(r.content&&r.content.misconceptions))continue;(byKind[r.kind]=byKind[r.kind]||[]).push(r);}
     const out={};
     for(const k of kinds){
       const arr=byKind[k]||[];
@@ -7582,7 +7631,7 @@ async function todayGenerate(){
         cyBusyLight('يُعِدّ خطة الدرس'+suffix);
         try{
           const res=await sb.functions.invoke('generate-lesson-plan',{
-            body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,images:[],bookContext}
+            body:{grade:String(ctx.grade),subject:ctx.subject,unit:ctx.unitName,lesson:ctx.lessonName,images:[],bookContext,semester:profile.semester||'الفصل الأول'}
           });
           const{data}=res;
           if(await _todayStop(res))quota=true;
