@@ -10,6 +10,7 @@ def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4):
     # src: «تمرين» لكتاب الطالب، «نشاط ص ٢٥ · تمرين» لكتاب النشاط.
     # الخط الكبير: أربعة أجزاء على الأكثر في الشريحة (٢×٢) — التمرين الأطول يُقسَّم تلقائياً على شرائح متتالية.
     out = []
+    n = -(-len(parts) // per); per = -(-len(parts) // n)   # توزيعٌ متوازن: ٥ أجزاء ← ٣ + ٢ لا ٤ + ١
     for k in range(0, len(parts), per):
         chunk = parts[k:k+per]
         cards=''.join(f'<button class="flip xcard"><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for q,ans in chunk)
