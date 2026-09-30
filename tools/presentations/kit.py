@@ -36,7 +36,8 @@ def btn(src, name, label, cls='save'):
 sheets = ''.join(f'<figure><img src="sheet{i}.png" alt="ورقة الملخّص، الصفحة {ar(i)}"><figcaption>الصفحة {ar(i)}</figcaption>'
                  f'{btn(f"sheet{i}.png", f"ملخص_{base}_{i}.png", f"حفظ الصفحة {ar(i)}")}</figure>' for i in range(1, len(A.sheets) + 1))
 
-DFILES = [('deck.html', NAMES['deck'], 'text/html')] + ([('video.mp4', NAMES['video'], 'video/mp4')] if A.video else []) + \
+# الفيديو لا يُرفع من الصفحة (رفع الملفات الكبيرة إلى Drive يتعذّر) — يُحفظ بزرّه ثم يُرفع يدوياً
+DFILES = [('deck.html', NAMES['deck'], 'text/html')] + \
          [(f'sheet{i}.png', f'ملخص_{base}_{i}.png', 'image/png') for i in range(1, len(A.sheets) + 1)] + [('summary.pdf', NAMES['pdf'], 'application/pdf')]
 import json as _json
 DRIVE = (f'''<section id="drive" class="drive">
@@ -52,8 +53,7 @@ VIDEO = (f'''<section id="video">
   <p>{html.escape(A.minutes)} بالتعليق الصوتي، ودقّة 1080p — صالح لليوتيوب والواتساب.</p>
   <video controls preload="metadata" src="video.mp4"></video>
   <div class="acts">{btn("video.mp4", NAMES["video"], "حفظ الفيديو")}</div>
-  <div class="acts"><button type="button" class="btn" id="vdrive">حفظ الفيديو في Drive ↑</button></div>
-  <p class="msg" id="vmsg" role="status" aria-live="polite"></p>
+  <p>احفظ الفيديو على جهازك بالزرّ أعلاه، ثم ارفعه إلى مجلد الدرس في Drive.</p>
 </section>
 ''' if A.video else '')
 page = f'''<title>تحضير درس {T}</title>

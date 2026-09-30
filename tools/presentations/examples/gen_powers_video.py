@@ -13,7 +13,7 @@ def expand(m):
     items, var, body = LISTS[m.group(1)], m.group(2), m.group(3)
     return ''.join(re.sub(r'\{\{' + var + r'\.(\w+)\}\}', lambda k: str(it[k.group(1)]), body) for it in items)
 scenes = []
-for n, body in re.findall(r'<sc-if value="\{\{s(\d)\}\}"[^>]*>(.*?)</sc-if>', src, re.S):
+for n, body in re.findall(r'<sc-if value="\{\{s(\d+)\}\}"[^>]*>(.*?)</sc-if>', src, re.S):
     body = re.sub(r'<sc-for list="\{\{(\w+)\}\}" as="(\w+)"[^>]*>(.*?)</sc-for>', expand, body, flags=re.S)
     scenes.append(f'<section class="sc" style="display:none">{body}</section>')
 durs = json.load(open(os.path.join(HERE, AUD, 'durations.json')))['durations']
