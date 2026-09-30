@@ -15,6 +15,9 @@
 | ١-٦ القوى والجذور | `1Srpp0PXEfZ7y5syhPhl-9ZtA7hd3zY2D` | https://claude.ai/artifact/3sgrEttY3JqnfFEcUHH58D |
 | ١-٧ ترتيب العمليات الحسابية | `12nZqENqw08uR5ddViDyjFIn0nTLKNhit` | https://claude.ai/artifact/GJq9QcVgtNuU3wa7j6CJf7 |
 | مراجعة الوحدة الأولى | `1L9VZ_BCW8c47rMmJFbHb2ErW4D0QRL-r` | https://claude.ai/artifact/Jn4W7waYU5QT2d8jMoDe18 |
+| الوحدة الثانية — العبارات الجبرية والمعادلات والصيغ | `1upOVHMBnI4QawCpL3lyHLgI5H-6MItjG` | |
+| ٢-١ كتابة العبارات الجبرية | `1OhvfsZWLPoGp4nyhiPo5y4E2fKplc8Jk` | https://claude.ai/artifact/C4GLzearm89H3UFqh7p3bg |
+| ٢-٢ تجميع الحدود المتشابهة | `1Dyaeq4iP8kKcTLYhti1ePbiu3fF8Kakn` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
