@@ -4,7 +4,7 @@
 
 def PM(v): return f'<span class="ng"><i>±</i>{a(v)}</span>'   # ±٥ كما يكتبها الكتاب، والإشارة يمين العدد
 def ref(t): return f'<span class="ref">📘 {t}</span>'
-def mk(): return '<span class="blank">؟</span><sup class="e2">٢</sup>'
+def mk(): return '<span class="bk"><span class="blank">؟</span><sup class="e2">٢</sup></span>'  # الأسّ ملتصقٌ بالمربّع الفارغ
 
 S = []
 # ═══ الشريحة الأولى: العنوان + أهداف الدرس بصيغة «أنا أستطيع» (من نقاط التعلّم في دليل المعلم) ═══

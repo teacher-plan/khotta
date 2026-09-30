@@ -69,7 +69,7 @@ TESTS = [('٢', 'الآحاد زوجي: ٠، ٢، ٤، ٦، ٨'), ('٣', 'مجم
 S.append(SEC(3, 'اختبارات قابلية القسمة', ['اختبارات بسيطة للقسمة على ٢، ٣، ٤، ٥، ٦، ٨، ٩، ١٠، ١٠٠', 'نطبّقها على عددٍ واحد']))
 for part in (TESTS[:4], TESTS[4:8], TESTS[8:]):   # أربع بطاقات في الشريحة ليبقى الخط كبيراً
     S.append(slide(f'''{RULE(6, 'اختباراتٌ بسيطة لقابلية القسمة — اضغط على البطاقة')}
-<div class="xgrid c{2 if len(part) > 1 else 1}">{''.join(f'<button class="flip xcard dv"><span class="xq">يقبل القسمة على <b>{n}</b></span><span class="tap">👆</span><span class="hid xa">{t}</span></button>' for n, t in part)}</div>'''))
+<div class="xgrid c{2 if len(part) > 1 else 1}">{''.join(f'<button class="flip xcard dv"><span class="xq">القسمة على <b>{n}</b></span><span class="tap">👆</span><span class="hid xa">{t}</span></button>' for n, t in part)}</div>'''))
 RES = [('٢', 1, 'الآحاد ٢ زوجي'), ('٣', 1, '٣ + ٧ + ٢ = ١٢'), ('٤', 1, '٧٢ ÷ ٤ = ١٨'), ('٥', 0, 'الآحاد ليس ٠ أو ٥'), ('٦', 1, 'يقبل ٢ و ٣'),
        ('٨', 0, '٣٧٢ ÷ ٨ = ٤٦ والباقي ٤'), ('٩', 0, 'مجموع الأرقام ١٢'), ('١٠', 0, 'الآحاد ليس ٠'), ('١٠٠', 0, 'آخر رقمين ليسا ٠٠')]
 for part in (RES[:6], RES[6:]):

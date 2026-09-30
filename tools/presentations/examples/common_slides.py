@@ -1,7 +1,7 @@
 # دوالّ وأنماط مشتركة بين ملفات محتوى الدروس — تُنفَّذ قبل ملف الدرس (انظر gen_powers.py).
 def PM(v): return f'<span class="ng"><i>±</i>{a(v)}</span>'   # ±٥ كما يكتبها الكتاب، والإشارة يمين العدد
 def ref(t): return f'<span class="ref">📘 {t}</span>'
-def mk(): return '<span class="blank">؟</span><sup class="e2">٢</sup>'
+def mk(): return '<span class="bk"><span class="blank">؟</span><sup class="e2">٢</sup></span>'  # الأسّ ملتصقٌ بالمربّع الفارغ
 
 def puzzle(who, ic, q, ans):
     return f'<button class="flip box col puz"><span class="who2">{ic} {who}</span><span class="pq">{q}</span><span class="tap">👆 اضغط للحل</span><span class="hid col">{ans}</span></button>'
