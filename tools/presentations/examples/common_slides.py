@@ -55,7 +55,7 @@ def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4):
         g = EXG.setdefault('تمرين' if src == 'تمارين' else src, len(EXG))                # مجموعة التمارين (يُعاد الترقيم من ١ في كل مجموعة)
         out.append(slide(f'''<div class="xhead"><span class="xnum">📘 {src} {a(num)}</span><h2>{title}</h2></div>
 <div class="xrule"><b>القاعدة</b><span>{rule}</span></div>
-<div class="xgrid c{min(cols, 2) if len(chunk) > 1 else 1}">{cards}</div>{f'<p class="hint">{note}</p>' if note and last else ''}''', f'exs ex-{bk}' + (f' exq-{bk}-{g}-{num}' if k == 0 else '')))
+<div class="xgrid c{min(cols, 2) if len(chunk) > 1 else 1}">{cards}</div>{(tn(note) if ('دليل' in note or 'قرأت' in note) else f'<p class="hint">{note}</p>') if note and last else ''}''', f'exs ex-{bk}' + (f' exq-{bk}-{g}-{num}' if k == 0 else '')))
     return '\n'.join(out)
 
 EXTRA_CSS_LESSON_X = '''

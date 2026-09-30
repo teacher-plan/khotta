@@ -32,7 +32,7 @@
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
       for(var k=0;k<3;k++){
         var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
-        [].forEach.call(s.children,function(c){var b=c.getBoundingClientRect();if(!b.height)return;top=Math.min(top,b.top);bot=Math.max(bot,b.bottom);lf=Math.min(lf,b.left);rt=Math.max(rt,b.right);});
+        [].forEach.call(s.children,function(c){if(c.classList.contains('dz')||c.tagName==='ASIDE'||getComputedStyle(c).position==='absolute')return;var b=c.getBoundingClientRect();if(!b.height)return;top=Math.min(top,b.top);bot=Math.max(bot,b.bottom);lf=Math.min(lf,b.left);rt=Math.max(rt,b.right);});
         var H=r.height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),W=r.width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
         var f=+(s.style.getPropertyValue('--fit')||1),need=Math.min(H/(bot-top),W/(rt-lf));
         if(need>=1)break;

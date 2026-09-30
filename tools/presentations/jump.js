@@ -12,13 +12,18 @@
   var L={sb:idx('.launch-sb'),ab:idx('.launch-ab')};
   var app=[L.sb,L.ab,idx('.exs')].filter(function(i){return i>=0;});app=app.length?Math.min.apply(null,app):-1;
   var back=null,bar=document.createElement('div');bar.id='jbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','انتقال سريع');
-  function btn(id,txt,title){var b=document.createElement('button');b.id=id;b.type='button';b.innerHTML=txt;b.title=title;bar.appendChild(b);return b;}
-  var bT=btn('jt','🧑‍🏫','وضع المعلّم: إظهار ملاحظات الشريحة على الشاشة (N)');
-  var bW=btn('jw','🪟','نافذة المعلّم: الملاحظات في نافذةٍ منفصلة تُسحب إلى شاشة الحاسوب (W)');
-  var bR=btn('jr','↩ العودة إلى الدرس','العودة إلى الشريحة التي كنت عندها');
+  var menu=document.createElement('div');menu.id='jmenu';menu.hidden=true;
+  function btn(id,txt,title,host){var b=document.createElement('button');b.id=id;b.type='button';b.innerHTML=txt;b.title=title;(host||menu).appendChild(b);return b;}
+  var bM=btn('jm','☰','القائمة: التمارين وملاحظات المعلّم',bar);
+  var bR=btn('jr','↩ العودة إلى الدرس','العودة إلى الشريحة التي كنت عندها',bar);
   var bS=L.sb>=0?btn('js','📘 تمارين كتاب الطالب','الانتقال إلى تمارين كتاب الطالب'):null;
   var bA=L.ab>=0?btn('ja','📗 تمارين كتاب النشاط','الانتقال إلى تمارين كتاب النشاط'):null;
-  document.body.appendChild(bar);
+  var bW=btn('jw','🪟 نافذة المعلّم','الملاحظات في نافذةٍ منفصلة تُسحب إلى شاشة الحاسوب (W)');
+  var bT=btn('jt','🧑‍🏫 الملاحظات على الشاشة','إظهار ملاحظة الشريحة على الشاشة (N)');
+  bar.insertBefore(menu,bar.firstChild);document.body.appendChild(bar);
+  bM.onclick=function(e){e.stopPropagation();menu.hidden=!menu.hidden;bM.classList.toggle('on',!menu.hidden);};
+  document.addEventListener('click',function(){menu.hidden=true;bM.classList.remove('on');});
+  menu.addEventListener('click',function(){menu.hidden=true;bM.classList.remove('on');},true);   // يُغلق قبل تنفيذ الزرّ
   var P=document.createElement('aside');P.id='tpanel';P.setAttribute('aria-live','polite');document.body.appendChild(P);
   function jump(i){if(i<0)return;var c=D.cur();if(app<0||c<app)back=c;D.go(i);}
   if(bS)bS.onclick=function(e){e.stopPropagation();jump(L.sb);};
@@ -65,6 +70,7 @@
       s.querySelectorAll('.lq').forEach(function(x){x.classList.toggle('on',x===q);});
       var n=q.getAttribute('data-q'),l=q.getAttribute('data-l');num.textContent=l;s.classList.add('chosen');
       go.hidden=false;go.setAttribute('data-q',n);go.innerHTML='انتقل إلى حلّ السؤال '+l+' ←';});});
+    num.addEventListener('click',function(e){e.stopPropagation();s.classList.remove('chosen');});
     go.addEventListener('click',function(e){e.stopPropagation();var t=idx('.exq-'+bk+'-'+go.getAttribute('data-q'));if(t>=0)D.go(t);});
   });
   setT(T);

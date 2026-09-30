@@ -37,7 +37,7 @@ SIGN = lambda s1, s2, r, ok: f'<div class="sg {"pos" if ok else "neg"}"><span>{s
 S.append(slide(f'''{RULE(2, 'عند ضرب عددين صحيحين أو قسمتهما: <b class="c-good">إشارتان متشابهتان ← الناتج موجب</b>، و<b class="c-bad">إشارتان مختلفتان ← الناتج سالب</b>')}
 <div class="row" style="align-items:center">
 <div class="sgrid">{SIGN('+', '+', '+', 1)}{SIGN('−', '−', '+', 1)}{SIGN('+', '−', '−', 0)}{SIGN('−', '+', '−', 0)}</div>
-<div class="col">{st(box(M(N(5), X, N(2), EQ, '١٠', cls="sm"), style="border-color:var(--good)"))}{st(box(M(N(5), X, '٢', EQ, N(10), cls="sm"), style="border-color:var(--bad)"))}
+<div class="xgrid c2" style="width:auto">{st(box(M(N(5), X, N(2), EQ, '١٠', cls="sm"), style="border-color:var(--good)"))}{st(box(M(N(5), X, '٢', EQ, N(10), cls="sm"), style="border-color:var(--bad)"))}
 {st(box(M(N(20), DV, N(4), EQ, '٥', cls="sm"), style="border-color:var(--good)"))}{st(box(M('٢٠', DV, N(4), EQ, N(5), cls="sm"), style="border-color:var(--bad)"))}</div></div>'''))
 S.append(slide(f'''{mode('u')}{timer(1)}''' + quiz(f'أوجد ناتج {M(N(6), X, N(3))}', [M(N(18)), M('١٨'), M(N(9)), M('٩')], 1, 'إشارتان متشابهتان ← موجب: ٦ × ٣ = ١٨')))
 S.append(slide(f'''{mode('u')}''' + quiz(f'أوجد ناتج {M(N(24), DV, "٦")}', [M('٤'), M(N(4)), M(N(18)), M('١٨')], 1, 'إشارتان مختلفتان ← سالب: ٢٤ ÷ ٦ = ٤ ، إذن الناتج −٤')))
