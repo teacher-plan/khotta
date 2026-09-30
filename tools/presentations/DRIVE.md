@@ -9,7 +9,7 @@
 | الوحدة الأولى — الأعداد الصحيحة والقوى والجذور | `1XVKUAWfSSocgt2lMvnGFNpfZ5ta1is2Y` | |
 | ١-١ الأعداد الصحيحة | `1MXacqVM1dGHa1i9PZ1yoXlzGWlWQS9X5` | https://claude.ai/artifact/Y3GimnXMCrcZRt3HGFRpyW |
 | ١-٢ المضاعفات | `1tZ4ay9uSX6XYsW1ZMGZys-FkvQHQdd2H` | https://claude.ai/artifact/DzyQ3EiAixCxaqhLbEXmBK |
-| ١-٣ العوامل وقابلية القسمة | `19TWpBIDBo48aoWrdQbSIljuTwqqnDXM8` | |
+| ١-٣ العوامل وقابلية القسمة | `19TWpBIDBo48aoWrdQbSIljuTwqqnDXM8` | https://claude.ai/artifact/9SBWQXXvvuNv5q33BygbKo |
 | ١-٤ الأعداد الأولية | `1M17Z63KSrESWHRHFxBS8RKjek_Mdn3KG` | |
 | ١-٥ الأسس | `1nTRLqbbV5ynhFpvjB9t7UJzOcOB_ygor` | |
 | ١-٦ القوى والجذور | `1Srpp0PXEfZ7y5syhPhl-9ZtA7hd3zY2D` | https://claude.ai/artifact/3sgrEttY3JqnfFEcUHH58D |
