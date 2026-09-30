@@ -8,6 +8,10 @@
 | الصف السابع | `1AD2Ce_-dnNMhldwa_M86TDYsUHgz4rEx` | |
 | الوحدة الأولى — الأعداد الصحيحة والقوى والجذور | `1XVKUAWfSSocgt2lMvnGFNpfZ5ta1is2Y` | |
 | ١-١ الأعداد الصحيحة | `1MXacqVM1dGHa1i9PZ1yoXlzGWlWQS9X5` | https://claude.ai/artifact/Y3GimnXMCrcZRt3HGFRpyW |
+| ١-٢ المضاعفات | `1tZ4ay9uSX6XYsW1ZMGZys-FkvQHQdd2H` | https://claude.ai/artifact/DzyQ3EiAixCxaqhLbEXmBK |
+| ١-٣ العوامل وقابلية القسمة | `19TWpBIDBo48aoWrdQbSIljuTwqqnDXM8` | |
+| ١-٤ الأعداد الأولية | `1M17Z63KSrESWHRHFxBS8RKjek_Mdn3KG` | |
+| ١-٥ الأسس | `1nTRLqbbV5ynhFpvjB9t7UJzOcOB_ygor` | |
 | ١-٦ القوى والجذور | `1Srpp0PXEfZ7y5syhPhl-9ZtA7hd3zY2D` | https://claude.ai/artifact/3sgrEttY3JqnfFEcUHH58D |
 | ١-٧ ترتيب العمليات الحسابية | `12nZqENqw08uR5ddViDyjFIn0nTLKNhit` | https://claude.ai/artifact/GJq9QcVgtNuU3wa7j6CJf7 |
 | مراجعة الوحدة الأولى | `1L9VZ_BCW8c47rMmJFbHb2ErW4D0QRL-r` | https://claude.ai/artifact/Jn4W7waYU5QT2d8jMoDe18 |
