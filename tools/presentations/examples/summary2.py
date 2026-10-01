@@ -15,7 +15,7 @@ def G(*p): return '<span class="grp">(' + ' '.join(p) + ')</span>'
 def M(*p): return '<span class="m">' + ' '.join(p) + '</span>'
 
 def header(code, title, unit, goal):
-    return f'''<header><div class="hl"><span class="code">الدرس {code}</span><h1>{title}</h1><span class="unit">الصف السابع · {unit}</span></div></header>
+    return f'''<header><div class="hl"><span class="code">{"الدرس " + code if code[:1] in "٠١٢٣٤٥٦٧٨٩" else code}</span><h1>{title}</h1><span class="unit">الصف السابع · {unit}</span></div></header>
 <div class="goal"><b>🎯 هدف الدرس</b><span>{goal}</span></div>'''
 def sec(n, title, *body): return f'<section class="sec"><h2><i>{a(n)}</i>{title}</h2>{"".join(body)}</section>'
 def rule(t, icon='📌'): return f'<div class="rule"><b>{icon}</b><div>{t}</div></div>'

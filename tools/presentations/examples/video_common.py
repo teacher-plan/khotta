@@ -31,7 +31,9 @@ def finalize(SC, header, short, outname):
     out = T[:a] + ''.join(SC) + T[z:]
     N = len(DURS)
     u = re.search(r'الدرس ([١-٩])-', header)   # الوحدة من رقم الدرس (القالب مكتوبٌ للوحدة الأولى)
-    if u: out = out.replace('الصف السابع · الوحدة الأولى', 'الصف السابع · الوحدة ' + 'الأولى الثانية الثالثة الرابعة الخامسة السادسة السابعة الثامنة التاسعة'.split()['١٢٣٤٥٦٧٨٩'.index(u[1])])
+    ORD = 'الأولى الثانية الثالثة الرابعة الخامسة السادسة السابعة الثامنة التاسعة'.split()
+    w = re.search(r'الوحدة (' + '|'.join(ORD) + ')', header)   # أو «مراجعة الوحدة الثانية»
+    if u or w: out = out.replace('الصف السابع · الوحدة الأولى', 'الصف السابع · الوحدة ' + (ORD['١٢٣٤٥٦٧٨٩'.index(u[1])] if u else w[1]))
     out = out.replace('الدرس ١-٦: القوى والجذور', header).replace('<title>فيديو القوى والجذور</title>', f'<title>فيديو {short}</title>')
     out = re.sub(r'const DURS = \[[^\]]*\]', 'const DURS = ' + json.dumps(DURS), out)
     out = out.replace('hint-placeholder-count="9"', f'hint-placeholder-count="{N}"').replace('const N = 9,', 'const N = DURS.length,')

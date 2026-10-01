@@ -21,6 +21,9 @@
 | ٢-٣ فك الأقواس | `1MRUe2A5wFJ5mhgtGcbB0681wqRwaF0k8` | https://claude.ai/artifact/Dbygiyg7hafCUMbTtnQCB7 |
 | ٢-٤ استنتاج واستخدام الصيغ | `13embW1E2UmfcjaR_rb0NFwBjcmks245_` | https://claude.ai/artifact/D1P3qhVQ5eekDjEFzBNQxW |
 | ٢-٥ كتابة المعادلات وحلها | `1IAIcnSWwejH035wXm6SBWmdWGw6-C3ao` | https://claude.ai/artifact/6P5w29GqbWcy8c7dXaWKZe |
+| مراجعة الوحدة الثانية | `1c9fezGpYp4J2DGdonNNn0nM7dvbQeKdD` | |
+| الوحدة الثالثة — الأعداد العشرية والكسور العشرية | `1wppQ5Kl-IcMysx-TgpFdb2V-v2Lhb4pY` | |
+| ٣-١ ترتيب الأعداد العشرية والكسور العشرية | `17yvQpT6Xm5JTFxqmTGrUxxjfcT0L2kYh` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
