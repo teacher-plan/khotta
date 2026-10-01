@@ -115,3 +115,16 @@ def vdiv(a, k, fs='', reveal=False):
 def dres(a, k):   # ناتج القسمة نصّاً بالأرقام العربية (للتحقّق والإجابات)
     from decimal import Decimal as D_
     return _ar(str(D_(a) / D_(k)))
+
+def valign(rows, fs=''):
+    # أعدادٌ مصفوفةٌ عند الفاصلة لنرى انتقال الأرقام بين المنازل: rows = [(العدد بأرقام لاتينية، التسمية يميناً)]؛ لا أصفار مضافة
+    I = max(len(x.partition('.')[0]) for x, _ in rows); Dm = max(len(x.partition('.')[2]) for x, _ in rows)
+    TD = 'padding: 0 .07em; text-align: center; min-width: .6em'
+    out = ''
+    for x, lab in rows:
+        i, hp, d = x.partition('.')
+        cells = [''] * (I - len(i)) + list(i) + ([('.' if hp else '')] if Dm else []) + list(d) + [''] * (Dm - len(d))
+        out += '<tr>' + ''.join(f'<td style="{TD}{"; color: #C0262D" if c == "." else ""}">{_ar(c)}</td>' for c in cells) + \
+               f'<td style="{TD}; padding-inline-start: .5em; font-size: .55em; color: #C2410C; text-align: left; white-space: nowrap">{lab}</td></tr>'
+    return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '
+            f'font-weight: 800; line-height: 1.2; vertical-align: middle; margin: 0 auto{"; font-size: " + fs if fs else ""}">{out}</table>')
