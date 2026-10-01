@@ -102,7 +102,7 @@ figcaption{{font-size:14px;color:var(--muted)}}
 <div class="wrap" id="app">
 <header>
   <span class="eyebrow">{html.escape(A.meta)}</span>
-  <h1>الدرس <span class="n">{html.escape(A.code)}</span>: {T}</h1>
+  <h1>{"الدرس " if A.code[:1] in "٠١٢٣٤٥٦٧٨٩" else ""}<span class="n">{html.escape(A.code)}</span>: {T}</h1>
   <p class="lead">تحضير الدرس كاملاً في صفحة واحدة. زرّ «حفظ» تحت كل جزء يحفظه في جهازك: على الهاتف تظهر قائمة المشاركة، فاختر «حفظ في الصور» للفيديو والصور أو «حفظ في الملفات».</p>
 </header>
 
