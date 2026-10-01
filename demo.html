@@ -4562,7 +4562,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='76f8e87';
+const KH_BUILD='a1709fe';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -7262,7 +7262,49 @@ function planShowInfo(id){
   imgFullOpen(st.info_url,'ملخص الدرس'+(l?' — '+l.name:''));
 }
 // إرفاق ملف: يُرفع إلى تخزين الحساب ويُسجل على بطاقة الدرس
+/* إرفاق ملف: من الجهاز (رفعٌ إلى التخزين) أو من Google Drive (رابط مشاركة
+   فقط — لا رفع ولا مساحة تُستهلك، والملف يبقى في Drive المعلّم كما هو).
+   على الهاتف: «من الجهاز» يفتح منتقي الملفات وفيه Drive أيضاً إن كان مثبّتاً،
+   و«رابط من Drive» للصق رابطٍ منسوخ من تطبيق Drive (مشاركة ← نسخ الرابط). */
 function planAttach(id){
+  document.getElementById('attach-pick')?.remove();
+  const m=document.createElement('div');m.id='attach-pick';m.className='c1-modal open';
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  m.innerHTML=`<div class="c1-mbox"><h3>إرفاق ملف بالدرس</h3>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="c1-mbtn go" id="ap-dev" style="width:100%">📁 ملف من الجهاز</button>
+      <button class="c1-mbtn" id="ap-drv" style="width:100%">🟢 رابط من Google Drive</button>
+      <p style="font-size:12px;color:var(--muted);margin:2px 0 0;line-height:1.7">في تطبيق Drive على الهاتف: ${khG('اضغطي','اضغط')} ⋮ بجانب الملف ← «مشاركة» ← ${khG('اجعلي','اجعل')} الوصول «أي شخص لديه الرابط» ← «نسخ الرابط»، ثم ${khG('الصقيه','الصقه')} هنا.</p>
+    </div>
+    <div class="c1-mrow"><button class="c1-mbtn no" onclick="document.getElementById('attach-pick').remove()">إلغاء</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector('#ap-dev').onclick=()=>{m.remove();planAttachDevice(id);};
+  m.querySelector('#ap-drv').onclick=()=>{m.remove();planAttachDrive(id);};
+}
+// رابط Drive/Docs ← رابط معاينة قابل للتضمين (/preview)
+function driveEmbedUrl(raw){
+  const u=String(raw||'').trim();
+  if(!/^https:\/\/(drive|docs)\.google\.com\//i.test(u))return null;
+  let m=u.match(/\/(document|presentation|spreadsheets|forms)\/d\/([\w-]{10,})/);
+  if(m)return{url:`https://docs.google.com/${m[1]}/d/${m[2]}/preview`,kind:m[1]};
+  m=u.match(/\/file\/d\/([\w-]{10,})/)||u.match(/[?&]id=([\w-]{10,})/);
+  if(m)return{url:`https://drive.google.com/file/d/${m[1]}/preview`,kind:'file'};
+  return null;
+}
+async function planAttachDrive(id){
+  const raw=prompt('الصق رابط الملف من Google Drive:');
+  if(!raw)return;
+  const e=driveEmbedUrl(raw);
+  if(!e){toast(/folders/.test(raw)?'هذا رابط مجلد — '+khG('انسخي','انسخ')+' رابط الملف نفسه':'الرابط ليس رابط ملفٍ من Google Drive',true);return;}
+  const KN={document:'مستند',presentation:'عرض تقديمي',spreadsheets:'جدول',forms:'نموذج',file:'ملف'};
+  const name=(prompt('اسم الملف كما سيظهر في البطاقة:',KN[e.kind]+' من Drive')||'').trim()||(KN[e.kind]+' من Drive');
+  const st=planGet(id);
+  const files=[...(st.files||[]),{name,type:'application/x-gdrive',drive:true,viewLink:e.url,previewLink:e.url}];
+  await planSetState(id,{files});
+  planRenderUnits();
+  toast('أُرفق الملف من Drive — '+khG('تأكّدي','تأكّد')+' أن مشاركته «أي شخص لديه الرابط»','ok');
+}
+function planAttachDevice(id){
   const inp=document.createElement('input');
   inp.type='file';
   inp.onchange=async()=>{
@@ -7305,6 +7347,7 @@ async function planFileDel(id,fi){
 // ربط) يعرضها داخل الإطار بدل تنزيلها.
 const OFFICE_EXT_RE=/\.(docx?|xlsx?|pptx?)$/i;
 function filePreviewSrc(url,name){
+  if(/^https:\/\/(drive|docs)\.google\.com\//i.test(url||''))return url;   // معاينة Drive جاهزة للتضمين
   const isOffice=OFFICE_EXT_RE.test(name||'')||OFFICE_EXT_RE.test(url||'');
   return isOffice?'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(url):url;
 }
