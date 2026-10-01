@@ -88,3 +88,30 @@ def vmul(a, k, reveal=False, fs=''):
     rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}{LN}; color: #0A7A3D">{_ar(d)}</td>' for d in [''] * (L - len(res)) + list(res)) + f'<td style="{TD}{LN}"></td></tr>')
     return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '
             f'font-weight: 800; line-height: 1.12; vertical-align: middle; margin: 0 auto{"; font-size: " + fs if fs else ""}">{"".join(rows)}</table>')
+
+def vdiv(a, k, fs='', reveal=False):
+    # القسمة المختصرة كما في مثال ٣-٥: المقسوم عليه يساراً، والناتج فوق المقسوم والفاصلة فوق الفاصلة، والباقي صغيرٌ قبل الرقم التالي.
+    k = int(k); i, _, d = a.partition('.'); digs = list(i) + list(d); npos = len(i)
+    r, qs, car, lead = 0, [], [''] * len(digs), True
+    for j, ch in enumerate(digs):
+        v = r * 10 + int(ch); q, r = divmod(v, k)
+        hide = lead and q == 0 and j < npos - 1
+        if hide: qs.append('')
+        else: lead = False; qs.append(str(q))
+        if r and j + 1 < len(digs) and not hide: car[j + 1] = str(r)
+    TD = 'padding: 0 .07em; text-align: center; min-width: .6em'
+    def cols(vals, f):
+        out = [f(v, j) for j, v in enumerate(vals[:npos])]
+        if d: out.append(f'<td style="{TD}; color: #C0262D">٫</td>')
+        return out + [f(v, j + npos) for j, v in enumerate(vals[npos:])]
+    q = cols(qs, lambda v, j: f'<td style="{TD}; color: #0A7A3D">{_ar(v)}</td>')
+    dv = cols(digs, lambda v, j: f'<td style="{TD}; border-top: .07em solid currentColor">'
+              + (f'<sup style="font-size: .5em; color: #C2410C; vertical-align: .55em">{_ar(car[j])}</sup>' if car[j] else '') + f'{_ar(v)}</td>')
+    if d: dv[npos] = f'<td style="{TD}; border-top: .07em solid currentColor; color: #C0262D">٫</td>'
+    SC = ' class="st"' if reveal else ''
+    return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '
+            f'font-weight: 800; line-height: 1.15; vertical-align: middle; margin: 0 auto{"; font-size: " + fs if fs else ""}">'
+            f'<tr{SC}><td></td>{"".join(q)}</tr><tr><td style="{TD}; border-right: .07em solid currentColor; padding-right: .18em">{_ar(k)}</td>{"".join(dv)}</tr></table>')
+def dres(a, k):   # ناتج القسمة نصّاً بالأرقام العربية (للتحقّق والإجابات)
+    from decimal import Decimal as D_
+    return _ar(str(D_(a) / D_(k)))
