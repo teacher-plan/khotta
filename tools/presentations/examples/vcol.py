@@ -68,3 +68,23 @@ def vcol(a, b, op, res='=', marks='auto', pad=True, reveal=False, fs=''):
     trs = ''.join(f'<tr{SC if reveal and k in ("mk", "res") else ""}>{r}</tr>' for k, r in rows)
     return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '
             f'font-weight: 800; line-height: 1.12; vertical-align: middle; margin: 0 auto{"; font-size: " + fs if fs else ""}">{trs}</table>')
+
+def vmul(a, k, reveal=False, fs=''):
+    # ضربٌ رأسي لعددٍ كامل (الأرقام بعد تجاهل الفاصلة) في رقمٍ واحد، والمحمول فوق المنزلة التالية — كما في مثال ٣-٤
+    res = str(int(a) * int(k)); L = max(len(a), len(res))
+    top = [''] * (L - len(a)) + list(a)
+    mk, c = [''] * L, 0
+    for j in range(L - 1, -1, -1):
+        if not top[j]: break
+        c = (int(top[j]) * int(k) + c) // 10
+        if c and j > 0 and top[j - 1]: mk[j - 1] = str(c)
+    TD = 'padding: 0 .07em; text-align: center; min-width: .6em'
+    LN = '; border-top: .07em solid currentColor'
+    SC = ' class="st"' if reveal else ''
+    rows = []
+    if any(mk): rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}; font-size: .5em; color: #C2410C; vertical-align: bottom">{_ar(m)}</td>' for m in mk) + '<td></td></tr>')
+    rows.append('<tr>' + ''.join(f'<td style="{TD}">{_ar(d)}</td>' for d in top) + '<td></td></tr>')
+    rows.append('<tr>' + f'<td style="{TD}"></td>' * (L - 1) + f'<td style="{TD}">{_ar(k)}</td><td style="{TD}; color: #C2410C; padding-inline-start: .25em">×</td></tr>')
+    rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}{LN}; color: #0A7A3D">{_ar(d)}</td>' for d in [''] * (L - len(res)) + list(res)) + f'<td style="{TD}{LN}"></td></tr>')
+    return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '
+            f'font-weight: 800; line-height: 1.12; vertical-align: middle; margin: 0 auto{"; font-size: " + fs if fs else ""}">{"".join(rows)}</table>')

@@ -3,7 +3,7 @@
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'summary2.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
-CSS += '.ex .vcol td{border-bottom:0}.ex td.e .vcol{font-size:15pt;margin:.6mm 0}.vrow{display:flex;gap:6mm;justify-content:center;align-items:center;font-weight:700}.vrow>div{text-align:center;font-size:10pt;color:var(--ink2)}.vrow .vcol{font-size:15pt;color:var(--ink)}'
+CSS += '.ex table.vcol{width:auto}.ex .vcol td{border-bottom:0}.ex td.e .vcol{font-size:15pt;margin:.6mm 0}.vrow{display:flex;gap:6mm;justify-content:center;align-items:center;font-weight:700}.vrow>div{text-align:center;font-size:10pt;color:var(--ink2)}.vrow .vcol{font-size:15pt;color:var(--ink)}'
 GT = '<span class="op">&gt;</span>'
 
 HD = header('٣-٣', 'جمع الأعداد العشرية والكسور العشرية وطرحها', 'الوحدة الثالثة: الأعداد العشرية والكسور العشرية',
