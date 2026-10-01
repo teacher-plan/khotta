@@ -1,5 +1,5 @@
 # صفحة «رفع التحضيرات إلى Drive»: تجمع ملفات عدّة دروس وترفع كلّاً منها إلى مجلد درسه في Google Drive
-# تلقائياً عند فتحها (بحساب المعلّم، عبر موصل Google Drive) — ويُتخطّى ما رُفع سابقاً.
+# بضغطة زرّ واحدة «رفع الكل» (بحساب المعلّم، عبر موصل Google Drive) — ويُتخطّى ما رُفع سابقاً.
 # python3 tools/presentations/drive_sync.py <مجلد_الخرج> <ملف_الدروس.json>
 # ملف الدروس: [{"name": "١-٦ القوى والجذور", "folder": "<id>", "files": [["<مسار محلي>", "<العنوان في Drive>", "<mime>"], …]}, …]
 #   بدل "folder" يمكن: "root": "<id>", "path": ["الوحدة الثانية", "٢-١ …"] — تُنشأ المجلدات الناقصة تلقائياً (ويُعاد استعمال الموجود بالاسم نفسه).
@@ -41,9 +41,9 @@ li{flex-wrap:wrap}.sv{font-size:14px;min-height:40px;padding:6px 14px;background
 </style>
 <div class="wrap">
 <h1>رفع التحضيرات إلى Google Drive</h1>
-<p>يبدأ الرفع تلقائياً عند فتح الصفحة: كل ملف يذهب إلى مجلد درسه في «خطة — تحضير الدروس». الملف الموجود مسبقاً لا يُكرَّر. أبقِ الصفحة مفتوحة حتى ينتهي.</p>
-<div id="status" role="status" aria-live="polite">جارٍ التحضير…</div>
-<button type="button" id="go" hidden>أعد المحاولة</button>
+<p>اضغط «رفع الكل» مرةً واحدة: يذهب كل ملف إلى مجلد درسه في «خطة — تحضير الدروس». الملف الموجود مسبقاً بالاسم نفسه لا يُكرَّر. أبقِ الصفحة مفتوحة حتى ينتهي.</p>
+<button type="button" id="go">رفع الكل إلى Drive ↑</button>
+<div id="status" role="status" aria-live="polite"></div>
 <div id="list"></div>
 </div>
 <script>
@@ -58,7 +58,7 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
   });
   let mcp = null;
   try { mcp = window.claude && window.claude.use ? await window.claude.use('mcp') : null; } catch (e) { mcp = null; }
-  if (!mcp) { status.textContent = 'الرفع إلى Drive غير متاح هنا. افتح الصفحة من تطبيق Claude أو موقعه.'; return; }
+  if (!mcp) { status.textContent = 'الرفع إلى Drive غير متاح هنا. افتح الصفحة من تطبيق Claude أو موقعه.'; go.hidden = true; return; }
   const FATAL = ['server_not_connected', 'server_not_found', 'needs_reauth', 'not_granted', 'consent_required', 'approval_required'];
   function why(e) {
     const c = e && e.code;
@@ -131,12 +131,11 @@ const ITEMS = ''' + json.dumps(items, ensure_ascii=False) + ''';
       }
     }
     running = false;
-    if (fatal) { status.textContent = fatal; go.hidden = false; }
-    else if (failed) { status.textContent = 'انتهى: رُفع ' + done + '، وكان موجوداً ' + skipped + '، وتعذّر ' + failed + '. اضغط «أعد المحاولة» للباقي.'; go.hidden = false; }
+    if (fatal) { status.textContent = fatal; go.textContent = 'أعد المحاولة'; go.hidden = false; }
+    else if (failed) { status.textContent = 'انتهى: رُفع ' + done + '، وكان موجوداً ' + skipped + '، وتعذّر ' + failed + '. اضغط «أعد المحاولة» للباقي.'; go.textContent = 'أعد المحاولة'; go.hidden = false; }
     else status.textContent = 'اكتمل ✓ — رُفع ' + done + ' ملفاً، وكان موجوداً ' + skipped + '. يمكنك إغلاق الصفحة.';
   }
-  go.addEventListener('click', run);
-  run();
+  go.addEventListener('click', function () { go.hidden = true; run(); });
 })();
 </script>
 '''
