@@ -126,5 +126,11 @@ html = f'''<!DOCTYPE html>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
 <script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script></body></html>'''
+# حدود العرض بوحدة vw تتصغّر مع zoom الشرائح (--ui و--fit و--ar)، فيضيق المربّع عن سطره ويخرج النص منه (iPad):
+# نقسمها على معامل التكبير --zz لتبقى بعرضها المرئي الأصلي، ويصغر الخط وحده.
+def _unz(css):
+    css = re.sub(r'((?:max-|min-)?width):\s*(min\([^;{}()]*vw\)|\d+(?:\.\d+)?vw)', lambda m: f'{m[1]}:calc({m[2]} / var(--zz,1))', css)
+    return css + '.slide{--zz:calc(var(--ar,1) * var(--fit,1) * var(--ui,1))}'
+html = re.sub(r'<style>(.*?)</style>', lambda m: '<style>' + _unz(m[1]) + '</style>', html, count=1, flags=re.S)
 open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')
