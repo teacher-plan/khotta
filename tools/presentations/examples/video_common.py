@@ -30,6 +30,8 @@ def finalize(SC, header, short, outname):
     a = T.index('<sc-if value="{{s0}}"'); z = T.index('\n</div>\n\n<div style="height: 88px')
     out = T[:a] + ''.join(SC) + T[z:]
     N = len(DURS)
+    u = re.search(r'الدرس ([١-٩])-', header)   # الوحدة من رقم الدرس (القالب مكتوبٌ للوحدة الأولى)
+    if u: out = out.replace('الصف السابع · الوحدة الأولى', 'الصف السابع · الوحدة ' + 'الأولى الثانية الثالثة الرابعة الخامسة السادسة السابعة الثامنة التاسعة'.split()['١٢٣٤٥٦٧٨٩'.index(u[1])])
     out = out.replace('الدرس ١-٦: القوى والجذور', header).replace('<title>فيديو القوى والجذور</title>', f'<title>فيديو {short}</title>')
     out = re.sub(r'const DURS = \[[^\]]*\]', 'const DURS = ' + json.dumps(DURS), out)
     out = out.replace('hint-placeholder-count="9"', f'hint-placeholder-count="{N}"').replace('const N = 9,', 'const N = DURS.length,')

@@ -18,6 +18,7 @@
 | الوحدة الثانية — العبارات الجبرية والمعادلات والصيغ | `1upOVHMBnI4QawCpL3lyHLgI5H-6MItjG` | |
 | ٢-١ كتابة العبارات الجبرية | `1OhvfsZWLPoGp4nyhiPo5y4E2fKplc8Jk` | https://claude.ai/artifact/C4GLzearm89H3UFqh7p3bg |
 | ٢-٢ تجميع الحدود المتشابهة | `1Dyaeq4iP8kKcTLYhti1ePbiu3fF8Kakn` | https://claude.ai/artifact/Bsak63Ex47Lb4TzDA8RXWN |
+| ٢-٣ فك الأقواس | `1MRUe2A5wFJ5mhgtGcbB0681wqRwaF0k8` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.

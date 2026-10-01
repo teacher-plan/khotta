@@ -69,11 +69,13 @@ h1{margin:0;font-size:21pt;font-weight:800;line-height:1.25}
 .ex td.e{font-size:12.5pt;font-weight:700;white-space:nowrap;width:1%}
 .ex td.r{font-size:10.5pt;color:var(--ink2);font-weight:600}
 .ans{background:var(--ex);color:#fff;font-weight:800;padding:1.6mm 4mm;font-size:11.5pt}
+.ans .op{color:#fff}.ans .v{color:#FFE08A}
 .warn{background:var(--wbg);border:1.2px solid #F2B8B2;border-radius:3mm;padding:2.5mm 4mm;display:flex;flex-direction:column;gap:1.6mm}
 .wt{color:var(--w);font-size:12pt}
 .wr{display:grid;grid-template-columns:1fr 1fr;gap:1mm 4mm;font-size:11pt;font-weight:700;align-items:center}
 .wr .bad{color:var(--w)}.wr .good{color:var(--ex)}.wr small{grid-column:1/-1;color:var(--ink2);font-weight:600;font-size:10pt}
 .tb{width:100%;border-collapse:separate;border-spacing:0;border:1.2px solid var(--line);border-radius:3mm;overflow:hidden;font-size:11pt}
+.tb.area{width:auto;margin:0 auto}.tb.area td,.tb.area th{text-align:center;min-width:22mm;font-size:13pt}.tb.area td:nth-child(2){background:#E7F0FF}.tb.area td:nth-child(3){background:#FFF1E6}
 .tb th{background:var(--nav);color:#fff;padding:1.2mm 3mm;font-weight:700;text-align:right}
 .tb td{padding:1.1mm 3mm;border-top:1px solid var(--line);font-weight:600;line-height:1.6}
 .tb tr:nth-child(odd) td{background:#F7FAFD}
