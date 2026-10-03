@@ -166,6 +166,7 @@ EXTRA_CSS_OWN = '''
 .vbox{flex:none;background:#fff;border:3px solid var(--line);border-radius:18px;padding:1vh 2vw;font-family:var(--fh);font-size:clamp(48px,9.6vh,110px)}
 .frc{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;vertical-align:middle;font-size:1em}
 .g3{direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.slide .b sup{font-size:.68em}
 .frc>span:first-child{border-bottom:.07em solid currentColor;padding:0 .15em;align-self:stretch;text-align:center}
 .pwt{border-collapse:separate;border-spacing:0 1vh;font-weight:700}
 .pwt td{background:#fff;border-top:3px solid var(--line);border-bottom:3px solid var(--line);padding:.6vh 1.4vw;text-align:center}

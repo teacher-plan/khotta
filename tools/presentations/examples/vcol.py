@@ -55,7 +55,7 @@ def vcol(a, b, op, res='=', marks='auto', pad=True, reveal=False, fs=''):
         return f'<td style="{s}{extra}">{_ar(c)}</td>'
     rows = []
     if any(m.strip() for m in mk):
-        rows.append(('mk', ''.join(f'<td style="{TD}; font-size: .5em; color: #C2410C; vertical-align: bottom">{_ar(m.strip())}</td>' for m in mk) + '<td></td>'))
+        rows.append(('mk', ''.join(f'<td style="{TD}; font-size: .6em; color: #C2410C; vertical-align: bottom">{_ar(m.strip())}</td>' for m in mk) + '<td></td>'))
     SK = '; background-image: linear-gradient(to top right, transparent 44%, #C0262D 44%, #C0262D 56%, transparent 56%)'   # شَرطةٌ مائلة تظهر فوق الصفر أيضاً
     rows.append(('', ''.join(td(c, k, SK if j in strike else '') for j, (c, k) in enumerate(top)) + '<td></td>'))
     rows.append(('', ''.join(td(c, k) for c, k in bot) + f'<td style="{TD}; color: #C2410C; padding-inline-start: .25em">{"+" if op == "+" else "−"}</td>'))
@@ -82,7 +82,7 @@ def vmul(a, k, reveal=False, fs=''):
     LN = '; border-top: .07em solid currentColor'
     SC = ' class="st"' if reveal else ''
     rows = []
-    if any(mk): rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}; font-size: .5em; color: #C2410C; vertical-align: bottom">{_ar(m)}</td>' for m in mk) + '<td></td></tr>')
+    if any(mk): rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}; font-size: .6em; color: #C2410C; vertical-align: bottom">{_ar(m)}</td>' for m in mk) + '<td></td></tr>')
     rows.append('<tr>' + ''.join(f'<td style="{TD}">{_ar(d)}</td>' for d in top) + '<td></td></tr>')
     rows.append('<tr>' + f'<td style="{TD}"></td>' * (L - 1) + f'<td style="{TD}">{_ar(k)}</td><td style="{TD}; color: #C2410C; padding-inline-start: .25em">×</td></tr>')
     rows.append(f'<tr{SC}>' + ''.join(f'<td style="{TD}{LN}; color: #0A7A3D">{_ar(d)}</td>' for d in [''] * (L - len(res)) + list(res)) + f'<td style="{TD}{LN}"></td></tr>')
@@ -106,7 +106,7 @@ def vdiv(a, k, fs='', reveal=False):
         return out + [f(v, j + npos) for j, v in enumerate(vals[npos:])]
     q = cols(qs, lambda v, j: f'<td style="{TD}; color: #0A7A3D">{_ar(v)}</td>')
     dv = cols(digs, lambda v, j: f'<td style="{TD}; border-top: .07em solid currentColor">'
-              + (f'<sup style="font-size: .5em; color: #C2410C; vertical-align: .55em">{_ar(car[j])}</sup>' if car[j] else '') + f'{_ar(v)}</td>')
+              + (f'<sup style="font-size: .6em; color: #C2410C; vertical-align: .55em">{_ar(car[j])}</sup>' if car[j] else '') + f'{_ar(v)}</td>')
     if d: dv[npos] = f'<td style="{TD}; border-top: .07em solid currentColor; color: #C0262D">٫</td>'
     SC = ' class="st"' if reveal else ''
     return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; unicode-bidi: isolate; display: inline-table; '

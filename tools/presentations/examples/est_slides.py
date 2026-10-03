@@ -108,11 +108,11 @@ EXTRA_CSS_OWN = '''
 @media (max-aspect-ratio:1/1){.slide .vrow{flex-direction:column}.slide .vrow>.stps{max-width:92vw}.stp{flex-wrap:wrap;justify-content:center}}
 .tags{gap:1.6vw}
 .ptag{display:flex;flex-direction:column;align-items:center;background:#FFF6E3;border:3px solid #E9A23B;border-radius:18px 18px 18px 4px;padding:.8vh 1.4vw;font-family:var(--fh)}
-.ptag span{font-size:clamp(34px,7vh,80px)}.ptag small{font-size:clamp(16px,2.6vh,28px);color:var(--ink2)}.ptag b{font-size:clamp(22px,4vh,46px)}
+.ptag span{font-size:clamp(34px,7vh,80px)}.ptag small{font-size:clamp(20px,3.8vh,42px);color:var(--ink2)}.ptag b{font-size:clamp(22px,4vh,46px)}
 .rt{border-collapse:separate;border-spacing:0 1vh;font-weight:700;font-size:clamp(22px,4vh,46px)}
 .rt td{background:#fff;border-top:3px solid var(--line);border-bottom:3px solid var(--line);padding:.6vh 1.4vw;text-align:center}
 .rt td:first-child{border-right:3px solid var(--line);border-radius:0 14px 14px 0;color:#2563EB}.rt td:last-child{border-left:3px solid var(--line);border-radius:14px 0 0 14px}
-.big2{font-weight:700;font-size:clamp(24px,4.4vh,50px);line-height:1.4}
+.big2{font-weight:700;font-size:clamp(28px,5.4vh,62px);line-height:1.4}
 .box .col>.m:not(.mid):not(.sm):not(.big),.hid.col>.m:not(.mid):not(.sm):not(.big){font-size:clamp(32px,6vh,70px)}
 .hint.no{color:var(--bad)}.hint.ok{color:var(--good)}
 .sumg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2vw;width:min(1600px,94vw)}

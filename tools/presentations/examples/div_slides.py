@@ -14,7 +14,7 @@ def Q(a_, k): return f'{_ar(a_)} ÷ {_ar(k)}'
 def PZ(q, dv, k):   # لغز القسمة: الأرقام الناقصة مربّعات (؟)
     TD = 'padding: 0 .07em; text-align: center; min-width: .6em'
     def cells(s, top):
-        return ''.join(f'<td style="{TD}{"" if top else "; border-top: .07em solid currentColor"}{"; color: #C0262D" if c == "٫" else ""}">' + (f'<span class="bx">{c[1:]}</span>' if c.startswith('?') else c.replace('^', '<sup style="font-size: .5em; color: #C2410C">').replace('|', '</sup>')) + '</td>' for c in s)
+        return ''.join(f'<td style="{TD}{"" if top else "; border-top: .07em solid currentColor"}{"; color: #C0262D" if c == "٫" else ""}">' + (f'<span class="bx">{c[1:]}</span>' if c.startswith('?') else c.replace('^', '<sup style="font-size: .6em; color: #C2410C">').replace('|', '</sup>')) + '</td>' for c in s)
     return (f'<table class="vcol" style="border-collapse: collapse; direction: ltr; display: inline-table; font-weight: 800; line-height: 1.2; margin: 0 auto">'
             f'<tr><td></td>{cells(q, True)}</tr><tr><td style="{TD}; border-right: .07em solid currentColor; padding-right: .18em">{k}</td>{cells(dv, False)}</tr></table>')
 S = []

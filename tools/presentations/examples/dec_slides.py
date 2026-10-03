@@ -205,7 +205,7 @@ EXTRA_CSS_OWN = '''
 .lu{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,62px);background:#EAF7F8;border:3px solid var(--base);border-radius:12px;padding:.05em .5em}
 .lf{display:flex;flex-direction:column;align-items:center;font-family:var(--fh);font-weight:800;font-size:clamp(26px,5.2vh,58px);line-height:1.15}
 .lf b{color:var(--good)}.lf i{font-style:normal;color:var(--bad)}
-.swim{border-collapse:separate;border-spacing:0;font-weight:800;font-size:clamp(20px,3.6vh,40px);background:#fff;border:3px solid var(--ink);border-radius:12px;overflow:hidden;width:min(900px,62vw)}
+.swim{border-collapse:separate;border-spacing:0;font-weight:800;font-size:clamp(22px,4.1vh,46px);background:#fff;border:3px solid var(--ink);border-radius:12px;overflow:hidden;width:min(900px,62vw)}
 .swim th{background:#FBE36B;padding:.2em;}.swim td{text-align:center;padding:.05em;border-top:2px solid var(--line)}.swim td+td,.swim th+th{border-inline-start:2px solid var(--line)}
 .swim td.bad{background:#FFF0F0;color:var(--bad)}
 .sumg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2vw;width:min(1600px,94vw)}
