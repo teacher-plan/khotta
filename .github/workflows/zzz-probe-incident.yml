@@ -1,0 +1,17 @@
+name: zzz probe incident
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run() { echo "── $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]? // .'; }
+          run "حجم التخزين الآن" "select count(*) as files, pg_size_pretty(sum((metadata->>'size')::bigint)) as size, round(sum((metadata->>'size')::bigint)/1048576.0) as mb from storage.objects"
+          run "حجم القاعدة" "select pg_size_pretty(pg_database_size(current_database())) as db"
+          run "إعدادات الذكاء" "select key, left(value,60) as value from ai_settings where key in ('generator_enabled','ai_model','model_plan','monthly_budget','openrouter_balance') or key ilike '%disable%' or key ilike '%balance%' or key ilike '%credit%'"
+          run "أعمدة أسجال الأخطاء" "select table_name, string_agg(column_name,',') as cols from information_schema.columns where table_schema='public' and table_name in ('error_logs','ai_usage','ai_cost_log','health_checks') group by 1"
+          run "آخر تكاليف الذكاء" "select * from ai_usage order by 1 desc limit 3"
