@@ -29,7 +29,7 @@
 | ٣-٤ ضرب الأعداد العشرية والكسور العشرية | `1wge59ppdt591X6WLoYqjvSqGpU9fo8mb` | https://claude.ai/artifact/V5P8LHWcEDZyQHgSJeDJ98 |
 | ٣-٥ قسمة الأعداد العشرية والكسور العشرية (١) | `1keNK-z2isihw9gQFCsALLk0tIpN4qyVK` | https://claude.ai/artifact/R5WXPeTZgtSassVqeG4g3H |
 | ٣-٦ قسمة الأعداد العشرية والكسور العشرية (٢) | `14fHlFfsdjgq8garYxXbegc7UImZj6_oW` | https://claude.ai/artifact/4vhPamQUtR3jzttNujNrHy |
-| ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | K37 |
+| ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | https://claude.ai/artifact/UBvecMAYhz7gPSGi6NFVJt |
 | ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | K38 |
 | مراجعة الوحدة الثالثة | `1JZXSEU5pIiAAwNPqPlsagFoyRqsMyzfx` | KU3 |
 
