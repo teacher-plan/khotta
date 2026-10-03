@@ -30,7 +30,7 @@
 | ٣-٥ قسمة الأعداد العشرية والكسور العشرية (١) | `1keNK-z2isihw9gQFCsALLk0tIpN4qyVK` | https://claude.ai/artifact/R5WXPeTZgtSassVqeG4g3H |
 | ٣-٦ قسمة الأعداد العشرية والكسور العشرية (٢) | `14fHlFfsdjgq8garYxXbegc7UImZj6_oW` | https://claude.ai/artifact/4vhPamQUtR3jzttNujNrHy |
 | ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | https://claude.ai/artifact/UBvecMAYhz7gPSGi6NFVJt |
-| ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | K38 |
+| ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | https://claude.ai/artifact/5MvZMx9YEkgQtghwCrCdbJ |
 | مراجعة الوحدة الثالثة | `1JZXSEU5pIiAAwNPqPlsagFoyRqsMyzfx` | KU3 |
 
 ## لكل درسٍ جديد
