@@ -1,0 +1,25 @@
+name: zzz probe dbhealth4
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run() { echo "── $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]? // .'; }
+          run "حجم القاعدة" "select pg_size_pretty(pg_database_size(current_database())) as db_size, pg_database_size(current_database())/1048576 as mb"
+          run "أكبر ١٠ جداول" "select relname, pg_size_pretty(pg_total_relation_size(c.oid)) as total, n_live_tup as rows from pg_class c join pg_stat_user_tables s on s.relid=c.oid order by pg_total_relation_size(c.oid) desc limit 10"
+          run "الاتصالات" "select state, count(*) from pg_stat_activity where datname=current_database() group by 1"
+          run "أطول استعلام جارٍ" "select now()-query_start as dur, left(query,80) as q from pg_stat_activity where state='active' and pid<>pg_backend_pid() order by 1 desc limit 3"
+          run "نسبة إصابة الكاش" "select round(100.0*sum(heap_blks_hit)/nullif(sum(heap_blks_hit+heap_blks_read),0),2) as cache_hit_pct from pg_statio_user_tables"
+          run "جداول بحاجة تنظيف (dead tuples)" "select relname, n_dead_tup, n_live_tup, last_autovacuum from pg_stat_user_tables where n_dead_tup>1000 order by n_dead_tup desc limit 5"
+          run "فحوصات الصحة آخر ٦ ساعات" "select status, count(*) from health_checks where checked_at>now()-interval '6 hours' group by 1"
+          run "آخر فحص" "select checked_at, status from health_checks order by checked_at desc limit 3"
+          run "أخطاء النظام آخر ٢٤ ساعة" "select count(*) as errors from error_logs where created_at>now()-interval '24 hours'"
+          run "المستخدمون" "select count(*) as users from auth.users"
+          run "التخزين" "select count(*) as files, pg_size_pretty(coalesce(sum((metadata->>'size')::bigint),0)) as size from storage.objects"
+          run "مهام cron" "select jobname, schedule, active from cron.job order by jobname"
+          run "فشل cron آخر ٢٤ ساعة" "select count(*) as failed from cron.job_run_details where status='failed' and start_time>now()-interval '24 hours'"
