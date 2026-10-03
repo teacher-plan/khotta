@@ -181,7 +181,8 @@ figcaption{{font-size:14px;color:var(--muted)}}
         st.textContent = 'رفع…';
         const blob = await (await fetch(f.src)).blob();
         const input = {{ title: f.title, parentId: K.folder, contentMimeType: f.type, disableConversionToGoogleType: true }};
-        if (blob.size < 700000) input.base64Content = b64(await blob.arrayBuffer());
+        if (/^text\//.test(f.type) && blob.size < 1500000) input.textContent = await blob.text();
+        else if (blob.size < 700000) input.base64Content = b64(await blob.arrayBuffer());
         else if (files) input.base64Content = {{ $file: {{ data: blob, name: f.src, type: f.type }} }};
         else throw {{ code: 'too_big' }};
         await mcp.callTool(S, 'create_file', input);
