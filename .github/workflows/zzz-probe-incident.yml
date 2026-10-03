@@ -9,9 +9,9 @@ jobs:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
-          run() { echo "── $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]? // .'; }
-          run "أخطاء آخر ١٢ ساعة" "select function_name, error_code, left(error_message,140) as msg, count(*) as n, max(occurred_at) as last from error_logs where occurred_at>now()-interval '12 hours' group by 1,2,3 order by n desc limit 12"
-          run "آخر توليد ناجح" "select function_name, model, cost_usd, created_at from ai_cost_log order by created_at desc limit 5"
-          run "عدد التوليد يومياً" "select date_trunc('day',created_at)::date as d, count(*) from ai_cost_log where created_at>now()-interval '5 days' group by 1 order by 1"
-          run "فحوصات غير سليمة آخر ٢٤ ساعة" "select component_name, status, left(error_message,120) as msg, max(checked_at) as last, count(*) as n from health_checks where status<>'healthy' and checked_at>now()-interval '24 hours' group by 1,2,3 order by last desc limit 10"
-          run "جداول المراقبة" "select table_name from information_schema.tables where table_schema='public' and (table_name ilike '%credit%' or table_name ilike '%balance%' or table_name ilike '%alert%' or table_name ilike '%agent%') order by 1"
+          api() { echo "── $1"; curl -s -m 30 "https://api.supabase.com/v1/projects/$REF$1" -H "Authorization: Bearer $TOKEN" | jq -c "$2" 2>/dev/null || true; }
+          echo "── المشروع"; curl -s -m 30 "https://api.supabase.com/v1/projects/$REF" -H "Authorization: Bearer $TOKEN" | jq -c '{status,name,region}'
+          api "/config/storage" '.'
+          api "/health?services=auth&services=db&services=rest&services=storage&services=realtime" '[.[]|{name,healthy,status}]'
+          echo "── مرفوض بالتخزين (رسائل ٦ ساعات)"; sql="select count(*) from storage.objects where created_at>now()-interval '24 hours'"; body=$(jq -Rs '{query: .}' <<< "$sql"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c .
+          sql="select name, created_at, (metadata->>'size')::bigint as size from storage.objects order by created_at desc limit 5"; body=$(jq -Rs '{query: .}' <<< "$sql"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?'
