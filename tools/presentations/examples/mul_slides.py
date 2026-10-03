@@ -4,6 +4,7 @@
 # كتاب الطالب ص٦٤–٦٥ (مثال ٣-٤)، وإجابات الدليل ص٧٨ (كتاب الطالب) وص٨٢ (كتاب النشاط ص٤٧).
 # python3.12 gen_powers.py mul_slides.py ضرب_الأعداد_العشرية_عرض_تفاعلي.html "ضرب الأعداد العشرية والكسور العشرية — الصف السابع"
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
+exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 
 def STP(lab, expr='', cls=''): return st(f'<div class="stp {cls}"><span class="lab">{lab}</span>{expr}</div>')
 def STEPS(*rows): return '<div class="stps">' + ''.join(rows) + '</div>'
@@ -34,9 +35,9 @@ S.append(slide(f'''<div class="row hdr"><span class="qbadge">تهيئة 🤔</sp
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٦٤')}</div><h2>لضرب عددٍ عشري في عددٍ من رقمٍ واحد</h2>
 <div class="defs">{st('<div><b class="kk c-exp">١</b><span><b class="c-exp">نتجاهل</b> الفاصلة العشرية</span></div>')}{st('<div><b class="kk c-we">٢</b><span>نضرب كالأعداد الكاملة</span></div>')}{st('<div><b class="kk c-lcm">٣</b><span><b>نعدّ</b> الأرقام يمين الفاصلة في السؤال</span></div>')}{st('<div><b class="kk c-i">٤</b><span><b>نعيد</b> الفاصلة إلى الناتج بالعدد نفسه من الأرقام على يمينها</span></div>')}</div>'''))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('مثال ٣-٤ (١ أ)')}</div><h2>الطريقة الذهنية: ٤ × ٠٫٢</h2>
-<div class="row vrow">{STEPS(STP('نتجاهل الفاصلة', M('٢', X, '٤', EQ, '٨', cls='sm')), STP('في السؤال رقمٌ واحد يمين الفاصلة', DPC('0.2')), STP('رقمٌ واحد يمين الفاصلة في الناتج', M('٠٫٢', X, '٤', EQ, '٠٫٨', cls='sm'), 'fin'))}</div>'''))
+<div class="row vrow">{STEPS(STP('نتجاهل الفاصلة', M('٢', X, '٤', EQ, '٨', cls='sm')), STP('في السؤال رقمٌ واحد يمين الفاصلة', DPC('0.2')), STP('رقمٌ واحد يمين الفاصلة في الناتج', M('٠٫٢', X, '٤', EQ, '٠٫٨', cls='sm'), 'fin'))}{TBARS(4, 2)}</div>'''))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('مثال ٣-٤ (١ ب)')}</div><h2>الطريقة الذهنية: ٢ × ٠٫٦</h2>
-<div class="row vrow">{STEPS(STP('نتجاهل الفاصلة', M('٦', X, '٢', EQ, '١٢', cls='sm')), STP('في السؤال رقمٌ واحد يمين الفاصلة', DPC('0.6')), STP('رقمٌ واحد يمين الفاصلة في الناتج', M('٠٫٦', X, '٢', EQ, '١٫٢', cls='sm'), 'fin'))}</div>
+<div class="row vrow">{STEPS(STP('نتجاهل الفاصلة', M('٦', X, '٢', EQ, '١٢', cls='sm')), STP('في السؤال رقمٌ واحد يمين الفاصلة', DPC('0.6')), STP('رقمٌ واحد يمين الفاصلة في الناتج', M('٠٫٦', X, '٢', EQ, '١٫٢', cls='sm'), 'fin'))}{TBARS(2, 6)}</div>
 {st('<div class="note">٢ × ٦ أجزاء من عشرة = ١٢ جزءاً من عشرة = ١٫٢</div>')}'''))
 S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ١ (أ، ب)')}</div><h2>معاً: احسب ذهنياً</h2>
 <div class="row">{st(f'<button class="flip box col" style="flex:1"><span class="hint">٨ × ٠٫١</span><span class="tap">👆</span><span class="hid">{M("٠٫٨")}</span></button>')}{st(f'<button class="flip box col" style="flex:1"><span class="hint">٣ × ٠٫٣</span><span class="tap">👆</span><span class="hid">{M("٠٫٩")}</span></button>')}</div>''' + tn('اطلب من الطلاب قول الخطوات بصوتٍ عالٍ: «٨ × ١ = ٨، ورقمٌ واحد يمين الفاصلة، إذن ٠٫٨».')))
@@ -68,6 +69,7 @@ S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٢ (ب)')}{t
 S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٣ (ج)')}</div>''' + quiz('٩ × ٣٫٢١ = ؟', [M('٢٨٫٨٩'), M('٢٨٨٫٩'), M('٢٧٫٨٩'), M('٢٫٨٨٩')], 0, '٣٢١ × ٩ = ٢٨٨٩، ورقمان يمين الفاصلة: ٢٨٫٨٩')))
 S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٥')}</div><h2>سامي وهيثم: ٥ × ٠٫٨</h2>
 <div class="row sh">{st(box('<div class="col"><span class="hint">سامي 🧑</span>' + M('٤٫٠') + '</div>', style="flex:1"))}{st(box('<div class="col"><span class="hint">هيثم 👦</span>' + M('٤') + '</div>', style="flex:1"))}</div>
+{st(TBARS(5, 8))}
 {st('<div class="note">كلاهما صحيح: ٥ × ٨ = ٤٠، ورقمٌ واحد يمين الفاصلة، فالناتج ٤٫٠ وهو يساوي ٤</div>')}''' + tn('من الدليل: يجب أن يفهم الطلاب أن ٤٫٠ يساوي العدد الصحيح ٤، وجدول القيمة المكانية وسيلةٌ مرئية جيدة.')))
 S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٤')}</div><h2>أكمل مستخدماً كل عددٍ مرةً واحدة</h2>
 <div class="pool">{''.join(f'<span>{n}</span>' for n in ('١٨٫٣', '٢', '٣٦٫٨', '٠٫٦', '٦٫١', '٧', '٠٫٧'))}</div>
@@ -138,4 +140,4 @@ EXTRA_CSS_OWN = '''
 .pz>.st{display:flex}.pz>.st>.xcard{flex:1}
 .sh .m{font-size:clamp(44px,8.6vh,100px)!important}
 .errs .err .xq .m{font-size:inherit}
-'''
+'''+FIG_CSS

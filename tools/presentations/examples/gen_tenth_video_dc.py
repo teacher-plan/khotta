@@ -3,6 +3,9 @@
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lesson_video.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
+exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
+def IM(name, h=170): return FIG(name).replace('<img class="fig"', f'<img style="height: {h}px; border-radius: 12px; border: 3px solid #D5DEEA; vertical-align: middle; margin-inline-start: 24px"')
+def SV(svg, w=420): return svg.replace('<svg class="svgfig', f'<svg style="width: {w}px; height: auto; vertical-align: middle; margin-inline-start: 24px" class="svgfig')
 def P(b, e): return f'<span style="direction: ltr; unicode-bidi: isolate; display: inline-block">{b}<sup style="font-size: .55em; color: #C2410C">{e}</sup></span>'
 def G(s): return f'<span style="direction: ltr; unicode-bidi: isolate; display: inline-block; white-space: nowrap">{s}</span>'
 D = [
@@ -17,8 +20,8 @@ D = [
   (P('١٠', '٦'), '١٠٠٠٠٠٠', 'سِتَّةُ أَصْفَارٍ يَمِينَ الْوَاحِدِ: مِلْيُونٌ.', False),
   ('١٠٠٠٠٠', P('١٠', '٥'), 'وَمِئَةُ أَلْفٍ فِيهَا خَمْسَةُ أَصْفَارٍ، فَهِيَ عَشَرَةٌ أُسُّ خَمْسَةٍ.', True)]),
  ('٠٫١ و ٠٫٠١', 'كسران عشريان', 'وَالْآنَ: مَا مَعْنَى صِفْرٍ فَاصِلَة وَاحِدٍ؟', [
-  ('جزءٌ من عشرة', e('٠٫١', EQ, FR('١', '١٠')), 'صِفْرٌ فَاصِلَة وَاحِدٍ يُسَاوِي وَاحِدًا عَلَى عَشَرَةٍ.', False),
-  ('جزءٌ من مئة', e('٠٫٠١', EQ, FR('١', '١٠٠')), 'وَصِفْرٌ فَاصِلَة صِفْر وَاحِدٍ يُسَاوِي وَاحِدًا عَلَى مِئَةٍ.', True)]),
+  ('جزءٌ من عشرة', e('٠٫١', EQ, FR('١', '١٠'), SV(GRID100(1), 200)), 'صِفْرٌ فَاصِلَة وَاحِدٍ يُسَاوِي وَاحِدًا عَلَى عَشَرَةٍ.', False),
+  ('جزءٌ من مئة', e('٠٫٠١', EQ, FR('١', '١٠٠'), SV(GRID100(0, 1), 200)), 'وَصِفْرٌ فَاصِلَة صِفْر وَاحِدٍ يُسَاوِي وَاحِدًا عَلَى مِئَةٍ.', True)]),
  ('الضرب في ٠٫١ و ٠٫٠١', 'الضرب في ٠٫١ = القسمة على ١٠', 'لِذَلِكَ: الضَّرْبُ فِي صِفْرٍ فَاصِلَة وَاحِدٍ يُسَاوِي الْقِسْمَةَ عَلَى عَشَرَةٍ.', [
   ('× ٠٫١', e('٨', X, '٠٫١', EQ, '٨', DV, '١٠', EQ, '٠٫٨'), 'ثَمَانِيَةٌ فِي صِفْرٍ فَاصِلَة وَاحِدٍ: ثَمَانِيَةٌ عَلَى عَشَرَةٍ، صِفْرٌ فَاصِلَة ثَمَانِيَةٍ.', False),
   ('× ٠٫٠١', e('٨', X, '٠٫٠١', EQ, '٨', DV, '١٠٠', EQ, '٠٫٠٨'), 'وَالضَّرْبُ فِي صِفْرٍ فَاصِلَة صِفْر وَاحِدٍ يُسَاوِي الْقِسْمَةَ عَلَى مِئَةٍ: صِفْرٌ فَاصِلَة صِفْر ثَمَانِيَةٍ.', True)]),

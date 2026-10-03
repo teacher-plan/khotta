@@ -4,6 +4,7 @@
 # كتاب الطالب ص٧٠–٧٣ (مثالا ٣-٧أ و ٣-٧ب)، وإجابات الدليل ص٧٩ (كتاب الطالب) وص٨٣ (كتاب النشاط ص٥٢–٥٤).
 # python3.12 gen_powers.py tenth_slides.py الضرب_في_٠٫١_و٠٫٠١_عرض_تفاعلي.html "الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما — الصف السابع"
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
+exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 
 DV = '<span class="x">÷</span>'
 def FR(n, d): return f'<span class="frc"><span>{n}</span><span>{d}</span></span>'
@@ -55,7 +56,7 @@ S.append(slide('''<span class="tag">الحصة الثانية · ٤٠ دقيقة
 <div><b>٧ د</b>نحن</div><div><b>٨ د</b>أنتم</div><div><b>٤ د</b>انتبه</div><div><b>٤ د</b>بطاقة الخروج</div></div>''', 'divider'))
 S.append(slide(f'''<div class="row hdr"><span class="qbadge">إحماء 🔥</span>{timer(1)}</div>''' + quiz('٣٢ ÷ ١٠ = ؟', [M('٣٢٠'), M('٣٫٢'), M('٠٫٣٢'), M('٢٢')], 1, 'القسمة على ١٠ تنقل الأرقام منزلةً واحدة إلى اليمين')))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٧٠')}</div><h2>الكسران العشريان ٠٫١ و ٠٫٠١</h2>
-<div class="row">{st(box(f'<div class="col"><span class="hint">جزءٌ من عشرة</span>{M("٠٫١", EQ, FR("١", "١٠"))}</div>', style="flex:1"))}{st(box(f'<div class="col"><span class="hint">جزءٌ من مئة</span>{M("٠٫٠١", EQ, FR("١", "١٠٠"))}</div>', style="flex:1"))}</div>
+<div class="row">{st(box(f'<div class="col"><span class="hint">جزءٌ من عشرة</span>{GRID100(1)}{M("٠٫١", EQ, FR("١", "١٠"))}</div>', style="flex:1"))}{st(box(f'<div class="col"><span class="hint">جزءٌ من مئة</span>{GRID100(0, 1)}{M("٠٫٠١", EQ, FR("١", "١٠٠"))}</div>', style="flex:1"))}</div>
 {st('<div class="note">الضرب في ٠٫١ = الضرب في <b>عُشر</b> = <b>القسمة على ١٠</b></div>')}''' + tn('الخطأ الشائع الأول في الدليل: صعوبة فهم أن ٠٫١ = ١/١٠ و ٠٫٠١ = ١/١٠٠. اربطه بجدول القيمة المكانية.')))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٧٠')}</div><h2>الضرب في ٠٫١ أو ٠٫٠١</h2>
 <div class="defs">{st(f'<div><b class="kk c-exp">× ٠٫١</b><span>= القسمة على <b class="c-exp">١٠</b>: {M("٨", X, "٠٫١", EQ, "٨", DV, "١٠", EQ, "٠٫٨", cls="sm")}</span></div>')}{st(f'<div><b class="kk c-we">× ٠٫٠١</b><span>= القسمة على <b class="c-we">١٠٠</b>: {M("٨", X, "٠٫٠١", EQ, "٨", DV, "١٠٠", EQ, "٠٫٠٨", cls="sm")}</span></div>')}</div>
@@ -98,7 +99,7 @@ S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٤ (أ، ه
 S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٤ (ج)')}{timer(1)}</div>''' + quiz('٥٢٫٢ ÷ ٠٫١ = ؟', [M('٥٫٢٢'), M('٥٢٢'), M('٥٢٢٠'), M('٥٢٫٣')], 1, '٥٢٫٢ × ١٠ = ٥٢٢')))
 S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٤ (ح)')}</div>''' + quiz('٧٫٢٢٥ ÷ ٠٫٠١ = ؟', [M('٧٢٢٫٥'), M('٧٢٫٢٥'), M('٠٫٠٧٢٢٥'), M('٧٢٢٥')], 0, '٧٫٢٢٥ × ١٠٠ = ٧٢٢٫٥')))
 S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٥: طريقة هيثم')}</div><h2>نتحقّق بالعملية العكسية</h2>
-<div class="row">{st(box(f'<div class="col"><span class="hint">٢٣ × ٠٫١ = ٢٣ ÷ ١٠ = ٢٫٣</span>{M("٢٫٣ × ١٠ = ٢٣ ✔", cls="sm")}</div>', style="flex:1"))}{st(box(f'<div class="col"><span class="hint">٨٫٣ ÷ ٠٫٠١ = ٨٣٠٠ ؟</span>{M("٨٣٠٠ ÷ ١٠٠ = ٨٣ ✘", cls="sm")}<span class="hint ok">الصحيح ٨٣٠</span></div>', style="flex:1"))}</div>''' + tn('من الكتاب (ورقة هيثم): العملية العكسية تكشف الخطأ. الدليل: شجّع الطلاب على استخدامها لتعزيز فهم العلاقة بين الضرب والقسمة.')))
+<div class="row">{st(FIG('3-7_haitham'))}{st(box(f'<div class="col"><span class="hint">٢٣ × ٠٫١ = ٢٣ ÷ ١٠ = ٢٫٣</span>{M("٢٫٣ × ١٠ = ٢٣ ✔", cls="sm")}</div>', style="flex:1"))}{st(box(f'<div class="col"><span class="hint">٨٫٣ ÷ ٠٫٠١ = ٨٣٠٠ ؟</span>{M("٨٣٠٠ ÷ ١٠٠ = ٨٣ ✘", cls="sm")}<span class="hint ok">الصحيح ٨٣٠</span></div>', style="flex:1"))}</div>''' + tn('من الكتاب (ورقة هيثم): العملية العكسية تكشف الخطأ. الدليل: شجّع الطلاب على استخدامها لتعزيز فهم العلاقة بين الضرب والقسمة.')))
 S.append(slide(f'''<div class="row hdr">{mode('u')}{ref('تمرين ٥ (ب، د)')}</div><h2>احسب ثم تحقّق</h2>
 <div class="row">{st(f'<button class="flip box col" style="flex:1"><span class="hint">٢٣٫٦ × ٠٫٠١</span><span class="tap">👆</span><span class="hid col">{M("٠٫٢٣٦", cls="sm")}<small class="ck">تحقّق: ٠٫٢٣٦ × ١٠٠ = ٢٣٫٦</small></span></button>')}{st(f'<button class="flip box col" style="flex:1"><span class="hint">٤٫٥ ÷ ٠٫٠١</span><span class="tap">👆</span><span class="hid col">{M("٤٥٠", cls="sm")}<small class="ck">تحقّق: ٤٥٠ ÷ ١٠٠ = ٤٫٥</small></span></button>')}</div>'''))
 S.append(slide(f'''<div class="row hdr">{mode('we')}{ref('تمرين ٦')}</div><h2>ضع × أو ÷</h2>
@@ -131,7 +132,7 @@ S.append(ex(6, 'ضع × أو ÷', 'الناتج أكبر من العدد ← ÷ 
 S.append(ex(7, 'اكتب ٠٫١ أو ٠٫٠١', 'منزلةٌ واحدة ← ٠٫١ ، ومنزلتان ← ٠٫٠١', [(f'({h}) {q}', r) for h, (q, r) in zip(H, [('٢٦ × ☐ = ٠٫٢٦', '٠٫٠١'), ('٣٫٤ ÷ ☐ = ٣٤', '٠٫١'), ('٠٫٠٦ × ☐ = ٠٫٠٠٠٦', '٠٫٠١'), ('٧ ÷ ☐ = ٧٠', '٠٫١'), ('٨٫٩٩ × ☐ = ٠٫٨٩٩', '٠٫١'), ('٥٢ ÷ ☐ = ٥٢٠', '٠٫١')])], cols=2))
 S.append(ex(8, 'أيّ العمليات ناتجها مختلف؟', 'نحسب كل عملية', [('(أ) ٥٫٢ × ٠٫١ (ب) ٥٢ ÷ ٠٫٠١ (ج) ٠٫٠٥٢ ÷ ٠٫١ (د) ٥٢ × ٠٫٠١', '(ب) = ٥٢٠٠<small>والبقية = ٠٫٥٢</small>')], cols=1))
 S.append(ex(9, 'فكّر فهد في عدد', 'نعكس العمليات أو نجمع أثرها', [('× ٠٫١ ثم ÷ ٠٫٠١ ثم ÷ ٠٫١ فحصل على ١٢٥٠٠: ما العدد؟', '١٢٥<small>÷ ١٠ ثم × ١٠٠ ثم × ١٠ = × ١٠٠</small>')], cols=1))
-S.append(ex(10, 'مثالٌ يبيّن خطأ العبارة', 'يكفي مثالٌ واحد مخالف', [('(أ) الضرب في ٠٫١ لعددٍ غير الصفر يعطي ناتجاً أكبر من صفر', 'عددٌ سالب<small>−٥ × ٠٫١ = −٠٫٥</small>'), ('(ب) قسمة عددٍ بمنزلة عشرية على ٠٫٠١ تعطي أكبر من ١٠٠', 'عددٌ أصغر من ١<small>٠٫٥ ÷ ٠٫٠١ = ٥٠</small>')], cols=1))
+S.append(ex(10, 'مثالٌ يبيّن خطأ العبارة', 'يكفي مثالٌ واحد مخالف', [(FIG('3-7_maryam', 'fig lg') + '(أ) الضرب في ٠٫١ لعددٍ غير الصفر يعطي ناتجاً أكبر من صفر', 'عددٌ سالب<small>−٥ × ٠٫١ = −٠٫٥</small>'), ('(ب) قسمة عددٍ بمنزلة عشرية على ٠٫٠١ تعطي أكبر من ١٠٠', 'عددٌ أصغر من ١<small>٠٫٥ ÷ ٠٫٠١ = ٥٠</small>')], cols=1))
 
 # ═══════════ ملحق: حلول كتاب النشاط ص٥٢–٥٤ (الإجابات من دليل المعلم ص٨٣) ═══════════
 S.append(launch('ab', '٥٢ إلى ٥٤', note='الإجابات النهائية من دليل المعلم ص ٨٣'))
@@ -145,7 +146,7 @@ S.append(ex(6, 'اكتب × أو ÷', 'الناتج أكبر من العدد ←
 S.append(ex(7, 'اكتب ٠٫١ أو ٠٫٠١', 'منزلةٌ واحدة ← ٠٫١ ، ومنزلتان ← ٠٫٠١', [(f'({h}) {q}', r) for h, (q, r) in zip(H, [('٤٤ × ☐ = ٤٫٤', '٠٫١'), ('٤٫٤ ÷ ☐ = ٤٤', '٠٫١'), ('٠٫٤٠ × ☐ = ٠٫٠٠٤', '٠٫٠١'), ('٤ ÷ ☐ = ٤٠', '٠٫١'), ('٤٤٫٤ × ☐ = ٠٫٤٤٤', '٠٫٠١'), ('٤٤ ÷ ☐ = ٤٤٠٠', '٠٫٠١')])], cols=2, src=NB))
 S.append(ex(8, 'أيّ العمليات ناتجها مختلف؟', 'نحسب كل عملية', [('(أ) ٠٫٠٩٦ ÷ ٠٫١ (ب) ٩٦ × ٠٫٠١ (ج) ٩٫٦ × ٠٫١ (د) ٩٦ ÷ ٠٫٠١', '(د) = ٩٦٠٠<small>والبقية = ٠٫٩٦</small>')], cols=1, src=NB))
 S.append(ex(9, 'فكّرت نور في عدد', 'نعكس العمليات أو نجمع أثرها', [('÷ ٠٫٠١ ثم × ٠٫١ ثم ÷ ٠٫٠١ فحصلت على ٢٣٤٠: ما العدد؟', '٢٫٣٤<small>× ١٠٠ ثم ÷ ١٠ ثم × ١٠٠ = × ١٠٠٠</small>')], cols=1, src=NB))
-S.append(ex(10, 'مثالٌ يبيّن خطأ العبارة', 'يكفي مثالٌ واحد مخالف', [('(أ) قسمة عددٍ بمنزلة عشرية على ٠٫١ تعطي أكبر من ١', '٠٫١ ÷ ٠٫١ = ١<small>وليس أكبر من ١</small>'), ('(ب) ضرب عددٍ بمنزلتين عشريتين في ٠٫٠١ يعطي أكبر من ٠٫٠١', 'عددٌ أصغر من ١<small>٠٫٥٠ × ٠٫٠١ = ٠٫٠٠٥</small>')], cols=1, src=NC))
+S.append(ex(10, 'مثالٌ يبيّن خطأ العبارة', 'يكفي مثالٌ واحد مخالف', [(FIG('3-7_mohammed', 'fig lg') + '(أ) قسمة عددٍ بمنزلة عشرية على ٠٫١ تعطي أكبر من ١', '٠٫١ ÷ ٠٫١ = ١<small>وليس أكبر من ١</small>'), ('(ب) ضرب عددٍ بمنزلتين عشريتين في ٠٫٠١ يعطي أكبر من ٠٫٠١', 'عددٌ أصغر من ١<small>٠٫٥٠ × ٠٫٠١ = ٠٫٠٠٥</small>')], cols=1, src=NC))
 
 # الأعداد الكبيرة بمجموعاتٍ ثلاثية كما في الكتاب (١٠ ٠٠٠ ٠٠٠) ليسهل عدّ الأصفار
 def _g3(m):
@@ -184,4 +185,4 @@ EXTRA_CSS_OWN = '''
 .sum4 .m{font-size:clamp(32px,6.4vh,74px)!important}
 .pz>.st{display:flex}.pz>.st>.xcard{flex:1}
 .xa small{display:block}
-'''
+'''+FIG_CSS
