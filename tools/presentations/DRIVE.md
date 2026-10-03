@@ -21,9 +21,17 @@
 | ٢-٣ فك الأقواس | `1MRUe2A5wFJ5mhgtGcbB0681wqRwaF0k8` | https://claude.ai/artifact/Dbygiyg7hafCUMbTtnQCB7 |
 | ٢-٤ استنتاج واستخدام الصيغ | `13embW1E2UmfcjaR_rb0NFwBjcmks245_` | https://claude.ai/artifact/D1P3qhVQ5eekDjEFzBNQxW |
 | ٢-٥ كتابة المعادلات وحلها | `1IAIcnSWwejH035wXm6SBWmdWGw6-C3ao` | https://claude.ai/artifact/6P5w29GqbWcy8c7dXaWKZe |
-| مراجعة الوحدة الثانية | `1c9fezGpYp4J2DGdonNNn0nM7dvbQeKdD` | |
+| مراجعة الوحدة الثانية | `1c9fezGpYp4J2DGdonNNn0nM7dvbQeKdD` | https://claude.ai/artifact/NK58AC3dqFANz5eQZ3TwaC |
 | الوحدة الثالثة — الأعداد العشرية والكسور العشرية | `1wppQ5Kl-IcMysx-TgpFdb2V-v2Lhb4pY` | |
-| ٣-١ ترتيب الأعداد العشرية والكسور العشرية | `17yvQpT6Xm5JTFxqmTGrUxxjfcT0L2kYh` | |
+| ٣-١ ترتيب الأعداد العشرية والكسور العشرية | `17yvQpT6Xm5JTFxqmTGrUxxjfcT0L2kYh` | https://claude.ai/artifact/9dU8QG4SLCydUJUCDhJmdo |
+| ٣-٢ التقريب | `1eVA3BrCSA2szr6FQNVfFBk_EiBfVyD08` | https://claude.ai/artifact/Qk3aXjsx2VRkAS5EbrFAbZ |
+| ٣-٣ جمع الأعداد العشرية والكسور العشرية وطرحها | `1jETpYalroe_MCREGVkKyXV33Lsn4XCnS` | https://claude.ai/artifact/JTpmkoT6pRegdUvREuo6hV |
+| ٣-٤ ضرب الأعداد العشرية والكسور العشرية | `1wge59ppdt591X6WLoYqjvSqGpU9fo8mb` | K34 |
+| ٣-٥ قسمة الأعداد العشرية والكسور العشرية (١) | `1keNK-z2isihw9gQFCsALLk0tIpN4qyVK` | K35 |
+| ٣-٦ قسمة الأعداد العشرية والكسور العشرية (٢) | `14fHlFfsdjgq8garYxXbegc7UImZj6_oW` | K36 |
+| ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | K37 |
+| ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | K38 |
+| مراجعة الوحدة الثالثة | `1JZXSEU5pIiAAwNPqPlsagFoyRqsMyzfx` | KU3 |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
