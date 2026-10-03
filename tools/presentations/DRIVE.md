@@ -27,7 +27,7 @@
 | ٣-٢ التقريب | `1eVA3BrCSA2szr6FQNVfFBk_EiBfVyD08` | https://claude.ai/artifact/Qk3aXjsx2VRkAS5EbrFAbZ |
 | ٣-٣ جمع الأعداد العشرية والكسور العشرية وطرحها | `1jETpYalroe_MCREGVkKyXV33Lsn4XCnS` | https://claude.ai/artifact/JTpmkoT6pRegdUvREuo6hV |
 | ٣-٤ ضرب الأعداد العشرية والكسور العشرية | `1wge59ppdt591X6WLoYqjvSqGpU9fo8mb` | https://claude.ai/artifact/V5P8LHWcEDZyQHgSJeDJ98 |
-| ٣-٥ قسمة الأعداد العشرية والكسور العشرية (١) | `1keNK-z2isihw9gQFCsALLk0tIpN4qyVK` | K35 |
+| ٣-٥ قسمة الأعداد العشرية والكسور العشرية (١) | `1keNK-z2isihw9gQFCsALLk0tIpN4qyVK` | https://claude.ai/artifact/R5WXPeTZgtSassVqeG4g3H |
 | ٣-٦ قسمة الأعداد العشرية والكسور العشرية (٢) | `14fHlFfsdjgq8garYxXbegc7UImZj6_oW` | K36 |
 | ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | K37 |
 | ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | K38 |
