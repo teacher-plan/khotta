@@ -27,9 +27,9 @@ S.append(slide('''<span class="tag">الحصة الأولى · ٤٠ دقيقة</
 <div class="plan"><div><b>٥ د</b>تهيئة: إناء الحلوى</div><div><b>٨ د</b>المتغيّر والعبارة</div><div><b>١٠ د</b>مثال ٢-١ (الأعمار)</div>
 <div><b>١٠ د</b>نحن ← أنتم</div><div><b>٤ د</b>انتبه</div><div><b>٣ د</b>بطاقة الخروج</div></div>''', 'divider'))
 S.append(slide(f'''<div class="row hdr"><span class="qbadge">تهيئة 🤔</span>{ref('كتاب الطالب ص ٤٠')}</div><h2>كم قطعة حلوى في الإناء؟</h2>
-<div class="row" style="gap:5vw;align-items:center">{st('<div class="jar"><span>🫙</span><b>؟</b></div>')}{st('<p class="lead" style="max-width:22ch">لا نعرف العدد… فنرمز له بحرف: <b class="var">ع</b></p>')}</div>''' + tn('اسأل: كيف نكتب عدداً لا نعرفه؟ دع الطلاب يقترحون قبل أن تكشف الحرف.')))
+<div class="row" style="gap:5vw;align-items:center">{st('<div class="jar"><span>📦</span><b>؟</b></div>')}{st('<p class="lead" style="max-width:22ch">لا نعرف العدد… فنرمز له بحرف: <b class="var">ع</b></p>')}</div>''' + tn('اسأل: كيف نكتب عدداً لا نعرفه؟ دع الطلاب يقترحون قبل أن تكشف الحرف.')))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٤٠')}</div><h2>أخذنا ٣ قطع من الإناء</h2>
-<div class="row" style="gap:4vw;align-items:center">{st('<div class="jar"><span>🫙</span><b>ع</b></div>')}{st('<div class="take">🍬🍬🍬 <small>نأخذ ٣</small></div>')}{st(box(M(V('ع'), MI, '٣', cls="mid"), style="border-color:var(--base)"))}</div>
+<div class="row" style="gap:4vw;align-items:center">{st('<div class="jar"><span>📦</span><b>ع</b></div>')}{st('<div class="take">🍬🍬🍬 <small>نأخذ ٣</small></div>')}{st(box(M(V('ع'), MI, '٣', cls="mid"), style="border-color:var(--base)"))}</div>
 {st('<div class="note">يتبقّى <b>ع − ٣</b> من الحلوى</div>')}'''))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٤٠')}</div><h2>المتغيّر والعبارة الجبرية</h2>
 <div class="defs">{st('<div><b class="kk c-we">المتغيّر</b><span>حرفٌ يمثّل عدداً مجهولاً، مثل ع</span></div>')}{st('<div><b class="kk c-exp">العبارة الجبرية</b><span>أرقامٌ ومتغيّرات وعمليات، مثل ع − ٣</span></div>')}</div>'''))
@@ -152,7 +152,7 @@ EXTRA_CSS_OWN = '''
 .stp.fin .lab{background:var(--good);color:#fff}.stp.fin .m{color:var(--good)}
 .box .col>.m:not(.mid):not(.sm):not(.big),.hid.col>.m:not(.mid):not(.sm):not(.big){font-size:clamp(34px,6.4vh,76px)}
 .jar{display:flex;flex-direction:column;align-items:center;font-size:clamp(90px,20vh,230px);line-height:1}
-.jar b{font-family:var(--fh);font-size:.45em;color:var(--exp);margin-top:-.2em}
+.jar b{font-family:var(--fh);font-size:.45em;color:var(--exp);margin-top:.08em}
 .take{font-size:clamp(40px,8vh,96px);display:flex;flex-direction:column;align-items:center}.take small{font-size:clamp(22px,4.2vh,48px);font-weight:800;color:var(--ink2)}
 .defs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2vw;width:min(1500px,92vw)}
 .defs .st>div{display:flex;flex-direction:column;gap:1vh;align-items:center;background:#fff;border:3px solid var(--line);border-radius:20px;padding:2.4vh 2vw;text-align:center}
