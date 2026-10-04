@@ -1034,7 +1034,12 @@ body.inapp #c1-budget-btn{display:flex}
 .imgf-t{position:absolute;top:18px;inset-inline-start:16px;color:#fff;font-size:13px;font-weight:800;opacity:.9;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* المسرح: كل ما تحت البار مخصّص لمرفقات الدرس */
-#live-stage{position:fixed;inset:0;z-index:950;background:var(--bg);display:none}
+#live-stage{position:fixed;inset:0;z-index:950;background:var(--bg);display:none;overscroll-behavior:none}
+/* قفل الصفحة خلف الحصة الحية: على iPad لا يحترم Safari ‎overflow:hidden‎ على body، فيسحب الإصبعُ الصفحةَ التي تحتها
+   ويتحرّك معها العارض ويُظهر الخطة تحت السبورة. الحلّ المعتمد: تثبيت body نفسه (position:fixed) وإعادة موضع التمرير عند الإغلاق. */
+html.live-lock,html.live-lock body{overflow:hidden!important;overscroll-behavior:none;height:100%}
+html.live-lock body{position:fixed;inset-inline:0;width:100%;top:var(--live-lock-top,0)}
+#live-body,#live-view .lv-vbody,.lb-pop{overscroll-behavior:contain}
 #live-stage.on{display:block}
 /* سبورة الصف: خلفية خضراء داكنة بنقشة غبار طباشير خفيفة (::before) بدل
    الخلفية الفاتحة المعتادة — إحساس المعلّمة أنها واقفة أمام سبورتها،
@@ -9663,6 +9668,7 @@ function liveOpen(classId,subject,lessonId){
   liveRenderQuickStars();
   lbPopCloseAll();
   liveViewClose(true);
+  liveScrollLock(true);
   document.getElementById('live-bar').classList.add('on');
   document.getElementById('live-stage').classList.add('on');
   document.body.style.overflow='hidden';
@@ -9699,7 +9705,22 @@ function liveFsHintDismiss(){
   document.getElementById('lb-fs-bubble')?.classList.remove('on');
   window.removeEventListener('resize',liveFsHintPosition);
 }
+// قفل/فتح تمرير الصفحة خلف الحصة الحية (انظر html.live-lock)
+let _liveLockY=0;
+function liveScrollLock(on){
+  const h=document.documentElement;
+  if(on){
+    if(h.classList.contains('live-lock'))return;
+    _liveLockY=window.scrollY||h.scrollTop||0;
+    h.style.setProperty('--live-lock-top',(-_liveLockY)+'px');
+    h.classList.add('live-lock');
+  }else if(h.classList.contains('live-lock')){
+    h.classList.remove('live-lock');h.style.removeProperty('--live-lock-top');
+    window.scrollTo(0,_liveLockY);
+  }
+}
 function liveClose(){
+  liveScrollLock(false);
   document.getElementById('live-stage').classList.remove('on');
   document.getElementById('live-bar').classList.remove('on');
   document.body.style.overflow='';
