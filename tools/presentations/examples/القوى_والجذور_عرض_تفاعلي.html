@@ -217,6 +217,27 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .nav2 button:focus-visible{outline:3px solid var(--base);outline-offset:2px}
 .nav2 svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 
+/* ─ شريط الشعبة وزرّ الحصة الحية: الزاوية العلوية اليسرى، لا تتعارض مع زرّي التنقّل
+   (أسفل اليمين) ولا مع زرّ القلم الذي تضعه الحصة الحية الخارجية (أسفل اليسار) ─ */
+.clsbar{position:fixed;top:14px;left:14px;display:flex;gap:8px;z-index:6;opacity:.55;transition:opacity .25s}
+.clsbar:hover,.clsbar:focus-within{opacity:1}
+.clsbtn,.livebtn{font-family:var(--fh);font-weight:800;font-size:clamp(13px,1.7vh,17px);display:flex;align-items:center;gap:.4em;
+  border-radius:99px;border:2px solid var(--line);background:rgba(255,255,255,.92);color:var(--ink);padding:.5em 1em;cursor:pointer;box-shadow:0 3px 10px rgba(15,36,71,.15)}
+.clsbtn:focus-visible,.livebtn:focus-visible{outline:3px solid var(--base);outline-offset:2px}
+.livebtn.on{background:var(--exp);border-color:var(--exp);color:#fff}
+.clspop{position:fixed;top:56px;left:14px;background:#fff;border:2px solid var(--line);border-radius:16px;padding:10px;
+  box-shadow:0 10px 30px rgba(15,36,71,.2);display:none;flex-direction:column;gap:6px;min-width:190px;z-index:7}
+.clspop.on{display:flex}
+.clspop button{font-family:var(--fh);font-weight:700;font-size:15px;text-align:right;background:#F3F6FB;border:1.5px solid var(--line);border-radius:10px;padding:.5em .8em;cursor:pointer}
+.clspop button.cur{background:var(--base);color:#fff;border-color:var(--base)}
+.clspop .addrow{display:flex;gap:6px}
+.clspop input{flex:1;font-family:var(--fh);border:1.5px solid var(--line);border-radius:10px;padding:.4em .6em;font-size:14px;min-width:0}
+.clspop .addrow button{flex:none}
+.resumetip{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:700;
+  font-size:clamp(13px,1.8vh,16px);padding:.5em 1.1em;border-radius:99px;z-index:8;display:none;align-items:center;gap:.8em;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.resumetip.on{display:flex}
+.resumetip button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:99px;padding:.2em .8em;cursor:pointer;font-weight:800;font-family:var(--fh)}
+
 .c-i{color:#2563EB}.c-we{color:#16A34A}.c-u{color:#EA580C}.c-b{color:var(--base)}.c-exp{color:var(--exp)}
 .mode{display:flex;align-items:center;gap:.6em;padding:.45em 1.2em;border-radius:99px;font-size:clamp(16px,2.4vh,26px);border:3px solid;background:#fff}
 .mode .ic{font-size:1.3em}.mode b{font-family:var(--fh);font-weight:900;font-size:1.25em}.mode small{font-weight:700;color:var(--ink2)}
@@ -759,6 +780,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 <div class="xgrid c1"><button class="flip xcard"><span class="xq">هل ما تقوله نور صحيح؟</span><span class="tap">👆</span><span class="hid xa"><b>نعم</b><span class="m "><span class="rt"><svg class="rsv" viewBox="0 0 32 64" preserveAspectRatio="none" aria-hidden="true"><path d="M31 38 L25 34 L15 62 L1 1.5"/></svg><span class="ov">٢٥</span></span> <span class="eq">=</span> <span class="ng"><i>±</i>٥</span></span><span class="m "><span class="rt"><svg class="rsv" viewBox="0 0 32 64" preserveAspectRatio="none" aria-hidden="true"><path d="M31 38 L25 34 L15 62 L1 1.5"/></svg><span class="ov">١٦</span></span> <span class="eq">=</span> <span class="ng"><i>±</i>٤</span></span><small>−٥ أصغر من ٤ و −٤</small></span></button></div></section>
 </div>
 <canvas id="fx"></canvas>
+<div class="clsbar" id="clsbar" aria-label="الشعبة والحصة الحية">
+  <button id="clsBtn" title="اختيار الشعبة"><span>🏫</span><span id="clsLbl">اختر الشعبة</span></button>
+  <button id="liveBtn" class="livebtn" title="بدء الحصة الحية بملء الشاشة"><span class="ic">▶</span><span class="lbl">ابدأ الحصة</span></button>
+  <div class="clspop" id="clsPop"></div>
+</div>
+<div class="resumetip" id="resumeTip"></div>
 <nav class="nav2" aria-label="التنقّل بين الشرائح">
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -884,8 +911,77 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
       if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
   }
+  // ─ الشعبة وحفظ آخر شريحة: يتذكّر لكل شعبة أين وصلت في هذا العرض على هذا المتصفّح ─
+  var DECKID=document.title;
+  function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
+  function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  var classes=lsGet('lk_classes',[]);
+  var curClass=lsGet('lk_cur_class',null);
+  if(curClass&&classes.indexOf(curClass)<0)curClass=null;
+  function progKey(c){return 'lk_prog:'+DECKID+':'+c;}
+  function saveProg(){if(curClass)lsSet(progKey(curClass),cur);}
+  function clsLabel(){var l=document.getElementById('clsLbl');if(l)l.textContent=curClass||'اختر الشعبة';}
+  function closeClsPop(){var p=document.getElementById('clsPop');if(p)p.classList.remove('on');}
+  function renderClsPop(){
+    var pop=document.getElementById('clsPop');if(!pop)return;
+    pop.innerHTML=classes.map(function(c){return '<button class="'+(c===curClass?'cur':'')+'" data-c="'+c.replace(/"/g,'&quot;')+'">'+c+'</button>';}).join('')
+      +'<div class="addrow"><input id="clsNew" placeholder="شعبة جديدة…"><button id="clsAdd">➕</button></div>';
+    [].slice.call(pop.querySelectorAll('button[data-c]')).forEach(function(b){b.addEventListener('click',function(){pickClass(b.getAttribute('data-c'));});});
+    var add=document.getElementById('clsAdd'),inp=document.getElementById('clsNew');
+    add.addEventListener('click',addClass);
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addClass();}});
+  }
+  function addClass(){
+    var inp=document.getElementById('clsNew'),v=(inp.value||'').trim();if(!v)return;
+    if(classes.indexOf(v)<0){classes.push(v);lsSet('lk_classes',classes);}
+    pickClass(v);
+  }
+  function pickClass(c){
+    curClass=c;lsSet('lk_cur_class',c);clsLabel();renderClsPop();closeClsPop();
+    var saved=lsGet(progKey(c),null);
+    if(saved!=null&&saved!==cur){go(saved);showResumeTip(saved);}
+  }
+  function showResumeTip(i){
+    var tip=document.getElementById('resumeTip');if(!tip)return;
+    tip.innerHTML='استؤنفت من الشريحة '+ar(i+1)+' <button id="resumeFromStart">من البداية</button>';
+    tip.classList.add('on');
+    document.getElementById('resumeFromStart').addEventListener('click',function(){tip.classList.remove('on');go(0);});
+    setTimeout(function(){tip.classList.remove('on');},6000);
+  }
+  var clsBtn=document.getElementById('clsBtn');
+  if(clsBtn){
+    clsBtn.addEventListener('click',function(e){
+      e.stopPropagation();var p=document.getElementById('clsPop');
+      if(p.classList.contains('on'))closeClsPop();else{renderClsPop();p.classList.add('on');}
+    });
+    document.addEventListener('click',function(e){var bar=document.getElementById('clsbar');if(bar&&!bar.contains(e.target))closeClsPop();});
+  }
+  var liveBtn=document.getElementById('liveBtn');
+  function liveSetUI(on){
+    if(!liveBtn)return;
+    liveBtn.classList.toggle('on',on);
+    liveBtn.querySelector('.ic').textContent=on?'⏹':'▶';
+    liveBtn.querySelector('.lbl').textContent=on?'إنهاء الحصة':'ابدأ الحصة';
+  }
+  if(liveBtn){
+    liveBtn.addEventListener('click',function(){
+      if(document.fullscreenElement)document.exitFullscreen().catch(function(){});
+      else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});
+    });
+    document.addEventListener('fullscreenchange',function(){
+      var on=!!document.fullscreenElement;liveSetUI(on);
+      if(!on)saveProg();   // الخروج من وضع الحصة الحية (أو إلغاء ملء الشاشة) ← حفظ الشريحة الحالية لهذه الشعبة
+    });
+  }
+  document.addEventListener('deck:slide',saveProg);   // حفظٌ مستمرّ أيضاً، شبكة أمان إن أُغلق التبويب دون زرّ
+  window.addEventListener('beforeunload',saveProg);
+  clsLabel();
+
+  var initIdx=0;
+  if(curClass){var sv=lsGet(progKey(curClass),null);if(sv!=null)initIdx=sv;}
   window.DECK={go:go,cur:function(){return cur;},n:slides.length};
-  go(0);
+  go(initIdx);
+  if(initIdx>0)showResumeTip(initIdx);
 })();
 </script><script>/* رموز رياضية ملوّنة في زوايا كل شريحة — مواضع وألوان تتغيّر بين الشرائح،
    وتبقى دائماً في الأطراف (لا تقترب من منطقة المحتوى الوسطى). */
