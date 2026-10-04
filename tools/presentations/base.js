@@ -101,6 +101,75 @@
       x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
       if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
   }
+  // ─ الشعبة وحفظ آخر شريحة: يتذكّر لكل شعبة أين وصلت في هذا العرض على هذا المتصفّح ─
+  var DECKID=document.title;
+  function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
+  function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  var classes=lsGet('lk_classes',[]);
+  var curClass=lsGet('lk_cur_class',null);
+  if(curClass&&classes.indexOf(curClass)<0)curClass=null;
+  function progKey(c){return 'lk_prog:'+DECKID+':'+c;}
+  function saveProg(){if(curClass)lsSet(progKey(curClass),cur);}
+  function clsLabel(){var l=document.getElementById('clsLbl');if(l)l.textContent=curClass||'اختر الشعبة';}
+  function closeClsPop(){var p=document.getElementById('clsPop');if(p)p.classList.remove('on');}
+  function renderClsPop(){
+    var pop=document.getElementById('clsPop');if(!pop)return;
+    pop.innerHTML=classes.map(function(c){return '<button class="'+(c===curClass?'cur':'')+'" data-c="'+c.replace(/"/g,'&quot;')+'">'+c+'</button>';}).join('')
+      +'<div class="addrow"><input id="clsNew" placeholder="شعبة جديدة…"><button id="clsAdd">➕</button></div>';
+    [].slice.call(pop.querySelectorAll('button[data-c]')).forEach(function(b){b.addEventListener('click',function(){pickClass(b.getAttribute('data-c'));});});
+    var add=document.getElementById('clsAdd'),inp=document.getElementById('clsNew');
+    add.addEventListener('click',addClass);
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addClass();}});
+  }
+  function addClass(){
+    var inp=document.getElementById('clsNew'),v=(inp.value||'').trim();if(!v)return;
+    if(classes.indexOf(v)<0){classes.push(v);lsSet('lk_classes',classes);}
+    pickClass(v);
+  }
+  function pickClass(c){
+    curClass=c;lsSet('lk_cur_class',c);clsLabel();renderClsPop();closeClsPop();
+    var saved=lsGet(progKey(c),null);
+    if(saved!=null&&saved!==cur){go(saved);showResumeTip(saved);}
+  }
+  function showResumeTip(i){
+    var tip=document.getElementById('resumeTip');if(!tip)return;
+    tip.innerHTML='استؤنفت من الشريحة '+ar(i+1)+' <button id="resumeFromStart">من البداية</button>';
+    tip.classList.add('on');
+    document.getElementById('resumeFromStart').addEventListener('click',function(){tip.classList.remove('on');go(0);});
+    setTimeout(function(){tip.classList.remove('on');},6000);
+  }
+  var clsBtn=document.getElementById('clsBtn');
+  if(clsBtn){
+    clsBtn.addEventListener('click',function(e){
+      e.stopPropagation();var p=document.getElementById('clsPop');
+      if(p.classList.contains('on'))closeClsPop();else{renderClsPop();p.classList.add('on');}
+    });
+    document.addEventListener('click',function(e){var bar=document.getElementById('clsbar');if(bar&&!bar.contains(e.target))closeClsPop();});
+  }
+  var liveBtn=document.getElementById('liveBtn');
+  function liveSetUI(on){
+    if(!liveBtn)return;
+    liveBtn.classList.toggle('on',on);
+    liveBtn.querySelector('.ic').textContent=on?'⏹':'▶';
+    liveBtn.querySelector('.lbl').textContent=on?'إنهاء الحصة':'ابدأ الحصة';
+  }
+  if(liveBtn){
+    liveBtn.addEventListener('click',function(){
+      if(document.fullscreenElement)document.exitFullscreen().catch(function(){});
+      else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});
+    });
+    document.addEventListener('fullscreenchange',function(){
+      var on=!!document.fullscreenElement;liveSetUI(on);
+      if(!on)saveProg();   // الخروج من وضع الحصة الحية (أو إلغاء ملء الشاشة) ← حفظ الشريحة الحالية لهذه الشعبة
+    });
+  }
+  document.addEventListener('deck:slide',saveProg);   // حفظٌ مستمرّ أيضاً، شبكة أمان إن أُغلق التبويب دون زرّ
+  window.addEventListener('beforeunload',saveProg);
+  clsLabel();
+
+  var initIdx=0;
+  if(curClass){var sv=lsGet(progKey(curClass),null);if(sv!=null)initIdx=sv;}
   window.DECK={go:go,cur:function(){return cur;},n:slides.length};
-  go(0);
+  go(initIdx);
+  if(initIdx>0)showResumeTip(initIdx);
 })();

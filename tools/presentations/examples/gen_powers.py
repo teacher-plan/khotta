@@ -121,6 +121,12 @@ html = f'''<!DOCTYPE html>
 {chr(10).join(S)}
 </div>
 <canvas id="fx"></canvas>
+<div class="clsbar" id="clsbar" aria-label="الشعبة والحصة الحية">
+  <button id="clsBtn" title="اختيار الشعبة"><span>🏫</span><span id="clsLbl">اختر الشعبة</span></button>
+  <button id="liveBtn" class="livebtn" title="بدء الحصة الحية بملء الشاشة"><span class="ic">▶</span><span class="lbl">ابدأ الحصة</span></button>
+  <div class="clspop" id="clsPop"></div>
+</div>
+<div class="resumetip" id="resumeTip"></div>
 <nav class="nav2" aria-label="التنقّل بين الشرائح">
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
