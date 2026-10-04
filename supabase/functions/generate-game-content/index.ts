@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
     const structure = ["pairs", "quiz", "items", "groups", "sequence", "blank", "tf", "sort"].includes(b.structure) ? b.structure : "quiz";
-    const count = Math.max(3, Math.min(15, parseInt(b.count) || 6));
+    const count = Math.max(3, Math.min(30, parseInt(b.count) || 6));   // ٣٠ سؤالاً فعلياً (كان السقف ١٥ فيُقصّ الطلب صامتاً)
     const nOut = structure === "sequence" ? Math.max(3, Math.min(6, Math.round(count / 2))) : count;
     // مستوى الأسئلة: كان يُرسَل من الواجهة (cycle1 وindex) ويُتجاهَل هنا صامتاً،
     // فيخرج المحتوى بمستوى واحد مهما اختارت المعلّمة. يُقرأ الآن ويُحقن في المُوجّه.
@@ -143,7 +143,8 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.5,
-          max_tokens: 2000,
+          // الميزانية تنمو بعدد العناصر: ٢٠٠٠ ثابتة كانت تقطع الناتج عند ~١٥ عنصراً فيخرج JSON مبتوراً
+          max_tokens: Math.min(14000, 1200 + nOut * 420),
         }),
       }, { st, task: "game" });
     let grounded = images.length > 0;
