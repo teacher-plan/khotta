@@ -97,9 +97,13 @@ body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;wid
 
 
 .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
-  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
-.slide.on{opacity:1;pointer-events:auto;transform:none}
-.slide.gone{transform:translateX(4vw)}
+  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;visibility:hidden;transform:translate3d(-3vw,0,0);
+  transition:opacity .28s ease,transform .38s cubic-bezier(.2,.9,.3,1),visibility 0s .38s}
+.slide.on{opacity:1;pointer-events:auto;transform:none;visibility:visible;transition:opacity .28s ease,transform .38s cubic-bezier(.2,.9,.3,1),visibility 0s;will-change:opacity,transform}
+.slide.out{visibility:visible;will-change:opacity,transform}
+.slide.gone{transform:translate3d(3vw,0,0)}
+/* الشرائح غير الظاهرة لا تُرسم ولا تُخطَّط إطلاقاً — ٦٤ شريحة كانت تُحسب كلها في كل لقطة */
+.slide:not(.on):not(.out):not(.fit-m){content-visibility:hidden}
 
 .tag{font-family:var(--fh);font-weight:800;font-size:clamp(14px,1.8vh,20px);color:var(--ink2);letter-spacing:.3px;background:#EAF1FA;border:1.5px solid var(--line);padding:.35em 1em;border-radius:99px}
 h1{font-family:var(--fh);font-weight:900;font-size:clamp(56px,13vh,150px);line-height:1.1}
@@ -117,17 +121,17 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .mid{font-size:clamp(30px,6vh,68px)}
 .sm{font-size:clamp(24px,4.4vh,48px)}
 .res{color:var(--ink)}
-.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 8px 0 #E3EAF4,0 18px 40px rgba(22,50,92,.08)}
+.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 6px 0 #E3EAF4,0 10px 22px rgba(22,50,92,.07)}
 .row{display:flex;gap:2.4vw;align-items:stretch;justify-content:center;flex-wrap:wrap}
 .col{display:flex;flex-direction:column;align-items:center;gap:1.6vh;text-align:center}
 
 /* الظهور خطوةً خطوة */
-.st{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .45s,transform .55s cubic-bezier(.2,1.3,.4,1);visibility:hidden}
+.st{opacity:0;transform:translate3d(0,18px,0) scale(.98);transition:opacity .3s ease,transform .4s cubic-bezier(.2,1.15,.4,1);visibility:hidden}
 .st.in{opacity:1;transform:none;visibility:visible}
 
 /* ضمّ ٥×٥×٥ إلى ٥³ */
-.merge{display:inline-flex;align-items:baseline;gap:.28em;transition:all .7s cubic-bezier(.5,0,.2,1)}
-.merge .f{display:inline-block;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge{display:inline-flex;align-items:baseline;gap:.28em}
+.merge .f{display:inline-block;transition:opacity .5s cubic-bezier(.5,0,.2,1),transform .5s cubic-bezier(.5,0,.2,1)}
 .merge .count{display:none;color:var(--exp);font-size:.52em;position:relative;top:-.55em;margin-inline-start:-.2em}
 /* مرحلتان: تنزلق الأعداد نحو الأوّل وتذوب، ثم تُزال فيظهر الأس مكانها */
 .merge.go .f:not(:first-child),.merge.go .x{opacity:0;transform:translateX(60px) scale(.3)}
@@ -158,7 +162,7 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .ft{border-collapse:separate;border-spacing:.7vw 1vh}
 .ft th{font-family:var(--fh);font-weight:800;font-size:clamp(16px,2.6vh,28px);color:var(--ink2);padding:0 .6vw}
 .ft td{min-width:calc(7.5vw / var(--zz,1));height:9vh;background:#fff;border:2.5px solid var(--line);border-radius:16px;text-align:center;vertical-align:middle;
-  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:all .45s}
+  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:background .3s,border-color .3s,transform .3s,opacity .3s,box-shadow .3s}
 .ft td.num{background:#EAF1FA;color:var(--ink)}
 .ft td.empty{background:transparent;border-style:dashed;color:#B8C6D8}
 .ft.lcm td.pick-l{background:#F1E8FF;border-color:var(--lcm);box-shadow:0 0 0 4px rgba(122,63,209,.18);transform:scale(1.07)}
@@ -435,7 +439,7 @@ h1,h2,.m,.ch,.mode b,.qbadge,.tag{font-weight:700}
 .m{letter-spacing:.02em;word-spacing:.08em}
 
 /* بروجكتر ٤:٣ (أضيق من ١٦:٩): المقاييس بالـvh تضيق أفقياً، فنصغّر المحتوى بنسبة العرض فقط */
-:root{--ui:.82}  /* تصغيرٌ عامّ لكل العروض (طلب الأستاذ عيسى: ٠٫٩ ثم ٠٫٨٢) */
+:root{--ui:.70}  /* تصغيرٌ عامّ لكل العروض (طلب الأستاذ عيسى: ٠٫٩ ثم ٠٫٨٢ ثم ٠٫٧ — أصغر بنسبة ١٥٪) */
 .slide>*{zoom:calc(var(--ar,1) * var(--fit,1) * var(--ui))}
 @media (max-aspect-ratio:3/2){:root{--ar:.82}.stps{zoom:.88}}
 @media (max-aspect-ratio:5/4){:root{--ar:.74}}
@@ -487,7 +491,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 /* رموز الزوايا: تُولَّد في deco.js لكل شريحة بألوانٍ ومواضع متغيّرة */
 .dz{position:absolute;pointer-events:none;font-family:var(--fh);font-weight:900;line-height:1;opacity:.5;z-index:0;
-  animation:dzFloat 6s ease-in-out infinite}
+  }
+.slide.on .dz{animation:dzFloat 8s ease-in-out infinite}
 .slide>*:not(.dz){position:relative;z-index:1}
 @keyframes dzFloat{50%{transform:translateY(-8px) rotate(var(--r2,6deg))}}
 
@@ -512,7 +517,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .q .ch:nth-child(1){--cc:#4CC9F0}.q .ch:nth-child(2){--cc:#FF7AA2}.q .ch:nth-child(3){--cc:#FFD166}.q .ch:nth-child(4){--cc:#06D6A0}
 
 /* الغلاف والشرائح الفاصلة */
-.cover h1{background:linear-gradient(100deg,var(--ink) 30%,#1E6FD9 55%,var(--ink) 80%);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:shine 6s linear infinite}
+.cover h1{background:linear-gradient(100deg,var(--ink) 30%,#1E6FD9 55%,var(--ink) 80%);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%}
 @keyframes shine{to{background-position:-200% 0}}
 .cover .tag,.divider .tag{background:var(--ink);color:#fff;border-color:var(--ink)}
 .divider::before{content:'';position:absolute;inset-inline:0;top:0;height:1.4vh;background:linear-gradient(90deg,var(--p1),var(--p4),var(--p6),var(--p5),var(--p3),var(--p2))}
@@ -682,6 +687,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   }
   function go(i,fromBack){
     i=Math.max(0,Math.min(slides.length-1,i));
+    var was=slides[cur];
+    if(was&&was!==slides[i]){was.classList.add('out');setTimeout(function(){was.classList.remove('out');},420);}
     slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
     var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
     cur=i;ui();
@@ -811,7 +818,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 (function(){
   function fitAll(){
     document.querySelectorAll('.slide').forEach(function(s){
-      s.style.setProperty('--fit',1);
+      s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
       for(var k=0;k<6;k++){
         var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
@@ -823,7 +830,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
         if(need>=1)break;
         s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));
       }
-      fl.forEach(function(e){e.classList.remove('open');});
+      fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
     });
   }
   window.__fitAll=fitAll;fitAll();

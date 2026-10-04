@@ -21,6 +21,8 @@
   }
   function go(i,fromBack){
     i=Math.max(0,Math.min(slides.length-1,i));
+    var was=slides[cur];
+    if(was&&was!==slides[i]){was.classList.add('out');setTimeout(function(){was.classList.remove('out');},420);}
     slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
     var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
     cur=i;ui();

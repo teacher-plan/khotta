@@ -28,7 +28,7 @@
 (function(){
   function fitAll(){
     document.querySelectorAll('.slide').forEach(function(s){
-      s.style.setProperty('--fit',1);
+      s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
       for(var k=0;k<6;k++){
         var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
@@ -40,7 +40,7 @@
         if(need>=1)break;
         s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));
       }
-      fl.forEach(function(e){e.classList.remove('open');});
+      fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
     });
   }
   window.__fitAll=fitAll;fitAll();

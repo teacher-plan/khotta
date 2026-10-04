@@ -19,9 +19,13 @@ body::before{content:'';position:fixed;inset-block:0;inset-inline-start:64px;wid
 
 
 .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;
-  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;transform:translateX(-4vw);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1)}
-.slide.on{opacity:1;pointer-events:auto;transform:none}
-.slide.gone{transform:translateX(4vw)}
+  padding:3vh 6vw 2vh 5vw;opacity:0;pointer-events:none;visibility:hidden;transform:translate3d(-3vw,0,0);
+  transition:opacity .28s ease,transform .38s cubic-bezier(.2,.9,.3,1),visibility 0s .38s}
+.slide.on{opacity:1;pointer-events:auto;transform:none;visibility:visible;transition:opacity .28s ease,transform .38s cubic-bezier(.2,.9,.3,1),visibility 0s;will-change:opacity,transform}
+.slide.out{visibility:visible;will-change:opacity,transform}
+.slide.gone{transform:translate3d(3vw,0,0)}
+/* الشرائح غير الظاهرة لا تُرسم ولا تُخطَّط إطلاقاً — ٦٤ شريحة كانت تُحسب كلها في كل لقطة */
+.slide:not(.on):not(.out):not(.fit-m){content-visibility:hidden}
 
 .tag{font-family:var(--fh);font-weight:800;font-size:clamp(14px,1.8vh,20px);color:var(--ink2);letter-spacing:.3px;background:#EAF1FA;border:1.5px solid var(--line);padding:.35em 1em;border-radius:99px}
 h1{font-family:var(--fh);font-weight:900;font-size:clamp(56px,13vh,150px);line-height:1.1}
@@ -39,17 +43,17 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .mid{font-size:clamp(30px,6vh,68px)}
 .sm{font-size:clamp(24px,4.4vh,48px)}
 .res{color:var(--ink)}
-.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 8px 0 #E3EAF4,0 18px 40px rgba(22,50,92,.08)}
+.box{background:var(--card);border:2.5px solid var(--line);border-radius:22px;padding:2.2vh 2.4vw;box-shadow:0 6px 0 #E3EAF4,0 10px 22px rgba(22,50,92,.07)}
 .row{display:flex;gap:2.4vw;align-items:stretch;justify-content:center;flex-wrap:wrap}
 .col{display:flex;flex-direction:column;align-items:center;gap:1.6vh;text-align:center}
 
 /* الظهور خطوةً خطوة */
-.st{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .45s,transform .55s cubic-bezier(.2,1.3,.4,1);visibility:hidden}
+.st{opacity:0;transform:translate3d(0,18px,0) scale(.98);transition:opacity .3s ease,transform .4s cubic-bezier(.2,1.15,.4,1);visibility:hidden}
 .st.in{opacity:1;transform:none;visibility:visible}
 
 /* ضمّ ٥×٥×٥ إلى ٥³ */
-.merge{display:inline-flex;align-items:baseline;gap:.28em;transition:all .7s cubic-bezier(.5,0,.2,1)}
-.merge .f{display:inline-block;transition:all .7s cubic-bezier(.5,0,.2,1)}
+.merge{display:inline-flex;align-items:baseline;gap:.28em}
+.merge .f{display:inline-block;transition:opacity .5s cubic-bezier(.5,0,.2,1),transform .5s cubic-bezier(.5,0,.2,1)}
 .merge .count{display:none;color:var(--exp);font-size:.52em;position:relative;top:-.55em;margin-inline-start:-.2em}
 /* مرحلتان: تنزلق الأعداد نحو الأوّل وتذوب، ثم تُزال فيظهر الأس مكانها */
 .merge.go .f:not(:first-child),.merge.go .x{opacity:0;transform:translateX(60px) scale(.3)}
@@ -80,7 +84,7 @@ h2{font-family:var(--fh);font-weight:900;font-size:clamp(28px,5.4vh,60px);line-h
 .ft{border-collapse:separate;border-spacing:.7vw 1vh}
 .ft th{font-family:var(--fh);font-weight:800;font-size:clamp(16px,2.6vh,28px);color:var(--ink2);padding:0 .6vw}
 .ft td{min-width:7.5vw;height:9vh;background:#fff;border:2.5px solid var(--line);border-radius:16px;text-align:center;vertical-align:middle;
-  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:all .45s}
+  font-family:var(--fh);font-weight:900;font-size:clamp(26px,5.2vh,56px);transition:background .3s,border-color .3s,transform .3s,opacity .3s,box-shadow .3s}
 .ft td.num{background:#EAF1FA;color:var(--ink)}
 .ft td.empty{background:transparent;border-style:dashed;color:#B8C6D8}
 .ft.lcm td.pick-l{background:#F1E8FF;border-color:var(--lcm);box-shadow:0 0 0 4px rgba(122,63,209,.18);transform:scale(1.07)}
