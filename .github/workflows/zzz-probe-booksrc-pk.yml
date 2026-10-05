@@ -26,7 +26,7 @@ jobs:
             toc=(select jsonb_agg(jsonb_build_object('guide_unit',ins.unit,'guide_lesson',ins.lesson,'guide_page',v.gpage,'matched_curriculum_id',ins.id,'confidence','high') order by ins.sort) from ins join v on v.sort=ins.sort)
             where grade=8 and subject='الدراسات الاجتماعية' and semester='الفصل الأول' returning id, page_count),
           b as (update public.book_sources set offset_pages=3, updated_at=now()
-            where grade='8' and subject='الدراسات الاجتماعية' and semester='الفصل الأول' and book_no=1 returning id, page_count)
+            where grade='8' and subject='الدراسات الاجتماعية' and semester='الفصل الأول' and book_no=1 returning page_count)
           select (select count(*) from ins) as lessons, (select json_agg(g) from g) as guide, (select json_agg(b) from b) as book;
           SQL
           body=$(jq -Rs '{query: .}' /tmp/q.sql)
