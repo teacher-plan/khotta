@@ -1,0 +1,19 @@
+name: zzz probe storage plan
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          run() { echo "── $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]? // .'; }
+          run "الحجم الكلي" "select bucket_id, count(*) n, round(sum((metadata->>'size')::bigint)/1048576.0) mb from storage.objects group by 1 order by 3 desc"
+          run "حسب المجلد الأول" "select bucket_id, split_part(name,'/',1) top, count(*) n, round(sum((metadata->>'size')::bigint)/1048576.0) mb from storage.objects group by 1,2 order by 4 desc limit 15"
+          run "كتب مرفوعة (book_sources)" "select grade, subject, semester, book_no, page_count, base_path from book_sources order by grade, subject, semester"
+          run "أدلة المعلم" "select grade, subject, semester, page_count, status, base_path from teacher_guides order by grade, subject"
+          run "متوسط حجم صفحة" "select round(avg((metadata->>'size')::bigint)/1024.0) as avg_kb, round(max((metadata->>'size')::bigint)/1024.0) as max_kb from storage.objects where name ~ '/p[0-9]+\\.jpg$'"
+          run "حجم كل كتابٍ على حدة (٢٠ الأكبر)" "select regexp_replace(name,'/p[0-9]+\\.jpg$','') as base, count(*) pages, round(sum((metadata->>'size')::bigint)/1048576.0) mb from storage.objects where name ~ '/p[0-9]+\\.jpg$' group by 1 order by 3 desc limit 25"
+          run "آخر ٣٠ يوماً غير مستعمل؟ مرفقات المعلمين" "select split_part(name,'/',1) top, count(*) n, round(sum((metadata->>'size')::bigint)/1048576.0) mb, min(created_at)::date oldest from storage.objects where bucket_id<>'library-files' or name not like 'books/%' group by 1 order by 3 desc limit 12"
