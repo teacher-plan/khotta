@@ -2,7 +2,9 @@
 # python3.12 gen_like_summary.py ← node ../sheet.mjs ملخص_تجميع_الحدود_المتشابهة.html <مجلد>
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'summary2.py'), encoding='utf-8').read())
-def T(k, v): return f'{"" if k in ("", "١") else k}{V(v)}'
+import re as _re
+def J(s): return _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u064A])', '\u200c<i style="display:inline-block;width:.1em"></i>', s)   # متغيّران متجاوران (سص) يُفصلان
+def T(k, v): return f'{"" if k in ("", "١") else k}{V(J(v))}'
 
 HD = header('٢-٢', 'تجميع الحدود المتشابهة', 'الوحدة الثانية: العبارات الجبرية والمعادلات والصيغ',
             'أتعرّف الحدود المتشابهة، وأبسّط العبارة الجبرية بجمع الحدود المتشابهة أو طرحها')

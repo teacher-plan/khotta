@@ -122,8 +122,8 @@ html = f'''<!DOCTYPE html>
 </div>
 <canvas id="fx"></canvas>
 <div class="clsbar" id="clsbar" aria-label="الشعبة والحصة الحية">
-  <button id="clsBtn" title="اختيار الشعبة"><span>🏫</span><span id="clsLbl">اختر الشعبة</span></button>
-  <button id="liveBtn" class="livebtn" title="بدء الحصة الحية بملء الشاشة"><span class="ic">▶</span><span class="lbl">ابدأ الحصة</span></button>
+  <button id="clsBtn" class="clsbtn" title="اختيار الشعبة"><span>🏫</span><span id="clsLbl">اختر الشعبة</span></button>
+  <button id="liveBtn" class="livebtn" title="بدء الحصة الحية بملء الشاشة"><span class="lv-ic">▶</span><span class="lv-lbl">ابدأ الحصة</span></button>
   <div class="clspop" id="clsPop"></div>
 </div>
 <div class="resumetip" id="resumeTip"></div>

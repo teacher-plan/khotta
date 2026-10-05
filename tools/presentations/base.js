@@ -150,8 +150,8 @@
   function liveSetUI(on){
     if(!liveBtn)return;
     liveBtn.classList.toggle('on',on);
-    liveBtn.querySelector('.ic').textContent=on?'⏹':'▶';
-    liveBtn.querySelector('.lbl').textContent=on?'إنهاء الحصة':'ابدأ الحصة';
+    liveBtn.querySelector('.lv-ic').textContent=on?'⏹':'▶';
+    liveBtn.querySelector('.lv-lbl').textContent=on?'إنهاء الحصة':'ابدأ الحصة';
   }
   if(liveBtn){
     liveBtn.addEventListener('click',function(){
