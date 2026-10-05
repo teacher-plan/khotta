@@ -1,4 +1,4 @@
-name: zzz probe book_sources pk
+name: zzz probe subjects
 on: workflow_dispatch
 jobs:
   probe:
@@ -9,8 +9,8 @@ jobs:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
-          q="select conname, contype, pg_get_constraintdef(oid) as def from pg_constraint where conrelid='public.book_sources'::regclass;"
+          q="select 'cur' as src, grade::text as grade, subject, semester, count(*) n from public.curriculum where grade::text in ('8','٨') group by 2,3,4 union all select 'book', grade::text, subject, semester, book_no from public.book_sources where grade::text in ('8','٨') union all select 'guide', grade::text, subject, semester, page_count from public.teacher_guides where grade::text in ('8','٨') order by 1,3,4;"
           body=$(jq -Rs '{query: .}' <<< "$q")
           curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
             -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-            --data-binary "$body" | jq .
+            --data-binary "$body" | jq -c '.[]?, .'
