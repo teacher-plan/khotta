@@ -1,4 +1,4 @@
-name: zzz probe subjects
+name: zzz apply g8 social map
 on: workflow_dispatch
 jobs:
   probe:
@@ -9,8 +9,27 @@ jobs:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: mkdsnnfkkdwdkywnwnjh
         run: |
-          q="select 'cur' src, grade::text g, subject, semester, count(*)::text n from public.curriculum group by 2,3,4 union all select 'book', grade::text, subject, semester, book_no::text from public.book_sources union all select 'guide', grade::text, subject, semester, page_count::text from public.teacher_guides order by 1,2,3;"
-          body=$(jq -Rs '{query: .}' <<< "$q")
+          cat > /tmp/q.sql <<'SQL'
+          with v(sort, unit, lesson, bpage, gpage) as (values
+            (1,'الوحدة الأولى: البيانات الجغرافية: معالجتها وتطبيقاتها','جمع البيانات الجغرافية',17,42),
+            (2,'الوحدة الأولى: البيانات الجغرافية: معالجتها وتطبيقاتها','معالجة البيانات الجغرافية',25,49),
+            (3,'الوحدة الأولى: البيانات الجغرافية: معالجتها وتطبيقاتها','تطبيقات البيانات الجغرافية',31,53),
+            (4,'الوحدة الثانية: عمان مطلع العصور الحديثة (1507 - 1624م)','البلاد العربية مطلع العصور الحديثة',47,69),
+            (5,'الوحدة الثانية: عمان مطلع العصور الحديثة (1507 - 1624م)','عمان ومقاومة الاحتلال البرتغالي',55,78),
+            (6,'الوحدة الثانية: عمان مطلع العصور الحديثة (1507 - 1624م)','المنجزات الحضارية العمانية مطلع العصور الحديثة',65,88),
+            (7,'الوحدة الثالثة: قضايا اقتصادية معاصرة','الاقتصاد العالمي: قضايا وآثار',81,100),
+            (8,'الوحدة الثالثة: قضايا اقتصادية معاصرة','الاقتصاد العماني: تحديات وجهود',88,107)),
+          del as (delete from public.curriculum where grade='8' and subject='الدراسات الاجتماعية' and semester='الفصل الأول' returning 1),
+          ins as (insert into public.curriculum (grade, subject, semester, book_no, unit, lesson, sort, page)
+            select '8','الدراسات الاجتماعية','الفصل الأول',1,unit,lesson,sort,bpage from v returning id, sort, unit, lesson),
+          g as (update public.teacher_guides set offset_pages=2, status='indexed', indexed_at=now(), updated_at=now(),
+            toc=(select jsonb_agg(jsonb_build_object('guide_unit',ins.unit,'guide_lesson',ins.lesson,'guide_page',v.gpage,'matched_curriculum_id',ins.id,'confidence','high') order by ins.sort) from ins join v on v.sort=ins.sort)
+            where grade=8 and subject='الدراسات الاجتماعية' and semester='الفصل الأول' returning id, page_count),
+          b as (update public.book_sources set offset_pages=3, updated_at=now()
+            where grade='8' and subject='الدراسات الاجتماعية' and semester='الفصل الأول' and book_no=1 returning id, page_count)
+          select (select count(*) from ins) as lessons, (select json_agg(g) from g) as guide, (select json_agg(b) from b) as book;
+          SQL
+          body=$(jq -Rs '{query: .}' /tmp/q.sql)
           curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
             -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-            --data-binary "$body" | jq -c '.[]?, .'
+            --data-binary "$body" | jq -c .
