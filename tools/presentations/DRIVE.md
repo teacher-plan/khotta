@@ -34,6 +34,7 @@
 | مراجعة الوحدة الثالثة | `1JZXSEU5pIiAAwNPqPlsagFoyRqsMyzfx` | https://claude.ai/artifact/4hyBDcqxBojFbiwopJe5tY |
 | الوحدة الرابعة — الطول والكتلة والسعة | `1fPg9MYRnZC3PMXvK4mFriem4lO-DapAa` | |
 | ٤-١ التعرف على وحدات القياس | `15Pp81WlF0obpdgxLTRHdt8JZodb3Jru6` | https://claude.ai/artifact/NR9Mydq8UZDNbe6EPGxAjC |
+| ٤-٢ اختيار وحدات القياس المناسبة | `1JkDXRf9v2MKuYMCJzTkoW-dGH0xVBHTW` | https://claude.ai/artifact/TrgSkLb9Liacj5EsWPhzdx |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
