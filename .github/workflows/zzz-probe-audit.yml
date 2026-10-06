@@ -1,0 +1,24 @@
+name: zzz probe audit
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: queries
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          q(){ echo "=== $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?' | head -${3:-80}; }
+          q tables "select c.relname t, c.reltuples::bigint n, pg_size_pretty(pg_total_relation_size(c.oid)) sz, c.relrowsecurity rls from pg_class c join pg_namespace s on s.oid=c.relnamespace where s.nspname='public' and c.relkind='r' order by pg_total_relation_size(c.oid) desc" 90
+          q dbsize "select pg_size_pretty(pg_database_size(current_database())) db"
+          q norls "select c.relname from pg_class c join pg_namespace s on s.oid=c.relnamespace where s.nspname='public' and c.relkind='r' and not c.relrowsecurity"
+          q openpol "select tablename,policyname,cmd,roles::text,qual,with_check from pg_policies where schemaname='public' and (qual='true' or with_check='true') and cmd<>'SELECT'" 60
+          q anonsel "select tablename,policyname,roles::text,qual from pg_policies where schemaname='public' and cmd in ('SELECT','ALL') and (roles::text like '%anon%' or roles::text like '%public%') and qual='true'" 60
+          q secdef "select p.proname, coalesce(array_to_string(p.proconfig,','),'NO_SEARCH_PATH') cfg from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef order by 2" 80
+          q buckets "select id,public,file_size_limit from storage.buckets"
+          q storage1 "select bucket_id b, split_part(name,'/',1) p, count(*) n, pg_size_pretty(sum((metadata->>'size')::bigint)) sz, sum((metadata->>'size')::bigint) bytes from storage.objects group by 1,2 order by bytes desc nulls last" 40
+          q storage2 "select split_part(name,'/',1)||'/'||split_part(name,'/',2) p, count(*) n, pg_size_pretty(sum((metadata->>'size')::bigint)) sz from storage.objects where bucket_id='library-files' and split_part(name,'/',1) in ('books','teacher-guides','book-cache','guide-summaries') group by 1 order by sum((metadata->>'size')::bigint) desc" 80
+          q bookrefs "select 'book' k, grade::text g, subject, semester, base_path from public.book_sources union all select 'guide', grade::text, subject, semester, base_path from public.teacher_guides order by 2,3" 80
+          q userfiles "select split_part(name,'/',1) owner, count(*) n, pg_size_pretty(sum((metadata->>'size')::bigint)) sz from storage.objects where bucket_id='user-files' group by 1 order by sum((metadata->>'size')::bigint) desc" 15
+          q usagecols "select table_name, string_agg(column_name,',') from information_schema.columns where table_schema='public' and table_name in ('usage_tracking','ai_usage','ai_usage_log','ai_cost_log','profiles','classes','lessons','games','user_files','ai_chats','allowed_emails') group by 1" 20
