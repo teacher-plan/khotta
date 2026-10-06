@@ -11521,6 +11521,12 @@ function gmPreloadBg(url){
   });
 }
 function gmPlayWith(items,title){
+  // خلط خيارات كل سؤالٍ عند كل تشغيل — حتى الألعاب المحفوظة قديماً (وكانت إجابتها غالباً الخيار الأول)
+  if(GM_STRUCT[gmTpl]==='quiz')items=items.map(q=>{
+    if(!q||!Array.isArray(q.c)||q.c.length<2)return q;
+    const ord=gmShuffle(q.c.map((_,i)=>i));
+    return Object.assign({},q,{c:ord.map(i=>q.c[i]),a:ord.indexOf(q.a||0)});
+  });
   const stage=document.getElementById('gm-stage-bg');
   const themeSel=document.getElementById('gm-theme');
   const theme=gmForcedTheme(gmTpl)||gmThemes.find(t=>t.id===themeSel.value);
