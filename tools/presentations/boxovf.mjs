@@ -3,7 +3,7 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const b=await chromium.launch();
-const sizes=[[1180,700],[1024,640],[820,1000],[1280,720]];
+const sizes=[[1180,820],[1180,700],[820,1000],[1280,720]];
 for(const f of process.argv.slice(2))for(const [w,h] of sizes){
 const p=await b.newPage({viewport:{width:w,height:h}});
 await p.setContent(fs.readFileSync(f,'utf8'));await p.waitForTimeout(400);

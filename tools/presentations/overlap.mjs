@@ -4,7 +4,7 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const files = process.argv.slice(2);
-const SIZES = [[1180, 700], [1024, 640], [820, 1000], [1280, 720]];
+const SIZES = [[1180, 820], [1180, 700], [820, 1000], [1280, 720]];   // iPad Air 11": ملء الشاشة، داخل منصّة «خطة»، عمودي؛ وشاشة حاسوب
 const b = await chromium.launch();
 for (const f of files) {
   const html = fs.readFileSync(f, 'utf8');
@@ -50,7 +50,7 @@ for (const f of files) {
       return { out, fonts };
     });
     console.log(`${name} ${W}x${H} ${res.out.length ? 'تراكب: ' + res.out.join(' | ') : 'لا تراكب'}`);
-    if (W === 1280) {
+    if (W === 1180 && H === 820) {
       const ex = res.fonts.filter(x => !/cover|divider|launch|exs/.test(x[3]));
       const med = a => { const v = a.filter(x => x != null).sort((p, q) => p - q); return v[Math.floor(v.length / 2)]; };
       const mh = med(ex.map(x => x[1])), mb = med(ex.map(x => x[2]));

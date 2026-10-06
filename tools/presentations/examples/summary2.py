@@ -44,7 +44,7 @@ header::after{content:'س  ع  ل  +  ×  ÷';position:absolute;left:8mm;top:3mm
 .code{align-self:flex-start;background:rgba(255,255,255,.18);border-radius:99px;padding:.6mm 4mm;font-weight:700;font-size:10.5pt}
 h1{margin:0;font-size:21pt;font-weight:800;line-height:1.25}
 .unit{font-size:10.5pt;font-weight:600;color:#DCEBFA}
-.goal{flex:none;display:flex;gap:3mm;align-items:center;margin:3mm 11mm 0;background:#FFF7E6;border:1px solid #F1C66B;border-radius:3mm;padding:2mm 4mm;font-size:11pt;font-weight:600}
+.goal{flex:none;display:flex;gap:3mm;align-items:center;margin:3mm 11mm 0;background:#FFF7E6;border:1px solid #F1C66B;border-radius:3mm;padding:2mm 4mm;font-size:11pt;font-weight:600;line-height:1.6}
 .goal b{color:#9A5B00;white-space:nowrap}
 .sec{display:flex;flex-direction:column;gap:1.8mm}
 .sec>h2{margin:0;display:flex;align-items:center;gap:2.5mm;font-size:14pt;color:var(--nav)}
@@ -59,7 +59,7 @@ h1{margin:0;font-size:21pt;font-weight:800;line-height:1.25}
 .fr>span:first-child{border-bottom:.5mm solid currentColor;padding:0 1mm .3mm;align-self:stretch;text-align:center}
 .grp{display:inline-flex;gap:1mm;align-items:center;direction:rtl;unicode-bidi:isolate}
 .ex{border:1.2px solid #A9D8BC;border-radius:3mm;overflow:hidden;background:#fff}
-.exh{display:flex;gap:3mm;align-items:baseline;background:var(--exbg);padding:2mm 4mm;font-size:11.5pt;font-weight:600;border-bottom:1px solid #CDEBD9}
+.exh{display:flex;gap:3mm;align-items:baseline;background:var(--exbg);padding:2mm 4mm;font-size:11.5pt;font-weight:600;border-bottom:1px solid #CDEBD9;line-height:1.6}
 .exh b{color:var(--ex);white-space:nowrap}
 .ex table{width:100%;border-collapse:collapse}
 .ex td{padding:1.1mm 3mm;border-bottom:1px dashed #DCEFE3;vertical-align:middle}
@@ -67,7 +67,7 @@ h1{margin:0;font-size:21pt;font-weight:800;line-height:1.25}
 .ex td.n{width:8mm;text-align:center;color:#fff;font-weight:800;font-size:10pt}
 .ex td.n{background:var(--ex);border-bottom:1px solid #fff}
 .ex td.e{font-size:12.5pt;font-weight:700;white-space:nowrap;width:1%}
-.ex td.r{font-size:10.5pt;color:var(--ink2);font-weight:600}
+.ex td.r{font-size:10.5pt;color:var(--ink2);font-weight:600;line-height:1.55}
 .ans{background:var(--ex);color:#fff;font-weight:800;padding:1.6mm 4mm;font-size:11.5pt}
 .ans .op{color:#fff}.ans .v{color:#FFE08A}
 .warn{background:var(--wbg);border:1.2px solid #F2B8B2;border-radius:3mm;padding:2.5mm 4mm;display:flex;flex-direction:column;gap:1.6mm}

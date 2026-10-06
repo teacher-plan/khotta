@@ -4,7 +4,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const b=await chromium.launch();
 for(const f of process.argv.slice(2)){
- const p=await b.newPage({viewport:{width:1280,height:720}});
+ const p=await b.newPage({viewport:{width: 1180, height: 820}});
  await p.setContent(fs.readFileSync(f,'utf8'));await p.waitForTimeout(500);
  const r=await p.evaluate(()=>{const out=[];const H=innerHeight;
   document.querySelectorAll('.slide').forEach((s,i)=>{

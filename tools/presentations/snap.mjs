@@ -3,7 +3,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const [f,out,...nums]=process.argv.slice(2);fs.mkdirSync(out,{recursive:true});
 const b=await chromium.launch({proxy:process.env.HTTPS_PROXY?{server:process.env.HTTPS_PROXY}:undefined});
-const p=await b.newPage({viewport:{width:+(process.env.W||1280),height:+(process.env.H||720)}});
+const p=await b.newPage({viewport:{width:+(process.env.W||1180),height:+(process.env.H||820)},deviceScaleFactor:2});
 const html=fs.readFileSync(f,'utf8');
 await p.route('http://deck.local/**',r=>r.fulfill({contentType:'text/html',body:html}));
 await p.goto('http://deck.local/x.html');await p.waitForTimeout(2000);
