@@ -32,6 +32,8 @@
 | ٣-٧ الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما | `1L1wHN_95dHReVlMIKS80NMXIb6N8CA66` | https://claude.ai/artifact/UBvecMAYhz7gPSGi6NFVJt |
 | ٣-٨ التقدير والتقريب | `1zGwczO_GQ11Xsl_nrTr34pqYThhJaByx` | https://claude.ai/artifact/5MvZMx9YEkgQtghwCrCdbJ |
 | مراجعة الوحدة الثالثة | `1JZXSEU5pIiAAwNPqPlsagFoyRqsMyzfx` | https://claude.ai/artifact/4hyBDcqxBojFbiwopJe5tY |
+| الوحدة الرابعة — الطول والكتلة والسعة | `1fPg9MYRnZC3PMXvK4mFriem4lO-DapAa` | |
+| ٤-١ التعرف على وحدات القياس | `15Pp81WlF0obpdgxLTRHdt8JZodb3Jru6` | https://claude.ai/artifact/NR9Mydq8UZDNbe6EPGxAjC |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.

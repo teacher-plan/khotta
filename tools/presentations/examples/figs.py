@@ -61,3 +61,27 @@ FIG_CSS = '''
 .xq .fig.side{float:right;height:36vh;margin:0 0 0 1.6vw}
 .xq .fig{display:block;margin:.4vh auto;height:22vh;width:auto;max-width:90%}
 '''
+
+def STAIR(units, facs, names=None, colors=('#DBEAFE', '#DCFCE7', '#FEF3C7', '#FCE7F3')):
+    # سلّم التحويل (الوحدة الرابعة): الوحدة الكبرى أعلى اليمين، وننزل درجةً درجةً إلى الصغرى.
+    # نزولاً (إلى وحدةٍ أصغر) نضرب، وصعوداً (إلى وحدةٍ أكبر) نقسم؛ معامل كل درجةٍ في دائرةٍ على حافّتها.
+    n, sw, sh, pad, top = len(units), 170, 78, 16, 118
+    W = max(n * sw, 560) + 2 * pad; H = top + n * sh + 40
+    o = ['<defs><marker id="ag" viewBox="0 0 10 10" markerWidth="3.6" markerHeight="3.6" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#15803D"/></marker>'
+         '<marker id="ar" viewBox="0 0 10 10" markerWidth="3.6" markerHeight="3.6" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#DC2626"/></marker></defs>']
+    X = lambda i: W - pad - (i + 1) * sw
+    Y = lambda i: top + i * sh
+    for i, u in enumerate(units):
+        o.append(f'<rect x="{X(i)}" y="{Y(i)}" width="{sw}" height="{H - pad - Y(i)}" rx="10" fill="{colors[i % len(colors)]}" stroke="#1E3A5F" stroke-width="3"/>')
+        o.append(f'<text x="{X(i) + sw / 2}" y="{Y(i) + 44}" text-anchor="middle" font-size="38" font-weight="900" fill="#0E1B33">{u}</text>')
+        if names: o.append(f'<text x="{X(i) + sw / 2}" y="{Y(i) + 70}" text-anchor="middle" font-size="19" font-weight="700" fill="#334155">{names[i]}</text>')
+    for i, f in enumerate(facs):
+        cx, cy = X(i), Y(i) + sh / 2 + 4
+        o.append(f'<circle cx="{cx}" cy="{cy}" r="27" fill="#fff" stroke="#1E3A5F" stroke-width="3"/>')
+        o.append(f'<text x="{cx}" y="{cy + 8}" text-anchor="middle" font-size="{22 if f >= 1000 else 25}" font-weight="900" fill="#0E1B33">{_a(f)}</text>')
+    x0, y0, x1, y1 = X(0) + sw * 0.6, Y(0) - 40, X(n - 1) + sw * 0.4, Y(n - 1) - 40
+    o.append(f'<line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="#15803D" stroke-width="6" marker-end="url(#ag)"/>')
+    o.append(f'<line x1="{x1}" y1="{y1 - 40}" x2="{x0}" y2="{y0 - 40}" stroke="#DC2626" stroke-width="6" marker-end="url(#ar)"/>')
+    o.append(f'<text x="{pad + 300}" y="34" font-size="27" font-weight="900" fill="#DC2626" direction="rtl" text-anchor="start">÷ صعوداً إلى وحدةٍ أكبر</text>')
+    o.append(f'<text x="{pad + 300}" y="72" font-size="27" font-weight="900" fill="#15803D" direction="rtl" text-anchor="start">× نزولاً إلى وحدةٍ أصغر</text>')
+    return f'<svg class="svgfig stair" viewBox="0 0 {W} {H}" style="direction:ltr;font-family:Tajawal,\'Noto Kufi Arabic\',sans-serif">{"".join(o)}</svg>'
