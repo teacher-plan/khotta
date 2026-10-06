@@ -106,7 +106,7 @@ S.append(ex(7, 'مغرفة فهد', 'نضرب، ثم نحوّل إلى كغم', 
 S.append(ex(8, 'صندوق سارة', 'نقدّر كتلة العلبة الواحدة، ثم نضرب في ١٢', [('قدّر كتلة صندوقٍ فيه ١٢ علبة مشروبات (كغم)', '٣ إلى ٦ كغم')], cols=1, src=NB))
 S.append(ex(9, 'المبنى والرجل', 'نعدّ كم مرةً يتكرّر طول الرجل', [(FIG('4-2_building2', 'fig lg') + '(أ) قدّر ارتفاع المبنى (ب) قدّر طوله', '(أ) ٦٫٥ إلى ٧٫٥ م<small>(ب) ١١ إلى ١٣ م</small>')], cols=1, src=NB))
 
-EXTRA_CSS_OWN = '''
+EXTRA_CSS_OWN = FIG_CSS + '''
 .stps{display:flex;flex-direction:column;gap:1.2vh;align-items:stretch}
 .stp{display:flex;align-items:center;gap:1.4vw;justify-content:space-between}
 .stp .lab{flex:0 1 auto;max-width:60%;font-family:var(--fh);font-weight:800;color:#2563EB;background:#EAF1FF;border-radius:12px;padding:.2em .8em;text-align:center;line-height:1.4;font-size:clamp(20px,3.6vh,42px)}
@@ -132,4 +132,4 @@ EXTRA_CSS_OWN = '''
 .hid.col .kk{font-size:clamp(28px,5.2vh,60px)}
 .xa small{display:block}
 @media (max-aspect-ratio:1/1){.voc3,.sumg{grid-template-columns:1fr}.bms{grid-template-columns:repeat(2,minmax(0,1fr))}}
-''' + FIG_CSS
+'''
