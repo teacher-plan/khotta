@@ -170,6 +170,19 @@ Deno.serve(async (req) => {
     const _arr = requireArray(_p.value, "items");
     if (!_arr.ok) return refund({ error: "bad_output", detail: _arr.reason }, 502);
     await logAiCost(admin, user.id, "generate-game-content", "text", model, or?.usage);
+    // النموذج يضع الإجابة الصحيحة غالباً في الخيار الأول، فلاحظ الطلاب النمط:
+    // نخلط الخيارات هنا ونُحدّث موضع الإجابة (a) بعد الخلط.
+    const _shuf = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    if (structure === "quiz") {
+      for (const it of _arr.items as { c?: unknown[]; a?: number }[]) {
+        if (!Array.isArray(it?.c) || it.c.length < 2) continue;
+        const ai = Math.min(Math.max(0, Number(it.a) || 0), it.c.length - 1);
+        const ord = _shuf(it.c.map((_, i) => i));
+        it.c = ord.map((i) => it.c![i]); it.a = ord.indexOf(ai);
+      }
+    } else if (structure === "blank") {
+      for (const it of _arr.items as { c?: unknown[] }[]) if (Array.isArray(it?.c)) _shuf(it.c);
+    }
     return json({ items: _arr.items, groupNames: _p.value.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)
