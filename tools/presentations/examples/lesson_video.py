@@ -6,7 +6,10 @@ import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 X = '<span class="x">×</span>'; DV = '<span class="x">÷</span>'; PL = '<span class="x">+</span>'; MI = '<span class="x">−</span>'; EQ = '<span class="x">=</span>'
 ARR = '<span class="x">←</span>'
-def V(t): return f'<b style="color: #C2410C">{t}</b>'
+import re as _re
+def V(t):   # متغيّران متجاوران (سص) يُفصلان بفاصلٍ يمنع الاتصال وفجوةٍ صغيرة — VIDEO.md ٣
+    t = _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u063F\u0641-\u064A])', '\u200c<i style="display: inline-block; width: .1em"></i>', t)
+    return f'<b style="color: #C2410C">{t}</b>'
 def FR(n, d): return (f'<span style="display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; vertical-align: middle">'
                       f'<span style="border-bottom: .07em solid currentColor; padding: 0 .15em .04em; align-self: stretch; text-align: center">{n}</span><span>{d}</span></span>')
 def G(*p): return '<span style="display: inline-flex; gap: .2em; direction: rtl; unicode-bidi: isolate">(' + ' '.join(p) + ')</span>'

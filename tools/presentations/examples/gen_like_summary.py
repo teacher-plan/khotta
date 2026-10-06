@@ -3,7 +3,7 @@
 import os
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'summary2.py'), encoding='utf-8').read())
 import re as _re
-def J(s): return _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u064A])', '\u200c<i style="display:inline-block;width:.1em"></i>', s)   # متغيّران متجاوران (سص) يُفصلان
+def J(s): return _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u063F\u0641-\u064A])', '\u200c<i style="display:inline-block;width:.1em"></i>', s)   # متغيّران متجاوران (سص) يُفصلان
 def T(k, v): return f'{"" if k in ("", "١") else k}{V(J(v))}'
 
 HD = header('٢-٢', 'تجميع الحدود المتشابهة', 'الوحدة الثانية: العبارات الجبرية والمعادلات والصيغ',

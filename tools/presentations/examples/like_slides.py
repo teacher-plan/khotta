@@ -7,7 +7,7 @@ def STP(lab, expr, cls=''): return st(f'<div class="stp {cls}"><span class="lab"
 def STEPS(*rows): return '<div class="stps">' + ''.join(rows) + '</div>'
 MI = '<span class="x">−</span>'
 import re as _re
-def J(s): return '<span>' + _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u064A])', '\u200c<i class="vgap"></i>', s) + '</span>'   # متغيّران متجاوران (سص) يُفصلان فلا يتشابكان كأنهما كلمة
+def J(s): return '<span>' + _re.sub(r'(?<=[\u0621-\u064A\u0640])(?=[\u0621-\u063F\u0641-\u064A])', '\u200c<i class="vgap"></i>', s) + '</span>'   # متغيّران متجاوران (سص) يُفصلان فلا يتشابكان كأنهما كلمة
 def V(t, c='v'): return f'<span class="{c}">{J(t)}</span>'
 def T(k, v, c=None):   # حدّ جبري: المعامل ثم المتغيّر (المعامل ١ لا يُكتب)
     return f'<span class="term">{"" if k in ("", "١", 1) else a(k)}{V(v, c or CL.get(v, "v"))}</span>'
