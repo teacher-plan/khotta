@@ -15045,6 +15045,35 @@ function brandLoadLogo(){
     im.src='/khottah_icon_120.png';
   });
 }
+// 🗜️ الإنفوجرافيك يُحفظ ملفاً في التخزين ويُخزَّن رابطه، بدل نصّ base64 ثقيل في قاعدة البيانات
+// (كان التحضير الواحد يشغل ~١٢ ميغابايت في الجدول). عند القراءة يُعاد الرابط data URL
+// فتبقى بقية الكود (الختم، Word، التنزيل) كما هي. أيّ فشلٍ يُبقي القيمة الأصلية.
+async function infoToUrl(v,lessonId){
+  if(!v||!/^data:image\//.test(v)||!currentUser)return v;
+  try{
+    const blob=await (await fetch(v)).blob();
+    const ext=((blob.type.split('/')[1])||'png').replace('jpeg','jpg');
+    const path=currentUser.id+'/infographics/'+String(lessonId).replace(/[^\w-]/g,'_')+'-'+Date.now()+'.'+ext;
+    const{error}=await sb.storage.from('user-files').upload(path,blob,{contentType:blob.type,cacheControl:'31536000'});
+    if(error)return v;
+    return sb.storage.from('user-files').getPublicUrl(path).data.publicUrl;
+  }catch(e){return v;}
+}
+// رفعٌ واحد لكل صورة: الحفظ يتكرّر كثيراً، فيُحفظ الرابط على الحزمة نفسها
+async function infoUrlFor(b,lessonId){
+  if(!b||!b.infoRaw)return null;
+  if(b._infoSrc===b.infoRaw&&b._infoUrl)return b._infoUrl;
+  const u=await infoToUrl(b.infoRaw,lessonId);
+  if(u!==b.infoRaw){b._infoSrc=b.infoRaw;b._infoUrl=u;}
+  return u;
+}
+async function infoFromUrl(v){
+  if(!v||!/^https?:\/\//.test(v))return v;
+  try{
+    const blob=await (await fetch(v)).blob();
+    return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});
+  }catch(e){return null;}
+}
 async function brandImage(dataUrl){
   try{
     const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl;});
@@ -15563,7 +15592,7 @@ function dpPersist(it,b){
 async function dpCloudPersist(it,b){
   try{
     if(!currentUser||!b||!b.plan)return;
-    const payload={plan:b.plan||null,slides:b.slides||null,examHtml:b.examHtml||null,infoRaw:b.infoRaw||null,slideImgsRaw:b.slideImgsRaw||null,missing:b.missing||[],imported:!!b.imported};
+    const payload={plan:b.plan||null,slides:b.slides||null,examHtml:b.examHtml||null,infoRaw:await infoUrlFor(b,it.lessonId),slideImgsRaw:b.slideImgsRaw||null,missing:b.missing||[],imported:!!b.imported};
     await sb.from('user_preps').upsert(
       {user_id:currentUser.id,lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,data:payload,updated_at:new Date().toISOString()},
       {onConflict:'user_id,lesson_id'});
@@ -15575,6 +15604,7 @@ async function dpCloudLoad(lessonId){
     if(!currentUser)return null;
     const{data:r}=await sb.from('user_preps').select('data').eq('user_id',currentUser.id).eq('lesson_id',lessonId).maybeSingle();
     const d=r&&r.data;if(!d||!d.plan)return null;
+    if(d.infoRaw)d.infoRaw=await infoFromUrl(d.infoRaw);
     const b={status:'saved',plan:d.plan,slides:d.slides||null,examHtml:d.examHtml||null,infoRaw:d.infoRaw||null,slideImgsRaw:d.slideImgsRaw||null,missing:d.missing||[],imported:!!d.imported};
     if(d.infoRaw){try{b.infoBranded=await brandImage(d.infoRaw);}catch(e){b.infoBranded=d.infoRaw;}}
     if(d.slideImgsRaw&&d.slideImgsRaw.some(Boolean)){
@@ -15768,13 +15798,13 @@ async function dpPublishShared(it,b){
     const slideImgsOk=(b.slideImgsRaw&&b.slideImgsRaw.length&&b.slideImgsRaw.every(Boolean))?b.slideImgsRaw:null;
     const{data:ex}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',it.lessonId).maybeSingle();
     if(!ex){
-      await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:(b.slides&&b.slides.length)?b.slides:null,exam_html:b.examHtml||null,info_b64:b.infoRaw||null,slide_imgs:slideImgsOk,created_by:uid||null});
+      await sb.from('shared_preps').insert({lesson_id:it.lessonId,grade:it.gradeNum,subject:it.subject,unit:it.unit,lesson:it.lesson,plan:b.plan,slides:(b.slides&&b.slides.length)?b.slides:null,exam_html:b.examHtml||null,info_b64:(await infoUrlFor(b,it.lessonId))||null,slide_imgs:slideImgsOk,created_by:uid||null});
     }else{
       const patch={};
       if(!ex.plan&&b.plan)patch.plan=b.plan;
       if(!(ex.slides&&ex.slides.length)&&b.slides&&b.slides.length)patch.slides=b.slides;
       if(!ex.exam_html&&b.examHtml)patch.exam_html=b.examHtml;
-      if(!ex.info_b64&&b.infoRaw)patch.info_b64=b.infoRaw;
+      if(!ex.info_b64&&b.infoRaw)patch.info_b64=await infoUrlFor(b,it.lessonId);
       if(!(ex.slide_imgs&&ex.slide_imgs.some(Boolean))&&slideImgsOk)patch.slide_imgs=slideImgsOk;
       if(Object.keys(patch).length)await sb.from('shared_preps').update(patch).eq('lesson_id',it.lessonId);
     }
@@ -15793,6 +15823,7 @@ async function dpPrepareAll(i){
   // ⚡ أولاً: هل حضّر معلم آخر هذا الدرس من قبل؟ استيراد فوري بلا رصيد
   try{
     const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',it.lessonId).maybeSingle();
+    if(sh&&sh.info_b64)sh.info_b64=await infoFromUrl(sh.info_b64);
     if(sh&&sh.plan){
       b.plan=sh.plan;
       b.slides=sh.slides||null;
@@ -16029,6 +16060,7 @@ async function dpResolvePrep(lessonId){
   if(!b||!b.plan){
     try{
       const{data:sh}=await sb.from('shared_preps').select('plan,slides,exam_html,info_b64,slide_imgs').eq('lesson_id',lessonId).maybeSingle();
+      if(sh&&sh.info_b64)sh.info_b64=await infoFromUrl(sh.info_b64);
       if(sh&&sh.plan){
         b={status:'saved',imported:true,plan:sh.plan,slides:sh.slides||null,examHtml:sh.exam_html||null,infoRaw:sh.info_b64||null,infoBranded:sh.info_b64||null,slideImgs:sh.slide_imgs||null,missing:[]};
         dpBundles.set(lessonId,b);
