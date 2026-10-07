@@ -145,7 +145,16 @@ Deno.serve(async (req) => {
     const bookContext = String(b.bookContext || "").slice(0, 4000);
     const semester = String(b.semester || "");
     if (!lesson) return json({ error: "no_lesson" }, 400);
-    const guideContext = (await guideContextFor(admin, st, apiKey, grade, subject, unit, lesson, semester)).slice(0, 9000);
+    // ⏱️ ميزانية وقت: دوال الحافة تُقطع عند ~١٥٠ث، وكانت قراءة الدليل (رؤية) ثم خطةٌ
+    // طويلة بنموذجٍ بطيء ثم إعادتان تتجاوزها معاً فيفشل أغلب الطلبات بلا ردّ.
+    const T0 = Date.now();
+    const left = () => 140_000 - (Date.now() - T0);
+    // قراءة الدليل أوّل مرة لكل درس تستغرق وقتاً (وتُخزَّن بعدها): نحدّها بـ٤٥ث،
+    // وإن لم تكتمل نمضي بلا سياق الدليل بدل أن نخسر الطلب كلّه.
+    const guideContext = (await Promise.race([
+      guideContextFor(admin, st, apiKey, grade, subject, unit, lesson, semester).catch(() => ""),
+      new Promise<string>((res) => setTimeout(() => res(""), 45_000)),
+    ])).slice(0, 9000);
 
     // عند إرفاق صفحات الكتاب نحتاج نموذجاً يدعم الرؤية
     // مع صفحات الكتاب: نموذج رؤية مضمون (لا نمرّ بـ ai_model النصي)
@@ -221,9 +230,15 @@ Deno.serve(async (req) => {
 
     // الخطة هي أساس التحضير كله — لا نستسلم من أول محاولة:
     // (١) محاولة كاملة (بالصور إن وُجدت) → (٢) إعادة عند خروج غير سليم → (٣) تراجع نصي بلا صور
-    const callOnce = async (withImages: boolean) => {
-      const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+    // النموذج السريع للإعادة: الإعادة بالنموذج البطيء نفسه هي ما كان يستهلك الميزانية
+    const FAST = "google/gemini-2.5-flash";
+    const callOnce = async (withImages: boolean, fast = false) => {
+      const budget = left() - 6_000;
+      if (budget < 15_000) return { ok: false as const, detail: "timeout_budget", status: 504, msg: "انتهت ميزانية الوقت" };
+      let r: Response;
+      try { r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
+        signal: AbortSignal.timeout(budget),
         headers: {
           "Authorization": "Bearer " + apiKey,
           "Content-Type": "application/json",
@@ -231,16 +246,18 @@ Deno.serve(async (req) => {
           "X-Title": "Khotta Lesson Prep",
         },
         body: JSON.stringify({
-          model: withImages ? model : (st.model_plan || st.ai_model || "google/gemini-2.5-flash"),
+          model: fast ? FAST : withImages ? model : (st.model_plan || st.ai_model || "google/gemini-2.5-flash"),
           messages: [
             { role: "system", content: system },
             { role: "user", content: withImages && images.length ? userContent : userMsg },
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 7000,
+          max_tokens: 6000,
         }),
-      }, { st, task: "plan" });
+      }, { st, task: "plan" }); } catch (e) {
+        return { ok: false as const, detail: String(e), status: 504, msg: "انتهت مهلة النموذج" };
+      }
       const j = await r.json();
       // رمزُ الحالة يُمرَّر مع الفشل: بدونه يُبتلع نفادُ الرصيد داخل
       // «bad_output» فيُقرأ عطلاً في المحتوى لا في الحساب
@@ -256,8 +273,9 @@ Deno.serve(async (req) => {
     };
 
     let attempt = await callOnce(images.length > 0);
-    if (!attempt.ok) attempt = await callOnce(images.length > 0);          // إعادة مرة
-    if (!attempt.ok && images.length) attempt = await callOnce(false);     // تراجع نصي
+    // إعادةٌ واحدة بنموذجٍ سريع (بالصور إن وُجدت — gemini flash يدعم الرؤية)، ثم تراجع نصي سريع
+    if (!attempt.ok) attempt = await callOnce(images.length > 0, true);
+    if (!attempt.ok && images.length) attempt = await callOnce(false, true);
     if (!attempt.ok) {
       const st_ = (attempt as { status?: number }).status;
       const m_ = (attempt as { msg?: string }).msg || "";
