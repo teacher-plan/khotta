@@ -1,0 +1,28 @@
+name: zzz probe prep
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: q
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          q(){ echo "=== $1"; body=$(jq -Rs '{query: .}' <<< "$2"); curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$body" | jq -c '.[]?,.message?' 2>/dev/null | head -40; }
+          q cost "select date_trunc('day',created_at)::date d, function_name, count(*) from public.ai_cost_log where created_at>now()-interval '5 days' and function_name in ('generate-lesson-plan','summarize-lesson-pages','generate-lesson-prep-guided') group by 1,2 order by 1 desc"
+          q gens "select column_name from information_schema.columns where table_name='lesson_prep_generations'"
+          q gens2 "select * from public.lesson_prep_generations order by 1 desc limit 5"
+          q errs "select occurred_at, left(to_jsonb(e)::text,400) from public.error_logs e order by occurred_at desc limit 15"
+          q rl "select * from public.ai_rate_limit order by 1 desc limit 5"
+          q settings "select key, left(value,80) from public.ai_settings"
+          S=$(date -u -d '-48 hours' +%Y-%m-%dT%H:%M:%S.000Z); E=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          for src in function_logs function_edge_logs; do
+            SQL="select timestamp, event_message from $src order by timestamp desc limit 60"
+            ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$SQL")
+            echo "=== logs $src"
+            curl -s "https://api.supabase.com/v1/projects/$REF/analytics/endpoints/logs.all?sql=$ENC&iso_timestamp_start=$S&iso_timestamp_end=$E" -H "Authorization: Bearer $TOKEN" | head -c 6000; echo
+          done
+          SQL="select timestamp, event_message, metadata from function_edge_logs where event_message like '%generate-lesson-plan%' order by timestamp desc limit 40"
+          ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$SQL")
+          echo "=== edge gen"; curl -s "https://api.supabase.com/v1/projects/$REF/analytics/endpoints/logs.all?sql=$ENC&iso_timestamp_start=$S&iso_timestamp_end=$E" -H "Authorization: Bearer $TOKEN" | jq -c '.result[]? | [.timestamp, (.event_message|.[0:120]), (.metadata[0].response[0].status_code // null), (.metadata[0].execution_time_ms // null)]' | head -40
