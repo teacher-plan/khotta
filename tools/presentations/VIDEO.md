@@ -63,7 +63,7 @@ ffmpeg -i خام.mp4 <إعدادات الضغط أعلاه> <اسم الدرس>.
 - ملفات mp4/mp3 لا تُحفظ في المستودع.
 
 ## ٥-ب. الرفع إلى قناة YouTube (قرار ٨ أكتوبر — قيد الإعداد)
-- الأداة: `youtube_upload.py` (YouTube Data API v3، رفعٌ مستأنَف). المفاتيح في إعدادات البيئة فقط: `YOUTUBE_CLIENT_ID` و`YOUTUBE_CLIENT_SECRET` و`YOUTUBE_REFRESH_TOKEN` — **لا تُلصق في المحادثة ولا تُحفظ في المستودع**.
+- الأداة: `youtube_upload.py` (YouTube Data API v3، رفعٌ مستأنَف). المفاتيح في إعدادات البيئة فقط: `YOUTUBE_REFRESH_TOKEN`، مع تطبيق OAuth المنشور نفسه الذي يرفع إلى Drive (`GDRIVE_CLIENT_ID` و`GDRIVE_CLIENT_SECRET`) ما لم يُضف `YOUTUBE_CLIENT_ID` و`YOUTUBE_CLIENT_SECRET` — **لا تُلصق في المحادثة ولا تُحفظ في المستودع**.
 - التحقّق من الربط: `python3 youtube_upload.py whoami` يطبع اسم القناة.
 - الرفع بعد الفحص (القسم ٤) وبعد إرسال الفيديو في المحادثة. مشروع Google غير المُراجَع يجعل الفيديو **خاصّاً**؛ يغيّره الأستاذ عيسى من YouTube Studio.
 - العنوان والوصف وقائمة التشغيل: يُقرّها الأستاذ عيسى عند أول رفع وتُسجَّل هنا.

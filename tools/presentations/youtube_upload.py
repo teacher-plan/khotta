@@ -1,5 +1,6 @@
 # رفع فيديو الدرس إلى قناة الأستاذ عيسى على YouTube (YouTube Data API v3) — VIDEO.md القسم ٥-ب.
-# المفاتيح من إعدادات البيئة فقط (لا تُكتب في المستودع ولا في المحادثة): YOUTUBE_CLIENT_ID و YOUTUBE_CLIENT_SECRET و YOUTUBE_REFRESH_TOKEN
+# المفاتيح من إعدادات البيئة فقط (لا تُكتب في المستودع ولا في المحادثة): YOUTUBE_REFRESH_TOKEN، ومعرّف التطبيق وسرّه
+# YOUTUBE_CLIENT_ID و YOUTUBE_CLIENT_SECRET — وإن غابا يُستعمل تطبيق Drive المنشور نفسه (GDRIVE_CLIENT_ID و GDRIVE_CLIENT_SECRET).
 #   python3 youtube_upload.py whoami                                   ← اسم القناة (للتحقّق من الربط)
 #   python3 youtube_upload.py upload <ملف.mp4> "<العنوان>" "<الوصف>" [--playlist "<اسم القائمة>"] [--privacy private|unlisted|public]
 # الرفع مستأنَف (resumable) بقطعٍ من ٨ ميغابايت. مشروع Google غير المُراجَع يجعل الفيديو خاصّاً مهما طُلب.
@@ -9,11 +10,11 @@ API = 'https://www.googleapis.com/youtube/v3'
 UP = 'https://www.googleapis.com/upload/youtube/v3/videos'
 
 def token():
-    need = ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET', 'YOUTUBE_REFRESH_TOKEN']
-    miss = [k for k in need if not os.environ.get(k)]
-    if miss: sys.exit('مفاتيح ناقصة في إعدادات البيئة: ' + '، '.join(miss))
+    E = lambda k: os.environ.get('YOUTUBE_' + k) or os.environ.get('GDRIVE_' + k, '')
+    miss = [k for k in ('CLIENT_ID', 'CLIENT_SECRET') if not E(k)] + ([] if os.environ.get('YOUTUBE_REFRESH_TOKEN') else ['REFRESH_TOKEN'])
+    if miss: sys.exit('مفاتيح ناقصة في إعدادات البيئة: ' + '، '.join('YOUTUBE_' + k for k in miss))
     r = requests.post('https://oauth2.googleapis.com/token', data={
-        'client_id': os.environ['YOUTUBE_CLIENT_ID'], 'client_secret': os.environ['YOUTUBE_CLIENT_SECRET'],
+        'client_id': E('CLIENT_ID'), 'client_secret': E('CLIENT_SECRET'),
         'refresh_token': os.environ['YOUTUBE_REFRESH_TOKEN'], 'grant_type': 'refresh_token'}, timeout=30)
     if r.status_code != 200: sys.exit(f'تعذّر تجديد الرمز ({r.status_code}): {r.json().get("error_description", r.text[:200])}')
     return {'Authorization': 'Bearer ' + r.json()['access_token']}
