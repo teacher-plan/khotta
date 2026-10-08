@@ -127,3 +127,6 @@ EXTRA_CSS_OWN = '''
 .ck .cb{flex:none;width:1.6em;height:1.6em;border-radius:50%;background:#EEF2F7;display:flex;align-items:center;justify-content:center;font-family:var(--fh)}
 .ck.ok{border-color:var(--good);background:#F2FBF5}.ck.ok .cb{background:var(--good);color:#fff}
 '''
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٥٤'), (9, '٥٥')]}

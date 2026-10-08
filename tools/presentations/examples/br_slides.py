@@ -178,3 +178,6 @@ EXTRA_CSS_OWN = '''
 .sumg .col span{font-weight:700;font-size:clamp(26px,4.6vh,56px);line-height:1.4}
 .sumg .kk{font-size:clamp(34px,6.4vh,76px)}
 '''
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٤٦'), (3, '٤٧')]}

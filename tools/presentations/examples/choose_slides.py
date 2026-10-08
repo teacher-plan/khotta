@@ -133,3 +133,6 @@ EXTRA_CSS_OWN = FIG_CSS + '''
 .xa small{display:block}
 @media (max-aspect-ratio:1/1){.voc3,.sumg{grid-template-columns:1fr}.bms{grid-template-columns:repeat(2,minmax(0,1fr))}}
 '''
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٨٥'), (8, '٨٦')]}

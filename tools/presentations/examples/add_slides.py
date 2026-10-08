@@ -151,3 +151,6 @@ EXTRA_CSS_OWN = '''
 .tag span{font-size:clamp(40px,8vh,90px)}.tag b{font-size:clamp(26px,5vh,58px)}.tag.q{background:#EAF1FF;border-color:#2563EB}
 .plus{font-family:var(--fh);font-weight:900;font-size:clamp(40px,8vh,90px);color:#C2410C}
 '''+FIG_CSS
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٦٢'), (2, '٦٣')]}

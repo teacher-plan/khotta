@@ -153,3 +153,6 @@ EXTRA_CSS_OWN = '''
 .xa small{display:block}
 @media (max-aspect-ratio:1/1){.voc3,.sumg{grid-template-columns:1fr}.stairs2{flex-direction:column}.slide .stairs2 .svgfig.stair{max-width:90vw;height:min(32vh,400px)}}
 ''' + FIG_CSS
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٨١'), (2, '٨٢'), (7, '٨٣')]}

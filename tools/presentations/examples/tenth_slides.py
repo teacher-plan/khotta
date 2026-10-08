@@ -187,3 +187,6 @@ EXTRA_CSS_OWN = '''
 .pz>.st{display:flex}.pz>.st>.xcard{flex:1}
 .xa small{display:block}
 '''+FIG_CSS
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٧١'), (5, '٧٢'), (10, '٧٣')]}

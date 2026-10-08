@@ -130,3 +130,6 @@ EXTRA_CSS_OWN = '''
 .xa .vcol{font-family:var(--fh);font-size:1.05em;margin:0 .3em;color:var(--ink)}
 .xa small{display:block}
 ''' + FIG_CSS
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٧٧'), (12, '٧٨')]}

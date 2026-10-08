@@ -212,3 +212,6 @@ button.note{font-family:inherit;font-weight:800;font-size:clamp(28px,5.2vh,60px)
 .sumg .kk{font-size:clamp(34px,6.4vh,76px)}
 .xq small{display:block;font-size:.75em;color:var(--ink2)}
 '''
+
+# صفحات تمارين كتاب الطالب لشارة «كتاب الطالب ص … · تمرين …» (common_slides.py)
+PG = {'تمرين': [(1, '٤٩'), (6, '٥٠')]}

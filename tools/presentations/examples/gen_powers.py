@@ -36,6 +36,7 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else 'القوى_والجذور_عرض_ت
 TITLE = sys.argv[3] if len(sys.argv) > 3 else 'القوى والجذور — الصف السابع'
 exec(open(os.path.join(HERE,'common_slides.py'),encoding='utf-8').read())
 exec(open(os.path.join(HERE,SLIDES),encoding='utf-8').read())
+resolve_pages(S)
 resolve_launch(S)   # شرائح الانطلاق إلى تمارين الكتابين (jump.js)
 
 EXTRA_CSS = '''
@@ -121,12 +122,9 @@ html = f'''<!DOCTYPE html>
 {chr(10).join(S)}
 </div>
 <canvas id="fx"></canvas>
-<div class="clsbar" id="clsbar" aria-label="الشعبة والحصة الحية">
-  <button id="clsBtn" class="clsbtn" title="اختيار الشعبة"><span>🏫</span><span id="clsLbl">اختر الشعبة</span></button>
+<div class="clsbar" id="clsbar" aria-label="الحصة الحية">
   <button id="liveBtn" class="livebtn" title="بدء الحصة الحية بملء الشاشة"><span class="lv-ic">▶</span><span class="lv-lbl">ابدأ الحصة</span></button>
-  <div class="clspop" id="clsPop"></div>
 </div>
-<div class="resumetip" id="resumeTip"></div>
 <nav class="nav2" aria-label="التنقّل بين الشرائح">
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>

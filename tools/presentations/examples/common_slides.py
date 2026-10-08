@@ -42,24 +42,80 @@ def resolve_launch(S):
                 if int(n) not in groups[int(g)]: groups[int(g)].append(int(n))
         S[i] = launch_slide(c, [(g, sorted(ns)) for g, ns in groups.items()])
 
-def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4):
+# شارة «كتاب الطالب ص … · تمرين … · الجزئية …» أعلى يسار شرائح حلّ التمارين (طلب الأستاذ عيسى، ٨ أكتوبر).
+# صفحة تمرين كتاب الطالب: من PG في ملف الدرس عند تعدّد الصفحات، وإلا من صفحة شريحة الانطلاق.
+#   PG = {'تمرين': [(١، '٨٥'), (٨، '٨٦')]} — والمدخل (رقم، 'جزئية'، 'صفحة') يبدأ صفحةً من جزئيةٍ بعينها.
+#   مجموعات كتاب الطالب الأخرى بمفتاح src نفسه (مثل 'تمرين ١-١أ'). وتمارين النشاط صفحتها في src («نشاط ص ٦١ · تمرين»).
+PG = {}
+PARTS = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي', 'ك', 'ل', 'م', 'ن', 'س', 'ع', 'ف', 'ص']
+def plabel(q):
+    m = re.match(r'\s*\(([^()]{1,3})\)', re.sub(r'<[^>]+>', '', q))
+    return m.group(1) if m else ''
+
+def resolve_pages(S):
+    import json as _j
+    sbpg = ''
+    for i, x in enumerate(S):
+        if x.startswith('<!--LAUNCH '):
+            c = _j.loads(x[11:-3])
+            if c['bk'] == 'sb': sbpg = c['pages']
+            continue
+        for blk in re.findall(r'<!--PGB (.*?)-->', x):
+            c = _j.loads(blk); src = c['src']; parts = c['parts']
+            if src.startswith('نشاط'):
+                book, pages = 'كتاب النشاط', [re.search(r'ص\s*([٠-٩]+)', src).group(1)]
+            else:
+                book = 'كتاب الطالب'
+                ent = PG.get('تمرين' if src == 'تمارين' else src) or PG.get('تمرين')
+                if c['pg']: pages = [c['pg']]
+                elif ent:
+                    def page_of(part):
+                        key = (int(c['num']), PARTS.index(part) if part in PARTS else 0); pgv = ''
+                        for e in ent:
+                            k = (e[0], PARTS.index(e[1]) if len(e) == 3 else 0)
+                            if k <= key: pgv = e[-1]
+                        return pgv
+                    pages = list(dict.fromkeys(page_of(p) for p in (parts or [''])))
+                elif sbpg and ' و ' not in sbpg and 'إلى' not in sbpg: pages = [sbpg]
+                else: raise SystemExit(f'صفحة التمرين {c["num"]} غير معروفة: أضف PG في ملف الدرس')
+            num = c['num'] if isinstance(c['num'], str) else a(c['num'])
+            lab = 'تمارين' if isinstance(c['num'], str) else 'تمرين'
+            pp = ''
+            if len(parts) == 1: pp = f'<span class="pgb-pt">الجزئية <b>({parts[0]})</b></span>'
+            elif len(parts) == 2: pp = f'<span class="pgb-pt" data-all="1">الجزئيتان <b>({parts[0]}) و ({parts[1]})</b></span>'
+            elif parts: pp = f'<span class="pgb-pt" data-all="({parts[0]}) – ({parts[-1]})">الجزئيات <b>({parts[0]}) – ({parts[-1]})</b></span>'
+            badge = (f'<div class="pgb"><span class="pgb-bk">{"📘" if book == "كتاب الطالب" else "📗"} {book}</span>'
+                     f'<span>ص <b>{" و ".join(pages)}</b></span><span>{lab} <b>{num}</b></span>{pp}</div>')
+            x = x.replace('<!--PGB ' + blk + '-->', badge)
+        S[i] = x
+
+def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4, pg=None):
     # src: «تمرين» لكتاب الطالب، «نشاط ص ٢٥ · تمرين» لكتاب النشاط.
     # الخط الكبير: أربعة أجزاء على الأكثر في الشريحة (٢×٢) — التمرين الأطول يُقسَّم تلقائياً على شرائح متتالية.
     out = []
     n = -(-len(parts) // per); per = -(-len(parts) // n)   # توزيعٌ متوازن: ٥ أجزاء ← ٣ + ٢ لا ٤ + ١
     for k in range(0, len(parts), per):
         chunk = parts[k:k+per]
-        cards=''.join(f'<button class="flip xcard"><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for q,ans in chunk)
+        labs = [plabel(q) for q, _ in chunk]
+        if not all(labs) or len(set(labs)) < len(labs): labs = [''] * len(chunk)
+        dp = [(' data-p="' + l + '"') if l else '' for l in labs]
+        cards=''.join(f'<button class="flip xcard"{d}><span class="xq">{q}</span><span class="tap">👆</span><span class="hid xa">{ans}</span></button>' for (q,ans),d in zip(chunk,dp))
         last = k + per >= len(parts)
         bk = 'ab' if src.startswith('نشاط') else 'sb'   # لربط شريحة الانطلاق بسؤالها (jump.js)
         g = EXG.setdefault('تمرين' if src == 'تمارين' else src, len(EXG))                # مجموعة التمارين (يُعاد الترقيم من ١ في كل مجموعة)
-        out.append(slide(f'''<div class="xhead"><span class="xnum">📘 {src} {a(num)}</span><h2>{title}</h2></div>
+        import json as _j
+        pgb = '<!--PGB ' + _j.dumps({'src': src, 'num': num, 'parts': [l for l in labs if l], 'pg': pg}, ensure_ascii=False) + '-->'
+        out.append(slide(f'''{pgb}<div class="xhead"><h2>{title}</h2></div>
 <div class="xrule"><b>القاعدة</b><span>{rule}</span></div>
 <div class="xgrid c{min(cols, 2) if len(chunk) > 1 else 1}">{cards}</div>{(tn(note) if ('دليل' in note or 'قرأت' in note) else f'<p class="hint">{note}</p>') if note and last else ''}''', f'exs ex-{bk}' + (f' exq-{bk}-{g}-{num}' if k == 0 else '')))
     return '\n'.join(out)
 
 EXTRA_CSS_LESSON_X = '''
 .xhead{display:flex;align-items:center;gap:1.4vw;justify-content:center;flex-wrap:wrap}
+.slide>.pgb.pgb{position:absolute;zoom:calc(var(--ar,1) * var(--ui,1));top:1.4vh;left:1.2vw;z-index:4;display:flex;align-items:center;gap:.25em;flex-wrap:wrap;max-width:58vw;direction:rtl;background:#14305C;color:#fff;border-radius:14px;padding:.3em .8em;font-family:var(--fh);font-weight:700;font-size:clamp(20px,3.6vh,40px);line-height:1.35;box-shadow:0 4px 0 #0B1E3B}
+.pgb>span+span::before{content:'·';margin-inline:.35em;opacity:.7}
+.pgb b{font-weight:900;color:#FFD66B}
+.pgb .pgb-pt.on b{background:#FFD66B;color:#14305C;border-radius:8px;padding:0 .25em}
 .xnum{font-family:var(--fh);font-weight:700;font-size:clamp(20px,3.2vh,34px);background:var(--ink);color:#fff;border-radius:99px;padding:.25em 1em}
 .xhead h2{font-size:clamp(28px,5.2vh,58px)}
 .xrule{display:flex;align-items:center;gap:1em;background:#FFF6E3;border:3px solid #E9A23B;border-radius:18px;padding:1.1vh 1.6vw;width:min(1150px,92vw);font-weight:700;font-size:clamp(19px,3.1vh,33px);line-height:1.55}
