@@ -2,7 +2,8 @@
 # المفاتيح من إعدادات البيئة فقط (لا تُكتب في المستودع ولا في المحادثة): YOUTUBE_REFRESH_TOKEN، ومعرّف التطبيق وسرّه
 # YOUTUBE_CLIENT_ID و YOUTUBE_CLIENT_SECRET — وإن غابا يُستعمل تطبيق Drive المنشور نفسه (GDRIVE_CLIENT_ID و GDRIVE_CLIENT_SECRET).
 #   python3 youtube_upload.py whoami                                   ← اسم القناة (للتحقّق من الربط)
-#   python3 youtube_upload.py upload <ملف.mp4> "<العنوان>" "<الوصف>" [--playlist "<اسم القائمة>"] [--privacy private|unlisted|public]
+#   python3 youtube_upload.py upload <ملف.mp4 | drive:<معرّف ملف Drive>> "<العنوان>" "<الوصف>" [--playlist "<اسم القائمة>"] [--privacy private|unlisted|public]
+#   (drive:… يُنزَّل الفيديو أولاً من Drive بمفتاح GDRIVE_REFRESH_TOKEN، لجلسةٍ لم تُنتجه بنفسها)
 # الرفع مستأنَف (resumable) بقطعٍ من ٨ ميغابايت. مشروع Google غير المُراجَع يجعل الفيديو خاصّاً مهما طُلب.
 import json, os, sys, requests
 
@@ -36,6 +37,18 @@ def playlist(H, title):
                       json={'snippet': {'title': title, 'defaultLanguage': 'ar'}, 'status': {'privacyStatus': 'public'}}); r.raise_for_status()
     return r.json()['id']
 
+def from_drive(fid):
+    r = requests.post('https://oauth2.googleapis.com/token', timeout=30, data={'client_id': os.environ['GDRIVE_CLIENT_ID'], 'client_secret': os.environ['GDRIVE_CLIENT_SECRET'],
+                      'refresh_token': os.environ['GDRIVE_REFRESH_TOKEN'], 'grant_type': 'refresh_token'}); r.raise_for_status()
+    D = {'Authorization': 'Bearer ' + r.json()['access_token']}
+    name = requests.get(f'https://www.googleapis.com/drive/v3/files/{fid}', params={'fields': 'name'}, headers=D, timeout=30).json()['name']
+    out = os.path.join('/tmp', name)
+    with requests.get(f'https://www.googleapis.com/drive/v3/files/{fid}', params={'alt': 'media'}, headers=D, stream=True, timeout=300) as g:
+        g.raise_for_status()
+        with open(out, 'wb') as f:
+            for c in g.iter_content(1 << 20): f.write(c)
+    print('نُزّل من Drive:', name, os.path.getsize(out) // 1024, 'ك.ب'); return out
+
 def upload(H, path, title, desc, privacy='private', pl=None):
     meta = {'snippet': {'title': title[:100], 'description': desc[:5000], 'categoryId': '27', 'defaultLanguage': 'ar', 'defaultAudioLanguage': 'ar'},
             'status': {'privacyStatus': privacy, 'selfDeclaredMadeForKids': False}}
@@ -66,4 +79,5 @@ if __name__ == '__main__':
     if a[0] == 'whoami': whoami(H)
     elif a[0] == 'upload':
         opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
-        upload(H, a[1], a[2], a[3], opt('--privacy', 'private'), opt('--playlist'))
+        src = from_drive(a[1][6:]) if a[1].startswith('drive:') else a[1]
+        upload(H, src, a[2], a[3], opt('--privacy', 'private'), opt('--playlist'))
