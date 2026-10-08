@@ -879,6 +879,10 @@ body.inapp #c1-budget-btn{display:flex}
 .today-btn.ghost{border-color:rgba(255,255,255,.22);background:none;color:rgba(255,255,255,.8)}
 #today-modal-body .prep-sec{margin-bottom:14px}
 #today-modal-body .prep-sec-t{font-size:11.5px;font-weight:800;color:var(--red-d);margin-bottom:5px}
+.prep-sec-t{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.prep-copy{flex:none;font:inherit;font-size:11px;font-weight:700;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:99px;padding:3px 11px;cursor:pointer}
+.prep-copy:hover{border-color:var(--red-d)}
+.prep-copy.ok{background:var(--olive-d);border-color:var(--olive-d);color:#fff}
 #today-modal-body .prep-sec-b{font-size:13px;color:var(--ink);line-height:1.8}
 .tdp-img{width:100%;border-radius:12px;display:block;cursor:zoom-in;border:1px solid var(--border)}
 .tdp-file{width:100%;text-align:start;border:1.5px solid var(--border);background:var(--card);border-radius:11px;padding:10px 13px;
@@ -4879,7 +4883,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='7fdbb49';
+const KH_BUILD='c030155';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -7783,9 +7787,23 @@ async function todayCtx(){
   }
   return{classId,subject,grade,className,lessonId,lessonName,unitName,live,upcoming,hasUnits:!!units.length};
 }
+// نسخ نص جزءٍ واحد من التحضير — لِلَصقه في منصة نور أو أي مستند
+async function prepCopySec(btn){
+  const b=btn.closest('.prep-sec').querySelector('.prep-sec-b');
+  const txt=b.innerText.trim();
+  try{await navigator.clipboard.writeText(txt);}
+  catch(e){
+    const ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta);ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    if(!ok){toast('تعذّر النسخ',true);return;}
+  }
+  btn.textContent='✓ نُسخ';btn.classList.add('ok');
+  setTimeout(()=>{btn.textContent='📋 نسخ';btn.classList.remove('ok');},1400);
+}
 function renderPrepHtml(plan){
   if(!plan)return'<div class="plan-empty-card">لا تحضير بعد</div>';
-  const E=escHtml,sec=(t,b)=>b?`<div class="prep-sec"><div class="prep-sec-t">${t}</div><div class="prep-sec-b">${b}</div></div>`:'';
+  const E=escHtml,sec=(t,b)=>b?`<div class="prep-sec"><div class="prep-sec-t"><span>${t}</span><button type="button" class="prep-copy" onclick="prepCopySec(this)" title="نسخ نص هذا الجزء">📋 نسخ</button></div><div class="prep-sec-b">${b}</div></div>`:'';
   const list=a=>(a||[]).filter(Boolean).map(x=>`<div>• ${E(typeof x==='string'?x:(x.text||''))}</div>`).join('');
   const sub=(t,v)=>v?`<div style="margin-top:4px"><b>${t}:</b> ${v}</div>`:'';
   const outcomes=(plan.outcomes||[]).map(o=>`<div>• ${E(o.text||'')} <span style="color:var(--muted);font-size:11px">(${E(o.level||'')})</span></div>`).join('');
