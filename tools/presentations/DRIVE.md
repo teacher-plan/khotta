@@ -42,6 +42,7 @@
 | ٥-٣ حل مسائل الزوايا | `1atcA2K6HF8hdiXJ94QI_Dutcx_VPjACo` | https://claude.ai/artifact/7GcdR79ytK32FZPtSN5JnM |
 | ٥-٤ الخطوط المتوازية | `1QyXcbBrqeatAE2r4oWj-qBtxu6CM00g8` | https://claude.ai/artifact/GAcKBEpYA3BDnw6Ad8yH9P |
 | مراجعة الوحدة الخامسة | `1yfEwnpfYQCo_9JjFNJWfOyPQdrPdLDHs` | https://claude.ai/artifact/3o3yuSVW6oCRfgegGRnvbw |
+| ٦-١ تبسيط الكسور | `1VdrxjQf84Xps_-Zt1NZfr5YU7uB62Ii3` | https://claude.ai/artifact/HFK1tu374aHYPAwHjz7pqK |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد

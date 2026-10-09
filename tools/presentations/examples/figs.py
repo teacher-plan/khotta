@@ -192,3 +192,73 @@ def PAR(hl=(), labels=('أ', 'ب', 'ج', 'ء', 'هـ', 'و', 'ز', 'ح'), vals=N
     if shape == 'Z':
         out.append(f'<path d="M{x1 - W * .25:.1f},{y1:.1f} L{x1:.1f},{y1:.1f} L{x2:.1f},{y2:.1f} L{x2 + W * .25:.1f},{y2:.1f}" fill="none" stroke="#DC2626" stroke-width="7" stroke-opacity=".6" stroke-linejoin="round"/>')
     return f'<svg class="svgfig ang par" viewBox="0 {-H * .04:.0f} {W} {H * 1.08:.0f}" width="{W}" height="{H * 1.08:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
+
+# ═══ رسوم الكسور (الوحدة السادسة) ═══
+_FF = 'font-family="Readex Pro,Tahoma,sans-serif" font-weight="800"'
+def _sfr(x, y, n, d, fs=56, col='#0E1B33', box=('', '')):
+    # كسرٌ مكدَّس داخل SVG: البسط فوق الخط والمقام تحته؛ القيمة الفارغة ('') تُرسم مربّعاً، و box يلوّن القيمة (إجابة)
+    out = []; w = fs * (0.62 * max(len(str(n)), len(str(d)), 1) + .5)
+    for v, yy, b in ((n, y - fs * .22, box[0]), (d, y + fs * .98, box[1])):
+        if v == '':
+            out.append(f'<rect x="{x - fs * .42:.1f}" y="{yy - fs * .8:.1f}" width="{fs * .84:.1f}" height="{fs * .9:.1f}" rx="6" fill="#fff" stroke="#DB2777" stroke-width="4"/>')
+        else:
+            out.append(f'<text x="{x:.1f}" y="{yy:.1f}" text-anchor="middle" font-size="{fs}" {_FF} fill="{b or col}">{_a(v)}</text>')
+    out.append(f'<line x1="{x - w / 2:.1f}" y1="{y:.1f}" x2="{x + w / 2:.1f}" y2="{y:.1f}" stroke="{col}" stroke-width="{fs * .07:.1f}" stroke-linecap="round"/>')
+    return ''.join(out)
+
+def EQV(n1, d1, n2, d2, op='÷', k='٢', k2=None, ans=(), size=360):
+    # n1/d1 (يمين) = n2/d2 (يسار) مع سهمين منحنيين: أعلى للبسط وأسفل للمقام (op k)؛ ans: مواضع الإجابة الملوّنة من 'n2','d2','k','k2'
+    G = '#16A34A'; W, H = 360, 330; xr, xl, yl = 262, 98, 170
+    k2 = k if k2 is None else k2
+    out = [_sfr(xr, yl, n1, d1), _sfr(xl, yl, n2, d2, box=(G if 'n2' in ans else '', G if 'd2' in ans else '')),
+           f'<text x="180" y="{yl + 18}" text-anchor="middle" font-size="56" {_FF} fill="#0E1B33">=</text>']
+    for top in (True, False):
+        y0 = yl - 78 if top else yl + 92; cy = y0 - 62 if top else y0 + 62
+        out.append(f'<path d="M{xr - 22},{y0} Q180,{cy} {xl + 26},{y0}" fill="none" stroke="#2563EB" stroke-width="5" marker-end="url(#ah)"/>')
+        lab = k if top else k2; key = 'k' if top else 'k2'
+        ly = y0 - 40 if top else y0 + 66
+        if lab == '':
+            out.append(f'<rect x="150" y="{ly - 40}" width="44" height="44" rx="6" fill="#fff" stroke="#DB2777" stroke-width="4"/><text x="208" y="{ly - 6}" font-size="40" {_FF} fill="#2563EB">{op}</text>')
+        else:
+            out.append(f'<text x="180" y="{ly}" text-anchor="middle" direction="rtl" font-size="40" {_FF} fill="{G if key in ans else "#2563EB"}">{op}{_a(lab)}</text>')
+    defs = '<defs><marker id="ah" markerWidth="4" markerHeight="4" refX="2.5" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 z" fill="#2563EB"/></marker></defs>'
+    return f'<svg class="svgfig eqv" viewBox="0 -24 {W} {H + 40}" width="{size}" xmlns="http://www.w3.org/2000/svg" style="direction:ltr">{defs}{"".join(out)}</svg>'
+
+def FBAR(den, sh, rows=1, color='#DB2777', label=True, w=520, cell_h=None):
+    # مستطيلٌ مقسومٌ إلى den جزءاً متساوياً (rows صفوف)، يُظلَّل منها sh جزءاً بدءاً من اليمين، والكسر مكتوبٌ بجانبه
+    cols = den // rows; ch = cell_h or (120 if rows == 1 else 240 / rows); cw = w / cols
+    H = rows * ch; out = []
+    for r in range(rows):
+        for c in range(cols):
+            k = r * cols + c; x = 4 + w - (c + 1) * cw
+            out.append(f'<rect x="{x:.1f}" y="{4 + r * ch:.1f}" width="{cw:.1f}" height="{ch:.1f}" fill="{color if k < sh else "#fff"}" stroke="#334155" stroke-width="2.5"/>')
+    out.append(f'<rect x="4" y="4" width="{w}" height="{H}" fill="none" stroke="#0E1B33" stroke-width="5"/>')
+    LW = 120 if label else 0
+    if label: out.append(_sfr(-LW / 2, 4 + H / 2 - 8, sh, den, fs=46, col=color if color != '#fff' else '#0E1B33'))
+    return f'<svg class="svgfig fbar" viewBox="{-LW} -2 {w + 8 + LW} {H + 12}" width="{w + 8 + LW}" xmlns="http://www.w3.org/2000/svg" style="direction:ltr">{"".join(out)}</svg>'
+
+def FCIRC(den, sh, color='#2563EB', size=240):
+    # دائرةٌ مقسومة إلى den قطاعاً متساوياً، يُظلَّل sh منها
+    r = 110; cx = cy = 120; out = []
+    for i in range(den):
+        a0 = -90 + 360 * i / den; a1 = -90 + 360 * (i + 1) / den
+        p0 = (cx + r * _m.cos(_m.radians(a0)), cy + r * _m.sin(_m.radians(a0))); p1 = (cx + r * _m.cos(_m.radians(a1)), cy + r * _m.sin(_m.radians(a1)))
+        lg = 1 if a1 - a0 > 180 else 0
+        if den == 1: out.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color if sh else "#fff"}" stroke="#334155" stroke-width="3"/>'); break
+        out.append(f'<path d="M{cx},{cy} L{p0[0]:.1f},{p0[1]:.1f} A{r},{r} 0 {lg} 1 {p1[0]:.1f},{p1[1]:.1f} Z" fill="{color if i < sh else "#fff"}" stroke="#334155" stroke-width="3"/>')
+    out.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#0E1B33" stroke-width="5"/>')
+    return f'<svg class="svgfig fcirc" viewBox="0 0 240 240" width="{size}" xmlns="http://www.w3.org/2000/svg">{"".join(out)}</svg>'
+
+def NLINE(den, marks, lo=0, hi=1, w=900, colors=('#2563EB', '#DB2777', '#16A34A', '#F59E0B')):
+    # خط أعداد من lo إلى hi مقسومٌ إلى أجزاء (den لكل واحد)؛ marks: [(موضع بعدد الأجزاء, بسط, مقام)] تُكتب تحت الخط بالترتيب يساراً ← يميناً
+    n = (hi - lo) * den; x0, x1 = 40, w - 40; y = 70; out = []
+    out.append(f'<line x1="{x0}" y1="{y}" x2="{x1}" y2="{y}" stroke="#0E1B33" stroke-width="5"/>')
+    for i in range(n + 1):
+        x = x0 + (x1 - x0) * i / n; big = i % den == 0
+        out.append(f'<line x1="{x:.1f}" y1="{y - (26 if big else 16)}" x2="{x:.1f}" y2="{y + (26 if big else 16)}" stroke="#0E1B33" stroke-width="{5 if big else 3}"/>')
+        if big: out.append(f'<text x="{x:.1f}" y="{y - 36}" text-anchor="middle" font-size="40" {_FF} fill="#0E1B33">{_a(lo + i // den)}</text>')
+    for j, (pos, a, b) in enumerate(marks):
+        x = x0 + (x1 - x0) * pos / n; c = colors[j % len(colors)]
+        out.append(f'<circle cx="{x:.1f}" cy="{y}" r="11" fill="{c}"/>')
+        out.append(_sfr(x, y + 78, a, b, fs=40, col=c))
+    return f'<svg class="svgfig nline" viewBox="0 -14 {w} 214" width="{w}" xmlns="http://www.w3.org/2000/svg" style="direction:ltr">{"".join(out)}</svg>'
