@@ -38,6 +38,7 @@
 | مراجعة الوحدة الرابعة | `1xMMZ65AbMc90GT6g8RGE1o-JREZtvBKx` | https://claude.ai/artifact/6gTdVB9D9rATF286TiT8UQ |
 | الوحدة الخامسة — الزوايا | `12JejCCCD3rqUR8jqMSOMNfDOP_0QrIjz` | |
 | ٥-١ تسمية الزوايا وتقديرها | `1HnS8847nG6_UwgcB7n0Og5aFct5lIhE1` | https://claude.ai/artifact/5qF2zeWgh9uyQuFUde9hKY |
+| ٥-٢ قياسات الزوايا | `12rwhHiNNvpm4pwo9vR7JZ9v77c1Er8JN` | https://claude.ai/artifact/7P1eykaNFMMbKwYh2rRwbr |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد
