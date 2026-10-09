@@ -40,6 +40,7 @@
 | ٥-١ تسمية الزوايا وتقديرها | `1HnS8847nG6_UwgcB7n0Og5aFct5lIhE1` | https://claude.ai/artifact/5qF2zeWgh9uyQuFUde9hKY |
 | ٥-٢ قياسات الزوايا | `12rwhHiNNvpm4pwo9vR7JZ9v77c1Er8JN` | https://claude.ai/artifact/7P1eykaNFMMbKwYh2rRwbr |
 | ٥-٣ حل مسائل الزوايا | `1atcA2K6HF8hdiXJ94QI_Dutcx_VPjACo` | https://claude.ai/artifact/7GcdR79ytK32FZPtSN5JnM |
+| ٥-٤ الخطوط المتوازية | `1QyXcbBrqeatAE2r4oWj-qBtxu6CM00g8` | https://claude.ai/artifact/GAcKBEpYA3BDnw6Ad8yH9P |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد

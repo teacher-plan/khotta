@@ -157,3 +157,38 @@ def XL(theta=35, labels=('أ', 'ب', 'ج', 'ء'), colors=('#2563EB', '#DB2777', 
         p, q = pt(b, L), pt(e, L)
         out.append(f'<line x1="{p[0]:.1f}" y1="{p[1]:.1f}" x2="{q[0]:.1f}" y2="{q[1]:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>')
     return f'<svg class="svgfig ang" viewBox="0 {-size * .08:.0f} {W} {H + size * .16:.0f}" width="{W}" height="{H + size * .16:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
+
+def PAR(hl=(), labels=('أ', 'ب', 'ج', 'ء', 'هـ', 'و', 'ز', 'ح'), vals=None, tilt=62, size=460, colors=('#2563EB', '#DB2777', '#16A34A', '#F59E0B'), shape=''):
+    # خطّان متوازيان أفقيان (بأسهم) يقطعهما قاطعٌ مائل بزاوية tilt. الزوايا الثماني بالترتيب:
+    # عند التقاطع العلوي: ٠ أعلى اليمين، ١ أعلى اليسار، ٢ أسفل اليسار، ٣ أسفل اليمين؛ وعند السفلي: ٤، ٥، ٦، ٧ بالترتيب نفسه.
+    # hl: مجموعات زوايا تُلوَّن معاً، مثل [(0, 4)] للمتناظرتين. vals: قياسات تُكتب بدل الحروف. shape='F' أو 'Z': يرسم الحرف فوق الشكل.
+    W, H = size, size * .78; y1, y2 = H * .3, H * .72; dx = (y2 - y1) / _m.tan(_m.radians(tilt)); x1 = W / 2 + dx / 2; x2 = W / 2 - dx / 2
+    out = []
+    for y in (y1, y2):
+        out.append(f'<line x1="{W * .04:.1f}" y1="{y:.1f}" x2="{W * .96:.1f}" y2="{y:.1f}" stroke="#14305C" stroke-width="5"/>')
+        ax = W * .5 + (W * .3 if y == y1 else -W * .28)
+        out.append(f'<path d="M{ax - 14:.1f},{y - 9:.1f} L{ax + 4:.1f},{y:.1f} L{ax - 14:.1f},{y + 9:.1f}" fill="none" stroke="#14305C" stroke-width="4"/>')
+    ext = H * .22
+    tx1, ty1 = x1 + ext / _m.tan(_m.radians(tilt)), y1 - ext; tx2, ty2 = x2 - ext / _m.tan(_m.radians(tilt)), y2 + ext
+    rays = [0, tilt, 180, 180 + tilt]   # يمين، القاطع لأعلى، يسار، القاطع لأسفل
+    secs = [(0, tilt), (tilt, 180), (180, 180 + tilt), (180 + tilt, 360)]
+    r = size * .075; col = {}
+    for gi, g in enumerate(hl):
+        for i in g: col[i] = colors[gi % len(colors)]
+    for k in range(8):
+        cx, cy = (x1, y1) if k < 4 else (x2, y2); s0, s1 = secs[k % 4]
+        def pt(a, rr): return cx + rr * _m.cos(_m.radians(a)), cy - rr * _m.sin(_m.radians(a))
+        c = col.get(k)
+        if c:
+            p1, p2 = pt(s0, r), pt(s1, r)
+            out.append(f'<path d="M{cx:.1f},{cy:.1f} L{p1[0]:.1f},{p1[1]:.1f} A{r},{r} 0 0 0 {p2[0]:.1f},{p2[1]:.1f} Z" fill="{c}55" stroke="{c}" stroke-width="3"/>')
+        lab = (vals[k] if vals and vals[k] is not None else labels[k]) if (labels or vals) else ''
+        if lab:
+            t = pt((s0 + s1) / 2, r + size * .055)
+            out.append(f'<text x="{t[0]:.1f}" y="{t[1] + 9:.1f}" text-anchor="middle" direction="rtl" font-size="{size * .06:.0f}" font-weight="800" fill="{c or "#14305C"}" font-family="Readex Pro,Tahoma,sans-serif">{lab}</text>')
+    out.append(f'<line x1="{tx1:.1f}" y1="{ty1:.1f}" x2="{tx2:.1f}" y2="{ty2:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>')
+    if shape == 'F':
+        out.append(f'<path d="M{x2 + W * .25:.1f},{y2:.1f} L{x2:.1f},{y2:.1f} L{x1:.1f},{y1:.1f} L{x1 + W * .25:.1f},{y1:.1f}" fill="none" stroke="#DC2626" stroke-width="7" stroke-opacity=".6" stroke-linejoin="round"/>')
+    if shape == 'Z':
+        out.append(f'<path d="M{x1 - W * .25:.1f},{y1:.1f} L{x1:.1f},{y1:.1f} L{x2:.1f},{y2:.1f} L{x2 + W * .25:.1f},{y2:.1f}" fill="none" stroke="#DC2626" stroke-width="7" stroke-opacity=".6" stroke-linejoin="round"/>')
+    return f'<svg class="svgfig ang par" viewBox="0 {-H * .04:.0f} {W} {H * 1.08:.0f}" width="{W}" height="{H * 1.08:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
