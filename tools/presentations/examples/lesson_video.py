@@ -28,7 +28,9 @@ def run(D, key, header, short):
     def row(lab, expr, d, fin):
         return fu(f'<span class="lab{" fin" if fin else ""}">{lab}</span>{m(expr, 50)}', d, 'display: flex; align-items: center; justify-content: space-between; gap: 28px')
     SC = []
+    DOT = '<span style="color: #E8590C; font-size: .8em; margin: 0 .35em">◆</span>'   # فاصلٌ لا يُشبه الصفر العربي «٠» (نقطة «·» بجوار رقمٍ تُقرأ صفراً)
     for i, (title, rule, intro, steps) in enumerate(D):
+        rule = rule.replace(' · ', DOT)
         if not steps:
             SC.append(scene(i, f'''<h1 class="pop" style="margin: 0; font-size: {84 if i == 0 else 70}px; font-weight: 700"><span class="hl">{title}</span></h1>
 {fu(rule, 1.2, 'font-size: 38px; font-weight: 700; color: #3B5480; max-width: 1400px; line-height: 1.6') if rule else ''}''', 34))
