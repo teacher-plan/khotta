@@ -131,3 +131,29 @@ def ANG(deg, start=0, label=None, names=None, reflex=False, color='#2563EB', siz
         out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{y1 + size * .09:.0f}" text-anchor="middle" font-size="{size * .085:.0f}" font-weight="800" fill="#14305C" font-family="Readex Pro,Tahoma,sans-serif">{sub}</text>'); y1 += size * .13
     vw, vh = x1 - x0, y1 - y0
     return f'<svg class="svgfig ang" viewBox="{x0:.1f} {y0:.1f} {vw:.1f} {vh:.1f}" width="{vw:.0f}" height="{vh:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
+
+def XL(theta=35, labels=('أ', 'ب', 'ج', 'ء'), colors=('#2563EB', '#DB2777', '#2563EB', '#DB2777'), size=420, perp=False):
+    # خطّان مستقيمان متقاطعان بزاوية theta؛ الزوايا الأربع حول التقاطع: labels بالترتيب (أ أعلى، ب يسار، ج أسفل، ء يمين).
+    # الزاويتان المتقابلتان بالرأس بلون واحد. perp=True: خطّان متعامدان بمربّعات قائمة.
+    if perp: theta = 90
+    W, H = size, size * .75; cx, cy = W / 2, H / 2; L = size * .46
+    def pt(a, r): return cx + r * _m.cos(_m.radians(a)), cy - r * _m.sin(_m.radians(a))
+    a1, a2 = 90 - theta / 2, 90 + theta / 2
+    lines = [(a1, a1 + 180), (a2, a2 + 180)]
+    out = []
+    order = [(a1, a2), (a2, a1 + 180), (a1 + 180, a2 + 180), (a2 + 180, a1 + 360)]   # أعلى، يسار، أسفل، يمين
+    r = size * .12
+    for (s0, s1), lab, col in zip(order, labels, colors):
+        if perp:
+            k = size * .06; q1, q2 = pt(s0, k), pt(s1, k); q3 = (q1[0] + q2[0] - cx, q1[1] + q2[1] - cy)
+            out.append(f'<path d="M{q1[0]:.1f},{q1[1]:.1f} L{q3[0]:.1f},{q3[1]:.1f} L{q2[0]:.1f},{q2[1]:.1f}" fill="none" stroke="{col}" stroke-width="4"/>')
+        else:
+            p1, p2 = pt(s0, r), pt(s1, r)
+            out.append(f'<path d="M{cx},{cy} L{p1[0]:.1f},{p1[1]:.1f} A{r},{r} 0 0 0 {p2[0]:.1f},{p2[1]:.1f} Z" fill="{col}2A" stroke="{col}" stroke-width="3"/>')
+        if lab:
+            t = pt((s0 + s1) / 2, r + size * .07)
+            out.append(f'<text x="{t[0]:.1f}" y="{t[1] + 11:.1f}" text-anchor="middle" direction="rtl" font-size="{size * .075:.0f}" font-weight="800" fill="{col}" font-family="Readex Pro,Tahoma,sans-serif">{lab}</text>')
+    for b, e in lines:
+        p, q = pt(b, L), pt(e, L)
+        out.append(f'<line x1="{p[0]:.1f}" y1="{p[1]:.1f}" x2="{q[0]:.1f}" y2="{q[1]:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>')
+    return f'<svg class="svgfig ang" viewBox="0 {-size * .08:.0f} {W} {H + size * .16:.0f}" width="{W}" height="{H + size * .16:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
