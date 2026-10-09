@@ -9,6 +9,7 @@
 #   python3 tools/presentations/drive_upload.py <المجلد> <ملف>=<الاسم في Drive> …
 #   python3 tools/presentations/drive_upload.py --spec دروس.json                 ← صيغة drive_sync.py نفسها
 #   python3 tools/presentations/drive_upload.py --check                           ← يتأكّد من المفتاح فقط
+#   python3 tools/presentations/drive_upload.py --mkdir <المجلد الأب> <الاسم>        ← ينشئ مجلداً (أو يعيد الموجود بالاسم نفسه) ويطبع معرّفه
 # الملف الموجود بالاسم نفسه في المجلد **يُستبدل محتواه** (يبقى رابطه كما هو)، وإلا يُنشأ ملفٌ جديد.
 # أي حجم (الفيديو أيضاً): رفعٌ على دفعات (resumable).
 import json, mimetypes, os, sys, urllib.parse, urllib.request, urllib.error
@@ -75,6 +76,12 @@ def main(a):
     if a[0] == '--check':
         me = req('GET', 'https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', headers={'Authorization': 'Bearer ' + tok})
         print('✔ المفتاح يعمل، الحساب:', me['user']['emailAddress']); return
+    if a[0] == '--mkdir':
+        old = [f for f in find(tok, a[1], a[2])]
+        if old: print(old[0]['id']); return
+        r = req('POST', API + '?supportsAllDrives=true&fields=id', json.dumps({'name': a[2], 'mimeType': 'application/vnd.google-apps.folder', 'parents': [a[1]]}).encode(),
+                {'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8'})
+        print(r['id']); return
     if a[0] == '--spec':
         for lesson in json.load(open(a[1], encoding='utf-8')):
             print('—', lesson['name'])

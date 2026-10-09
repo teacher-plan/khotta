@@ -36,6 +36,11 @@
 | ٤-١ التعرف على وحدات القياس | `15Pp81WlF0obpdgxLTRHdt8JZodb3Jru6` | https://claude.ai/artifact/NR9Mydq8UZDNbe6EPGxAjC |
 | ٤-٢ اختيار وحدات القياس المناسبة | `1JkDXRf9v2MKuYMCJzTkoW-dGH0xVBHTW` | https://claude.ai/artifact/TrgSkLb9Liacj5EsWPhzdx |
 | مراجعة الوحدة الرابعة | `1xMMZ65AbMc90GT6g8RGE1o-JREZtvBKx` | https://claude.ai/artifact/6gTdVB9D9rATF286TiT8UQ |
+| الوحدة الخامسة — الزوايا | `12JejCCCD3rqUR8jqMSOMNfDOP_0QrIjz` | |
+| ٥-١ تسمية الزوايا وتقديرها | `1HnS8847nG6_UwgcB7n0Og5aFct5lIhE1` | https://claude.ai/artifact/5qF2zeWgh9uyQuFUde9hKY |
+| ٥-٢ قياسات الزوايا | `12rwhHiNNvpm4pwo9vR7JZ9v77c1Er8JN` | https://claude.ai/artifact/7P1eykaNFMMbKwYh2rRwbr |
+| ٥-٣ حل مسائل الزوايا | `1atcA2K6HF8hdiXJ94QI_Dutcx_VPjACo` | https://claude.ai/artifact/7GcdR79ytK32FZPtSN5JnM |
+| الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.

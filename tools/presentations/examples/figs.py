@@ -85,3 +85,75 @@ def STAIR(units, facs, names=None, colors=('#DBEAFE', '#DCFCE7', '#FEF3C7', '#FC
     o.append(f'<text x="{pad + 300}" y="34" font-size="27" font-weight="900" fill="#DC2626" direction="rtl" text-anchor="start">÷ صعوداً إلى وحدةٍ أكبر</text>')
     o.append(f'<text x="{pad + 300}" y="72" font-size="27" font-weight="900" fill="#15803D" direction="rtl" text-anchor="start">× نزولاً إلى وحدةٍ أصغر</text>')
     return f'<svg class="svgfig stair" viewBox="0 0 {W} {H}" style="direction:ltr;font-family:Tajawal,\'Noto Kufi Arabic\',sans-serif">{"".join(o)}</svg>'
+
+# ── الزوايا (الوحدة الخامسة) ──
+import math as _m
+def ANG(deg, start=0, label=None, names=None, reflex=False, color='#2563EB', size=300, arm=1.0, mark=True, sub=None):
+    # زاويةٌ قياسها deg بين ضلعٍ باتجاه start وآخر باتجاه start+deg (عكس عقارب الساعة).
+    # reflex=True: يُرسم قوس الزاوية المنعكسة (الخارجية). names=('ب','أ','ج'): طرف الضلع الأول، الرأس، طرف الضلع الثاني.
+    # label: نصّ القياس (افتراضياً deg°)؛ sub: سطرٌ تحت الرسم.
+    W = H = size; cx = cy = size / 2; L = size * .42 * arm; _pts = [(cx, cy)]
+    def pt(a, r): return cx + r * _m.cos(_m.radians(a)), cy - r * _m.sin(_m.radians(a))
+    a1, a2 = start, start + deg
+    p1, p2 = pt(a1, L), pt(a2, L); _pts += [p1, p2]
+    out = [f'<line x1="{cx}" y1="{cy}" x2="{p1[0]:.1f}" y2="{p1[1]:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>',
+           f'<line x1="{cx}" y1="{cy}" x2="{p2[0]:.1f}" y2="{p2[1]:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>']
+    r = size * (.13 if not reflex else .11); _pts += [(cx - r, cy - r), (cx + r, cy + r)] if reflex or deg >= 180 else []
+    if mark:
+        if deg == 90 and not reflex:
+            s = size * .08; q1, q2 = pt(a1, s), pt(a2, s); q3 = (q1[0] + q2[0] - cx, q1[1] + q2[1] - cy)
+            out.append(f'<path d="M{q1[0]:.1f},{q1[1]:.1f} L{q3[0]:.1f},{q3[1]:.1f} L{q2[0]:.1f},{q2[1]:.1f}" fill="none" stroke="{color}" stroke-width="4"/>')
+        else:
+            s1, s2 = pt(a1, r), pt(a2, r)
+            if reflex:
+                out.append(f'<path d="M{cx},{cy} L{s1[0]:.1f},{s1[1]:.1f} A{r},{r} 0 {1 if 360 - deg > 180 else 0} 1 {s2[0]:.1f},{s2[1]:.1f} Z" fill="{color}22" stroke="none"/>'
+                           f'<path d="M{s1[0]:.1f},{s1[1]:.1f} A{r},{r} 0 {1 if 360 - deg > 180 else 0} 1 {s2[0]:.1f},{s2[1]:.1f}" fill="none" stroke="{color}" stroke-width="4"/>')
+            else:
+                out.append(f'<path d="M{cx},{cy} L{s1[0]:.1f},{s1[1]:.1f} A{r},{r} 0 {1 if deg > 180 else 0} 0 {s2[0]:.1f},{s2[1]:.1f} Z" fill="{color}22" stroke="none"/>'
+                           f'<path d="M{s1[0]:.1f},{s1[1]:.1f} A{r},{r} 0 {1 if deg > 180 else 0} 0 {s2[0]:.1f},{s2[1]:.1f}" fill="none" stroke="{color}" stroke-width="4"/>')
+    if label != '':
+        txt = label if label is not None else _a(deg if not reflex else 360 - deg) + '°'
+        mid = (a1 + a2) / 2 + (180 if reflex else 0)
+        lr = r + size * (.13 if deg >= 60 or reflex else .24)
+        t = pt(mid, lr); _pts += [(t[0] - size * .12, t[1] - size * .06), (t[0] + size * .12, t[1] + size * .06)]
+        out.append(f'<text x="{t[0]:.1f}" y="{t[1] + 10:.1f}" text-anchor="middle" direction="rtl" font-size="{size * .095:.0f}" font-weight="800" fill="{color}" font-family="Readex Pro,Tahoma,sans-serif">{txt}</text>')
+    if names:
+        for (a, rr), n in zip(((a1, L + size * .07), (None, 0), (a2, L + size * .07)), names):
+            if not n: continue
+            if a is None:
+                mid = (a1 + a2) / 2 + (0 if reflex else 180); t = pt(mid, size * .1); t = (t[0], t[1] + (size * .04 if not reflex else 0))
+            else: t = pt(a, rr)
+            _pts += [(t[0] - size * .05, t[1] - size * .05), (t[0] + size * .05, t[1] + size * .06)]
+            out.append(f'<text x="{t[0]:.1f}" y="{t[1] + 10:.1f}" text-anchor="middle" font-size="{size * .09:.0f}" font-weight="800" fill="#14305C" font-family="Readex Pro,Tahoma,sans-serif">{n}</text>')
+    pad = size * .05
+    x0 = min(p[0] for p in _pts) - pad; x1 = max(p[0] for p in _pts) + pad; y0 = min(p[1] for p in _pts) - pad; y1 = max(p[1] for p in _pts) + pad
+    if sub:
+        out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{y1 + size * .09:.0f}" text-anchor="middle" font-size="{size * .085:.0f}" font-weight="800" fill="#14305C" font-family="Readex Pro,Tahoma,sans-serif">{sub}</text>'); y1 += size * .13
+    vw, vh = x1 - x0, y1 - y0
+    return f'<svg class="svgfig ang" viewBox="{x0:.1f} {y0:.1f} {vw:.1f} {vh:.1f}" width="{vw:.0f}" height="{vh:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
+
+def XL(theta=35, labels=('أ', 'ب', 'ج', 'ء'), colors=('#2563EB', '#DB2777', '#2563EB', '#DB2777'), size=420, perp=False):
+    # خطّان مستقيمان متقاطعان بزاوية theta؛ الزوايا الأربع حول التقاطع: labels بالترتيب (أ أعلى، ب يسار، ج أسفل، ء يمين).
+    # الزاويتان المتقابلتان بالرأس بلون واحد. perp=True: خطّان متعامدان بمربّعات قائمة.
+    if perp: theta = 90
+    W, H = size, size * .75; cx, cy = W / 2, H / 2; L = size * .46
+    def pt(a, r): return cx + r * _m.cos(_m.radians(a)), cy - r * _m.sin(_m.radians(a))
+    a1, a2 = 90 - theta / 2, 90 + theta / 2
+    lines = [(a1, a1 + 180), (a2, a2 + 180)]
+    out = []
+    order = [(a1, a2), (a2, a1 + 180), (a1 + 180, a2 + 180), (a2 + 180, a1 + 360)]   # أعلى، يسار، أسفل، يمين
+    r = size * .12
+    for (s0, s1), lab, col in zip(order, labels, colors):
+        if perp:
+            k = size * .06; q1, q2 = pt(s0, k), pt(s1, k); q3 = (q1[0] + q2[0] - cx, q1[1] + q2[1] - cy)
+            out.append(f'<path d="M{q1[0]:.1f},{q1[1]:.1f} L{q3[0]:.1f},{q3[1]:.1f} L{q2[0]:.1f},{q2[1]:.1f}" fill="none" stroke="{col}" stroke-width="4"/>')
+        else:
+            p1, p2 = pt(s0, r), pt(s1, r)
+            out.append(f'<path d="M{cx},{cy} L{p1[0]:.1f},{p1[1]:.1f} A{r},{r} 0 0 0 {p2[0]:.1f},{p2[1]:.1f} Z" fill="{col}2A" stroke="{col}" stroke-width="3"/>')
+        if lab:
+            t = pt((s0 + s1) / 2, r + size * .07)
+            out.append(f'<text x="{t[0]:.1f}" y="{t[1] + 11:.1f}" text-anchor="middle" direction="rtl" font-size="{size * .075:.0f}" font-weight="800" fill="{col}" font-family="Readex Pro,Tahoma,sans-serif">{lab}</text>')
+    for b, e in lines:
+        p, q = pt(b, L), pt(e, L)
+        out.append(f'<line x1="{p[0]:.1f}" y1="{p[1]:.1f}" x2="{q[0]:.1f}" y2="{q[1]:.1f}" stroke="#14305C" stroke-width="5" stroke-linecap="round"/>')
+    return f'<svg class="svgfig ang" viewBox="0 {-size * .08:.0f} {W} {H + size * .16:.0f}" width="{W}" height="{H + size * .16:.0f}" xmlns="http://www.w3.org/2000/svg">' + ''.join(out) + '</svg>'
