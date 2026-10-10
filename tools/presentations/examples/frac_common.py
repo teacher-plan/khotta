@@ -99,3 +99,16 @@ def QBAR(total, den, num, unit='', color='#16A34A', w=900):
 FRAC_CSS += '''
 .slide .svgfig.qbar{width:min(1400px,80vw);height:auto;max-height:46vh}
 '''
+
+def DEC(s):
+    # كسرٌ عشري بأرقامٍ عربية وفاصلة ٫؛ الرقم المسبوق بـ ^ تعلوه نقطة التكرار: DEC('0.^6^3') ← ٠٫٦̇٣̇
+    out, dot = [], False
+    for ch in s:
+        if ch == '^': dot = True; continue
+        c = _a(ch)
+        out.append(f'<span class="dot">{c}</span>' if dot else c); dot = False
+    return '<span class="dec">' + ''.join(out) + '</span>'
+FRAC_CSS += '''
+.dec{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.dot{position:relative;display:inline-block}.dot::after{content:'•';position:absolute;top:-.62em;left:50%;transform:translateX(-50%);font-size:.6em;color:#DB2777}
+'''
