@@ -44,6 +44,7 @@
 | مراجعة الوحدة الخامسة | `1yfEwnpfYQCo_9JjFNJWfOyPQdrPdLDHs` | https://claude.ai/artifact/3o3yuSVW6oCRfgegGRnvbw |
 | ٦-١ تبسيط الكسور | `1VdrxjQf84Xps_-Zt1NZfr5YU7uB62Ii3` | https://claude.ai/artifact/HFK1tu374aHYPAwHjz7pqK |
 | ٦-٢ مقارنة الكسور | `1okZvbMS7md7csofgESrbXBu4QN3rqg_V` | https://claude.ai/artifact/9njyDY7eq6u8tox5GN3svn |
+| ٦-٣ الكسور غير الاعتيادية والأعداد الكسرية | `17AVLUMz3egqfE2PYHN2zt17RHEbP60B_` | https://claude.ai/artifact/WZNdXUcM8WBXtgrXhxJu3T |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد

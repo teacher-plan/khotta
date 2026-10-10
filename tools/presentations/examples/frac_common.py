@@ -71,3 +71,13 @@ FRAC_CSS += '''
 .slide .box.col>.m,.slide .box.col>b>.m{font-size:clamp(40px,8vh,96px)}
 .slide .box.col>b{font-size:clamp(28px,5.4vh,64px)}
 '''
+
+def MX(w, n, d): return f'<span class="mx">{w}{FR(n, d)}</span>'   # عددٌ كسري: العدد الكامل يمين الكسر (كما في الكتاب)
+def WHOLES(den, num, rows=1, color='#F59E0B'):
+    # num جزءاً من أجزاءٍ حجمها 1/den موزّعة على مستطيلاتٍ متطابقة (كل مستطيلٍ واحدٌ صحيح)؛ يبدأ التظليل من المستطيل الأيمن
+    k = max(1, -(-num // den)); return '<div class="wholes">' + ''.join(FBAR(den, min(den, num - i * den), rows=rows, color=color, label=False, w=260 if rows > 1 else 300) for i in range(k)) + '</div>'
+FRAC_CSS += '''
+.mx{display:inline-flex;align-items:center;gap:.12em;direction:rtl;unicode-bidi:isolate}
+.wholes{display:flex;gap:1.6vw;justify-content:center;align-items:center;direction:rtl}
+.slide .wholes .svgfig.fbar{height:min(30vh,280px);width:auto;max-width:26vw}
+'''
