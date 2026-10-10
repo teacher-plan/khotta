@@ -46,6 +46,7 @@
 | ٦-٢ مقارنة الكسور | `1okZvbMS7md7csofgESrbXBu4QN3rqg_V` | https://claude.ai/artifact/9njyDY7eq6u8tox5GN3svn |
 | ٦-٣ الكسور غير الاعتيادية والأعداد الكسرية | `17AVLUMz3egqfE2PYHN2zt17RHEbP60B_` | https://claude.ai/artifact/WZNdXUcM8WBXtgrXhxJu3T |
 | ٦-٤ جمع الكسور وطرحها | `1jgTrlcW7X_SblvmKaFfWOe5AIQMjrVrC` | https://claude.ai/artifact/Gi5HpVwzx1GqVLJuQHK2a7 |
+| ٦-٥ استخدام الكسور مع الكميات | `1jY8P48LrUSvhe0s03CvOweOo9Hxq8SPu` | https://claude.ai/artifact/M3BTrsMeiu6KnShKXvegYT |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد

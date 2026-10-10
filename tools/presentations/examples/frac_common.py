@@ -81,3 +81,21 @@ FRAC_CSS += '''
 .wholes{display:flex;gap:1.6vw;justify-content:center;align-items:center;direction:rtl}
 .slide .wholes .svgfig.fbar{height:min(30vh,280px);width:auto;max-width:26vw}
 '''
+
+def QBAR(total, den, num, unit='', color='#16A34A', w=900):
+    # نموذج الشريط لكسرٍ من كمية: شريطٌ طوله الكمية (مكتوبةٌ فوقه) مقسومٌ إلى den جزءاً، في كلٍّ منها total/den، ويُظلَّل num جزءاً من اليمين ويُكتب ناتجها تحته
+    part = total // den; cw = w / den; h = 110; y0 = 70; out = []
+    out.append(f'<path d="M4,{y0 - 14} L4,{y0 - 30} L{w + 4},{y0 - 30} L{w + 4},{y0 - 14}" fill="none" stroke="#0E1B33" stroke-width="4"/>')
+    out.append(f'<text x="{w / 2 + 4}" y="{y0 - 40}" text-anchor="middle" direction="rtl" font-size="44" {_FF} fill="#0E1B33">{_a(total)} {unit}</text>')
+    for i in range(den):
+        x = 4 + w - (i + 1) * cw; sh = i < num
+        out.append(f'<rect x="{x:.1f}" y="{y0}" width="{cw:.1f}" height="{h}" fill="{color if sh else "#fff"}" stroke="#334155" stroke-width="3"/>')
+        if den <= 12: out.append(f'<text x="{x + cw / 2:.1f}" y="{y0 + h / 2 + 15}" text-anchor="middle" font-size="{40 if den <= 8 else 30}" {_FF} fill="{"#fff" if sh else "#334155"}">{_a(part)}</text>')
+    out.append(f'<rect x="4" y="{y0}" width="{w}" height="{h}" fill="none" stroke="#0E1B33" stroke-width="5"/>')
+    xs = 4 + w - num * cw
+    out.append(f'<path d="M{xs:.1f},{y0 + h + 14} L{xs:.1f},{y0 + h + 30} L{w + 4},{y0 + h + 30} L{w + 4},{y0 + h + 14}" fill="none" stroke="{color}" stroke-width="4"/>')
+    out.append(f'<text x="{(xs + w + 4) / 2:.1f}" y="{y0 + h + 76}" text-anchor="middle" direction="rtl" font-size="44" {_FF} fill="{color}">{_a(part * num)} {unit}</text>')
+    return f'<svg class="svgfig qbar" viewBox="0 0 {w + 8} {y0 + h + 92}" width="{w + 8}" xmlns="http://www.w3.org/2000/svg" style="direction:ltr">{"".join(out)}</svg>'
+FRAC_CSS += '''
+.slide .svgfig.qbar{width:min(1400px,80vw);height:auto;max-height:46vh}
+'''
