@@ -249,7 +249,7 @@ def FCIRC(den, sh, color='#2563EB', size=240):
     out.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#0E1B33" stroke-width="5"/>')
     return f'<svg class="svgfig fcirc" viewBox="0 0 240 240" width="{size}" xmlns="http://www.w3.org/2000/svg">{"".join(out)}</svg>'
 
-def NLINE(den, marks, lo=0, hi=1, w=900, colors=('#2563EB', '#DB2777', '#16A34A', '#F59E0B')):
+def NLINE(den, marks, lo=0, hi=1, w=900, colors=('#2563EB', '#DB2777', '#16A34A', '#F59E0B'), red=0):
     # خط أعداد من lo إلى hi مقسومٌ إلى أجزاء (den لكل واحد)؛ marks: [(موضع بعدد الأجزاء, بسط, مقام)] تُكتب تحت الخط بالترتيب يساراً ← يميناً
     n = (hi - lo) * den; x0, x1 = 40, w - 40; y = 70; out = []
     out.append(f'<line x1="{x0}" y1="{y}" x2="{x1}" y2="{y}" stroke="#0E1B33" stroke-width="5"/>')
@@ -257,6 +257,9 @@ def NLINE(den, marks, lo=0, hi=1, w=900, colors=('#2563EB', '#DB2777', '#16A34A'
         x = x0 + (x1 - x0) * i / n; big = i % den == 0
         out.append(f'<line x1="{x:.1f}" y1="{y - (26 if big else 16)}" x2="{x:.1f}" y2="{y + (26 if big else 16)}" stroke="#0E1B33" stroke-width="{5 if big else 3}"/>')
         if big: out.append(f'<text x="{x:.1f}" y="{y - 36}" text-anchor="middle" font-size="40" {_FF} fill="#0E1B33">{_a(lo + i // den)}</text>')
+    for i in range(1, (hi - lo) * red if red else 0):   # علاماتٌ حمراء لتقسيمٍ ثانٍ (مثل الأرباع فوق الأثمان)
+        x = x0 + (x1 - x0) * i / ((hi - lo) * red)
+        out.append(f'<line x1="{x:.1f}" y1="{y - 34}" x2="{x:.1f}" y2="{y}" stroke="#DC2626" stroke-width="5"/>')
     for j, (pos, a, b) in enumerate(marks):
         x = x0 + (x1 - x0) * pos / n; c = colors[j % len(colors)]
         out.append(f'<circle cx="{x:.1f}" cy="{y}" r="11" fill="{c}"/>')

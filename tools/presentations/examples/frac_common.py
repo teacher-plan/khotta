@@ -7,7 +7,8 @@ def STP(lab, expr='', cls=''): return st(f'<div class="stp {cls}"><span class="l
 def STEPS(*rows): return '<div class="stps">' + ''.join(rows) + '</div>'
 def VC(items, cls=''): return f'<div class="voc3 {cls}">' + ''.join(st(f'<div><b>{w}</b><i>{e}</i><span>{d}</span></div>') for w, e, d in items) + '</div>'
 def FLIPS(items, style='flex:1'):
-    return '<div class="row">' + ''.join(st(f'<button class="flip box col" style="{style}">{q}<span class="tap">👆</span><span class="hid col"><span class="kk c-we">{a_}</span><span class="why">{w}</span></span></button>') for q, a_, w in items) + '</div>'
+    items = [tuple(x) + ('',) * (3 - len(x)) for x in items]   # السبب (العنصر الثالث) اختياري
+    return '<div class="row">' + ''.join(st(f'<button class="flip box col" style="{style}">{q}<span class="tap">👆</span><span class="hid col"><span class="kk c-we">{a_}</span>' + (f'<span class="why">{w}</span>' if w else '') + '</span></button>') for q, a_, w in items) + '</div>'
 MI = '<span class="x">−</span>'; DV = '<span class="x">÷</span>'; X = '<span class="x">×</span>'
 
 FRAC_CSS = FIG_CSS + '''
@@ -51,4 +52,22 @@ FRAC_CSS = FIG_CSS + '''
 .xq .fig.lg{height:auto;width:min(1100px,80vw);max-height:48vh}
 .xa small{display:block}
 @media (max-aspect-ratio:1/1){.voc3,.sumg{grid-template-columns:1fr}.slide .svgfig.eqv{max-width:80vw}}
+'''
+
+def LDIV(dvd, dvs, q='', size=420):
+    # القسمة المطوّلة كما في الكتاب: المقسوم عليه يميناً خلف الخط العمودي، والمقسوم تحت الخط، والناتج فوقه (أرقامٌ عربية، والفاصلة ٫)
+    n = max(len(dvd), len(q)); cw = 44; W = n * cw + 150; xr = W - 110
+    out = [f'<line x1="{xr}" y1="78" x2="10" y2="78" stroke="#0E1B33" stroke-width="5"/>',
+           f'<path d="M{xr},78 Q{xr + 16},112 {xr},146" fill="none" stroke="#0E1B33" stroke-width="5"/>',
+           f'<text x="{xr + 60}" y="132" text-anchor="middle" font-size="60" {_FF} fill="#DB2777">{_a(dvs)}</text>',
+           f'<text x="{xr - 18}" y="132" text-anchor="end" font-size="60" {_FF} fill="#0E1B33" style="letter-spacing:6px">{_a(dvd)}</text>']
+    if q: out.append(f'<text x="{xr - 18}" y="62" text-anchor="end" font-size="60" {_FF} fill="#16A34A" style="letter-spacing:6px">{_a(q)}</text>')
+    return f'<svg class="svgfig ldiv" viewBox="0 0 {W} 160" width="{size}" xmlns="http://www.w3.org/2000/svg" style="direction:ltr">{"".join(out)}</svg>'
+FRAC_CSS += '''
+.slide .svgfig.ldiv{width:auto;height:min(30vh,280px);max-width:46vw;max-height:none}
+.slide .svgfig.nline{width:min(1500px,86vw);height:auto;max-height:none}
+'''
+FRAC_CSS += '''
+.slide .box.col>.m,.slide .box.col>b>.m{font-size:clamp(40px,8vh,96px)}
+.slide .box.col>b{font-size:clamp(28px,5.4vh,64px)}
 '''

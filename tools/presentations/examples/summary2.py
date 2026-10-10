@@ -94,5 +94,6 @@ def build(out, title, pages):
     text = re.sub(r'<[^>]+>', ' ', html)
     bad = [m.group(0) for m in BAD_DASH.finditer(text)]
     assert not bad, f'شَرطة فاصلة في الملخّص: {bad[:3]}'
+    html = re.sub(r'&(lt|gt);', lambda m: f'&#x200e;&{m[1]};&#x200e;', html)   # < و > كما في الكتاب: لا تنعكسان في النص العربي
     open(out, 'w', encoding='utf-8').write(f'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>{title}</title><style>{CSS}</style></head><body>{html}</body></html>')
     print(out)
