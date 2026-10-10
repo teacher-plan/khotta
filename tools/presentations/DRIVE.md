@@ -50,6 +50,7 @@
 | ٦-٦ تحويل الكسور إلى كسور عشرية | `1ep5NscTYiC3ZOkGswH4H07GVLHOofHmp` | https://claude.ai/artifact/K1Ajfz2Ed5g8nTZpsyPA6t |
 | ٦-٧ ترتيب الكسور | `1eNS-4tYY1vmzjgIB0JpWvXt9c80UMPDF` | https://claude.ai/artifact/UnZh9PUJZFCcV9NmgcHamB |
 | ٦-٨ حساب الباقي | `1A8wtv7ctB5iGY03Pe5AlXWTOlafHuLz0` | https://claude.ai/artifact/GcVY35jicP8hN8qWezH3hM |
+| مراجعة الوحدة السادسة | `1xS5lh2J7UMpuR8bhhGE594CoZ5EM1K6w` | https://claude.ai/artifact/4eQgPE9jbJTyWS21Dqc2P5 |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد
