@@ -43,6 +43,7 @@
 | ٥-٤ الخطوط المتوازية | `1QyXcbBrqeatAE2r4oWj-qBtxu6CM00g8` | https://claude.ai/artifact/GAcKBEpYA3BDnw6Ad8yH9P |
 | مراجعة الوحدة الخامسة | `1yfEwnpfYQCo_9JjFNJWfOyPQdrPdLDHs` | https://claude.ai/artifact/3o3yuSVW6oCRfgegGRnvbw |
 | ٦-١ تبسيط الكسور | `1VdrxjQf84Xps_-Zt1NZfr5YU7uB62Ii3` | https://claude.ai/artifact/HFK1tu374aHYPAwHjz7pqK |
+| ٦-٢ مقارنة الكسور | `1okZvbMS7md7csofgESrbXBu4QN3rqg_V` | https://claude.ai/artifact/9njyDY7eq6u8tox5GN3svn |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 
 ## لكل درسٍ جديد
