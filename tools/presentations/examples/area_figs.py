@@ -255,3 +255,20 @@ def SECTORS(n=16, r=150, cls='svgfig shp lg'):
     c.o.append(f'<defs><marker id="as" viewBox="0 0 10 10" markerWidth="4" markerHeight="4" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0E1B33"/></marker></defs>')
     c.line((r + 20, 0), (x0 - 80, 0), '#0E1B33', 5, marker=' marker-end="url(#as)"')
     return c.svg(cls)
+
+def DRAW(spec, k=34, cls='svgfig shp', fs=30):
+    # رسمٌ مركّب بمواصفاتٍ بسيطة (الإحداثيات بالوحدات، و y للأسفل):
+    # ('P', نقاط، لون) مضلّع · ('C', x, y, r، لون) دائرة · ('H', x, y, r، لون) نصف دائرة علوية قطرها أفقي ·
+    # ('T', x, y، نص، لون) نص · ('D', p, q) خطّ تقسيم متقطّع · ('M', p, q) خطّ قياس متقطّع رمادي
+    c = _C(); S_ = lambda p: (p[0] * k, p[1] * k)
+    for it in spec:
+        t = it[0]
+        if t == 'P': c.poly([S_(p) for p in it[1]], it[2] if len(it) > 2 else '#DBEAFE')
+        elif t == 'C': c.circle(it[1] * k, it[2] * k, it[3] * k, it[4] if len(it) > 4 else '#fff')
+        elif t == 'H':
+            x, y, r = it[1] * k, it[2] * k, it[3] * k
+            c.path(f'M{x - r:.1f},{y:.1f} A{r:.1f},{r:.1f} 0 0 1 {x + r:.1f},{y:.1f} Z', it[4] if len(it) > 4 else '#BBF7D0', '#1E3A5F', 5, pts=[(x - r, y), (x + r, y), (x, y - r)])
+        elif t == 'T': c.text(it[1] * k, it[2] * k, it[3], fs, it[4] if len(it) > 4 else '#0E1B33')
+        elif t == 'D': c.line(S_(it[1]), S_(it[2]), '#DB2777', 4, '12 9')
+        elif t == 'M': c.line(S_(it[1]), S_(it[2]), '#64748B', 3, '6 6')
+    return c.svg(cls)

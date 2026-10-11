@@ -56,6 +56,7 @@
 | ٧-٣ مساحة المثلث | `1BzU2Nxny8uYFM4WFhn1eh2-I-EtNYKnp` | https://claude.ai/artifact/SFzVzdKYL76Z7hSq9rHBKc |
 | ٧-٤ مساحة متوازي الأضلاع ومساحة شبه المنحرف | `1IX7o9gQ4ZhksLhoAKD1w3vt98HD0Ss_Q` | https://claude.ai/artifact/96hH3soXhAV5ZwwmtYmvGJ |
 | ٧-٥ مساحة الدائرة ومحيطها | `1XOfuKrgWMlcn-vGr-jkV1W1ZBEE8Voi_` | https://claude.ai/artifact/1ec1Gt3KKtrpAhPbiGA4YC |
+| ٧-٦ مساحة الأشكال المركبة | `1_q5BqWgK8OCqQGTBGCb2Rq4bgym09l8E` | https://claude.ai/artifact/4WhCWqmj7sD9h61Xjy1xgx |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 | الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
 
