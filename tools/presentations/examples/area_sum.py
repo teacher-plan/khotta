@@ -11,3 +11,4 @@ CSS += '''.u2{font-size:.6em;vertical-align:super;line-height:0}
 .figrow{display:flex;gap:4mm;align-items:center}.figrow>.ex,.figrow>.rule{flex:1}.figrow>.sfig{flex:none}
 '''
 def FIX(x): return SUP2(FIXNUM([x])[0])   # أعدادٌ بمجموعات معزولة LTR، و ² أسٌّ مرفوع
+def P(n): return f'{n}٪'

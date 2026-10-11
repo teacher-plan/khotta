@@ -58,8 +58,10 @@
 | ٧-٥ مساحة الدائرة ومحيطها | `1XOfuKrgWMlcn-vGr-jkV1W1ZBEE8Voi_` | https://claude.ai/artifact/1ec1Gt3KKtrpAhPbiGA4YC |
 | ٧-٦ مساحة الأشكال المركبة | `1_q5BqWgK8OCqQGTBGCb2Rq4bgym09l8E` | https://claude.ai/artifact/4WhCWqmj7sD9h61Xjy1xgx |
 | مراجعة الوحدة السابعة | `1UQ9A48PL7tAipk5j2NmxbXAxvWf_Bi3p` | https://claude.ai/artifact/Bjrsisy3Ly6iuUjVkWCWcr |
+| ٨-١ النسب المئوية البسيطة | `1yPdr6Y8J8vEJNi9o7d-ArS292SKCgN1O` | https://claude.ai/artifact/FAqq9DPE6d97isA2b1rfX9 |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 | الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
+| الوحدة الثامنة — النسب المئوية | `1NSj3HratSOSO8v4mQDs2ts3_ZltAoO-K` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
