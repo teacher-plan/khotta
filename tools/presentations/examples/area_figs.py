@@ -84,8 +84,9 @@ def TRI(base, h, apex=0.35, B=420, H=260, fill='#DCFCE7', hl=True, sides=(), cls
 def PARA(base, h, slant=110, B=380, H=230, fill='#FEF3C7', side='', cls='svgfig shp', fs=32, hcol='#DB2777'):
     c = _C(); P = [(0, H), (B, H), (B + slant, 0), (slant, 0)]; c.poly(P, fill)
     if base: c.elab(P[0], P[1], base, -34, fs)
-    c.line((slant, 0), (slant, H), hcol, 4, '12 9'); c.right((slant, H), (0, -1), (1, 0))
-    if h: c.text(slant + 16 + len(_a(h)) * fs * .3, H / 2, h, fs, hcol)
+    hx = slant if slant >= 0 else B + slant
+    c.line((hx, 0), (hx, H), hcol, 4, '12 9'); c.right((hx, H), (0, -1), (1, 0) if slant >= 0 else (-1, 0))
+    if h: c.text(hx + (1 if slant >= 0 else -1) * (16 + len(_a(h)) * fs * .3), H / 2, h, fs, hcol)
     if side: c.elab(P[1], P[2], side, 30 + len(_a(side)) * 8, fs - 4, '#334155', -1)
     return c.svg(cls)
 
@@ -186,4 +187,32 @@ def HALVES(W=240, H=150, gap=50, cls='svgfig shp lg'):
         c.poly([(x0, H), (x0 + W, H), T], '#16A34A', '#14532D', 4)
         if 0 < ap < 1: c.line(T, (T[0], H), '#14532D', 3, '8 6')
     c.text((W * 3 + gap * 2) / 2, H + 40, 'المثلث الأخضر = نصف المستطيل', 30, '#14532D')
+    return c.svg(cls)
+
+def PARACUT(B=300, H=180, sl=90, cls='svgfig shp lg'):
+    # متوازي الأضلاع ← مستطيل: نقصّ المثلث من طرفٍ وننقله إلى الطرف الآخر (القاعدة والارتفاع نفساهما)
+    c = _C(); g = 140
+    c.poly([(0, H), (B, H), (B + sl, 0), (sl, 0)], '#FDE68A')
+    c.poly([(0, H), (sl, H), (sl, 0)], '#F59E0B', '#92400E', 4)
+    c.line((sl, 0), (sl, H), '#DB2777', 4, '12 9')
+    x0 = B + sl + g
+    c.poly([(x0, H), (x0 + B, H), (x0 + B, 0), (x0, 0)], '#FDE68A')
+    c.poly([(x0 + B - sl, H), (x0 + B, H), (x0 + B, 0)], '#F59E0B', '#92400E', 4)
+    c.line((x0 + B - sl, 0), (x0 + B - sl, H), '#92400E', 3, '8 6')
+    c.o.append(f'<defs><marker id="am" viewBox="0 0 10 10" markerWidth="4" markerHeight="4" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0E1B33"/></marker></defs>')
+    c.line((B + sl + 20, H / 2), (x0 - 20, H / 2), '#0E1B33', 6, marker=' marker-end="url(#am)"')
+    c.text(sl / 2 + B / 2, H + 34, 'القاعدة', 28); c.text(x0 + B / 2, H + 34, 'القاعدة', 28)
+    c.text(x0 + B + 70, H / 2, 'الارتفاع', 28, '#DB2777')
+    return c.svg(cls)
+
+def TRAP2(B=300, T=160, off=50, H=150, cls='svgfig shp lg'):
+    # نسختان من شبه المنحرف (إحداهما مقلوبة) تكوّنان متوازي أضلاع قاعدته ق١ + ق٢
+    c = _C()
+    c.poly([(0, H), (B, H), (off + T, 0), (off, 0)], '#BAE6FD')
+    # النسخة المقلوبة: ضلعها الطويل في الأعلى
+    c.poly([(off + T, 0), (off + T + B, 0), (B + T, H), (B, H)], '#FBCFE8')
+    c.line((off, 0), (off, H), '#DB2777', 4, '12 9')
+    c.text(B / 2, H + 34, 'ق١', 30); c.text(B + T / 2, H + 34, 'ق٢', 30, '#BE185D')
+    c.text(off + T / 2, -30, 'ق٢', 30); c.text(off + T + B / 2, -30, 'ق١', 30, '#BE185D')
+    c.text(off - 34, H / 2, 'ع', 32, '#DB2777')
     return c.svg(cls)
