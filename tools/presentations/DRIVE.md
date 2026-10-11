@@ -60,6 +60,7 @@
 | مراجعة الوحدة السابعة | `1UQ9A48PL7tAipk5j2NmxbXAxvWf_Bi3p` | https://claude.ai/artifact/Bjrsisy3Ly6iuUjVkWCWcr |
 | ٨-١ النسب المئوية البسيطة | `1yPdr6Y8J8vEJNi9o7d-ArS292SKCgN1O` | https://claude.ai/artifact/FAqq9DPE6d97isA2b1rfX9 |
 | ٨-٢ الكسور والكسور العشرية والنسب المئوية | `1SX20EnQ26pCsA593lyXwPniF_b0qnZt5` | https://claude.ai/artifact/SBRzV2XPuZH48gKxxPir3Z |
+| ٨-٣ حساب النسب المئوية من الكميات | `1mXVF-o5FLcCLsZL-omDO-w-U6RrvygZl` | https://claude.ai/artifact/WQb2mS3Yquddb7ABqBqKXJ |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 | الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
 | الوحدة الثامنة — النسب المئوية | `1NSj3HratSOSO8v4mQDs2ts3_ZltAoO-K` | |

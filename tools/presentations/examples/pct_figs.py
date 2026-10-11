@@ -48,3 +48,15 @@ def NL3(marks, w=1000, cls='svgfig shp lg', fs=40):
             c.text(x, 170, d, fs, '#BE185D')
         c.text(x, 475, p, fs, '#15803D')
     return c.svg(cls)
+
+def SPIDER(center, items, R=330, cls='svgfig spider', fs=38):
+    # شكلٌ تخطيطي: النسبة الكاملة في الوسط، والنسب الأخرى على أطراف الأذرع. items = [(الزاوية بالدرجات، النص، اللون)]
+    import math
+    c = _C(); c.path('M -170 0 A 170 62 0 1 0 170 0 A 170 62 0 1 0 -170 0 Z', '#FEF3C7', '#0E1B33', 4, pts=[(-170, -62), (170, 62)])
+    c.text(0, 14, center, fs, '#0E1B33', w=900)
+    for a, t, col in items:
+        r = math.radians(a); dx, dy = math.cos(r), -math.sin(r)
+        x0, y0 = 170 * dx, 62 * dy; x1, y1 = R * dx, R * .62 * dy
+        c.line((x0, y0), (x1, y1), '#334155', 3)
+        c.text(x1 + 60 * dx, y1 + 30 * dy + 12, t, fs, col, w=900)
+    return c.svg(cls)
