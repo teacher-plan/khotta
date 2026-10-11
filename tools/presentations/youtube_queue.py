@@ -1,10 +1,11 @@
-# رفع فيديوهات الوحدتين الثانية والثالثة إلى YouTube بدفعاتٍ يومية (حدّ الرفع ~١٠ في ٢٤ ساعة) — VIDEO.md ٥-ب.
+# رفع فيديوهات الوحدات ٢ و٣ و٥ و٦ إلى YouTube بدفعاتٍ يومية (حدّ الرفع ~١٠ في ٢٤ ساعة) — VIDEO.md ٥-ب.
 #   python3 youtube_queue.py      ← يرفع من Drive بالترتيب ما ليس في قائمة وحدته بعد، مع الصورة المصغّرة، ويتوقّف عند الحدّ.
 # بلا ملف حالة: ما في القائمة يُعدّ مرفوعاً. الصور المصغّرة وغلافا القائمتين تُرسم بـ youtube_art.py عند الحاجة.
 import os, sys, json, glob, subprocess, requests
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); import youtube_upload as Y
 ART = '/tmp/yt_art'
-U = {2: ('الثانية', 'العبارات الجبرية والمعادلات والصيغ'), 3: ('الثالثة', 'الأعداد العشرية والكسور العشرية')}
+U = {2: ('الثانية', 'العبارات الجبرية والمعادلات والصيغ'), 3: ('الثالثة', 'الأعداد العشرية والكسور العشرية'),
+     5: ('الخامسة', 'الزوايا'), 6: ('السادسة', 'الكسور (١)')}
 J = [('2-1','٢-١','كتابة العبارات الجبرية','1hXBvU5SbaY0b1Fa91WuQmEziCd2U4AT0'),('2-2','٢-٢','تجميع الحدود المتشابهة','1rV86usu3lrzbv6gtYyQrssIAzRIOs-sM'),
  ('2-3','٢-٣','فك الأقواس','1FPAEhq0pjv-zM6ze4FVGBKP_4SaqSuom'),('2-4','٢-٤','استنتاج واستخدام الصيغ','1ciHWgcQV9oJE6DTPctuehSZjj5TI2ZP2'),
  ('2-5','٢-٥','كتابة المعادلات وحلها','12kmUnAwRzqlrrWO_0WachZwF0SMFDWVq'),('2-r','','','1LDbr4ondbvLytWZMFfDKuI-yhM7wIgIE'),
@@ -12,7 +13,15 @@ J = [('2-1','٢-١','كتابة العبارات الجبرية','1hXBvU5SbaY0b1
  ('3-3','٣-٣','جمع الأعداد العشرية والكسور العشرية وطرحها','1C-WScQ0F4KxqtVtu-KD-Y9c2UuJ8Rub2'),('3-4','٣-٤','ضرب الأعداد العشرية والكسور العشرية','1Bkazi7Sb6yztp9GEc7XIq1b3KHInAt3C'),
  ('3-5','٣-٥','قسمة الأعداد العشرية والكسور العشرية (١)','1CmVhw3oIQv589Tx1mmIbidaZccGJ7KEn'),('3-6','٣-٦','قسمة الأعداد العشرية والكسور العشرية (٢)','1vZymzNkdTZQK0evRmZG75Ysm4rhqrBXs'),
  ('3-7','٣-٧','الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما','1yE_DXtU_Xi6zbk8S-lCwAwDcQIGKpxEG'),('3-8','٣-٨','التقدير والتقريب','1pzcsw3PHDJTME8uPcdzDMNn2TCBPNMV-'),
- ('3-r','','','1EJJllpr1gblu_zdL8ae2_PD3HabwMAhq')]
+ ('3-r','','','1EJJllpr1gblu_zdL8ae2_PD3HabwMAhq'),
+ ('5-1','٥-١','تسمية الزوايا وتقديرها','1ijSosAYc9i3uVuKq-dol4TRmnbF_v_V0'),('5-2','٥-٢','قياسات الزوايا','16xC5KZ4VOftuoYMnUKJAjVePnQsr1Sny'),
+ ('5-3','٥-٣','حل مسائل الزوايا','1PuudgOFXGN78d65OqYcSxl8cvMEREA89'),('5-4','٥-٤','الخطوط المتوازية','1iEtKlpn3MkdQNvn6W5K2F34gRRfDqdWP'),
+ ('5-r','','','1bEPd2BHRlcTLXgupNY3ngIspg7hgGy5G'),
+ ('6-1','٦-١','تبسيط الكسور','1iLnQKBw-u305UiUeZSnrJLx9NAIueBdS'),('6-2','٦-٢','مقارنة الكسور','12UXwLEaLlkU6avyBHXaBDY98e5V2H7te'),
+ ('6-3','٦-٣','الكسور غير الاعتيادية والأعداد الكسرية','1mj782vDKhWNSetX8x_JbfsQ1O7PQKe_p'),('6-4','٦-٤','جمع الكسور وطرحها','1RAGgw77mwE0yMkAPr0qnQBYFMa6dPcLr'),
+ ('6-5','٦-٥','استخدام الكسور مع الكميات','1w7Ceg9YoK1iEUETboTXInbGsI39gZ0eS'),('6-6','٦-٦','تحويل الكسور إلى كسور عشرية','18Vwz0TobBfP8im84jB7k5RqCyTwrAg7O'),
+ ('6-7','٦-٧','ترتيب الكسور','18GkEU65aSpwkWW0j3IrLM9YvwLrWeyOQ'),('6-8','٦-٨','حساب الباقي','1xHQFbQL6-Qmub0NQGhBC0PzSdf6DSoAN'),
+ ('6-r','','','1M3czAqnFX4xFnA-pOUgG5kWinUMVaHTW')]
 
 def art(name):
     p = f'{ART}/{name}.jpg'
