@@ -78,7 +78,7 @@ def TRI(base, h, apex=0.35, B=420, H=260, fill='#DCFCE7', hl=True, sides=(), cls
         c.right(foot, (0, -1), (1, 0) if apex <= 0.5 else (-1, 0))
         if h: c.text(T[0] + (1 if apex < .5 else -1) * (14 + len(_a(h)) * fs * .3), H / 2 + 10, h, fs, hcol)
     for i, t in sides:   # تسمية الأضلاع المائلة: ٠ الأيسر، ١ الأيمن
-        p, q = (A, T) if i == 0 else (T, Bp); c.elab(p, q, t, 30 + len(_a(t)) * 8, fs - 4, '#334155', -1 if i == 1 else 1)
+        p, q = (A, T) if i == 0 else (T, Bp); c.elab(p, q, t, 30 + len(_a(t)) * 8, fs - 4, '#334155', 1)
     return c.svg(cls)
 
 def PARA(base, h, slant=110, B=380, H=230, fill='#FEF3C7', side='', cls='svgfig shp', fs=32, hcol='#DB2777'):
@@ -176,3 +176,14 @@ def FIXNUM(S):
 _TAGS = re.compile(r'(<[^>]+>)')
 def SUP2(x):   # ² في النص فقط (لا داخل سمات الوسوم مثل data-why) ← أسٌّ مرفوع
     return ''.join(q if q.startswith('<') else q.replace('²', '<sup class="u2">٢</sup>') for q in _TAGS.split(x))
+
+def HALVES(W=240, H=150, gap=50, cls='svgfig shp lg'):
+    # المثلث نصف المستطيل المحيط به: ثلاث حالات (قائم، رأسه في المنتصف، رأسه قرب الطرف) والجزءان الخارجيان باللون الفاتح
+    c = _C()
+    for k, ap in enumerate((0, .5, .85)):
+        x0 = k * (W + gap); T = (x0 + W * ap, 0)
+        c.poly([(x0, 0), (x0 + W, 0), (x0 + W, H), (x0, H)], '#D1FAE5', '#475569', 3, '9 7')
+        c.poly([(x0, H), (x0 + W, H), T], '#16A34A', '#14532D', 4)
+        if 0 < ap < 1: c.line(T, (T[0], H), '#14532D', 3, '8 6')
+    c.text((W * 3 + gap * 2) / 2, H + 40, 'المثلث الأخضر = نصف المستطيل', 30, '#14532D')
+    return c.svg(cls)

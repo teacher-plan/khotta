@@ -21,8 +21,8 @@ AREA_CSS = FRAC_CSS + '''
 .box.col .svgfig.shp{height:min(36vh,340px);max-width:40vw}
 .xq .svgfig.shp{display:block;margin:.4vh auto;height:26vh;width:auto;max-width:90%}
 .slide .svgfig.stair{width:auto;height:min(54vh,540px);max-width:92vw;max-height:none}
-.fml{display:flex;align-items:center;justify-content:center;gap:.4em;flex-wrap:wrap;font-family:var(--fh);font-weight:900;font-size:clamp(34px,7vh,80px);background:#FFF6E3;border:4px solid #E9A23B;border-radius:22px;padding:1vh 2vw;color:var(--ink)}
-.fml small{font-size:.5em;color:var(--ink2);font-weight:700}
+.fml{display:block;line-height:1.7;text-align:center;font-family:var(--fh);font-weight:900;font-size:clamp(34px,7vh,80px);background:#FFF6E3;border:4px solid #E9A23B;border-radius:22px;padding:1vh 2vw;color:var(--ink)}
+.fml small{display:block;font-size:.5em;color:var(--ink2);font-weight:700}
 .act{border-collapse:separate;border-spacing:0;font-weight:800;font-size:clamp(22px,4vh,46px);background:#fff;border:3px solid var(--ink);border-radius:14px;overflow:hidden;width:min(1300px,92vw)}
 .act th{background:var(--ink);color:#fff;padding:.3em .6em}.act td{text-align:center;padding:.25em .6em;border-top:2px solid var(--line)}.act td+td,.act th+th{border-inline-start:2px solid var(--line)}
 .act .hid{display:none}.act .open .hid,.act td.flip.open .hid{display:inline}
