@@ -30,3 +30,21 @@ def GRIDN(rows, cols, shaded, col='#B8A97E', cell=50, cls='svgfig shp'):
             c.poly([(q * cell, r * cell), ((q + 1) * cell, r * cell), ((q + 1) * cell, (r + 1) * cell), (q * cell, (r + 1) * cell)], col if (r, q) in S_ else '#fff', '#334155', 2)
     c.poly([(0, 0), (cols * cell, 0), (cols * cell, rows * cell), (0, rows * cell)], 'none', '#0E1B33', 4)
     return c.svg(cls)
+
+def NL3(marks, w=1000, cls='svgfig shp lg', fs=40):
+    # خط أعدادٍ ثلاثي: كسور عشرية (أعلى)، كسور (وسط)، نسب مئوية (أسفل). marks = [(القيمة ٠..١، عشري، (بسط، مقام)، نسبة)]
+    c = _C(); ys = (60, 230, 400)
+    for y in ys:
+        c.poly([(0, y), (w, y), (w, y + 22), (0, y + 22)], '#BBF7D0', '#15803D', 2)
+    for y, t in zip(ys, ('كسور عشرية', 'كسور', 'نسب مئوية')):
+        c.text(w + 110, y + 20, t, 32, '#334155')
+    for v, d, fr, p in marks:
+        x = w * v
+        c.line((x, 10), (x, 430), '#64748B', 2, '5 6')
+        c.text(x, 40, d, fs, '#1D4ED8')
+        if fr:
+            n, q = fr; c.text(x, 140, n, fs, '#BE185D'); c.line((x - 22, 152), (x + 22, 152), '#BE185D', 3); c.text(x, 195, q, fs, '#BE185D')
+        else:
+            c.text(x, 170, d, fs, '#BE185D')
+        c.text(x, 475, p, fs, '#15803D')
+    return c.svg(cls)
