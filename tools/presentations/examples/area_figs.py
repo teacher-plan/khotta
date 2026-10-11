@@ -117,16 +117,18 @@ def CIRC(r=150, show=('r',), lab=None, fill='#FEF3C7', cls='svgfig shp', fs=32):
         a1, a2 = P(100), P(160); c.path(f'M{a1[0]:.1f},{a1[1]:.1f} A{r},{r} 0 0 0 {a2[0]:.1f},{a2[1]:.1f}', 'none', '#16A34A', 10)
         p = P(130, r + 36); c.text(p[0], p[1], lab.get('arc', 'قوس'), fs, '#15803D')
     if 'd' in show:
-        c.line(P(180), P(0), '#2563EB', 6); c.text(cx + r * .45, cy + 30, lab.get('d', 'القطر'), fs, '#1D4ED8')
+        c.line(P(180), P(0), '#2563EB', 6); c.text(cx - r * .5, cy - 28, lab.get('d', 'القطر'), fs, '#1D4ED8')
     if 'r' in show:
         q = P(-40) if 'd' in show else P(0)
         c.line((cx, cy), q, '#DB2777', 6); m = ((cx + q[0]) / 2, (cy + q[1]) / 2)
-        c.text(m[0] + (22 if 'd' in show else 0), m[1] + (30 if 'd' in show else -28), lab.get('r', 'نصف القطر'), fs, '#BE185D')
+        t_ = lab.get('r', 'نصف القطر')
+        if 'd' in show: c.text(m[0] - len(_a(t_)) * fs * .32 - 8, m[1] + 22, t_, fs, '#BE185D')
+        else: c.text(m[0], m[1] - 28, t_, fs, '#BE185D')
     if 'ch' in show:
         a1, a2 = P(215), P(325); c.line(a1, a2, '#7C3AED', 6); c.text(cx, a1[1] + 30, lab.get('ch', 'وتر'), fs, '#6D28D9')
     if 'c' in show or 'r' in show or 'd' in show:
         c.dot(cx, cy)
-        if 'c' in show: c.text(cx - 6, cy - 30, lab.get('c', 'المركز'), fs - 4, '#0E1B33')
+        if 'c' in show: c.text(cx + r * .42, cy - 30, lab.get('c', 'المركز'), fs - 4, '#0E1B33')
     return c.svg(cls)
 
 def COMP(pts, labels=(), cuts=(), fills=None, fill='#DBEAFE', cls='svgfig shp', fs=30, rights=True, regions=()):
@@ -215,4 +217,41 @@ def TRAP2(B=300, T=160, off=50, H=150, cls='svgfig shp lg'):
     c.text(B / 2, H + 34, 'ق١', 30); c.text(B + T / 2, H + 34, 'ق٢', 30, '#BE185D')
     c.text(off + T / 2, -30, 'ق٢', 30); c.text(off + T + B / 2, -30, 'ق١', 30, '#BE185D')
     c.text(off - 34, H / 2, 'ع', 32, '#DB2777')
+    return c.svg(cls)
+
+def SEMI(lab, r=160, fill='#BBF7D0', cls='svgfig shp', fs=34, show='d'):
+    # نصف دائرة: show='d' القطر مسمّى أسفلها، 'r' نصف القطر
+    c = _C(); c.path(f'M{-r},0 A{r},{r} 0 0 1 {r},0 Z', fill, '#1E3A5F', 5, pts=[(-r, 0), (r, 0), (0, -r)])
+    if show == 'd': c.text(0, 36, lab, fs)
+    else: c.line((0, 0), (r, 0), '#DB2777', 5); c.dot(0, 0, 6); c.text(r / 2, 34, lab, fs, '#BE185D')
+    return c.svg(cls)
+
+def QUAR(lab, r=200, fill='#BAE6FD', cls='svgfig shp', fs=34, frac=1):
+    # ربع دائرة (frac=1) أو ثلاثة أرباع (frac=3)، ونصف القطر مسمّى
+    c = _C()
+    if frac == 1:
+        c.path(f'M0,0 L0,{-r} A{r},{r} 0 0 1 {r},0 Z', fill, '#1E3A5F', 5, pts=[(0, 0), (0, -r), (r, 0)])
+        c.right((0, 0), (0, -1), (1, 0)); c.text(-14 - len(_a(lab)) * fs * .3, -r / 2, lab, fs)
+    else:
+        c.path(f'M0,0 L{r},0 A{r},{r} 0 1 1 0,{-r} Z', fill, '#1E3A5F', 5, pts=[(-r, -r), (r, r)])
+        c.right((0, 0), (0, -1), (1, 0)); c.text(r / 2, -26, lab, fs)
+    return c.svg(cls)
+
+def SECTORS(n=16, r=150, cls='svgfig shp lg'):
+    # نقسم الدائرة قطاعات ونعيد ترتيبها: شكلٌ قريب من مستطيل طوله نصف المحيط (π نق) وعرضه نق
+    c = _C(); cols = ('#FDE68A', '#93C5FD')
+    for k in range(n):
+        a1, a2 = 2 * _mm.pi * k / n, 2 * _mm.pi * (k + 1) / n
+        p1 = (r * _mm.cos(a1), -r * _mm.sin(a1)); p2 = (r * _mm.cos(a2), -r * _mm.sin(a2))
+        c.path(f'M0,0 L{p1[0]:.1f},{p1[1]:.1f} A{r},{r} 0 0 0 {p2[0]:.1f},{p2[1]:.1f} Z', cols[k < n // 2], '#334155', 2, pts=[p1, p2, (0, 0)])
+    w = 2 * r * _mm.sin(_mm.pi / n); x0 = r + 120; L = n // 2 * w
+    for k in range(n):
+        x = x0 + (k // 2) * w + (w / 2 if k % 2 else 0); up = k % 2 == 0
+        if up: pts = [(x, r * .5), (x + w, r * .5), (x + w / 2, -r * .5)]
+        else: pts = [(x, -r * .5), (x + w, -r * .5), (x + w / 2, r * .5)]
+        c.poly(pts, cols[0] if up else cols[1], '#334155', 2)
+    c.text(x0 + L / 2 + w / 4, r * .5 + 36, 'نصف المحيط = π نق', 28, '#0E1B33')
+    c.text(x0 - 40, 0, 'نق', 30, '#BE185D')
+    c.o.append(f'<defs><marker id="as" viewBox="0 0 10 10" markerWidth="4" markerHeight="4" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0E1B33"/></marker></defs>')
+    c.line((r + 20, 0), (x0 - 80, 0), '#0E1B33', 5, marker=' marker-end="url(#as)"')
     return c.svg(cls)
