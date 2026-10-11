@@ -6,7 +6,7 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lesson_video
 _FRV = FR
 exec(open(os.path.join(HERE, 'frac_common.py'), encoding='utf-8').read())   # FBAR وEQV (figs.py)
 FR = _FRV   # الكسر المكدَّس بتنسيقٍ مضمَّن (lesson_video.py)
-def SV(svg, h=300): return svg.replace('<svg class="svgfig', f'<svg style="height: {h}px; width: auto; vertical-align: middle" class="svgfig')
+def SV(svg, h=300): return svg.replace('<svg class="svgfig', f'<svg style="height: {h}px; width: auto; vertical-align: middle; direction: ltr" class="svgfig')
 def K(t): return f'<b style="color: #C2410C">{t}</b>'
 def MX(w, n, d): return f'<span style="display: inline-flex; align-items: center; gap: .12em; direction: rtl; unicode-bidi: isolate">{w}{FR(n, d)}</span>'   # عددٌ كسري: العدد الكامل يمين الكسر
 def BARS(*items, h=86):   # أشرطة كسورٍ متطابقة بينها علامات: BARS((5,1),PL,(5,2),EQ,(5,3))

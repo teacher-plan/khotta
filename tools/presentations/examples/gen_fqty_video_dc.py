@@ -6,7 +6,7 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lesson_video
 _FRV = FR
 exec(open(os.path.join(HERE, 'frac_common.py'), encoding='utf-8').read())   # QBAR (نموذج الشريط) من frac_common.py وfigs.py
 FR = _FRV   # الكسر المكدَّس بتنسيقٍ مضمَّن (lesson_video.py)
-def SV(svg, h=300): return svg.replace('<svg class="svgfig', f'<svg style="height: {h}px; width: auto; vertical-align: middle" class="svgfig')
+def SV(svg, h=300): return svg.replace('<svg class="svgfig', f'<svg style="height: {h}px; width: auto; vertical-align: middle; direction: ltr" class="svgfig')
 def K(t): return f'<b style="color: #C2410C">{t}</b>'
 def OF(n, d, q): return e(FR(n, d), 'من', q)       # الوحدة تُكتب نصاً بعد العدد (لا تمرّ بـ V())
 def TX(n, d, q): return e(FR(n, d), X, q)
