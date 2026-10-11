@@ -51,7 +51,9 @@
 | ٦-٧ ترتيب الكسور | `1eNS-4tYY1vmzjgIB0JpWvXt9c80UMPDF` | https://claude.ai/artifact/UnZh9PUJZFCcV9NmgcHamB |
 | ٦-٨ حساب الباقي | `1A8wtv7ctB5iGY03Pe5AlXWTOlafHuLz0` | https://claude.ai/artifact/GcVY35jicP8hN8qWezH3hM |
 | مراجعة الوحدة السادسة | `1xS5lh2J7UMpuR8bhhGE594CoZ5EM1K6w` | https://claude.ai/artifact/4eQgPE9jbJTyWS21Dqc2P5 |
+| ٧-١ التحويل بين وحدات قياس المساحة | `1J7MkkThcE3jpx6oaFT0ScmeLButqU-Ge` | https://claude.ai/artifact/Wq98E4xEJ8rdBsfvPuxs8T |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
+| الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
