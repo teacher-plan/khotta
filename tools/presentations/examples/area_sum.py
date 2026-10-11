@@ -8,6 +8,6 @@ def SF(svg, h=30): return f'<div class="sfig" style="--h:{h}mm">{svg}</div>'
 CSS += '''.u2{font-size:.6em;vertical-align:super;line-height:0}
 .pi{font-family:'Times New Roman',serif;font-style:italic;font-weight:700}
 .sfig{display:flex;justify-content:center;gap:6mm;align-items:center}.sfig svg{height:var(--h);width:auto;max-width:100%}
-.figrow{display:flex;gap:4mm;align-items:center}.figrow>.ex,.figrow>div:first-child{flex:1}
+.figrow{display:flex;gap:4mm;align-items:center}.figrow>.ex,.figrow>.rule{flex:1}.figrow>.sfig{flex:none}
 '''
-def FIX(x): return FIXNUM([x])[0].replace('²', '<sup class="u2">٢</sup>')   # أعدادٌ بمجموعات معزولة LTR، و ² أسٌّ مرفوع
+def FIX(x): return SUP2(FIXNUM([x])[0])   # أعدادٌ بمجموعات معزولة LTR، و ² أسٌّ مرفوع

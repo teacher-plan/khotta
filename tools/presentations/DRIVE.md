@@ -52,6 +52,7 @@
 | ٦-٨ حساب الباقي | `1A8wtv7ctB5iGY03Pe5AlXWTOlafHuLz0` | https://claude.ai/artifact/GcVY35jicP8hN8qWezH3hM |
 | مراجعة الوحدة السادسة | `1xS5lh2J7UMpuR8bhhGE594CoZ5EM1K6w` | https://claude.ai/artifact/4eQgPE9jbJTyWS21Dqc2P5 |
 | ٧-١ التحويل بين وحدات قياس المساحة | `1J7MkkThcE3jpx6oaFT0ScmeLButqU-Ge` | https://claude.ai/artifact/Wq98E4xEJ8rdBsfvPuxs8T |
+| ٧-٢ مساحة المستطيل ومحيطه | `1LecEMUNI7HDQSDcJ0arG5P2J83Zm2CnX` | https://claude.ai/artifact/HPU9P86VgffzGvUPVsHS3B |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
 | الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
 

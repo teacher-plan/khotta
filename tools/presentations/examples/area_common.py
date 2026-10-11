@@ -13,6 +13,7 @@ exec(open(os.path.join(HERE, 'area_figs.py'), encoding='utf-8').read())
 
 AREA_CSS = FRAC_CSS + '''
 .u2{font-size:.55em;vertical-align:super;line-height:0;margin-inline-start:.04em}
+.xa small{margin-top:.45em}
 .pi{font-family:'Times New Roman',serif;font-style:italic;font-weight:700}
 .slide .svgfig.shp{width:auto;height:min(46vh,440px);max-width:46vw;max-height:none}
 .slide .svgfig.shp.lg{height:min(56vh,540px);max-width:60vw}

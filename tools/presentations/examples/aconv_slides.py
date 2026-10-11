@@ -96,4 +96,4 @@ EXTRA_CSS_OWN = AREA_CSS + '''
 '''
 PG = {'تمرين': [(1, '١٢٧')]}
 S = FIXNUM(S)
-S = [x.replace('²', '<sup class="u2">٢</sup>') for x in S]
+S = [SUP2(x) for x in S]

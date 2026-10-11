@@ -53,7 +53,7 @@ def RECT(l, w, L=420, Wd=240, fill='#DBEAFE', grid=None, side=True, top=False, c
         c.poly(P, 'none')
     if l: c.elab(P[3], P[2], l, -30, fs)
     if w and side: c.elab(P[1], P[2], w, 30 + len(_a(w)) * fs * .28, fs)
-    if top and l: c.elab(P[1], P[0], top if isinstance(top, str) else l, 30, fs)
+    if top and l: c.elab(P[1], P[0], top if isinstance(top, str) else l, -30, fs)
     return c.svg(cls)
 
 def SQGRID(n, side_lab, area_lab, L=300, fill='#FDBA74'):
@@ -173,3 +173,6 @@ _GRP = re.compile(r'(?<![٠-٩٫])[٠-٩]{1,3}(?:[ \u00a0][٠-٩]{3})+(?:٫[٠-�
 def FIXNUM(S):
     # الأعداد المكتوبة بمجموعات (١٠ ٠٠٠): نعزلها LTR ونمنع كسر السطر، وإلا انعكس ترتيب المجموعات في السياق العربي
     return [_GRP.sub(lambda m: '⁦' + m.group(0).replace(' ', ' ') + '⁩', x) for x in S]
+_TAGS = re.compile(r'(<[^>]+>)')
+def SUP2(x):   # ² في النص فقط (لا داخل سمات الوسوم مثل data-why) ← أسٌّ مرفوع
+    return ''.join(q if q.startswith('<') else q.replace('²', '<sup class="u2">٢</sup>') for q in _TAGS.split(x))
