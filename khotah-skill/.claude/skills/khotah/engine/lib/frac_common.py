@@ -21,7 +21,7 @@ FRAC_CSS = FIG_CSS + '''
 .slide .vrow{align-items:center;justify-content:center;gap:2vh 3vw;flex-wrap:wrap}
 .voc3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.6vw;width:min(1500px,94vw)}
 .voc3 .st>div{display:flex;flex-direction:column;align-items:center;gap:.6vh;background:#fff;border:3px solid var(--line);border-radius:18px;padding:1.6vh 1vw;text-align:center}
-.voc3 b{font-family:var(--fh);font-size:clamp(28px,5.4vh,64px);color:var(--base)}.voc3 i{font-style:normal;font-weight:700;color:var(--ink2);font-size:clamp(16px,2.8vh,32px)}
+.voc3 b{font-family:var(--fh);font-size:clamp(28px,5.4vh,64px);color:var(--base)}.voc3 i{font-style:normal;font-weight:700;color:var(--ink2);font-size:clamp(20px,4.2vh,46px)}
 .voc3 span{font-weight:700;font-size:clamp(20px,3.6vh,42px);line-height:1.5}
 .facs{display:flex;gap:2vw;justify-content:center;flex-wrap:wrap}
 .facs .st>div{display:flex;flex-direction:column;align-items:center;gap:.6vh;background:#fff;border:3px solid var(--line);border-radius:18px;padding:1.4vh 2vw}
@@ -35,7 +35,7 @@ FRAC_CSS = FIG_CSS + '''
 .circs{gap:3vw;justify-content:center}
 .slide .vrow .fig{height:min(56vh,520px);width:auto;max-width:52vw;max-height:none}
 .slide .vrow .fig.lg{max-width:56vw;height:auto;max-height:40vh}
-.why{font-weight:700;color:var(--ink2);font-size:clamp(20px,3.4vh,40px)}
+.why{font-weight:700;color:var(--ink2);font-size:clamp(22px,4.4vh,48px)}
 .errs{display:flex;flex-direction:column;gap:1.4vh;width:min(1300px,90vw)}
 .errs>.st{width:100%}.errs .err{width:100%;display:flex;flex-direction:column;align-items:center;gap:.6vh;background:#fff;border:3px solid var(--line);border-radius:16px;padding:.8vh 1.6vw;font-size:clamp(24px,4.6vh,54px);font-weight:700}
 .errs .err .xa{font-size:clamp(28px,5.4vh,64px);display:block;text-align:center;line-height:1.6}
