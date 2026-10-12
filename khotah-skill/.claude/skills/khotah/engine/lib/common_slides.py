@@ -14,7 +14,7 @@ def tn(t): return f'<aside class="tnote">{t}</aside>'   # ملاحظة للمع�
 
 def launch(bk, pages, start=None, mins=10, note=''):
     # شريحة الانطلاق إلى تمارين الكتاب (bk: 'sb' كتاب الطالب، 'ab' كتاب النشاط) — يصل إليها زرّ الشريط السفلي مباشرةً.
-    # تُترك علامة، ويبنيها gen_powers.py بعد اكتمال الشرائح بأرقام الأسئلة التي تليها (resolve_launch).
+    # تُترك علامة، ويبنيها build_deck.py بعد اكتمال الشرائح بأرقام الأسئلة التي تليها (resolve_launch).
     import json as _j
     return '<!--LAUNCH ' + _j.dumps({'bk': bk, 'pages': pages, 'start': start, 'mins': mins, 'note': note}, ensure_ascii=False) + '-->'
 

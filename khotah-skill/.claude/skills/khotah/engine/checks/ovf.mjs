@@ -12,7 +12,7 @@ const r=await p.evaluate(()=>{const out=[];const H=innerHeight,W=innerWidth,SAFE
   s.querySelectorAll('.flip').forEach(e=>e.classList.add('open'));
   s.querySelectorAll('.sq').forEach(e=>e.classList.add('open'));
   s.style.transition='none';s.classList.add('on');
-  let top=1e9,bot=-1e9,l=1e9,rr=-1e9;s.querySelectorAll('*:not(.dz)').forEach(e=>{const r=e.getBoundingClientRect();if(!r.width)return;top=Math.min(top,r.top);bot=Math.max(bot,r.bottom);l=Math.min(l,r.left);rr=Math.max(rr,r.right);});
+  let top=1e9,bot=-1e9,l=1e9,rr=-1e9;s.querySelectorAll('*:not(.dz)').forEach(e=>{if(e.closest('.pgb'))return;const r=e.getBoundingClientRect();if(!r.width)return;top=Math.min(top,r.top);bot=Math.max(bot,r.bottom);l=Math.min(l,r.left);rr=Math.max(rr,r.right);});
   if(top<SAFE||bot>H+1||l<0||rr>W+1)out.push(`${i+1}: top${Math.round(top)} bot${Math.round(bot)}/${H} l${Math.round(l)} r${Math.round(rr)}/${W}`);
   s.classList.remove('on');});return out;});
 console.log(f.split('/').pop(),w,h,r.length?r:'OK');await p.close();}
