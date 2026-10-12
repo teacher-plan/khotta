@@ -51,7 +51,21 @@
 | ٦-٧ ترتيب الكسور | `1eNS-4tYY1vmzjgIB0JpWvXt9c80UMPDF` | https://claude.ai/artifact/UnZh9PUJZFCcV9NmgcHamB |
 | ٦-٨ حساب الباقي | `1A8wtv7ctB5iGY03Pe5AlXWTOlafHuLz0` | https://claude.ai/artifact/GcVY35jicP8hN8qWezH3hM |
 | مراجعة الوحدة السادسة | `1xS5lh2J7UMpuR8bhhGE594CoZ5EM1K6w` | https://claude.ai/artifact/4eQgPE9jbJTyWS21Dqc2P5 |
+| ٧-١ التحويل بين وحدات قياس المساحة | `1J7MkkThcE3jpx6oaFT0ScmeLButqU-Ge` | https://claude.ai/artifact/Wq98E4xEJ8rdBsfvPuxs8T |
+| ٧-٢ مساحة المستطيل ومحيطه | `1LecEMUNI7HDQSDcJ0arG5P2J83Zm2CnX` | https://claude.ai/artifact/HPU9P86VgffzGvUPVsHS3B |
+| ٧-٣ مساحة المثلث | `1BzU2Nxny8uYFM4WFhn1eh2-I-EtNYKnp` | https://claude.ai/artifact/SFzVzdKYL76Z7hSq9rHBKc |
+| ٧-٤ مساحة متوازي الأضلاع ومساحة شبه المنحرف | `1IX7o9gQ4ZhksLhoAKD1w3vt98HD0Ss_Q` | https://claude.ai/artifact/96hH3soXhAV5ZwwmtYmvGJ |
+| ٧-٥ مساحة الدائرة ومحيطها | `1XOfuKrgWMlcn-vGr-jkV1W1ZBEE8Voi_` | https://claude.ai/artifact/1ec1Gt3KKtrpAhPbiGA4YC |
+| ٧-٦ مساحة الأشكال المركبة | `1_q5BqWgK8OCqQGTBGCb2Rq4bgym09l8E` | https://claude.ai/artifact/4WhCWqmj7sD9h61Xjy1xgx |
+| مراجعة الوحدة السابعة | `1UQ9A48PL7tAipk5j2NmxbXAxvWf_Bi3p` | https://claude.ai/artifact/Bjrsisy3Ly6iuUjVkWCWcr |
+| ٨-١ النسب المئوية البسيطة | `1yPdr6Y8J8vEJNi9o7d-ArS292SKCgN1O` | https://claude.ai/artifact/FAqq9DPE6d97isA2b1rfX9 |
+| ٨-٢ الكسور والكسور العشرية والنسب المئوية | `1SX20EnQ26pCsA593lyXwPniF_b0qnZt5` | https://claude.ai/artifact/SBRzV2XPuZH48gKxxPir3Z |
+| ٨-٣ حساب النسب المئوية من الكميات | `1mXVF-o5FLcCLsZL-omDO-w-U6RrvygZl` | https://claude.ai/artifact/WQb2mS3Yquddb7ABqBqKXJ |
+| ٨-٤ تطبيقات على النسب المئوية | `1nK0HWa2luk0XbhzrjjZCCn_wDhOlsfh0` | https://claude.ai/artifact/1YQX4gAXKnvvjQ2ejP8zVd |
+| مراجعة الوحدة الثامنة | `1jbMmng8Wl75QcE1NdenKvUU3YqPoOl11` | https://claude.ai/artifact/EoL5UAXBe3GEvbmSEgkneJ |
 | الوحدة السادسة — الكسور (١) | `1fheYroD_CX2N5rq3gnsOSCXYYYF7UyXa` | |
+| الوحدة السابعة — المساحة والمحيط | `1HrkZqg6ePyNLa9Ua03EWuMzm373U3azR` | |
+| الوحدة الثامنة — النسب المئوية | `1NSj3HratSOSO8v4mQDs2ts3_ZltAoO-K` | |
 
 ## لكل درسٍ جديد
 1. أنشئ مجلد الدرس داخل مجلد وحدته بأداة Google Drive `create_file` (mimeType مجلد) — ومجلد الوحدة إن لم يوجد — وأضف المعرّف هنا.
