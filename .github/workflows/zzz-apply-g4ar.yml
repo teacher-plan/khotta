@@ -1,0 +1,58 @@
+name: zzz apply g4 arabic patterns
+on: workflow_dispatch
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: apply
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          cat > /tmp/q.sql <<'SQL'
+          begin;
+          -- ١) إعادة ترقيم الترتيب لإفساح مكان الأنماط بعد كل درس قرائي (المعرّفات والأسماء كما هي)
+          update public.curriculum c set sort=v.s from (values
+            (4786,1),(4787,2),(4788,3),(4789,4),(4790,7),(4791,10),(4792,13),(4793,14),(4794,15),
+            (4795,1001),(4796,1002),(4797,1003),(4798,1006),(4799,1009),(4800,1012),(4801,1013),(4802,1014)
+          ) v(id,s) where c.id=v.id and c.grade=4 and c.subject='أحب لغتي';
+          -- ٢) دروس الأنماط اللغوية والإملائية
+          insert into public.curriculum (grade,subject,semester,book_no,unit,lesson,sort,page)
+          select 4,'أحب لغتي','الفصل الأول',b,u,l,s,p from (values
+            (1,'المحور الأول: في ربوع وطني','النمط اللغوي: مكونات الجملة الاسمية (المبتدأ والخبر)',5,41),
+            (1,'المحور الأول: في ربوع وطني','النمط الإملائي: همزتا القطع والوصل',6,44),
+            (1,'المحور الأول: في ربوع وطني','النمط اللغوي: ضمائر الرفع المتصلة (تاء الفاعل، نا الفاعلين، نون النسوة)',8,57),
+            (1,'المحور الأول: في ربوع وطني','النمط الإملائي: الهمزة المتوسطة على ألف وعلى نبرة',9,60),
+            (1,'المحور الأول: في ربوع وطني','النمط اللغوي: أسماء الإشارة للبعيد (ذلك، تلك، أولئك)',11,75),
+            (1,'المحور الأول: في ربوع وطني','النمط الإملائي: الهمزة المتوسطة على واو وعلى السطر',12,78),
+            (2,'المحور الثاني: قصص وعبر','النمط اللغوي: جملة اسمية تبدأ باسم إشارة أو ضمير رفع منفصل',1004,33),
+            (2,'المحور الثاني: قصص وعبر','النمط الإملائي: الهمزة في آخر الكلمة',1005,36),
+            (2,'المحور الثاني: قصص وعبر','النمط اللغوي: ضمائر الرفع المتصلة (ألف الاثنين، واو الجماعة، ياء المخاطبة)',1007,52),
+            (2,'المحور الثاني: قصص وعبر','النمط الإملائي: النقطة والفاصلة والنقطتان الرأسيتان',1008,56),
+            (2,'المحور الثاني: قصص وعبر','النمط اللغوي: الجملة الفعلية تبدأ بفعل ماضٍ ومضارع وأمر',1010,72),
+            (2,'المحور الثاني: قصص وعبر','النمط الإملائي: مراجعة النمط الإملائي (المحور الأول والثاني)',1011,74)
+          ) v(b,u,l,s,p)
+          where not exists (select 1 from public.curriculum x where x.grade=4 and x.subject='أحب لغتي' and x.semester='الفصل الأول' and x.lesson=v.l);
+          -- ٣) فهرس دليل المعلم كاملاً (مع تصحيح صفحات ٤ مداخل كانت خاطئة)
+          update public.teacher_guides set updated_at=now(), toc=(
+            select jsonb_agg(jsonb_build_object('guide_unit',g.u,'guide_lesson',c.lesson,'guide_page',g.gp,'matched_curriculum_id',c.id,'confidence','high') order by c.sort)
+            from public.curriculum c join (values
+              (24,'المحور الأول'),(27,'المحور الأول'),(29,'المحور الأول'),(33,'المحور الأول'),(35,'المحور الأول'),
+              (39,'المحور الأول'),(44,'المحور الأول'),(45,'المحور الأول'),(50,'المحور الأول'),(54,'المحور الأول'),(55,'المحور الأول'),
+              (60,'المحور الأول'),(62,'المحور الأول'),(64,'المحور الأول'),
+              (66,'المحور الثاني'),(69,'المحور الثاني'),(72,'المحور الثاني'),(76,'المحور الثاني'),(78,'المحور الثاني'),
+              (82,'المحور الثاني'),(86,'المحور الثاني'),(87,'المحور الثاني'),(91,'المحور الثاني'),(95,'المحور الثاني'),(96,'المحور الثاني'),
+              (101,'المحور الثاني'),(103,'المحور الثاني'),(105,'المحور الثاني')
+            ) g(gp,u) on true
+            join (select id, sort, row_number() over (order by sort) rn from public.curriculum
+                  where grade=4 and subject='أحب لغتي' and semester='الفصل الأول' and sort>1) o on o.id=c.id
+            where o.rn = (select count(*) from (values (24),(27),(29),(33),(35),(39),(44),(45),(50),(54),(55),(60),(62),(64),(66),(69),(72),(76),(78),(82),(86),(87),(91),(95),(96),(101),(103),(105)) z(x) where z.x<=g.gp)
+          ) where id=26;
+          commit;
+          select c.id, c.book_no, c.sort, c.page, c.lesson, e->>'guide_page' gp
+          from public.curriculum c left join public.teacher_guides t on t.id=26
+          left join lateral (select e from jsonb_array_elements(t.toc) e where (e->>'matched_curriculum_id')::bigint=c.id) x on true
+          where c.grade=4 and c.subject='أحب لغتي' and c.semester='الفصل الأول' order by c.sort;
+          select name from storage.objects where bucket_id='library-files' and name like 'guide-summaries/26-%';
+          SQL
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$(jq -Rs '{query: .}' /tmp/q.sql)" | jq -c '.[]?, .message?'
