@@ -56,7 +56,7 @@ description: >-
 6. **الفحوص:** `python3 <S>/engine/run_checks.py --deck <العرض>.html --summary <الملخّص>.html` — كلها نظيفة (تفاصيلها في `rules/GENERAL.md` §٧)، ثم لقطات `node <S>/engine/checks/snap.mjs <العرض>.html shots <أرقام>` للشرائح الأكثر امتلاءً ولكل شريحة فيها صورة، وانظر فيها بنفسك (Read). ما لا يتّسع يُقسَّم ولا يُصغَّر خطّه.
 7. **حدّث** `<P>/progress.json` (`last_lesson` وقائمة `done`).
 
-المتطلبات (مرّة واحدة): `python3`، و`pip install segno opencv-python-headless`، و`node` مع `npm i -g playwright && npx playwright install chromium`. إن تعذّر Playwright: سلّم HTML الملخّص ليطبعه المعلّم من المتصفّح PDF، واذكر أن الفحوص الآلية لم تُشغَّل.
+المتطلبات (مرّة واحدة): `python3`، و`poppler-utils` (`pdftoppm`/`pdftotext`)، و`pip install segno opencv-python-headless pillow`، و`node` مع `npm i -g playwright && npx playwright install chromium`. إن تعذّر Playwright: سلّم HTML الملخّص ليطبعه المعلّم من المتصفّح PDF، واذكر أن الفحوص الآلية لم تُشغَّل.
 
 ## ٥. رسالة التسليم (قصيرة)
 - مسارا الملفين: العرض HTML (ملف واحد مكتفٍ بنفسه) والملخّص PDF.

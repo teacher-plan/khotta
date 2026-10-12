@@ -32,6 +32,14 @@ for png in sorted(glob.glob(os.path.join(tmp, '*.png'))):
         if not ok or len([t for t in texts if t]) == 0:
             t, _, _ = det.detectAndDecode(im)
             if t: bag.append(t)
+        # احتياط ثانٍ: على الصفحة كاملةً قد يكتشف OpenCV الرمز ولا يفكّه (مربّعات أرقام الخطوات تشبه علامات الزوايا).
+        # الهاتف يؤطّر الرمز وحده، فنحاكيه بنوافذ متداخلة (ثلث الصفحة) ونفكّ كلاً منها.
+        if not all(w in bag for w in want):
+            H, W = im.shape[:2]; th, tw = H // 3, W // 2
+            for y in range(0, H - th // 2, th // 2):
+                for x in range(0, W - tw // 2, tw // 2):
+                    t, _, _ = det.detectAndDecode(im[y:y + th, x:x + tw])
+                    if t: bag.append(t)
 miss = [w for w in want if w not in got]
 miss_low = [w for w in want if w not in lowres]
 print(os.path.basename(f), f'رموز: {len(want)} · قُرئ: {len(set(got) & set(want))}' + (f' · مقاس أصغر من ٢٥ مم: {small}' if small else ''))
