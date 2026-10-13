@@ -1,0 +1,11 @@
+name: zzz probe gcfg
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$(jq -Rs '{query: .}' <<< "select key, length(value) len, left(value,300) v, updated_at from public.ai_settings where key like '%game%' or key like '%gm%';")" | jq -c '.[]?'
