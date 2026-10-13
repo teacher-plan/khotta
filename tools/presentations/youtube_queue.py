@@ -5,7 +5,8 @@ import os, sys, json, glob, subprocess, requests
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); import youtube_upload as Y
 ART = '/tmp/yt_art'
 U = {2: ('الثانية', 'العبارات الجبرية والمعادلات والصيغ'), 3: ('الثالثة', 'الأعداد العشرية والكسور العشرية'),
-     5: ('الخامسة', 'الزوايا'), 6: ('السادسة', 'الكسور (١)')}
+     5: ('الخامسة', 'الزوايا'), 6: ('السادسة', 'الكسور (١)'),
+     7: ('السابعة', 'المساحة والمحيط'), 8: ('الثامنة', 'النسب المئوية')}
 J = [('2-1','٢-١','كتابة العبارات الجبرية','1hXBvU5SbaY0b1Fa91WuQmEziCd2U4AT0'),('2-2','٢-٢','تجميع الحدود المتشابهة','1rV86usu3lrzbv6gtYyQrssIAzRIOs-sM'),
  ('2-3','٢-٣','فك الأقواس','1FPAEhq0pjv-zM6ze4FVGBKP_4SaqSuom'),('2-4','٢-٤','استنتاج واستخدام الصيغ','1ciHWgcQV9oJE6DTPctuehSZjj5TI2ZP2'),
  ('2-5','٢-٥','كتابة المعادلات وحلها','12kmUnAwRzqlrrWO_0WachZwF0SMFDWVq'),('2-r','','','1LDbr4ondbvLytWZMFfDKuI-yhM7wIgIE'),
@@ -21,7 +22,22 @@ J = [('2-1','٢-١','كتابة العبارات الجبرية','1hXBvU5SbaY0b1
  ('6-3','٦-٣','الكسور غير الاعتيادية والأعداد الكسرية','1mj782vDKhWNSetX8x_JbfsQ1O7PQKe_p'),('6-4','٦-٤','جمع الكسور وطرحها','1RAGgw77mwE0yMkAPr0qnQBYFMa6dPcLr'),
  ('6-5','٦-٥','استخدام الكسور مع الكميات','1w7Ceg9YoK1iEUETboTXInbGsI39gZ0eS'),('6-6','٦-٦','تحويل الكسور إلى كسور عشرية','18Vwz0TobBfP8im84jB7k5RqCyTwrAg7O'),
  ('6-7','٦-٧','ترتيب الكسور','18GkEU65aSpwkWW0j3IrLM9YvwLrWeyOQ'),('6-8','٦-٨','حساب الباقي','1xHQFbQL6-Qmub0NQGhBC0PzSdf6DSoAN'),
- ('6-r','','','1M3czAqnFX4xFnA-pOUgG5kWinUMVaHTW')]
+ ('6-r','','','1M3czAqnFX4xFnA-pOUgG5kWinUMVaHTW'),
+ # الوحدتان ٧ و٨: «folder:» = مجلد الدرس في Drive، يُؤخذ الفيديو منه حين يُرفع
+ ('7-1','٧-١','التحويل بين وحدات قياس المساحة','folder:1J7MkkThcE3jpx6oaFT0ScmeLButqU-Ge'),('7-2','٧-٢','مساحة المستطيل ومحيطه','folder:1LecEMUNI7HDQSDcJ0arG5P2J83Zm2CnX'),
+ ('7-3','٧-٣','مساحة المثلث','folder:1BzU2Nxny8uYFM4WFhn1eh2-I-EtNYKnp'),('7-4','٧-٤','مساحة متوازي الأضلاع ومساحة شبه المنحرف','folder:1IX7o9gQ4ZhksLhoAKD1w3vt98HD0Ss_Q'),
+ ('7-5','٧-٥','مساحة الدائرة ومحيطها','folder:1XOfuKrgWMlcn-vGr-jkV1W1ZBEE8Voi_'),('7-6','٧-٦','مساحة الأشكال المركبة','folder:1_q5BqWgK8OCqQGTBGCb2Rq4bgym09l8E'),
+ ('7-r','','','folder:1UQ9A48PL7tAipk5j2NmxbXAxvWf_Bi3p'),
+ ('8-1','٨-١','النسب المئوية البسيطة','folder:1yPdr6Y8J8vEJNi9o7d-ArS292SKCgN1O'),('8-2','٨-٢','الكسور والكسور العشرية والنسب المئوية','folder:1SX20EnQ26pCsA593lyXwPniF_b0qnZt5'),
+ ('8-3','٨-٣','حساب النسب المئوية من الكميات','folder:1mXVF-o5FLcCLsZL-omDO-w-U6RrvygZl'),('8-4','٨-٤','تطبيقات على النسب المئوية','folder:1nK0HWa2luk0XbhzrjjZCCn_wDhOlsfh0'),
+ ('8-r','','','folder:1jbMmng8Wl75QcE1NdenKvUU3YqPoOl11')]
+
+def folder_video(fid):
+    r = requests.post('https://oauth2.googleapis.com/token', timeout=30, data={'client_id': os.environ['GDRIVE_CLIENT_ID'], 'client_secret': os.environ['GDRIVE_CLIENT_SECRET'],
+                      'refresh_token': os.environ['GDRIVE_REFRESH_TOKEN'], 'grant_type': 'refresh_token'}).json()
+    v = requests.get('https://www.googleapis.com/drive/v3/files', params={'q': f"'{fid}' in parents and trashed=false and mimeType='video/mp4'", 'fields': 'files(id)'},
+                     headers={'Authorization': 'Bearer ' + r['access_token']}, timeout=30).json().get('files', [])
+    return v[0]['id'] if v else None
 
 def art(name):
     p = f'{ART}/{name}.jpg'
@@ -52,8 +68,11 @@ for key, num, name, fid in J:
     pid = Y.playlist(H, pl); have = titles(H, pid)
     if title in have: done += 1; continue
     first = not have
+    if fid.startswith('folder:'):
+        fid = folder_video(fid[7:])
+        if not fid: print('توقّف عند', key, 'لا فيديو في مجلده على Drive بعد'); break
     path = Y.from_drive(fid); size = os.path.getsize(path)
-    meta = {'snippet': {'title': title, 'description': desc, 'categoryId': '27', 'defaultLanguage': 'ar', 'defaultAudioLanguage': 'ar'}, 'status': {'privacyStatus': 'private', 'selfDeclaredMadeForKids': False}}
+    meta = {'snippet': {'title': title, 'description': desc, 'categoryId': '27', 'defaultLanguage': 'ar', 'defaultAudioLanguage': 'ar'}, 'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}}
     r = requests.post(Y.UP, params={'uploadType': 'resumable', 'part': 'snippet,status'}, json=meta, timeout=60, headers={**H, 'X-Upload-Content-Type': 'video/mp4', 'X-Upload-Content-Length': str(size)})
     if r.status_code != 200:
         os.remove(path); print('توقّف عند', key, 'uploadLimitExceeded (حدّ الرفع)' if 'uploadLimitExceeded' in r.text else f'{r.status_code} {r.text[:200]}'); break
