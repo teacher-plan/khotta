@@ -48,7 +48,7 @@ button,a,[onclick],label,summary,input,select,textarea,
 .c1-card,.rs-card,.gm-tpl-btn,.eg-mode-btn{touch-action:manipulation}
 [style*="overflow:auto"],[style*="overflow-y:auto"],
 .c1-modal,#c1-board,#c1-mbox,#c1-notif-panel,#c1-select-panel,#wk-sheet,
-#fh-body,#fhp-side,#gm-stage-body,#gm-theme-grid,#tt-scroll,#tt-day-tabs,
+#fh-body,#fhp-side,#gm-stage-body,#tt-scroll,#tt-day-tabs,
 #tasks-list,#rs-grid,.rs-grid,#gm-editor,.fhp-main{
   overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
@@ -2768,6 +2768,19 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-g3fl-o.off{opacity:.35;filter:saturate(.4)}
 .gm-g3fl-o mark{background:#FF4D4F;color:#fff;border-radius:6px;padding:0 .05em}
 @media(max-width:700px){.gm-g3bd-board{flex-direction:column}.gm-g3fl-opts{grid-template-columns:1fr}}
+/* ثيمات الألعاب المرسومة: تعتيمٌ أخفّ (المشهد مصمَّمٌ ليُقرأ)، والملعب يملأ الشاشة كلها */
+#gm-stage-bg.gm-world #gm-stage-veil{background:rgba(10,6,30,.12)}
+#gm-stage-bg.gm-fill #gm-stage-body{padding:0;overflow:hidden;container-type:size}
+.gm-fill .gm-g3{position:relative;max-width:none;width:100%;height:100%;margin:0;padding:12px 16px 16px;justify-content:space-between}
+.gm-fill .gm-g3>:not(.gm-g3pk-scene):not(.gm-g3bl-lab):not(.gm-g3tg-arena):not(.gm-g3fr-pond){position:relative;z-index:3}
+.gm-fill .gm-g3>.gm-g3q,.gm-fill #gm-g3tg-q{width:100%;max-width:1040px}
+/* الملعب: نسبته نسبة الشاشة، فيُكبَّر ليغطّيها (كـcover) ويبقى كل عنصرٍ في موضعه.
+   المختبر: يجلس تحت بطاقة السؤال كي لا تحجب البومة، وحافّتاه تذوبان في مكتبة الخلفية */
+.gm-fill .gm-g3pk-scene{position:absolute;left:50%;top:50%;width:max(100cqw,calc(100cqh*16/9));min-width:0;transform:translate(-50%,-50%);border-radius:0;box-shadow:none;z-index:0}
+.gm-fill .gm-g3bl-lab{position:absolute;left:50%;bottom:0;top:auto;width:min(100cqw,calc((100cqh - 96px)*16/8.4));min-width:0;transform:translateX(-50%);border-radius:0;box-shadow:none;z-index:0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+/* الساحة والبِركة: عناصرهما بالنِّسَب، فتمتدّان لتأخذا الشاشة كما هي */
+.gm-fill .gm-g3tg-arena,.gm-fill .gm-g3fr-pond{position:absolute;inset:0;width:auto;height:auto;min-height:0;max-height:none;aspect-ratio:auto;border-radius:0;box-shadow:none;z-index:0}
+.gm-fill .gm-g3pk-tally{background:rgba(8,14,30,.55);backdrop-filter:blur(6px);border-radius:18px;padding:8px 14px}
 /*G3-CSS-END*/
 .gm-instr{border:1.5px solid;border-radius:14px;padding:14px 16px;margin:0 0 16px;text-align:center;color:#3d3428}
 .gm-instr-t{font-family:'Baloo Bhaijaan 2',cursive;font-weight:800;font-size:16px;margin-bottom:6px}
@@ -2829,19 +2842,6 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-tbox{min-height:64px;border:2.5px solid #E8C34A;border-radius:13px;background:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 7px,transparent 7px 14px),linear-gradient(145deg,#8A6508,#C0A848);color:#FFF3CE;font-size:24px;font-weight:800;cursor:pointer;font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;box-shadow:0 4px 10px rgba(0,0,0,.28);transition:.15s}
 .gm-tbox:not(:disabled):hover{transform:scale(1.06)}
 .gm-tbox.open{background:linear-gradient(160deg,#FFFDF7,#F1E7D8);border-color:rgba(42,21,3,.15);color:#2A1503;font-size:13px;font-weight:700;box-shadow:none;padding:5px;line-height:1.5}
-.gm-theme-grid{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px}
-/* content-visibility: البطاقات شريطٌ أفقيّ يظهر منه ثلاثٌ أو أربع، والباقي
-   خارج الشاشة. وكل مصغّرة خلفيّتها مشهد SVG كامل بالبيانات — فرسمُ الثمانية
-   دفعةً واحدة كلّف ٢٠٨ms على معالجٍ ضعيف، وهو حجبٌ يُحسّ عند فتح الاستوديو.
-   هذه الخاصيّة تجعل المتصفّح يتخطّى رسم ما هو خارج الشاشة حتى يُمرَّر إليه،
-   وcontain-intrinsic-size يحجز مقاسها سلفاً فلا يقفز الشريط عند التمرير. */
-.gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:inherit;
-  content-visibility:auto;contain-intrinsic-size:104px 84px}
-.gm-theme-card:hover{border-color:var(--red);transform:translateY(-2px)}
-.gm-theme-card.on{border-color:var(--olive-d);box-shadow:0 0 0 2px rgba(72,120,72,.3)}
-.gm-theme-card .thumb{height:56px;background:linear-gradient(135deg,#2a1f4d,#1c1730) center/cover}
-.gm-theme-card .nm{font-size:10.5px;font-weight:800;color:var(--ink);padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gm-theme-card.locked{opacity:.45;pointer-events:none}
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px}
 .gm-balloon{position:relative;width:132px;height:162px;border:none;cursor:pointer;
   background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.5),transparent 46%),var(--bc);
@@ -3322,7 +3322,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   <div class="eg-mode-row">
     <button type="button" class="eg-mode-btn active" data-mode="game" onclick="studioSetMode('game')">
       <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5z"/></svg></span>
-      <span class="eg-mode-lbl">لعبة</span><span class="eg-mode-sub">١٠ قوالب لعب تفاعلية</span>
+      <span class="eg-mode-lbl">لعبة</span><span class="eg-mode-sub">٢١ لعبة تفاعلية لكلٍّ منها عالمها</span>
     </button>
     <button type="button" class="eg-mode-btn" data-mode="info" onclick="studioSetMode('info')">
       <span class="eg-mode-ic"><svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 12h10l-3.2-4.2-2.3 2.9L9.8 12 7 16z"/></svg></span>
@@ -3384,9 +3384,6 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <div class="eg-row" style="margin-top:12px">
       <div style="flex:1"><label class="eg-lbl">عدد العناصر</label><select id="gm-count" class="c1-select" style="max-width:none;width:100%"><option value="5">٥</option><option value="6">٦</option><option value="7">٧</option><option value="8">٨</option><option value="9">٩</option><option value="10">١٠</option><option value="11">١١</option><option value="12" selected>١٢</option><option value="13">١٣</option><option value="14">١٤</option><option value="15">١٥</option><option value="16">١٦</option><option value="17">١٧</option><option value="18">١٨</option><option value="19">١٩</option><option value="20">٢٠</option><option value="21">٢١</option><option value="22">٢٢</option><option value="23">٢٣</option><option value="24">٢٤</option><option value="25">٢٥</option><option value="26">٢٦</option><option value="27">٢٧</option><option value="28">٢٨</option><option value="29">٢٩</option><option value="30">٣٠</option></select></div>
     </div>
-    <label class="eg-lbl">الثيم</label>
-    <select id="gm-theme" class="hidden"><option value=""></option></select>
-    <div id="gm-theme-grid" class="gm-theme-grid"></div>
     <button class="eg-generate" onclick="gmGenerate()" data-kh-g="ولّدي محتوى اللعبة|ولّد محتوى اللعبة">ولّدي محتوى اللعبة</button>
   </div>
 
@@ -4883,7 +4880,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='c030155';
+const KH_BUILD='862c741';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5469,7 +5466,7 @@ const C1_CACHE_V=2;                    // ارفعي الرقم لإبطال ك�
 // violation_types يبقى في ذاكرة المعلّمات حتى ١٢ ساعة (C1_TTL) — فبقيت
 // الشريحة القديمة ظاهرةً عندهنّ رغم حذفها من الخادم. رفع الرقم يُبطل كل
 // المخزون المحلّي فوراً عند أول تحميلٍ تالٍ، بلا انتظار انتهاء المدة.
-const C1_TTL={curriculum:864e5,book_sources:864e5,violation_types:432e5,ai_settings:216e5,game_themes:216e5};
+const C1_TTL={curriculum:864e5,book_sources:864e5,violation_types:432e5,ai_settings:216e5};
 const _c1Mem=new Map();
 function _c1Key(table,tag){return `c1c${C1_CACHE_V}:${table}:${tag}`;}
 function _c1Purge(){try{Object.keys(localStorage).forEach(k=>{if(k.startsWith('c1c'))localStorage.removeItem(k);});}catch(e){}}
@@ -7213,20 +7210,16 @@ async function planPlayGame(id){
   if(!st.game_id)return;
   cyBusy('يجهّز اللعبة');
   try{
-    await gmLoadThemes();
+    await gmLoadCfg();
     const{data:g}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();
     if(!g){toast('اللعبة لم تعد موجودة — '+khG('أنشئي','أنشئ')+' واحدة جديدة',true);await planSetState(id,{game:false,game_id:null});planRenderUnits();return;}
     gmTpl=g.template||'quiz';
     gmItems=(g.content&&g.content.items)||[];
     if(g.content&&g.content.groupNames)gmGroupNames=g.content.groupNames;
-    const sel=document.getElementById('gm-theme');if(sel&&g.theme_id)sel.value=g.theme_id;
     // القارعة داخل اللعبة: شعبة الحصة الحية إن كنا فيها، وإلا شعب صف/مادة الدرس فقط
     if(liveCtx&&document.getElementById('live-stage').classList.contains('on'))gmPickScope=[liveCtx.classId];
     else if(planGrade&&planSubject)gmPickScope=planClassesFor(planGrade,planSubject).map(c=>c.id);
     else gmPickScope=null;
-    // ننتظر خلفية الثيم قبل الفتح (بحدّ أقصى ٢.٥ ثانية) — الساحة تفتح بخلفية مكتملة لا متدرّجة
-    const th=gmForcedTheme(gmTpl)||gmThemes.find(t=>t.id===(g.theme_id||''));
-    if(th&&th.bg_url)await Promise.race([gmPreloadBg(th.bg_url),new Promise(r=>setTimeout(r,2500))]);
     gmPlayWith(gmItems,g.lesson||g.title||'لعبة');
   }catch(e){toast('تعذّر فتح اللعبة',true);}
   finally{cyBusyDone();}
@@ -9491,7 +9484,7 @@ async function rsPlayGame(){
   const r=a.run||{};
   const conv=RS_TPL_ITEMS[r.tpl];
   if(!conv){toast('قالب اللعبة غير معروف',true);return;}
-  if(typeof gmLoadThemes==='function'&&!(window.gmThemes||[]).length){try{await gmLoadThemes();}catch(e){}}
+  try{await gmLoadCfg();}catch(e){}
   if(r.groups&&typeof gmGroupNames!=='undefined')gmGroupNames=r.groups.slice();
   gmTpl=r.tpl;
   gmPickScope=null;
@@ -10788,7 +10781,7 @@ function studioRender(){
     ?grades.map(g=>`<option value="${g}" ${g===studioGrade?'selected':''}>الصف ${gradeName(g)}</option>`).join('')
     :'<option value="">'+khG('أكملي','أكمل')+' إعداد صفوفك أولاً</option>';
   studioRenderSubjects();
-  gmLoadThemes();
+  gmLoadCfg();
   gmLoadMyGames();
   // تهيئة موسيقى الألعاب مبكراً عند فتح الاستوديو، لا عند فتح لعبة فعلياً —
   // بلا هذا يبدأ تحميل وفكّ ترميز الملف فقط لحظة الضغط فتُسمع الموسيقى متأخرة
@@ -10991,48 +10984,258 @@ async function infoSaveToLesson(){
    كانت كلُّ لعبةٍ تحمل لوحتها العشوائية (ألوان مكتباتٍ افتراضية مشبعة،
    بنفسجيّ فاقع بجوار أزرق فاقع) فبدت بدائيةً ومتنافرة. هذه لوحةٌ واحدة
    متناغمة من عائلة المنصّة: [فاتح، غامق] لكل لون ليُصنع منها تدرّج. */
-/* ══ مشاهد مرسومة: خلفياتٌ ساكنة داخل الصفحة لا تُجلب من الشبكة ══
-   ثيمات الخادم صورٌ تُنزَّل، فخلفيةُ اللعبة تختفي في فصلٍ بلا تغطية.
-   هذه مرسومةٌ بالكود، تعمل بلا إنترنت وتبقى حادّةً على البروجكتر مهما
-   كبرت الشاشة. تدخل نظام الثيمات نفسه لأنّ bg_url يقبل data: URI. */
-const GM_SCENES=[
- {id:'sc-beach',name:'شاطئٌ عُمانيّ',subj:'عامّ',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s1%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%232E6FA8%22/><stop offset=%22100%25%22 stop-color=%22%23F5D9A8%22/></linearGradient><linearGradient id=%22sea1%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%231F6B6D%22/><stop offset=%22100%25%22 stop-color=%22%230F4C4A%22/></linearGradient><linearGradient id=%22sand1%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23F0D6A4%22/><stop offset=%22100%25%22 stop-color=%22%23D9B87C%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s1)%22/><g transform=%22translate(980,130)%22><circle r=%2282%22 fill=%22%23FFE9A8%22 opacity=%22.7%22/><circle r=%2250%22 fill=%22%23FFD166%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g><g opacity=%22.85%22><g fill=%22%23FFFDF9%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,108) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,150) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,108) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,150) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><g fill=%22none%22 stroke=%22%232A1503%22 stroke-width=%224%22 stroke-linecap=%22round%22><path d=%22M1240 190q13-13 26 0 13-13 26 0%22/><path d=%22M1330 230q10-10 20 0 10-10 20 0%22/></g><rect y=%22392%22 width=%221200%22 height=%22180%22 fill=%22url(%23sea1)%22/><g stroke=%22%238FD6D0%22 stroke-width=%225%22 fill=%22none%22 stroke-linecap=%22round%22 opacity=%22.85%22><g><path d=%22M-40 424q34-16 68 0t68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0 68 0%22/></g><g><path d=%22M-40 466q40-18 80 0t80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0 80 0%22/></g><g><path d=%22M-40 512q46-20 92 0t92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0 92 0%22/></g></g><g transform=%22translate(286,404)%22><g><path d=%22M-66 0h132l-21 32h-90z%22 fill=%22%238A5A2A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M0 0V-92%22 stroke=%22%232A1503%22 stroke-width=%225%22/><path d=%22M2-90 74-12H2z%22 fill=%22%23FFFDF9%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g></g><path d=%22M0 560q300-40 600-8t600-14v137H0z%22 fill=%22url(%23sand1)%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(112,648)%22><g><path d=%22M0 0V-140%22 stroke=%22%238A5A2A%22 stroke-width=%2214%22 stroke-linecap=%22round%22/><g fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224%22><path d=%22M0-140q-70-34-96 4 44 10 96-4z%22/><path d=%22M0-140q70-34 96 4-44 10-96-4z%22/><path d=%22M0-140q-52-58-92-40 24 36 92 40z%22/><path d=%22M0-140q52-58 92-40-24 36-92 40z%22/></g></g></g><g transform=%22translate(1096,626)%22><g><path d=%22M0 0V-116%22 stroke=%22%238A5A2A%22 stroke-width=%2212%22 stroke-linecap=%22round%22/><g fill=%22%2335603A%22 stroke=%22%232A1503%22 stroke-width=%224%22><path d=%22M0-116q-60-28-82 4 38 8 82-4z%22/><path d=%22M0-116q60-28 82 4-38 8-82-4z%22/><path d=%22M0-116q-44-50-78-34 20 30 78 34z%22/><path d=%22M0-116q44-50 78-34-20 30-78 34z%22/></g></g></g></svg>"},
- {id:'sc-fort',name:'قلعةٌ وجبال',subj:'الهوية والمواطنة',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s2%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%237A3F2A%22/><stop offset=%22100%25%22 stop-color=%22%23F0B98A%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s2)%22/><g transform=%22translate(240,150)%22><circle r=%2270%22 fill=%22%23FFD9A8%22 opacity=%22.55%22/><circle r=%2244%22 fill=%22%23FFE0A8%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g><g opacity=%22.85%22><g fill=%22%23F6D9BE%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,170) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,170) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><path d=%22M0 430 210 250l150 130 130-110 190 160 200-120 320 220v145H0z%22 fill=%22%238A5A3A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M0 500 190 380l160 100 170-70 200 110 250-60 230 130v90H0z%22 fill=%22%23A87450%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(902,452) scale(.86)%22><path d=%22M-190 190V0h48v-40h44V0h60v-40h44V0h60v-40h44V0h48v190z%22 fill=%22%23E8C9A0%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M-118 190V96a52 52 0 0 1 104 0v94z%22 fill=%22%238A5A2A%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><rect x=%2242%22 y=%2260%22 width=%2242%22 height=%2248%22 rx=%228%22 fill=%22%236B3A1F%22 stroke=%22%232A1503%22 stroke-width=%224%22/><rect x=%22118%22 y=%2260%22 width=%2242%22 height=%2248%22 rx=%228%22 fill=%22%236B3A1F%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(0,-40)%22><g><path d=%22M0 0V-92%22 stroke=%22%232A1503%22 stroke-width=%225%22/><path d=%22M4-90h84v54H4z%22 fill=%22%23C9453B%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g></g></g><rect y=%22620%22 width=%221200%22 height=%2255%22 fill=%22%23D9B87C%22 stroke=%22%232A1503%22 stroke-width=%224%22/></svg>"},
- {id:'sc-mosque',name:'مسجدٌ وهلالٌ ليلاً',subj:'ديني حياتي',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s3%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%2312233F%22/><stop offset=%22100%25%22 stop-color=%22%232E5A6B%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s3)%22/><g fill=%22%23FFF3CE%22><circle cx=%22180%22 cy=%22120%22 r=%224%22/><circle cx=%22330%22 cy=%2270%22 r=%223%22/><circle cx=%22520%22 cy=%22140%22 r=%224.5%22/><circle cx=%22760%22 cy=%2290%22 r=%223.5%22/><circle cx=%22960%22 cy=%22160%22 r=%224%22/><circle cx=%221090%22 cy=%2280%22 r=%223%22/><circle cx=%22430%22 cy=%22210%22 r=%223%22/><circle cx=%22640%22 cy=%2246%22 r=%223%22/></g><g transform=%22translate(970,140)%22><g><path d=%22M0-58a58 58 0 1 0 0 116 46 46 0 1 1 0-116z%22 fill=%22%23FFE9A8%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g></g><g opacity=%22.85%22><g fill=%22%233E5F72%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,210) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,250) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,210) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,250) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><g transform=%22translate(600,428) scale(.86)%22><path d=%22M-250 250V40h500v210z%22 fill=%22%23F0E4CE%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M-250 40q250-150 500 0z%22 fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M0-118v-42%22 stroke=%22%232A1503%22 stroke-width=%225%22/><path d=%22M-330 250V70h64v180z%22 fill=%22%23F0E4CE%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M-330 70q32-64 64 0z%22 fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M266 250V70h64v180z%22 fill=%22%23F0E4CE%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M266 70q32-64 64 0z%22 fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M-52 250V150a52 52 0 0 1 104 0v100z%22 fill=%22%238A5A2A%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><g fill=%22%23C9A86A%22 stroke=%22%232A1503%22 stroke-width=%223.5%22><path d=%22M-176 250v-60a26 26 0 0 1 52 0v60z%22/><path d=%22M124 250v-60a26 26 0 0 1 52 0v60z%22/></g></g><rect y=%22640%22 width=%221200%22 height=%2235%22 fill=%22%231F3A2E%22 stroke=%22%232A1503%22 stroke-width=%224%22/></svg>"},
- {id:'sc-books',name:'كتبٌ وحروفٌ تطير',subj:'أحب لغتي',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s4%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%237A2020%22/><stop offset=%22100%25%22 stop-color=%22%23E8A88A%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s4)%22/><g opacity=%22.85%22><g fill=%22%23F2CFC0%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,110) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,158) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,110) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,158) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><g fill=%22%23FFF3CE%22 stroke=%22%232A1503%22 stroke-width=%223.5%22 font-family=%22Cairo,Tahoma%22 font-size=%2252%22 font-weight=%22800%22 text-anchor=%22middle%22><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22200%22 y=%22560%22>%D8%A3</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22420%22 y=%22580%22>%D8%A8</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22820%22 y=%22565%22>%D8%B3</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%221010%22 y=%22585%22>%D9%86</text></g></g><path d=%22M0 540h1200v135H0z%22 fill=%22%238A5A2A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(230,540)%22><g><path d=%22M-96 0v-130h96v130z%22 fill=%22%23C9453B%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M0 0v-130h96v130z%22 fill=%22%23D98B2B%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M-70-104h44M-70-78h44M26-104h44M26-78h44%22 stroke=%22%23FFF3CE%22 stroke-width=%225%22 stroke-linecap=%22round%22/></g></g><g transform=%22translate(980,540)%22><g><path d=%22M-56 0v-96h112v96z%22 fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M0 0v-96%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M-38-72h26M14-72h26%22 stroke=%22%23FFF3CE%22 stroke-width=%225%22 stroke-linecap=%22round%22/></g></g><g transform=%22translate(258,452) scale(.92)%22><g><path d=%22M-130 70q130-56 260 0V-40q-130-56-260 0z%22 fill=%22%23FFFDF9%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M0 62V-52%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><path d=%22M-104 6h74M-104 34h74M30 6h74M30 34h74%22 stroke=%22%23C9BBA9%22 stroke-width=%225%22 stroke-linecap=%22round%22/></g></g></svg>"},
- {id:'sc-city',name:'مدينةٌ وحروفٌ لاتينية',subj:'اللغة الإنجليزية',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s5%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%232C4E63%22/><stop offset=%22100%25%22 stop-color=%22%239ED0D2%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s5)%22/><g transform=%22translate(220,140)%22><circle r=%2262%22 fill=%22%23FFF3CE%22 opacity=%22.5%22/><circle r=%2240%22 fill=%22%23FFE9A8%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g><g opacity=%22.85%22><g fill=%22%23DCEFF0%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,168) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,168) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><g fill=%22%23FFF3CE%22 stroke=%22%232A1503%22 stroke-width=%223%22 font-family=%22Baloo Bhaijaan 2,Cairo,Tahoma%22 font-size=%2246%22 font-weight=%22800%22 text-anchor=%22middle%22><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22300%22 y=%22540%22>A</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22900%22 y=%22550%22>B</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%221080%22 y=%22535%22>C</text></g></g><g fill=%22%2344686A%22 stroke=%22%232A1503%22 stroke-width=%224%22><rect x=%2260%22 y=%22330%22 width=%22130%22 height=%22260%22 rx=%228%22/><rect x=%22220%22 y=%22270%22 width=%22110%22 height=%22320%22 rx=%228%22/><rect x=%22880%22 y=%22300%22 width=%22120%22 height=%22290%22 rx=%228%22/><rect x=%221030%22 y=%22360%22 width=%22120%22 height=%22230%22 rx=%228%22/></g><g fill=%22%23FFE9A8%22><rect x=%2282%22 y=%22356%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22128%22 y=%22356%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%2282%22 y=%22410%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22128%22 y=%22410%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22244%22 y=%22300%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22288%22 y=%22300%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22906%22 y=%22330%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%22950%22 y=%22330%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%221054%22 y=%22392%22 width=%2226%22 height=%2230%22 rx=%225%22/><rect x=%221098%22 y=%22392%22 width=%2226%22 height=%2230%22 rx=%225%22/></g><rect y=%22588%22 width=%221200%22 height=%2287%22 fill=%22%233D5A63%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(268,588) scale(.9)%22><g><path d=%22M-140-104h250a22 22 0 0 1 22 22v82h-272z%22 fill=%22%23C9453B%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><g fill=%22%23DCEFF0%22 stroke=%22%232A1503%22 stroke-width=%223.5%22><rect x=%22-118%22 y=%22-88%22 width=%2256%22 height=%2242%22 rx=%226%22/><rect x=%22-48%22 y=%22-88%22 width=%2256%22 height=%2242%22 rx=%226%22/><rect x=%2222%22 y=%22-88%22 width=%2256%22 height=%2242%22 rx=%226%22/></g><circle cx=%22-84%22 cy=%220%22 r=%2224%22 fill=%22%232A1503%22/><circle cx=%2286%22 cy=%220%22 r=%2224%22 fill=%22%232A1503%22/><circle cx=%22-84%22 cy=%220%22 r=%229%22 fill=%22%23DCEFF0%22/><circle cx=%2286%22 cy=%220%22 r=%229%22 fill=%22%23DCEFF0%22/></g></g></svg>"},
- {id:'sc-math',name:'أشكالٌ وأرقامٌ تسبح',subj:'الرياضيات',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s6%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%235A4A12%22/><stop offset=%22100%25%22 stop-color=%22%23F0DFA0%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s6)%22/><g opacity=%22.9%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(160,180)%22><g><rect x=%22-46%22 y=%22-46%22 width=%2292%22 height=%2292%22 rx=%2214%22 fill=%22%23C9453B%22/></g></g><g transform=%22translate(1030,200)%22><g><path d=%22M0-56 52 30H-52z%22 fill=%22%232F7D74%22/></g></g><g transform=%22translate(380,120)%22><g><circle r=%2242%22 fill=%22%233D6FA8%22/></g></g><g transform=%22translate(880,120)%22><g><path d=%22M0-46 46 0 0 46-46 0z%22 fill=%22%237B4EA8%22/></g></g><g transform=%22translate(620,540)%22><g><path d=%22M0-52 15-16h38l-31 23 12 37L0 20l-34 24 12-37-31-23h38z%22 fill=%22%23E8C34A%22/></g></g></g><g fill=%22%23FFF3CE%22 stroke=%22%232A1503%22 stroke-width=%223.5%22 font-family=%22Baloo Bhaijaan 2,Cairo,Tahoma%22 font-size=%2256%22 font-weight=%22800%22 text-anchor=%22middle%22><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22250%22 y=%22600%22>%D9%A7</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22500%22 y=%22615%22>%D9%A3</text></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><text x=%22950%22 y=%22600%22>%D9%A9</text></g></g><path d=%22M0 596h1200v79H0z%22 fill=%22%238A6524%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g stroke=%22%23F0DFA0%22 stroke-width=%224%22 opacity=%22.5%22><path d=%22M120 596v79M300 596v79M480 596v79M660 596v79M840 596v79M1020 596v79%22/></g></svg>"},
- {id:'sc-plant',name:'نبتةٌ تنمو ومطر',subj:'العلوم',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s7%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%231F4B4D%22/><stop offset=%22100%25%22 stop-color=%22%23BFE3D8%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s7)%22/><g transform=%22translate(985,130)%22><circle r=%2276%22 fill=%22%23FFE9A8%22 opacity=%22.6%22/><circle r=%2246%22 fill=%22%23FFD166%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g><g opacity=%22.85%22><g fill=%22%23E4F1EC%22 stroke=%22%232A1503%22 stroke-width=%224%22><g transform=%22translate(140,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(640,166) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1340,120) scale(1)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g><g transform=%22translate(1840,166) scale(.82)%22><ellipse rx=%2252%22 ry=%2227%22/><ellipse cx=%2242%22 cy=%227%22 rx=%2238%22 ry=%2222%22/><ellipse cx=%22-40%22 cy=%229%22 rx=%2234%22 ry=%2220%22/></g></g></g><g stroke=%22%236FB7D4%22 stroke-width=%226%22 stroke-linecap=%22round%22 opacity=%22.85%22><g transform=%22translate(0,-96)%22 opacity=%22.85%22><path d=%22M300 380v34%22/></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><path d=%22M370 356v34%22/></g><g transform=%22translate(0,-96)%22 opacity=%22.85%22><path d=%22M240 366v34%22/></g></g><path d=%22M0 556q300 26 600 0t600-18v137H0z%22 fill=%22%236B4A22%22 stroke=%22%232A1503%22 stroke-width=%224%22/><path d=%22M0 556q300 26 600 0t600-18v34q-300 26-600 0T0 590z%22 fill=%22%2335603A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g transform=%22translate(252,572) scale(.9)%22><g><path d=%22M0 0V-190%22 stroke=%22%2335603A%22 stroke-width=%2213%22 stroke-linecap=%22round%22/><g fill=%22%232F7D74%22 stroke=%22%232A1503%22 stroke-width=%224%22><path d=%22M-4-96q-92-16-104-74 74-10 104 74z%22/><path d=%22M4-134q92-16 104-74-74-10-104 74z%22/><path d=%22M-4-172q-70-12-80-56 56-8 80 56z%22/></g><g transform=%22translate(0,-196)%22><circle r=%2230%22 fill=%22%23E8C34A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><g fill=%22%23C9453B%22 stroke=%22%232A1503%22 stroke-width=%223.5%22><ellipse cx=%220%22 cy=%22-40%22 rx=%2217%22 ry=%2226%22/><ellipse cx=%220%22 cy=%2240%22 rx=%2217%22 ry=%2226%22/><ellipse cx=%22-40%22 cy=%220%22 rx=%2226%22 ry=%2217%22/><ellipse cx=%2240%22 cy=%220%22 rx=%2226%22 ry=%2217%22/></g><circle r=%2216%22 fill=%22%23E8C34A%22 stroke=%22%232A1503%22 stroke-width=%223.5%22/></g></g></g><g transform=%22translate(210,536)%22><g><path d=%22M0 0V-84%22 stroke=%22%2335603A%22 stroke-width=%229%22 stroke-linecap=%22round%22/><g fill=%22%23487848%22 stroke=%22%232A1503%22 stroke-width=%223.5%22><path d=%22M-3-52q-58-10-66-46 46-6 66 46z%22/><path d=%22M3-72q58-10 66-46-46-6-66 46z%22/></g></g></g><g transform=%22translate(1010,548)%22><g><path d=%22M0 0V-70%22 stroke=%22%2335603A%22 stroke-width=%228%22 stroke-linecap=%22round%22/><g fill=%22%23487848%22 stroke=%22%232A1503%22 stroke-width=%223.5%22><path d=%22M-3-44q-50-8-56-38 40-6 56 38z%22/><path d=%22M3-60q50-8 56-38-40-6-56 38z%22/></g></g></g></svg>"},
- {id:'sc-digital',name:'فضاءٌ رقميّ',subj:'عالمي الرقمي',builtin:true,
-  bg_url:"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 675%22 preserveAspectRatio=%22xMidYMid slice%22><defs><linearGradient id=%22s8%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23161A38%22/><stop offset=%22100%25%22 stop-color=%22%233A5268%22/></linearGradient></defs><rect width=%221200%22 height=%22675%22 fill=%22url(%23s8)%22/><g fill=%22%23DCEFF0%22><circle cx=%22150%22 cy=%22100%22 r=%224%22/><circle cx=%22340%22 cy=%22180%22 r=%223%22/><circle cx=%22560%22 cy=%2280%22 r=%224%22/><circle cx=%22820%22 cy=%22150%22 r=%223.5%22/><circle cx=%221080%22 cy=%2296%22 r=%224%22/><circle cx=%22960%22 cy=%22230%22 r=%223%22/><circle cx=%22430%22 cy=%22270%22 r=%223%22/></g><g transform=%22translate(1010,180)%22><g><ellipse rx=%22118%22 ry=%2234%22 fill=%22none%22 stroke=%22%238FD6D0%22 stroke-width=%225%22 opacity=%22.8%22/></g><circle r=%2254%22 fill=%22%237B4EA8%22 stroke=%22%232A1503%22 stroke-width=%224%22/><circle cx=%22-16%22 cy=%22-14%22 r=%2212%22 fill=%22%235C3781%22/><circle cx=%2220%22 cy=%2216%22 r=%229%22 fill=%22%235C3781%22/></g><g transform=%22translate(230,220)%22><g><circle r=%2236%22 fill=%22%23D98B2B%22 stroke=%22%232A1503%22 stroke-width=%224%22/><circle cx=%2212%22 cy=%22-10%22 r=%229%22 fill=%22%23B06D18%22/></g></g><g transform=%22translate(250,452) scale(.9)%22><g><rect x=%22-92%22 y=%22-118%22 width=%22184%22 height=%22150%22 rx=%2226%22 fill=%22%23DCEFF0%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><rect x=%22-58%22 y=%22-84%22 width=%2252%22 height=%2246%22 rx=%2212%22 fill=%22%232A1503%22/><rect x=%228%22 y=%22-84%22 width=%2252%22 height=%2246%22 rx=%2212%22 fill=%22%232A1503%22/><circle cx=%22-38%22 cy=%22-66%22 r=%229%22 fill=%22%238FD6D0%22/><circle cx=%2228%22 cy=%22-66%22 r=%229%22 fill=%22%238FD6D0%22/><path d=%22M-34 0h68%22 stroke=%22%232A1503%22 stroke-width=%226%22 stroke-linecap=%22round%22/><path d=%22M0-118v-34%22 stroke=%22%232A1503%22 stroke-width=%225%22/><circle cy=%22-160%22 r=%2213%22 fill=%22%23E8C34A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><rect x=%22-64%22 y=%2240%22 width=%22128%22 height=%2286%22 rx=%2218%22 fill=%22%234F6D8A%22 stroke=%22%232A1503%22 stroke-width=%224.5%22/><rect x=%22-116%22 y=%2252%22 width=%2244%22 height=%2220%22 rx=%2210%22 fill=%22%234F6D8A%22 stroke=%22%232A1503%22 stroke-width=%224%22/><rect x=%2272%22 y=%2252%22 width=%2244%22 height=%2220%22 rx=%2210%22 fill=%22%234F6D8A%22 stroke=%22%232A1503%22 stroke-width=%224%22/></g></g><g stroke=%22%238FD6D0%22 stroke-width=%223%22 opacity=%22.45%22 fill=%22none%22><path d=%22M0 620h1200M0 650h1200M150 600v75M400 600v75M800 600v75M1050 600v75%22/></g></svg>"}
-];
+/* ══ لا ثيماتٌ تُختار ولا صورٌ تُنزَّل: لكل لعبةٍ عالمها المرسوم بالكود، يعمل بلا
+   إنترنت ويبقى حادّاً على البروجكتر مهما كبرت الشاشة ══ */
+/*GMTH-START*/
+// ══ ثيمات الألعاب: لكل لعبةٍ عالمٌ مرسومٌ بالكود يملأ الشاشة (لا صورة ولا اختيار) ══
+// كل دالةٍ تُعيد SVG بمقاس ١٦٠٠×٩٠٠ يُقصّ ليغطّي الشاشة (slice)؛ الوسط أهدأ دائماً
+// لأن بطاقات اللعب تجلس فيه. الأرقام الثابتة بدل العشوائية: المشهد نفسه في كل مرة.
+var GM_W={
+  // أدوات رسمٍ صغيرة
+  svg:function(defs,body){return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><defs>'+defs+'</defs>'+body+'</svg>';},
+  lg:function(id,stops,v){return '<linearGradient id="'+id+'" x1="0" y1="0" x2="'+(v?0:1)+'" y2="'+(v?1:0)+'">'+stops.map(function(s){return '<stop offset="'+s[0]+'" stop-color="'+s[1]+'"/>';}).join('')+'</linearGradient>';},
+  rg:function(id,stops,cx,cy,r){return '<radialGradient id="'+id+'" cx="'+(cx||.5)+'" cy="'+(cy||.5)+'" r="'+(r||.6)+'">'+stops.map(function(s){return '<stop offset="'+s[0]+'" stop-color="'+s[1]+'"/>';}).join('')+'</radialGradient>';},
+  // رقمٌ «عشوائيٌّ» ثابت
+  h:function(i,m){return ((i*2654435761)>>>0)%m;},
+  // تعتيمٌ للوسط لتبرز البطاقات
+  vig:function(id,c){return '<radialGradient id="'+id+'" cx=".5" cy=".5" r=".75"><stop offset=".35" stop-color="'+c+'" stop-opacity="0"/><stop offset="1" stop-color="'+c+'" stop-opacity=".55"/></radialGradient>';}
+};
+var GM_WORLDS={
+  // ١) العجلة: مسرح عرضٍ بستارتين وأشعّةٍ وإطار مصابيح
+  wheel:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var i=0;i<24;i++){var a=i*15;b+='<path d="M800 470 L'+(800+1400*Math.cos(a*Math.PI/180)).toFixed(0)+' '+(470+1400*Math.sin(a*Math.PI/180)).toFixed(0)+' L'+(800+1400*Math.cos((a+6)*Math.PI/180)).toFixed(0)+' '+(470+1400*Math.sin((a+6)*Math.PI/180)).toFixed(0)+'Z" fill="#FFD43B" opacity=".07"/>';}
+    b+='<ellipse cx="800" cy="840" rx="620" ry="70" fill="#2A0A3A" opacity=".7"/><ellipse cx="800" cy="830" rx="520" ry="48" fill="url(#f)"/>';
+    // الستارتان
+    [0,1].forEach(function(s){var x=s?1600:0,d=s?-1:1,p='M'+x+' 0';for(var k=0;k<=8;k++)p+=' Q'+(x+d*(30+k*28))+' '+(k*112+56)+' '+(x+d*(k%2?60:40+k*14))+' '+(k*112+112);p+=' L'+x+' 900Z';
+      b+='<path d="'+p+'" fill="url(#c)"/>';for(var k2=0;k2<6;k2++)b+='<path d="M'+(x+d*(14+k2*30))+' 0 L'+(x+d*(10+k2*36))+' 900" stroke="#5E0B22" stroke-width="6" opacity=".45"/>';});
+    b+='<path d="M0 0H1600V70Q800 130 0 70Z" fill="url(#c)"/>';
+    for(var j=0;j<30;j++)b+='<circle cx="'+(30+j*53)+'" cy="'+(j%2?92:100)+'" r="9" fill="#FFE27A"/><circle cx="'+(30+j*53)+'" cy="'+(j%2?92:100)+'" r="18" fill="#FFD43B" opacity=".25"/>';
+    for(var k3=0;k3<40;k3++)b+='<circle cx="'+(200+GM_W.h(k3+3,1200))+'" cy="'+(150+GM_W.h(k3+9,600))+'" r="'+(2+k3%3)+'" fill="#FFF3B0" opacity=".5"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#7A2BB8'],[.55,'#3E1067'],[1,'#1B0530']],.5,.52,.8)+GM_W.lg('c',[[0,'#C21E45'],[1,'#7D0F2A']],0)+GM_W.rg('f',[[0,'#FFD43B'],[1,'#FFD43B00']]),b);
+  },
+  // ٢) المطابقة: لوح فلّينٍ ودبابيس وخيوطٌ حمراء تصل بينها
+  match:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var i=0;i<900;i++)b+='<circle cx="'+GM_W.h(i,1600)+'" cy="'+GM_W.h(i+7,900)+'" r="'+(1+i%3)+'" fill="'+(i%2?'#8A5A2B':'#E3B47A')+'" opacity=".35"/>';
+    var P=[[120,140],[380,90],[230,330],[90,560],[300,760],[1480,130],[1250,80],[1380,360],[1510,600],[1270,780],[620,60],[980,70],[560,850],[1050,840]];
+    var L=[[0,1],[1,2],[2,3],[3,4],[5,6],[6,7],[7,8],[8,9],[0,10],[10,11],[11,6],[4,12],[12,13],[13,9]];
+    L.forEach(function(l){var a=P[l[0]],c=P[l[1]];b+='<path d="M'+a[0]+' '+a[1]+' Q'+((a[0]+c[0])/2)+' '+((a[1]+c[1])/2+40)+' '+c[0]+' '+c[1]+'" stroke="#C62E2E" stroke-width="4" fill="none" opacity=".85"/>';});
+    P.forEach(function(p,k){var col=['#E5484D','#3E7BFA','#F5A524','#30A46C'][k%4];
+      if(k%3===0)b+='<rect x="'+(p[0]-70)+'" y="'+(p[1]+14)+'" width="140" height="92" rx="6" fill="#FFF8E7" transform="rotate('+((k%5)-2)*3+' '+p[0]+' '+p[1]+')"/><rect x="'+(p[0]-52)+'" y="'+(p[1]+40)+'" width="104" height="9" rx="4" fill="#D9CDB3" transform="rotate('+((k%5)-2)*3+' '+p[0]+' '+p[1]+')"/><rect x="'+(p[0]-52)+'" y="'+(p[1]+62)+'" width="70" height="9" rx="4" fill="#D9CDB3" transform="rotate('+((k%5)-2)*3+' '+p[0]+' '+p[1]+')"/>';
+      b+='<circle cx="'+(p[0]+3)+'" cy="'+(p[1]+5)+'" r="13" fill="#000" opacity=".25"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="13" fill="'+col+'"/><circle cx="'+(p[0]-4)+'" cy="'+(p[1]-4)+'" r="4" fill="#fff" opacity=".7"/>';});
+    b+='<rect width="1600" height="900" fill="none" stroke="#6B4423" stroke-width="44"/><rect x="22" y="22" width="1556" height="856" fill="none" stroke="#3E2610" stroke-width="4" opacity=".6"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#D19A5E'],[1,'#9C6A37']],.5,.5,.8),b);
+  },
+  // ٣) اختبار السرعة: حلبةٌ ليلية بخطوط سرعةٍ ودوائر مؤقّت
+  quiz:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var r=1;r<7;r++)b+='<circle cx="800" cy="450" r="'+(r*120)+'" fill="none" stroke="#22D3EE" stroke-width="2" opacity="'+(.18-r*.02)+'" stroke-dasharray="'+(r*8)+' '+(r*6)+'"/>';
+    for(var i=0;i<60;i++){var x=GM_W.h(i,1600),y=GM_W.h(i+11,900),w=120+GM_W.h(i+5,380);if(x>420&&x<1180&&y>200&&y<700)continue;
+      b+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+(2+i%4)+'" rx="2" fill="'+(i%3?'#22D3EE':'#F472B6')+'" opacity="'+(.25+(i%4)*.12)+'" transform="skewX(-20)"/>';}
+    for(var t=0;t<60;t++){var a=t*6*Math.PI/180,R=t%5?395:380;b+='<line x1="'+(800+R*Math.sin(a)).toFixed(1)+'" y1="'+(450-R*Math.cos(a)).toFixed(1)+'" x2="'+(800+410*Math.sin(a)).toFixed(1)+'" y2="'+(450-410*Math.cos(a)).toFixed(1)+'" stroke="#FDE047" stroke-width="'+(t%5?2:5)+'" opacity=".35"/>';}
+    b+='<path d="M800 450 L800 70" stroke="#F472B6" stroke-width="6" opacity=".35" stroke-linecap="round"/><path d="M0 820 L1600 760 L1600 900 L0 900Z" fill="#0B1022"/><path d="M0 820 L1600 760" stroke="#22D3EE" stroke-width="4" opacity=".6"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#1E3A8A'],[.6,'#0F1A45'],[1,'#060A1C']],.5,.5,.8),b);
+  },
+  // ٤) البالون: سماءٌ صافية وغيومٌ ومناطيد بعيدة وتلال
+  balloon:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/><circle cx="1380" cy="150" r="80" fill="#FFF3B0"/><circle cx="1380" cy="150" r="140" fill="#FFF3B0" opacity=".25"/>';
+    function cloud(x,y,s,o){return '<g transform="translate('+x+' '+y+') scale('+s+')" opacity="'+o+'"><ellipse cx="0" cy="0" rx="90" ry="34" fill="#fff"/><circle cx="-38" cy="-16" r="34" fill="#fff"/><circle cx="20" cy="-28" r="44" fill="#fff"/><circle cx="62" cy="-8" r="28" fill="#fff"/></g>';}
+    b+=cloud(200,160,1.3,.95)+cloud(620,110,.8,.8)+cloud(1100,250,1,.85)+cloud(1450,420,.9,.8)+cloud(150,480,.8,.7);
+    function hab(x,y,s,c1,c2){return '<g transform="translate('+x+' '+y+') scale('+s+')"><path d="M0 -70 C60 -70 70 0 22 40 L-22 40 C-70 0 -60 -70 0 -70Z" fill="'+c1+'"/><path d="M0 -70 C20 -70 24 0 8 40 L-8 40 C-24 0 -20 -70 0 -70Z" fill="'+c2+'"/><path d="M-18 44 L-12 62 M18 44 L12 62" stroke="#6B4423" stroke-width="2"/><rect x="-13" y="62" width="26" height="18" rx="3" fill="#8A5A2B"/></g>';}
+    b+=hab(330,330,.9,'#E5484D','#FFD43B')+hab(1260,170,.7,'#3E7BFA','#fff')+hab(1460,640,1,'#30A46C','#FDE68A')+hab(120,700,.6,'#F5A524','#E5484D');
+    b+='<path d="M0 780 Q300 690 620 770 T1200 750 T1600 760 V900 H0Z" fill="#7CC36A"/><path d="M0 830 Q400 770 800 830 T1600 820 V900 H0Z" fill="#5AAE4A"/>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#5BB7F0'],[.7,'#A9DEFA'],[1,'#E8F7FF']],1),b);
+  },
+  // ٥) افتح الصندوق: غرفة مفاجآت بأرففٍ عليها صناديق هدايا ولمعات
+  box:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    [[180,1],[1420,0]].forEach(function(s){var x=s[0];for(var r=0;r<4;r++){var y=170+r*180;b+='<rect x="'+(x-170)+'" y="'+(y+92)+'" width="340" height="16" rx="4" fill="#5B2C83"/>';
+      for(var k=0;k<3;k++){var cx=x-110+k*110,c=['#E5484D','#3E7BFA','#F5A524','#30A46C','#EC4899'][(r+k+s[1])%5],h=56+((r*3+k)%3)*12;
+        b+='<rect x="'+(cx-40)+'" y="'+(y+92-h)+'" width="80" height="'+h+'" rx="6" fill="'+c+'"/><rect x="'+(cx-7)+'" y="'+(y+92-h)+'" width="14" height="'+h+'" fill="#FFF3B0" opacity=".85"/><path d="M'+cx+' '+(y+92-h)+' q-26 -26 -30 -2 q14 6 30 2 q16 4 30 -2 q-4 -24 -30 2" fill="#FFF3B0"/>';}}});
+    for(var i=0;i<40;i++){var x2=GM_W.h(i+1,1600),y2=GM_W.h(i+5,900),s2=6+i%4*4;b+='<path d="M'+x2+' '+(y2-s2)+' L'+(x2+s2/4)+' '+(y2-s2/4)+' L'+(x2+s2)+' '+y2+' L'+(x2+s2/4)+' '+(y2+s2/4)+' L'+x2+' '+(y2+s2)+' L'+(x2-s2/4)+' '+(y2+s2/4)+' L'+(x2-s2)+' '+y2+' L'+(x2-s2/4)+' '+(y2-s2/4)+'Z" fill="#FFE27A" opacity="'+(.25+i%3*.2)+'"/>';}
+    b+='<path d="M0 840 H1600 V900 H0Z" fill="#2E1050"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#9D4EDD'],[.6,'#5A189A'],[1,'#240046']],.5,.45,.8),b);
+  },
+  // ٦) الذاكرة: طاولة لعبٍ خضراء بإطارٍ خشبي وبطاقاتٍ مقلوبة على الحواف
+  memory:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var i=0;i<14;i++){var x=i<7?60+GM_W.h(i,220):1300+GM_W.h(i,220),y=80+(i%7)*110,r=GM_W.h(i+3,40)-20;
+      b+='<g transform="rotate('+r+' '+(x+50)+' '+(y+65)+')"><rect x="'+(x+4)+'" y="'+(y+6)+'" width="100" height="130" rx="12" fill="#000" opacity=".3"/><rect x="'+x+'" y="'+y+'" width="100" height="130" rx="12" fill="#FFF8E7"/><rect x="'+(x+8)+'" y="'+(y+8)+'" width="84" height="114" rx="8" fill="'+(i%2?'#C9453B':'#2F5DA8')+'"/><path d="M'+(x+50)+' '+(y+40)+' l14 25 l-14 25 l-14 -25z" fill="#FFD43B"/></g>';}
+    b+='<rect x="0" y="0" width="1600" height="900" fill="none" stroke="#5B3A1A" stroke-width="56"/><rect x="28" y="28" width="1544" height="844" fill="none" stroke="#C49A5A" stroke-width="6"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#2E8B57'],[.7,'#1E6B42'],[1,'#114A2C']],.5,.5,.75),b);
+  },
+  // ٧) فرز المجموعات: سوقٌ بمظلّاتٍ مخطّطة وسلال
+  groups:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    var C=[['#E5484D','#FFF3E0'],['#3E7BFA','#FFF3E0'],['#F5A524','#FFF3E0'],['#30A46C','#FFF3E0']];
+    for(var k=0;k<5;k++){var x=k*340-20,c=C[k%4];for(var s=0;s<8;s++)b+='<path d="M'+(x+s*45)+' 0 L'+(x+s*45+45)+' 0 L'+(x+s*45+50)+' 150 L'+(x+s*45-5)+' 150Z" fill="'+(s%2?c[1]:c[0])+'"/>';
+      for(var w=0;w<8;w++)b+='<path d="M'+(x+w*45-5)+' 150 q27 34 55 0" fill="'+(w%2?c[1]:c[0])+'"/>';}
+    for(var i=0;i<6;i++){var bx=60+i*300,by=760;b+='<ellipse cx="'+(bx+90)+'" cy="'+(by+110)+'" rx="120" ry="14" fill="#000" opacity=".2"/><path d="M'+bx+' '+by+' h180 l-20 110 h-140z" fill="#B07A3A"/>';
+      for(var l=0;l<4;l++)b+='<path d="M'+(bx+6+l*4)+' '+(by+20+l*24)+' h'+(168-l*8)+'" stroke="#7A4F22" stroke-width="5"/>';
+      var fc=['#E5484D','#F5A524','#30A46C','#FDE047','#F97316','#A3E635'][i];for(var f=0;f<5;f++)b+='<circle cx="'+(bx+30+f*30)+'" cy="'+(by-8-(f%2)*14)+'" r="22" fill="'+fc+'"/>';}
+    return GM_W.svg(GM_W.lg('a',[[0,'#F7D9A8'],[1,'#E8B878']],1),b);
+  },
+  // ٨) من سيربح المليون: استوديو ليليّ بحلقاتٍ مضيئة وأشعّة
+  millionaire:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var i=0;i<10;i++){var x=80+i*160;b+='<path d="M'+x+' -20 L'+(x-120+i*24)+' 900 L'+(x+40+i*24)+' 900Z" fill="#7DD3FC" opacity=".06"/>';}
+    for(var r=0;r<5;r++)b+='<ellipse cx="800" cy="760" rx="'+(260+r*140)+'" ry="'+(50+r*26)+'" fill="none" stroke="'+(r%2?'#A78BFA':'#38BDF8')+'" stroke-width="'+(6-r)+'" opacity="'+(.7-r*.12)+'"/>';
+    b+='<ellipse cx="800" cy="760" rx="240" ry="44" fill="#38BDF8" opacity=".25"/>';
+    for(var k=0;k<70;k++)b+='<circle cx="'+GM_W.h(k,1600)+'" cy="'+GM_W.h(k+4,520)+'" r="'+(1+k%3)+'" fill="#fff" opacity="'+(.2+k%4*.15)+'"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#1E1B6B'],[.6,'#0B0C3A'],[1,'#02021A']],.5,.55,.8),b);
+  },
+  // ٩) سباق الفريقين: مضمارٌ من الأعلى بحاراتٍ وخط بدايةٍ مربّع
+  race:function(){
+    var b='<rect width="1600" height="900" fill="#3FA34D"/><rect y="150" width="1600" height="600" fill="#3B3F4A"/>';
+    for(var l=1;l<4;l++)b+='<path d="M0 '+(150+l*150)+' H1600" stroke="#fff" stroke-width="6" stroke-dasharray="60 40" opacity=".8"/>';
+    b+='<rect y="146" width="1600" height="10" fill="#fff"/><rect y="744" width="1600" height="10" fill="#fff"/>';
+    for(var r=0;r<20;r++)for(var c=0;c<2;c++)b+='<rect x="'+(1440+c*30)+'" y="'+(150+r*30)+'" width="30" height="30" fill="'+((r+c)%2?'#111':'#fff')+'"/>';
+    for(var s=0;s<54;s++)b+='<rect x="'+(s*30)+'" y="'+(s%2?120:126)+'" width="30" height="22" fill="'+(s%2?'#E5484D':'#fff')+'"/><rect x="'+(s*30)+'" y="'+(s%2?758:752)+'" width="30" height="22" fill="'+(s%2?'#E5484D':'#fff')+'"/>';
+    for(var t=0;t<16;t++)b+='<circle cx="'+(50+t*100)+'" cy="60" r="34" fill="#2E7D32"/><circle cx="'+(90+t*100)+'" cy="840" r="34" fill="#2E7D32"/>';
+    b+='<rect width="1600" height="900" fill="url(#v)"/>';
+    return GM_W.svg(GM_W.vig('v','#000'),b);
+  },
+  // ١٠) كنوز وقنابل: بحرٌ وجزيرةٌ ونخلةٌ وصندوق كنز
+  boxes:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/><rect y="520" width="1600" height="380" fill="url(#s)"/>';
+    for(var w=0;w<10;w++)b+='<path d="M'+(w*170-40)+' '+(560+w%3*90)+' q40 -18 80 0 t80 0" stroke="#fff" stroke-width="4" fill="none" opacity=".4"/>';
+    [[180,1],[1420,-1]].forEach(function(s){var x=s[0],d=s[1];
+      b+='<ellipse cx="'+x+'" cy="760" rx="260" ry="80" fill="#F2D49B"/><ellipse cx="'+x+'" cy="750" rx="220" ry="60" fill="#F7E2B5"/>';
+      b+='<path d="M'+x+' 740 Q'+(x+d*30)+' 520 '+(x+d*10)+' 360" stroke="#8A5A2B" stroke-width="24" fill="none" stroke-linecap="round"/>';
+      for(var f=0;f<6;f++){var a=(f*60+20)*Math.PI/180;b+='<path d="M'+(x+d*10)+' 360 q'+(Math.cos(a)*80).toFixed(0)+' '+(-70+Math.sin(a)*30).toFixed(0)+' '+(Math.cos(a)*180).toFixed(0)+' '+(Math.sin(a)*90+30).toFixed(0)+'" stroke="#2E8B3E" stroke-width="26" fill="none" stroke-linecap="round"/>';}
+      b+='<g transform="translate('+(x-d*110)+' 690)"><rect x="-60" y="-10" width="120" height="70" rx="8" fill="#8A5A2B"/><path d="M-60 -10 q60 -60 120 0z" fill="#A86B32"/><rect x="-60" y="10" width="120" height="10" fill="#E8C34A"/><rect x="-10" y="0" width="20" height="26" rx="3" fill="#E8C34A"/><circle cx="-30" cy="-22" r="8" fill="#FFD43B"/><circle cx="20" cy="-28" r="7" fill="#FFD43B"/></g>';});
+    b+='<circle cx="800" cy="130" r="70" fill="#FFF3B0" opacity=".9"/><path d="M640 300 l20 -10 l20 10" stroke="#333" stroke-width="4" fill="none"/><path d="M980 240 l16 -8 l16 8" stroke="#333" stroke-width="4" fill="none"/>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#FDBA74'],[.6,'#FDE68A'],[1,'#BAE6FD']],1)+GM_W.lg('s',[[0,'#22B8CF'],[1,'#0B7285']],1),b);
+  },
+  // ١١) رتّب: درجٌ ملوّن صاعد بخطواتٍ مرقّمة
+  order:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    var C=['#E5484D','#F97316','#F5A524','#30A46C','#3E7BFA','#8B5CF6'];
+    for(var i=0;i<6;i++){var x=i*270-20,h=120+i*100;b+='<rect x="'+x+'" y="'+(900-h)+'" width="280" height="'+h+'" fill="'+C[i]+'"/><rect x="'+x+'" y="'+(900-h)+'" width="280" height="22" fill="#fff" opacity=".35"/>';
+      b+='<circle cx="'+(x+140)+'" cy="'+(900-h+70)+'" r="38" fill="#fff" opacity=".9"/><text x="'+(x+140)+'" y="'+(900-h+86)+'" font-family="Tahoma" font-size="44" font-weight="700" text-anchor="middle" fill="'+C[i]+'">'+'١٢٣٤٥٦'[i]+'</text>';}
+    b+='<path d="M120 700 Q400 560 640 560 T1100 380 T1500 160" stroke="#fff" stroke-width="6" fill="none" stroke-dasharray="4 18" stroke-linecap="round" opacity=".8"/><path d="M1500 160 l-30 -6 l14 26z" fill="#fff"/>';
+    b+='<g transform="translate(1440 90)"><path d="M0 0 V90" stroke="#5B3A1A" stroke-width="6"/><path d="M0 0 H70 L56 20 L70 40 H0z" fill="#E5484D"/></g>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#DBEAFE'],[1,'#FDF2F8']],1),b);
+  },
+  // ١٢) أكمل الفراغ: دفترٌ مسطّر على مكتبٍ بقلم رصاص وممحاة
+  blank:function(){
+    var b='<rect width="1600" height="900" fill="#B9874F"/>';
+    for(var g=0;g<30;g++)b+='<path d="M0 '+(g*31)+' Q800 '+(g*31+(g%3-1)*14)+' 1600 '+(g*31)+'" stroke="#9C6D3A" stroke-width="2" fill="none" opacity=".5"/>';
+    b+='<g transform="rotate(-2 800 450)"><rect x="150" y="50" width="1300" height="800" rx="18" fill="#000" opacity=".25" transform="translate(10 14)"/><rect x="150" y="50" width="1300" height="800" rx="18" fill="#FFFDF5"/>';
+    for(var l=0;l<17;l++)b+='<path d="M180 '+(130+l*44)+' H1420" stroke="#9CC3E8" stroke-width="2"/>';
+    b+='<path d="M1300 60 V840" stroke="#F28B82" stroke-width="3"/>';for(var h=0;h<9;h++)b+='<circle cx="1400" cy="'+(110+h*85)+'" r="11" fill="#B9874F"/>';b+='</g>';
+    b+='<g transform="translate(70 640) rotate(-28)"><rect width="330" height="34" rx="6" fill="#FDE047"/><rect width="40" height="34" fill="#F472B6"/><rect x="38" width="10" height="34" fill="#CBD5E1"/><path d="M330 0 L380 17 L330 34Z" fill="#F5D0A9"/><path d="M362 11 L380 17 L362 23Z" fill="#333"/></g>';
+    b+='<rect x="1440" y="700" width="110" height="56" rx="10" fill="#F9A8D4" transform="rotate(14 1495 728)"/>';
+    return GM_W.svg('',b);
+  },
+  // ١٣) صح أم خطأ: نصفان أخضر وأحمر بعلامتين كبيرتين
+  tf:function(){
+    var b='<path d="M0 0 H860 L740 900 H0Z" fill="url(#r)"/><path d="M860 0 H1600 V900 H740Z" fill="url(#g)"/>';
+    b+='<path d="M780 0 L840 0 L720 900 L660 900Z" fill="#fff" opacity=".18"/>';
+    b+='<g opacity=".22" stroke="#fff" stroke-width="70" stroke-linecap="round"><path d="M120 280 L380 540 M380 280 L120 540"/><path d="M1220 430 L1330 540 L1520 300" fill="none"/></g>';
+    for(var i=0;i<26;i++){var x=GM_W.h(i,1600),y=GM_W.h(i+3,900);b+='<circle cx="'+x+'" cy="'+y+'" r="'+(4+i%4*3)+'" fill="#fff" opacity=".18"/>';}
+    return GM_W.svg(GM_W.lg('r',[[0,'#B91C1C'],[1,'#EF4444']],1)+GM_W.lg('g',[[0,'#15803D'],[1,'#22C55E']],1),b);
+  },
+  // ١٤) صنّف بالسحب: مصنعٌ بسيرٍ ناقلٍ وتروسٍ وصناديق
+  sort:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    function gear(x,y,r,c,o){var p='';for(var t=0;t<12;t++){var a=t*30*Math.PI/180,a2=(t*30+15)*Math.PI/180;p+=(t?'L':'M')+(x+(r+18)*Math.cos(a)).toFixed(0)+' '+(y+(r+18)*Math.sin(a)).toFixed(0)+'L'+(x+r*Math.cos(a2)).toFixed(0)+' '+(y+r*Math.sin(a2)).toFixed(0);}
+      return '<path d="'+p+'Z" fill="'+c+'" opacity="'+o+'"/><circle cx="'+x+'" cy="'+y+'" r="'+(r*.35)+'" fill="#0F2A35" opacity="'+o+'"/>';}
+    b+=gear(150,160,90,'#5EEAD4',.35)+gear(300,290,60,'#99F6E4',.3)+gear(1460,180,110,'#5EEAD4',.3)+gear(1290,330,55,'#99F6E4',.3);
+    b+='<rect x="0" y="720" width="1600" height="60" rx="30" fill="#334155"/>';for(var r=0;r<17;r++)b+='<circle cx="'+(40+r*100)+'" cy="750" r="22" fill="#64748B"/><circle cx="'+(40+r*100)+'" cy="750" r="8" fill="#1E293B"/>';
+    var C=['#F5A524','#3E7BFA','#E5484D','#30A46C'];for(var k=0;k<7;k++)b+='<rect x="'+(60+k*230)+'" y="'+(640+k%2*10)+'" width="'+(70+k%3*12)+'" height="'+(70-k%2*10)+'" rx="8" fill="'+C[k%4]+'"/><path d="M'+(60+k*230)+' '+(660+k%2*10)+' h'+(70+k%3*12)+'" stroke="#fff" stroke-width="4" opacity=".5"/>';
+    b+='<rect y="810" width="1600" height="90" fill="#0F172A"/>';for(var s=0;s<32;s++)b+='<path d="M'+(s*50)+' 810 l25 0 l-25 90 h-25z" fill="#FACC15" opacity=".8"/>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#155E75'],[1,'#0E3A4A']],1),b);
+  },
+  // ١٥) مغامرة اللوح: خريطةٌ ورقية بمسارٍ ونردٍ وبوصلة
+  board:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    var pts=[];for(var i=0;i<26;i++){var t=i/25;pts.push([120+t*1360,780-Math.sin(t*Math.PI*2.4)*230-t*300]);}
+    pts.forEach(function(p,k){b+='<circle cx="'+p[0].toFixed(0)+'" cy="'+p[1].toFixed(0)+'" r="26" fill="'+['#E5484D','#3E7BFA','#F5A524','#30A46C'][k%4]+'" stroke="#fff" stroke-width="5" opacity=".75"/>';});
+    b+='<g transform="translate(1400 160)"><circle r="90" fill="#FFF8E7" stroke="#8A5A2B" stroke-width="6"/><path d="M0 -80 L16 0 L0 80 L-16 0Z" fill="#C62E2E"/><path d="M-80 0 L0 -16 L80 0 L0 16Z" fill="#8A5A2B"/><circle r="8" fill="#333"/></g>';
+    function die(x,y,r,n){var s='<g transform="translate('+x+' '+y+') rotate('+r+')"><rect x="-50" y="-50" width="100" height="100" rx="18" fill="#fff" stroke="#ccc" stroke-width="3"/>';var D={1:[[0,0]],3:[[-24,-24],[0,0],[24,24]],5:[[-24,-24],[24,-24],[0,0],[-24,24],[24,24]]};D[n].forEach(function(d){s+='<circle cx="'+d[0]+'" cy="'+d[1]+'" r="9" fill="#333"/>';});return s+'</g>';}
+    b+=die(170,170,-14,5)+die(290,250,12,3)+die(1470,760,18,1);
+    b+='<path d="M60 60 Q200 30 300 70" stroke="#8A5A2B" stroke-width="3" fill="none" opacity=".4"/><rect width="1600" height="900" fill="none" stroke="#8A5A2B" stroke-width="30" opacity=".5"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#FBF1D6'],[.7,'#EED9A6'],[1,'#C9A66B']],.5,.5,.8),b);
+  },
+  // ١٦) شدّ الحبل: ساحةٌ عشبية برايات وشمس (امتداد مشهد اللعبة)
+  tug:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/><circle cx="1360" cy="140" r="70" fill="#FFE27A"/><circle cx="1360" cy="140" r="120" fill="#FFE27A" opacity=".3"/>';
+    b+='<path d="M0 90 Q400 170 800 100 T1600 110" stroke="#555" stroke-width="3" fill="none"/>';
+    for(var f=0;f<34;f++){var x=f*48+10,y=90+Math.sin(f/34*Math.PI*2)*-0+((x<800)?(x/800)*40:((1600-x)/800)*40);b+='<path d="M'+x+' '+(y-4)+' l26 0 l-13 34z" fill="'+['#E5484D','#3E7BFA','#F5A524','#30A46C'][f%4]+'"/>';}
+    b+='<path d="M0 560 Q400 500 800 540 T1600 520 V900 H0Z" fill="#8BD06F"/><path d="M0 640 Q500 600 900 640 T1600 630 V900 H0Z" fill="#5FB548"/>';
+    for(var g=0;g<60;g++)b+='<path d="M'+GM_W.h(g,1600)+' '+(660+GM_W.h(g+2,220))+' l6 -18 l6 18" stroke="#3E8E2E" stroke-width="3" fill="none"/>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#7CC8F8'],[1,'#D6F0FF']],1),b);
+  },
+  // ١٧) ركلات الترجيح: الملعب كاملاً (مشهد اللعبة يتّسع ليملأ الشاشة)
+  penalty:function(){
+    return g3StadiumSvg().replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ');
+  },
+  // ١٨) الميزان: مكتبة الحكيم بأرففٍ ومصباحٍ دافئ
+  balance:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    [[0,1],[1240,0]].forEach(function(s){var x=s[0];b+='<rect x="'+x+'" y="40" width="360" height="760" fill="#4A2A14"/>';
+      for(var r=0;r<5;r++){var y=60+r*150;b+='<rect x="'+(x+10)+'" y="'+(y+128)+'" width="340" height="14" fill="#2E1A0C"/>';
+        for(var k=0;k<11;k++){var w=22+GM_W.h(k+r*11+s[1]*55,14),h=88+GM_W.h(k+r*7,34),c=['#B42A30','#2152C4','#C27C0E','#1B7A4C','#7C3AED','#0E7490'][GM_W.h(k*3+r+s[1],6)];
+          b+='<rect x="'+(x+16+k*30)+'" y="'+(y+128-h)+'" width="'+w+'" height="'+h+'" rx="3" fill="'+c+'"/><rect x="'+(x+16+k*30)+'" y="'+(y+138-h)+'" width="'+w+'" height="6" fill="#FDE68A" opacity=".6"/>';}}});
+    b+='<path d="M800 0 V120" stroke="#3A2410" stroke-width="5"/><path d="M730 120 h140 l-30 50 h-80z" fill="#E8C34A"/><ellipse cx="800" cy="300" rx="520" ry="300" fill="url(#l)"/>';
+    b+='<rect y="800" width="1600" height="100" fill="#3A2410"/><rect y="800" width="1600" height="10" fill="#5B3A1A"/>';
+    return GM_W.svg(GM_W.rg('a',[[0,'#7A4A24'],[.7,'#4A2A14'],[1,'#2A160A']],.5,.4,.8)+GM_W.rg('l',[[0,'#FFE7A3'],[1,'#FFE7A300']]),b);
+  },
+  // ١٩) قفزة الضفدع: بِركةٌ بزنابق وقصبٍ ويعاسيب
+  frog:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/><rect y="300" width="1600" height="600" fill="url(#w)"/>';
+    for(var r=0;r<14;r++)b+='<ellipse cx="'+GM_W.h(r,1600)+'" cy="'+(360+GM_W.h(r+4,500))+'" rx="'+(60+r%3*30)+'" ry="'+(10+r%2*6)+'" fill="none" stroke="#fff" stroke-width="3" opacity=".25"/>';
+    var P=[[160,480,70],[420,760,90],[1180,800,80],[1460,520,70],[300,640,50],[1320,680,55]];
+    P.forEach(function(p){b+='<path d="M'+p[0]+' '+p[1]+' m-'+p[2]+' 0 a'+p[2]+' '+(p[2]*.45)+' 0 1 0 '+(p[2]*2)+' 0 a'+p[2]+' '+(p[2]*.45)+' 0 1 0 -'+(p[2]*2)+' 0z" fill="#3DA35D"/><path d="M'+p[0]+' '+p[1]+' L'+(p[0]+p[2])+' '+(p[1]-8)+' L'+(p[0]+p[2])+' '+(p[1]+8)+'Z" fill="#1F7A40"/>';});
+    b+='<circle cx="420" cy="740" r="16" fill="#F9A8D4"/><circle cx="1180" cy="780" r="14" fill="#FDE68A"/>';
+    [[0,1],[1600,-1]].forEach(function(s){for(var k=0;k<12;k++){var x=s[0]+s[1]*(20+k*16);b+='<path d="M'+x+' 900 Q'+(x+s[1]*10)+' '+(560-k%4*40)+' '+(x+s[1]*(k%3*12))+' '+(420-k%5*30)+'" stroke="'+(k%2?'#2E7D32':'#558B2F')+'" stroke-width="10" fill="none" stroke-linecap="round"/>';if(k%3===0)b+='<ellipse cx="'+(x+s[1]*(k%3*12))+'" cy="'+(440-k%5*30)+'" rx="10" ry="34" fill="#6D4C2F"/>';}});
+    b+='<path d="M0 300 Q300 250 600 290 T1200 280 T1600 290 V320 H0Z" fill="#6FBF57"/>';
+    b+='<g transform="translate(1000 160)"><ellipse cx="-22" cy="-8" rx="24" ry="8" fill="#BAE6FD" opacity=".8"/><ellipse cx="22" cy="-8" rx="24" ry="8" fill="#BAE6FD" opacity=".8"/><rect x="-4" y="-14" width="8" height="40" rx="4" fill="#0EA5E9"/></g>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#A5DEF5'],[1,'#E3F6FD']],1)+GM_W.lg('w',[[0,'#38A3C9'],[1,'#1D6F8F']],1),b);
+  },
+  // ٢٠) بنّاء الكلمات: ورشة بناءٍ بجدار طوبٍ ورافعةٍ ومكعّبات حروف
+  build:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var r=0;r<9;r++)for(var c=0;c<18;c++){var x=c*100-(r%2?50:0),y=520+r*44;b+='<rect x="'+(x+3)+'" y="'+(y+3)+'" width="94" height="38" rx="4" fill="'+(GM_W.h(r*18+c,5)?'#C2552E':'#A8461F')+'"/>';}
+    b+='<path d="M1300 520 V80 M1300 80 H560 M1300 80 L1420 160 M1300 140 L1360 80" stroke="#F5A524" stroke-width="18" fill="none"/>';
+    for(var t=0;t<9;t++)b+='<path d="M'+(1300-t*80)+' 80 l40 -30 l40 30" stroke="#F5A524" stroke-width="8" fill="none"/>';
+    b+='<path d="M640 80 V250" stroke="#333" stroke-width="4"/><rect x="600" y="250" width="80" height="80" rx="10" fill="#3E7BFA"/><text x="640" y="306" font-family="Tahoma" font-size="48" font-weight="700" text-anchor="middle" fill="#fff">ب</text>';
+    var L=['أ','ح','ر','ف','ك','ت'],C=['#E5484D','#30A46C','#F5A524','#8B5CF6','#3E7BFA','#EC4899'];
+    for(var k=0;k<6;k++){var bx=(k<3?60+k*95:1250+(k-3)*95),by=430-(k%2)*20;b+='<rect x="'+bx+'" y="'+by+'" width="86" height="86" rx="12" fill="'+C[k]+'"/><text x="'+(bx+43)+'" y="'+(by+60)+'" font-family="Tahoma" font-size="48" font-weight="700" text-anchor="middle" fill="#fff">'+L[k]+'</text>';}
+    for(var s=0;s<20;s++)b+='<path d="M'+(s*80)+' 900 l40 0 l40 -30 h-40z" fill="#FACC15"/><path d="M'+(s*80+40)+' 900 l40 0 l0 0 l40 -30 h-40z" fill="#111" opacity=".85"/>';
+    return GM_W.svg(GM_W.lg('a',[[0,'#FDE68A'],[.55,'#FED7AA'],[1,'#FDBA74']],1),b);
+  },
+  // ٢١) انظر وتذكّر: ليلٌ بنجومٍ وومضة كاميرا وعينٌ ساهرة
+  flash:function(){
+    var b='<rect width="1600" height="900" fill="url(#a)"/>';
+    for(var i=0;i<120;i++)b+='<circle cx="'+GM_W.h(i,1600)+'" cy="'+GM_W.h(i+9,900)+'" r="'+(1+i%3*.8)+'" fill="#fff" opacity="'+(.2+i%5*.15)+'"/>';
+    for(var s=0;s<4;s++){var x=200+s*380,y=80+s%2*120;b+='<path d="M'+x+' '+y+' l180 90" stroke="url(#t)" stroke-width="4" stroke-linecap="round"/>';}
+    for(var r=0;r<16;r++){var a=r*22.5*Math.PI/180;b+='<path d="M800 450 L'+(800+900*Math.cos(a)).toFixed(0)+' '+(450+900*Math.sin(a)).toFixed(0)+'" stroke="#FDE68A" stroke-width="'+(r%2?3:8)+'" opacity=".07"/>';}
+    b+='<circle cx="800" cy="450" r="420" fill="url(#g)"/>';
+    [[180,720,1],[1420,720,1]].forEach(function(e){b+='<g transform="translate('+e[0]+' '+e[1]+')"><path d="M-110 0 Q0 -80 110 0 Q0 80 -110 0Z" fill="#fff" opacity=".9"/><circle r="42" fill="#7C3AED"/><circle r="20" fill="#1E1B4B"/><circle cx="12" cy="-12" r="9" fill="#fff"/></g>';});
+    return GM_W.svg(GM_W.rg('a',[[0,'#3B2A8A'],[.6,'#1A1350'],[1,'#0A0722']],.5,.5,.8)+GM_W.rg('g',[[0,'#FDE68A'],[.4,'#FDE68A55'],[1,'#FDE68A00']])+GM_W.lg('t',[[0,'#ffffff00'],[1,'#ffffff']]),b);
+  }
+};
+// أسماء العوالم (للتوثيق والمراجعة)
+var GM_WORLD_NAMES={wheel:'مسرح العجلة',match:'لوح الدبابيس',quiz:'حلبة السرعة',balloon:'سماء البالونات',box:'غرفة المفاجآت',memory:'طاولة البطاقات',groups:'سوق الفرز',millionaire:'استوديو المليون',race:'مضمار السباق',boxes:'جزيرة الكنوز',order:'درج الخطوات',blank:'دفتر الكتابة',tf:'صح أم خطأ',sort:'مصنع الفرز',board:'خريطة المغامرة',tug:'ساحة الشدّ',penalty:'الملعب',balance:'مكتبة الحكيم',frog:'بِركة الضفدع',build:'ورشة البنّاء',flash:'ليلة الومضة'};
+// ألعابٌ يتّسع مشهدها المرسوم نفسه ليملأ الشاشة بدل أن يجلس في إطار
+var GM_FILL_TPL={penalty:1,tug:1,balance:1,frog:1};
+var _gmWorldCache={};
+function gmWorldUrl(tpl){
+  if(!GM_WORLDS[tpl])return null;
+  if(!_gmWorldCache[tpl])_gmWorldCache[tpl]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(GM_WORLDS[tpl]());
+  return _gmWorldCache[tpl];
+}
+/*GMTH-END*/
 const GM_PAL=[['#C9453B','#A32F27'],['#D98B2B','#B06D18'],['#2F7D74','#1F5C55'],
               ['#5C7A3D','#41592B'],['#3D6FA8','#2A5183'],['#B0873A','#8A6524']];
 const GM_PAL_F=GM_PAL.map(p=>p[0]);
-let gmTpl='wheel',gmItems=[],gmGroupNames=['المجموعة الأولى','المجموعة الثانية'],gmThemes=[];
+let gmTpl='wheel',gmItems=[],gmGroupNames=['المجموعة الأولى','المجموعة الثانية'];
 const GM_STRUCT={wheel:'items',match:'pairs',quiz:'quiz',balloon:'quiz',box:'items',memory:'pairs',groups:'groups',millionaire:'quiz',race:'quiz',boxes:'quiz',order:'sequence',blank:'blank',tf:'tf',sort:'sort',board:'quiz',tug:'quiz',penalty:'quiz',balance:'pairs',frog:'quiz',build:'words',flash:'spell'};
 // قوالب لها فرقها الخاصة أو لاعبٌ واحد بطبيعتها — لا يُعرض فيها اختيار الفرق
 const GM_NO_TEAMS={millionaire:1,tug:1};
-const GM_TPL_THEME={millionaire:'استوديو المليون'};
-function gmForcedTheme(tpl){
-  const c=gmGameCfg[tpl];
-  if(c&&c.lock&&c.theme){const t=gmThemes.find(x=>x.id===c.theme);if(t)return t;}
-  const nm=GM_TPL_THEME[tpl];if(!nm)return null;
-  return gmThemes.find(t=>(t.name||'').includes(nm))||null;
-}
-function gmApplyForcedTheme(){
-  const sel=document.getElementById('gm-theme');if(!sel)return;
-  const f=gmForcedTheme(gmTpl);
-  if(f){sel.value=f.id;sel.disabled=true;sel.title='ثيم هذه اللعبة ثابت: '+f.name;}
-  else{sel.disabled=false;sel.title='';}
-}
 const GM_TPL_LBL={wheel:'العجلة',match:'المطابقة',quiz:'اختبار السرعة',balloon:'فرقع البالون',box:'افتح الصندوق',memory:'بطاقات الذاكرة',groups:'فرز المجموعات',millionaire:'من سيربح المليون',race:'سباق الفريقين',boxes:'كنوز وقنابل',order:'رتّب',blank:'أكمل الفراغ',tf:'صح أم خطأ',sort:'صنّف بالسحب',board:'مغامرة اللوح',tug:'شدّ الحبل',penalty:'ركلات الترجيح',balance:'الميزان',frog:'قفزة الضفدع',build:'بنّاء الكلمات',flash:'انظر وتذكّر'};
 // دالّة لا ثابتاً: نصوصها تستدعي khG/khS، والجنس لا يُعرف إلا بعد الدخول
 function GM_TPL_INSTR(){return {
@@ -11146,58 +11349,16 @@ function gmToggleMusic(){
 }
 function gmMusicStop(){if(gmMusicAudio){gmMusicAudio.pause();gmMusicAudio.currentTime=0;}}
 
-let gmGameCfg={},gmThemeTouched=false;
-let _gmThemesAt=0;
-async function gmLoadThemes(){
-  // تخفيف الضغط: الثيمات والإعدادات شبه ثابتة — لا نعيد جلبها قبل مرور ٥ دقائق
-  if(gmThemes.length&&Date.now()-_gmThemesAt<300000)return;
-  _gmThemesAt=Date.now();
+let gmGameCfg={};
+let _gmCfgAt=0;
+// إعدادات المشرف لكل لعبة (أصوات وخيارات لعب) — شبه ثابتة، لا تُجلب قبل مرور ٥ دقائق
+async function gmLoadCfg(){
+  if(_gmCfgAt&&Date.now()-_gmCfgAt<300000)return;
+  _gmCfgAt=Date.now();
   try{
     const cfgVal=await c1Setting('game_cfg');
     gmGameCfg=cfgVal?JSON.parse(cfgVal):{};
   }catch(e){gmGameCfg={};}
-  try{
-    // المرسومة تُثبَّت قبل أي طلبٍ للشبكة: لو تعثّر الجلب لظلّت القائمة فارغة،
-    // وذلك في الفصل بلا تغطية — وهو بالضبط الموضع الذي بُنيت له
-    gmThemes=[...GM_SCENES];
-    const data=await c1Ref('game_themes','all',async()=>{
-      const{data,error}=await sb.from('game_themes').select('*').order('created_at');
-      return error?null:(data||[]);
-    });
-    gmThemes=[...GM_SCENES,...(data||[])];
-    const sel=document.getElementById('gm-theme');
-    const cur=sel.value;
-    sel.innerHTML='<option value=""></option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
-    if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
-    gmApplyForcedTheme();
-    /* شبكة الثيمات آخر ما تُرسم: ثماني مصغّراتٍ خلفيّاتُها مشاهد SVG كاملة،
-       ورسمها في مسار فتح القسم يحجب الخيط. تأجيلها إطاراً واحداً يجعل
-       الاستوديو يظهر فوراً ثم تكتمل الشبكة — والمعلّمة لا تصل إليها قبل
-       أن تختار الدرس أصلاً. */
-    requestAnimationFrame(()=>{try{gmRenderThemeGrid()}catch(e){}});
-  }catch(e){}
-}
-function gmRenderThemeGrid(){
-  const grid=document.getElementById('gm-theme-grid');
-  const sel=document.getElementById('gm-theme');
-  if(!grid||!sel)return;
-  const forced=gmForcedTheme(gmTpl);
-  const cur=sel.value;
-  const card=(id,name,bg)=>`<button type="button" class="gm-theme-card ${cur===id?'on':''} ${forced&&forced.id!==id?'locked':''}" data-id="${escAttr(id)}" onclick="gmGridPick('${escJs(id)}')">
-    <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div>
-    <div class="nm">${escHtml(name)}</div></button>`;
-  grid.innerHTML=gmThemes.map(t=>card(t.id,t.name,t.bg_url)).join('');
-  grid.title=forced?'ثيم هذه اللعبة ثابت: '+forced.name:'';
-  // الثيم المختار (أو المفروض) يُحمَّل بهدوء الآن ليكون جاهزاً لحظة التشغيل
-  const pre=forced||gmThemes.find(t=>t.id===cur);
-  if(pre&&pre.bg_url)gmPreloadBg(pre.bg_url);
-}
-function gmGridPick(id){
-  const sel=document.getElementById('gm-theme');
-  if(sel.disabled)return;
-  gmThemeTouched=true;
-  sel.value=id;
-  gmRenderThemeGrid();
 }
 // مستوى الأسئلة الذي تختاره المعلمة، يُرسَل مع طلب التوليد
 // دالّة لا ثابتاً: نصوصها تستدعي khG/khS، والجنس لا يُعرف إلا بعد الدخول
@@ -11296,14 +11457,7 @@ function gmRecoApply(){
   const box=document.getElementById('gm-reco');
   if(box&&box.dataset.tpl){gmPickTpl(box.dataset.tpl);toast('اختير القالب المقترح — '+khG('عدّلي','عدّل')+' ما '+khG('تشائين','تشاء')+' ثم '+khG('ولّدي','ولّد')+'','ok');}
 }
-/* ثيمٌ يُختار تلقائياً بمادة الدرس: المشاهد المدمجة موسومةٌ بموادّها أصلاً */
-function gmAutoTheme(){
-  const subj=studioSubject||'';
-  const t=gmThemes.find(x=>x.subj&&subj&&(subj.includes(x.subj)||x.subj.includes(subj)))
-        ||gmThemes.find(x=>x.subj==='عامّ')||gmThemes[0];
-  return t?t.id:'';
-}
-/* ⚡ الوضع السريع: قالبٌ مقترح + مستوى متوسط + ٦ عناصر + ثيم المادة —
+/* ⚡ الوضع السريع: قالبٌ مقترح + مستوى متوسط + ٦ عناصر —
    ثم التوليد فوراً. المعلّمة تراجع الناتج وتُشغّل: ثلاث ضغطاتٍ من الدرس
    إلى اللعبة، وكل قرارٍ اتُّخذ عنها يبقى قابلاً للتعديل بعد التوليد. */
 function gmQuick(){
@@ -11313,11 +11467,7 @@ function gmQuick(){
   if(r)gmPickTpl(r.tpl);
   const lv=document.getElementById('gm-level-sel');if(lv)lv.value='متوسط';
   const ct=document.getElementById('gm-count');if(ct)ct.value='6';
-  if(!gmForcedTheme(gmTpl)){
-    const th=gmAutoTheme();
-    if(th){document.getElementById('gm-theme').value=th;gmRenderThemeGrid();}
-  }
-  toast('⚡ اختير القالب والثيم تلقائياً — جاري التوليد…','ok');
+  toast('⚡ اختير القالب تلقائياً — جاري التوليد…','ok');
   gmGenerate();
 }
 function gmPickTpl(t){
@@ -11326,25 +11476,12 @@ function gmPickTpl(t){
   const sel=document.getElementById('gm-tpl-sel');
   if(sel&&sel.value!==t)sel.value=t;
   gmTplHint();
-  gmThemeTouched=false;
-  const dc=gmGameCfg[t];
-  if(dc&&dc.theme&&!dc.lock&&gmThemes.some(x=>x.id===dc.theme))document.getElementById('gm-theme').value=dc.theme;
-  gmApplyForcedTheme();
-  gmRenderThemeGrid();
   if(GM_STRUCT[t]!==prevStruct&&gmItems.length){gmItems=[];document.getElementById('studio-game-result-card').classList.add('hidden');}
 }
 let _gmGenBusy=false;
 async function gmGenerate(){
   const lessons=studioSelectedLessons();
   if(!lessons.length){toast(''+khG('اختاري','اختر')+' درساً أولاً',true);return;}
-  // «كلاسيكي (بلا خلفية)» حُذف، فلا مهرب من اختيارٍ صريح — وبلا هذا الفحص
-  // تُولَّد اللعبة ثم تُفتح على تدرّجٍ رماديّ بلا مشهد
-  if(!gmForcedTheme(gmTpl)&&!document.getElementById('gm-theme').value){
-    toast(''+khG('اختاري','اختر')+' ثيماً للعبة أولاً',true);
-    const g=document.getElementById('gm-theme-grid');
-    if(g)g.scrollIntoView({behavior:'smooth',block:'center'});
-    return;
-  }
   const grade=String(studioGrade||''),subject=studioSubject||'';
   const count=Math.max(5,Math.min(30,parseInt(document.getElementById('gm-count').value)||6));
   const btn=document.querySelector('#studio-game-options-card .eg-generate');
@@ -11515,14 +11652,13 @@ async function gmSave(){
   if(items.length<2){toast(''+khG('أكملي','أكمل')+' المحتوى أولاً (عنصران على الأقل)',true);return;}
   const lessons=studioSelectedLessons();
   const grade=String(studioGrade||''),subject=studioSubject||'';
-  const themeSel=(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value||null;
   const title=(lessons[0]?lessons[0].name:'لعبة')+' — '+GM_TPL_LBL[gmTpl];
   uiBusy('يحفظ اللعبة…');
   try{
     const{data,error}=await sb.from('games').insert({
       user_id:currentUser.id,
       grade,subject,unit:lessons[0]?lessons[0].unit:'',lesson:lessons.map(l=>l.name).join('، '),
-      title,template:gmTpl,theme_id:themeSel,content:{structure:GM_STRUCT[gmTpl],items,groupNames:(GM_STRUCT[gmTpl]==='groups'||GM_STRUCT[gmTpl]==='sort')?gmGroupNames:undefined}
+      title,template:gmTpl,theme_id:null,content:{structure:GM_STRUCT[gmTpl],items,groupNames:(GM_STRUCT[gmTpl]==='groups'||GM_STRUCT[gmTpl]==='sort')?gmGroupNames:undefined}
     }).select().single();
     if(error)throw error;
     // ربط اللعبة ببطاقة الدرس دائماً: من الرابط المحفوظ إن جئنا من البطاقة،
@@ -11541,7 +11677,7 @@ async function gmSave(){
       // النشر يحتاج درساً بعينه؛ لعبة تجمع عدة دروس لا تُنشر إلا وقد ارتبطت بواحد
       shAutoPublish({kind:'game',lessonId:linkId,grade,subject,
         unit:lessons[0]?lessons[0].unit:'',lesson:lessons[0]?lessons[0].name:'',
-        title,template:gmTpl,themeId:themeSel,
+        title,template:gmTpl,themeId:null,
         content:{structure:GM_STRUCT[gmTpl],items,groupNames:(GM_STRUCT[gmTpl]==='groups'||GM_STRUCT[gmTpl]==='sort')?gmGroupNames:undefined}});
     }
     gmLoadMyGames(true);
@@ -11573,8 +11709,6 @@ async function gmOpenSaved(id){
     document.querySelectorAll('.gm-tpl-btn').forEach(b=>b.classList.toggle('active',b.dataset.tpl===g.template));
     gmItems=(g.content&&g.content.items)||[];
     if(g.content&&g.content.groupNames&&g.content.groupNames.length>=2)gmGroupNames=g.content.groupNames.map(String);
-    const ts=document.getElementById('gm-theme');if(g.theme_id&&ts)ts.value=g.theme_id;
-    gmApplyForcedTheme();
     gmPlayWith(gmItems,g.title||'لعبة');
   }catch(e){}
 }
@@ -11596,17 +11730,6 @@ function gmPlay(){
   gmPickScope=(studioGrade&&studioSubject)?planClassesFor(studioGrade,studioSubject).map(c=>c.id):null;
   gmPlayWith(items,lessons[0]?lessons[0].name:'لعبة');
 }
-// ⚡ خلفية الثيم تُحمَّل مسبقاً: بدونها كانت الصورة تُرسم تدريجياً أمام الطلاب فور فتح اللعبة
-const _gmBgReady=new Set();
-function gmPreloadBg(url){
-  if(!url||_gmBgReady.has(url))return Promise.resolve(_gmBgReady.has(url));
-  return new Promise(res=>{
-    const im=new Image();
-    im.onload=()=>{_gmBgReady.add(url);res(true);};
-    im.onerror=()=>res(false);
-    im.src=url;
-  });
-}
 function gmPlayWith(items,title){
   // خلط خيارات كل سؤالٍ عند كل تشغيل — حتى الألعاب المحفوظة قديماً (وكانت إجابتها غالباً الخيار الأول)
   if(GM_STRUCT[gmTpl]==='quiz'||GM_STRUCT[gmTpl]==='spell')items=items.map(q=>{
@@ -11616,15 +11739,11 @@ function gmPlayWith(items,title){
   });
   if(GM_STRUCT[gmTpl]==='quiz'||GM_STRUCT[gmTpl]==='spell')gmItems=items;   // «جولة جديدة» تعيد اللعب بالترتيب المخلوط نفسه
   const stage=document.getElementById('gm-stage-bg');
-  const themeSel=document.getElementById('gm-theme');
-  const theme=gmForcedTheme(gmTpl)||gmThemes.find(t=>t.id===themeSel.value);
-  const bg=theme&&theme.bg_url;
-  // نبدأ دائماً بالتدرّج اللوني الفوري، ولا نبدّل للصورة إلا بعد اكتمال تحميلها
-  stage.style.backgroundImage='linear-gradient(135deg,#2a1f4d,#1c1730)';
-  if(bg){
-    if(_gmBgReady.has(bg))stage.style.backgroundImage=`url("${bg}")`;
-    else gmPreloadBg(bg).then(ok=>{if(ok&&stage.style.display==='flex')stage.style.backgroundImage=`url("${bg}")`;});
-  }
+  // ثيم كل لعبةٍ ثابتٌ ومرسومٌ بالكود (GM_WORLDS): يُرسم فوراً بلا تحميل
+  const bg=gmWorldUrl(gmTpl);
+  stage.classList.toggle('gm-world',!!bg);
+  stage.classList.toggle('gm-fill',GM_FILL_TPL[gmTpl]===1);
+  stage.style.backgroundImage=bg?`url("${bg}")`:'linear-gradient(135deg,#2a1f4d,#1c1730)';
   document.getElementById('gm-stage-title').textContent=title;
   stage.style.display='flex';
   document.body.style.overflow='hidden';
@@ -11659,8 +11778,7 @@ function gmPlayWith(items,title){
   try{gmTeamsN=+localStorage.getItem('gmTeamsN')||0;}catch(e){gmTeamsN=0;}
   if(GM_MIN2[gmTpl]&&gmTeamsN<2)gmTeamsN=2;
   gmT.on=false;gmKitBar();
-  const tc=(theme&&theme.colors)||{};
-  const accent=tc.accent||'#D86048';
+  const accent='#D86048';
   const instr=GM_TPL_INSTR()[gmTpl]||'';
   document.getElementById('gm-stage-body').innerHTML=`<div class="gm-panel gm-end" style="max-width:420px">
     <h2 style="margin:6px 0">درس ${escHtml(title)}</h2>
@@ -11712,9 +11830,9 @@ function gmCollectCss(){
   }
   return out;
 }
-async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
-  const theme=gmThemes.find(t=>t.id===themeId);
-  const bg=theme&&theme.bg_url?await gmFetchB64(theme.bg_url):null;
+async function gmBuildStandalone(tpl,items,groupNames,title){
+  const bg=gmWorldUrl(tpl);
+  const stCls=bg?' class="gm-world'+(GM_FILL_TPL[tpl]===1?' gm-fill':'')+'"':'';
   const sfx={};
   for(const k of GM_SFX_KINDS.concat(GM_TPL_SFX[tpl]||[])){
     const d=await gmFetchB64(new URL(khSfxUrl(k),location.href).href);
@@ -11732,7 +11850,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title,themeId){
   parts.push(gmCollectCss());
   parts.push('#gm-stage-bg{position:fixed;inset:0;display:flex;flex-direction:column;background-position:center;background-size:cover;}');
   parts.push('</style></head><body>');
-  parts.push(`<div id="gm-stage-bg" style="background-image:${bgStyle}">`);
+  parts.push(`<div id="gm-stage-bg"${stCls} style="background-image:${bgStyle}">`);
   parts.push('<div id="gm-stage-veil"></div><canvas id="gm-confetti"></canvas>');
   // أدوات المعلّمة في الملف المستقلّ: ملء الشاشة للبروجكتر، وإعادةٌ لتلعب
   // مجموعةٌ ثانية بلا إغلاق الملف وفتحه. كانا مفقودَين، فكانت المعلّمة
@@ -11804,7 +11922,7 @@ async function gmDownload(){
   const title=(lessons[0]?lessons[0].name+' — ':'')+GM_TPL_LBL[gmTpl];
   uiBusy('يجهّز ملف اللعبة…');
   let blob;
-  try{blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title,(gmForcedTheme(gmTpl)||{}).id||document.getElementById('gm-theme').value);}
+  try{blob=await gmBuildStandalone(gmTpl,items,gmGroupNames,title);}
   finally{uiBusyDone();}
   gmDownloadBlob(blob,'لعبة - '+title.replace(/[\\/:*?"<>|]/g,'')+'.html');
   toast('⬇ حُمّلت اللعبة — تعمل بأي متصفح بلا إنترنت','ok');
@@ -11813,12 +11931,10 @@ async function gmDownloadSaved(id){
   try{
     const{data:g}=await sb.from('games').select('*').eq('id',id).maybeSingle();
     if(!g)return;
-    if(!gmThemes.length)await gmLoadThemes();
     uiBusy('يجهّز ملف اللعبة…');
     const gn=(g.content&&g.content.groupNames)||gmGroupNames;
-    const gth=(gmForcedTheme(g.template)||{}).id||g.theme_id;
     let blob;
-    try{blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',gth);}
+    try{blob=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة');}
     finally{uiBusyDone();}
     gmDownloadBlob(blob,'لعبة - '+String(g.title||'لعبة').replace(/[\\/:*?"<>|]/g,'')+'.html');
   }catch(e){toast('تعذّر تجهيز الملف',true);}
@@ -12473,6 +12589,8 @@ function gmRunTF(qs){
     card.onpointerup=function(e){if(x0==null)return;var dx=e.clientX-x0;x0=null;card.style.boxShadow='';
       if(Math.abs(dx)>90)answer(dx>0);else{card.style.transition='transform .2s';card.style.transform='';}};
     timer=setInterval(function(){
+      // أُغلقت اللعبة أو بُدِّلت: لا يُجيب المؤقّت داخل لعبةٍ أخرى ولا يضيف لها نقاطاً
+      if(!card.isConnected){clearInterval(timer);return;}
       var left=Math.max(0,secs-(Date.now()-t0)/1000);
       arc.style.strokeDashoffset=L*(1-left/secs);
       var sEl=document.getElementById('gm-tf-sec');if(sEl)sEl.textContent=egToArabic(Math.ceil(left));
@@ -14644,13 +14762,11 @@ async function shPreview(id){
   }
   cyBusy('يجهّز اللعبة');
   try{
-    await gmLoadThemes();
+    await gmLoadCfg();
     gmTpl=it.template||'quiz';
     gmItems=(it.content&&it.content.items)||[];
     if(it.content&&it.content.groupNames)gmGroupNames=it.content.groupNames;
-    const sel=document.getElementById('gm-theme');if(sel&&it.theme_id)sel.value=it.theme_id;
     gmPickScope=null;                       // معاينة لا حصة: لا قرعة على شعبة بعينها
-    gmApplyForcedTheme();
     gmPlayWith(gmItems,it.title||it.lesson||'لعبة');
   }catch(e){toast('تعذّر فتح اللعبة',true);}
   finally{cyBusyDone();}
@@ -14683,7 +14799,7 @@ async function shSave(id,btn){
     }else{
       const{data:g,error}=await sb.from('games').insert({
         user_id:currentUser.id,grade:it.grade,subject:it.subject,unit:it.unit||'',lesson:it.lesson,
-        title:it.title||it.lesson,template:it.template,theme_id:it.theme_id||null,content:it.content
+        title:it.title||it.lesson,template:it.template,theme_id:null,content:it.content
       }).select().single();
       if(error||!g)throw error||new Error('no row');
       await planSetState(target.id,{game:true,game_id:g.id});
@@ -14730,7 +14846,7 @@ function shAutoPublish(o){
     row.image_url=o.imageUrl;
   }else if(o.kind==='game'){
     if(!o.content||!o.template)return;
-    row.template=o.template;row.theme_id=o.themeId||null;row.content=o.content;
+    row.template=o.template;row.theme_id=null;row.content=o.content;
   }else{                                   // prep | slides
     if(!o.content)return;
     row.content=o.content;

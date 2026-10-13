@@ -114,7 +114,7 @@ export async function get_ai_cost(admin: any) {
     cost_by_model: byModel,
     top_users: topUsers,
     known_limitation:
-      "extract-lessons وgenerate-game-theme وsegment-book تستدعي الذكاء الاصطناعي لكنها لا تُسجَّل هنا بعد (خارج نطاق Phase 0) — التكلفة الفعلية الكلية أعلى مما يظهر.",
+      "extract-lessons وsegment-book تستدعي الذكاء الاصطناعي لكنها لا تُسجَّل هنا بعد (خارج نطاق Phase 0) — التكلفة الفعلية الكلية أعلى مما يظهر.",
   };
 }
 
