@@ -1,0 +1,35 @@
+name: zzz retire game themes
+on: workflow_dispatch
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: حذف الثيمات القديمة (صور + صفوف) ودالة توليدها
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -uo pipefail
+          q() { curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "$(jq -Rs '{query: .}' <<< "$1")"; }
+          SERVICE_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          [ -n "$SERVICE_KEY" ] && [ "$SERVICE_KEY" != "null" ] || { echo "::error::no service key"; exit 1; }
+          echo "== الثيمات الحالية =="
+          q "select id, name, bg_url from public.game_themes order by created_at;" | jq -c '.[]?'
+          echo "== قبل: ألعاب تشير إلى ثيم =="
+          q "select (select count(*) from public.games where theme_id is not null) games, (select count(*) from public.c1_shared_assets where theme_id is not null) shared;" | jq -c '.[]?'
+          # مسارات الصور: كل ما تحت game-themes/ + أي bg_url آخر داخل library-files
+          PATHS=$(q "select name from storage.objects where bucket_id='library-files' and name like 'game-themes/%' union select substring(bg_url from '/object/public/library-files/(.*)$') from public.game_themes where bg_url like '%/object/public/library-files/%';" | jq -c '[.[]?.name | select(. != null)]')
+          echo "صور للحذف: $(echo "$PATHS" | jq length)"
+          echo "$PATHS" | jq -r '.[]'
+          if [ "$(echo "$PATHS" | jq length)" -gt 0 ]; then
+            curl -s -X DELETE "https://$REF.supabase.co/storage/v1/object/library-files" \
+              -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" -H "Content-Type: application/json" \
+              --data-binary "$(jq -c '{prefixes: .}' <<< "$PATHS")" | jq -c 'length'
+          fi
+          echo "== تطبيق p58 =="
+          q "$(cat supabase/migrations/20261013_p58_retire_game_themes.sql)" | jq -c '.'
+          echo "== بعد =="
+          q "select (select count(*) from public.game_themes) themes, (select count(*) from public.games where theme_id is not null) games, (select count(*) from storage.objects where bucket_id='library-files' and name like 'game-themes/%') imgs, (select value from public.ai_settings where key='game_cfg') cfg;" | jq -c '.[]?'
+          echo "== حذف دالة generate-game-theme =="
+          curl -s -o /dev/null -w '%{http_code}\n' -X DELETE "https://api.supabase.com/v1/projects/$REF/functions/generate-game-theme" -H "Authorization: Bearer $TOKEN"

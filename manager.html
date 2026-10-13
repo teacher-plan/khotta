@@ -1610,13 +1610,6 @@ body.lp .page.active{animation:lpPage .25s ease}
 @keyframes gmCtaShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @media (prefers-reduced-motion:reduce){.dp-btn.game-cta{animation:none}}
 /* شبكة معاينة الثيمات (للمعلم) */
-.gm-theme-grid{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;}
-.gm-theme-card{flex:none;width:104px;border:2px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;background:var(--card);transition:.15s;padding:0;font-family:'Cairo',sans-serif;}
-.gm-theme-card:hover{border-color:var(--gold);transform:translateY(-2px);}
-.gm-theme-card.on{border-color:#6d28d9;box-shadow:0 0 0 2px rgba(109,40,217,.25);}
-.gm-theme-card .thumb{height:56px;background:linear-gradient(135deg,#2a1f4d,#1c1730) center/cover;}
-.gm-theme-card .nm{font-size:10.5px;font-weight:800;color:var(--text);padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.gm-theme-card.locked{opacity:.45;pointer-events:none;}
 /* بالونات */
 .gm-balloon-zone{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:26px 10px;width:100%;max-width:720px;}
 .gm-balloon{position:relative;width:128px;height:158px;border:none;cursor:pointer;background:var(--bc);border-radius:50% 50% 50% 50%/58% 58% 42% 42%;box-shadow:inset -10px -12px 0 rgba(0,0,0,.14),0 8px 20px rgba(0,0,0,.3);animation:gmBob 2.6s ease-in-out infinite alternate;font-family:'Cairo',sans-serif;transition:transform .15s;}
@@ -3737,23 +3730,10 @@ input,textarea,select{font-size:16px !important;}
     <button class="eg-generate" style="margin-top:14px" onclick="savePptSettings()">💾 حفظ إعدادات العروض التقديمية</button>
   </div>
 
-  <!-- 🎮 ثيمات الألعاب -->
-  <div class="eg-card">
-    <div class="eg-step-title">🎮 ثيمات قسم الألعاب</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">الثيم يولَّد <b>مرة واحدة</b> بنموذج الرسم أعلاه ويُخزَّن كأصل دائم يستخدمه كل المعلمين مجاناً — لا تكلفة عند كل لعبة.</p>
-    <div class="eg-row">
-      <input type="text" id="gmth-name" placeholder="اسم الثيم (مثل: فضاء)" style="flex:1">
-      <input type="text" id="gmth-emoji" placeholder="🚀" maxlength="4" style="width:70px;text-align:center">
-    </div>
-    <input type="text" id="gmth-desc" placeholder="وصف الخلفية (مثل: فضاء ليلي بكواكب ونجوم متلألئة وصاروخ صغير على الحافة)" style="width:100%;margin-top:8px">
-    <button class="eg-generate" style="margin-top:10px" id="gmth-gen-btn" onclick="gmThemeGenerate()">🎨 توليد الثيم ورفعه (مرة واحدة)</button>
-    <div id="gmth-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px"></div>
-  </div>
-
   <!-- 🎮 إعدادات كل لعبة -->
   <div class="eg-card">
     <div class="eg-step-title">🎮 إعدادات كل لعبة على حدة</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">لكل قالب: ثيم افتراضي (أو إجباري)، أصوات تخصّه تتجاوز العامة، وخيارات لعب دقيقة — كل ما تحفظه يسري فوراً على جميع المعلمين.</p>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:10px">لكل قالب: أصوات تخصّه تتجاوز العامة، وخيارات لعب دقيقة — كل ما تحفظه يسري فوراً على جميع المعلمين.</p>
     <select id="gcfg-tpl" style="width:100%" onchange="gcfgRender()"></select>
     <div id="gcfg-body" style="margin-top:12px"></div>
     <button class="eg-generate" style="margin-top:12px" onclick="gcfgSave()">💾 حفظ إعدادات هذه اللعبة</button>
@@ -7444,7 +7424,6 @@ const AI_CARD_MAP=[
   ['ppt-system-prompt','prompts'],
   ['seg-grade',       'books'],
   ['ex-font',         'books'],
-  ['gmth-name',       'games'],
   ['gcfg-tpl',        'games'],
   ['gm-sfx-slots',    'games'],
   ['fh-pose-grid',    'games'],
@@ -7503,7 +7482,7 @@ function switchAiTab(tab){
   if(tab==='overview'){aiOverview();loadOrBalance();}
   if(tab==='models'){loadOrBalance();if(typeof renderTaskModels==='function')renderTaskModels(_aiSettings||{});}
   if(tab==='limits'){if(typeof gpAdminList==='function')gpAdminList();}
-  if(tab==='games'){gmThemeList();gmSfxSlots();gmLoadThemes().then(()=>gcfgLoad());}
+  if(tab==='games'){gmSfxSlots();gmLoadThemes().then(()=>gcfgLoad());}
 }
 // نظرة عامة: ما يحتاجه المشرف قبل أي إعداد — هل المولّد يعمل، وكم بقي، ومن
 // يستهلك. الأرقام نفسها موجودة في التبويبات، لكن جمعها هنا يوفّر الجولة عليها.
@@ -7540,20 +7519,6 @@ async function aiOverview(){
           <span style="font-variant-numeric:tabular-nums">${egToArabic(r.t)} نصّي · ${egToArabic(r.i)} صورة</span></div>`).join('')
       : 'لا استهلاك مسجّل هذا الشهر.';
   }catch(e){document.getElementById('ai-ov-top').textContent='تعذّر قراءة الاستهلاك — تأكّد من تنفيذ ملف سياسة ai_usage.';}
-}
-
-// ═ 🎮 إدارة ثيمات الألعاب (مشرف) ═
-async function gmThemeList(){
-  const box=document.getElementById('gmth-list');if(!box)return;
-  try{
-    const{data}=await sb.from('game_themes').select('*').order('created_at');
-    box.innerHTML=(data||[]).map(t=>`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)">
-      <div style="height:78px;background:var(--surface);position:relative"><img src="${t.bg_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.replaceWith(Object.assign(document.createElement('div'),{textContent:'⚠️ تعذّر تحميل الخلفية',style:'font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;height:100%'}))"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;font-size:12px;font-weight:700">
-        <span>${escHtml(t.emoji||'🎨')} ${escHtml(t.name)}</span>
-        <button class="arc-btn del" style="padding:2px 7px;font-size:11px" onclick="gmThemeDelete('${t.id}')">🗑️</button>
-      </div></div>`).join('')||'<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:10px">لا توجد ثيمات بعد — ولّد الأول الآن</div>';
-  }catch(e){console.warn('gmThemeList',e);}
 }
 
 // ═ 🏆 إدارة الخطط الذهبية (مشرف) ═
@@ -7614,26 +7579,15 @@ function gcfgRender(){
   const tpl=document.getElementById('gcfg-tpl').value||'wheel';
   const c=gcfg[tpl]||{};
   const box=document.getElementById('gcfg-body');if(!box)return;
-  const themeCards=[['','كلاسيكي','🎨','']].concat(gmThemes.map(t=>[t.id,t.name,t.emoji,t.bg_url]))
-    .map(([id,nm,em,bg])=>`<button type="button" class="gm-theme-card ${((c.theme||'')===id)?'on':''}" data-id="${escHtml(id)}" onclick="gcfgPickTheme('${escJs(id)}')">
-      <div class="thumb" ${bg?`style="background-image:url('${bg}')"`:''}></div><div class="nm">${escHtml(em||'')} ${escHtml(nm)}</div></button>`).join('');
   const opts=(GCFG_OPTS[tpl]||[]).map(([k,lbl,def,min,max])=>`<div style="flex:1;min-width:150px">
       <label class="eg-lbl">${lbl}</label>
       <input type="number" class="gcfg-opt" data-k="${k}" min="${min}" max="${max}" value="${(c.opts&&c.opts[k]!=null)?c.opts[k]:def}" placeholder="${def}" style="width:100%">
     </div>`).join('');
   box.innerHTML=`
-    <label class="eg-lbl">الثيم الافتراضي لهذه اللعبة</label>
-    <div class="gm-theme-grid" id="gcfg-theme-grid">${themeCards}</div>
-    <label class="eg-chip" style="display:inline-flex;margin:6px 0 12px"><input type="checkbox" id="gcfg-lock" ${c.lock?'checked':''}> 🔒 إجباري — المعلم لا يستطيع تغييره</label>
     <label class="eg-lbl">🔊 أصوات خاصة بهذه اللعبة <span style="color:var(--muted);font-weight:400">(تتجاوز العامة — الحذف يعيدها للعامة)</span></label>
     <div id="gcfg-snd" style="display:grid;gap:6px;margin-bottom:12px"></div>
     ${opts?`<label class="eg-lbl">⚙️ خيارات اللعب</label><div class="eg-row" style="flex-wrap:wrap">${opts}</div>`:'<div style="font-size:12px;color:var(--muted)">لا خيارات لعب إضافية لهذا القالب</div>'}`;
   gcfgSndSlots(tpl);
-}
-function gcfgPickTheme(id){
-  const tpl=document.getElementById('gcfg-tpl').value;
-  gcfg[tpl]=gcfg[tpl]||{};gcfg[tpl].theme=id;
-  document.querySelectorAll('#gcfg-theme-grid .gm-theme-card').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
 }
 async function gcfgSndSlots(tpl){
   const box=document.getElementById('gcfg-snd');if(!box)return;
@@ -7682,7 +7636,8 @@ async function gcfgSndDelete(tpl,k){
 async function gcfgSave(){
   const tpl=document.getElementById('gcfg-tpl').value;
   gcfg[tpl]=gcfg[tpl]||{};
-  gcfg[tpl].lock=document.getElementById('gcfg-lock').checked?1:0;
+  // الثيم صار ثابتاً لكل لعبة (مرسوماً في الواجهة) — لا ثيمٌ ولا قفلٌ يُحفظ هنا
+  delete gcfg[tpl].theme;delete gcfg[tpl].lock;
   const opts={};
   document.querySelectorAll('#gcfg-body .gcfg-opt').forEach(inp=>{
     const v=parseFloat(inp.value);
@@ -7747,36 +7702,6 @@ async function gmSfxDelete(kind){
     gmSfxSlots();
   }catch(e){toast('تعذّر الحذف',true);}
 }
-async function gmThemeDelete(id){
-  if(!(await uiConfirm('سيختفي من قوائم كل المعلمين — الألعاب المحفوظة به ستعود للخلفية الكلاسيكية. متابعة؟',{title:'حذف الثيم'})))return;
-  try{await sb.from('game_themes').delete().eq('id',id);gmThemeList();}catch(e){toast('تعذّر الحذف',true);}
-}
-async function gmThemeGenerate(){
-  const name=(document.getElementById('gmth-name').value||'').trim();
-  const emoji=(document.getElementById('gmth-emoji').value||'🎨').trim();
-  const desc=(document.getElementById('gmth-desc').value||'').trim();
-  if(!name||!desc){toast('اكتب اسم الثيم ووصفه',true);return;}
-  const btn=document.getElementById('gmth-gen-btn');
-  btn.disabled=true;btn.textContent='⏳ جاري الرسم والرفع... (٣٠-٩٠ ثانية)';
-  try{
-    const{data,error}=await sb.functions.invoke('generate-game-theme',{body:{name,emoji,desc}});
-    if(error||!data||!data.theme){
-      let reason=(data&&data.error)||error?.message||'خطأ غير معروف';
-      try{if(error&&error.context&&error.context.json){const j=await error.context.json();if(j&&j.error)reason=j.error;if(j&&j.detail)reason+=' | '+JSON.stringify(j.detail).slice(0,300);}}catch(_){}
-      toast('⚠️ تعذّر توليد الثيم — '+reason,true);
-    }else{
-      toast('✅ تم توليد الثيم «'+name+'» ورفعه','ok');
-      document.getElementById('gmth-name').value='';
-      document.getElementById('gmth-desc').value='';
-      gmThemeList();
-    }
-  }catch(e){toast('⚠️ تعذّر توليد الثيم',true);console.warn(e);}
-  btn.disabled=false;btn.textContent='🎨 توليد الثيم ورفعه (مرة واحدة)';
-}
-
-
-
-
 // جلب رصيد OpenRouter الفعلي (للمشرف)
 let _orbLoaded=false;
 // إنذارٌ استباقيّ بالرصيد. كان الرصيد لا يُرى إلا بفتح تبويب الذكاء عمداً،
@@ -15272,7 +15197,7 @@ const GM_IC_CLOSE='<svg viewBox="0 0 24 24" fill="currentColor" width="15" heigh
 
 
 
-let gmGameCfg={};   // إعدادات المشرف لكل قالب {theme,lock,opts}
+let gmGameCfg={};   // إعدادات المشرف لكل قالب {opts}
  // هل اختار المعلم ثيماً بنفسه في هذه الجلسة؟
 async function gmLoadThemes(){
   try{
@@ -15280,14 +15205,7 @@ async function gmLoadThemes(){
     gmGameCfg=cfgRow&&cfgRow.value?JSON.parse(cfgRow.value):{};
   }catch(e){gmGameCfg={};}
   try{
-    const{data}=await sb.from('game_themes').select('*').order('created_at');
-    gmThemes=data||[];
-    const sel=document.getElementById('gm-theme');
-    const cur=sel.value;
-    sel.innerHTML='<option value="">كلاسيكي (بلا خلفية)</option>'+gmThemes.map(t=>`<option value="${t.id}">${escHtml(t.emoji||'🎨')} ${escHtml(t.name)}</option>`).join('');
-    if(cur&&gmThemes.some(t=>t.id===cur))sel.value=cur;
-    gmApplyForcedTheme();
-    gmRenderThemeGrid();
+    gmThemes=[];   // الثيمات القديمة أُلغيت: لكل لعبةٍ ثيمها المرسوم في تطبيق المعلمين
   }catch(e){console.warn('gmLoadThemes',e);}
 }
 // شبكة الثيمات المصورة — تُبقي select المخفي متزامناً فتعمل كل المسارات القديمة
