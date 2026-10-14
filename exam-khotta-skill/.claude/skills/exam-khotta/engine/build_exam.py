@@ -8,36 +8,21 @@ import argparse, base64, html, json, os, re, shutil, subprocess, sys, datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from exam_lib import (parse, plain, ar, marks_word, load_json, find_config, load_spec, validate, grade_band,
-                      LETTERS, TYPE_NAMES, AO_NAMES, LV_NAMES)
+import notation
+from exam_lib import (plain, ar, marks_word, load_json, find_config, load_spec, validate, grade_band,
+                      LETTERS, TYPE_NAMES, tool_cfg, fields, key_columns, field_value, grid_model,
+                      summary_model, KEY_WIDTHS, item_labels)
 
 GRADE_AR = {5: 'الخامس', 6: 'السادس', 7: 'السابع', 8: 'الثامن', 9: 'التاسع', 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر'}
 SEM_AR = {1: 'الأول', 2: 'الثاني'}
 SUBJ_AR = {'math': 'الرياضيات', 'science': 'العلوم', 'arabic': 'اللغة العربية', 'english': 'اللغة الإنجليزية',
-           'social': 'الدراسات الاجتماعية', 'islamic': 'التربية الإسلامية', 'it': 'تقنية المعلومات'}
+           'social': 'الدراسات الاجتماعية', 'islamic': 'التربية الإسلامية', 'it': 'تقنية المعلومات',
+           'chemistry': 'الكيمياء', 'physics': 'الفيزياء', 'biology': 'الأحياء'}
 
 
 # ═════════════ HTML ═════════════
 def h(text, dg):
-    out = []
-    for p in parse(text, dg):
-        k = p[0]
-        if k == 't':
-            out.append(html.escape(p[1]))
-        elif k == 'f':
-            w = f'<span class="whole">{html.escape(p[1])}</span>' if p[1] else ''
-            out.append(f'<span class="mix">{w}<span class="fr"><span>{html.escape(p[2])}</span><span>{html.escape(p[3])}</span></span></span>')
-        elif k == 'sup':
-            out.append(f'<sup>{html.escape(p[1])}</sup>')
-        elif k == 'sqrt':
-            out.append(f'<span class="sq">√<span>{html.escape(p[1])}</span></span>')
-        elif k == 'b':
-            out.append(f'<b>{html.escape(p[1])}</b>')
-        elif k == 'blank':
-            out.append('<span class="blank"></span>')
-        elif k == 'br':
-            out.append('<br>')
-    return ''.join(out)
+    return notation.html(text, dg)
 
 
 def img_tag(path, base, width):
@@ -71,7 +56,7 @@ def item_html(k, it, dg, base):
         L, R = it['left'], it['right']
         rows = ''
         for i in range(max(len(L), len(R))):
-            l = f'<td class="mn">{ar(i + 1, dg)}</td><td>{h(L[i], dg)}</td><td class="mbox"></td>' if i < len(L) else '<td></td><td></td><td></td>'
+            l = f'<td class="mn">{ar(i + 1)}</td><td>{h(L[i], dg)}</td><td class="mbox"></td>' if i < len(L) else '<td></td><td></td><td></td>'
             r = f'<td class="mn">{LETTERS[i]}</td><td>{h(R[i], dg)}</td>' if i < len(R) else '<td></td><td></td>'
             rows += f'<tr>{l}<td class="gap"></td>{r}</tr>'
         body.append(f'<table class="match"><tr><th colspan="3">{h(it.get("left_title", "العمود الأول"), dg)}</th><th class="gap"></th><th colspan="2">{h(it.get("right_title", "العمود الثاني"), dg)}</th></tr>{rows}</table>')
@@ -87,7 +72,7 @@ def item_html(k, it, dg, base):
         body.append(lines_html(it.get('lines', default)))
     for p in it.get('parts', []):
         body.append(f'<div class="part"><b>({p["label"]})</b> {h(p["stem"], dg)}</div>' + lines_html(p.get('lines', 2)))
-    return (f'<section class="item"><div class="qhead"><span class="qn">{ar(k, dg)}</span></div>'
+    return (f'<section class="item"><div class="qhead"><span class="qn">{k}</span></div>'
             f'<div class="qbody">{"".join(body)}</div><div class="mk">{marks_word(it["marks"])}</div></section>')
 
 
@@ -104,7 +89,7 @@ def header_html(exam, cfg, form, dg, key=False):
     if key:
         mid.insert(1, '<b>دليل التصحيح وشبكة المفردات</b>')
     left = [f'العام الدراسي: {ar(cfg.get("year", exam.get("year", "")), dg)}', f'الزمن: {html.escape(exam.get("duration_short") or exam.get("duration", ""))}',
-            f'الدرجة الكلية: {ar(exam["total"], dg)}']
+            f'الدرجة الكلية: {ar(exam["total"])}']
     if form:
         left.append(f'<b>النموذج ({form})</b>')
     col = lambda xs, c: f'<div class="{c}">' + '<br>'.join(xs) + '</div>'
@@ -115,7 +100,7 @@ CSS = '''
 @page { size: A4 %(orient)s; margin: 12mm 13mm 14mm; }
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-body { margin: 0; font-family: 'KDigits', 'Readex Pro', sans-serif; font-weight: 500; font-size: %(fs)spt; line-height: 1.75; color: #111; direction: rtl; background: #fff; }
+body { margin: 0; font-family: %(ff)s; font-weight: 500; font-size: %(fs)spt; line-height: %(lh)s; color: #111; direction: rtl; background: #fff; }
 header { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; border: 1.6px solid #222; border-radius: 6px; padding: 6px 10px; font-size: 10.5pt; line-height: 1.55; }
 .hm { text-align: center; } .hl { text-align: left; } .ttl { font-size: 13.5pt; }
 .student { display: flex; gap: 10px; align-items: stretch; margin: 8px 0 6px; font-size: 11pt; }
@@ -125,12 +110,11 @@ header { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; border: 
 .inst { font-size: 10.5pt; background: #f2f2f2; border-radius: 5px; padding: 4px 10px; margin-bottom: 4px; }
 .item { display: grid; grid-template-columns: 9mm 1fr auto; gap: 6px; padding: 8px 0 6px; border-bottom: 1px dashed #bbb; break-inside: avoid; }
 .qhead { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.qn { display: inline-grid; place-items: center; width: 8mm; height: 8mm; border-radius: 50%%; background: #222; color: #fff; font-weight: 700; font-size: 11.5pt; }
+.qn { display: inline-grid; place-items: center; min-width: 8mm; height: 8mm; padding: 0 1.5mm; border-radius: 4mm; background: #222; color: #fff; font-weight: 700; font-size: 11.5pt; }
 .mk { font-size: 9pt; color: #222; white-space: nowrap; border: 1px solid #888; border-radius: 4px; padding: 0 6px; align-self: start; margin-top: 3px; }
 .stem { font-weight: 600; }
 .sub { margin-top: 4px; }
 .part { margin-top: 6px; }
-.blank { display: inline-block; min-width: 26mm; border-bottom: 1.4px dotted #222; height: 1.2em; vertical-align: baseline; }
 .lines div { height: 9mm; border-bottom: 1.2px dotted #666; }
 .choices { width: 100%%; border-collapse: separate; border-spacing: 6px 4px; margin-top: 2px; }
 .choices td { border: 1px solid #999; border-radius: 6px; padding: 3px 8px; vertical-align: middle; }
@@ -145,14 +129,16 @@ table.grid td { height: 10mm; }
 .ords { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
 .ord { border: 1.2px solid #333; border-radius: 6px; padding: 1px 12px; }
 .fig { text-align: center; margin: 4px 0; } .fig img { max-height: 70mm; object-fit: contain; }
-.mix { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; }
-.fr { display: inline-flex; flex-direction: column; text-align: center; line-height: 1.15; font-size: .92em; vertical-align: middle; margin: 0 2px; }
-.fr > span:first-child { border-bottom: 1.3px solid currentColor; padding: 0 3px; }
-.sq span { border-top: 1.3px solid currentColor; padding: 0 2px; }
 .end { text-align: center; font-weight: 700; margin-top: 10px; }
+.pt { text-align: center; font-weight: 700; margin-bottom: 4px; }
+.psrc { text-align: left; font-size: .85em; margin-top: 4px; }
+table.verses { margin: 0 auto; border-collapse: collapse; } table.verses td { padding: 1px 6px; text-align: justify; text-align-last: justify; min-width: 45mm; } table.verses td.gap { min-width: 12mm; }
+.passage { border: 1.3px solid #444; border-radius: 6px; padding: 8px 12px; margin: 8px 0; line-height: 2; text-align: justify; break-inside: avoid; }
+h3.grp { font-size: 12.5pt; margin: 10px 0 0; padding: 2px 10px; background: #ececec; border-radius: 5px; }
 .foot { display: flex; justify-content: space-between; font-size: 9.5pt; color: #333; margin-top: 8px; }
 /* دليل التصحيح */
-h2 { font-size: 13pt; margin: 10px 0 4px; }
+h2 { font-size: 13pt; margin: 10px 0 4px; break-after: avoid; }
+thead { display: table-header-group; }
 table.key, table.spec, table.sum { width: 100%%; border-collapse: collapse; font-size: 10pt; line-height: 1.5; }
 table.key th, table.key td, table.spec th, table.spec td, table.sum th, table.sum td { border: 1.1px solid #333; padding: 3px 6px; vertical-align: top; }
 table.key th, table.spec th, table.sum th { background: #e6e6e6; }
@@ -165,22 +151,45 @@ table.key tr, table.spec tr { break-inside: avoid; }
 
 
 def fonts_css():
-    p = os.path.join(HERE, 'assets', 'fonts.css')
-    return open(p, encoding='utf-8').read() if os.path.exists(p) else ''
+    out = ''
+    for f in ('fonts.css', 'fonts_ar.css'):
+        p = os.path.join(HERE, 'assets', f)
+        if os.path.exists(p):
+            out += open(p, encoding='utf-8').read()
+    return out
+
+
+# خطّ المتن: readex (الرياضيات والعلوم، أرقام واضحة) أو amiri (نسخ للعربية والتربية الإسلامية: تشكيل كامل)
+FONTS = {'readex': ("'KDigits', 'Readex Pro', sans-serif", 1.75, 0),
+         'amiri': ("'Amiri', 'KDigits', serif", 2.0, 1.5)}
+BODY_FONT = 'readex'
 
 
 def page(body, orient='portrait', fs=12.5):
-    return (f'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>{fonts_css()}{CSS % {"orient": orient, "fs": fs}}</style></head>'
-            f'<body>{body}</body></html>')
+    ff, lh, extra = FONTS.get(BODY_FONT, FONTS['readex'])
+    return (f'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>{fonts_css()}{CSS % {"orient": orient, "fs": fs + extra, "ff": ff, "lh": lh}}</style></head>'
+            f'<body>{body}</body></html>').replace('</style>', notation.CSS + '</style>', 1)
 
 
 def paper_html(exam, cfg, form, items, dg, base):
     calc = calc_note(exam)
     inst = '؛ '.join(x for x in [exam.get('instructions', 'أجب عن جميع الأسئلة في الورقة نفسها'), calc] if x)
     stu = (f'<div class="student"><div class="nm">اسم الطالب: ...................................................................'
-           f' &nbsp; الصف: ............</div><div class="sc">الدرجة<b>&nbsp;&nbsp;&nbsp; / {ar(exam["total"], dg)}</b></div></div>')
+           f' &nbsp; الصف: ............</div><div class="sc">الدرجة<b>&nbsp;&nbsp;&nbsp; / {ar(exam["total"])}</b></div></div>')
     body = header_html(exam, cfg, form, dg) + stu + f'<div class="inst">{html.escape(inst)}.</div>'
-    body += ''.join(item_html(k, it, dg, base) for k, it in enumerate(items, 1))
+    labels = iter(item_labels(items)); grp = None
+    for it in items:
+        if it.get('group') and it['group'] != grp:   # «السؤال الأول» ثم مفرداته (أ، ب، ج)
+            grp = it['group']; body += f'<h3 class="grp">السؤال {html.escape(grp)}</h3>'
+        if it.get('type') == 'passage':   # نص القراءة أو الأبيات: بلا رقم ولا درجة
+            t = f'<div class="pt">{h(it["title"], dg)}</div>' if it.get('title') else ''
+            v = ''
+            if it.get('verses'):   # أبيات: الصدر والعجز في عمودين
+                v = '<table class="verses">' + ''.join(f'<tr><td>{h(a_, dg)}</td><td class="gap"></td><td>{h(b_, dg)}</td></tr>' for a_, b_ in it['verses']) + '</table>'
+            src = f'<div class="psrc">{h(it["source"], dg)}</div>' if it.get('source') else ''
+            body += f'<div class="passage">{t}{h(it.get("body", ""), dg)}{v}{src}</div>'
+            continue
+        body += item_html(next(labels)[0], it, dg, base)
     body += f'<div class="end">انتهت الأسئلة، مع تمنياتنا لكم بالتوفيق</div>'
     tname = cfg.get('teacher_name', '')
     if tname:
@@ -194,7 +203,7 @@ def answer_html(it, dg):
         a = it['answer']
         return f'<b>({LETTERS[a]})</b> {h(it["choices"][a], dg)}'
     if t == 'match' and it.get('pairs'):
-        return '، '.join(f'{ar(i + 1, dg)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
+        return '، '.join(f'{ar(i + 1)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
     parts = []
     if it.get('answer') not in (None, ''):
         parts.append(h(it['answer'], dg))
@@ -203,46 +212,57 @@ def answer_html(it, dg):
     return '<br>'.join(parts)
 
 
+def key_cell(exam, spec, it, f, k, dg):
+    if f == 'n':
+        return k
+    if f == 'marks':
+        return ar(it.get('marks', 0))
+    if f == 'answer':
+        return answer_html(it, dg)
+    if f in ('objective', 'page', 'guidance'):
+        return h(it.get(f, ''), dg)
+    return html.escape(str(field_value(spec, it, f, exam)))
+
+
 def key_html(exam, cfg, spec, dg):
-    tool = spec['tools'][exam['kind']]
+    tool = tool_cfg(spec, exam['kind'], exam['grade'], exam.get('number'))
     body = header_html(exam, cfg, None, dg, key=True)
     lessons = '، '.join(f'{l["code"]} {l.get("title", "")}' if isinstance(l, dict) else l for l in exam['lessons'])
     body += f'<div class="inst">الدروس: {html.escape(lessons)} · المرجع: {html.escape(spec["document"]["title"])}، {html.escape(spec["document"]["edition"])}</div>'
+    cols = key_columns(spec, tool)
+    tw = sum(KEY_WIDTHS.get(f, 9) for _, f in cols)
     for n, (form, items) in enumerate(exam['forms'].items()):
+        items = [i for i in items if i.get('type') != 'passage']
         cls = ' class="formbreak"' if n else ''
         body += f'<h2{cls}>شبكة مفردات النموذج ({form})</h2>'
-        rows = ''.join(f'<tr><td>{ar(k, dg)}</td><td>{TYPE_NAMES[it["type"]]}</td><td>{it["ao"]} · {AO_NAMES[it["ao"]]}</td>'
-                       f'<td>{it["level"]} · {LV_NAMES[it["level"]]}</td><td>{ar(it["marks"], dg)}</td><td>{html.escape(it["lesson"])}</td></tr>'
-                       for k, it in enumerate(items, 1))
-        body += f'<table class="spec"><tr><th>رقم المفردة</th><th>نمط المفردة</th><th>هدف التقويم</th><th>مستوى الصعوبة</th><th>الدرجة</th><th>الدرس</th></tr>{rows}</table>'
-        body += summary_table(items, tool, dg)
+        heads, rows = grid_model(spec, items)
+        body += ('<table class="spec"><tr>' + ''.join(f'<th>{x}</th>' for x in heads) + '</tr>'
+                 + ''.join('<tr>' + ''.join(f'<td>{html.escape(x)}</td>' for x in r) + '</tr>' for r in rows) + '</table>')
+        body += summary_table(spec, tool, items)
         body += f'<h2>دليل التصحيح — النموذج ({form})</h2>'
-        rows = ''
-        for k, it in enumerate(items, 1):
-            rows += (f'<tr><td class="c">{ar(k, dg)}</td><td class="c">{AO_NAMES[it["ao"]]}</td><td>{h(it["objective"], dg)}</td>'
-                     f'<td class="c">{h(it["page"], dg)}</td><td>{answer_html(it, dg)}</td><td class="c">{ar(it["marks"], dg)}</td>'
-                     f'<td>{h(it.get("guidance", ""), dg)}</td></tr>')
-        cols = tool.get('answer_key_columns') or ['رقم المفردة', 'عنصر التقويم', 'الهدف التعليمي', 'رقم الصفحة', 'الإجابة', 'الدرجة', 'الإرشادات']
-        widths = ['6%', '8%', '20%', '9%', '30%', '6%', '21%']
-        th = ''.join(f'<th style="width:{w}">{c}</th>' for c, w in zip(cols, widths))
-        body += f'<table class="key"><tr>{th}</tr>{rows}<tr><th colspan="5">المجموع</th><th>{ar(sum(i["marks"] for i in items), dg)}</th><th></th></tr></table>'
+        th = ''.join(f'<th style="width:{KEY_WIDTHS.get(f, 9) * 100 / tw:.0f}%">{c}</th>' for c, f in cols)
+        rows = ''.join('<tr>' + ''.join(f'<td class="{"c" if f not in ("objective", "answer", "guidance") else ""}">{key_cell(exam, spec, it, f, lab[1], dg)}</td>'
+                                        for _, f in cols) + '</tr>' for lab, it in zip(item_labels(items), items))
+        mi = [f for _, f in cols].index('marks') if 'marks' in [f for _, f in cols] else None
+        tot = ''
+        if mi is not None:
+            tot = (f'<tr><th colspan="{mi}">المجموع</th><th>{ar(sum(i["marks"] for i in items))}</th>'
+                   + (f'<th colspan="{len(cols) - mi - 1}"></th>' if len(cols) - mi - 1 else '') + '</tr>')
+        body += f'<table class="key"><thead><tr>{th}</tr></thead><tbody>{rows}{tot}</tbody></table>'
     sup = cfg.get('reviewer_title', 'المعلّم الأول')
     body += (f'<div class="sign"><span>إعداد: {html.escape(cfg.get("teacher_name", "........................"))}</span>'
              f'<span>مراجعة {html.escape(sup)}: ........................ التوقيع: ............</span></div>')
     return page(body, 'landscape', 11)
 
 
-def summary_table(items, tool, dg):
-    ao = {k: sum(i['marks'] for i in items if i['ao'] == k) for k in AO_NAMES}
-    lv = {k: sum(i['marks'] for i in items if i['level'] == k) for k in LV_NAMES}
+def summary_table(spec, tool, items):
+    sm = summary_model(spec, tool, items)
     def cell(v, want):
         if want is None:
-            return f'<td>{ar(v, dg)}</td>'
-        return f'<td class="{"ok" if v == want else "bad"}">{ar(v, dg)} / {ar(want, dg)}</td>'
-    wa, wl = tool.get('ao') or {}, tool.get('level') or {}
-    head = ''.join(f'<th>{AO_NAMES[k]}</th>' for k in AO_NAMES) + ''.join(f'<th>{LV_NAMES[k]}</th>' for k in LV_NAMES) + '<th>المفردات</th><th>المجموع</th>'
-    row = ''.join(cell(ao[k], wa.get(k)) for k in AO_NAMES) + ''.join(cell(lv[k], wl.get(k)) for k in LV_NAMES)
-    row += f'<td>{ar(len(items), dg)}</td>' + cell(sum(i['marks'] for i in items), tool['total'])
+            return f'<td>{ar(v)}</td>'
+        return f'<td class="{"ok" if v == want else "bad"}">{ar(v)} / {ar(want)}</td>'
+    head = ''.join(f'<th>{html.escape(l)}</th>' for l, _, _ in sm)
+    row = ''.join(cell(v, w) for _, v, w in sm)
     return f'<table class="sum" style="margin-top:6px"><tr>{head}</tr><tr>{row}</tr></table>'
 
 
@@ -264,9 +284,70 @@ def to_pdf(html_path, pdf_path):
 
 
 # ═════════════ Word (python-docx) ═════════════
+def all_texts(exam):
+    keys = ('stem', 'answer', 'guidance', 'objective', 'page', 'body', 'title')
+    for items in exam['forms'].values():
+        for it in items:
+            for k in keys:
+                if isinstance(it.get(k), str):
+                    yield it[k]
+            for k in ('choices', 'steps', 'left', 'right', 'items'):
+                for x in it.get(k, []) or []:
+                    yield str(x)
+            for prt in it.get('parts', []):
+                yield prt.get('stem', '')
+            for row in (it.get('grid') or {}).get('rows', []):
+                for c in row:
+                    yield str(c)
+
+
+def make_snipper(exam, dg, workdir):
+    """يرسم كل جذر في الاختبار صورةً (Chromium) لـ Word، ويعيد دالة: عقدة ← (مسار، العرض pt، الارتفاع pt) أو None."""
+    import hashlib
+    found = {}
+    def walk(ns):
+        for n in ns:
+            if n[0] == 'root':
+                hh = notation.to_html([n]); found[hashlib.md5(hh.encode()).hexdigest()[:12]] = hh
+            for x in n[1:]:
+                if isinstance(x, list):
+                    walk(x)
+    for t in all_texts(exam):
+        walk(notation.parse(t, dg))
+    if not found:
+        return None
+    os.makedirs(workdir, exist_ok=True)
+    items = [{'id': k, 'html': v, 'out': os.path.join(workdir, k + '.png')} for k, v in found.items()]
+    jobs = os.path.join(workdir, 'jobs.json')
+    json.dump({'css': fonts_css() + notation.CSS, 'items': items}, open(jobs, 'w', encoding='utf-8'), ensure_ascii=False)
+    env = dict(os.environ)
+    if not env.get('CHROMIUM_PATH') and os.path.exists('/opt/pw-browsers/chromium'):
+        env['CHROMIUM_PATH'] = '/opt/pw-browsers/chromium'
+    r = subprocess.run(['node', os.path.join(HERE, 'snips.mjs'), jobs], capture_output=True, text=True, env=env)
+    if r.returncode != 0:
+        print('⚠ تعذّر رسم الجذور صوراً لـ Word (تظهر بعلامة غير معكوسة):', (r.stderr or '')[-200:])
+        return None
+    sizes = {}
+    from PIL import Image
+    for it in items:   # قصّ الهوامش الشفافة؛ المقاس بالنقاط = البكسل ÷ ٥ (دقّة الرسم) × ٠٫٧٥
+        im = Image.open(it['out']); bb = im.getbbox()
+        if bb:
+            im = im.crop((max(0, bb[0] - 4), 0, min(im.width, bb[2] + 4), im.height)); im.save(it['out'])
+        sizes[it['id']] = (im.width / 5 * 0.75, im.height / 5 * 0.75)
+    def snip(node):
+        k = hashlib.md5(notation.to_html([node]).encode()).hexdigest()[:12]
+        if k in sizes:
+            return (os.path.join(workdir, k + '.png'),) + tuple(sizes[k])
+        return None
+    return snip
+
+
 def docx_build(exam, cfg, spec, dg, base, out_base):
     from docx_writer import DocxExam
-    W = DocxExam(cfg.get('docx_font', 'Arial'), dg)
+    snip = make_snipper(exam, dg, out_base + '_صور')
+    default_font = 'Traditional Arabic' if BODY_FONT == 'amiri' else 'Arial'
+    W = DocxExam(exam.get('docx_font') or spec.get('docx_font') or cfg.get('docx_font', default_font), dg, snip,
+                 cfg.get('quran_font', 'Traditional Arabic'))
     files = []
     for form, items in exam['forms'].items():
         d = W.paper(exam, cfg, form, items, base, header_lines(exam, cfg, form, dg), calc_note(exam))
@@ -281,8 +362,51 @@ def header_lines(exam, cfg, form, dg, key=False):
     right = [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التربية والتعليم')] + [x for x in (cfg.get('directorate'), cfg.get('school')) if x]
     subj = SUBJ_AR.get(exam.get('subject'), exam.get('subject', ''))
     mid = [exam['title']] + (['دليل التصحيح وشبكة المفردات'] if key else []) + [f'مادة {subj} · الصف {GRADE_AR.get(g, g)}', f'الفصل الدراسي {SEM_AR.get(int(exam.get("semester", 1)), "")}']
-    left = [f'العام الدراسي: {ar(cfg.get("year", exam.get("year", "")), dg)}', f'الزمن: {exam.get("duration_short") or exam.get("duration", "")}', f'الدرجة الكلية: {ar(exam["total"], dg)}'] + ([f'النموذج ({form})'] if form else [])
+    left = [f'العام الدراسي: {ar(cfg.get("year", exam.get("year", "")), dg)}', f'الزمن: {exam.get("duration_short") or exam.get("duration", "")}', f'الدرجة الكلية: {ar(exam["total"])}'] + ([f'النموذج ({form})'] if form else [])
     return right, mid, left
+
+
+# ═════════════ الآيات: quran[112:1-4] ← النص الموثّق ═════════════
+QREF = re.compile(r'quran\[(\d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?)(?:\|(uthmani|imlaei))?\](?:\{([^{}]*)\})?')
+
+
+def resolve_quran(exam, base):
+    """يستبدل quran[المرجع] بنصّ الآيات من quran.com (مع ذاكرة مؤقتة بجانب الملف)، ويتحقّق من quran[المرجع]{نص}."""
+    raw = json.dumps(exam, ensure_ascii=False)
+    if 'quran[' not in raw:
+        return exam
+    sys.path.insert(0, os.path.join(HERE, 'tools'))
+    import quran as Q
+    cache_p = os.path.join(base, '.quran_cache.json')
+    cache = load_json(cache_p) if os.path.exists(cache_p) else {}
+    errs = []
+    def rep(m):
+        ref, script, given = m.group(1), m.group(2) or 'uthmani', m.group(3)
+        key = f'{ref}|{script}'
+        if key not in cache:
+            try:
+                s_, x, y, name = Q.parse_ref(ref)
+                vs = Q.fetch(s_, x, y, script)
+                cache[key] = {'text': ' '.join(f'{t} ({Q.num(n)})' if y != x else t for n, t in vs),
+                              'label': f'[{name}: {Q.num(x)}{"–" + Q.num(y) if y != x else ""}]'}
+            except BaseException as e:
+                errs.append(f'تعذّر جلب الآية {ref} ({e})؛ الصق نصّها من كتاب الطالب داخل quran{{…}}')
+                return m.group(0)
+        c = cache[key]
+        if given is not None:   # اقتباس: يجب أن يكون جزءاً متّصلاً من الآية (أو الآيات) حرفاً حرفاً
+            g = Q.strip_marks(re.sub(r'\s*\([٠-٩]+\)', '', given))
+            w = Q.strip_marks(re.sub(r'\s*\([٠-٩]+\)', '', c['text']))
+            if not g or g not in w:
+                errs.append(f'الاقتباس من الآية {ref} لا يطابق المصدر «{given}»؛ نصّ الآية: {c["text"]}')
+            return 'quran{' + given.replace('"', '\\"') + '}'
+        return 'quran{' + c['text'].replace('"', '\\"') + '} ' + c['label']
+    raw = QREF.sub(rep, raw)
+    json.dump(cache, open(cache_p, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    if errs:
+        for e in errs:
+            print('  ✘', e)
+        sys.exit(1)
+    return json.loads(raw)
 
 
 # ═════════════ main ═════════════
@@ -297,18 +421,22 @@ def main():
     ap.add_argument('--log', help='سجلّ الاختبارات <P>/exams/log.json (لمنع تكرار أهداف السؤال القصير)')
     a = ap.parse_args()
     exam = load_json(a.exam); base = os.path.dirname(os.path.abspath(a.exam))
+    exam = resolve_quran(exam, base)
     cfg = {**find_config(base), **exam.get('header', {})}
     spec = load_spec(SKILL, exam.get('spec') or f'{exam.get("subject", "math")}-5-10')
-    tool = spec['tools'][exam['kind']]
-    exam.setdefault('total', tool['total'])
+    tool = tool_cfg(spec, exam['kind'], exam['grade'], exam.get('number')) or {}
+    if not tool or tool.get('_no_band'):
+        print(f'✘ لا مواصفات لـ«{exam["kind"]}» للصف {exam["grade"]} في {spec["id"]}'); sys.exit(1)
+    exam.setdefault('total', tool.get('total'))
     exam.setdefault('duration', tool.get('duration_text', ''))
     exam.setdefault('duration_short', tool.get('duration_short', ''))
-    if exam.get('calculator') is None and tool.get('calculator'):
-        band = grade_band(exam['grade'], tool['calculator'])
-        exam['calculator'] = tool['calculator'].get(band) if band else None
-    dg = cfg.get('digits', exam.get('digits', 'ar'))
+    if exam.get('calculator') is None and tool.get('calculator') is not None:
+        exam['calculator'] = tool['calculator']
+    dg = exam.get('digits') or spec.get('digits') or cfg.get('digits', 'ar')
+    global BODY_FONT
+    BODY_FONT = exam.get('font') or spec.get('font') or cfg.get('font') or 'readex'
     log = load_json(a.log) if a.log and os.path.exists(a.log) else []
-    errs, warns = validate(exam, spec, log)
+    errs, warns = validate(exam, spec, log, dg)
     print(f'التحقّق من مواصفات {spec["document"]["title"]} ({spec["document"]["edition"]}) — {tool["name"]}:')
     for e in errs:
         print('  ✘', e)
@@ -340,8 +468,10 @@ def main():
         except ImportError:
             print('⚠ python-docx غير مثبّت: pip install python-docx')
     if log is not None and a.log and not errs:
-        objs = sorted({it['objective'] for items in exam['forms'].values() for it in items})
-        log = [e for e in log if e.get('title') != exam['title']] + [{'kind': exam['kind'], 'title': exam['title'], 'date': str(datetime.date.today()),
+        objs = sorted({it['objective'] for items in exam['forms'].values() for it in items if it.get('type') != 'passage' and it.get('objective')})
+        ident = lambda e: (e.get('subject'), e.get('grade'), e.get('semester'), e.get('kind'), e.get('title'))
+        me = {'subject': exam.get('subject'), 'grade': exam.get('grade'), 'semester': exam.get('semester'), 'kind': exam['kind'], 'title': exam['title']}
+        log = [e for e in log if ident(e) != ident(me)] + [{**me, 'date': str(datetime.date.today()),
                'lessons': [l['code'] if isinstance(l, dict) else l for l in exam['lessons']], 'objectives': objs}]
         os.makedirs(os.path.dirname(os.path.abspath(a.log)), exist_ok=True)
         json.dump(log, open(a.log, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

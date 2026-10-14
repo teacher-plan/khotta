@@ -8,7 +8,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
-from exam_lib import parse, plain, ar, marks_word, LETTERS, TYPE_NAMES, AO_NAMES, LV_NAMES
+import notation
+from exam_lib import (plain, ar, marks_word, LETTERS, TYPE_NAMES, tool_cfg, key_columns, field_value,
+                      grid_model, summary_model, KEY_WIDTHS, item_labels)
 
 M_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/math'
 
@@ -53,8 +55,8 @@ def _el(tag, **attrs):
 
 
 class DocxExam:
-    def __init__(self, font='Arial', digits='ar'):
-        self.font, self.dg = font, digits
+    def __init__(self, font='Arial', digits='ar', snip=None, quran_font='Traditional Arabic'):
+        self.font, self.dg, self.snip, self.quran_font = font, digits, snip, quran_font
 
     @staticmethod
     def save(d, path):
@@ -94,10 +96,13 @@ class DocxExam:
         p.alignment = {'right': WD_ALIGN_PARAGRAPH.RIGHT, 'center': WD_ALIGN_PARAGRAPH.CENTER, 'left': WD_ALIGN_PARAGRAPH.LEFT}[align]
         return p
 
-    def run(self, p, text, bold=False, size=None, color=None, sup=False):
+    def run(self, p, text, bold=False, size=None, color=None, sup=False, sub=False, rtl=True, font=None):
         r = p.add_run(text)
         rpr = r._r.get_or_add_rPr()
-        rpr.append(_el('w:rtl'))
+        if rtl:
+            rpr.append(_el('w:rtl'))
+        if font:
+            rpr.append(_el('w:rFonts', **{'w:ascii': font, 'w:hAnsi': font, 'w:cs': font}))
         if bold:
             r.bold = True; rpr.append(_el('w:bCs'))
         if size:
@@ -106,6 +111,8 @@ class DocxExam:
             r.font.color.rgb = RGBColor.from_string(color)
         if sup:
             r.font.superscript = True
+        if sub:
+            r.font.subscript = True
         return r
 
     def _mrun(self, text, bold=False):
@@ -116,41 +123,66 @@ class DocxExam:
         t = OxmlElement('m:t'); t.text = text; t.set(qn('xml:space'), 'preserve'); r.append(t)
         return r
 
-    def frac(self, p, whole, num, den, bold=False):
+    def omath(self, p, elements):
         om = OxmlElement('m:oMath')
-        if whole:
-            om.append(self._mrun(whole + ' ', bold))
-        f = OxmlElement('m:f')
-        for tag, val in (('m:num', num), ('m:den', den)):
-            e = OxmlElement(tag); e.append(self._mrun(val, bold)); f.append(e)
-        om.append(f)
+        for e in elements:
+            om.append(e)
         p._p.append(om)
 
-    def sqrt(self, p, val):
-        om = OxmlElement('m:oMath'); rad = OxmlElement('m:rad')
-        pr = OxmlElement('m:radPr'); pr.append(_el('m:degHide', **{'m:val': 1})); rad.append(pr)
-        rad.append(OxmlElement('m:deg'))
-        e = OxmlElement('m:e'); e.append(self._mrun(val)); rad.append(e)
-        om.append(rad); p._p.append(om)
-
     def rich(self, p, text, bold=False, size=None):
-        for part in parse(text, self.dg):
-            k = part[0]
+        self.nodes(p, notation.parse(text, self.dg), bold, size)
+        return p
+
+    def nodes(self, p, ns, bold=False, size=None, sup=False, sub=False, rtl=True, under=False):
+        mk = notation.OMML(lambda tag, **kw: _el(tag, **kw), lambda t: self._mrun(t, bold))
+        for n in ns:
+            k = n[0]
             if k == 't':
-                self.run(p, part[1], bold, size)
+                r_ = self.run(p, n[1], bold, size, sup=sup, sub=sub, rtl=rtl)
+                if under:
+                    r_.underline = True
+            elif k == 'u':
+                self.nodes(p, n[1], bold, size, sup, sub, rtl, under=True)
             elif k == 'b':
-                self.run(p, part[1], True, size)
-            elif k == 'f':
-                self.frac(p, part[1], part[2], part[3], bold)
-            elif k == 'sup':
-                self.run(p, part[1], bold, size, sup=True)
-            elif k == 'sqrt':
-                self.sqrt(p, part[1])
+                self.nodes(p, n[1], True, size, sup, sub, rtl)
+            elif k == 'grp':
+                self.nodes(p, n[1], bold, size, sup, sub, rtl)
+            elif k in ('sup', 'sub'):
+                # في النص العربي: علامة RLM تفصل أرقام الأسّ عن أرقام الأساس فيظهر الأسّ يسار الأساس كما في الكتاب؛
+                # وفي النص اللاتيني (العلوم) يبقى الأسّ يمين أساسه
+                if rtl:
+                    self.run(p, notation.RLM, size=size)
+                self.nodes(p, n[1], bold, size, sup=(k == 'sup'), sub=(k == 'sub'), rtl=rtl)
+            elif k == 'frac':
+                if n[1]:   # العدد الصحيح نصّاً قبل الكسر (يمينه)
+                    self.nodes(p, n[1], bold, size)
+                self.omath(p, mk.atom(('node', ('frac', None, n[2], n[3]))))
+            elif k == 'ol':   # خطّ فوق كل رقم (U+0305) في النص نفسه، فيبقى العدد متّصلاً
+                self.run(p, ''.join(ch + '\u0305' for ch in notation.plain_nodes(n[1])), bold, size, sup=sup, sub=sub)
+            elif k == 'root':
+                img = self.snip(n) if self.snip else None
+                if img:
+                    path, w_pt, h_pt = img
+                    scale = (size or 12.5) / 12.5
+                    r = p.add_run(); r.add_picture(path, width=Pt(w_pt * scale), height=Pt(h_pt * scale))
+                    # إنزال الصورة ليتوسّط الجذرُ السطرَ (w:position بأنصاف النقاط)
+                    r._r.get_or_add_rPr().append(_el('w:position', **{'w:val': -int(h_pt * scale * 0.55)}))
+                else:
+                    self.omath(p, mk.atom(('node', n)))
+            elif k in ('ce', 'ltr'):
+                self.run(p, notation.LRE, size=size, rtl=False)
+                if k == 'ce':
+                    for t, kk in notation.ce_tokens(n[1]):
+                        self.run(p, t, bold, size, sup=(kk == 'sup'), sub=(kk == 'sub'), rtl=False)
+                else:
+                    self.nodes(p, n[1], bold, size, sup, sub, rtl=False)
+                self.run(p, notation.PDF_, size=size, rtl=False)
+            elif k == 'quran':
+                self.run(p, '﴿' + n[1].strip() + '﴾', bold, (size or 12.5) + 1.5, font=self.quran_font)
             elif k == 'blank':
                 self.run(p, ' .................... ', False, size)
             elif k == 'br':
                 p.add_run().add_break()
-        return p
 
     def table(self, cont, rows, cols, widths=None, border=True, center=True):
         t = cont.add_table(rows=rows, cols=cols)
@@ -208,11 +240,28 @@ class DocxExam:
         t = self.table(d, 1, 2, (150, 34))
         c0, c1 = t.rows[0].cells
         self.cell(c0, 'اسم الطالب: ..............................................   الصف: ........', align='right', size=11.5)
-        self.cell(c1, f'الدرجة\n      / {ar(exam["total"], self.dg)}', bold=True, size=12)
+        self.cell(c1, f'الدرجة\n      / {ar(exam["total"])}', bold=True, size=12)
         inst = '؛ '.join(x for x in [exam.get('instructions', 'أجب عن جميع الأسئلة في الورقة نفسها'), calc] if x) + '.'
         p = self.para(d, 'right', 4, 4); self.run(p, inst, size=11)
-        for k, it in enumerate(items, 1):
-            self.item(d, k, it, base)
+        labels = iter(item_labels(items)); grp = None
+        for it in items:
+            if it.get('group') and it['group'] != grp:
+                grp = it['group']; p = self.para(d, 'right', 8, 2, keep=True); self.run(p, f'السؤال {grp}', True, 13.5)
+            if it.get('type') == 'passage':
+                tb = self.table(d, 1, 1, (184,))
+                c = tb.rows[0].cells[0]; c.paragraphs[0]._p.getparent().remove(c.paragraphs[0]._p)
+                if it.get('title'):
+                    self.rich(self.para(c, 'center', 2, 2), it['title'], bold=True)
+                for line in (str(it['body']).split('\n') if it.get('body') else []):
+                    self.rich(self.para(c, 'right', 1, 1), line)
+                if it.get('verses'):
+                    vt = self.table(c, len(it['verses']), 3, (78, 14, 78), border=False)
+                    for r_, (a_, b_) in zip(vt.rows, it['verses']):
+                        self.cell(r_.cells[0], a_, align='right'); self.cell(r_.cells[1], ' '); self.cell(r_.cells[2], b_, align='right')
+                if it.get('source'):
+                    self.rich(self.para(c, 'left', 2, 0), it['source'], size=10)
+                continue
+            self.item(d, next(labels)[0], it, base)
         p = self.para(d, 'center', 4, 0); self.run(p, 'انتهت الأسئلة، مع تمنياتنا لكم بالتوفيق', True, 11.5)
         if cfg.get('teacher_name'):
             self.run(p, f'          معلّم المادّة: {cfg["teacher_name"]}', size=10)
@@ -221,7 +270,7 @@ class DocxExam:
     def item(self, d, k, it, base):
         t = it['type']
         p = self.para(d, 'right', 4, 2, keep=True)
-        self.run(p, f'{ar(k, self.dg)}) ', True, 13.5)
+        self.run(p, f'{k}) ' if it.get('group') is None else f'({k}) ', True, 13.5)
         self.rich(p, it['stem'], bold=True)
         self.run(p, f'   ({marks_word(it["marks"])})', size=10, color='444444')
         if it.get('fig'):
@@ -251,7 +300,7 @@ class DocxExam:
             for i in range(n):
                 r = tb.rows[i + 1].cells
                 if i < len(L):
-                    self.cell(r[0], ar(i + 1, self.dg)); self.cell(r[1], L[i]); self.cell(r[2], '')
+                    self.cell(r[0], ar(i + 1)); self.cell(r[1], L[i]); self.cell(r[2], '')
                 if i < len(R):
                     self.cell(r[3], LETTERS[i]); self.cell(r[4], R[i])
         elif t == 'order':
@@ -276,52 +325,61 @@ class DocxExam:
 
     # ── دليل التصحيح ──
     def key(self, exam, cfg, spec, hl):
-        tool = spec['tools'][exam['kind']]
+        tool = tool_cfg(spec, exam['kind'], exam['grade'], exam.get('number'))
         d = self.new_doc(landscape=True)
         self.header(d, hl, landscape=True)
         lessons = '، '.join(f'{l["code"]} {l.get("title", "")}' if isinstance(l, dict) else l for l in exam['lessons'])
         p = self.para(d, 'right', 4, 4)
         self.run(p, f'الدروس: {lessons} · المرجع: {spec["document"]["title"]}، {spec["document"]["edition"]}', size=10)
-        cols = tool.get('answer_key_columns') or ['رقم المفردة', 'عنصر التقويم', 'الهدف التعليمي', 'رقم الصفحة', 'الإجابة', 'الدرجة', 'الإرشادات']
+        cols = key_columns(spec, tool)
+        tw = sum(KEY_WIDTHS.get(f, 9) for _, f in cols)
         for n, (form, items) in enumerate(exam['forms'].items()):
+            items = [i for i in items if i.get('type') != 'passage']
             if n:
                 d.add_page_break()
             p = self.para(d, 'right', 6, 2); self.run(p, f'شبكة مفردات النموذج ({form})', True, 13)
-            tb = self.table(d, len(items) + 1, 6, (22, 50, 45, 40, 20, 30))
-            for c, v in zip(tb.rows[0].cells, ['رقم المفردة', 'نمط المفردة', 'هدف التقويم', 'مستوى الصعوبة', 'الدرجة', 'الدرس']):
-                self.cell(c, v, True, 10.5, shade='E6E6E6')
-            for k, it in enumerate(items, 1):
-                vals = [ar(k, self.dg), TYPE_NAMES[it['type']], f'{it["ao"]} · {AO_NAMES[it["ao"]]}', f'{it["level"]} · {LV_NAMES[it["level"]]}', ar(it['marks'], self.dg), it['lesson']]
-                for c, v in zip(tb.rows[k].cells, vals):
-                    self.cell(c, v, size=10.5)
-            # ملخّص التوزيع
-            ao = {k: sum(i['marks'] for i in items if i['ao'] == k) for k in AO_NAMES}
-            lv = {k: sum(i['marks'] for i in items if i['level'] == k) for k in LV_NAMES}
-            wa, wl = tool.get('ao') or {}, tool.get('level') or {}
-            heads = [AO_NAMES[k] for k in AO_NAMES] + [LV_NAMES[k] for k in LV_NAMES] + ['المجموع']
-            vals = [f'{ar(ao[k], self.dg)}' + (f' / {ar(wa[k], self.dg)}' if k in wa else '') for k in AO_NAMES] + \
-                   [f'{ar(lv[k], self.dg)}' + (f' / {ar(wl[k], self.dg)}' if k in wl else '') for k in LV_NAMES] + \
-                   [f'{ar(sum(i["marks"] for i in items), self.dg)} / {ar(tool["total"], self.dg)}']
-            p = self.para(d, 'right', 4, 0)
-            tb = self.table(d, 2, len(heads))
+            heads, rows = grid_model(spec, items)
+            tb = self.table(d, len(rows) + 1, len(heads), [270 / len(heads)] * len(heads))
             for c, v in zip(tb.rows[0].cells, heads):
-                self.cell(c, v, True, 10, shade='E6E6E6')
-            for c, v in zip(tb.rows[1].cells, vals):
-                self.cell(c, v, size=10)
-            p = self.para(d, 'right', 8, 2); self.run(p, f'دليل التصحيح — النموذج ({form})', True, 13)
-            widths = (16, 22, 52, 22, 78, 14, 66)
-            tb = self.table(d, len(items) + 2, 7, widths)
-            for c, v in zip(tb.rows[0].cells, cols):
                 self.cell(c, v, True, 10.5, shade='E6E6E6')
-            for k, it in enumerate(items, 1):
-                r = tb.rows[k].cells
-                self.cell(r[0], ar(k, self.dg), size=10.5); self.cell(r[1], AO_NAMES[it['ao']], size=10.5)
-                self.cell(r[2], it['objective'], size=10.5, align='right'); self.cell(r[3], it['page'], size=10.5)
-                self.cell(r[4], self.answer_text(it), size=10.5, align='right'); self.cell(r[5], ar(it['marks'], self.dg), size=10.5)
-                self.cell(r[6], it.get('guidance', ''), size=10.5, align='right')
+            for k, r in enumerate(rows, 1):
+                for c, v in zip(tb.rows[k].cells, r):
+                    self.cell(c, v, size=10.5)
+            sm = summary_model(spec, tool, items)
+            self.para(d, 'right', 4, 0)
+            tb = self.table(d, 2, len(sm), [270 / len(sm)] * len(sm))
+            for c, (lab, v, w) in zip(tb.rows[0].cells, sm):
+                self.cell(c, lab, True, 10, shade='E6E6E6')
+            for c, (lab, v, w) in zip(tb.rows[1].cells, sm):
+                self.cell(c, ar(v) + (f' / {ar(w)}' if w is not None else ''), size=10)
+            p = self.para(d, 'right', 8, 2); self.run(p, f'دليل التصحيح — النموذج ({form})', True, 13)
+            fl = [f for _, f in cols]
+            tb = self.table(d, len(items) + 2, len(cols), [270 * KEY_WIDTHS.get(f, 9) / tw for f in fl])
+            trpr = tb.rows[0]._tr.get_or_add_trPr(); trpr.append(_el('w:tblHeader'))   # تكرار العناوين في كل صفحة
+            for c, (hd, _) in zip(tb.rows[0].cells, cols):
+                self.cell(c, hd, True, 10.5, shade='E6E6E6')
+            for k, (lab, it) in enumerate(zip(item_labels(items), items), 1):
+                for c, f in zip(tb.rows[k].cells, fl):
+                    if f == 'n':
+                        v = lab[1]
+                    elif f == 'marks':
+                        v = ar(it.get('marks', 0))
+                    elif f == 'answer':
+                        v = self.answer_text(it)
+                    elif f in ('objective', 'page', 'guidance'):
+                        v = it.get(f, '')
+                    else:
+                        v = str(field_value(spec, it, f, exam))
+                    self.cell(c, v or ' ', size=10.5, align='right' if f in ('objective', 'answer', 'guidance') else 'center')
             last = tb.rows[-1].cells
-            m = last[0].merge(last[4]); self.cell(m, 'المجموع', True, 10.5, shade='E6E6E6')
-            self.cell(last[5], ar(sum(i['marks'] for i in items), self.dg), True, 10.5); self.cell(last[6], '')
+            if 'marks' in fl:
+                mi = fl.index('marks')
+                if mi > 0:
+                    m = last[0].merge(last[mi - 1]); self.cell(m, 'المجموع', True, 10.5, shade='E6E6E6')
+                self.cell(last[mi], ar(sum(i['marks'] for i in items)), True, 10.5)
+                if mi + 1 < len(fl):
+                    m2 = last[mi + 1].merge(last[-1]) if mi + 1 < len(fl) - 1 else last[mi + 1]
+                    self.cell(m2, ' ')
         p = self.para(d, 'right', 14, 0)
         self.run(p, f'إعداد: {cfg.get("teacher_name", "........................")}          '
                     f'مراجعة {cfg.get("reviewer_title", "المعلّم الأول")}: ........................   التوقيع: ............', size=11)
@@ -331,7 +389,7 @@ class DocxExam:
         if it['type'] == 'mcq':
             a = it['answer']; return f'({LETTERS[a]}) {it["choices"][a]}'
         if it['type'] == 'match' and it.get('pairs'):
-            return '، '.join(f'{ar(i + 1, self.dg)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
+            return '، '.join(f'{ar(i + 1)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
         parts = [str(it['answer'])] if it.get('answer') not in (None, '') else []
         parts += it.get('steps', [])
         return '\n'.join(parts)

@@ -32,12 +32,16 @@ GPT مخصّص أو مشروع: الصق `platforms/CHAT_INSTRUCTIONS.md` في �
 «Gem جديد»: التعليمات من `platforms/CHAT_INSTRUCTIONS.md`، وملفات المعرفة (حتى ١٠).
 
 ## ملفات المعرفة للمحادثات
-من `.claude/skills/exam-khotta/`:
+من `.claude/skills/exam-khotta/` (حتى ١٠ ملفات؛ اختر ما يخصّ مادّتك):
 1. `SKILL.md`
-2. `specs/math-5-10.md` (ومعه `specs/math-5-10.json`)
-3. `guides/WRITING.md`
-4. `guides/FORMAT.md`
-5. `indexes/math-7-1.json` أو `indexes/math-7-2.json` (فهرس صفّك)
-6. `examples/math7-1_short-test-1.json` (مثال كامل)
+2. `specs/<المادة>.summary.md` و`specs/<المادة>.json` (مثل `islamic-5-12`)
+3. `subjects/<المادة>.md` (قواعد الكتابة: math، science، arabic، islamic)
+4. `guides/WRITING.md`
+5. `guides/FORMAT.md`
+6. `examples/<مثال المادّة>.json`
+7. فهرس صفّك من `indexes/` إن وُجد
+
+**الآيات في المحادثة:** إن أتاحت البيئة الإنترنت فاكتب `quran[112:1-4]` ويجلبها المحرّك؛ وإلا فانقلها من صورة صفحة الكتاب
+المرفقة حرفاً حرفاً، ولا تكتبها من الذاكرة.
 
 لا ترفع الكتب كاملةً إلى GPT أو Gem مشترك؛ أرفق صفحات الدروس في المحادثة نفسها.

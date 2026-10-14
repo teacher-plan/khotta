@@ -60,6 +60,7 @@ def moe_books(subject, grade, sem):
         raise RuntimeError(f'لم أجد {SEM_AR[sem][0]}')
     page = http_get(p)
     out = {}
+    unnamed = []
     # كل كتاب: نصّ العنوان قبل رابط Book…pdf
     for m in re.finditer(r"(.{0,500}?)(/images/manaheg/file/Book\d+\.pdf)", page, re.S):
         title = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', ' ', m.group(1)))).strip()[-120:]
@@ -70,6 +71,11 @@ def moe_books(subject, grade, sem):
         if kind and kind not in out:
             out[kind] = url
             log(f'البوابة: {kind} ← {url} ({title[-50:]})')
+        elif not kind:
+            unnamed.append((url, title))
+    if 'student' not in out and len(unnamed) >= 1:   # كتاب واحد بلا «كتاب الطالب» في عنوانه (مثل «ديني قيمي»)
+        out['student'] = unnamed[0][0]
+        log(f'البوابة: student ← {unnamed[0][0]} (بلا تسمية؛ تحقّق من الغلاف)')
     return out
 
 
