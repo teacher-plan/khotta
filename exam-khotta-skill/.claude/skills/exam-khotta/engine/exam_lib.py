@@ -40,12 +40,12 @@ def load_json(p):
 def find_config(start):
     p = os.environ.get('EXAM_KHOTTA_CONFIG')
     if p and os.path.exists(p):
-        return load_json(p)
+        return {**load_json(p), '_dir': os.path.dirname(os.path.abspath(p))}
     d = os.path.abspath(start)
     while True:
         c = os.path.join(d, 'exam-khotta.config.json')
         if os.path.exists(c):
-            return load_json(c)
+            return {**load_json(c), '_dir': d}   # _dir: لمسارات نسبية في الإعداد (مثل الشعار)
         if os.path.dirname(d) == d:
             return {}
         d = os.path.dirname(d)

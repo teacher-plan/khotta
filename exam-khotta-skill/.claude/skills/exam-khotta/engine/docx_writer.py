@@ -93,7 +93,8 @@ class DocxExam:
         if keep:
             pf.keep_with_next = True
         p._p.get_or_add_pPr().insert(0, _el('w:bidi'))
-        p.alignment = {'right': WD_ALIGN_PARAGRAPH.RIGHT, 'center': WD_ALIGN_PARAGRAPH.CENTER, 'left': WD_ALIGN_PARAGRAPH.LEFT}[align]
+        # في الفقرة العربية (bidi) يقرأ Word وLibreOffice القيمة left على أنها «البداية» أي اليمين، وright على أنها اليسار
+        p.alignment = {'right': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER, 'left': WD_ALIGN_PARAGRAPH.RIGHT}[align]
         return p
 
     def run(self, p, text, bold=False, size=None, color=None, sup=False, sub=False, rtl=True, font=None):
@@ -213,13 +214,11 @@ class DocxExam:
             tcpr = c._tc.get_or_add_tcPr(); tcpr.append(_el('w:shd', **{'w:val': 'clear', 'w:color': 'auto', 'w:fill': shade}))
 
     def lines(self, cont, n, width_mm=182):
-        # سطر إجابة: علامة جدولة بخطٍّ منقّط حتى نهاية السطر (لا تُدمج كما تُدمج حدود الفقرات)
+        # سطر إجابة: نقاط نصّية بعرض الحاوية (علامة الجدولة المنقّطة لا تظهر داخل خلايا الجداول، وحدود الفقرات تُدمج)
+        dots = '.' * int(width_mm / 1.13 * 0.9)   # النقطة بحجم ١١ ≈ ١٫١ مم في Arial
         for _ in range(n):
             p = self.para(cont, 'right', 9, 0)
-            tabs = OxmlElement('w:tabs')
-            tabs.append(_el('w:tab', **{'w:val': 'left', 'w:leader': 'dot', 'w:pos': int(width_mm * 56.7)}))
-            p._p.get_or_add_pPr().append(tabs)
-            r = self.run(p, '	', size=11, color='777777')
+            self.run(p, dots, size=11, color='777777')
 
     def header(self, d, hl, landscape=False):
         right, mid, left = hl
@@ -267,32 +266,140 @@ class DocxExam:
             self.run(p, f'          معلّم المادّة: {cfg["teacher_name"]}', size=10)
         return d
 
-    def item(self, d, k, it, base):
+    # ── نمط «الجدول» (الافتراضي): كعيّنة مدارس سلطنة عُمان ──
+    @staticmethod
+    def borders(c, sz=12, val='single', sides=('top', 'left', 'bottom', 'right')):
+        tcpr = c._tc.get_or_add_tcPr()
+        b = OxmlElement('w:tcBorders')
+        for side in ('top', 'left', 'bottom', 'right'):
+            b.append(_el(f'w:{side}', **({'w:val': val, 'w:sz': sz, 'w:color': '000000'} if side in sides else {'w:val': 'nil'})))
+        tcpr.append(b)
+
+    @staticmethod
+    def vcenter(c):
+        c._tc.get_or_add_tcPr().append(_el('w:vAlign', **{'w:val': 'center'}))
+
+    def paper_table(self, exam, info, items, base):
+        d = self.new_doc()
+        sp = d.sections[0]._sectPr   # إطار مزدوج حول كل صفحة
+        pb = _el('w:pgBorders', **{'w:offsetFrom': 'page'})
+        for side in ('top', 'left', 'bottom', 'right'):
+            pb.append(_el(f'w:{side}', **{'w:val': 'double', 'w:sz': 12, 'w:space': 20, 'w:color': '000000'}))
+        sp.append(pb)
+        # الترويسة: الجهات يميناً، الشعار وسطاً، خانة الدرجة يساراً
+        t = self.table(d, 1, 3, (104, 36, 44), border=False)
+        cr, cm, cl = t.rows[0].cells
+        cr.paragraphs[0]._p.getparent().remove(cr.paragraphs[0]._p)
+        for x in info['right']:
+            self.run(self.para(cr, 'right', 0, 0), x, True, 11)
+        pm = cm.paragraphs[0]; pm.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        if info.get('logo'):
+            pm.add_run().add_picture(info['logo'], height=Mm(21))
+        cl.paragraphs[0]._p.getparent().remove(cl.paragraphs[0]._p)
+        sc = self.table(cl, 2, 1, (24,))
+        sc.alignment = WD_TABLE_ALIGNMENT.RIGHT   # في الجدول المعكوس (bidiVisual) تعني اليسار
+        for r_, v in zip(sc.rows, ('', info['total'])):
+            r_.height = Mm(10)
+            self.borders(r_.cells[0], 16); self.vcenter(r_.cells[0])
+            self.cell(r_.cells[0], v or ' ', True, 13)
+        self.para(cl, 'left', 0, 0)
+        # العنوان مسطّراً
+        for i, x in enumerate(info['title']):
+            p = self.para(d, 'center', 6 if i == 0 else 0, 0)
+            r_ = self.run(p, x, True, 14); r_.underline = True
+        if info.get('meta'):
+            self.run(self.para(d, 'center', 2, 0), '          '.join(info['meta']), size=10.5)
+        # الاسم والصف
+        self.para(d, 'right', 0, 0).paragraph_format.line_spacing = Pt(8)
+        t = self.table(d, 1, 3, (130, 8, 46), border=False)
+        a_, g_, b_ = t.rows[0].cells
+        for c, x in ((a_, 'الاسم: ......................................................................'), (b_, info['class'])):
+            self.borders(c, 12); self.vcenter(c); self.cell(c, x, size=12, align='right')
+        t.rows[0].height = Mm(12)
+        self.run(self.para(d, 'right', 6, 3), info['inst'], size=12)
+        # جدول المفردات
+        Wq = 144
+        n_rows = 1 + len(items) + len({i.get('group') for i in items if i.get('group')})
+        qt = self.table(d, n_rows, 3, (21, Wq, 19), border=False)
+        b = OxmlElement('w:tblBorders')
+        for side in ('top', 'left', 'bottom', 'right'):
+            b.append(_el(f'w:{side}', **{'w:val': 'double', 'w:sz': 12, 'w:color': '000000'}))
+        for side in ('insideH', 'insideV'):
+            b.append(_el(f'w:{side}', **{'w:val': 'single', 'w:sz': 12, 'w:color': '000000'}))
+        qt._tbl.tblPr.append(b)
+        hd = qt.rows[0]
+        hd._tr.get_or_add_trPr().append(_el('w:tblHeader'))
+        for c, x, al in zip(hd.cells, ('المفردة', 'السؤال', 'الدرجة'), ('center', 'right', 'center')):
+            self.cell(c, x, True, 11.5, align=al); self.vcenter(c)
+        ri = 1; grp = None
+        labels = iter(item_labels(items))
+        for it in items:
+            if it.get('group') and it['group'] != grp:
+                grp = it['group']; row = qt.rows[ri]; ri += 1
+                m = row.cells[0].merge(row.cells[2]); self.cell(m, f'السؤال {grp}', True, 13, align='right', shade='ECECEC')
+                m.paragraphs[0].paragraph_format.keep_with_next = True   # لا يبقى العنوان وحده آخر الصفحة
+                row._tr.get_or_add_trPr().append(_el('w:cantSplit'))
+            row = qt.rows[ri]; ri += 1
+            row._tr.get_or_add_trPr().append(_el('w:cantSplit'))
+            cn, cb, cmk = row.cells
+            for c in (cn, cmk):
+                self.vcenter(c)
+            if it.get('type') == 'passage':
+                self.cell(cn, ' '); self.cell(cmk, ' ')
+                cb.paragraphs[0]._p.getparent().remove(cb.paragraphs[0]._p)
+                if it.get('title'):
+                    self.rich(self.para(cb, 'center', 2, 2), it['title'], bold=True)
+                for line in (str(it['body']).split('\n') if it.get('body') else []):
+                    self.rich(self.para(cb, 'right', 1, 1), line)
+                if it.get('verses'):
+                    vt = self.table(cb, len(it['verses']), 3, (66, 10, 66), border=False)
+                    for r_, (x_, y_) in zip(vt.rows, it['verses']):
+                        self.cell(r_.cells[0], x_, align='right'); self.cell(r_.cells[1], ' '); self.cell(r_.cells[2], y_, align='right')
+                if it.get('source'):
+                    self.rich(self.para(cb, 'left', 2, 0), it['source'], size=10)
+                continue
+            self.cell(cn, next(labels)[0], size=13)
+            self.cell(cmk, f'[{ar(it["marks"])}]', size=13)
+            first = cb.paragraphs[0]._p
+            self.item(cb, None, it, base, W=Wq - 6, numbered=False, letters=info.get('letters', False))
+            first.getparent().remove(first)
+            self.para(cb, 'right', 0, 2)
+        if info.get('closing'):
+            self.para(d, 'right', 0, 0).paragraph_format.line_spacing = Pt(6)
+            ct = self.table(d, 1, 1, (184,))
+            ct.rows[0].height = Mm(13); self.vcenter(ct.rows[0].cells[0])
+            self.cell(ct.rows[0].cells[0], info['closing'], size=13.5)
+        return d
+
+    def item(self, d, k, it, base, W=184, numbered=True, letters=True):
         t = it['type']
         p = self.para(d, 'right', 4, 2, keep=True)
-        self.run(p, f'{k}) ' if it.get('group') is None else f'({k}) ', True, 13.5)
-        self.rich(p, it['stem'], bold=True)
-        self.run(p, f'   ({marks_word(it["marks"])})', size=10, color='444444')
+        if numbered:
+            self.run(p, f'{k}) ' if it.get('group') is None else f'({k}) ', True, 13.5)
+        self.rich(p, it['stem'], bold=numbered)
+        if numbered:
+            self.run(p, f'   ({marks_word(it["marks"])})', size=10, color='444444')
         if it.get('fig'):
             path = it['fig'] if os.path.isabs(it['fig']) else os.path.join(base, it['fig'])
             pp = self.para(d, 'center', 2, 2)
-            pp.add_run().add_picture(path, width=Mm(1.7 * it.get('fig_width', 45)))
+            pp.add_run().add_picture(path, width=Mm(min(W - 6, 1.7 * it.get('fig_width', 45))))
         if t == 'mcq':
             ch = it['choices']
             cols = it.get('choice_cols', 4 if max(len(plain(c)) for c in ch) < 14 else 2)
             rows = (len(ch) + cols - 1) // cols
-            tb = self.table(d, rows, cols, [184 / cols] * cols)
+            tb = self.table(d, rows, cols, [W / cols] * cols, border=numbered)
             for i, c in enumerate(ch):
-                self.cell(tb.rows[i // cols].cells[i % cols], f'({LETTERS[i]})  {c}', align='right')
+                self.cell(tb.rows[i // cols].cells[i % cols], f'({LETTERS[i]})  {c}' if letters else c,
+                          align='right' if numbered else 'center')
         elif t == 'tf':
             p = self.para(d, 'right', 2, 2); self.run(p, '(  صواب  /  خطأ  )', True)
             if it.get('explain', True):
                 p = self.para(d, 'right', 2, 0); self.run(p, 'فسّر إجابتك:')
-                self.lines(d, it.get('lines', 2))
+                self.lines(d, it.get('lines', 2), W - 4)
         elif t == 'match':
             L, R = it['left'], it['right']
             n = max(len(L), len(R))
-            tb = self.table(d, n + 1, 5, (12, 62, 16, 12, 62))
+            tb = self.table(d, n + 1, 5, [w * W / 164 for w in (12, 62, 16, 12, 62)])
             hdr = tb.rows[0].cells
             self.cell(hdr[0], ''); self.cell(hdr[1], it.get('left_title', 'العمود الأول'), True, shade='E6E6E6')
             self.cell(hdr[2], 'الحرف', True, shade='E6E6E6'); self.cell(hdr[3], '')
@@ -307,7 +414,7 @@ class DocxExam:
             p = self.para(d, 'right', 2, 2)
             self.rich(p, '     |     '.join(it['items']))
             p = self.para(d, 'right', 2, 0); self.run(p, 'الترتيب:')
-            self.lines(d, it.get('lines', 1))
+            self.lines(d, it.get('lines', 1), W - 4)
         elif t == 'table':
             rows = it['grid']['rows']
             tb = self.table(d, len(rows), len(rows[0]))
@@ -315,13 +422,13 @@ class DocxExam:
                 for c, v in enumerate(row):
                     hd = r == 0 and it['grid'].get('header', True)
                     self.cell(tb.rows[r].cells[c], v or ' ', hd, shade='E6E6E6' if hd else None)
-            self.lines(d, it.get('lines', 0))
+            self.lines(d, it.get('lines', 0), W - 4)
         else:
             default = 0 if it.get('parts') else {'long': 6, 'explain': 3, 'creative': 4, 'short': 1, 'fill': 0}.get(t, 2)
-            self.lines(d, it.get('lines', default))
+            self.lines(d, it.get('lines', default), W - 4)
         for prt in it.get('parts', []):
             p = self.para(d, 'right', 4, 0); self.run(p, f'({prt["label"]}) ', True); self.rich(p, prt['stem'])
-            self.lines(d, prt.get('lines', 2))
+            self.lines(d, prt.get('lines', 2), W - 4)
 
     # ── دليل التصحيح ──
     def key(self, exam, cfg, spec, hl):
@@ -387,7 +494,7 @@ class DocxExam:
 
     def answer_text(self, it):
         if it['type'] == 'mcq':
-            a = it['answer']; return f'({LETTERS[a]}) {it["choices"][a]}'
+            a = it['answer']; return (f'({LETTERS[a]}) ' if getattr(self, 'letters', True) else '') + it['choices'][a]
         if it['type'] == 'match' and it.get('pairs'):
             return '، '.join(f'{ar(i + 1)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
         parts = [str(it['answer'])] if it.get('answer') not in (None, '') else []

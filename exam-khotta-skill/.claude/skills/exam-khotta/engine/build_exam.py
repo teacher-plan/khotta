@@ -36,7 +36,7 @@ def lines_html(n):
     return '<div class="lines">' + '<div></div>' * n + '</div>' if n else ''
 
 
-def item_html(k, it, dg, base):
+def item_body(it, dg, base, letters=True, boxed=True):
     t = it['type']
     body = [f'<div class="stem">{h(it["stem"], dg)}</div>']
     if it.get('fig'):
@@ -46,8 +46,8 @@ def item_html(k, it, dg, base):
         rows = [it['choices'][i:i + cols] for i in range(0, len(it['choices']), cols)]
         tr = ''
         for r0, row in enumerate(rows):
-            tr += '<tr>' + ''.join(f'<td><span class="circ">{LETTERS[r0 * cols + i]}</span> {h(c, dg)}</td>' for i, c in enumerate(row)) + '</tr>'
-        body.append(f'<table class="choices">{tr}</table>')
+            tr += '<tr>' + ''.join(f'<td>{f"<span class=circ>{LETTERS[r0 * cols + i]}</span> " if letters else ""}{h(c, dg)}</td>' for i, c in enumerate(row)) + '</tr>'
+        body.append(f'<table class="choices{"" if boxed else " open"}">{tr}</table>')
     elif t == 'tf':
         body.append('<div class="tf">( &nbsp; صواب &nbsp; / &nbsp; خطأ &nbsp; )</div>')
         if it.get('explain', True):
@@ -72,13 +72,18 @@ def item_html(k, it, dg, base):
         body.append(lines_html(it.get('lines', default)))
     for p in it.get('parts', []):
         body.append(f'<div class="part"><b>({p["label"]})</b> {h(p["stem"], dg)}</div>' + lines_html(p.get('lines', 2)))
+    return ''.join(body)
+
+
+def item_html(k, it, dg, base):
+    body = [item_body(it, dg, base)]
     return (f'<section class="item"><div class="qhead"><span class="qn">{k}</span></div>'
             f'<div class="qbody">{"".join(body)}</div><div class="mk">{marks_word(it["marks"])}</div></section>')
 
 
 def header_html(exam, cfg, form, dg, key=False):
     g = int(exam['grade'])
-    right = [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التربية والتعليم')]
+    right = [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التعليم')]
     if cfg.get('directorate'):
         right.append(cfg['directorate'])
     if cfg.get('school'):
@@ -163,6 +168,7 @@ def fonts_css():
 FONTS = {'readex': ("'KDigits', 'Readex Pro', sans-serif", 1.75, 0),
          'amiri': ("'Amiri', 'KDigits', serif", 2.0, 1.5)}
 BODY_FONT = 'readex'
+CHOICE_LETTERS = True   # حروف البدائل في الورقة (ودليل التصحيح يتبعها)
 
 
 def page(body, orient='portrait', fs=12.5):
@@ -171,7 +177,137 @@ def page(body, orient='portrait', fs=12.5):
             f'<body>{body}</body></html>').replace('</style>', notation.CSS + '</style>', 1)
 
 
+# ═════════════ نمط «الجدول» (الافتراضي): ترويسة المدارس في سلطنة عُمان ═════════════
+# الوزارة والمديرية والمدرسة يميناً، والشعار في الوسط، وخانة الدرجة يساراً؛ ثم العنوان مسطّراً، وخانتا الاسم والصف،
+# ثم جدول «المفردة | السؤال | الدرجة» وفي آخره عبارة الختام، داخل إطار مزدوج حول كل صفحة.
+CLOSING = 'انتهت الأسئلة مع تمنياتي للجميع بالنجاح والتفوّق'
+
+
+def paper_style(cfg, exam):
+    return exam.get('paper_style') or cfg.get('paper_style') or 'table'
+
+
+def title_lines(exam, cfg, dg):
+    """«الاختبار القصير الأول للصف السابع في مادة الرياضيات» / «للفصل الدراسي الأول للعام الدراسي ٢٠٢٦/٢٠٢٧م»"""
+    g = int(exam['grade'])
+    subj = SUBJ_AR.get(exam.get('subject'), exam.get('subject', ''))
+    year = re.sub(r'\s*/\s*', '/', str(cfg.get('year', exam.get('year', ''))).strip())
+    l1 = f'{exam["title"]} للصف {GRADE_AR.get(g, g)} في مادة {subj}'
+    l2 = f'للفصل الدراسي {SEM_AR.get(int(exam.get("semester", 1)), "")}' + (f' للعام الدراسي {ar(year)}م' if year else '')
+    return l1, l2
+
+
+def logo_path(cfg, base):
+    lg = cfg.get('logo')
+    if not lg:
+        return None
+    for b in (base, cfg.get('_dir', ''), ''):
+        q = lg if os.path.isabs(lg) else os.path.join(b, lg)
+        if os.path.exists(q):
+            return q
+    print(f'  ⚠ ملف الشعار غير موجود: {lg}')
+    return None
+
+
+def right_lines(cfg):
+    return [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التعليم')] + [x for x in (cfg.get('directorate'), cfg.get('school')) if x]
+
+
+def instructions(exam, calc):
+    inst = exam.get('instructions', 'أجب عن جميع الأسئلة التالية')
+    return inst + (f' ({calc})' if calc else '') + ':'
+
+
+def table_info(exam, cfg, form, dg, base):
+    """بيانات نمط الجدول لملف Word."""
+    meta = [f'النموذج ({form})'] if form else []
+    if exam.get('duration_short') or exam.get('duration'):
+        meta.append(f'الزمن: {exam.get("duration_short") or exam.get("duration")}')
+    return {'right': right_lines(cfg), 'logo': logo_path(cfg, base), 'total': ar(exam['total']),
+            'title': title_lines(exam, cfg, dg), 'meta': meta, 'class': f'الصف: {ar(int(exam["grade"]))}/ ......',
+            'inst': instructions(exam, calc_note(exam)), 'closing': cfg.get('closing', CLOSING),
+            'letters': cfg.get('choice_letters', False)}
+
+
+def paper_table_html(exam, cfg, form, items, dg, base):
+    calc = calc_note(exam)
+    g = int(exam['grade'])
+    lg = logo_path(cfg, base)
+    logo = img_tag(lg, base, 100).replace('class="fig"', 'class="logo"') if lg else ''
+    l1, l2 = title_lines(exam, cfg, dg)
+    meta = [f'النموذج ({form})'] if form else []
+    if exam.get('duration_short') or exam.get('duration'):
+        meta.append(f'الزمن: {html.escape(exam.get("duration_short") or exam.get("duration"))}')
+    body = ('<!--frame-->'
+            f'<div class="th"><div class="thr">{"<br>".join(html.escape(x) for x in right_lines(cfg))}</div>'
+            f'<div class="thm">{logo}</div>'
+            f'<div class="thl"><table class="score"><tr><td></td></tr><tr><td>{ar(exam["total"])}</td></tr></table></div></div>'
+            f'<div class="tt">{html.escape(l1)}<br>{html.escape(l2)}</div>'
+            + (f'<div class="tmeta">{" &emsp;&emsp; ".join(meta)}</div>' if meta else '') +
+            f'<div class="tstu"><div class="tnm">الاسم: ......................................................................</div>'
+            f'<div class="tcl">الصف: {ar(g)}/ ......</div></div>'
+            f'<div class="tinst">{html.escape(instructions(exam, calc))}</div>')
+    letters = cfg.get('choice_letters', False)
+    rows = ''
+    labels = iter(item_labels(items)); grp = None; glue = False
+    for it in items:
+        if it.get('group') and it['group'] != grp:
+            # عنوان المجموعة مع أول مفرداتها في مجموعة صفوف لا تنقسم (فلا يبقى العنوان وحده آخر الصفحة)
+            grp = it['group']; rows += f'</tbody><tbody class="kg"><tr class="tg"><td colspan="3">السؤال {html.escape(grp)}</td></tr>'
+            glue = True
+        if it.get('type') == 'passage':
+            t = f'<div class="pt">{h(it["title"], dg)}</div>' if it.get('title') else ''
+            v = ''
+            if it.get('verses'):
+                v = '<table class="verses">' + ''.join(f'<tr><td>{h(a_, dg)}</td><td class="gap"></td><td>{h(b_, dg)}</td></tr>' for a_, b_ in it['verses']) + '</table>'
+            src = f'<div class="psrc">{h(it["source"], dg)}</div>' if it.get('source') else ''
+            rows += f'<tr class="tq"><td></td><td><div class="passage">{t}{h(it.get("body", ""), dg)}{v}{src}</div></td><td></td></tr>'
+            continue
+        lab = next(labels)[0]
+        rows += (f'<tr class="tq"><td class="tn">{lab}</td><td class="tb">{item_body(it, dg, base, letters, boxed=False)}</td>'
+                 f'<td class="tm">[{ar(it["marks"])}]</td></tr>')
+        if glue:
+            rows += '</tbody><tbody>'; glue = False
+    closing = cfg.get('closing', CLOSING)
+    body += (f'<table class="qt"><thead><tr><th class="tn">المفردة</th><th>السؤال</th><th class="tm">الدرجة</th></tr></thead>'
+             f'<tbody>{rows}</tbody></table>'
+             + (f'<div class="tend">{html.escape(closing)}</div>' if closing else ''))
+    if cfg.get('teacher_name') and cfg.get('show_teacher', False):
+        body += f'<div class="foot"><span>معلّم المادّة: {html.escape(cfg["teacher_name"])}</span><span></span></div>'
+    return page(body).replace('</style>', TABLE_CSS + '</style>', 1)
+
+
+TABLE_CSS = """
+@page { margin: 13mm 14mm 13mm; }
+.th { display: grid; grid-template-columns: 1.6fr 34mm 1fr; align-items: start; font-size: 10.5pt; line-height: 1.45; font-weight: 700; }
+.thm { text-align: center; } .logo img { max-height: 23mm; max-width: 34mm; }
+.thl { display: flex; justify-content: flex-end; }
+table.score { border-collapse: collapse; width: 24mm; } table.score td { border: 2px solid #000; height: 10mm; text-align: center; font-weight: 700; font-size: 13pt; }
+.tt { text-align: center; font-weight: 800; font-size: 14pt; text-decoration: underline; text-underline-offset: 5px; line-height: 1.6; margin-top: 2mm; }
+.tmeta { text-align: center; font-size: 10.5pt; margin-top: 1mm; }
+.tstu { display: flex; gap: 6mm; margin: 5mm 0 2mm; font-size: 12pt; }
+.tnm { flex: 1; border: 1.5px solid #000; padding: 3mm 4mm; }
+.tcl { width: 42mm; border: 1.5px solid #000; border-radius: 4mm; padding: 3mm 4mm; }
+.tinst { font-size: 11.5pt; margin-bottom: 2mm; }
+table.qt { width: 100%; border-collapse: collapse; border: 3px double #000; }
+table.qt th, table.qt td { border: 2px solid #000; padding: 2mm 3mm; vertical-align: middle; }
+table.qt th { font-weight: 700; text-align: right; } table.qt th.tn, table.qt th.tm { text-align: center; }
+table.qt .tn { width: 16mm; text-align: center; font-size: 13pt; }
+table.qt .tm { width: 17mm; text-align: center; font-size: 13pt; white-space: nowrap; }
+table.qt tr.tq, table.qt tbody.kg { break-inside: avoid; }
+table.qt td.tb { padding: 3mm 4mm 4mm; }
+table.qt .stem { font-weight: 500; }
+table.qt tr.tg td { font-weight: 800; background: #ececec; }
+table.qt .passage { border: none; margin: 0; padding: 0; }
+table.choices.open { border-spacing: 0 4px; margin-top: 4mm; }
+table.choices.open td { border: none; text-align: center; padding: 2px 4px; }
+.tend { border: 2px solid #000; text-align: center; font-size: 13pt; padding: 4mm; margin-top: 3mm; break-inside: avoid; }
+"""
+
+
 def paper_html(exam, cfg, form, items, dg, base):
+    if paper_style(cfg, exam) == 'table':
+        return paper_table_html(exam, cfg, form, items, dg, base)
     calc = calc_note(exam)
     inst = '؛ '.join(x for x in [exam.get('instructions', 'أجب عن جميع الأسئلة في الورقة نفسها'), calc] if x)
     stu = (f'<div class="student"><div class="nm">اسم الطالب: ...................................................................'
@@ -201,7 +337,7 @@ def answer_html(it, dg):
     t = it['type']
     if t == 'mcq':
         a = it['answer']
-        return f'<b>({LETTERS[a]})</b> {h(it["choices"][a], dg)}'
+        return (f'<b>({LETTERS[a]})</b> ' if CHOICE_LETTERS else '') + h(it['choices'][a], dg)
     if t == 'match' and it.get('pairs'):
         return '، '.join(f'{ar(i + 1)} ← {LETTERS[j]}' for i, j in enumerate(it['pairs']))
     parts = []
@@ -281,6 +417,27 @@ def to_pdf(html_path, pdf_path):
     r = subprocess.run(['node', js, html_path, pdf_path], capture_output=True, text=True, env=env)
     if r.returncode != 0:
         raise RuntimeError((r.stderr or r.stdout).strip()[-400:])
+    if '<!--frame-->' in open(html_path, encoding='utf-8').read():
+        frame_pdf(pdf_path)
+
+
+def frame_pdf(pdf_path):
+    """إطار مزدوج حول كل صفحة (نمط الجدول)؛ يُرسم على الملف لأن Chromium يقصّ العناصر الثابتة عند الطباعة."""
+    try:
+        import pymupdf
+    except ImportError:
+        try:
+            import fitz as pymupdf
+        except ImportError:
+            return
+    d = pymupdf.open(pdf_path)
+    mm = 72 / 25.4
+    for pg in d:
+        r = pg.rect
+        for inset, w in ((7 * mm, 2.4), (8.4 * mm, 0.9)):
+            pg.draw_rect(pymupdf.Rect(r.x0 + inset, r.y0 + inset, r.x1 - inset, r.y1 - inset), color=(0, 0, 0), width=w)
+    d.save(pdf_path + '.tmp'); d.close()
+    os.replace(pdf_path + '.tmp', pdf_path)
 
 
 # ═════════════ Word (python-docx) ═════════════
@@ -348,9 +505,13 @@ def docx_build(exam, cfg, spec, dg, base, out_base):
     default_font = 'Traditional Arabic' if BODY_FONT == 'amiri' else 'Arial'
     W = DocxExam(exam.get('docx_font') or spec.get('docx_font') or cfg.get('docx_font', default_font), dg, snip,
                  cfg.get('quran_font', 'Traditional Arabic'))
+    W.letters = CHOICE_LETTERS
     files = []
     for form, items in exam['forms'].items():
-        d = W.paper(exam, cfg, form, items, base, header_lines(exam, cfg, form, dg), calc_note(exam))
+        if paper_style(cfg, exam) == 'table':
+            d = W.paper_table(exam, table_info(exam, cfg, form, dg, base), items, base)
+        else:
+            d = W.paper(exam, cfg, form, items, base, header_lines(exam, cfg, form, dg), calc_note(exam))
         f = f'{out_base}_نموذج_{form}.docx'; W.save(d, f); files.append(f)
     d = W.key(exam, cfg, spec, header_lines(exam, cfg, None, dg, key=True))
     f = f'{out_base}_دليل_التصحيح.docx'; W.save(d, f); files.append(f)
@@ -359,7 +520,7 @@ def docx_build(exam, cfg, spec, dg, base, out_base):
 
 def header_lines(exam, cfg, form, dg, key=False):
     g = int(exam['grade'])
-    right = [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التربية والتعليم')] + [x for x in (cfg.get('directorate'), cfg.get('school')) if x]
+    right = [cfg.get('country', 'سلطنة عُمان'), cfg.get('ministry', 'وزارة التعليم')] + [x for x in (cfg.get('directorate'), cfg.get('school')) if x]
     subj = SUBJ_AR.get(exam.get('subject'), exam.get('subject', ''))
     mid = [exam['title']] + (['دليل التصحيح وشبكة المفردات'] if key else []) + [f'مادة {subj} · الصف {GRADE_AR.get(g, g)}', f'الفصل الدراسي {SEM_AR.get(int(exam.get("semester", 1)), "")}']
     left = [f'العام الدراسي: {ar(cfg.get("year", exam.get("year", "")), dg)}', f'الزمن: {exam.get("duration_short") or exam.get("duration", "")}', f'الدرجة الكلية: {ar(exam["total"])}'] + ([f'النموذج ({form})'] if form else [])
@@ -433,7 +594,8 @@ def main():
     if exam.get('calculator') is None and tool.get('calculator') is not None:
         exam['calculator'] = tool['calculator']
     dg = exam.get('digits') or spec.get('digits') or cfg.get('digits', 'ar')
-    global BODY_FONT
+    global BODY_FONT, CHOICE_LETTERS
+    CHOICE_LETTERS = paper_style(cfg, exam) != 'table' or bool(cfg.get('choice_letters', False))
     BODY_FONT = exam.get('font') or spec.get('font') or cfg.get('font') or 'readex'
     log = load_json(a.log) if a.log and os.path.exists(a.log) else []
     errs, warns = validate(exam, spec, log, dg)
