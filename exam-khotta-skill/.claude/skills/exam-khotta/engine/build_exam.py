@@ -599,6 +599,11 @@ def main():
     BODY_FONT = exam.get('font') or spec.get('font') or cfg.get('font') or 'readex'
     log = load_json(a.log) if a.log and os.path.exists(a.log) else []
     errs, warns = validate(exam, spec, log, dg)
+    if not CHOICE_LETTERS:   # البدائل بلا حروف: يطلب السؤال من الطالب أن يحوّط الإجابة
+        for form, items in exam['forms'].items():
+            for lab, it in zip(item_labels([i for i in items if i.get('type') != 'passage']), [i for i in items if i.get('type') != 'passage']):
+                if it.get('type') == 'mcq' and not re.search(r'حو[ّ]?ط', it.get('stem', '')):
+                    warns.append(f'النموذج ({form}) المفردة {lab[1]}: اختيار من متعدد بلا «حوّط» (مثل «حوّط ناتج …:» أو «… حوّط الإجابة الصحيحة.»)')
     print(f'التحقّق من مواصفات {spec["document"]["title"]} ({spec["document"]["edition"]}) — {tool["name"]}:')
     for e in errs:
         print('  ✘', e)
