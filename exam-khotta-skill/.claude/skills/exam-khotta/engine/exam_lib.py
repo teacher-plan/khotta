@@ -160,7 +160,7 @@ def validate(exam, spec, log=None, dg=None):
     F = fields(spec)
     lessons = exam.get('lessons', [])
     if tool.get('lessons') and not _in(len(lessons), tool['lessons']):
-        E.append(f'عدد الدروس {len(lessons)}، والمطلوب {_rng(tool["lessons"])} ({tool["name"]}، الوثيقة ص {page})')
+        E.append(f'عدد الدروس {ar(len(lessons))}، والمطلوب {_rng(tool["lessons"])} ({tool["name"]}، الوثيقة ص {page})')
     forms = exam.get('forms') or {}
     if not forms:
         return E + ['لا توجد نماذج (forms)'], W
@@ -172,12 +172,12 @@ def validate(exam, spec, log=None, dg=None):
     for fname, items in forms.items():
         tag = f'النموذج ({fname})'
         if tool.get('items') and not _in(len(items), tool['items']):
-            E.append(f'{tag}: عدد المفردات {len(items)}، والمطلوب {_rng(tool["items"])}')
+            E.append(f'{tag}: عدد المفردات {ar(len(items))}، والمطلوب {_rng(tool["items"])}')
         total = 0
         sums = {f: {} for f in F}
         objectives = []
         for k, it in enumerate(items, 1):
-            q = f'{tag} المفردة {k}'
+            q = f'{tag} المفردة {ar(k)}'
             t = it.get('type')
             if t not in TYPE_NAMES:
                 E.append(f'{q}: نوع غير معروف «{t}»'); continue
@@ -223,14 +223,14 @@ def validate(exam, spec, log=None, dg=None):
                 E.append(f'{q}: الترتيب يحتاج ٣ عناصر على الأقل')
             objectives.append(str(it.get('objective', '')).strip())
         if tool.get('total') is not None and total != tool['total']:
-            E.append(f'{tag}: مجموع الدرجات {total}، والمطلوب {tool["total"]}')
+            E.append(f'{tag}: مجموع الدرجات {ar(total)}، والمطلوب {ar(tool["total"])}')
         for f, want in (tool.get('dist') or {}).items():
             if f not in F:
                 continue
             for v, n in want.items():
                 got = sums[f].get(v, 0)
                 if got != n:
-                    E.append(f'{tag}: درجات «{F[f]["values"].get(v, v)}» ({F[f]["label"]}) = {got}، والمطلوب {n}')
+                    E.append(f'{tag}: درجات «{F[f]["values"].get(v, v)}» ({F[f]["label"]}) = {ar(got)}، والمطلوب {ar(n)}')
             extra = [v for v in sums[f] if v not in want and sums[f][v]]
             if extra:
                 E.append(f'{tag}: {F[f]["label"]}: «{"، ".join(F[f]["values"].get(v, v) for v in extra)}» ليس ضمن توزيع الوثيقة لهذه الأداة')
@@ -240,7 +240,7 @@ def validate(exam, spec, log=None, dg=None):
             oth = [i for i in items if is_other(i.get('type'))]
             if tr.get('mcq'):
                 if not _in(len(mcq), tr['mcq']['count']):
-                    E.append(f'{tag}: مفردات الاختيار من متعدد {len(mcq)}، والمطلوب {_rng(tr["mcq"]["count"])}')
+                    E.append(f'{tag}: مفردات الاختيار من متعدد {ar(len(mcq))}، والمطلوب {_rng(tr["mcq"]["count"])}')
                 if tr['mcq'].get('each') and any(not _in(i.get('marks', 0), tr['mcq']['each']) for i in mcq):
                     E.append(f'{tag}: درجة مفردة الاختيار من متعدد {_rng(tr["mcq"]["each"])}')
                 for f, vals in (tr['mcq'].get('covers') or {}).items():
@@ -251,7 +251,7 @@ def validate(exam, spec, log=None, dg=None):
             if tr.get('long'):
                 lc = tr['long'].get('count', 1)
                 if not _in(len(lng), lc):
-                    E.append(f'{tag}: مفردات الإجابة الطويلة {len(lng)}، والمطلوب {_rng(lc)}')
+                    E.append(f'{tag}: مفردات الإجابة الطويلة {ar(len(lng))}، والمطلوب {_rng(lc)}')
                 if tr['long'].get('marks') is not None and any(not _in(i.get('marks', 0), tr['long']['marks']) for i in lng):
                     E.append(f'{tag}: درجة الإجابة الطويلة {_rng(tr["long"]["marks"])}')
             elif 'long' in tr and lng:
@@ -259,9 +259,9 @@ def validate(exam, spec, log=None, dg=None):
             if tr.get('other'):
                 o = tr['other']
                 if o.get('count') is not None and not _in(len(oth), o['count']):
-                    E.append(f'{tag}: مفردات الأنواع الأخرى {len(oth)}، والمطلوب {_rng(o["count"])}')
+                    E.append(f'{tag}: مفردات الأنواع الأخرى {ar(len(oth))}، والمطلوب {_rng(o["count"])}')
                 if o.get('marks') is not None and not _in(sum(i.get('marks', 0) for i in oth), o['marks']):
-                    E.append(f'{tag}: درجات الأنواع الأخرى {sum(i.get("marks", 0) for i in oth)}، والمطلوب {_rng(o["marks"])}')
+                    E.append(f'{tag}: درجات الأنواع الأخرى {ar(sum(i.get("marks", 0) for i in oth))}، والمطلوب {_rng(o["marks"])}')
                 if o.get('each') and any(not _in(i.get('marks', 0), o['each']) for i in oth):
                     E.append(f'{tag}: درجة كل مفردة من الأنواع الأخرى {_rng(o["each"])}')
         if tool.get('slots'):   # بنية ثابتة (مثل التربية الإسلامية: السؤال الأول نص قرآني وحديث…)
@@ -295,8 +295,8 @@ def validate(exam, spec, log=None, dg=None):
                 bare = re.sub(r' ?(quran|ce|ltr)\{[^{}]*\}', '', t)
                 for kind_, msg in arabic_check.check(bare, punctuation=True):
                     (e2 if kind_ == 'E' else w2).append(msg)
-                E += [f'النموذج ({fname}) المفردة {k}: {x}' for x in e2]
-                W += [f'النموذج ({fname}) المفردة {k}: {x}' for x in w2]
+                E += [f'النموذج ({fname}) المفردة {ar(k)}: {x}' for x in e2]
+                W += [f'النموذج ({fname}) المفردة {ar(k)}: {x}' for x in w2]
     names = list(grids)
     for f2 in names[1:]:
         if sorted(grids[f2], key=str) != sorted(grids[names[0]], key=str):
