@@ -281,6 +281,8 @@ class DocxExam:
 
     def paper_table(self, exam, info, items, base):
         d = self.new_doc()
+        st = d.styles['Normal']; st.font.size = Pt(14)   # كالعيّنة: الأسئلة ١٤، الجهات ١٢ عريض، العنوان ١٦ عريض
+        st.element.get_or_add_rPr().find(qn('w:szCs')).set(qn('w:val'), '28')
         sp = d.sections[0]._sectPr   # إطار مزدوج حول كل صفحة
         pb = _el('w:pgBorders', **{'w:offsetFrom': 'page'})
         for side in ('top', 'left', 'bottom', 'right'):
@@ -291,7 +293,7 @@ class DocxExam:
         cr, cm, cl = t.rows[0].cells
         cr.paragraphs[0]._p.getparent().remove(cr.paragraphs[0]._p)
         for x in info['right']:
-            self.run(self.para(cr, 'right', 0, 0), x, True, 11)
+            self.run(self.para(cr, 'center', 0, 0), x, True, 12)
         pm = cm.paragraphs[0]; pm.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if info.get('logo'):
             pm.add_run().add_picture(info['logo'], height=Mm(21))
@@ -306,9 +308,9 @@ class DocxExam:
         # العنوان مسطّراً
         for i, x in enumerate(info['title']):
             p = self.para(d, 'center', 6 if i == 0 else 0, 0)
-            r_ = self.run(p, x, True, 14); r_.underline = True
+            r_ = self.run(p, x, True, 16); r_.underline = True
         if info.get('meta'):
-            self.run(self.para(d, 'center', 2, 0), '          '.join(info['meta']), size=10.5)
+            self.run(self.para(d, 'center', 2, 0), '          '.join(info['meta']), size=12)
         # الاسم والصف
         self.para(d, 'right', 0, 0).paragraph_format.line_spacing = Pt(8)
         t = self.table(d, 1, 3, (130, 8, 46), border=False)
@@ -316,7 +318,7 @@ class DocxExam:
         for c, x in ((a_, 'الاسم: ......................................................................'), (b_, info['class'])):
             self.borders(c, 12); self.vcenter(c); self.cell(c, x, size=12, align='right')
         t.rows[0].height = Mm(12)
-        self.run(self.para(d, 'right', 6, 3), info['inst'], size=12)
+        self.run(self.para(d, 'right', 6, 3), info['inst'], size=13)
         # جدول المفردات
         Wq = 144
         n_rows = 1 + len(items) + len({i.get('group') for i in items if i.get('group')})

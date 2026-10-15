@@ -166,7 +166,10 @@ def fonts_css():
 
 # خطّ المتن: readex (الرياضيات والعلوم، أرقام واضحة) أو amiri (نسخ للعربية والتربية الإسلامية: تشكيل كامل)
 FONTS = {'readex': ("'KDigits', 'Readex Pro', sans-serif", 1.75, 0),
-         'amiri': ("'Amiri', 'KDigits', serif", 2.0, 1.5)}
+         'amiri': ("'Amiri', 'KDigits', serif", 2.0, 1.5),
+         # Arial كما في أوراق المدارس: الرموز اللاتينية من Arial (أو Liberation Sans بمقاييسه نفسها)، والحروف العربية من
+         # Arial في Windows أو Noto Sans Arabic (أقرب خط حرّ إلى شكل Arial العربي)
+         'arial': ("Arial, 'Liberation Sans', 'Noto Sans Arabic', sans-serif", 1.65, 1.5)}
 BODY_FONT = 'readex'
 CHOICE_LETTERS = True   # حروف البدائل في الورقة (ودليل التصحيح يتبعها)
 
@@ -279,16 +282,17 @@ def paper_table_html(exam, cfg, form, items, dg, base):
 
 TABLE_CSS = """
 @page { margin: 13mm 14mm 13mm; }
-.th { display: grid; grid-template-columns: 1.6fr 34mm 1fr; align-items: start; font-size: 10.5pt; line-height: 1.45; font-weight: 700; }
+.th { display: grid; grid-template-columns: 1.6fr 34mm 1fr; align-items: start; font-size: 12pt; line-height: 1.4; font-weight: 700; }
+.thr { text-align: center; justify-self: start; }
 .thm { text-align: center; } .logo img { max-height: 23mm; max-width: 34mm; }
 .thl { display: flex; justify-content: flex-end; }
 table.score { border-collapse: collapse; width: 24mm; } table.score td { border: 2px solid #000; height: 10mm; text-align: center; font-weight: 700; font-size: 13pt; }
-.tt { text-align: center; font-weight: 800; font-size: 14pt; text-decoration: underline; text-underline-offset: 5px; line-height: 1.6; margin-top: 2mm; }
-.tmeta { text-align: center; font-size: 10.5pt; margin-top: 1mm; }
+.tt { text-align: center; font-weight: 700; font-size: 16pt; text-decoration: underline; text-underline-offset: 5px; line-height: 1.6; margin-top: 2mm; }
+.tmeta { text-align: center; font-size: 12pt; margin-top: 1mm; }
 .tstu { display: flex; gap: 6mm; margin: 5mm 0 2mm; font-size: 12pt; }
 .tnm { flex: 1; border: 1.5px solid #000; padding: 3mm 4mm; }
 .tcl { width: 42mm; border: 1.5px solid #000; border-radius: 4mm; padding: 3mm 4mm; }
-.tinst { font-size: 11.5pt; margin-bottom: 2mm; }
+.tinst { font-size: 13pt; margin-bottom: 2mm; }
 table.qt { width: 100%; border-collapse: collapse; border: 3px double #000; }
 table.qt th, table.qt td { border: 2px solid #000; padding: 2mm 3mm; vertical-align: middle; }
 table.qt th { font-weight: 700; text-align: right; } table.qt th.tn, table.qt th.tm { text-align: center; }
@@ -596,7 +600,9 @@ def main():
     dg = exam.get('digits') or spec.get('digits') or cfg.get('digits', 'ar')
     global BODY_FONT, CHOICE_LETTERS
     CHOICE_LETTERS = paper_style(cfg, exam) != 'table' or bool(cfg.get('choice_letters', False))
-    BODY_FONT = exam.get('font') or spec.get('font') or cfg.get('font') or 'readex'
+    # الخط: ملف الاختبار ثم الإعداد ثم المواصفات؛ وفي نمط الجدول خط Arial بدل readex (العربية والتربية الإسلامية تبقيان بخط النسخ)
+    sf = spec.get('font') or 'readex'
+    BODY_FONT = exam.get('font') or cfg.get('font') or ('arial' if sf == 'readex' and paper_style(cfg, exam) == 'table' else sf)
     log = load_json(a.log) if a.log and os.path.exists(a.log) else []
     errs, warns = validate(exam, spec, log, dg)
     if not CHOICE_LETTERS:   # البدائل بلا حروف: يطلب السؤال من الطالب أن يحوّط الإجابة
