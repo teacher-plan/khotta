@@ -4,7 +4,6 @@
 # python3.12 gen_powers.py dec_slides.py ترتيب_الأعداد_العشرية_عرض_تفاعلي.html "ترتيب الأعداد العشرية والكسور العشرية — الصف السابع"
 # الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
 NUM_CHIPS = True
-CMP_RTL = True
 EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .8)} .q .ch{font-size:clamp(34px,7vh,84px)}'
 
 def STP(lab, expr, cls=''): return st(f'<div class="stp {cls}"><span class="lab">{lab}</span>{expr}</div>')

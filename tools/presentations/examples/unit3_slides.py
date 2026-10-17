@@ -5,7 +5,6 @@
 # لكل جزء: بطاقة القاعدة ← مثالٌ محلول بالرسم ← سؤالٌ سريع (أنتم).
 # الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
 NUM_CHIPS = True
-CMP_RTL = True
 EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .8)} .q .ch{font-size:clamp(34px,7vh,84px)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
