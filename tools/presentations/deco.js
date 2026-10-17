@@ -23,3 +23,29 @@
     s.style.setProperty('--hl',hl);
   });
 })();
+
+// صمّام الأمان: إن تجاوز محتوى شريحةٍ ارتفاع الشاشة (مع كشف كل الخطوات والبطاقات) صُغِّر قليلاً — حتى ٠٫٦، ويشمل خروج سطرٍ من مربّعه
+(function(){
+  function fitAll(){
+    var dk=document.getElementById('deck'),tf=dk?dk.style.transform:'';if(dk)dk.style.transform='';   // القياس بلا تكبير العرض (jump.js)
+    document.querySelectorAll('.slide').forEach(function(s){
+      s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
+      var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
+      for(var k=0;k<6;k++){
+        var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
+        // كل العناصر لا الأبناء المباشرون فقط: سطرٌ رياضي أعرض من مربّعه يُحسب أيضاً (ما عدا الزخارف والملاحظات والعناصر المطلقة)
+        (function walk(p){[].forEach.call(p.children,function(c){if(c.classList.contains('dz')||c.tagName==='ASIDE'||getComputedStyle(c).position==='absolute')return;var b=c.getBoundingClientRect();if(b.height&&b.width){top=Math.min(top,b.top);bot=Math.max(bot,b.bottom);lf=Math.min(lf,b.left);rt=Math.max(rt,b.right);}walk(c);});})(s);
+        var H=r.height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),W=r.width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+        var cx=r.left+r.width/2,f=+(s.style.getPropertyValue('--fit')||1),need=Math.min(H/(bot-top),W/(rt-lf),(W/2)/Math.max(cx-lf,rt-cx));  // والخروج من جهةٍ واحدة (شبكة RTL تفيض يساراً)
+        [].forEach.call(s.querySelectorAll('.box,.xcard,.err,.opt'),function(b){if(b.clientWidth&&b.scrollWidth>b.clientWidth+2)need=Math.min(need,b.clientWidth/b.scrollWidth);});  // سطرٌ أعرض من مربّعه
+        if(need>=1)break;
+        s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));
+      }
+      fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
+    });
+    if(dk)dk.style.transform=tf;
+  }
+  window.__fitAll=fitAll;fitAll();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
+  var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(fitAll,150);});
+})();

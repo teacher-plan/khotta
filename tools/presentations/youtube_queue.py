@@ -1,0 +1,87 @@
+# رفع فيديوهات الوحدات ٢ و٣ و٥ و٦ إلى YouTube بدفعاتٍ يومية (حدّ الرفع ~١٠ في ٢٤ ساعة) — VIDEO.md ٥-ب.
+#   python3 youtube_queue.py      ← يرفع من Drive بالترتيب ما ليس في قائمة وحدته بعد، مع الصورة المصغّرة، ويتوقّف عند الحدّ.
+# بلا ملف حالة: ما في القائمة يُعدّ مرفوعاً. الصور المصغّرة وغلافا القائمتين تُرسم بـ youtube_art.py عند الحاجة.
+import os, sys, json, glob, subprocess, requests
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); import youtube_upload as Y
+ART = '/tmp/yt_art'
+U = {2: ('الثانية', 'العبارات الجبرية والمعادلات والصيغ'), 3: ('الثالثة', 'الأعداد العشرية والكسور العشرية'),
+     5: ('الخامسة', 'الزوايا'), 6: ('السادسة', 'الكسور (١)'),
+     7: ('السابعة', 'المساحة والمحيط'), 8: ('الثامنة', 'النسب المئوية')}
+J = [('2-1','٢-١','كتابة العبارات الجبرية','1hXBvU5SbaY0b1Fa91WuQmEziCd2U4AT0'),('2-2','٢-٢','تجميع الحدود المتشابهة','1rV86usu3lrzbv6gtYyQrssIAzRIOs-sM'),
+ ('2-3','٢-٣','فك الأقواس','1FPAEhq0pjv-zM6ze4FVGBKP_4SaqSuom'),('2-4','٢-٤','استنتاج واستخدام الصيغ','1ciHWgcQV9oJE6DTPctuehSZjj5TI2ZP2'),
+ ('2-5','٢-٥','كتابة المعادلات وحلها','12kmUnAwRzqlrrWO_0WachZwF0SMFDWVq'),('2-r','','','1LDbr4ondbvLytWZMFfDKuI-yhM7wIgIE'),
+ ('3-1','٣-١','ترتيب الأعداد العشرية والكسور العشرية','1KsmraPn9sZW-p8oSI-BlDXl73BGPSI4c'),('3-2','٣-٢','التقريب','1SgoIQ1Csl3LMMhK1JIUR8cyrPdxpIlRF'),
+ ('3-3','٣-٣','جمع الأعداد العشرية والكسور العشرية وطرحها','1C-WScQ0F4KxqtVtu-KD-Y9c2UuJ8Rub2'),('3-4','٣-٤','ضرب الأعداد العشرية والكسور العشرية','1Bkazi7Sb6yztp9GEc7XIq1b3KHInAt3C'),
+ ('3-5','٣-٥','قسمة الأعداد العشرية والكسور العشرية (١)','1CmVhw3oIQv589Tx1mmIbidaZccGJ7KEn'),('3-6','٣-٦','قسمة الأعداد العشرية والكسور العشرية (٢)','1vZymzNkdTZQK0evRmZG75Ysm4rhqrBXs'),
+ ('3-7','٣-٧','الضرب في ٠٫١ أو ٠٫٠١ والقسمة عليهما','1yE_DXtU_Xi6zbk8S-lCwAwDcQIGKpxEG'),('3-8','٣-٨','التقدير والتقريب','1pzcsw3PHDJTME8uPcdzDMNn2TCBPNMV-'),
+ ('3-r','','','1EJJllpr1gblu_zdL8ae2_PD3HabwMAhq'),
+ ('5-1','٥-١','تسمية الزوايا وتقديرها','1ijSosAYc9i3uVuKq-dol4TRmnbF_v_V0'),('5-2','٥-٢','قياسات الزوايا','16xC5KZ4VOftuoYMnUKJAjVePnQsr1Sny'),
+ ('5-3','٥-٣','حل مسائل الزوايا','1PuudgOFXGN78d65OqYcSxl8cvMEREA89'),('5-4','٥-٤','الخطوط المتوازية','1iEtKlpn3MkdQNvn6W5K2F34gRRfDqdWP'),
+ ('5-r','','','1bEPd2BHRlcTLXgupNY3ngIspg7hgGy5G'),
+ ('6-1','٦-١','تبسيط الكسور','1iLnQKBw-u305UiUeZSnrJLx9NAIueBdS'),('6-2','٦-٢','مقارنة الكسور','12UXwLEaLlkU6avyBHXaBDY98e5V2H7te'),
+ ('6-3','٦-٣','الكسور غير الاعتيادية والأعداد الكسرية','1mj782vDKhWNSetX8x_JbfsQ1O7PQKe_p'),('6-4','٦-٤','جمع الكسور وطرحها','1RAGgw77mwE0yMkAPr0qnQBYFMa6dPcLr'),
+ ('6-5','٦-٥','استخدام الكسور مع الكميات','1w7Ceg9YoK1iEUETboTXInbGsI39gZ0eS'),('6-6','٦-٦','تحويل الكسور إلى كسور عشرية','18Vwz0TobBfP8im84jB7k5RqCyTwrAg7O'),
+ ('6-7','٦-٧','ترتيب الكسور','18GkEU65aSpwkWW0j3IrLM9YvwLrWeyOQ'),('6-8','٦-٨','حساب الباقي','1xHQFbQL6-Qmub0NQGhBC0PzSdf6DSoAN'),
+ ('6-r','','','1M3czAqnFX4xFnA-pOUgG5kWinUMVaHTW'),
+ # الوحدتان ٧ و٨: «folder:» = مجلد الدرس في Drive، يُؤخذ الفيديو منه حين يُرفع
+ ('7-1','٧-١','التحويل بين وحدات قياس المساحة','folder:1J7MkkThcE3jpx6oaFT0ScmeLButqU-Ge'),('7-2','٧-٢','مساحة المستطيل ومحيطه','folder:1LecEMUNI7HDQSDcJ0arG5P2J83Zm2CnX'),
+ ('7-3','٧-٣','مساحة المثلث','folder:1BzU2Nxny8uYFM4WFhn1eh2-I-EtNYKnp'),('7-4','٧-٤','مساحة متوازي الأضلاع ومساحة شبه المنحرف','folder:1IX7o9gQ4ZhksLhoAKD1w3vt98HD0Ss_Q'),
+ ('7-5','٧-٥','مساحة الدائرة ومحيطها','folder:1XOfuKrgWMlcn-vGr-jkV1W1ZBEE8Voi_'),('7-6','٧-٦','مساحة الأشكال المركبة','folder:1_q5BqWgK8OCqQGTBGCb2Rq4bgym09l8E'),
+ ('7-r','','','folder:1UQ9A48PL7tAipk5j2NmxbXAxvWf_Bi3p'),
+ ('8-1','٨-١','النسب المئوية البسيطة','folder:1yPdr6Y8J8vEJNi9o7d-ArS292SKCgN1O'),('8-2','٨-٢','الكسور والكسور العشرية والنسب المئوية','folder:1SX20EnQ26pCsA593lyXwPniF_b0qnZt5'),
+ ('8-3','٨-٣','حساب النسب المئوية من الكميات','folder:1mXVF-o5FLcCLsZL-omDO-w-U6RrvygZl'),('8-4','٨-٤','تطبيقات على النسب المئوية','folder:1nK0HWa2luk0XbhzrjjZCCn_wDhOlsfh0'),
+ ('8-r','','','folder:1jbMmng8Wl75QcE1NdenKvUU3YqPoOl11')]
+
+def folder_video(fid):
+    r = requests.post('https://oauth2.googleapis.com/token', timeout=30, data={'client_id': os.environ['GDRIVE_CLIENT_ID'], 'client_secret': os.environ['GDRIVE_CLIENT_SECRET'],
+                      'refresh_token': os.environ['GDRIVE_REFRESH_TOKEN'], 'grant_type': 'refresh_token'}).json()
+    v = requests.get('https://www.googleapis.com/drive/v3/files', params={'q': f"'{fid}' in parents and trashed=false and mimeType='video/mp4'", 'fields': 'files(id)'},
+                     headers={'Authorization': 'Bearer ' + r['access_token']}, timeout=30).json().get('files', [])
+    return v[0]['id'] if v else None
+
+def art(name):
+    p = f'{ART}/{name}.jpg'
+    if not os.path.exists(p):
+        subprocess.run([sys.executable, os.path.join(HERE, 'youtube_art.py'), ART], check=True, capture_output=True)
+        for png in glob.glob(f'{ART}/*.png'): subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', png, '-q:v', '3', png[:-4] + '.jpg'], check=True)
+    return open(p, 'rb').read()
+
+def titles(H, pid):
+    out, pg = {}, None
+    while True:
+        r = requests.get(f'{Y.API}/playlistItems', params={'part': 'snippet', 'playlistId': pid, 'maxResults': 50, **({'pageToken': pg} if pg else {})}, headers=H, timeout=30).json()
+        for i in r.get('items', []): out[i['snippet']['title']] = i['snippet']['resourceId']['videoId']
+        pg = r.get('nextPageToken')
+        if not pg: return out
+
+def cover(H, pid, u):
+    B = 'xxBOUNDxx'
+    body = (f'--{B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + json.dumps({'snippet': {'playlistId': pid, 'type': 'hero'}}) + f'\r\n--{B}\r\nContent-Type: image/jpeg\r\n\r\n').encode() + art(f'cover_u{u}') + f'\r\n--{B}--'.encode()
+    r = requests.post('https://www.googleapis.com/upload/youtube/v3/playlistImages', params={'part': 'snippet', 'uploadType': 'multipart'}, data=body, headers={**H, 'Content-Type': f'multipart/related; boundary={B}'}, timeout=60)
+    print('غلاف قائمة الوحدة', u, '✔' if r.ok else f'✘ {r.status_code} {r.text[:150]}')
+
+H = Y.token(); new, done = [], 0
+for key, num, name, fid in J:
+    u = int(key[0]); o, un = U[u]; pl = f'رياضيات الصف السابع — الوحدة {o}: {un}'
+    if num: title, desc = f'الدرس {num}: {name} — رياضيات الصف السابع', f'شرح الدرس {num} من منهج الرياضيات للصف السابع، الوحدة {o}: {un}.\nإعداد: أ. عيسى الحارثي'
+    else: title, desc = f'مراجعة الوحدة {o}: {un} — رياضيات الصف السابع', f'مراجعة الوحدة {o} كاملةً من منهج الرياضيات للصف السابع: {un}.\nإعداد: أ. عيسى الحارثي'
+    pid = Y.playlist(H, pl); have = titles(H, pid)
+    if title in have: done += 1; continue
+    first = not have
+    if fid.startswith('folder:'):
+        fid = folder_video(fid[7:])
+        if not fid: print('توقّف عند', key, 'لا فيديو في مجلده على Drive بعد'); break
+    path = Y.from_drive(fid); size = os.path.getsize(path)
+    meta = {'snippet': {'title': title, 'description': desc, 'categoryId': '27', 'defaultLanguage': 'ar', 'defaultAudioLanguage': 'ar'}, 'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}}
+    r = requests.post(Y.UP, params={'uploadType': 'resumable', 'part': 'snippet,status'}, json=meta, timeout=60, headers={**H, 'X-Upload-Content-Type': 'video/mp4', 'X-Upload-Content-Length': str(size)})
+    if r.status_code != 200:
+        os.remove(path); print('توقّف عند', key, 'uploadLimitExceeded (حدّ الرفع)' if 'uploadLimitExceeded' in r.text else f'{r.status_code} {r.text[:200]}'); break
+    r = requests.put(r.headers['Location'], data=open(path, 'rb').read(), timeout=900, headers={**H, 'Content-Type': 'video/mp4'}); os.remove(path)
+    if r.status_code not in (200, 201): print('فشل رفع', key, r.status_code, r.text[:200]); break
+    vid = r.json()['id']
+    t = requests.post('https://www.googleapis.com/upload/youtube/v3/thumbnails/set', params={'videoId': vid}, headers={**H, 'Content-Type': 'image/jpeg'}, data=art(f'thumb_{key}'), timeout=60)
+    p = requests.post(f'{Y.API}/playlistItems', params={'part': 'snippet'}, headers=H, timeout=30, json={'snippet': {'playlistId': pid, 'resourceId': {'kind': 'youtube#video', 'videoId': vid}}})
+    print(key, f'https://youtu.be/{vid}', 'صورة', '✔' if t.ok else '✘', 'قائمة', '✔' if p.ok else '✘')
+    if first: cover(H, pid, u)
+    new.append((key, vid)); done += 1
+print(json.dumps({'new': new, 'done': done, 'total': len(J)}, ensure_ascii=False))

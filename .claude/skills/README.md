@@ -39,3 +39,13 @@
 صُمّمت هذه المهارات لحلقات آلية تعمل بلا إشراف (فرز يومي، مجالسة PRs، كنس
 CI). في العمل التفاعلي المعتاد على هذا المستودع، أنفعها `minimal-fix` و
 `loop-verifier`؛ و`loop-triage` يفيد لو أردتِ تقريراً دورياً عن حالة المستودع.
+
+## مهارات تحضير الدروس (أُضيفت بطلب الأستاذ عيسى)
+
+| المصدر | الرخصة | المهارات |
+|---|---|---|
+| إعدادي | — | `lesson-kit`: سير عمل الدرس كاملاً، وخريطة متى أستعين بكل مهارة أدناه |
+| [anthropics/k12-teacher-skills](https://github.com/anthropics/k12-teacher-skills) | Apache-2.0 (`LICENSE-k12-teacher-skills`) | `k12-check-for-understanding` · `k12-lesson-plan-creation` · `k12-lesson-differentiation` · `k12-lesson-prep` |
+| [garethmanning/claude-education-skills](https://github.com/garethmanning/claude-education-skills) | CC BY-SA 4.0 © Gareth Manning (`LICENSE-claude-education-skills`) | ٢٤ مهارة مختارة: الأمثلة المحلولة المتدرّجة، والترميز المزدوج، والعبء المعرفي، والأسئلة المفصلية، والأمثلة الخاطئة، والتعليم الصريح، والتلميحات المتدرّجة، والتمرين المتباعد والمتداخل، والتمايز، وسلالم التقدير … |
+
+نُقلت كما هي دون تعديل؛ تحديثها = نسخها من المصدر فوقها. مُستبعَد عمداً ما لا يخصّ تدريس الرياضيات (التفكير التاريخي، والتعلّم البيئي، والأُطر المحلية الخاصة).

@@ -1946,6 +1946,12 @@ input,textarea,select{font-size:16px !important;}
 .lv-vbody.zoomed{align-items:flex-start;justify-content:flex-start;cursor:grab}
 @media(prefers-reduced-motion:reduce){.lv-spread{transition:none}}
 .lv-vbody iframe{width:100%;height:100%;border:none;background:#fff;border-radius:8px}
+/* تكبير المرفق المفتوح وتصغيره كاملاً من بار الحصة (طلب الأستاذ عيسى): يُلفّ العنصر في .lv-zw بحجمه المكبَّر/المصغَّر
+   ويُرسَم بمقياسه الأصلي ثم يُضرب في النسبة — فيصغر العرض كلّه بنسبةٍ واحدة (لا الخط وحده)، وعند التكبير يُمرَّر بأشرطة التمرير */
+.lb-zoom{display:inline-flex;gap:3px;flex:none}.lb-zoom.hidden{display:none}
+.lb-zoom .lb-zl{min-width:58px;justify-content:center;font-variant-numeric:tabular-nums}
+.lv-zw{flex:none;position:relative;margin:auto}
+.lv-zw>iframe,.lv-zw>img{position:absolute;top:0;left:0;transform-origin:0 0;max-width:none;max-height:none}
 .lv-pages{display:flex;align-items:center;justify-content:center;gap:11px;padding:9px;background:var(--surface);border-top:1.5px solid var(--border);flex:none}
 .lv-pages button{border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:8px 15px;font-family:inherit;font-size:13px;font-weight:800;color:var(--kh-ink);cursor:pointer}
 .lv-pages button:hover:not(:disabled){border-color:var(--red);color:var(--kh-red-d)}
@@ -17238,10 +17244,37 @@ function liveViewOpen(title,html,showPages){
   document.getElementById('lv-pages').classList.toggle('hidden',!showPages);
   document.getElementById('live-view').classList.add('on');
   lbPopCloseAll();
+  lbViewZoomApply();
 }
+/* ══ تكبير المرفق المفتوح وتصغيره من بار الحصة (🔍− ٪ 🔍+) — للعروض التفاعلية والملفات والصور؛ صفحات الكتاب لها تكبيرها ══ */
+var LB_VZ=[.5,.6,.7,.8,.9,1,1.25,1.5,2];
+var _lbVZ=1;try{_lbVZ=+localStorage.getItem('lbViewZoom')||1;}catch(e){}
+function lbViewZoom(d){
+  const i=LB_VZ.indexOf(_lbVZ);
+  _lbVZ=d===0?1:LB_VZ[Math.min(LB_VZ.length-1,Math.max(0,(i<0?5:i)+d))];
+  try{localStorage.setItem('lbViewZoom',_lbVZ);}catch(e){}
+  lbViewZoomApply();
+}
+function lbViewZoomApply(){
+  const body=document.getElementById('lv-vbody'),grp=document.getElementById('lb-zoom');
+  const on=document.getElementById('live-view')?.classList.contains('on');
+  const book=!document.getElementById('lv-pages')?.classList.contains('hidden');
+  let w=body&&body.querySelector(':scope>.lv-zw'),el=w?w.firstElementChild:body&&body.querySelector(':scope>iframe,:scope>img');
+  if(grp)grp.classList.toggle('hidden',!(on&&!book&&el));
+  if(!on||book||!el)return;
+  if(!w){w=document.createElement('div');w.className='lv-zw';el.replaceWith(w);w.appendChild(el);}
+  const cs=getComputedStyle(body),W=body.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),H=body.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  if(el.tagName==='IMG'){el.style.objectFit='contain';}
+  el.style.width=W+'px';el.style.height=H+'px';el.style.transform=_lbVZ===1?'':'scale('+_lbVZ+')';
+  w.style.width=W*_lbVZ+'px';w.style.height=H*_lbVZ+'px';
+  body.classList.toggle('zoomed',_lbVZ>1);
+  document.getElementById('lb-zoom-lbl').textContent=egToArabic(Math.round(_lbVZ*100))+'٪';
+}
+window.addEventListener('resize',()=>{clearTimeout(window._lbVZt);window._lbVZt=setTimeout(lbViewZoomApply,120);});
 function liveViewClose(silent){
   const v=document.getElementById('live-view');
   if(v){v.classList.remove('on');document.getElementById('lv-vbody').innerHTML='';}
+  document.getElementById('lb-zoom')?.classList.add('hidden');
   const gm=document.getElementById('gm-stage-bg');
   if(gm&&gm.classList.contains('live-embed')){gm.classList.remove('live-embed');if(gm.style.display==='flex')gmClose();}
   if(!silent&&liveCtx)liveRenderLauncher();
@@ -17513,6 +17546,13 @@ function imgFullClose(){
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3 3.5A1.5 1.5 0 1 0 8 9.5a1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-8 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm-4-4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg><span class="lbl">قرعة</span></button>
     <button class="lb-btn" id="lb-stars-btn" onclick="lbPop('stars')" title="نجوم سريعة">
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg><span class="lbl">نجوم</span></button>
+    <span class="lb-zoom hidden" id="lb-zoom">
+      <button class="lb-btn" onclick="lbViewZoom(-1)" title="تصغير المرفق المفتوح (العرض كاملاً)" aria-label="تصغير">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM7 9h6v2H7z"/></svg></button>
+      <button class="lb-btn lb-zl" id="lb-zoom-lbl" onclick="lbViewZoom(0)" title="إعادة إلى ١٠٠٪">١٠٠٪</button>
+      <button class="lb-btn" onclick="lbViewZoom(1)" title="تكبير المرفق المفتوح" aria-label="تكبير">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM9 7h2v2h2v2h-2v2H9v-2H7V9h2z"/></svg></button>
+    </span>
     <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
       <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm16 0h-2v4h-4v2h6v-6z"/></svg><span class="lbl">ملء الشاشة</span></button>
   </div>

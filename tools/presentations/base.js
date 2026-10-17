@@ -26,6 +26,7 @@
     slides.forEach(function(s,k){s.classList.toggle('on',k===i);s.classList.toggle('gone',k<i);});
     var st=steps(slides[i]);st.forEach(function(e){show(e,!!fromBack);});
     cur=i;ui();
+    document.dispatchEvent(new CustomEvent('deck:slide',{detail:i}));
   }
   function next(){
     var h=steps(slides[cur]).filter(function(e){return !e.classList.contains('in');});
@@ -51,7 +52,7 @@
       if(q.classList.contains('solved'))return;
       if(i===ok){
         q.classList.add('solved');b.classList.add('ok');bs.forEach(function(x){if(x!==b)x.classList.add('dim');});
-        fb.className='fb ok';fb.innerHTML='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();
+        fb.className='fb ok';fb.textContent='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();
       }else{
         b.classList.remove('no');void b.offsetWidth;b.classList.add('no');
         fb.className='fb no';fb.textContent='✘ حاول مرة أخرى';tone('no');
@@ -100,5 +101,30 @@
       x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore();});
       if(++t<90)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height);})();
   }
+  // ─ حُذف حفظ الشريحة لكل شعبة (قرار الأستاذ عيسى، ٨ أكتوبر) — تُمسح بياناته القديمة من المتصفّح ─
+  try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('lk_')===0)localStorage.removeItem(k);});}catch(e){}
+  // ─ شارة الصفحة في شرائح التمارين: الضغط على بطاقة جزئيةٍ يُظهر «الجزئية (ب)» ─
+  document.addEventListener('click',function(e){
+    var c=e.target.closest&&e.target.closest('.xcard[data-p]');if(!c)return;
+    var sl=c.closest('.slide'),pt=sl&&sl.querySelector('.pgb-pt[data-all]');if(!pt)return;
+    pt.textContent='الجزئية ';var pb=document.createElement('b');pb.textContent='('+c.getAttribute('data-p')+')';pt.appendChild(pb);pt.classList.add('on');
+  },true);
+  var liveBtn=document.getElementById('liveBtn');
+  function liveSetUI(on){
+    if(!liveBtn)return;
+    liveBtn.classList.toggle('on',on);
+    liveBtn.querySelector('.lv-ic').textContent=on?'⏹':'▶';
+    liveBtn.querySelector('.lv-lbl').textContent=on?'إنهاء الحصة':'ابدأ الحصة';
+  }
+  if(liveBtn){
+    liveBtn.addEventListener('click',function(){
+      if(document.fullscreenElement)document.exitFullscreen().catch(function(){});
+      else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});
+    });
+    document.addEventListener('fullscreenchange',function(){
+      liveSetUI(!!document.fullscreenElement);
+    });
+  }
+  window.DECK={go:go,cur:function(){return cur;},n:slides.length};
   go(0);
 })();
