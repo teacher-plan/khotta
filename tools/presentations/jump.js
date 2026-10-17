@@ -20,11 +20,12 @@
   var bA=L.ab>=0?btn('ja','📗 تمارين كتاب النشاط','الانتقال إلى تمارين كتاب النشاط'):null;
   var bW=btn('jw','🪟 نافذة المعلّم','الملاحظات في نافذةٍ منفصلة تُسحب إلى شاشة الحاسوب (W)');
   var bT=btn('jt','🧑‍🏫 الملاحظات على الشاشة','إظهار ملاحظة الشريحة على الشاشة (N)');
-  // تكبير العرض وتصغيره كاملاً (طلب الأستاذ عيسى، ١٧ أكتوبر) — كعارض صفحات الكتاب: 🔍− / 🔍+ في شريط الأدوات (أو مفتاحا − و +)،
+  // تكبير العرض وتصغيره كاملاً (طلب الأستاذ عيسى، ١٧ أكتوبر) — كعارض صفحات الكتاب: 🔍− / 🔍+ في شريط الحصة الحية (أعلى اليمين) (أو مفتاحا − و +)،
   // من ٥٠٪ إلى ٢٠٠٪، والضغط على النسبة يعيدها إلى ١٠٠٪. يتصغّر كل شيء بنسبةٍ واحدة (الخط والمربّعات والمسافات) فلا يزدحم شيء،
   // وعند التكبير يُسحب العرض بالإصبع أو الفأرة لرؤية أطرافه (والتنقّل بالأزرار أو الأسهم). يُحفظ في الجهاز.
   var DK=document.getElementById('deck'),Z=document.createElement('div');Z.id='jzoom';
-  Z.innerHTML='<button type="button" title="تصغير العرض (−)">🔍−</button><output title="إعادة إلى ١٠٠٪"></output><button type="button" title="تكبير العرض (+)">🔍+</button>';bar.appendChild(Z);
+  Z.innerHTML='<button type="button" title="تصغير العرض (−)">🔍−</button><output title="إعادة إلى ١٠٠٪"></output><button type="button" title="تكبير العرض (+)">🔍+</button>';
+  (document.getElementById('clsbar')||bar).appendChild(Z);   // في شريط الحصة الحية أعلى اليمين بجانب «ابدأ الحصة»
   var zb=Z.querySelectorAll('button'),zo=Z.querySelector('output'),VZ=1,PX=0,PY=0;try{VZ=+localStorage.getItem('deckview')||1;}catch(e){}
   function clampPan(){var mx=Math.max(0,(VZ-1)*innerWidth/2),my=Math.max(0,(VZ-1)*innerHeight/2);PX=Math.max(-mx,Math.min(mx,PX));PY=Math.max(-my,Math.min(my,PY));}
   function applyZ(){clampPan();DK.style.transform=VZ===1?'':'translate('+PX+'px,'+PY+'px) scale('+VZ+')';DK.classList.toggle('zin',VZ>1);}
