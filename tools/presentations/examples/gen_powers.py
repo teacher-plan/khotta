@@ -166,8 +166,8 @@ background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var
 if globals().get('NUM_CHIPS'):   # «،» بين عددين في نصّ الشريحة ← فاصلٌ رأسي خفيف (لا يشتبه بالفاصلة العشرية «٫»)
     _sep = re.compile(r'(?<=[٠-٩])((?:\s*[^\s،<>٠-٩]{1,4})?)\s*،\s*(?=[٠-٩−])')
     html = re.sub(r'(<script\b.*?</script>|<style\b.*?</style>|<[^>]*>)|([^<]+)',
-                  lambda m: m[1] or (('<span class="dl">' + _sep.sub(lambda k: k[1] + '<span class="dsep"></span>', m[2]) + '</span>') if _sep.search(m[2]) else m[2]), html, flags=re.S)
+                  lambda m: m[1] or (('<span class="dl">' + _sep.sub(lambda k: k[1] + '<span class="dsep"></span>', m[2]) + '</span>') if _sep.search(m[2]) else m[2]), html, flags=re.S | re.I)
 if globals().get('CMP_LRM'):   # لكل العروض (طلب الأستاذ عيسى، ١٧ أكتوبر): العلامة تنعكس طبيعياً فتنفتح «أكبر من» نحو العدد الأكبر على اليمين؛ CMP_LRM يعيد المنع القديم
-    html = re.sub(r'(<script\b.*?</script>)|&(lt|gt);', lambda m: m[1] or f'&#x200e;&{m[2]};&#x200e;', html, flags=re.S)
+    html = re.sub(r'(<script\b.*?</script>)|&(lt|gt);', lambda m: m[1] or f'&#x200e;&{m[2]};&#x200e;', html, flags=re.S | re.I)
 open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')

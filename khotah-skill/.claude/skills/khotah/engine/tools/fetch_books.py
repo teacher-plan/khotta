@@ -110,7 +110,9 @@ def drive_id(text):
 
 def resolve(url):
     """يحوّل رابط صفحة أفدني أو Drive إلى رابط تنزيل مباشر."""
-    if 'afedne.com/library/file/' in url or 'afidni.com' in url:
+    u = urllib.parse.urlparse(url)
+    host = (u.hostname or '').lower()
+    if (host in ('afedne.com', 'www.afedne.com') and u.path.startswith('/library/file/')) or host == 'afidni.com' or host.endswith('.afidni.com'):
         did = drive_id(http_get(url))
         if not did:
             raise RuntimeError('لم أجد رابط Drive في صفحة الملف')
