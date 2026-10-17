@@ -27,6 +27,7 @@
 // صمّام الأمان: إن تجاوز محتوى شريحةٍ ارتفاع الشاشة (مع كشف كل الخطوات والبطاقات) صُغِّر قليلاً — حتى ٠٫٦، ويشمل خروج سطرٍ من مربّعه
 (function(){
   function fitAll(){
+    var dk=document.getElementById('deck'),tf=dk?dk.style.transform:'';if(dk)dk.style.transform='';   // القياس بلا تكبير العرض (jump.js)
     document.querySelectorAll('.slide').forEach(function(s){
       s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
@@ -42,6 +43,7 @@
       }
       fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
     });
+    if(dk)dk.style.transform=tf;
   }
   window.__fitAll=fitAll;fitAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
