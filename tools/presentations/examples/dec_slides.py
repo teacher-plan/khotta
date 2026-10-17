@@ -60,7 +60,7 @@ S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب �
 {st('<div class="note">عدد الأرقام بعد الفاصلة العشرية هو <b>عدد المنازل العشرية</b>: ٥٫٢٠١ له ثلاث منازل</div>')}'''))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('كتاب الطالب ص ٥٧')}</div><h2>رتّب تصاعدياً: {M(D('8.56'), '،', D('7.4'), '،', D('8.518'), cls="sm")}</h2>
 {box(STEPS(STP('١) نقارن العدد الكامل', M(D('7'), '&lt;', D('8'), cls="sm")), STP('٢) العدد الكامل متساوٍ، فنقارن الأجزاء من عشرة', M(D('5'), EQ, D('5'), cls="sm")), STP('٣) نقارن الأجزاء من مئة', M(D('1'), '&lt;', D('6'), cls="sm")), STP('الترتيب', M(D('7.4'), '،', D('8.518'), '،', D('8.56'), cls="sm"), 'fin')))}'''))
-S.append(slide(f'''<div class="row hdr">{mode('i')}<span class="qbadge" style="background:#7048E8;box-shadow:0 4px 0 #4C2FB0">جدول المنازل</span></div><h2>نقارن عموداً عموداً من اليمين</h2>
+S.append(slide(f'''<div class="row hdr">{mode('i')}<span class="qbadge" style="background:#7048E8;box-shadow:0 4px 0 #4C2FB0">جدول المنازل</span></div><h2>نقارن عموداً عموداً من اليسار (من المنزلة الكبرى)</h2>
 {st(PV(['7.4', '8.56', '8.518'], hi=3))}
 {st('<div class="note">في عمود الأجزاء من مئة: ١ أصغر من ٦، فـ ٨٫٥١٨ أصغر من ٨٫٥٦</div>')}''' + tn('من خارج المرجع: جدول المنازل يرتّب الأعداد عند الفاصلة، فتسهل المقارنة عموداً عموداً.')))
 S.append(slide(f'''<div class="row hdr">{mode('i')}{ref('دليل المعلم ص ٦٣')}</div><h2>نكتب أصفاراً لتتساوى المنازل العشرية</h2>
@@ -197,6 +197,7 @@ EXTRA_CSS_OWN = '''
 .stp.fin .lab{background:var(--good);color:#fff}
 .box .col>.m:not(.mid):not(.sm):not(.big),.hid.col>.m:not(.mid):not(.sm):not(.big){font-size:clamp(34px,6.4vh,76px)}
 .pv{border-collapse:separate;border-spacing:0;direction:rtl;font-family:var(--fh);background:#fff;border:3px solid var(--ink);border-radius:14px;overflow:hidden}
+.pv{direction:ltr}
 .pv th{background:var(--ink);color:#fff;font-weight:800;font-size:clamp(22px,4.3vh,48px);padding:.4em .7em;line-height:1.3}
 .pv td{font-weight:900;font-size:clamp(34px,6.4vh,74px);text-align:center;padding:.05em .5em;border-top:2px solid var(--line);min-width:1.4em}
 .pv .pt{padding:0 .1em;min-width:0;color:var(--bad);background:#fff}.pv th.pt{background:var(--ink)}

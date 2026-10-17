@@ -154,7 +154,7 @@ html = f'''<!DOCTYPE html>
 # نقسمها على معامل التكبير --zz لتبقى بعرضها المرئي الأصلي، ويصغر الخط وحده.
 def _unz(css):
     css = re.sub(r'((?:max-|min-)?width):\s*(min\([^;{}()]*vw\)|\d+(?:\.\d+)?vw)', lambda m: f'{m[1]}:calc({m[2]} / var(--zz,1))', css)
-    return css + '.slide{--zz:calc(var(--ar,1) * var(--fit,1) * var(--ui,1))}'
+    return css + '.slide{--zz:calc(var(--ar,1) * var(--fit,1) * var(--ui,1) * var(--uk,1))}'
 html = re.sub(r'<style>(.*?)</style>', lambda m: '<style>' + _unz(m[1]) + '</style>', html, count=1, flags=re.S)
 # علامتا < و > كما في كتاب الطالب: تُقرأ من اليمين ولا تنعكس («٧ > ٥» = سبعة أكبر من خمسة)؛ المتصفّح يعكسهما في النص العربي، فنحيطهما بعلامتي LRM
 # إجابات بطاقة الخروج مرقّمة بأرقام أسئلتها (طلب الأستاذ عيسى، ١٧ أكتوبر): دائرةٌ برقم السؤال قبل كل إجابة
