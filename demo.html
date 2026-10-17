@@ -509,6 +509,11 @@ body.inapp #c1-budget-btn{display:flex}
   border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12.5px;font-weight:700;
   color:var(--ink);cursor:pointer;transition:.15s}
 .rs-act-btn:disabled{opacity:.4;cursor:default}
+.rs-paste{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:12px}
+.rs-paste textarea{width:100%;box-sizing:border-box;min-height:150px;resize:vertical;font-family:inherit;font-size:13.5px;line-height:1.9;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg,#fff);color:var(--ink)}
+.rs-paste textarea:focus{outline:none;border-color:var(--red)}
+.rs-paste-row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.rs-paste-row .n{flex:1;font-size:11.5px;color:var(--muted)}
 .rs-act-btn.danger:not(:disabled){color:var(--red-d)}
 .rs-act-btn:not(:disabled):hover{border-color:var(--olive)}
 .rs-del-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;background:var(--card);
@@ -3056,7 +3061,9 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button type="button" class="rs-act-btn" id="rs-add-btn" onclick="rosterAddStudent()" disabled>➕ إضافة طالب</button>
       <button type="button" class="rs-act-btn danger" id="rs-del-btn" onclick="rosterDeleteToggle()" disabled>🗑️ حذف طالب</button>
       <button type="button" class="rs-act-btn" id="rs-upload-btn" onclick="document.getElementById('roster-file').click()" disabled>📎 رفع قوائم الطلاب</button>
+      <button type="button" class="rs-act-btn" id="rs-paste-btn" onclick="khPasteToggle('roster')" disabled>📋 لصق الأسماء</button>
     </div>
+    <div class="rs-paste" id="roster-paste" hidden></div>
     <span class="su-roster-hint" id="roster-upload-msg"></span>
     <div id="roster-del-list"></div>
     <div class="c1-mrow"><button class="c1-mbtn no" onclick="rosterClose()">إغلاق</button>
@@ -3088,7 +3095,9 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button type="button" class="rs-act-btn" onclick="newClsAddStudent()">➕ إضافة طالب</button>
       <button type="button" class="rs-act-btn" id="newcls-up-btn"
               onclick="document.getElementById('newcls-file').click()">📎 رفع قوائم الطلاب</button>
+      <button type="button" class="rs-act-btn" onclick="khPasteToggle('newcls')">📋 لصق الأسماء</button>
     </div>
+    <div class="rs-paste" id="newcls-paste" hidden></div>
     <span class="su-roster-hint" id="newcls-msg"></span>
     <div id="newcls-list"></div>
 
@@ -4880,7 +4889,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f94b270';
+const KH_BUILD='30bd300';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -4899,7 +4908,7 @@ function acctRenderRoster(){
     </button>`;
   if(!cls.length){
     grid.innerHTML='<div class="plan-empty-card" style="grid-column:1/-1">لا شعب بعد — '+khG('أضيفي','أضف')+' أولى '+khG('شُعَبكِ','شُعَبك')+' من الزرّ أدناه.</div>'+addCard;
-    ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=true);
+    ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn'].forEach(id=>document.getElementById(id).disabled=true);
     return;
   }
   grid.innerHTML=cls.map(c=>{
@@ -4910,7 +4919,8 @@ function acctRenderRoster(){
     </button>`;
   }).join('')+addCard;
   const has=!!acctCls;
-  ['rs-add-btn','rs-del-btn','rs-upload-btn'].forEach(id=>document.getElementById(id).disabled=!has);
+  ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn'].forEach(id=>document.getElementById(id).disabled=!has);
+  if(!has){const pb=document.getElementById('roster-paste');if(pb)pb.hidden=true;}
 }
 function acctTab(id){
   acctCls=(acctCls===id)?null:id;   // ضغطةٌ ثانية على الشعبة نفسها تُلغي التحديد
@@ -5036,6 +5046,7 @@ let newCls={g:0,n:0,subs:[],stu:[]};
 function newClsOpen(){
   newCls={g:0,n:0,subs:[],stu:[]};
   const msg=document.getElementById('newcls-msg');if(msg)msg.textContent='';
+  const np=document.getElementById('newcls-paste');if(np)np.hidden=true;
   newClsRender();
   document.getElementById('newcls-modal').classList.add('open');
 }
@@ -5162,6 +5173,7 @@ async function newClsSave(){
 function rosterClose(){document.getElementById('roster-modal').classList.remove('open');}
 function rosterOpen(){
   document.getElementById('c1-menu').classList.remove('open');
+  const rp=document.getElementById('roster-paste');if(rp)rp.hidden=true;
   // نسخةُ عملٍ منفصلة: التعديل لا يمسّ الملف حتى تضغط «حفظ»، فالإغلاق يتراجع.
   // كل طالبة تحمل si = موضعها الأصلي، وهو ما تُبنى عليه إعادةُ ترتيب النجوم.
   acctRoster={};
@@ -5240,6 +5252,52 @@ function khRosterErrMsg(m){
     :m==='quota_unavailable'?'تعذّر التحقّق من رصيدك — '+khG('أعيدي','أعد')+' المحاولة بعد قليل. لم يُخصم شيء'
     :m==='bad_ai_output'?'تعذّرت قراءة الأسماء من الملف — '+khG('جرّبي','جرّب')+' صورةً أوضح، لم تُخصم من حصّتك'
     :'تعذّرت القراءة — '+khG('تحقّقي','تحقّق')+' من الاتصال و'+khG('أعيدي','أعد')+' المحاولة';
+}
+// ── لصق الأسماء: اسمٌ في كل سطر ──
+// بديلٌ فوريّ للرفع لمن عندها الكشف نصّاً (من Excel أو Word أو رسالة): لا ذكاء
+// اصطناعي ولا انتظار ولا حصّة. يُنظَّف كل سطر من الترقيم («١- »، «3.») ومن أعمدة
+// Excel الملصوقة (يُؤخذ العمود الذي فيه حروف)، وتُتجاهل الأسماء المكرّرة.
+function khParseNames(text){
+  return String(text||'').split(/\r?\n/).map(line=>{
+    let cells=line.split('\t').map(c=>c.trim()).filter(Boolean);
+    let nm=cells.find(c=>/[\u0621-\u064Aa-zA-Z]/.test(c))||'';
+    nm=nm.replace(/^[\s\d\u0660-\u0669\u06F0-\u06F9]+\s*[-–.:)\]،,]*\s*/,'').replace(/^[-–•*·]+\s*/,'');
+    return nm.replace(/\s+/g,' ').trim();
+  }).filter(n=>n&&/[\u0621-\u064Aa-zA-Z]/.test(n));
+}
+function khPasteToggle(where){
+  const box=document.getElementById(where+'-paste');if(!box)return;
+  if(!box.hidden){box.hidden=true;return;}
+  box.innerHTML='<textarea id="'+where+'-paste-ta" placeholder="'+escAttr(khG('الصقي','الصق'))+' الأسماء هنا — اسمٌ في كل سطر"></textarea>'
+    +'<div class="rs-paste-row"><span class="n" id="'+where+'-paste-n">'+khG('انسخي','انسخ')+' عمود الأسماء من Excel أو Word و'+khG('الصقيه','الصقه')+' كما هو</span>'
+    +'<button type="button" class="c1-mbtn no" onclick="khPasteToggle(\''+where+'\')">إلغاء</button>'
+    +'<button type="button" class="c1-mbtn go" onclick="khPasteAdd(\''+where+'\')">إضافة الأسماء</button></div>';
+  box.hidden=false;
+  const ta=document.getElementById(where+'-paste-ta'),cnt=document.getElementById(where+'-paste-n');
+  ta.oninput=()=>{const k=new Set(khParseNames(ta.value)).size;cnt.textContent=k?('سيُضاف '+k+' اسماً (تُتجاهل المكرّرة)'):''+khG('الصقي','الصق')+' الأسماء — اسمٌ في كل سطر';};
+  ta.focus();
+}
+function khPasteAdd(where){
+  const ta=document.getElementById(where+'-paste-ta');if(!ta)return;
+  const names=khParseNames(ta.value);
+  const msg=document.getElementById(where==='roster'?'roster-upload-msg':'newcls-msg');
+  const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
+  if(!names.length){say('لم أجد أسماءً — '+khG('اكتبي','اكتب')+' اسماً في كل سطر',true);ta.focus();return;}
+  let added=0;
+  if(where==='roster'){
+    if(!acctCls){toast(''+khG('اختاري','اختر')+' شعبةً أولاً',true);return;}
+    const list=acctRoster[acctCls]=acctRoster[acctCls]||[];
+    const seen=new Set(list.map(s=>(s.nm||'').replace(/\s+/g,' ').trim()));
+    for(const k of names){if(seen.has(k))continue;seen.add(k);list.push({nm:k,si:-1});added++;}
+    acctRenderRoster();
+  }else{
+    const seen=new Set(newCls.stu.map(s=>s.replace(/\s+/g,' ').trim()));
+    for(const k of names){if(seen.has(k))continue;seen.add(k);newCls.stu.push(k);added++;}
+    newClsRender();
+  }
+  document.getElementById(where+'-paste').hidden=true;
+  say(added?('أُضيف '+added+' اسماً — '+khG('راجعيها','راجعها')+' ثم '+khG('اضغطي','اضغط')+' «حفظ»'):'كل الأسماء موجودةٌ مسبقاً');
+  if(added)toast('أُضيف '+added+' اسماً');
 }
 async function rosterUpload(input){
   const files=[...(input.files||[])].slice(0,4);
