@@ -45,5 +45,5 @@
   }
   window.__fitAll=fitAll;fitAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
-  var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(function(){(window.__fitAll||fitAll)();},150);});
+  var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(fitAll,150);});
 })();

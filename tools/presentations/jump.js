@@ -22,9 +22,9 @@
   var bT=btn('jt','🧑‍🏫 الملاحظات على الشاشة','إظهار ملاحظة الشريحة على الشاشة (N)');
   // حجم المحتوى: أ− / أ+ (أو مفتاحا − و +)، من ٦٠٪ إلى ١٥٠٪، ويُحفظ في الجهاز
   var Z=document.createElement('div');Z.className='jsz';Z.innerHTML='<span>حجم المحتوى</span><button type="button" title="تصغير (−)">أ−</button><output></output><button type="button" title="تكبير (+)">أ+</button>';menu.appendChild(Z);
-  var zb=Z.querySelectorAll('button'),zo=Z.querySelector('output'),K=1;try{K=+localStorage.getItem('deckzoom2')||1;}catch(e){}
+  var zb=Z.querySelectorAll('button'),zo=Z.querySelector('output'),K=1;try{K=+localStorage.getItem('deckzoom')||1;}catch(e){}
   function setK(v){K=Math.min(1.5,Math.max(.6,Math.round(v*10)/10));document.documentElement.style.setProperty('--uk',K);zo.textContent=ar(Math.round(K*100))+'٪';
-    try{localStorage.setItem('deckzoom2',K);}catch(e){}if(window.__fitAll)window.__fitAll();}
+    try{localStorage.setItem('deckzoom',K);}catch(e){}if(window.__fitAll)window.__fitAll();}
   Z.onclick=function(e){e.stopPropagation();};zb[0].onclick=function(e){e.stopPropagation();setK(K-.1);};zb[1].onclick=function(e){e.stopPropagation();setK(K+.1);};
   document.addEventListener('keydown',function(e){if(e.target.closest&&e.target.closest('input,textarea'))return;if(e.key==='-'||e.key==='_')setK(K-.1);else if(e.key==='+'||e.key==='=')setK(K+.1);});
   setK(K);

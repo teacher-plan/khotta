@@ -169,14 +169,5 @@ if globals().get('NUM_CHIPS'):   # «،» بين عددين في نصّ الشر
                   lambda m: m[1] or (('<span class="dl">' + _sep.sub(lambda k: k[1] + '<span class="dsep"></span>', m[2]) + '</span>') if _sep.search(m[2]) else m[2]), html, flags=re.S)
 if globals().get('CMP_LRM'):   # لكل العروض (طلب الأستاذ عيسى، ١٧ أكتوبر): العلامة تنعكس طبيعياً فتنفتح «أكبر من» نحو العدد الأكبر على اليمين؛ CMP_LRM يعيد المنع القديم
     html = re.sub(r'(<script\b.*?</script>)|&(lt|gt);', lambda m: m[1] or f'&#x200e;&{m[2]};&#x200e;', html, flags=re.S)
-if globals().get('FIT2'):   # الحجم المتناسق على كل الشاشات (fit2.css / fit2.js): vh وvw ← وحدة إطار ١٦:٩ (--u)، وحدود px تسقط
-    def _u(css):
-        css = re.sub(r'clamp\(\s*[\d.]+px\s*,\s*([\d.]+)v([hw])\s*,\s*[\d.]+px\s*\)', lambda m: f'calc({m[1]} * var(--u{"w" if m[2]=="w" else ""}))', css)
-        return re.sub(r'(?<![\w.-])([\d.]+)v([hw])\b', lambda m: m[0] if float(m[1]) >= 100 else f'calc({m[1]} * var(--u{"w" if m[2]=="w" else ""}))', css)
-    html = re.sub(r'<style>(.*?)</style>', lambda m: '<style>' + _u(m[1]) + '</style>', html, count=1, flags=re.S)
-    html = html.replace('</style>', open(os.path.join(KIT,'fit2.css'),encoding='utf-8').read() + '</style>', 1)   # بعد التحويل: تعريف --u نفسه بـ vh/vw
-    html = re.sub(r'(<script\b.*?</script>)|style="([^"]*v[hw][^"]*)"', lambda m: m[1] or 'style="' + _u(m[2]) + '"', html, flags=re.S)
-    _k = html.rfind('</body>')   # الأخير: نصوص نافذة المعلّم في base.js فيها '</body>' أيضاً
-    html = html[:_k] + '<script>' + open(os.path.join(KIT,'fit2.js'),encoding='utf-8').read() + '</script>' + html[_k:]
 open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')
