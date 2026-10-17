@@ -157,6 +157,12 @@ def _unz(css):
     return css + '.slide{--zz:calc(var(--ar,1) * var(--fit,1) * var(--ui,1))}'
 html = re.sub(r'<style>(.*?)</style>', lambda m: '<style>' + _unz(m[1]) + '</style>', html, count=1, flags=re.S)
 # علامتا < و > كما في كتاب الطالب: تُقرأ من اليمين ولا تنعكس («٧ > ٥» = سبعة أكبر من خمسة)؛ المتصفّح يعكسهما في النص العربي، فنحيطهما بعلامتي LRM
+# إجابات بطاقة الخروج مرقّمة بأرقام أسئلتها (طلب الأستاذ عيسى، ١٧ أكتوبر): دائرةٌ برقم السؤال قبل كل إجابة
+html = re.sub(r'<section class="slide[^"]*">.*?</section>', lambda m: m[0].replace('<span class="hid col">', '<span class="hid col exitans">')
+              if 'بطاقة الخروج' in m[0] and '>الإجابات</h2>' in m[0] else m[0], html, flags=re.S)
+html = html.replace('</style>', """.exitans{counter-reset:q}.exitans>*{counter-increment:q;display:flex!important;align-items:center;gap:.5em}
+.exitans>*::before{content:counter(q,arabic-indic);flex:none;display:inline-grid;place-items:center;width:1.5em;height:1.5em;border-radius:50%;
+background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var(--fh)}</style>""", 1)
 if globals().get('NUM_CHIPS'):   # «،» بين عددين في نصّ الشريحة ← فاصلٌ رأسي خفيف (لا يشتبه بالفاصلة العشرية «٫»)
     _sep = re.compile(r'(?<=[٠-٩])((?:\s*[^\s،<>٠-٩]{1,4})?)\s*،\s*(?=[٠-٩−])')
     html = re.sub(r'(<script\b.*?</script>|<style\b.*?</style>|<[^>]*>)|([^<]+)',
