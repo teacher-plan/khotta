@@ -1139,6 +1139,13 @@ html.live-lock body{position:fixed;inset-inline:0;width:100%;top:var(--live-lock
 .lv-ink.on{pointer-events:auto;cursor:crosshair}
 /* العرض التفاعلي: الطبقة لا تستقبل لمساً أبداً — الرسم يصلها من جسر القلم داخل الإطار */
 .lv-html-wrap{position:relative;width:100%;height:100%}
+/* تكبير المرفق المفتوح وتصغيره كاملاً من بار الحصة (كما في index.html): العرض التفاعلي مع طبقة قلمه، أو الملف،
+   يُرسَم بمقاسه الأصلي داخل .lv-zw ويُضرب في النسبة؛ وعند التكبير يُمرَّر. الصور والكتاب لها تكبيرها في شريطها */
+.lb-zoom{display:inline-flex;gap:3px;flex:none}.lb-zoom.hidden{display:none}
+.lb-zoom .lb-zl{min-width:58px;justify-content:center;font-variant-numeric:tabular-nums}
+.lv-zw{flex:none;position:relative;margin:auto}
+.lv-zw>iframe,.lv-zw>.lv-html-wrap{position:absolute;top:0;left:0;transform-origin:0 0}
+.lv-vbody.vzin{overflow:auto;touch-action:pan-x pan-y;align-items:flex-start;justify-content:flex-start}
 .lv-ink.lv-ink-html,.lv-ink.lv-ink-html.on{pointer-events:none;border-radius:8px}
 .lv-pages.htmlmode>:not(#lv-pen-btn):not(#lv-ink-clear){display:none}
 .lv-pages:not(.htmlmode) #lv-ink-clear{display:none}
@@ -4071,6 +4078,13 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r=".6" fill="currentColor"/><circle cx="15.5" cy="15.5" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/><circle cx="15.5" cy="8.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="15.5" r=".6" fill="currentColor"/></svg><span class="lbl">قرعة</span></button>
     <button class="lb-btn" id="lb-stars-btn" onclick="lbPop('stars')" title="نجوم سريعة">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.4 1.1 6.3L12 17.1l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z"/></svg><span class="lbl">نجوم</span></button>
+    <span class="lb-zoom hidden" id="lb-zoom">
+      <button class="lb-btn" onclick="lbViewZoom(-1)" title="تصغير المرفق المفتوح (العرض كاملاً)" aria-label="تصغير">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM7 9h6v2H7z"/></svg></button>
+      <button class="lb-btn lb-zl" id="lb-zoom-lbl" onclick="lbViewZoom(0)" title="إعادة إلى ١٠٠٪">١٠٠٪</button>
+      <button class="lb-btn" onclick="lbViewZoom(1)" title="تكبير المرفق المفتوح" aria-label="تكبير">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM9 7h2v2h2v2h-2v2H9v-2H7V9h2z"/></svg></button>
+    </span>
     <button class="lb-btn" id="lb-fs-btn" onclick="liveFullscreenToggle()" title="ملء الشاشة">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">ملء الشاشة</span></button>
   </div>
@@ -4935,7 +4949,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='dc531fa';
+const KH_BUILD='827c2f4';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10322,10 +10336,36 @@ function liveViewOpen(title,html,showPages){
   if(!showPages){_lvPenOn=false;lvPenSyncUI();}
   document.getElementById('live-view').classList.add('on');
   lbPopCloseAll();
+  lbViewZoomApply();
 }
+/* ══ تكبير المرفق المفتوح وتصغيره من بار الحصة (🔍− ٪ 🔍+) — العرض التفاعلي والملفات؛ الصور وصفحات الكتاب لها تكبيرها ══ */
+var LB_VZ=[.5,.6,.7,.8,.9,1,1.25,1.5,2];
+var _lbVZ=1;try{_lbVZ=+localStorage.getItem('lbViewZoom')||1;}catch(e){}
+function lbViewZoom(d){
+  const i=LB_VZ.indexOf(_lbVZ);
+  _lbVZ=d===0?1:LB_VZ[Math.min(LB_VZ.length-1,Math.max(0,(i<0?5:i)+d))];
+  try{localStorage.setItem('lbViewZoom',_lbVZ);}catch(e){}
+  lbViewZoomApply();
+}
+function lbViewZoomApply(){
+  const body=document.getElementById('lv-vbody'),grp=document.getElementById('lb-zoom'),rail=document.getElementById('lv-pages');
+  const on=document.getElementById('live-view')?.classList.contains('on');
+  const book=rail&&!rail.classList.contains('hidden')&&!rail.classList.contains('htmlmode');
+  let w=body&&body.querySelector(':scope>.lv-zw'),el=w?w.firstElementChild:body&&body.querySelector(':scope>iframe,:scope>.lv-html-wrap');
+  if(grp)grp.classList.toggle('hidden',!(on&&!book&&el));
+  if(body)body.classList.toggle('vzin',!!(on&&!book&&el&&_lbVZ>1));
+  if(!on||book||!el)return;
+  if(!w){w=document.createElement('div');w.className='lv-zw';el.replaceWith(w);w.appendChild(el);}
+  const cs=getComputedStyle(body),W=body.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),H=body.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  el.style.width=W+'px';el.style.height=H+'px';el.style.transform=_lbVZ===1?'':'scale('+_lbVZ+')';
+  w.style.width=W*_lbVZ+'px';w.style.height=H*_lbVZ+'px';
+  document.getElementById('lb-zoom-lbl').textContent=egToArabic(Math.round(_lbVZ*100))+'٪';
+}
+window.addEventListener('resize',()=>{clearTimeout(window._lbVZt);window._lbVZt=setTimeout(lbViewZoomApply,120);});
 function liveViewClose(silent){
   const v=document.getElementById('live-view');
   if(v){v.classList.remove('on');document.getElementById('lv-vbody').innerHTML='';}
+  document.getElementById('lb-zoom')?.classList.add('hidden');document.getElementById('lv-vbody')?.classList.remove('vzin');
   // إغلاق اللعبة إن كانت مدمجة تحت البار
   const gm=document.getElementById('gm-stage-bg');
   if(gm&&gm.classList.contains('live-embed')){gm.classList.remove('live-embed');if(gm.style.display==='flex')gmClose();}
@@ -10355,6 +10395,7 @@ function liveOpenFile(fi){
       wrap.appendChild(fr);
       const cv=document.createElement('canvas');cv.className='lv-ink lv-ink-html';cv.id='lv-ink';
       wrap.appendChild(cv);body.appendChild(wrap);
+      lbViewZoomApply();
       _lvHtmlFrame=fr;_lvStrokes={};_lvCurStroke=null;_lvPenErasing=false;
       const rail=document.getElementById('lv-pages');
       rail.classList.remove('hidden');rail.classList.add('htmlmode');
@@ -10560,8 +10601,8 @@ addEventListener('message',e=>{
   const fr=_lvHtmlFrame,d=e.data;
   if(!fr||e.source!==fr.contentWindow||!d||d.kh!=='ink')return;
   const cv=lvInkCanvas();if(!cv)return;
-  const r=fr.getBoundingClientRect();
-  const ev={clientX:r.left+(+d.x||0),clientY:r.top+(+d.y||0),pressure:+d.p||0,pointerType:d.pt==='pen'?'pen':'mouse',pointerId:-1,preventDefault(){}};
+  const r=fr.getBoundingClientRect(),k=fr.offsetWidth?r.width/fr.offsetWidth:1;   // ×النسبة عند تكبير العرض من البار
+  const ev={clientX:r.left+(+d.x||0)*k,clientY:r.top+(+d.y||0)*k,pressure:+d.p||0,pointerType:d.pt==='pen'?'pen':'mouse',pointerId:-1,preventDefault(){}};
   if(d.t==='down')lvInkPointerDown(ev,cv);
   else if(d.t==='move')lvInkPointerMove(ev,cv);
   else if(d.t==='up')lvInkPointerUp(ev);
