@@ -15503,8 +15503,38 @@ async function libDelete(id){
 // مباشرة: فتح فوري من الكاش وقابلية تثبيتها تطبيقاً. التسجيل بعد load حتى لا
 // يزاحم إقلاع الصفحة، والفشل صامت لأن العمل لا يتوقف عليه.
 if('serviceWorker' in navigator){
+  // وصول التحديثات: تبويبٌ أو تطبيقٌ مثبَّت يبقى مفتوحاً أياماً لا يتنقّل، فلا يسأل
+  // المتصفح عن نسخةٍ جديدة — فتبقى المعلّمة على نسخةٍ قديمة بعد النشر. لذا نسأل
+  // بأنفسنا عند كل عودةٍ للصفحة (وكل نصف ساعة)، ومتى تسلّم الإصدار الجديد التحكم
+  // تُحدَّث الصفحة: فوراً إن كانت في الخلفية، وإلا بشريطٍ صغير لا يقطع حصةً أو لعبة.
+  const hadCtl=!!navigator.serviceWorker.controller;
+  let _swReg=null,_swAsk=0,_swPending=false;
+  const swBusy=()=>{
+    const gs=document.getElementById('gm-stage-bg'),ls=document.getElementById('live-stage');
+    return (gs&&gs.style.display==='flex')||(ls&&ls.classList.contains('on'));
+  };
+  const swAsk=()=>{if(_swReg&&Date.now()-_swAsk>120000){_swAsk=Date.now();_swReg.update().catch(()=>{});}};
+  const swApply=()=>{if(!swBusy())location.reload();};
+  const swBar=()=>{
+    if(document.getElementById('sw-upd'))return;
+    const b=document.createElement('div');b.id='sw-upd';
+    b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#2A1A12;color:#fff;border-radius:14px;padding:10px 14px;display:flex;gap:10px;align-items:center;font:700 13px inherit;box-shadow:0 10px 30px rgba(0,0,0,.3)';
+    b.innerHTML='<span>نسخةٌ جديدة من المنصة جاهزة</span><button style="border:0;border-radius:10px;padding:6px 12px;font:800 12.5px inherit;background:#E8C34A;color:#2A1A12;cursor:pointer">تحديث الآن</button>';
+    b.querySelector('button').onclick=()=>location.reload();
+    document.body.appendChild(b);
+  };
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!hadCtl)return;                 // أول تثبيتٍ لا تحديث: الصفحة أصلاً من الشبكة
+    _swPending=true;
+    if(document.hidden)swApply();else swBar();
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){if(_swPending)swApply();}
+    else swAsk();
+  });
+  setInterval(swAsk,30*60*1000);
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{});
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(r=>{_swReg=r;}).catch(()=>{});
   });
 }
 </script>
