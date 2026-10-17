@@ -2491,7 +2491,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-g3-tip{color:#fff;font-weight:700;font-size:15px;opacity:.92;text-align:center;text-shadow:0 2px 6px rgba(0,0,0,.4)}
 #gm-g3fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
 .gm-g3-banner{position:absolute;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.gm-g3-banner span{font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;font-weight:900;font-size:clamp(56px,11vw,150px);line-height:1.1;color:#FFD43B;-webkit-text-stroke:5px #7A3E00;paint-order:stroke fill;text-shadow:0 10px 0 #7A3E00,0 18px 40px rgba(0,0,0,.45);animation:gmK3Ban 1.5s cubic-bezier(.2,1.4,.4,1) both}
+.gm-g3-banner span{will-change:transform,opacity;font-family:'Baloo Bhaijaan 2','Cairo',Tahoma;font-weight:900;font-size:clamp(56px,11vw,150px);line-height:1.1;color:#FFD43B;-webkit-text-stroke:5px #7A3E00;paint-order:stroke fill;text-shadow:0 10px 0 #7A3E00,0 18px 40px rgba(0,0,0,.45);animation:gmK3Ban 1.5s cubic-bezier(.2,1.4,.4,1) both}
 .gm-g3-banner.miss span{color:#fff;-webkit-text-stroke-color:#9B1C1C;text-shadow:0 8px 0 #9B1C1C,0 18px 40px rgba(0,0,0,.45);font-size:clamp(34px,5.6vw,78px)}
 .gm-g3-banner.win span{font-size:clamp(40px,6.4vw,92px)}
 .gm-g3-banner.ok span{color:#7CF29C;-webkit-text-stroke-color:#0F5C2E;text-shadow:0 8px 0 #0F5C2E,0 18px 40px rgba(0,0,0,.45);font-size:clamp(44px,8vw,110px)}
@@ -2587,12 +2587,15 @@ body:has(#page-fahim.active){overflow:hidden}
 /* ── ركلات الترجيح ── */
 .gm-g3pk-scene{position:relative;width:min(100%,calc((100vh - 290px)*16/9));min-width:min(100%,560px);aspect-ratio:16/9;border-radius:26px;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.45);isolation:isolate}
 .gm-g3pk-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.gm-g3pk-row{animation:none}
+.gm-g3pk-crowd{position:absolute;inset:0;pointer-events:none}
+.gm-g3pk-crowd .gm-g3pk-row{position:absolute;left:0;width:100%;background:center/100% 100% no-repeat;will-change:transform;animation:none}
 .gm-g3pk-scene.goal .gm-g3pk-row{animation:gmK3Crowd .32s ease-in-out calc(var(--r)*.04s) 5 alternate}
-@keyframes gmK3Crowd{to{transform:translateY(-12px)}}
+@keyframes gmK3Crowd{to{transform:translateY(-38%)}}
 .gm-g3pk-scene.goal .gm-g3pk-net{animation:gmK3Net .6s ease-out;transform-origin:800px 330px}
+.gm-g3pk-netl{will-change:transform}
+.gm-g3pk-scene.goal .gm-g3pk-netl{animation:gmK3Net .6s ease-out;transform-origin:50% 36.7%}
 @keyframes gmK3Net{30%{transform:scale(1.035,1.05)}60%{transform:scale(.99)}}
-.gm-g3pk-scene.goal::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.35),transparent 60%);animation:gmK3Flash .7s ease-out forwards;pointer-events:none}
+.gm-g3pk-scene.goal::after{content:'';position:absolute;inset:0;will-change:opacity;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.35),transparent 60%);animation:gmK3Flash .7s ease-out forwards;pointer-events:none}
 @keyframes gmK3Flash{from{opacity:1}to{opacity:0}}
 .gm-g3pk-keeper{position:absolute;width:13.5%;aspect-ratio:220/250;transform:translate(-50%,-100%);transform-origin:50% 80%;z-index:4;transition:transform .42s cubic-bezier(.2,.8,.3,1);pointer-events:none}
 .gm-g3pk-ksvg,.gm-g3pk-ssvg{width:100%;height:100%;display:block;overflow:visible}
@@ -4889,7 +4892,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='30bd300';
+const KH_BUILD='7c77764';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -13095,7 +13098,8 @@ function g3FxCanvas(){
   var bg=document.getElementById('gm-stage-bg');if(!bg)return null;
   var cv=document.getElementById('gm-g3fx');
   if(!cv){cv=document.createElement('canvas');cv.id='gm-g3fx';bg.appendChild(cv);}
-  var dpr=Math.min(2,window.devicePixelRatio||1);
+  // دقّةٌ عاديّة لا مضاعفة: لوحةٌ بحجم الشاشة تُمسح كل إطار، وقصاصاتٌ متحرّكة لا يُرى فيها الفرق
+  var dpr=1;
   if(cv.width!==Math.round(bg.clientWidth*dpr)){cv.width=Math.round(bg.clientWidth*dpr);cv.height=Math.round(bg.clientHeight*dpr);}
   return cv;
 }
@@ -13141,7 +13145,11 @@ function g3Banner(txt,cls){
 function g3Shake(el,strong){
   if(G3_RM||!el||!el.animate)return;
   var k=strong?14:7;
-  el.animate([{transform:'translate(0,0)'},{transform:'translate('+(-k)+'px,'+(k/3)+'px)'},{transform:'translate('+k+'px,'+(-k/4)+'px)'},{transform:'translate('+(-k/2)+'px,0)'},{transform:'translate(0,0)'}],{duration:380,easing:'ease-out'});
+  // خاصيّة translate المستقلّة لا transform: تُضاف فوق تموضع العنصر بدل أن تمحوه
+  // (الملعب المملوء للشاشة مُوسَّطٌ بـtransform، فكانت الهزّة تقذفه عن مكانه لحظة الهدف)
+  var T=function(x,y){return {translate:x+'px '+y+'px'};};
+  if(!CSS.supports||!CSS.supports('translate','1px 1px'))T=function(x,y){return {transform:'translate('+x+'px,'+y+'px)'};};
+  el.animate([T(0,0),T(-k,k/3),T(k,-k/4),T(-k/2,0),T(0,0)],{duration:380,easing:'ease-out'});
 }
 // قفزةٌ قوسية حقيقية بين نقطتين (FLIP): العنصر يُوضع في مكانه النهائي ثم يُحرَّك إليه من القديم
 function g3Arc(el,dx,dy,lift,ms,base,extra){
@@ -13359,8 +13367,14 @@ function gmRunFrog(qs){
 }
 
 // ─ ركلات الترجيح: ملعبٌ ليليّ بجمهور، حارسٌ يتمايل ويقفز، ولاعبٌ يركض ويسدّد ─
-function g3StadiumSvg(){
-  var s='<svg class="gm-g3pk-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>'
+// split=true (داخل اللعبة): الجمهور طبقةُ HTML مستقلة بين خلفيةٍ ومقدّمة مرسومتين.
+// كانت صفوفه (≈١٠٠٠ دائرة) داخل الـSVG الواحد، فقفزُها عند الهدف يعيد رسم الملعب
+// كله في كل إطار — وصار الملعب بحجم الشاشة، فظهر «لاج» عند كل إجابةٍ صحيحة.
+// الآن كل صفٍّ صورةٌ مستقلة يحرّكها المعالج الرسومي وحده (transform) بلا إعادة رسم.
+// split=false: SVG واحدٌ ساكن (خلفية العالم المرسومة في GM_WORLDS).
+function g3StadiumSvg(split){
+  var SV='<svg class="gm-g3pk-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">';
+  var s=SV+'<defs>'
     +'<linearGradient id="g3pkSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081430"/><stop offset="1" stop-color="#1D3E78"/></linearGradient>'
     +'<radialGradient id="g3pkGlow"><stop offset="0" stop-color="rgba(255,250,220,.95)"/><stop offset=".25" stop-color="rgba(255,245,200,.35)"/><stop offset="1" stop-color="rgba(255,240,190,0)"/></radialGradient>'
     +'<linearGradient id="g3pkGrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F8F45"/><stop offset="1" stop-color="#1F6B32"/></linearGradient>'
@@ -13372,16 +13386,19 @@ function g3StadiumSvg(){
   // المدرّجات والجمهور (صفوفٌ تقفز عند الهدف)
   s+='<path d="M0 175L1600 175L1600 372L0 372Z" fill="#101A30"/>';
   var cols=['#E5484D','#3E7BFA','#F5A524','#30A46C','#FFFFFF','#A855F7','#F97316','#38BDF8'];
+  var crowd='';
   for(var r=0;r<8;r++){
-    s+='<g class="gm-g3pk-row" style="--r:'+r+'">';
-    var y=192+r*23,sz=9+r*.7;
+    var y=192+r*23,sz=9+r*.7,dots='';
     for(var x=10+(r%2)*13;x<1600;x+=26+r*.5){
       var c=cols[(x*7+r*13)%cols.length];
-      s+='<circle cx="'+x+'" cy="'+y+'" r="'+sz+'" fill="'+c+'" opacity=".82"/><circle cx="'+x+'" cy="'+(y-sz*.9)+'" r="'+(sz*.6)+'" fill="#C68B59" opacity=".7"/>';
+      dots+='<circle cx="'+x+'" cy="'+y+'" r="'+sz+'" fill="'+c+'" opacity=".82"/><circle cx="'+x+'" cy="'+(y-sz*.9)+'" r="'+(sz*.6)+'" fill="#C68B59" opacity=".7"/>';
     }
-    s+='</g>';
+    if(!split){s+=dots;continue;}
+    var top=y-sz*1.5-2,h=sz*2.5+4;
+    var url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 '+top.toFixed(1)+' 1600 '+h.toFixed(1)+'" preserveAspectRatio="none">'+dots+'</svg>');
+    crowd+='<div class="gm-g3pk-row" style="--r:'+r+';top:'+(top/9).toFixed(3)+'%;height:'+(h/9).toFixed(3)+'%;background-image:url(&quot;'+url+'&quot;)"></div>';
   }
-  s+='<g class="gm-g3pk-flash"></g>';
+  if(split)s+='</svg><div class="gm-g3pk-crowd">'+crowd+'</div>'+SV;
   // الأضواء الكاشفة
   [[130,70],[1470,70]].forEach(function(p){
     s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="260" fill="url(#g3pkGlow)"/><rect x="'+(p[0]-8)+'" y="'+(p[1]+20)+'" width="16" height="300" fill="#2A3550"/>'
@@ -13398,7 +13415,10 @@ function g3StadiumSvg(){
   s+='<g fill="none" stroke="rgba(255,255,255,.85)" stroke-width="5"><path d="M110 640L330 470L1270 470L1490 640Z"/><path d="M330 560L420 482L1180 482L1270 560Z" stroke-width="4"/><path d="M640 640Q800 700 960 640"/></g>'
     +'<ellipse cx="800" cy="770" rx="16" ry="7" fill="#fff"/>';
   // المرمى: الشبكة الخلفية والجانبية ثم القائمان والعارضة
-  s+='<g class="gm-g3pk-net"><path d="M455 205L1145 205L1160 470L440 470Z" fill="url(#g3pkNet)"/><path d="M455 205L440 470L425 480L430 172Z" fill="url(#g3pkNet)" opacity=".7"/><path d="M1145 205L1160 470L1175 480L1170 172Z" fill="url(#g3pkNet)" opacity=".7"/><path d="M430 172L455 205L1145 205L1170 172Z" fill="url(#g3pkNet)" opacity=".6"/></g>'
+  // الشبكة طبقةٌ مستقلّة أيضاً: اهتزازها عند الهدف يحرّكه المعالج الرسومي بلا إعادة رسم الملعب
+  if(split)s+='</svg><svg class="gm-g3pk-svg gm-g3pk-netl" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">';
+  s+='<g class="'+(split?'':'gm-g3pk-net')+'"><path d="M455 205L1145 205L1160 470L440 470Z" fill="url(#g3pkNet)"/><path d="M455 205L440 470L425 480L430 172Z" fill="url(#g3pkNet)" opacity=".7"/><path d="M1145 205L1160 470L1175 480L1170 172Z" fill="url(#g3pkNet)" opacity=".7"/><path d="M430 172L455 205L1145 205L1170 172Z" fill="url(#g3pkNet)" opacity=".6"/></g>'
+    +(split?'</svg>'+SV:'')
     +'<rect x="414" y="160" width="20" height="322" rx="6" fill="url(#g3pkPost)"/><rect x="1166" y="160" width="20" height="322" rx="6" fill="url(#g3pkPost)"/><rect x="414" y="156" width="772" height="20" rx="8" fill="#F4F7FA"/>'
     +'<ellipse cx="800" cy="482" rx="400" ry="10" fill="rgba(0,0,0,.18)"/>';
   return s+'</svg>';
@@ -13472,7 +13492,7 @@ function gmRunPenalty(qs){
       targets+='<button class="gm-g3pk-t gm-g3-opt" data-i="'+i+'" style="'+pct(z[0],z[1])+';--oc:'+G3_OPT[i%4][0]+';--od:'+G3_OPT[i%4][1]+'">'+g3OptIcon(i)+'<span>'+escHtml(c)+'</span></button>';
     });
     body.innerHTML='<div class="gm-g3 gm-g3pk">'+g3QCard(Q.q,qi,qs.length,g3TeamChip('يسدّد الفريق'))
-      +'<div class="gm-g3pk-scene" id="gm-g3pk-scene">'+g3StadiumSvg()
+      +'<div class="gm-g3pk-scene" id="gm-g3pk-scene">'+g3StadiumSvg(true)
       +'<div class="gm-g3pk-keeper" id="gm-g3pk-k" style="'+pct(KEEP.x,KEEP.y)+'">'+g3KeeperSvg(gender(qi+1))+'</div>'
       +targets
       +'<div class="gm-g3pk-bshadow" id="gm-g3pk-bs" style="'+pct(800,782)+'"></div>'
