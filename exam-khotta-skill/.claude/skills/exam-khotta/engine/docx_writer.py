@@ -385,6 +385,12 @@ class DocxExam:
             path = it['fig'] if os.path.isabs(it['fig']) else os.path.join(base, it['fig'])
             pp = self.para(d, 'center', 2, 2)
             pp.add_run().add_picture(path, width=Mm(min(W - 6, 1.7 * it.get('fig_width', 45))))
+        if it.get('graph') and getattr(self, 'graph_img', None):   # شبكة الإحداثيات صورةً بمقاسها الحقيقي
+            gi = self.graph_img(self.graph_svg(it))
+            if gi:
+                pp = self.para(d, 'center', 2, 2)
+                sc = min(1.0, Mm(W - 6).pt / gi[1])
+                pp.add_run().add_picture(gi[0], width=Pt(gi[1] * sc), height=Pt(gi[2] * sc))
         if t == 'mcq':
             ch = it['choices']
             cols = it.get('choice_cols', 4 if max(len(plain(c)) for c in ch) < 14 else 2)
@@ -480,6 +486,12 @@ class DocxExam:
                     else:
                         v = str(field_value(spec, it, f, exam))
                     self.cell(c, v or ' ', size=10.5, align='right' if f in ('objective', 'answer', 'guidance') else 'center')
+                    if f == 'answer' and it.get('graph_answer') and getattr(self, 'graph_img', None):
+                        gi = self.graph_img(self.graph_svg(it, True))
+                        if gi:
+                            pp = self.para(c, 'center', 2, 2)
+                            sc = min(1.0, c.width.pt / gi[1] * 0.95) if c.width else 1.0
+                            pp.add_run().add_picture(gi[0], width=Pt(gi[1] * sc), height=Pt(gi[2] * sc))
             last = tb.rows[-1].cells
             if 'marks' in fl:
                 mi = fl.index('marks')

@@ -9,6 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import notation
+import graph
 from exam_lib import (plain, ar, marks_word, load_json, find_config, load_spec, validate, grade_band,
                       LETTERS, TYPE_NAMES, tool_cfg, fields, key_columns, field_value, grid_model,
                       summary_model, KEY_WIDTHS, item_labels)
@@ -41,6 +42,8 @@ def item_body(it, dg, base, letters=True, boxed=True):
     body = [f'<div class="stem">{h(it["stem"], dg)}</div>']
     if it.get('fig'):
         body.append(img_tag(it['fig'], base, it.get('fig_width', 45)))
+    if it.get('graph'):   # شبكة إحداثيات مرسومة (graph.py)
+        body.append(f'<div class="fig graph">{graph.svg(it["graph"], dg)}</div>')
     if t == 'mcq':
         cols = it.get('choice_cols', 4 if max(len(plain(c)) for c in it['choices']) < 14 else 2)
         rows = [it['choices'][i:i + cols] for i in range(0, len(it['choices']), cols)]
@@ -133,7 +136,7 @@ table.match .mbox { width: 12mm; }
 table.grid td { height: 10mm; }
 .ords { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
 .ord { border: 1.2px solid #333; border-radius: 6px; padding: 1px 12px; }
-.fig { text-align: center; margin: 4px 0; } .fig img { max-height: 70mm; object-fit: contain; }
+.fig { text-align: center; margin: 4px 0; } .fig.graph svg { display: inline-block; } .fig img { max-height: 70mm; object-fit: contain; }
 .end { text-align: center; font-weight: 700; margin-top: 10px; }
 .pt { text-align: center; font-weight: 700; margin-bottom: 4px; }
 .psrc { text-align: left; font-size: .85em; margin-top: 4px; }
@@ -349,7 +352,15 @@ def answer_html(it, dg):
         parts.append(h(it['answer'], dg))
     if it.get('steps'):
         parts.append('<br>'.join(h(s, dg) for s in it['steps']))
+    if it.get('graph_answer'):   # الإجابة مرسومة بالأحمر على شبكة السؤال، بحجم أصغر
+        parts.append(f'<div class="fig graph">{graph.svg(key_grid(it), dg, it["graph_answer"])}</div>')
     return '<br>'.join(parts)
+
+
+def key_grid(it):
+    g = dict(it.get('graph') or {})
+    g['unit'] = min(float(g.get('unit', 6)), 3.6)
+    return g
 
 
 def key_cell(exam, spec, it, f, k, dg):
@@ -503,13 +514,50 @@ def make_snipper(exam, dg, workdir):
     return snip
 
 
+def graph_images(exam, dg, workdir):
+    """يرسم كل شبكة إحداثيات (السؤال، والإجابة في الدليل) صورة PNG لـ Word: SVG ← (المسار، العرض pt، الارتفاع pt)."""
+    import hashlib
+    svgs = []
+    for items in exam['forms'].values():
+        for it in items:
+            if it.get('graph'):
+                svgs.append(graph.svg(it['graph'], dg))
+            if it.get('graph_answer'):
+                svgs.append(graph.svg(key_grid(it), dg, it['graph_answer']))
+    if not svgs:
+        return {}
+    os.makedirs(workdir, exist_ok=True)
+    items = [{'id': hashlib.md5(v.encode()).hexdigest()[:12], 'html': v} for v in dict.fromkeys(svgs)]
+    for i in items:
+        i['out'] = os.path.join(workdir, 'g_' + i['id'] + '.png')
+    jobs = os.path.join(workdir, 'graphs.json')
+    json.dump({'css': fonts_css() + 'svg{display:block}', 'items': items}, open(jobs, 'w', encoding='utf-8'), ensure_ascii=False)
+    env = dict(os.environ)
+    if not env.get('CHROMIUM_PATH') and os.path.exists('/opt/pw-browsers/chromium'):
+        env['CHROMIUM_PATH'] = '/opt/pw-browsers/chromium'
+    r = subprocess.run(['node', os.path.join(HERE, 'snips.mjs'), jobs], capture_output=True, text=True, env=env)
+    if r.returncode != 0:
+        print('⚠ تعذّر رسم شبكات الإحداثيات صوراً لـ Word:', (r.stderr or '')[-200:])
+        return {}
+    from PIL import Image
+    out = {}
+    for i in items:
+        im = Image.open(i['out'])
+        out[i['id']] = (i['out'], im.width / 5 * 0.75, im.height / 5 * 0.75)
+    return out
+
+
 def docx_build(exam, cfg, spec, dg, base, out_base):
     from docx_writer import DocxExam
     snip = make_snipper(exam, dg, out_base + '_صور')
+    gimgs = graph_images(exam, dg, out_base + '_صور')
     default_font = 'Traditional Arabic' if BODY_FONT == 'amiri' else 'Arial'
     W = DocxExam(exam.get('docx_font') or spec.get('docx_font') or cfg.get('docx_font', default_font), dg, snip,
                  cfg.get('quran_font', 'Traditional Arabic'))
     W.letters = CHOICE_LETTERS
+    import hashlib
+    W.graph_img = lambda svg_: gimgs.get(hashlib.md5(svg_.encode()).hexdigest()[:12])
+    W.graph_svg = lambda it, ans=False: graph.svg(key_grid(it), dg, it['graph_answer']) if ans else graph.svg(it['graph'], dg)
     files = []
     for form, items in exam['forms'].items():
         if paper_style(cfg, exam) == 'table':
@@ -605,6 +653,16 @@ def main():
     BODY_FONT = exam.get('font') or cfg.get('font') or ('arial' if sf == 'readex' and paper_style(cfg, exam) == 'table' else sf)
     log = load_json(a.log) if a.log and os.path.exists(a.log) else []
     errs, warns = validate(exam, spec, log, dg)
+    for form, items in exam['forms'].items():   # شبكات الإحداثيات: النقاط والأشكال داخل المدى
+        for k, it in enumerate([i for i in items if i.get('type') != 'passage'], 1):
+            g, ga = it.get('graph'), it.get('graph_answer')
+            if g:
+                errs += [f'النموذج ({form}) المفردة {ar(k)}: الشبكة: {e}' for e in graph.check(g)]
+            if g and ga:
+                rng = {'x': g.get('x', [-5, 5]), 'y': g.get('y', [-5, 5])}
+                errs += [f'النموذج ({form}) المفردة {ar(k)}: الإجابة المرسومة: {e}' for e in graph.check({**ga, **rng})]
+            if it.get('graph_answer') and not it.get('graph'):
+                errs.append(f'النموذج ({form}) المفردة {ar(k)}: graph_answer يحتاج graph (الشبكة التي يرسم عليها الطالب)')
     if not CHOICE_LETTERS:   # البدائل بلا حروف: يطلب السؤال من الطالب أن يحوّط الإجابة
         for form, items in exam['forms'].items():
             for lab, it in zip(item_labels([i for i in items if i.get('type') != 'passage']), [i for i in items if i.get('type') != 'passage']):
