@@ -63,8 +63,8 @@ Deno.serve(async (req) => {
     const grade = String(b.grade || "");
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
-    const structure = ["pairs", "quiz", "items", "groups", "sequence", "blank", "tf", "sort"].includes(b.structure) ? b.structure : "quiz";
-    const count = Math.max(3, Math.min(15, parseInt(b.count) || 6));
+    const structure = ["pairs", "quiz", "items", "groups", "sequence", "blank", "tf", "sort", "words", "spell"].includes(b.structure) ? b.structure : "quiz";
+    const count = Math.max(3, Math.min(30, parseInt(b.count) || 6));   // ٣٠ سؤالاً فعلياً (كان السقف ١٥ فيُقصّ الطلب صامتاً)
     const nOut = structure === "sequence" ? Math.max(3, Math.min(6, Math.round(count / 2))) : count;
     // مستوى الأسئلة: كان يُرسَل من الواجهة (cycle1 وindex) ويُتجاهَل هنا صامتاً،
     // فيخرج المحتوى بمستوى واحد مهما اختارت المعلّمة. يُقرأ الآن ويُحقن في المُوجّه.
@@ -95,9 +95,13 @@ Deno.serve(async (req) => {
       sequence: '{"items":[{"t":"عنوان الجولة: رتّب …","s":["الخطوة الأولى","الخطوة الثانية","الخطوة الثالثة","الخطوة الرابعة"]}]}',
       blank: '{"items":[{"s":"جملة فيها ___ مكان الكلمة الناقصة","a":"الكلمة الصحيحة","c":["الكلمة الصحيحة","بديل خاطئ","بديل خاطئ"]}]}',
       tf: '{"items":[{"s":"عبارة قصيرة واضحة","t":true}]}',
+      words: '{"items":[{"w":"كلمة بلا تشكيل","h":"تلميح قصير أو جملة تحتوي الكلمة"}]}',
+      spell: '{"items":[{"w":"الكلمة بإملائها الصحيح","c":["الإملاء الصحيح","خطأ إملائي شائع","خطأ إملائي شائع","خطأ إملائي شائع"],"a":0,"s":"جملة قصيرة تحتوي الكلمة"}]}',
       sort: '{"groupNames":["المجموعة ١","المجموعة ٢","المجموعة ٣"],"items":[{"t":"عنصر قصير","g":0}]}',
     };
     const structureNotes: Record<string, string> = {
+      words: "بناء الكلمات (مهارة كتابة): كلمات من مفردات الدرس يبنيها الطالب حرفاً حرفاً. كل كلمة (w) من ٣ إلى ٧ حروف، بلا تشكيل ولا مسافات ولا أل التعريف إلا إن كانت مقصودة (مثل اللام الشمسية/القمرية)، مكتوبة إملائياً بدقّة تامة (التاء المربوطة، الهمزات، الألف الممدودة والمقصورة). وفي h تلميحٌ قصير يدلّ على الكلمة (معناها أو جملة تحتويها مكانها ___) دون كتابة الكلمة نفسها. تدرّج من الأقصر إلى الأطول.",
+      spell: "الإملاء (اختر الكتابة الصحيحة): كلمات من الدرس (w) بإملاءٍ صحيح، وفي c أربع كتابات للكلمة نفسها: الصحيحة وثلاثة أخطاء إملائية شائعة عند أطفال هذا العمر تحديداً (تاء مربوطة/مفتوحة/هاء، همزة الوصل والقطع وموضع الهمزة، اللام الشمسية تُكتب ولا تُنطق، المدّ: إسقاط أو زيادة حرف مدّ، التنوين يُكتب نوناً، الألف المقصورة والياء، الحروف المتقاربة صوتاً: ث/س، ذ/ز، ض/ظ، ت/ط). الأخطاء كلمات حقيقية الشكل لا عشوائية، وa موضع الصحيحة. وفي s جملة قصيرة تحتوي الكلمة الصحيحة.",
       pairs: "أزواج مطابقة: كل زوج مصطلح/مفهوم من الدرس ومعناه. اجعل النصين قصيرين (كلمة إلى ٦ كلمات) ليظهرا على بطاقات لعب صغيرة.",
       quiz: "أسئلة اختيار من متعدد بأربعة خيارات، حقل a هو موضع الإجابة الصحيحة (٠-٣). أسئلة قصيرة مباشرة تناسب مسابقة سريعة موقوتة على شاشة الصف.",
       items: "قائمة أسئلة/مهام قصيرة جداً (سطر واحد) تُكتب على قطاعات عجلة عشوائية أو داخل صناديق مغلقة — يُسأل بها الطالب شفهياً.",
@@ -143,7 +147,8 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.5,
-          max_tokens: 2000,
+          // الميزانية تنمو بعدد العناصر: ٢٠٠٠ ثابتة كانت تقطع الناتج عند ~١٥ عنصراً فيخرج JSON مبتوراً
+          max_tokens: Math.min(14000, 1200 + nOut * 420),
         }),
       }, { st, task: "game" });
     let grounded = images.length > 0;
@@ -169,6 +174,19 @@ Deno.serve(async (req) => {
     const _arr = requireArray(_p.value, "items");
     if (!_arr.ok) return refund({ error: "bad_output", detail: _arr.reason }, 502);
     await logAiCost(admin, user.id, "generate-game-content", "text", model, or?.usage);
+    // النموذج يضع الإجابة الصحيحة غالباً في الخيار الأول، فلاحظ الطلاب النمط:
+    // نخلط الخيارات هنا ونُحدّث موضع الإجابة (a) بعد الخلط.
+    const _shuf = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    if (structure === "quiz" || structure === "spell") {
+      for (const it of _arr.items as { c?: unknown[]; a?: number }[]) {
+        if (!Array.isArray(it?.c) || it.c.length < 2) continue;
+        const ai = Math.min(Math.max(0, Number(it.a) || 0), it.c.length - 1);
+        const ord = _shuf(it.c.map((_, i) => i));
+        it.c = ord.map((i) => it.c![i]); it.a = ord.indexOf(ai);
+      }
+    } else if (structure === "blank") {
+      for (const it of _arr.items as { c?: unknown[] }[]) if (Array.isArray(it?.c)) _shuf(it.c);
+    }
     return json({ items: _arr.items, groupNames: _p.value.groupNames || null, structure, grounded, model, usage: or?.usage || null });
   } catch (e) {
     // لا استرداد هنا: قد يقع الخطأ قبل تعريف refund أصلاً (وقبل خصم الحصّة)

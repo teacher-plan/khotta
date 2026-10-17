@@ -1,5 +1,5 @@
 // ══ Service Worker - خطتي الفصلية ══
-const CACHE_NAME = 'khotta-e5ea9f3'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
+const CACHE_NAME = 'khotta-dc531fa'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
 self.addEventListener('install', e => {
   // تجهيز الصفحة الرئيسية في الكاش فور التثبيت — حتى أول فتحة بعد التحديث تكون فورية
@@ -41,8 +41,7 @@ self.addEventListener('activate', e => {
 });
 
 // ═══ استراتيجية التخزين المؤقت (فتح فوري + تحديث بالخلفية) ═══
-// HTML/التنقّل: الكاش فوراً (لا شاشة بيضاء أبداً) + جلب النسخة الجديدة بالخلفية
-//   للفتحة التالية. سلامة التحديثات مضمونة: كل نشر يرقّي إصدار الكاش تلقائياً
+// HTML/التنقّل: الشبكة أولاً بمهلة ٣٫٥ ثانية، ثم الكاش (لا شاشة بيضاء أبداً). سلامة التحديثات مضمونة: كل نشر يرقّي إصدار الكاش تلقائياً
 //   (GitHub Actions) فيتجدد كل شيء خلال فتحتين على الأكثر.
 // الملفات الثابتة (أيقونات/manifest): الكاش أولاً مع تحديث بالخلفية.
 // الطلبات الخارجية (Supabase, Google Fonts): لا تُعترض إطلاقاً → بيانات حيّة دائماً.
@@ -89,13 +88,18 @@ self.addEventListener('fetch', e => {
       const isRoot = url.pathname === '/' || url.pathname === '/index.html';
       const cached = await validCached(req)
         || (isRoot ? (await validCached('/index.html') || await validCached('/')) : null);
-      // تحديث بالخلفية دائماً (لا ننتظره)
-      const refresh = fetch(req).then(fresh => {
+      // الشبكة أولاً بمهلةٍ قصيرة: كانت الصفحة تُعرض من الكاش دائماً والنسخة الجديدة
+      // تُجلب للفتحة التالية، فبقيت معلّماتٌ على نسخةٍ قديمة أياماً بعد النشر.
+      // الآن: نسخة الخادم إن وصلت خلال ٣٫٥ ثانية (no-cache يتجاوز كاش HTTP)،
+      // وإلا الكاش فوراً — فالفصل بلا إنترنت أو بشبكةٍ بطيئة لا يرى شاشةً بيضاء.
+      const refresh = fetch(req, { cache: 'no-cache' }).then(fresh => {
         cacheFullHtml(req, fresh);
         return fresh;
-      }).catch(() => cached);
-      if (cached) return cached;       // ⚡ فتح فوري من كاش سليم مؤكد
-      return refresh;                   // لا كاش سليم؟ من الشبكة
+      });
+      if (!cached) return refresh.catch(() => Response.error());
+      const timeout = new Promise(r => setTimeout(() => r(null), 3500));
+      const fresh = await Promise.race([refresh.catch(() => null), timeout]);
+      return (fresh && fresh.ok) ? fresh : cached;
     })());
     return;
   }
