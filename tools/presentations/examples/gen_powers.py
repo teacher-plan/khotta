@@ -12,7 +12,21 @@ def P(b, e=None):  # أساس بأسٍّ
 X = '<span class="x">×</span>'
 EQ = '<span class="eq">=</span>'
 PL = '<span class="x">+</span>'
-def M(*parts, cls=''): return f'<span class="m {cls}">' + ' '.join(parts) + '</span>'
+def M(*parts, cls=''):
+    if globals().get('NUM_CHIPS'):   # قائمة أعداد: كل عدد في مربّعه بلا فاصلة «،» (طلب الأستاذ عيسى للوحدة الثالثة)
+        groups, cur = [], []
+        for p in parts:
+            bits = re.split(r'\s*،\s*', p) if '<' not in p else [p]
+            for k, b in enumerate(bits):
+                if k:
+                    groups.append(cur); cur = []
+                if b.strip():
+                    cur.append(b)
+        groups.append(cur)
+        groups = [g for g in groups if g]
+        if len(groups) > 1:
+            return f'<span class="m nlist {cls}">' + ''.join('<span class="nb">' + ' '.join(g) + '</span>' for g in groups) + '</span>'
+    return f'<span class="m {cls}">' + ' '.join(parts) + '</span>'
 def R(v, k=2):  # جذرٌ مرسوم من اليمين لليسار: ذيلٌ صغير يميناً ثم نزولٌ فصعودٌ متّصل بالخط العلوي فوق العدد
     v=str(v)
     inner = N(v[1:]) if v.startswith('−') else a(v)
@@ -39,6 +53,12 @@ exec(open(os.path.join(HERE,SLIDES),encoding='utf-8').read())
 resolve_pages(S)
 resolve_launch(S)   # شرائح الانطلاق إلى تمارين الكتابين (jump.js)
 
+NUM_CSS = """
+.m.nlist{flex-wrap:wrap;white-space:normal;justify-content:center;gap:.35em .45em}
+.nb{display:inline-flex;align-items:baseline;gap:.2em;background:#fff;border:3px solid #9DB3D1;border-radius:.35em;padding:0 .35em;white-space:nowrap}
+.dl{display:inline}
+.dsep{display:inline-block;width:0;height:.9em;border-right:3px solid #B8C6DB;margin:0 .55em;vertical-align:middle}
+"""
 EXTRA_CSS = '''
 .c-i{color:#2563EB}.c-we{color:#16A34A}.c-u{color:#EA580C}.c-b{color:var(--base)}.c-exp{color:var(--exp)}
 .mode{display:flex;align-items:center;gap:.6em;padding:.45em 1.2em;border-radius:99px;font-size:clamp(16px,2.4vh,26px);border:3px solid;background:#fff}
@@ -117,7 +137,7 @@ base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{TITLE}</title>
-<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}</style></head><body>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}{NUM_CSS if globals().get('NUM_CHIPS') else ''}{globals().get('EXTRA_CSS_LAST','')}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
@@ -137,6 +157,10 @@ def _unz(css):
     return css + '.slide{--zz:calc(var(--ar,1) * var(--fit,1) * var(--ui,1))}'
 html = re.sub(r'<style>(.*?)</style>', lambda m: '<style>' + _unz(m[1]) + '</style>', html, count=1, flags=re.S)
 # علامتا < و > كما في كتاب الطالب: تُقرأ من اليمين ولا تنعكس («٧ > ٥» = سبعة أكبر من خمسة)؛ المتصفّح يعكسهما في النص العربي، فنحيطهما بعلامتي LRM
+if globals().get('NUM_CHIPS'):   # «،» بين عددين في نصّ الشريحة ← فاصلٌ رأسي خفيف (لا يشتبه بالفاصلة العشرية «٫»)
+    _sep = re.compile(r'(?<=[٠-٩])((?:\s*[^\s،<>٠-٩]{1,4})?)\s*،\s*(?=[٠-٩−])')
+    html = re.sub(r'(<script\b.*?</script>|<style\b.*?</style>|<[^>]*>)|([^<]+)',
+                  lambda m: m[1] or (('<span class="dl">' + _sep.sub(lambda k: k[1] + '<span class="dsep"></span>', m[2]) + '</span>') if _sep.search(m[2]) else m[2]), html, flags=re.S)
 html = re.sub(r'(<script\b.*?</script>)|&(lt|gt);', lambda m: m[1] or f'&#x200e;&{m[2]};&#x200e;', html, flags=re.S)
 open(os.path.join(HERE,OUT), 'w', encoding='utf-8').write(html)
 print(len(S), 'slides')

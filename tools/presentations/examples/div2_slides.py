@@ -3,6 +3,9 @@
 # النشاط: ورقة المصادر ٣-٦ «الصديق والعالِم»؛ التمرين ٣: ٦٫٢٤٢ أو ٦٫٢٤٢٥ قبل التقريب)،
 # كتاب الطالب ص٦٨–٦٩ (مثال ٣-٦)، وإجابات الدليل ص٧٩ (كتاب الطالب) وص٨٣ (كتاب النشاط ص٥٠–٥١).
 # python3.12 gen_powers.py div2_slides.py قسمة_الأعداد_العشرية_٢_عرض_تفاعلي.html "قسمة الأعداد العشرية والكسور العشرية (٢) — الصف السابع"
+# الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
+NUM_CHIPS = True
+EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .9)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 from decimal import Decimal as _D, ROUND_HALF_UP as _HU

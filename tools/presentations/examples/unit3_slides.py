@@ -3,6 +3,9 @@
 # (إجابات دليل المعلم ص٨٠، مع تصحيح ٢ (ج) و ٨ (أ) و ١٠ (ب)).
 # python3.12 gen_powers.py unit3_slides.py مراجعة_الوحدة_الثالثة_عرض_تفاعلي.html "مراجعة الوحدة الثالثة — الصف السابع"
 # لكل جزء: بطاقة القاعدة ← مثالٌ محلول بالرسم ← سؤالٌ سريع (أنتم).
+# الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
+NUM_CHIPS = True
+EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .9)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 DV = '<span class="x">÷</span>'

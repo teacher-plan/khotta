@@ -3,6 +3,9 @@
 # الخطأ الشائع: إعادة المحاولة الأولى بدل التقدير أو العكس؛ النشاط: بطاقات ورقة المصادر ٣-٨)،
 # كتاب الطالب ص٧٤–٧٥ (مثال ٣-٨)، وإجابات الدليل ص٧٩ (كتاب الطالب) وص٨٤ (كتاب النشاط ص٥٥–٥٧).
 # python3.12 gen_powers.py est_slides.py التقدير_والتقريب_عرض_تفاعلي.html "التقدير والتقريب — الصف السابع"
+# الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
+NUM_CHIPS = True
+EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .9)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 

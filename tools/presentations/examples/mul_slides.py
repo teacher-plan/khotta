@@ -3,6 +3,9 @@
 # الخطأ الشائع: ٠٫٢ × ٠٫٣ = ٠٫٦؛ النشاط: شبكة ٤ × ٤ وحجرا نرد؛ التمرين ٥: ٤٫٠ = ٤)،
 # كتاب الطالب ص٦٤–٦٥ (مثال ٣-٤)، وإجابات الدليل ص٧٨ (كتاب الطالب) وص٨٢ (كتاب النشاط ص٤٧).
 # python3.12 gen_powers.py mul_slides.py ضرب_الأعداد_العشرية_عرض_تفاعلي.html "ضرب الأعداد العشرية والكسور العشرية — الصف السابع"
+# الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
+NUM_CHIPS = True
+EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .9)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())
 

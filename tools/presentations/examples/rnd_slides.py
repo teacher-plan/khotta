@@ -2,6 +2,9 @@
 # المراجع: دليل المعلم ص٦٥–٦٦ (القيمة المكانية، الرقم على يمين المنزلة، الخطأ الشائع: فقد الأصفار أو إضافتها؛ النشاط: تقدير أطوالٍ بالمساطر)،
 # كتاب الطالب ص٦٠–٦١ (مثال ٣-٢)، وإجابات الدليل ص٧٧ (كتاب الطالب) وص٨١–٨٢ (كتاب النشاط ص٤٣–٤٤).
 # python3.12 gen_powers.py rnd_slides.py التقريب_عرض_تفاعلي.html "التقريب — الصف السابع"
+# الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
+NUM_CHIPS = True
+EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .9)}'
 
 def STP(lab, expr, cls=''): return st(f'<div class="stp {cls}"><span class="lab">{lab}</span>{expr}</div>')
 def STEPS(*rows): return '<div class="stps">' + ''.join(rows) + '</div>'
