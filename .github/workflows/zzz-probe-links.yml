@@ -1,0 +1,19 @@
+name: zzz probe links
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+          for u in \
+            "https://kanz3.com/2025/09/22/%D9%83%D8%AA%D8%A7%D8%A8-%D9%85%D8%A7%D8%AF%D8%A9-%D8%A7%D9%84%D8%AA%D8%B1%D8%A8%D9%8A%D8%A9-%D8%A7%D9%84%D8%A7%D8%B3%D9%84%D8%A7%D9%85%D9%8A%D8%A9-%D8%AF%D9%8A%D9%86%D9%8A-%D9%85%D9%86%D9%87%D8%AC/" \
+            "https://kanz3.com/2025/09/22/%D8%AF%D9%84%D9%8A%D9%84-%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85-%D9%84%D9%85%D8%A7%D8%AF%D8%A9-%D8%A7%D9%84%D8%AA%D8%B1%D8%A8%D9%8A%D8%A9-%D8%A7%D9%84%D8%A7%D8%B3%D9%84%D8%A7%D9%85%D9%8A%D8%A9-%D8%AF-6/" \
+            "https://oman-school.com/oman-g9-curriculum/" \
+            "https://afidni.com/%D8%AF%D9%84%D9%8A%D9%84-%D9%85%D8%B9%D9%84%D9%85-%D8%AA%D8%B1%D8%A8%D9%8A%D8%A9-%D8%A5%D8%B3%D9%84%D8%A7%D9%85%D9%8A%D8%A9-2025-2026" \
+            "https://afidni.com/%d8%af%d9%84%d9%8a%d9%84-%d9%85%d8%b9%d9%84%d9%85-%d8%a7%d9%84%d8%aa%d8%b1%d8%a8%d9%8a%d8%a9-%d8%a7%d9%84%d8%a5%d8%b3%d9%84%d8%a7%d9%85%d9%8a%d8%a9-%d8%a7%d9%84%d8%b5%d9%81-%d8%a7%d9%84%d8%aa%d8%a7/" ; do
+            echo "=== $u"
+            curl -sL -A "$UA" "$u" -o p.html -w "code=%{http_code} size=%{size_download}\n"
+            grep -oE '(https?:)?//[^"'"'"' <>]*(drive\.google\.com|docs\.google\.com|\.pdf)[^"'"'"' <>]*' p.html | sort -u | head -30
+            grep -oE '(https?://[^"'"'"' <>]*(oman-school|afidni|afedne)[^"'"'"' <>]*(islam|إسلام|%d8%a5%d8%b3%d9%84%d8%a7%d9%85|%D8%A5%D8%B3%D9%84%D8%A7%D9%85|%d8%a7%d8%b3%d9%84%d8%a7%d9%85)[^"'"'"' <>]*)' p.html | sort -u | head -20
+          done
