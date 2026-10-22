@@ -20,7 +20,12 @@
   var bA=L.ab>=0?btn('ja','📗 تمارين كتاب النشاط','الانتقال إلى تمارين كتاب النشاط'):null;
   var bW=btn('jw','🪟 نافذة المعلّم','الملاحظات في نافذةٍ منفصلة تُسحب إلى شاشة الحاسوب (W)');
   var bT=btn('jt','🧑‍🏫 الملاحظات على الشاشة','إظهار ملاحظة الشريحة على الشاشة (N)');
-  // تكبير العرض وتصغيره صار في بار الحصة الحية بالمنصّة (index.html: 🔍− ٪ 🔍+ بجانب القرعة)، لا داخل العرض
+  // تكبير المحتوى وتصغيره من بار الحصة الحية بالمنصّة (🔍− ٪ 🔍+ بجانب القرعة): ترسل المنصّة {kh:'vz',z} إلى إطار العرض
+  // (ولو داخل معاينة Drive)، فيُضرب كل محتوى الشريحة في z — الخط والمربّعات والمسافات معاً — وتبقى الشريحة بخلفيتها تملأ الشاشة.
+  // والردّ vz-ack يُعلم المنصّة أن العرض تكفّل بالتكبير فلا تصغّر الإطار نفسه.
+  addEventListener('message',function(e){var d=e.data;if(!d||d.kh!=='vz')return;
+    var z=Math.min(2,Math.max(.4,+d.z||1));document.documentElement.style.setProperty('--vz',z);
+    if(window.__fitAll)window.__fitAll();try{if(e.source)e.source.postMessage({kh:'vz-ack',z:z},'*');}catch(_){}});
   bar.insertBefore(menu,bar.firstChild);document.body.appendChild(bar);
   bM.onclick=function(e){e.stopPropagation();menu.hidden=!menu.hidden;bM.classList.toggle('on',!menu.hidden);};
   document.addEventListener('click',function(){menu.hidden=true;bM.classList.remove('on');});
