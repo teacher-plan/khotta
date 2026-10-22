@@ -1,0 +1,17 @@
+name: zzz probe pdfs
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          pip install -q gdown; sudo apt-get -qq install -y poppler-utils >/dev/null
+          mkdir out
+          for id in 1fbEZDE2ygKCqL_4KP7h4ZxoFdjmxyM5- 1xx5hMKRFPTIV3hCu6QngQ_uOeNtgStk4 1WzWdaaesNoGgho6OVfyl-FWa56KF_8Y5; do
+            echo "=== $id"; gdown -q "$id" -O $id.pdf || { echo FAIL; continue; }
+            pdfinfo $id.pdf | grep -E "Title|Pages|Page size|File size"
+            pdftoppm -r 40 -jpeg -f 1 -l 8 $id.pdf out/$id
+            pdftotext -f 1 -l 12 $id.pdf - | grep -E "طبعة|الطبعة|٢٠٢|202|الفصل|الصف" | head -8
+          done
+      - uses: actions/upload-artifact@v4
+        with: {name: pages, path: out}
