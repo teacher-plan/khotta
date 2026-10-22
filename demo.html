@@ -4949,7 +4949,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='827c2f4';
+const KH_BUILD='43f86a3';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10347,19 +10347,34 @@ function lbViewZoom(d){
   try{localStorage.setItem('lbViewZoom',_lbVZ);}catch(e){}
   lbViewZoomApply();
 }
+// العرض التفاعلي يتكفّل بالتكبير بنفسه: نرسل إليه النسبة (وإلى الإطارات المتداخلة، كمعاينة Drive) فيصغر محتواه
+// وتبقى شريحته تملأ المساحة؛ فإن ردّ (vz-ack) لم نُصغّر الإطار. وغير العروض (PDF ونحوه) يُصغَّر إطارها كاملاً.
+var _lbVZAware=false,_lbVZTimer=null;
+function _lbVZSend(win,z,d){try{win.postMessage({kh:'vz',z:z},'*');}catch(e){}if(d>3)return;let n=0;try{n=win.frames.length;}catch(e){}for(let i=0;i<n;i++){try{_lbVZSend(win.frames[i],z,d+1);}catch(e){}}}
+function _lbVZPush(fr){
+  clearInterval(_lbVZTimer);if(!fr)return;let k=0;
+  const go=()=>{if(!fr.isConnected||k++>16){clearInterval(_lbVZTimer);return;}try{_lbVZSend(fr.contentWindow,_lbVZ,0);}catch(e){}};
+  go();_lbVZTimer=setInterval(go,600);   // العرض داخل معاينة Drive يُحمَّل بعد الإطار الخارجي: نعيد الإرسال بضع ثوانٍ
+}
+window.addEventListener('message',e=>{const d=e.data;if(!d||d.kh!=='vz-ack')return;
+  const fr=document.querySelector('#lv-vbody iframe');if(!fr)return;
+  if(!_lbVZAware){_lbVZAware=true;lbViewZoomApply();}if(+d.z===_lbVZ)clearInterval(_lbVZTimer);});
 function lbViewZoomApply(){
   const body=document.getElementById('lv-vbody'),grp=document.getElementById('lb-zoom'),rail=document.getElementById('lv-pages');
   const on=document.getElementById('live-view')?.classList.contains('on');
   const book=rail&&!rail.classList.contains('hidden')&&!rail.classList.contains('htmlmode');
   let w=body&&body.querySelector(':scope>.lv-zw'),el=w?w.firstElementChild:body&&body.querySelector(':scope>iframe,:scope>.lv-html-wrap');
   if(grp)grp.classList.toggle('hidden',!(on&&!book&&el));
-  if(body)body.classList.toggle('vzin',!!(on&&!book&&el&&_lbVZ>1));
-  if(!on||book||!el)return;
-  if(!w){w=document.createElement('div');w.className='lv-zw';el.replaceWith(w);w.appendChild(el);}
+  if(body)body.classList.toggle('vzin',!!(on&&!book&&el&&_lbVZ>1&&!_lbVZAware));
+  if(!on||book||!el){_lbVZAware=false;clearInterval(_lbVZTimer);return;}
+  if(!w){w=document.createElement('div');w.className='lv-zw';el.replaceWith(w);w.appendChild(el);_lbVZAware=false;
+    const fr=el.tagName==='IFRAME'?el:el.querySelector('iframe');if(fr)fr.addEventListener('load',()=>_lbVZPush(fr));}
   const cs=getComputedStyle(body),W=body.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),H=body.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
-  el.style.width=W+'px';el.style.height=H+'px';el.style.transform=_lbVZ===1?'':'scale('+_lbVZ+')';
-  w.style.width=W*_lbVZ+'px';w.style.height=H*_lbVZ+'px';
+  const z=_lbVZAware?1:_lbVZ;   // العرض المتكفّل يملأ المساحة كلها، وتصغيره داخله
+  el.style.width=W+'px';el.style.height=H+'px';el.style.transform=z===1?'':'scale('+z+')';
+  w.style.width=W*z+'px';w.style.height=H*z+'px';
   document.getElementById('lb-zoom-lbl').textContent=egToArabic(Math.round(_lbVZ*100))+'٪';
+  const fr=el.tagName==='IFRAME'?el:el.querySelector('iframe');if(fr)_lbVZPush(fr);
 }
 window.addEventListener('resize',()=>{clearTimeout(window._lbVZt);window._lbVZt=setTimeout(lbViewZoomApply,120);});
 function liveViewClose(silent){
