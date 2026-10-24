@@ -385,12 +385,12 @@ def key_html(exam, cfg, spec, dg):
     for n, (form, items) in enumerate(exam['forms'].items()):
         items = [i for i in items if i.get('type') != 'passage']
         cls = ' class="formbreak"' if n else ''
-        body += f'<h2{cls}>شبكة مفردات النموذج ({form})</h2>'
+        body += f'<h2{cls}>شبكة المفردات' + (f' — النموذج ({form})' if form else '') + '</h2>'
         heads, rows = grid_model(spec, items)
         body += ('<table class="spec"><tr>' + ''.join(f'<th>{x}</th>' for x in heads) + '</tr>'
                  + ''.join('<tr>' + ''.join(f'<td>{html.escape(x)}</td>' for x in r) + '</tr>' for r in rows) + '</table>')
         body += summary_table(spec, tool, items)
-        body += f'<h2>دليل التصحيح — النموذج ({form})</h2>'
+        body += '<h2>دليل التصحيح' + (f' — النموذج ({form})' if form else '') + '</h2>'
         th = ''.join(f'<th style="width:{KEY_WIDTHS.get(f, 9) * 100 / tw:.0f}%">{c}</th>' for c, f in cols)
         rows = ''.join('<tr>' + ''.join(f'<td class="{"c" if f not in ("objective", "answer", "guidance") else ""}">{key_cell(exam, spec, it, f, lab[1], dg)}</td>'
                                         for _, f in cols) + '</tr>' for lab, it in zip(item_labels(items), items))
