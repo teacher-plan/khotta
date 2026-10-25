@@ -4,6 +4,9 @@
 exec(open(os.path.join(HERE, 'isl_common.py'), encoding='utf-8').read())
 def VR(t, r=''):   # تلاوة: أرقام الآيات بين قوسين صغيرين ذهبيّين داخل النص
     return re.sub(r'﴿([٠-٩]+)﴾', r'<i class="an">\1</i>', AY(t, r).replace('<span class="ayah">﴿', '<span class="ayah">⁅', 1)).replace('⁅', '﴿', 1)
+TILAWA = 'https://ict.moe.gov.om/tlawti/video/9/P1/cls9_Islamic_altafsir2.mp4'   # رمز QR في كتاب الطالب ص٥٦ (qrs.ly/ofgtqr4) يحيل إليه
+def AUDIO():   # مشغّل التلاوة النموذجية (يحتاج إنترنت)؛ لا يقلب الشريحة عند الضغط عليه
+    return f'<div class="tilawa" onclick="event.stopPropagation()"><span>🔊 التلاوة النموذجية</span><audio controls preload="none" src="{TILAWA}"></audio></div>'
 def OPT4(items, opts): return SORT(items, opts, cols=1)
 
 S.append(cover('٢', 'سورة الإسراء (١٠٥ – ١١١)', 'الصف التاسع · تفسير · الوحدة الثانية', 'كتاب الطالب ص ٥٦ – ٦١'))
@@ -14,9 +17,9 @@ S.append(goals(['أتلو الآيات <b>(١٠٥–١١١)</b> من سورة ا
 S.append(section('أتلو وأتدبّر', 'كتاب الطالب ص ٥٦'))
 S.append(slide(f'''<div class="row hdr"><span class="qbadge">تهيئة 📖</span>{ref('دليل المعلم ص ٨٨')}</div><h2>قبل أن نبدأ</h2>
 {FLIPS([('كم جزءاً في القرآن الكريم؟', 'ثلاثون جزءاً'), ('ما المدّة التي تستغرقها لقراءة جزءٍ واحد؟', 'تختلف من قارئٍ لآخر'), ('هل يمكن أن نحفظ القرآن مرّةً واحدة؟', 'لا، بل شيئاً فشيئاً', 'وهكذا نزل: مفرّقاً')], 'flex:1;min-width:26vw')}''' + tn('أسئلة التهيئة من الدليل ص٨٨. الإجابات من إعداد العرض، والثالثة مدخلٌ إلى «منجّماً».')))
-S.append(slide(f'''<div class="row hdr"><span class="stage s1">١ اقرأ</span>{ref('كتاب الطالب ص ٥٦')}</div>
+S.append(slide(f'''<div class="row hdr"><span class="stage s1">١ اقرأ</span>{ref('كتاب الطالب ص ٥٦')}{AUDIO()}</div>
 <div class="ayahbox recite st">{VR('وَبِٱلْحَقِّ أَنزَلْنَـٰهُ وَبِٱلْحَقِّ نَزَلَ ۗ وَمَآ أَرْسَلْنَـٰكَ إِلَّا مُبَشِّرًا وَنَذِيرًا ﴿١٠٥﴾ وَقُرْءَانًا فَرَقْنَـٰهُ لِتَقْرَأَهُۥ عَلَى ٱلنَّاسِ عَلَىٰ مُكْثٍ وَنَزَّلْنَـٰهُ تَنزِيلًا ﴿١٠٦﴾ قُلْ ءَامِنُوا۟ بِهِۦٓ أَوْ لَا تُؤْمِنُوٓا۟ ۚ إِنَّ ٱلَّذِينَ أُوتُوا۟ ٱلْعِلْمَ مِن قَبْلِهِۦٓ إِذَا يُتْلَىٰ عَلَيْهِمْ يَخِرُّونَ لِلْأَذْقَانِ سُجَّدًا ﴿١٠٧﴾ وَيَقُولُونَ سُبْحَـٰنَ رَبِّنَآ إِن كَانَ وَعْدُ رَبِّنَا لَمَفْعُولًا ﴿١٠٨﴾')}</div>''' + tn('المخرج الأول (الدليل ص٨٨): تلاوة نموذجية بصوت المعلم أو من رمز QR في الكتاب، ثم يتلو بعض الطلبة ويصوّب لهم المعلم أو زملاؤهم (تعليم الأقران)، مع مراعاة الوقت.')))
-S.append(slide(f'''<div class="row hdr"><span class="stage s1">١ اقرأ</span>{ref('كتاب الطالب ص ٥٦')}</div>
+S.append(slide(f'''<div class="row hdr"><span class="stage s1">١ اقرأ</span>{ref('كتاب الطالب ص ٥٦')}{AUDIO()}</div>
 <div class="ayahbox recite st">{VR('وَيَخِرُّونَ لِلْأَذْقَانِ يَبْكُونَ وَيَزِيدُهُمْ خُشُوعًا ۩ ﴿١٠٩﴾ قُلِ ٱدْعُوا۟ ٱللَّهَ أَوِ ٱدْعُوا۟ ٱلرَّحْمَـٰنَ ۖ أَيًّا مَّا تَدْعُوا۟ فَلَهُ ٱلْأَسْمَآءُ ٱلْحُسْنَىٰ ۚ وَلَا تَجْهَرْ بِصَلَاتِكَ وَلَا تُخَافِتْ بِهَا وَٱبْتَغِ بَيْنَ ذَٰلِكَ سَبِيلًا ﴿١١٠﴾ وَقُلِ ٱلْحَمْدُ لِلَّهِ ٱلَّذِى لَمْ يَتَّخِذْ وَلَدًا وَلَمْ يَكُن لَّهُۥ شَرِيكٌ فِى ٱلْمُلْكِ وَلَمْ يَكُن لَّهُۥ وَلِىٌّ مِّنَ ٱلذُّلِّ ۖ وَكَبِّرْهُ تَكْبِيرًۢا ﴿١١١﴾', 'الإسراء: ١٠٥–١١١')}</div>''' + tn('الآية ١٠٩ موضع سجدة تلاوة (۩).')))
 
 # ═══════════ ٢: أتعرّف المعنى ═══════════
@@ -102,4 +105,9 @@ EXTRA_CSS_OWN += '''
 EXTRA_CSS_OWN += '''
 .slide .flip.box{font-size:clamp(20px,4vh,46px);font-weight:700;line-height:1.45}.slide .flip .ayah{font-size:1.1em;line-height:1.7}
 .recite .ayah{font-size:clamp(30px,6.2vh,72px)!important;line-height:2}
+'''
+EXTRA_CSS_OWN += '''
+.tilawa{display:flex;align-items:center;gap:.8vw;background:#F6FAF4;border:2px solid #C9DCC4;border-radius:12px;padding:.3em .8em}
+.tilawa span{font-family:var(--fh);font-weight:800;color:#0B6B4F;font-size:clamp(18px,3.4vh,38px);white-space:nowrap}
+.tilawa audio{height:clamp(32px,5vh,52px);width:min(30vw,420px)}
 '''
