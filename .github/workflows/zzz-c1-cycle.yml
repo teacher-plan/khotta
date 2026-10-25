@@ -1,0 +1,18 @@
+# مؤقّت: جعل الحساب التجريبي (khalfan.demo@khotati.com) حساباً للحلقة الأولى (allowed_emails.cycle = cycle1). يُحذف بعد التشغيل.
+name: zzz demo teacher cycle1
+on: workflow_dispatch
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: set cycle
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -euo pipefail
+          SK=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          echo "::add-mask::$SK"
+          curl -sf -X PATCH "https://$REF.supabase.co/rest/v1/allowed_emails?email=eq.khalfan.demo@khotati.com" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: return=representation" \
+            -d '{"cycle":"cycle1"}'
