@@ -5,7 +5,7 @@ import { spawn, spawnSync, execSync } from 'child_process';
 import fs from 'fs'; import path from 'path';
 const [f, audioDir, out, fpsArg, scaleArg] = process.argv.slice(2); const FPS = Number(fpsArg || 25), SCALE = Number(scaleArg || 1.5); // 1.5 ← 1920×1080
 const FF = process.env.FFMPEG || execSync(`python3 -c "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"`).toString().trim();
-const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: SCALE });
+const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: Number(process.env.VW || 1280), height: Number(process.env.VH || 720) }, deviceScaleFactor: SCALE });
 const html = fs.readFileSync(f, 'utf8');
 await p.route('http://deck.local/**', r => r.fulfill({ contentType: 'text/html', body: html }));
 await p.goto('http://deck.local/x.html'); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
