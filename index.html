@@ -8690,10 +8690,10 @@ function lessonFileRowHtml(lessonId,f){
     return parts.map(p=>`<div class="lesson-file-item" style="background:linear-gradient(90deg,rgba(109,40,217,.06),transparent)"><span>${LBL[p][0]}</span><span class="lfi-name">${LBL[p][1]} — ${escHtml((f.meta&&f.meta.lesson)||'')}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="dpPrepPartView('${lessonId}','${p}')">👁️ معاينة</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="dpPrepPartDl('${lessonId}','${p}')">⬇️ تحميل</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="dpPrepPartDel('${lessonId}','${p}')">🗑️</button></div>`).join('');
   }
   const n=(f.name||'').toLowerCase();
-  const icon=(f.type&&f.type.startsWith('image/'))?'🖼️':n.endsWith('.pptx')?'📊':n.endsWith('.pdf')?'📄':'📎';
+  const icon=f.html?'🖥️':(f.type&&f.type.startsWith('image/'))?'🖼️':n.endsWith('.pptx')?'📊':n.endsWith('.pdf')?'📄':'📎';
   const openUrl=f.previewLink||f.viewLink||'';
   const dlUrl=f.downloadLink||f.viewLink||'';
-  return`<div class="lesson-file-item"><span>${icon}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="openDriveFile('${openUrl}','${(f.name||'').replace(/'/g,"\\'")}')">👁️ معاينة</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="window.open('${dlUrl}','_blank')">⬇️ تحميل</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="deleteLessonFile('${lessonId}','${f.id}','${f.driveId||''}')">🗑️</button></div>`;
+  return`<div class="lesson-file-item"><span>${icon}</span><span class="lfi-name">${f.name}</span><span class="lfi-size">${fmtSize(f.size)}</span><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="${f.html?'openHtmlDeck':'openDriveFile'}('${openUrl}','${(f.name||'').replace(/'/g,"\\'")}')">${f.html?'▶️ تشغيل':'👁️ معاينة'}</button><button class="arc-btn" style="padding:3px 8px;font-size:10px;" onclick="window.open('${dlUrl}','_blank')">⬇️ تحميل</button><button class="arc-btn del" style="padding:3px 8px;font-size:10px;" onclick="deleteLessonFile('${lessonId}','${f.id}','${f.driveId||''}')">🗑️</button></div>`;
 }
 function refreshLessonFiles(lessonId){
   const html=(lessonFiles[lessonId]||[]).map(f=>lessonFileRowHtml(lessonId,f)).join('');
@@ -11930,7 +11930,29 @@ async function deleteCvItem(id){
 }
 
 // ══ PDF/IMG ════════════════════════════════════════════
-function closePdf(){document.getElementById('pdf-modal').classList.add('hidden');document.getElementById('pdf-frame').src='';}
+function closePdf(){document.getElementById('pdf-modal').classList.add('hidden');const fr=document.getElementById('pdf-frame');fr.removeAttribute('srcdoc');fr.removeAttribute('sandbox');fr.src='';}
+// العرض التفاعلي (ملف HTML) يُحفظ في المخزن نصّاً ويُشغَّل هنا في الإطار نفسه بـ srcdoc:
+// sandbox بلا allow-same-origin — أصلٌ معتم، فلا يصل الملف إلى جلسة المعلّم ولا تخزينه.
+async function openHtmlDeck(url,name){
+  const real=resolveLocalUrl(url);
+  if(!real){toast('❌ الملف غير متاح',true);return;}
+  uiBusy('⏳ يفتح العرض…');
+  try{
+    const r=await fetch(real);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const html=await r.text();
+    const fr=document.getElementById('pdf-frame');
+    fr.removeAttribute('src');
+    fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals');
+    fr.setAttribute('allow','autoplay; fullscreen');
+    fr.srcdoc=html;
+    document.getElementById('pdf-title').textContent=name;
+    const openLink=document.getElementById('pdf-open-new-tab');
+    if(openLink)openLink.removeAttribute('href');
+    document.getElementById('pdf-modal').classList.remove('hidden');
+  }catch(e){toast('❌ تعذّر فتح العرض',true);}
+  finally{uiBusyDone();}
+}
 async function viewImg(url){
   const real=resolveLocalUrl(url);
   if(!real){toast('❌ الصورة غير متاحة',true);return;}
@@ -17323,6 +17345,14 @@ function liveOpenExam(){
 function liveOpenFile(fi){
   const f=(lessonFiles[liveCtx.lessonId]||[])[fi];if(!f)return;
   const u=f.viewLink||f.previewLink||f.downloadLink||'';
+  if(f.html){   // العرض التفاعلي: يُجلب نصّه ويُشغَّل في إطارٍ معزول (انظر openHtmlDeck)
+    fetch(resolveLocalUrl(u)).then(r=>{if(!r.ok)throw 0;return r.text();}).then(h=>{
+      liveViewOpen(f.name,'<iframe sandbox="allow-scripts allow-popups allow-forms allow-modals" allow="autoplay; fullscreen"></iframe>',false);
+      const fr=document.querySelector('#lv-vbody iframe');
+      if(fr)fr.srcdoc=h;
+    }).catch(()=>toast('❌ تعذّر فتح العرض',true));
+    return;
+  }
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
   const embed=/drive\.google\.com\/file\/d\//.test(u)?u.replace(/\/view(\?[^#]*)?$/,'/preview'):u;
   liveViewOpen(f.name,isImg?`<img src="${escAttr(u)}" alt="${escHtml(f.name||'')}">`:`<iframe src="${escAttr(embed)}" allow="autoplay"></iframe>`,false);

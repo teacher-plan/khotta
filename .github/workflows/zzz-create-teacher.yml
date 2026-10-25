@@ -1,0 +1,61 @@
+# مؤقّت: إنشاء حساب تجريبي (أ. خلفان المصلحي — التربية الإسلامية، ٩/١ و٩/٢) وإرفاق عرض «سورة الإسراء ١٠٥–١١١» في بطاقة الدرس. يُحذف بعد التشغيل.
+name: zzz create demo teacher
+on: workflow_dispatch
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: create
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -euo pipefail
+          export SK=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          echo "::add-mask::$SK"
+          cat > /tmp/c.mjs <<'JS'
+          import fs from 'fs';
+          const U=`https://${process.env.REF}.supabase.co`, K=process.env.SK;
+          const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
+          const j=async(r)=>{const t=await r.text();if(!r.ok)throw new Error(r.status+' '+t);return t?JSON.parse(t):null;};
+          const EMAIL='khalfan.demo@khotati.com', PASS='Khalfan@2026', NAME='أ. خلفان المصلحي';
+          const SUBJ='التربية الإسلامية', SEM='الفصل الأول', G=9;
+          // ١) رفع العرض نصّاً إلى المخزن العام
+          const dest='presentations/islamic/g9/isra-105-111.html.txt';
+          const buf=fs.readFileSync('supabase/_uploads/isra-105-111.html');
+          await j(await fetch(`${U}/storage/v1/object/library-files/${dest}`,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'text/plain; charset=utf-8','x-upsert':'true'},body:buf}));
+          const pub=`${U}/storage/v1/object/public/library-files/${dest}`;
+          const chk=await fetch(pub); console.log('public fetch',chk.status,(await chk.text()).length);
+          // ٢) المستخدم
+          let uid;
+          const cr=await fetch(`${U}/auth/v1/admin/users`,{method:'POST',headers:H,body:JSON.stringify({email:EMAIL,password:PASS,email_confirm:true,user_metadata:{full_name:NAME}})});
+          if(cr.ok){uid=(await cr.json()).id;}else{
+            const list=await j(await fetch(`${U}/auth/v1/admin/users?per_page=1000`,{headers:H}));
+            uid=(list.users||[]).find(u=>u.email===EMAIL)?.id; if(!uid)throw new Error('create user: '+await cr.text());
+          }
+          console.log('uid',uid);
+          // ٣) السماح بالدخول (التطبيق الرئيسي، ١٥٠ يوماً)
+          const exp=new Date(Date.now()+150*864e5).toISOString();
+          await fetch(`${U}/rest/v1/allowed_emails?email=eq.${EMAIL}`,{method:'DELETE',headers:H});
+          await j(await fetch(`${U}/rest/v1/allowed_emails`,{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify({email:EMAIL,cycle:'main',expires_at:exp})}));
+          // ٤) الدروس كما يبنيها finishSetup في index.html
+          const rows=await j(await fetch(`${U}/rest/v1/curriculum?select=*&semester=eq.${encodeURIComponent(SEM)}&subject=eq.${encodeURIComponent(SUBJ)}&grade=eq.${G}&order=sort`,{headers:H}));
+          console.log('lessons',rows.length);
+          const sid=(a,b,c,d,e)=>{const raw=`${a}|${b}|${c}|${d}|${e}`;let h=5381;for(let i=0;i<raw.length;i++){h=((h<<5)+h+raw.charCodeAt(i))>>>0;}return 'L'+h.toString(36);};
+          const units=[],m={};
+          rows.slice().sort((a,b)=>(a.sort||0)-(b.sort||0)).forEach(r=>{if(!m[r.unit]){m[r.unit]=[];units.push({name:r.unit,lessons:m[r.unit]});}m[r.unit].push({id:sid(SEM,SUBJ,r.grade,r.unit,r.lesson),name:r.lesson});});
+          const COLORS=['#e74c3c','#3498db'];
+          const classes=['9/1','9/2'].map((c,k)=>({id:`cls_${SUBJ}_${G}_${k}`.replace(/\s/g,'_'),name:c,color:COLORS[k]}));
+          const tc={grades:[{num:G,subject:SUBJ,classes,units}],subjects:[SUBJ],subject:SUBJ,semester:SEM,setupDone:true,school_id:null,school_name:''};
+          const isra=rows.find(r=>/الإسراء/.test(r.lesson));
+          if(!isra)throw new Error('no isra lesson: '+rows.map(r=>r.lesson).join(' | '));
+          const lid=sid(SEM,SUBJ,isra.grade,isra.unit,isra.lesson);
+          console.log('isra',isra.unit,'/',isra.lesson,lid);
+          const lesson_files={[lid]:[{id:String(Date.now()),name:'سورة الإسراء (١٠٥–١١١) — العرض التفاعلي.html',size:buf.length,type:'text/html',html:true,viewLink:pub,previewLink:pub,downloadLink:pub}]};
+          const now=new Date().toISOString();
+          const data={display_name:NAME,email:EMAIL,full_name:NAME,created_at:now,updated_at:now,teacher_config:tc,lesson_files,students:{},behavior_students:{},plan_state:{},grades:{},grade_types:[]};
+          await j(await fetch(`${U}/rest/v1/profiles?on_conflict=id`,{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:uid,email:EMAIL,data,updated_at:now})}));
+          console.log('DONE', units.map(u=>u.name+':'+u.lessons.length).join(' | '));
+          JS
+          node /tmp/c.mjs
