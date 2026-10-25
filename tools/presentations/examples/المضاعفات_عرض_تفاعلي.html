@@ -853,10 +853,14 @@ background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var
 
 // صمّام الأمان: إن تجاوز محتوى شريحةٍ ارتفاع الشاشة (مع كشف كل الخطوات والبطاقات) صُغِّر قليلاً — حتى ٠٫٦، ويشمل خروج سطرٍ من مربّعه
 (function(){
+  // Safari القديم (iPad) يتجاهل zoom:calc(var(..)) في big.css فيظهر المحتوى كبيراً ومقطوعاً؛ نكتب الناتج رقماً صريحاً
+  function zs(s){[].forEach.call(s.children,function(c){c.style.zoom='';var q=document.createElement('i');
+    q.style.cssText='position:absolute;visibility:hidden;height:0;zoom:1;width:calc(var(--ar,1) * var(--fit,1) * var(--ui,1) * var(--uk,1) * var(--vz,1) * 10000px)';
+    c.appendChild(q);var z=parseFloat(getComputedStyle(q).width)/10000;c.removeChild(q);if(z>0)c.style.zoom=z.toFixed(4);});}
   function fitAll(){
     var dk=document.getElementById('deck'),tf=dk?dk.style.transform:'';if(dk)dk.style.transform='';   // القياس بلا تكبير العرض (jump.js)
     document.querySelectorAll('.slide').forEach(function(s){
-      s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
+      s.style.setProperty('--fit',1);s.classList.add('fit-m');zs(s);   // يُرسَم مؤقتاً للقياس رغم content-visibility
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
       for(var k=0;k<6;k++){
         var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
@@ -866,7 +870,7 @@ background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var
         var cx=r.left+r.width/2,f=+(s.style.getPropertyValue('--fit')||1),need=Math.min(H/(bot-top),W/(rt-lf),(W/2)/Math.max(cx-lf,rt-cx));  // والخروج من جهةٍ واحدة (شبكة RTL تفيض يساراً)
         [].forEach.call(s.querySelectorAll('.box,.xcard,.err,.opt'),function(b){if(b.clientWidth&&b.scrollWidth>b.clientWidth+2)need=Math.min(need,b.clientWidth/b.scrollWidth);});  // سطرٌ أعرض من مربّعه
         if(need>=1)break;
-        s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));
+        s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));zs(s);
       }
       fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
     });

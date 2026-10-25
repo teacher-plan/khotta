@@ -12,19 +12,23 @@ PAL = ['#F59E0B', '#2563EB', '#16A34A', '#DB2777', '#7C3AED', '#0891B2', '#DC262
 
 def TBARS(groups, per, label=True):
     # groups مجموعات، في كلٍّ منها per جزءاً من عشرة؛ كل شريطٍ واحدٌ صحيح مقسومٌ إلى ١٠ أجزاء
+    # يُكتب «٠٫١» داخل كل مربّع، والتسمية نصّ HTML خارج الرسم (النص العربي داخل SVG ينقلب في Safari)
     total = groups * per; bars = max(1, -(-total // 10)); cw, ch, gap = 40, 46, 16
-    W = 10 * cw + 4; H = bars * (ch + gap) + (30 if label else 0)
+    W = 10 * cw + 4; H = bars * (ch + gap) - gap + 6
     out = []
     for b in range(bars):
         y = b * (ch + gap)
         for c in range(10):
-            k = b * 10 + c; fill = PAL[k // per % len(PAL)] if k < total else '#fff'
+            k = b * 10 + c; on = k < total; fill = PAL[k // per % len(PAL)] if on else '#fff'
             out.append(f'<rect x="{2 + c * cw}" y="{y + 2}" width="{cw}" height="{ch}" fill="{fill}" stroke="#334155" stroke-width="2"/>')
+            out.append(f'<text x="{2 + c * cw + cw / 2}" y="{y + 2 + ch / 2 + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="{"#fff" if on else "#94A3B8"}">٠٫١</text>')
         out.append(f'<rect x="2" y="{y + 2}" width="{10 * cw}" height="{ch}" fill="none" stroke="#0E1B33" stroke-width="4"/>')
-    if label:
-        val = f'{total // 10}' + (f'.{total % 10}' if total % 10 else '')
-        out.append(f'<text x="{W / 2}" y="{H - 4}" text-anchor="middle" direction="rtl" font-size="26" font-weight="800" fill="#0E1B33">{_a(total)} {"أجزاء" if 3 <= total <= 10 else "جزءاً"} من عشرة = {_a(val)}</text>')
-    return f'<svg class="svgfig" viewBox="0 0 {W} {H}" style="direction:ltr">{"".join(out)}</svg>'
+    svg = f'<svg class="svgfig" viewBox="0 0 {W} {H}" style="direction:ltr">{"".join(out)}</svg>'
+    if not label: return svg
+    val = f'{total // 10}' + (f'.{total % 10}' if total % 10 else '')
+    cap = (f'<div class="tbcap"><span class="tbkey">كل مربّع = ٠٫١ · كل شريط = ١</span>'
+           f'<span>{_a(total)} {"أجزاء" if 3 <= total <= 10 else "جزءاً"} من عشرة = {_a(val)}</span></div>')
+    return f'<div class="tbars">{svg}{cap}</div>'
 
 def GRID100(cols=0, cells=0, color='#2563EB', color2='#F59E0B'):
     # شبكة ١٠ × ١٠ تمثّل الواحد: نظلّل cols أعمدة (كل عمودٍ ٠٫١) ثم cells مربّعات (كل مربّعٍ ٠٫٠١)
@@ -55,6 +59,9 @@ FIG_CSS = '''
 .fig{width:min(560px,38vw);height:auto;max-height:40vh;border-radius:14px;border:3px solid var(--line);background:#fff;object-fit:contain}
 .fig.sm{width:min(400px,28vw)}.fig.lg{max-width:min(760px,56vw);max-height:40vh}
 .svgfig{width:min(560px,40vw);height:auto;max-height:36vh;font-family:var(--fh)}
+.tbars{display:flex;flex-direction:column;align-items:center;gap:.6vh}
+.tbcap{display:flex;flex-direction:column;align-items:center;font-family:var(--fh);font-weight:800;font-size:clamp(20px,3.6vh,42px);color:#0E1B33;line-height:1.35;text-align:center}
+.tbcap .tbkey{font-size:.85em;color:#2563EB;background:#EAF1FF;border-radius:10px;padding:0 .6em}
 .svgfig.sq{width:auto;height:min(38vh,380px)}
 .figrow{display:flex;align-items:center;justify-content:center;gap:2.4vw;flex-wrap:wrap}
 .xq .fig.lg{height:32vh}

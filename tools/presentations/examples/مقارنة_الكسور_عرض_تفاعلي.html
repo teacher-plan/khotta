@@ -345,6 +345,9 @@ button.flip{font:inherit;color:inherit;cursor:pointer}
 .fig{width:calc(min(560px,38vw) / var(--zz,1));height:auto;max-height:40vh;border-radius:14px;border:3px solid var(--line);background:#fff;object-fit:contain}
 .fig.sm{width:calc(min(400px,28vw) / var(--zz,1))}.fig.lg{max-width:calc(min(760px,56vw) / var(--zz,1));max-height:40vh}
 .svgfig{width:calc(min(560px,40vw) / var(--zz,1));height:auto;max-height:36vh;font-family:var(--fh)}
+.tbars{display:flex;flex-direction:column;align-items:center;gap:.6vh}
+.tbcap{display:flex;flex-direction:column;align-items:center;font-family:var(--fh);font-weight:800;font-size:clamp(20px,3.6vh,42px);color:#0E1B33;line-height:1.35;text-align:center}
+.tbcap .tbkey{font-size:.85em;color:#2563EB;background:#EAF1FF;border-radius:10px;padding:0 .6em}
 .svgfig.sq{width:auto;height:min(38vh,380px)}
 .figrow{display:flex;align-items:center;justify-content:center;gap:2.4vw;flex-wrap:wrap}
 .xq .fig.lg{height:32vh}
@@ -903,10 +906,14 @@ background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var
 
 // صمّام الأمان: إن تجاوز محتوى شريحةٍ ارتفاع الشاشة (مع كشف كل الخطوات والبطاقات) صُغِّر قليلاً — حتى ٠٫٦، ويشمل خروج سطرٍ من مربّعه
 (function(){
+  // Safari القديم (iPad) يتجاهل zoom:calc(var(..)) في big.css فيظهر المحتوى كبيراً ومقطوعاً؛ نكتب الناتج رقماً صريحاً
+  function zs(s){[].forEach.call(s.children,function(c){c.style.zoom='';var q=document.createElement('i');
+    q.style.cssText='position:absolute;visibility:hidden;height:0;zoom:1;width:calc(var(--ar,1) * var(--fit,1) * var(--ui,1) * var(--uk,1) * var(--vz,1) * 10000px)';
+    c.appendChild(q);var z=parseFloat(getComputedStyle(q).width)/10000;c.removeChild(q);if(z>0)c.style.zoom=z.toFixed(4);});}
   function fitAll(){
     var dk=document.getElementById('deck'),tf=dk?dk.style.transform:'';if(dk)dk.style.transform='';   // القياس بلا تكبير العرض (jump.js)
     document.querySelectorAll('.slide').forEach(function(s){
-      s.style.setProperty('--fit',1);s.classList.add('fit-m');   // يُرسَم مؤقتاً للقياس رغم content-visibility
+      s.style.setProperty('--fit',1);s.classList.add('fit-m');zs(s);   // يُرسَم مؤقتاً للقياس رغم content-visibility
       var fl=[].slice.call(s.querySelectorAll('.flip:not(.open)'));fl.forEach(function(e){e.classList.add('open');});
       for(var k=0;k<6;k++){
         var cs=getComputedStyle(s),r=s.getBoundingClientRect(),top=1e9,bot=-1e9,lf=1e9,rt=-1e9;
@@ -916,7 +923,7 @@ background:var(--ink);color:#fff;font-size:.75em;font-weight:900;font-family:var
         var cx=r.left+r.width/2,f=+(s.style.getPropertyValue('--fit')||1),need=Math.min(H/(bot-top),W/(rt-lf),(W/2)/Math.max(cx-lf,rt-cx));  // والخروج من جهةٍ واحدة (شبكة RTL تفيض يساراً)
         [].forEach.call(s.querySelectorAll('.box,.xcard,.err,.opt'),function(b){if(b.clientWidth&&b.scrollWidth>b.clientWidth+2)need=Math.min(need,b.clientWidth/b.scrollWidth);});  // سطرٌ أعرض من مربّعه
         if(need>=1)break;
-        s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));
+        s.style.setProperty('--fit',Math.max(.6,f*need*.99).toFixed(3));zs(s);
       }
       fl.forEach(function(e){e.classList.remove('open');});s.classList.remove('fit-m');
     });
