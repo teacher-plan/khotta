@@ -2,7 +2,7 @@
 # المفاتيح من إعدادات البيئة فقط (لا تُكتب في المستودع ولا في المحادثة): YOUTUBE_REFRESH_TOKEN، ومعرّف التطبيق وسرّه
 # YOUTUBE_CLIENT_ID و YOUTUBE_CLIENT_SECRET — وإن غابا يُستعمل تطبيق Drive المنشور نفسه (GDRIVE_CLIENT_ID و GDRIVE_CLIENT_SECRET).
 #   python3 youtube_upload.py whoami                                   ← اسم القناة (للتحقّق من الربط)
-#   python3 youtube_upload.py upload <ملف.mp4 | drive:<معرّف ملف Drive>> "<العنوان>" "<الوصف>" [--playlist "<اسم القائمة>"] [--privacy private|unlisted|public]
+#   python3 youtube_upload.py upload <ملف.mp4 | drive:<معرّف ملف Drive>> "<العنوان>" "<الوصف>" [--playlist "<اسم القائمة>"] [--privacy private|unlisted|public] [--publish-at 2026-10-28T12:30:00Z]
 #   (drive:… يُنزَّل الفيديو أولاً من Drive بمفتاح GDRIVE_REFRESH_TOKEN، لجلسةٍ لم تُنتجه بنفسها)
 # الرفع مستأنَف (resumable) بقطعٍ من ٨ ميغابايت. مشروع Google غير المُراجَع يجعل الفيديو خاصّاً مهما طُلب.
 import json, os, sys, requests
@@ -49,9 +49,10 @@ def from_drive(fid):
             for c in g.iter_content(1 << 20): f.write(c)
     print('نُزّل من Drive:', name, os.path.getsize(out) // 1024, 'ك.ب'); return out
 
-def upload(H, path, title, desc, privacy='private', pl=None):
+def upload(H, path, title, desc, privacy='private', pl=None, at=None):
     meta = {'snippet': {'title': title[:100], 'description': desc[:5000], 'categoryId': '27', 'defaultLanguage': 'ar', 'defaultAudioLanguage': 'ar'},
             'status': {'privacyStatus': privacy, 'selfDeclaredMadeForKids': False}}
+    if at: meta['status'].update(privacyStatus='private', publishAt=at)   # نشرٌ مجدول: YouTube يجعله عامّاً في الموعد
     size = os.path.getsize(path)
     r = requests.post(UP, params={'uploadType': 'resumable', 'part': 'snippet,status'}, json=meta, timeout=60,
                       headers={**H, 'X-Upload-Content-Type': 'video/mp4', 'X-Upload-Content-Length': str(size)})
@@ -65,7 +66,7 @@ def upload(H, path, title, desc, privacy='private', pl=None):
             if r.status_code != 308: sys.exit(f'انقطع الرفع ({r.status_code}): {r.text[:300]}')
             rng = r.headers.get('Range'); sent = int(rng.split('-')[1]) + 1 if rng else 0; f.seek(sent)
     v = r.json(); vid = v['id']
-    print(json.dumps({'id': vid, 'url': f'https://youtu.be/{vid}', 'privacy': v['status']['privacyStatus']}, ensure_ascii=False))
+    print(json.dumps({'id': vid, 'url': f'https://youtu.be/{vid}', 'privacy': v['status']['privacyStatus'], 'publishAt': v['status'].get('publishAt')}, ensure_ascii=False))
     if pl:
         r = requests.post(f'{API}/playlistItems', params={'part': 'snippet'}, headers=H, timeout=30,
                           json={'snippet': {'playlistId': playlist(H, pl), 'resourceId': {'kind': 'youtube#video', 'videoId': vid}}})
@@ -80,4 +81,4 @@ if __name__ == '__main__':
     elif a[0] == 'upload':
         opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
         src = from_drive(a[1][6:]) if a[1].startswith('drive:') else a[1]
-        upload(H, src, a[2], a[3], opt('--privacy', 'private'), opt('--playlist'))
+        upload(H, src, a[2], a[3], opt('--privacy', 'private'), opt('--playlist'), opt('--publish-at'))
