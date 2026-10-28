@@ -10,6 +10,9 @@ self.addEventListener('install', e => {
       // معلمة الاحتياط قد تفتح القسم أول مرة في فصل بلا إنترنت، ولو انتظرنا
       // الجلب لوجدته فارغاً. حجمه صغير فلا يُثقل التثبيت.
       await cache.addAll(['/', '/index.html', '/reserve.js']);
+      // تطبيق الحلقة الأولى ومكتبته: يُفتح في الصف بلا إنترنت حتى لو نُشر تحديثٌ
+      // بين ليلة الحفظ وصباح الحصة (كل نشرٍ يُنشئ كاشاً جديداً ويحذف القديم).
+      ['/cycle1.html', '/vendor/supabase.js', '/manifest-cycle1.json', '/khottah1_icon_192.png'].forEach(f => cache.add(f).catch(() => {}));
       // أنشطة حصص الاحتياط الجديدة: صفحاتٌ مستقلة تُفتح أمام صفٍّ قد يكون
       // بلا إنترنت — فتُخزَّن مسبقاً كلّها مثل reserve.js، لا عند أول فتح.
       // بلا انتظارٍ للتثبيت: كثيرةٌ والتثبيت لا يجوز أن يفشل بواحدةٍ منها.
@@ -35,7 +38,9 @@ self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     // حذف الكاشات القديمة من إصدارات سابقة
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+    // khotta-files: ما حفظته المعلّمة للعمل بلا إنترنت · khotta-fonts: الخطوط — كلاهما يبقى عبر التحديثات
+    const KEEP = [CACHE_NAME, 'khotta-files', 'khotta-fonts'];
+    await Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k)));
     await clients.claim();
   })());
 });
@@ -50,7 +55,24 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
-  if (url.origin !== self.location.origin) return; // خارجي → الشبكة كالعادة
+  if (url.origin !== self.location.origin) {
+    // ملفات التخزين العامّة (مرفقات الدروس، صفحات الكتاب، الملخّصات): نسخة الجهاز أولاً إن حُفظت
+    if (url.pathname.includes('/storage/v1/object/public/')) {
+      e.respondWith(caches.open('khotta-files').then(c => c.match(req.url)).then(hit => hit || fetch(req)).catch(() => fetch(req)));
+      return;
+    }
+    // خطوط Google: تُخزَّن عند أول تحميل فتظهر الخطوط نفسها بلا إنترنت
+    if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+      e.respondWith((async () => {
+        const c = await caches.open('khotta-fonts');
+        const hit = await c.match(req);
+        const net = fetch(req).then(r => { if (r && (r.ok || r.type === 'opaque')) c.put(req, r.clone()).catch(() => {}); return r; }).catch(() => null);
+        return hit || (await net) || Response.error();
+      })().catch(() => fetch(req)));
+      return;
+    }
+    return; // خارجي آخر (واجهات Supabase وغيرها) → الشبكة كالعادة
+  }
   // نسخة المعاينة (/preview/) تُجلب من الشبكة دائماً: يرى المشرف آخر تعديلٍ فوراً
   if (url.pathname.startsWith('/preview/')) return;
 
