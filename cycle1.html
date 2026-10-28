@@ -4867,6 +4867,7 @@ async function afterAuth(session){
   renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
   khBudgetRing();
+  c1OffAutoSoon();
 }
 /* ══ إقلاع وضع التجربة ══
    بيانات معلمةٍ وشعبةٍ وهمية بأسماء عُمانية. لا تسجيلَ دخول، ولا اتصالَ
@@ -5725,20 +5726,51 @@ async function c1OffSrc(u){
   const hit=await c1OffMatch(u);if(!hit)return u;
   try{return _c1OffBlobs[u]=URL.createObjectURL(await hit.blob());}catch(e){return u;}
 }
+// توقيع محتوى الدرس: إن أُضيف مرفقٌ أو تغيّر الملخّص أو اللعبة يُعاد حفظه تلقائياً
+function c1OffSig(st){return 's'+((st.files||[]).map(f=>f.viewLink||'').join('|')+'#'+(st.info_url||'')+'#'+(st.game_id||'')).length+':'+(st.files||[]).length;}
+// ── الحفظ التلقائي ──
+// كل فتحةٍ متّصلة: بعد أن يهدأ التطبيق تُحفظ في الخلفية الدروسُ القادمة فقط
+// (أوّل ٣ دروس غير منجزة لكل مادة) — كل ملفٍّ يُنزَّل مرةً واحدة لكل جهاز ثم يُقرأ منه،
+// فلا تتكرّر الطلبات ولا يُستنزف حدّ التنزيل الشهري للخطة المجانية.
+// لا يعمل على «توفير البيانات» ولا على شبكات 2G.
+let _c1AutoBusy=false;
+async function c1OffAuto(){
+  if(_c1AutoBusy||C1_OFF||KH_DEMO||!navigator.onLine||!window.caches||!currentUser)return;
+  const cn=navigator.connection;if(cn&&(cn.saveData||/(^|-)2g/.test(cn.effectiveType||'')))return;
+  _c1AutoBusy=true;
+  try{
+    try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch(e){}
+    const saved=c1OffSavedMap();
+    for(const g of planGradesList())for(const subj of planSubjectsFor(g)){
+      const units=(profile.plan_units&&profile.plan_units[planKey(g,subj)])||[];
+      const next=[];units.forEach(u=>u.lessons.forEach(l=>{if(next.length<3&&!planGet(l.id).done)next.push(l.id);}));
+      for(const id of next){
+        if(!navigator.onLine||C1_OFF)return;
+        if(saved[id]===c1OffSig(planGet(id)))continue;
+        await c1OffSaveLesson(id,null,g,subj);
+        await new Promise(r=>setTimeout(r,800));   // تمهّلٌ بين الدروس: لا يزاحم استعمال المعلّم للشبكة
+      }
+    }
+    if(document.getElementById('plan-sections')&&document.querySelector('.plan-lesson'))planRenderUnits();
+  }catch(e){}finally{_c1AutoBusy=false;}
+}
+function c1OffAutoSoon(){(window.requestIdleCallback||(f=>setTimeout(f,1)))(()=>setTimeout(c1OffAuto,15000));}
 function c1OffSavedMap(){try{return JSON.parse(localStorage.getItem(C1_OFF_SAVED)||'{}');}catch(e){return {};}}
 // كل ما يلزم الدرس في الصف: المرفقات، والملخّص، وصور صفحات الكتاب، واللعبة
-async function c1OffSaveLesson(id,onStep){
-  const st=planGet(id),l=planFindLesson(id),urls=[];let skip=0,fail=0,done=0;
+async function c1OffSaveLesson(id,onStep,grade,subject){
+  grade=grade||planGrade;subject=subject||planSubject;
+  const st=planGet(id),urls=[];let skip=0,fail=0,done=0,l=null;
+  ((profile.plan_units&&profile.plan_units[planKey(grade,subject)])||[]).forEach(u=>u.lessons.forEach(x=>{if(x.id===id)l={name:x.name,unit:u.name};}));
   (st.files||[]).forEach(f=>{const u=f.viewLink||f.previewLink||'';if(c1OffHttp(u))urls.push(u);else skip++;});
   if(c1OffHttp(st.info_url))urls.push(st.info_url);
-  if(l){try{const imgs=await c1LessonBookImages(planGrade,planSubject,l.unit,l.name);(imgs||[]).forEach(u=>urls.push(u));}catch(e){}}
+  if(l){try{const imgs=await c1LessonBookImages(grade,subject,l.unit,l.name);(imgs||[]).forEach(u=>urls.push(u));}catch(e){}}
   if(st.game_id){
     try{const{data:g,error}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();if(error)throw error;
       if(g)localStorage.setItem('c1off-g-'+st.game_id,JSON.stringify({template:g.template,content:g.content,lesson:g.lesson,title:g.title}));}
     catch(e){fail++;}
   }
   for(const u of urls){try{await c1OffPut(u);}catch(e){fail++;}done++;if(onStep)onStep(done,urls.length);}
-  if(!fail){const m=c1OffSavedMap();m[id]=Date.now();try{localStorage.setItem(C1_OFF_SAVED,JSON.stringify(m));}catch(e){}}
+  if(!fail){const m=c1OffSavedMap();m[id]=c1OffSig(st);try{localStorage.setItem(C1_OFF_SAVED,JSON.stringify(m));}catch(e){}}
   return {n:urls.length,fail,skip};
 }
 async function c1OffPrep(){
@@ -8013,7 +8045,9 @@ function isHtmlAttachment(f){return !!f&&(!!f.html||HTML_EXT_RE.test(f.name||'')
 // sandbox بلا allow-same-origin: أصلٌ معتم منفصل، فلا يقرأ الملفُّ جلسةَ المعلّمة
 // ولا تخزينها ولا يتحكّم بالصفحة الأمّ — تعمل سكربتاته وأزراره داخل إطاره فقط.
 async function htmlFrame(u){
-  const r=(await c1OffMatch(u))||await fetch(u);
+  const hit=await c1OffMatch(u);
+  const r=hit||await fetch(u);
+  if(!hit&&r.ok&&c1OffHttp(u)&&window.caches)try{const rc=r.clone();caches.open(C1_FILES).then(c=>c.put(u,rc)).catch(()=>{});}catch(e){}
   if(!r.ok)throw new Error('HTTP '+r.status);
   const fr=document.createElement('iframe');
   fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals');
