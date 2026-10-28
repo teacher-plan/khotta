@@ -706,6 +706,11 @@ body.inapp #c1-budget-btn{display:flex}
 .plan-uchip .cnt{font-size:10.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .plan-uchip.sel .cnt{color:var(--red-d)}
 .plan-uhead{display:flex;align-items:center;gap:9px;margin:6px 0 11px}
+.pl-offall{margin-inline-start:auto;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:#2A5183;border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
+.pl-offall:disabled,.pl-btn.off:disabled{opacity:.7;cursor:progress}
+#c1-offbar{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9000;font-family:inherit;font-size:13px;font-weight:800;color:#fff;background:#4A5568;border:0;border-radius:999px;padding:7px 16px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#c1-offbar.on{background:#2F7D74;cursor:pointer}
+
 .plan-uhead b{font-size:13.5px;font-weight:800;color:var(--ink)}
 .plan-uhead span{font-size:11.5px;color:var(--muted);font-weight:700;margin-inline-start:auto;font-variant-numeric:tabular-nums}
 .plan-lesson{position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(48,24,0,.05)}
@@ -4799,7 +4804,7 @@ async function afterAuth(session){
   document.getElementById('cy1-login-form').classList.add('hidden');
   const userEmail=(currentUser.email||'').toLowerCase();
   try{
-    const{data:allowed,error}=await sb.from('allowed_emails').select('email,cycle').ilike('email',userEmail).maybeSingle();
+    const{data:allowed,error}=await c1OffRace(sb.from('allowed_emails').select('email,cycle').ilike('email',userEmail).maybeSingle());
     if(error)throw error;
     const isAdminU=userEmail===CY1_ADMIN_EMAIL.toLowerCase();
     if(!isAdminU){
@@ -4825,22 +4830,29 @@ async function afterAuth(session){
     // ما اجتاز البوّابة بحلقةٍ معروفة يضبطها هنا، والمشرف (الذي يتخطّى
     // البوّابة) يبقى على الافتراضي 'cycle1' إن لم يكن له صفٌّ معروف.
     if(allowed&&allowed.cycle&&CYCLE_GRADES[allowed.cycle])APP_CYCLE=allowed.cycle;
-  }catch(e){await sb.auth.signOut();showLogin('تعذّر التحقق، '+khG('حاولي','حاول')+' مجدداً');return;}
+  }catch(e){
+    if(c1OffNetErr(e)&&c1OfflineBoot())return;
+    await sb.auth.signOut();showLogin('تعذّر التحقق، '+khG('حاولي','حاول')+' مجدداً');return;}
   // ⚠️ لا ندخل التطبيق بملف مجهول الحال. supabase-js لا يرمي استثناءً عند فشل
   // الشبكة بل يُرجع {data:null,error} — ولو عاملناه كـ«معلمة جديدة» لظهر معالج
   // الإعداد، وأول حفظ بعده يستبدل صفوفها ونجومها وجدولها بملف شبه فارغ.
   // الغياب الحقيقي للملف يأتي بـ data=null بلا error، وذلك يفتح المعالج بحق.
   try{
-    const{data,error}=await sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle();
+    const{data,error}=await c1OffRace(sb.from('cycle1_profiles').select('*').eq('id',currentUser.id).maybeSingle());
     if(error)throw error;
     profile=(data&&data.data)||{};
     // أساس المقارنة ضدّ الكتابة من جهاز آخر — انظر cy1Flush
     _cy1Base=(data&&data.updated_at)||null;
   }catch(e){
+    if(c1OffNetErr(e)&&c1OfflineBoot())return;
     await sb.auth.signOut();
     showLogin('تعذّر تحميل بياناتك — '+khG('تحققي','تحقق')+' من الاتصال ثم '+khG('أعيدي','أعد')+' الدخول');
     return;
   }
+  try{_cy1Loaded=JSON.parse(JSON.stringify(profile));}catch(e){}
+  // تعديلاتٌ أُجريت بلا إنترنت على هذا الجهاز: تُدمج فوق نسخة الخادم وتُرفع الآن
+  c1OffMergePending();
+  c1OffSnap(false);
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
@@ -5565,6 +5577,7 @@ function cy1Flush(){
 function cy1Settled(snapshot,ts){
   _cy1Base=ts||null;
   try{_cy1Loaded=JSON.parse(JSON.stringify(snapshot));}catch(e){_cy1Loaded=null;}
+  c1OffSnap(false);
   _cy1Touched.clear();
 }
 
@@ -5609,6 +5622,9 @@ function cy1Save(partial,busyText){
   // بدونها كانت كلُّ ضغطةٍ تفتح شاشة «يحفظ» ثم تنتظر ردّاً لا يأتي،
   // فتبقى الشاشة مفتوحةً تحجب كلَّ ضغطةٍ بعدها.
   if(KH_DEMO){profile={...profile,...partial};return Promise.resolve(true);}
+  // بلا إنترنت: التعديل يبقى في نسخة الجهاز ويُرفع مدموجاً عند أول دخولٍ متّصل (c1OffMergePending)
+  if(C1_OFF){Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));profile={...profile,...partial,updated_at:new Date().toISOString()};c1OffSnap(true);
+    if(!_c1OffSavedHint){_c1OffSavedHint=true;toast('📴 حُفظ على الجهاز — يُرفع تلقائياً عند عودة الإنترنت');}return Promise.resolve(true);}
   // نُسجّل ما مسّه هذا الجهاز — عليه يقوم الدمج عند التعارض
   Object.keys(partial||{}).forEach(k=>_cy1Touched.add(k));
   profile={...profile,...partial,updated_at:new Date().toISOString()};
@@ -5619,6 +5635,140 @@ function cy1Save(partial,busyText){
   clearTimeout(_cy1FlushTimer);
   _cy1FlushTimer=setTimeout(cy1Flush,900);
   return new Promise(res=>_cy1Waiters.push(res));
+}
+
+/* ══ العمل بلا إنترنت ══════════════════════════════════════════════════
+   شبكة المدارس ضعيفة: تحفظ المعلّمة في البيت (بزرٍّ في بطاقة الدرس أو الوحدة)
+   مرفقات الدروس وصور صفحات الكتاب والملخّص واللعبة، فتفتحها في الصف بلا إنترنت.
+   ١) نسخة الملف (profile) على الجهاز بعد كل تحميلٍ أو رفعٍ ناجح، فيُفتح التطبيق بها
+      حين تتعذّر الشبكة، والتعديل بلا إنترنت يُرفع مدموجاً عند أول دخولٍ متّصل.
+   ٢) الملفات في Cache Storage باسم khotta-files (لا يمحوه تحديث المنصّة؛ انظر sw.js)،
+      تُقرأ منه أولاً دائماً — فتفتح فوراً حتى على شبكةٍ بطيئة. */
+var C1_OFF=false,_c1OffSavedHint=false,_c1OffLoaded=null;
+const C1_FILES='khotta-files',C1_OFF_KEY='c1off',C1_OFF_SAVED='c1off-saved';
+function c1OffRead(){try{return JSON.parse(localStorage.getItem(C1_OFF_KEY)||'null');}catch(e){return null;}}
+function c1OffSnap(pending){
+  if(!currentUser||KH_DEMO)return;
+  try{
+    const o={uid:currentUser.id,email:currentUser.email||'',cycle:APP_CYCLE,profile,base:_cy1Base,at:Date.now(),pending:!!pending};
+    if(pending){o.loaded=_c1OffLoaded;o.touched=[..._cy1Touched];}
+    localStorage.setItem(C1_OFF_KEY,JSON.stringify(o));
+  }catch(e){/* امتلاء التخزين: النسخة اجتهادية */}
+}
+function c1OffWipe(){
+  try{localStorage.removeItem(C1_OFF_KEY);localStorage.removeItem(C1_OFF_SAVED);
+    Object.keys(localStorage).filter(k=>k.indexOf('c1off-g-')===0).forEach(k=>localStorage.removeItem(k));}catch(e){}
+  try{if(window.caches)caches.delete(C1_FILES);}catch(e){}
+}
+// شبكة المدرسة الضعيفة: إن وُجدت نسخةٌ لهذا الحساب على الجهاز لا ننتظر الخادم أكثر من ٨ ثوانٍ
+function c1OffRace(q){
+  const snap=c1OffRead();
+  if(!snap||!currentUser||snap.uid!==currentUser.id)return q;
+  return Promise.race([q,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))]);
+}
+function c1OffNetErr(e){const m=String((e&&e.message)||e||'');return !navigator.onLine||/fetch|network|load failed|timeout|offline/i.test(m);}
+// الدخول بنسخة الجهاز: يُرجع false إن لم توجد نسخةٌ لهذا الحساب
+function c1OfflineBoot(){
+  const snap=c1OffRead();
+  if(!snap||!snap.profile||(currentUser&&currentUser.id!==snap.uid))return false;
+  currentUser=currentUser||{id:snap.uid,email:snap.email,user_metadata:{}};
+  if(snap.cycle&&CYCLE_GRADES[snap.cycle])APP_CYCLE=snap.cycle;
+  profile=snap.profile;_cy1Base=snap.base||null;C1_OFF=true;
+  _c1OffLoaded=snap.pending&&snap.loaded?snap.loaded:JSON.parse(JSON.stringify(profile));
+  (snap.touched||[]).forEach(k=>_cy1Touched.add(k));
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  document.body.classList.add('inapp');
+  document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
+  khSetGender(profile.teacher_gender);khApplyGender();
+  renderYawmi();
+  c1OffBar();
+  return true;
+}
+// أول دخولٍ متّصل بعد العمل بلا إنترنت: تعديلات الجهاز فوق نسخة الخادم ثم الرفع
+function c1OffMergePending(){
+  const snap=c1OffRead();
+  if(!snap||!snap.pending||snap.uid!==currentUser.id||!(snap.touched||[]).length)return false;
+  const touched=new Set(snap.touched);
+  profile=cy1Merge(profile,snap.profile,snap.loaded||{},touched);
+  touched.forEach(k=>_cy1Touched.add(k));
+  _cy1Dirty=true;setTimeout(cy1Flush,1200);
+  toast('🔄 '+khG('تُرفع تعديلاتكِ','تُرفع تعديلاتك')+' التي '+khG('أجريتِها','أجريتها')+' بلا إنترنت');
+  return true;
+}
+// شارة «بلا إنترنت» أعلى الشاشة؛ وعند عودة الاتصال تصير زرّ مزامنة
+function c1OffBar(){
+  let b=document.getElementById('c1-offbar');
+  if(!b){b=document.createElement('button');b.id='c1-offbar';document.body.appendChild(b);}
+  const on=navigator.onLine;
+  b.className=on?'on':'';
+  b.innerHTML=on?'🔄 عاد الاتصال — '+khG('اضغطي','اضغط')+' للمزامنة':'📴 بلا إنترنت — المحفوظ على الجهاز متاح';
+  b.onclick=on?()=>location.reload():null;
+}
+window.addEventListener('online',()=>{if(C1_OFF)c1OffBar();});
+window.addEventListener('offline',()=>{if(C1_OFF)c1OffBar();});
+
+// ── الملفات ──
+function c1OffHttp(u){return typeof u==='string'&&/^https:\/\//i.test(u)&&!/^https:\/\/(drive|docs)\.google\.com\//i.test(u);}
+async function c1OffMatch(u){try{if(!window.caches||!c1OffHttp(u))return null;return (await (await caches.open(C1_FILES)).match(u))||null;}catch(e){return null;}}
+async function c1OffPut(u){
+  const c=await caches.open(C1_FILES);
+  if(await c.match(u))return;
+  const r=await fetch(u,{mode:'cors',cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  await c.put(u,r);
+}
+// رابطٌ يصلح لـ iframe: نسخة الجهاز (blob) إن وُجدت، وإلا الرابط نفسه
+const _c1OffBlobs={};
+async function c1OffSrc(u){
+  if(_c1OffBlobs[u])return _c1OffBlobs[u];
+  const hit=await c1OffMatch(u);if(!hit)return u;
+  try{return _c1OffBlobs[u]=URL.createObjectURL(await hit.blob());}catch(e){return u;}
+}
+function c1OffSavedMap(){try{return JSON.parse(localStorage.getItem(C1_OFF_SAVED)||'{}');}catch(e){return {};}}
+// كل ما يلزم الدرس في الصف: المرفقات، والملخّص، وصور صفحات الكتاب، واللعبة
+async function c1OffSaveLesson(id,onStep){
+  const st=planGet(id),l=planFindLesson(id),urls=[];let skip=0,fail=0,done=0;
+  (st.files||[]).forEach(f=>{const u=f.viewLink||f.previewLink||'';if(c1OffHttp(u))urls.push(u);else skip++;});
+  if(c1OffHttp(st.info_url))urls.push(st.info_url);
+  if(l){try{const imgs=await c1LessonBookImages(planGrade,planSubject,l.unit,l.name);(imgs||[]).forEach(u=>urls.push(u));}catch(e){}}
+  if(st.game_id){
+    try{const{data:g,error}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();if(error)throw error;
+      if(g)localStorage.setItem('c1off-g-'+st.game_id,JSON.stringify({template:g.template,content:g.content,lesson:g.lesson,title:g.title}));}
+    catch(e){fail++;}
+  }
+  for(const u of urls){try{await c1OffPut(u);}catch(e){fail++;}done++;if(onStep)onStep(done,urls.length);}
+  if(!fail){const m=c1OffSavedMap();m[id]=Date.now();try{localStorage.setItem(C1_OFF_SAVED,JSON.stringify(m));}catch(e){}}
+  return {n:urls.length,fail,skip};
+}
+async function c1OffPrep(){
+  if(!window.caches){toast('هذا المتصفّح لا يدعم الحفظ بلا إنترنت',true);return false;}
+  if(!navigator.onLine){toast('الحفظ يحتاج إنترنت — '+khG('احفظي','احفظ')+' في البيت قبل يوم الحصة',true);return false;}
+  try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch(e){}
+  return true;
+}
+async function c1OffSaveLessonBtn(btn,id){
+  if(!await c1OffPrep())return;
+  btn.disabled=true;const t0=btn.innerHTML;
+  const r=await c1OffSaveLesson(id,(d,n)=>{btn.innerHTML='⏳ '+egArNum(d)+'/'+egArNum(n);});
+  btn.disabled=false;btn.innerHTML=t0;
+  c1OffReport(r,1);planRenderUnits();
+}
+async function c1OffSaveUnit(btn){
+  if(!await c1OffPrep())return;
+  const units=(profile.plan_units&&profile.plan_units[planKey(planGrade,planSubject)])||[],u=units[planUnitIdx];if(!u)return;
+  btn.disabled=true;const t0=btn.innerHTML,tot={n:0,fail:0,skip:0};
+  for(let i=0;i<u.lessons.length;i++){
+    btn.innerHTML='⏳ الدرس '+egArNum(i+1)+' من '+egArNum(u.lessons.length);
+    const r=await c1OffSaveLesson(u.lessons[i].id);tot.n+=r.n;tot.fail+=r.fail;tot.skip+=r.skip;
+  }
+  btn.disabled=false;btn.innerHTML=t0;
+  c1OffReport(tot,u.lessons.length);planRenderUnits();
+}
+function c1OffReport(r,lessons){
+  if(r.fail)toast('تعذّر حفظ '+egArNum(r.fail)+' ملف — '+khG('أعيدي','أعد')+' المحاولة على شبكةٍ أقوى',true);
+  else if(r.skip)toast('✅ حُفظ '+egArNum(r.n)+' ملف · '+egArNum(r.skip)+' من روابط Google Drive لا تُحفظ — '+khG('ارفعيها','ارفعها')+' من جهازك لتعمل بلا إنترنت','ok');
+  else toast(r.n?'✅ حُفظ '+(lessons>1?'كل ما في الوحدة':'كل ما في الدرس')+' ('+egArNum(r.n)+' ملف) — '+khG('افتحيه','افتحه')+' غداً بلا إنترنت':'✅ لا ملفات لهذا الدرس بعد · التحضير محفوظ مع حسابك','ok');
 }
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')cy1Flush();});
@@ -5645,11 +5795,17 @@ const C1_TTL={curriculum:864e5,book_sources:864e5,violation_types:432e5,ai_setti
 const _c1Mem=new Map();
 function _c1Key(table,tag){return `c1c${C1_CACHE_V}:${table}:${tag}`;}
 function _c1Purge(){try{Object.keys(localStorage).forEach(k=>{if(k.startsWith('c1c'))localStorage.removeItem(k);});}catch(e){}}
-function c1CacheClear(){_c1Mem.clear();_c1Purge();}
+function c1CacheClear(){_c1Mem.clear();_c1Purge();c1OffWipe();}
 // جلب مُخزَّن: fetcher يُستدعى فقط عند غياب النسخة أو انتهاء صلاحيتها.
 // fresh=true يتجاوز المخزون ويُحدّثه (لزر «تحديث الدروس» مثلاً).
 async function c1Ref(table,tag,fetcher,fresh){
   const key=_c1Key(table,tag),ttl=C1_TTL[table]||216e5,now=Date.now();
+  // بلا إنترنت: المخزون مهما قدُم (حُفظ ليلة أمس)، ولا طلب شبكة — الطلب ينتظر تجديد الجلسة بلا نهاية
+  if(C1_OFF){
+    const m=_c1Mem.get(key);if(m)return m.d;
+    try{const raw=localStorage.getItem(key);if(raw){const p=JSON.parse(raw);if(p){_c1Mem.set(key,p);return p.d;}}}catch(e){}
+    return null;
+  }
   if(!fresh){
     const m=_c1Mem.get(key);
     if(m&&now-m.t<ttl)return m.d;
@@ -6034,6 +6190,8 @@ c1SelectEnhanceAll();
   // العائدة من رابط الاستعادة: نقرأ العلامة من العنوان لا من حدث المكتبة،
   // لأنّ الحدث قد يكون انطلق قبل أن نشترك فيه فيمضي الرابط بلا أثر.
   const isRecovery=/[#&?]type=recovery/.test(location.hash+location.search);
+  // بلا إنترنت أصلاً ومع نسخةٍ على الجهاز: الدخول بها فوراً بلا انتظار محاولات المكتبة للاتصال
+  if(!navigator.onLine&&!isRecovery&&c1OfflineBoot()){sb.auth.onAuthStateChange(()=>{});return;}
   const{data:{session}}=await sb.auth.getSession();
   if(isRecovery&&session){
     // لا نُدخلها إلى التطبيق قبل أن تضع كلمتها: جلسةُ الرابط قصيرة، ودخولٌ
@@ -6043,6 +6201,7 @@ c1SelectEnhanceAll();
     pwOpen({recovery:true,email:(session.user&&session.user.email)||''});
   }
   else if(session)await afterAuth(session);
+  else if(!navigator.onLine&&c1OfflineBoot()){}
   else showLogin();
   sb.auth.onAuthStateChange(async(event,s)=>{
     if(event==='PASSWORD_RECOVERY'&&s){pwOpen({recovery:true,email:(s.user&&s.user.email)||''});return;}
@@ -6061,6 +6220,7 @@ c1SelectEnhanceAll();
     // ليلاً تُقذَف صباحاً إلى شاشة الدخول بلا كلمةٍ واحدة تشرح، ويضيع معها
     // كلُّ تعديلٍ لم يُرفع بعد.
     if(event==='SIGNED_OUT'){
+      if(C1_OFF&&!_cy1SigningOut)return;
       if(_cy1SigningOut){currentUser=null;location.reload();return;}
       currentUser=null;
       // لا إعادةَ تحميل: تمحو ما في الذاكرة. نُبقي الصفحة ونشرح.
@@ -7080,7 +7240,8 @@ async function planRenderUnits(){
   if(units.length)box.innerHTML='';else box.innerHTML='<div class="plan-empty-card">يجري البحث عن دروس هذه المادة...</div>';
   try{
     const semester=profile.semester||'الفصل الأول';
-    const data=await c1Curriculum(semester,planSubject,planGrade,'*',true);
+    // بلا إنترنت: المخزون وحده (طلبٌ حيّ ينتظر تجديد الجلسة بلا نهاية)
+    const data=await c1Curriculum(semester,planSubject,planGrade,'*',!C1_OFF);
     if(data==null){if(!units.length)planLoadErr=true;}
     else if(data.length){
       units=buildUnitsFromRows(data,semester,planSubject);
@@ -7112,6 +7273,7 @@ async function planRenderUnits(){
   }).join('');
   const u=units[planUnitIdx];
   const uDone=u.lessons.filter(l=>planGet(l.id).done).length;
+  const offSaved=c1OffSavedMap();
   const lessonsHtml=u.lessons.map((l,li)=>{
     const st=planGet(l.id);
     const clsChips=classes.map(c=>{
@@ -7142,13 +7304,14 @@ async function planRenderUnits(){
         <button class="pl-btn ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')"><span class="d" style="background:#8b5cf6"></span>${st.game_id?'تشغيل اللعبة':'إنشاء لعبة'}</button>
         <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
         <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
+        <button class="pl-btn off ${offSaved[l.id]?'ready':''}" onclick="c1OffSaveLessonBtn(this,'${l.id}')" title="${khG('احفظي','احفظ')} مرفقات الدرس وصفحات الكتاب واللعبة على هذا الجهاز لتعمل بلا إنترنت"><span class="d" style="background:#2A5183"></span>${offSaved[l.id]?'✓ محفوظ بلا إنترنت':'📥 حفظ بلا إنترنت'}</button>
         <button class="pl-btn live" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>${khG('ابدئي','ابدأ')} الحصة</button>
       </div>
       ${fileRows?`<div class="pl-files-t">مرفقات الدرس (${egArNum(files.length)})</div>${fileRows}`:''}
     </div>`;
   }).join('');
   box.innerHTML=`<div class="plan-units">${chips}</div>
-    <div class="plan-uhead"><b>${escHtml(u.name)}</b><span>${egArNum(uDone)}/${egArNum(u.lessons.length)} درس منجز</span></div>
+    <div class="plan-uhead"><b>${escHtml(u.name)}</b><span>${egArNum(uDone)}/${egArNum(u.lessons.length)} درس منجز</span><button class="pl-offall" onclick="c1OffSaveUnit(this)">📥 حفظ الوحدة كاملة بلا إنترنت</button></div>
     ${lessonsHtml}`;
 }
 function planPickUnit(i){planUnitIdx=i;planRenderUnits();}
@@ -7285,6 +7448,7 @@ async function c1AssetsLoad(){
   if(_c1AssetsLoading)return _c1AssetsLoading;
   _c1AssetsLoading=(async()=>{
     c1Assets={};
+    if(C1_OFF)return c1Assets;
     try{
       const{data,error}=await sb.from('c1_lesson_assets').select('lesson_id,book_summary').eq('user_id',currentUser.id);
       // supabase-js لا يرمي استثناءً عند فشل الاستعلام بل يُعيد {data:null,error}،
@@ -7386,7 +7550,11 @@ async function planPlayGame(id){
   cyBusy('يجهّز اللعبة');
   try{
     await gmLoadCfg();
-    const{data:g}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();
+    let g=null,netErr=false;
+    try{const r=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();if(r.error)throw r.error;g=r.data;
+      if(g)try{localStorage.setItem('c1off-g-'+st.game_id,JSON.stringify({template:g.template,content:g.content,lesson:g.lesson,title:g.title}));}catch(e){}}
+    catch(e){netErr=true;try{g=JSON.parse(localStorage.getItem('c1off-g-'+st.game_id)||'null');}catch(_){}}
+    if(!g&&netErr){toast('اللعبة غير محفوظة على هذا الجهاز — '+khG('احفظي','احفظ')+' الدرس بزرّ «حفظ بلا إنترنت» حين يتوفّر الاتصال',true);return;}
     if(!g){toast('اللعبة لم تعد موجودة — '+khG('أنشئي','أنشئ')+' واحدة جديدة',true);await planSetState(id,{game:false,game_id:null});planRenderUnits();return;}
     gmTpl=g.template||'quiz';
     gmItems=(g.content&&g.content.items)||[];
@@ -7845,7 +8013,7 @@ function isHtmlAttachment(f){return !!f&&(!!f.html||HTML_EXT_RE.test(f.name||'')
 // sandbox بلا allow-same-origin: أصلٌ معتم منفصل، فلا يقرأ الملفُّ جلسةَ المعلّمة
 // ولا تخزينها ولا يتحكّم بالصفحة الأمّ — تعمل سكربتاته وأزراره داخل إطاره فقط.
 async function htmlFrame(u){
-  const r=await fetch(u);
+  const r=(await c1OffMatch(u))||await fetch(u);
   if(!r.ok)throw new Error('HTTP '+r.status);
   const fr=document.createElement('iframe');
   fr.setAttribute('sandbox','allow-scripts allow-popups allow-forms allow-modals');
@@ -7880,8 +8048,13 @@ function htmlInjectPenBridge(src){
   return HTML_PEN_BRIDGE+src;
 }
 let _htmlOpenTok=0;
-function drivePrevOpen(url,name,type){
-  const u=url||'';
+async function drivePrevOpen(url,name,type){
+  let u=url||'';
+  if(!(HTML_EXT_RE.test(name||'')||type==='text/html')){
+    const off=await c1OffSrc(u);
+    if(off!==u){if(OFFICE_EXT_RE.test(name||'')&&!navigator.onLine){toast('ملفات Word وPowerPoint تحتاج إنترنت للعرض — '+khG('احفظيها','احفظها')+' PDF لتعمل بلا إنترنت',true);return;}
+      if(!OFFICE_EXT_RE.test(name||''))u=off;}
+  }
   const oldHtml=document.getElementById('drive-prev-html');if(oldHtml)oldHtml.remove();
   if(HTML_EXT_RE.test(name||'')||type==='text/html'){
     const frame=document.getElementById('drive-prev-frame');
@@ -10481,7 +10654,10 @@ function liveOpenFile(fi){
   // بلا أي تصغير، مهما كانت أبعادها.
   const isImg=/^image\//.test(f.type||'')||/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f.name||'');
   if(isImg){liveOpenImage(f.name,u);return;}
-  liveViewOpen(f.name,`<iframe src="${escAttr(filePreviewSrc(u,f.name))}" allow="autoplay"></iframe>`,false);
+  c1OffSrc(u).then(off=>{
+    const src=(off!==u&&!OFFICE_EXT_RE.test(f.name||''))?off:filePreviewSrc(u,f.name);
+    liveViewOpen(f.name,`<iframe src="${escAttr(src)}" allow="autoplay"></iframe>`,false);
+  });
 }
 /* ══ عرض الكتاب: صفحتان كالكتاب المفتوح ══════════════════════════════
    المعلّمة تعرض على الطالبات ما بين يديهنّ — والكتاب الورقيّ مفتوحٌ على
