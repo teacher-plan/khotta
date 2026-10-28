@@ -210,12 +210,16 @@ def build():
     html = []
     for (sc, a) in zip(S, A):
         txt = CLEAN(sc['narr'])
+        cur = [0]
         def T(anchor):
             if not anchor: return 0
             if anchor.startswith('@'): return round(float(anchor[1:]) * a * 1000)
-            k = txt.index(anchor)   # يفشل إن لم تُوجد العبارة
+            k = txt.index(anchor, cur[0]); cur[0] = k   # بحثٌ متتابع: العبارة بعد سابقتها (لا أول ظهورٍ لها في النص)
             return round(max(0, a * k / len(txt) - .2) * 1000)
         times = [T(it[0]) for it in sc['items']]
+        for sl in {it[3] for it in sc['items'] if it[3]}:   # خطوات المكان الواحد مرتّبة زمنياً، وإلا تراكبت
+            ts = [times[n] for n, it in enumerate(sc['items']) if it[3] == sl]
+            assert all(x < y for x, y in zip(ts, ts[1:])), (sc['title'], ts)
         slots = {}
         for n, it in enumerate(sc['items']):
             if it[3]: slots.setdefault(it[3], []).append(n)
