@@ -52,7 +52,7 @@
       if(q.classList.contains('solved'))return;
       if(i===ok){
         q.classList.add('solved');b.classList.add('ok');bs.forEach(function(x){if(x!==b)x.classList.add('dim');});
-        fb.className='fb ok';fb.textContent='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();
+        fb.className='fb ok';fb.textContent='✔ أحسنت! '+fb.getAttribute('data-why');tone('ok');confetti();try{document.dispatchEvent(new CustomEvent('deck:ok',{detail:{el:q}}));}catch(_){}
       }else{
         b.classList.remove('no');void b.offsetWidth;b.classList.add('no');
         fb.className='fb no';fb.textContent='✘ حاول مرة أخرى';tone('no');
@@ -125,6 +125,6 @@
       liveSetUI(!!document.fullscreenElement);
     });
   }
-  window.DECK={go:go,cur:function(){return cur;},n:slides.length};
+  window.DECK={go:go,cur:function(){return cur;},n:slides.length,tone:tone,fx:confetti};   // tone وfx لأدوات التفاعل (interact.js)
   go(0);
 })();

@@ -89,9 +89,11 @@ def resolve_pages(S):
             x = x.replace('<!--PGB ' + blk + '-->', badge)
         S[i] = x
 
+EXLOG = []
 def ex(num, title, rule, parts, cols=3, note='', src='تمرين', per=4, pg=None):
     # src: «تمرين» لكتاب الطالب، «نشاط ص ٢٥ · تمرين» لكتاب النشاط.
     # الخط الكبير: أربعة أجزاء على الأكثر في الشريحة (٢×٢) — التمرين الأطول يُقسَّم تلقائياً على شرائح متتالية.
+    EXLOG.append((src, num, parts))   # لـ«طابق» التلقائية (auto_interact)
     out = []
     n = -(-len(parts) // per); per = -(-len(parts) // n)   # توزيعٌ متوازن: ٥ أجزاء ← ٣ + ٢ لا ٤ + ١
     for k in range(0, len(parts), per):
@@ -160,3 +162,123 @@ EXTRA_CSS_LESSON = '''
 .who2{font-family:var(--fh);font-weight:900;font-size:clamp(22px,3.6vh,38px)}
 .pq{font-weight:800;font-size:clamp(18px,2.9vh,31px);line-height:1.6}
 '''
+
+# ═══════════ أدوات التفاعل (interact.js / interact.css — طلب الأستاذ عيسى، ٢٨ أكتوبر) ═══════════
+def _q(s): return str(s).replace('"', '&quot;')
+def KEYPAD(q, ans, hint='', why='', long=False):
+    # لوحة أرقام: يكتب الطالب الناتج ثم «تحقّق»؛ ans بالأرقام اللاتينية مثل '0.7'
+    K = [('7', '٧'), ('8', '٨'), ('9', '٩'), ('del', '⌫'), ('4', '٤'), ('5', '٥'), ('6', '٦'), ('.', '٫'), ('1', '١'), ('2', '٢'), ('3', '٣'), ('0', '٠')]
+    keys = ''.join(f'<button data-k="{k}"{" class=kd" if k == "del" else ""}>{t}</button>' for k, t in K) + '<button data-k="go" class="kg">✔ تحقّق</button>'
+    return (f'<div class="ixk" data-a="{ans}" data-h="{_q(hint)}" data-w="{_q(why)}"><div class="ixk-q{' long' if long else ''}"><span>{q}</span>'
+            f'<span class="ixk-out empty">؟</span><span class="ixk-fb"></span></div><div class="ixk-keys">{keys}</div></div>')
+def ORDER(items):
+    # اسحب ورتّب: items بالترتيب الصحيح، وتظهر مخلوطة (خلطٌ ثابت لا يساوي الترتيب الصحيح)
+    import random
+    idx = list(range(len(items))); rnd = random.Random(len(items) * 7 + sum(len(x) for x in items))
+    while idx == sorted(idx): rnd.shuffle(idx)
+    li = ''.join(f'<div class="ixo-i" data-i="{i}">{items[i]}</div>' for i in idx)
+    return f'<div class="ixo"><div class="ixo-l">{li}</div><button class="ixo-go">✔ تحقّق</button><div class="ixo-fb"></div></div>'
+def MATCH(pairs):
+    # طابق: المسائل يميناً ونواتجها مخلوطة يساراً؛ يلمس الطالب مسألةً ثم ناتجها
+    import random
+    idx = list(range(len(pairs))); rnd = random.Random(len(pairs) * 13)
+    while idx == sorted(idx): rnd.shuffle(idx)
+    A = ''.join(f'<button class="ixm-i" data-m="{i}">{q}</button>' for i, (q, _) in enumerate(pairs))
+    B = ''.join(f'<button class="ixm-i" data-m="{i}">{pairs[i][1]}</button>' for i in idx)
+    return f'<div class="ixm"><div class="ixm-cols"><div class="ixm-a">{A}</div><div class="ixm-b">{B}</div></div><div class="ixm-fb"></div></div>'
+def TEAMS():
+    # شريحة بدء منافسة الفريقين: بعدها تظهر لوحة النقاط أسفل كل الشرائح، وبعد كل إجابة صحيحة «النقطة لمن؟»
+    return slide('''<span class="qbadge">منافسة 🏆</span><h2>منافسة الفريقين</h2>
+<div class="ixt-teams"><div class="a">🔵 الفريق الأزرق</div><div class="b">🔴 الفريق الأحمر</div></div>
+<button class="ixt-start">▶ ابدأ المنافسة</button>''' + tn('قسّم الصف فريقين (مثلاً نصف الصف الأيمن والأيسر). بعد كل إجابة صحيحة في سؤالٍ أو لوحة أرقام أو ترتيب أو مطابقة يسألك العرض «النقطة لمن؟». ويمكنك لمس اسم الفريق أسفل الشاشة لإضافة نقطة، و↺ للتراجع.'))
+def TEAMS_END():
+    return slide('''<span class="qbadge">منافسة 🏆</span><h2>نتيجة المنافسة</h2>
+<button class="ixt-end">🏆 أعلن الفائز</button><div class="ixt-win"></div>''')
+def WHERE(title, items, note=''):
+    # أين أرى هذا؟ ثلاثة مواقف يومية، كلٌّ بطاقة تُكشف عمليتها بلمسة
+    cards = ''.join(st(f'<button class="flip box"><span class="wi">{ic}</span><span class="wt">{t}</span><span class="tap">👆</span><span class="hid">{r}</span></button>') for ic, t, r in items)
+    return slide(f'''<span class="qbadge">أين أرى هذا؟ 🌍</span><h2>{title}</h2><div class="ixw">{cards}</div>''' + (tn(note) if note else ''))
+
+# ═══════════ أدوات التفاعل التلقائية في كل عرض (طلب الأستاذ عيسى، ٢٨ أكتوبر: «طبّقها في كل درس كتنويعٍ لطرق الحل») ═══════════
+# - منافسة الفريقين: تبدأ بعد شريحة خطة كل حصة، وتُعلن النتيجة في آخرها.
+# - لوحة الأرقام: كل سؤال «أنتم» ثانٍ ناتجه عددٌ واحد يصير لوحة أرقام بدل الاختيار من متعدد.
+# - اسحب ورتّب: بعد أول مثالٍ محلول بخطوات (STEPS) شريحة «رتّب خطوات الحل».
+# - طابق: قبل بطاقة الخروج الأخيرة، أربع مسائل من تمارين الكتاب مع نواتجها.
+# - أين أرى هذا؟: من where_data.py قبل خطة الحصة الأولى.
+# لإيقافها في عرضٍ بعينه: NO_AUTO_INTERACT = True في ملف الدرس.
+import html as _html
+QUIZ_LOG = []; _QN = [0]; _quiz0 = quiz
+def _txt(h): return ' '.join(_html.unescape(re.sub(r'<[^>]+>', ' ', str(h))).split())
+def _latin(t):
+    t = t.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩٫', '0123456789.')).replace(' ', '')
+    return t if re.fullmatch(r'\d+(\.\d+)?', t) else None
+def quiz(q, choices, ok, why, badge=None):
+    ans = _txt(choices[ok]); num = _latin(ans); QUIZ_LOG.append((q, choices[ok], num))
+    if num is not None and not globals().get('NO_AUTO_INTERACT'):
+        _QN[0] += 1
+        if _QN[0] % 2 == 0:
+            qq = re.sub(r'=\s*؟\s*$', '=', q.strip())
+            return ((f'<span class="qbadge">{badge}</span>' if badge else '') + '<h2>اكتب الناتج ثم «تحقّق»</h2>'
+                    + KEYPAD(qq, num, hint='راجع خطواتك وحاول مرة أخرى', why=why, long=len(_txt(qq)) > 22)
+                    + tn(f'لوحة أرقام (بدل الاختيار من متعدد للتنويع): يأتي طالبٌ إلى الشاشة ويكتب الناتج. الإجابة: {choices[ok]}<br>{why}'))
+    return _quiz0(q, choices, ok, why, badge)
+def _cls(sl): m = re.match(r'<section class="slide ([^"]*)"', sl); return m[1] if m else ''
+def auto_interact(S):
+    if globals().get('NO_AUTO_INTERACT'): return S
+    W = globals().get('WHERE_DATA', {}).get(os.path.basename(SLIDES))
+    # اسحب ورتّب بعد أول مثالٍ محلول بخطوات
+    for i, sl in enumerate(S):
+        if globals().get('AUTO_ORDER', True) and 'class="stps"' in sl and 'mode i' in sl:
+            st_ = re.findall(r'<div class="stp[^"]*"><span class="lab">(.*?)</span>(.*?)</div></div>', sl, re.S)
+            st_ = [(re.sub(r'^\s*[٠-٩0-9]+\)\s*', '', l), e) for l, e in st_]   # بلا أرقام الخطوات، وإلا رتّبها الطالب بالأرقام
+            items = [((l + (': ' + e if _txt(e) else '')) if _txt(l) else e) for l, e in st_]
+            h = re.search(r'<h2[^>]*>(.*?)</h2>', sl, re.S); ht = _txt(h[1]) if h else ''
+            seq = ht[:1] in '٠١٢٣٤٥٦٧٨٩' or ht.split(' ')[0] in ('أوجد', 'حوّل', 'اكتب', 'رتّب', 'احسب', 'بسّط', 'الطريقة', 'قرّب', 'حلّ', 'اجمع', 'اطرح', 'اضرب', 'اقسم')
+            if seq and not any(re.search(r'(^|\s)أو\s|لماذا', _txt(x)) for x in items) and 3 <= len(items) <= 5 and len({_txt(x) for x in items}) == len(items):
+                S.insert(i + 1, slide(f'<div class="row hdr">{mode("we")}<span class="qbadge">اسحب ورتّب ↕️</span></div><h2>رتّب خطوات: {h[1] if h else "الحل"}</h2>' + ORDER(items)
+                                      + tn('يسحب طالبٌ البطاقات بإصبعه إلى ترتيبها، ثم «تحقّق»: الخضراء في مكانها والحمراء لا. استرجاعٌ لخطوات المثال السابق بلا النظر إليه.')))
+            break
+    # طابق: من تمارين كتاب الطالب أولاً ثم كتاب النشاط، وإلا من أسئلة الحصة
+    def ok_(h): return not re.search(r'<img|<table|vcol|<svg|<br|class="fig', str(h))
+    pairs = []
+    for src, num, parts in sorted(EXLOG, key=lambda e: e[0] != 'تمرين'):
+        c = []
+        for q, a_ in parts:
+            q = re.sub(r'^\(\S+\)\s*', '', q); a_ = re.sub(r'<small>.*?</small>', '', str(a_), flags=re.S)
+            if not (ok_(q) and ok_(a_) and 0 < len(_txt(q)) <= 24): continue
+            if '=' in _txt(a_):   # «٤ + ٦ = ١٠» ← الناتج وحده، وإلا كشف الجوابُ السؤال
+                if 'class="fr"' in str(a_): continue
+                a_ = _txt(a_).split('=')[-1].strip()
+                m_ = re.match(r'^([−\d٠-٩٫\s]+?)\s+(نطرح|نضيف|نقسم|نضرب)', a_)
+                if m_: a_ = m_[1]
+            at = _txt(a_)
+            if not (0 < len(at) <= 14) or at[:1] in '<>≠≤≥=' or _txt(q) in at: continue
+            c.append((q, a_))
+        seen, c2 = set(), []
+        for q, a_ in c:
+            if _txt(a_) not in seen: seen.add(_txt(a_)); c2.append((q, a_))
+        box = [x for x in c2 if '☐' in x[0]]; nob = [x for x in c2 if '☐' not in x[0]]
+        c2 = box if len(box) > len(nob) else nob   # نوعٌ واحد من الأسئلة في الشريحة
+        if len(c2) >= 3: pairs = c2[:4]; break
+    if not pairs:
+        seen = set()
+        for q, ch, num in QUIZ_LOG:
+            qq = re.sub(r'=\s*؟\s*$', '', q.strip()).strip()
+            if num and ok_(qq) and len(_txt(qq)) <= 24 and num not in seen: seen.add(num); pairs.append((qq, ch))
+        pairs = pairs[:4] if len(pairs) >= 3 else []
+    if pairs:
+        ex_i = [i for i, sl in enumerate(S) if 'بطاقة الخروج' in sl and '>الإجابات</h2>' not in sl]
+        at = ex_i[-1] if ex_i else next((i for i, sl in enumerate(S) if sl.startswith('<!--LAUNCH')), len(S))
+        S.insert(at, slide(f'<div class="row hdr">{mode("u")}<span class="qbadge">طابق 🔗</span></div><h2>المس المسألة ثم ناتجها</h2>' + MATCH(pairs)
+                           + tn('مسائل من تمارين الكتاب: يلمس الطالب المسألة ثم ناتجها؛ الصحيحة تتلوّن بلونٍ واحد، والخاطئة تهتزّ.')))
+    # منافسة الفريقين في كل حصة، و«أين أرى هذا؟» قبل الحصة الأولى
+    dv = [i for i, sl in enumerate(S) if 'divider' in _cls(sl).split()]
+    ln = next((i for i, sl in enumerate(S) if sl.startswith('<!--LAUNCH')), len(S))
+    ins = [(ln, TEAMS_END())] if dv else []
+    for k, i in enumerate(dv):
+        ins.append((i + 1, TEAMS()))
+        if k: ins.append((i, TEAMS_END()))
+    if not dv: ins += [(min(3, len(S)), TEAMS()), (ln, TEAMS_END())]
+    if W: ins.append((dv[0] if dv else min(3, len(S)), WHERE(W['title'], W['items'], W.get('note', 'مواقف من بيئة الطالب (من خارج المرجع). اسأل: «أي عمليةٍ نحتاج؟» ثم المس البطاقة لتكشف العملية والناتج.'))))
+    for i, h in sorted(ins, key=lambda x: -x[0]): S.insert(i, h)
+    return S

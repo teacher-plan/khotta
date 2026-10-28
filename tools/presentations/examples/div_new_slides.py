@@ -6,6 +6,7 @@
 # python3.12 gen_powers.py div_new_slides.py قسمة_الأعداد_العشرية_تجريبي_عرض_تفاعلي.html "قسمة الأعداد العشرية والكسور العشرية (١) — الصف السابع"
 # الوحدة الثالثة (طلب الأستاذ عيسى): الخط أصغر بنسبة ١٠٪، والأعداد في القوائم كلٌّ في مربّعه بلا «،» (gen_powers.py)
 NUM_CHIPS = True
+NO_AUTO_INTERACT = True   # تجربة مرفوضة؛ تبقى كما جُرّبت
 EXTRA_CSS_LAST = 'html:root{--ui:calc(.70 * .8)} .q .ch{font-size:clamp(34px,7vh,84px)}'
 exec(open(os.path.join(HERE, 'vcol.py'), encoding='utf-8').read())
 exec(open(os.path.join(HERE, 'figs.py'), encoding='utf-8').read())

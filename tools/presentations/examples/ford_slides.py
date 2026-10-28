@@ -4,6 +4,7 @@
 # نشاط بطاقات المقامات (ورقة المصادر ٦-٧)؛ تعليقا التمرينين ٣ و ٤؛ الواجب: النشاط ص٨٤–٨٥)،
 # كتاب الطالب ص١١٨–١١٩، وإجابات الدليل ص١٢٤ (كتاب الطالب) وص١٢٨–١٢٩ (كتاب النشاط ص٨٤–٨٥).
 # python3.12 gen_powers.py ford_slides.py ترتيب_الكسور_عرض_تفاعلي.html "ترتيب الكسور — الصف السابع"
+AUTO_ORDER = False   # خطوتا التحويل ٢ و ٣ يصحّ تبديلهما، فلا «رتّب» تلقائية
 exec(open(os.path.join(HERE, 'frac_common.py'), encoding='utf-8').read())
 def LST(*fr): return M(*sum([[FR(*f), '،'] for f in fr], [])[:-1])   # قائمة كسور: الأول يميناً
 LT, GT = '<span class="x">&lt;</span>', '<span class="x">&gt;</span>'

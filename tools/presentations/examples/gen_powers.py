@@ -50,6 +50,9 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else 'القوى_والجذور_عرض_ت
 TITLE = sys.argv[3] if len(sys.argv) > 3 else 'القوى والجذور — الصف السابع'
 exec(open(os.path.join(HERE,'common_slides.py'),encoding='utf-8').read())
 exec(open(os.path.join(HERE,SLIDES),encoding='utf-8').read())
+try: exec(open(os.path.join(HERE,'where_data.py'),encoding='utf-8').read())
+except FileNotFoundError: pass
+S = auto_interact(S)   # أدوات التفاعل التلقائية (common_slides.py)
 resolve_pages(S)
 resolve_launch(S)   # شرائح الانطلاق إلى تمارين الكتابين (jump.js)
 
@@ -137,7 +140,7 @@ base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{TITLE}</title>
-<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}{NUM_CSS if globals().get('NUM_CHIPS') else ''}{globals().get('EXTRA_CSS_LAST','')}</style></head><body>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'interact.css'),encoding='utf-8').read()}{NUM_CSS if globals().get('NUM_CHIPS') else ''}{globals().get('EXTRA_CSS_LAST','')}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
@@ -149,7 +152,7 @@ html = f'''<!DOCTYPE html>
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
-<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script></body></html>'''
+<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'interact.js'),encoding='utf-8').read()}</script></body></html>'''
 # حدود العرض بوحدة vw تتصغّر مع zoom الشرائح (--ui و--fit و--ar)، فيضيق المربّع عن سطره ويخرج النص منه (iPad):
 # نقسمها على معامل التكبير --zz لتبقى بعرضها المرئي الأصلي، ويصغر الخط وحده.
 def _unz(css):
