@@ -4003,7 +4003,7 @@ input,textarea,select{font-size:16px !important;}
            placeholder="٨ أحرف فأكثر" oninput="pwCheck()"/>
     <!-- التكرار ليس تزيّناً: خطأٌ مطبعيٌّ في كلمةٍ مخفيّة يُخرجها من حسابها
          عند أوّل خروج، ولا تعرف ما الذي كتبته. -->
-    <label>أعيدي كتابتها</label>
+    <label data-kh-g="أعيدي كتابتها|أعد كتابتها">أعيدي كتابتها</label>
     <input id="pw-new2" type="password" dir="ltr" style="text-align:left" autocomplete="new-password"
            placeholder="نفس الكلمة" oninput="pwCheck()"/>
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:8px;font-weight:600">
@@ -4280,13 +4280,13 @@ async function forgotPassword(){
   const btn=document.getElementById('forgot-btn');
   const email=(document.getElementById('pw-login-email').value||'').trim();
   if(!email){
-    box.textContent='اكتبي بريدك في الحقل أعلاه ثم اضغطي هنا مرّة أخرى';
+    box.textContent=khG('اكتبي','اكتب')+' بريدك في الحقل أعلاه ثم '+khG('اضغطي','اضغط')+' هنا مرّة أخرى';
     box.style.color='var(--red2)';
     try{document.getElementById('pw-login-email').focus();}catch(e){}
     return;
   }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
-    box.textContent='البريد غير صالح — راجعي كتابته';
+    box.textContent='البريد غير صالح — '+khG('راجعي','راجع')+' كتابته';
     box.style.color='var(--red2)';return;
   }
   btn.disabled=true;btn.textContent='يُرسَل…';box.textContent='';
@@ -4298,14 +4298,14 @@ async function forgotPassword(){
     if(error)throw error;
     const wa='https://wa.me/'+RESET_WA+'?text='+encodeURIComponent('السلام عليكم، لم تصلني رسالة استعادة كلمة المرور. بريدي: '+email);
     box.innerHTML='إن كان هذا البريد مسجّلاً فستصلك رسالةٌ فيها رابط. '
-      +'افحصي صندوق الوارد <b>والمهملات</b>. '
-      +'ولو لم تصلك خلال دقائق <a href="'+wa+'" target="_blank" rel="noopener" style="color:var(--gold,#C0A848);font-weight:800">راسلي الإدارة</a>.';
+      +khG('افحصي','افحص')+' صندوق الوارد <b>والمهملات</b>. '
+      +'ولو لم تصلك خلال دقائق <a href="'+wa+'" target="_blank" rel="noopener" style="color:var(--gold,#C0A848);font-weight:800">'+khG('راسلي','راسل')+' الإدارة</a>.';
     box.style.color='var(--muted,#999)';
   }catch(e){
     const m=String(e&&e.message||'');
     box.textContent=/rate|limit|seconds|Too many/i.test(m)
-      ?'أُرسلت رسالةٌ قبل قليل — انتظري دقيقةً ثم أعيدي المحاولة'
-      :'تعذّر الإرسال — تحققي من الاتصال وأعيدي المحاولة';
+      ?'أُرسلت رسالةٌ قبل قليل — '+khG('انتظري','انتظر')+' دقيقةً ثم '+khG('أعيدي','أعد')+' المحاولة'
+      :'تعذّر الإرسال — '+khG('تحققي','تحقق')+' من الاتصال و'+khG('أعيدي','أعد')+' المحاولة';
     box.style.color='var(--red2)';
   }finally{
     btn.disabled=false;btn.textContent='نسيت كلمة المرور؟';
@@ -4324,8 +4324,8 @@ function pwOpen(opts){
   if(!rec&&!currentUser){toast('سجّلي الدخول أولاً',true);return;}
   const who=document.getElementById('pw-who');
   if(who)who.innerHTML=rec
-    ? 'اختاري كلمة مرورٍ جديدة لحساب <bdi dir="ltr">'+escHtml(mail)+'</bdi>. ستدخلين بها مباشرةً.'
-    : 'كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(mail)+'</bdi>. تبقين داخل حسابك بعد التغيير.';
+    ? khG('اختاري','اختر')+' كلمة مرورٍ جديدة لحساب <bdi dir="ltr">'+escHtml(mail)+'</bdi>. '+khG('ستدخلين','ستدخل')+' بها مباشرةً.'
+    : 'كلمة مرور الدخول إلى <bdi dir="ltr">'+escHtml(mail)+'</bdi>. '+khG('تبقين','تبقى')+' داخل حسابك بعد التغيير.';
   ['pw-new','pw-new2'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('pw-show').checked=false;
   pwToggleShow();pwCheck();
@@ -4370,9 +4370,9 @@ async function pwSave(){
     const m=String(e&&e.message||'');
     const el=document.getElementById('pw-msg');
     el.textContent=
-      /different|same/i.test(m)?'هذه كلمتك الحالية — اختاري كلمةً جديدة'
-      :/weak|short|least/i.test(m)?'كلمةٌ ضعيفة — أطيلي الكلمة أو نوّعي حروفها'
-      :/session|expired|jwt/i.test(m)?'انتهت جلستك — سجّلي الدخول ثم أعيدي المحاولة'
+      /different|same/i.test(m)?'هذه كلمتك الحالية — '+khG('اختاري','اختر')+' كلمةً جديدة'
+      :/weak|short|least/i.test(m)?'كلمةٌ ضعيفة — '+khG('أطيلي','أطِل')+' الكلمة أو '+khG('نوّعي','نوّع')+' حروفها'
+      :/session|expired|jwt/i.test(m)?'انتهت جلستك — '+khG('سجّلي','سجّل')+' الدخول ثم '+khG('أعيدي','أعد')+' المحاولة'
       :'تعذّر الحفظ — تحققي من الاتصال وأعيدي المحاولة';
     el.style.color='var(--red2)';
   }finally{
@@ -4776,7 +4776,9 @@ function showAuthState(state){
    («أهلاً بك»، «مادتك وصفوفك»)، فلا يتبدّل الخطاب تحت أقدام مستخدمٍ قديم
    حتى يختار بنفسه. */
 let khGender='';   // 'm' | 'f' | '' (غير محدَّد)
-function khSetGender(g){ khGender=(g==='m'||g==='f')?g:''; }
+function khSetGender(g){ khGender=(g==='m'||g==='f')?g:''; try{if(khGender)localStorage.setItem('kh_gender',khGender);}catch(e){} }
+// قبل الدخول لا نعرف المستخدم: نستعمل آخر جنسٍ عُرف على هذا الجهاز
+try{khSetGender(localStorage.getItem('kh_gender')||'');}catch(e){}
 function khIsMale(){ return khGender!=='f'; }
 function khG(fem,masc){ return khIsMale()?masc:fem; }
 // ألقاب جاهزة، أكثر ما يتكرّر في نصوص المنصّة
@@ -6393,7 +6395,7 @@ function ywRenderLessons(){
   const box=document.getElementById('yw-lessons');if(!box)return;
   let items=[];
   try{items=(typeof dpNextLessons==='function')?dpNextLessons():[];}catch(e){}
-  if(!items.length){box.innerHTML='<div class="yw-empty">لا دروس غير منجزة حالياً — أحسنتِ!</div>';return;}
+  if(!items.length){box.innerHTML='<div class="yw-empty">لا دروس غير منجزة حالياً — '+khG('أحسنتِ','أحسنت')+'!</div>';return;}
   box.innerHTML=items.slice(0,4).map(it=>`<div class="yw-row" style="display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12.5px;border-bottom:1px solid var(--border)">
     <span style="font-weight:800;color:var(--text)">${escHtml(it.lesson)}</span>
     <span style="color:var(--muted);margin-inline-start:auto;font-size:11.5px">${escHtml(it.subject)} · صف ${egToArabic(it.gradeNum)}</span>
@@ -17043,7 +17045,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     let running = false;
     window[name] = function(...args){
       if (running) {
-        try { toast('العملية جارية — انتظري انتهاءها', true); } catch(e) {}
+        try { toast('العملية جارية — '+khG('انتظري','انتظر')+' انتهاءها', true); } catch(e) {}
         return;
       }
       running = true;

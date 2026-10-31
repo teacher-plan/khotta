@@ -3373,7 +3373,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     </div>
     <div class="beh-sum" id="stu-sum"></div>
     <div class="beh-tools">
-      <input type="text" id="stu-search" class="beh-search" placeholder="ابحثي عن اسم..." oninput="starRenderBoard()"/>
+      <input type="text" id="stu-search" class="beh-search" placeholder="ابحثي عن اسم..." data-kh-gp="placeholder|ابحثي عن اسم...|ابحث عن اسم..." oninput="starRenderBoard()"/>
       <div class="beh-sort">
         <button data-s="name" class="on" onclick="stuSort('name')">بالاسم</button>
         <button data-s="star" onclick="stuSort('star')">الأعلى نجوماً</button>
@@ -3465,7 +3465,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
         <b id="gm-reco-name"></b>
         <span id="gm-reco-why"></span></div></div>
       <div class="gm-reco-btns">
-        <button type="button" class="eg-regen" onclick="gmRecoApply()">اعتمدي الاقتراح</button>
+        <button type="button" class="eg-regen" onclick="gmRecoApply()" data-kh-g="اعتمدي الاقتراح|اعتمد الاقتراح">اعتمدي الاقتراح</button>
         <button type="button" class="eg-generate" style="margin:0" onclick="gmQuick()">⚡ إنشاء سريع — كل القرارات عنّي</button>
       </div>
     </div>
@@ -4191,7 +4191,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 </div>
 <!-- فقّاعة تنبيه ملء الشاشة — خارج live-bar عمداً كي لا يقصّها overflow-x:auto
      الخاص بـ.lb-tools (يفرض overflow-y:auto ضمناً فيقصّ أي فائضٍ رأسي). -->
-<div class="lb-fs-bubble" id="lb-fs-bubble">فعّلي وضع ملء الشاشة لتجربة أفضل</div>
+<div class="lb-fs-bubble" id="lb-fs-bubble" data-kh-g="فعّلي وضع ملء الشاشة لتجربة أفضل|فعّل وضع ملء الشاشة لتجربة أفضل">فعّلي وضع ملء الشاشة لتجربة أفضل</div>
 
 <div id="live-stage">
   <div id="live-body"></div>
@@ -4431,11 +4431,16 @@ function cycleGrades(cy){return CYCLE_GRADES[cy||APP_CYCLE]||CYCLE_GRADES.cycle1
    المتحدّث عن الطلاب. فمع 'cycle1' تُعيد khG المؤنّث دائماً — أي أنّ خطاب
    المعلّمة لا يتغيّر حرفاً واحداً عمّا هو عليه اليوم. */
 let khGender='';                 // 'm' | 'f' | '' (غير محدَّد)
-function khSetGender(g){ khGender=(g==='m'||g==='f')?g:''; }
+function khSetGender(g){ khGender=(g==='m'||g==='f')?g:''; try{if(khGender)localStorage.setItem('kh_gender',khGender);}catch(e){} }
+// قبل الدخول لا نعرف المستخدم: نستعمل آخر جنسٍ عُرف على هذا الجهاز (رسائل الدخول واستعادة كلمة المرور)
+try{khSetGender(localStorage.getItem('kh_gender')||'');}catch(e){}
 // الحلقة الأولى: مؤنّث ثابت لا يُناقَش. غيرها: اختيارها، والافتراض المؤنّث.
-function khTeacherGender(){ return APP_CYCLE==='cycle1' ? 'f' : (khGender||'f'); }
+// ⚠️ صارت المنصّة تضمّ معلّمين رجالاً (الصفوف ١–١٢): من اختار «معلّم» يُخاطَب
+// بالمذكّر في كل حلقة. الافتراض عند غياب الاختيار يبقى المؤنّث.
+function khTeacherGender(){ return khGender==='m' ? 'm' : 'f'; }
 // 'mixed' في الحلقة الأولى، وإلا فهو جنس المعلّم نفسه (مدارس أحاديّة الجنس)
-function khStuGender(){ return APP_CYCLE==='cycle1' ? 'mixed' : khTeacherGender(); }
+// معلّمٌ رجلٌ يدرّس بنين دائماً (لا يدرّس الرجال طالباتٍ)، فطلابه بالمذكّر
+function khStuGender(){ return APP_CYCLE==='cycle1' && khTeacherGender()==='f' ? 'mixed' : khTeacherGender(); }
 function khG(fem,masc){ return khTeacherGender()==='f'?fem:masc; }
 function khS(fem,masc){ return khStuGender()==='f'?fem:masc; }
 /* • جنس الزميلات/الزملاء (khColGender): متغيّرٌ ثالثٌ مستقلٌّ عن الاثنين قبله،
@@ -4444,7 +4449,7 @@ function khS(fem,masc){ return khStuGender()==='f'?fem:masc; }
      نساء، فزميلاتهنّ نساءٌ دائماً — بينما طلابهنّ مختلطون. فمع 'cycle1' تُعيد
      khS المذكّر (طلابٌ مختلطون) وتُعيد khC المؤنّث (زميلاتٌ كلُّهنّ نساء)،
      وهذا الفرق وحده سببٌ كافٍ لفصل المتغيّرين. */
-function khColGender(){ return APP_CYCLE==='cycle1' ? 'f' : khTeacherGender(); }
+function khColGender(){ return khTeacherGender(); }
 function khC(fem,masc){ return khColGender()==='f'?fem:masc; }
 // ألقابٌ جاهزة، أكثر ما يتكرّر
 function khTitle(){ return khG('الأستاذة','الأستاذ'); }
@@ -4457,7 +4462,7 @@ function khRole(){ return khG('معلّمة','معلّم'); }
    data-kh-cp مثلها لكن بجنس الزميلات. */
 function khApplyGender(){
   const gm=document.getElementById('c1-mi-gender');
-  if(gm)gm.style.display=(APP_CYCLE==='cycle1')?'none':'';
+  if(gm)gm.style.display='';
   document.querySelectorAll('[data-kh-g]').forEach(el=>{
     const p=(el.getAttribute('data-kh-g')||'').split('|');
     if(p.length===2)el.textContent=khG(p[0],p[1]);
@@ -4482,7 +4487,6 @@ function khApplyGender(){
 /* تغيير طريقة المخاطبة — سؤالٌ واحدٌ وحفظ، بلا شاشةٍ جديدة.
    لا معنى له في الحلقة الأولى (خطابها مؤنّثٌ ثابت)، فالزرّ مخفيٌّ هناك. */
 async function changeGender(){
-  if(APP_CYCLE==='cycle1')return;
   const cur=khTeacherGender()==='f'?'معلّمة':'معلّم';
   const ans=(prompt('كيف نخاطبك؟ اكتب: معلم أو معلمة\n(الحالي: '+cur+')',cur)||'').trim();
   if(!ans)return;
@@ -6476,10 +6480,9 @@ function suRender(){
       +'<div class="fld"><label>الفصل الدراسي</label><div class="chip-row">'
       +['الفصل الأول','الفصل الثاني'].map(x=>'<button class="chip '+(x===suSem?'sel':'')+'" onclick="suSem=\''+x+'\';suRender()">'+x+'</button>').join('')
       +'</div></div>'
-      // سؤال المخاطبة — للحلقة الثانية وحدها. الحلقة الأولى خطابها مؤنّثٌ
-      // ثابت فلا يُعرض لها شيء، ولا يتغيّر في معالجها حرف.
-      +(APP_CYCLE==='cycle1'?'':
-        '<div class="fld"><label>طريقة المخاطبة</label><div class="chip-row">'
+      // سؤال المخاطبة — لكل الحلقات: المنصّة صارت تضمّ معلّمين (الصفوف ١–١٢).
+      // في الحلقة الأولى اختياريّ (الافتراض مؤنّث)، وفي غيرها إلزاميّ (suNext1).
+      +('<div class="fld"><label>طريقة المخاطبة</label><div class="chip-row">'
         +[['f','معلّمة'],['m','معلّم']].map(x=>'<button class="chip '+(khGender===x[0]?'sel':'')+'" onclick="suPickGender(\''+x[0]+'\')">'+x[1]+'</button>').join('')
         +'</div><small style="display:block;font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.8">يحدّد صيغة خطاب المنصّة لك ولطلابك — ويمكن تغييره لاحقاً من قائمة الحساب</small></div>')
       +'<button class="c1-mbtn go" style="width:100%;margin-top:14px;padding:13px" onclick="suNext1()">التالي: الصفوف</button></div>';
@@ -6818,7 +6821,6 @@ function suGradeTab(g){
    مع بقيّة الإعداد في suFinish (حفظٌ واحد لا اثنان)، وchangeGender يبقى
    طريق التصحيح لاحقاً. */
 function suPickGender(g){
-  if(APP_CYCLE==='cycle1')return;
   // ما كُتب في الحقول يُلتقط قبل إعادة الرسم وإلا مُسح
   const nEl=document.getElementById('su-name');if(nEl)suName=nEl.value;
   const sEl=document.getElementById('su-school');if(sEl)suSchool=sEl.value;
@@ -6862,7 +6864,7 @@ async function suFinish(){
   const ap={...achProfile(),school:suSchool};
   // teacher_gender لا يُضاف إطلاقاً في الحلقة الأولى: حمولة الحفظ هناك تبقى
   // كما هي حرفاً بحرف.
-  const _extra=(APP_CYCLE!=='cycle1'&&khGender)?{teacher_gender:khGender}:{};
+  const _extra=khGender?{teacher_gender:khGender}:{};
   const _ok=await cy1Save({display_name:suName,phone:suPhone,semester:suSem,grades,setupDone:true,ach_profile:ap,..._extra},'يحفظ إعدادك');
   // أخطرُ حفظٍ في التطبيق: مسحُ suData/suRosters يمحو كلَّ ما أدخلته في
   // الإعداد. لو لم يصل الخادمَ لضاع عملُ ربع ساعةٍ بلا رجعة.
@@ -10194,7 +10196,7 @@ function chRenderRound(){
     body.innerHTML=head
       +`<div class="ch-hint">طالبٌ ظهرُه للشاشة، وفريقه يصف الكلمة بلا ذكرها.</div>
         <div class="ch-word">${escHtml(rd.q)}</div>
-        ${rd.note?`<div class="ch-note">تلميح للمعلمة: ${escHtml(rd.note)}</div>`:''}
+        ${rd.note?`<div class="ch-note">تلميح ${khG('للمعلمة','للمعلم')}: ${escHtml(rd.note)}</div>`:''}
         ${chTimerHtml(r.secs||60)}
         <div class="ch-acts">
           ${chCtx.teams.map((t,i)=>`<button class="ch-btn ghost" onclick="chPoint(${i})" style="border-color:${t.c};color:${t.c}">+١ ${escHtml(t.nm)}</button>`).join('')}
@@ -10207,7 +10209,7 @@ function chRenderRound(){
         ${chTimerHtml(r.secs||60)}
         <div class="ch-hint">${khG('امنحي','امنح')} نقطةً عن كل إجابة صحيحة — ${khG('اضغطي','اضغط')} بطاقة الفريق.</div>
         <div class="ch-acts">
-          <button class="ch-btn ghost" onclick="chReveal()">أفكارٌ للمعلمة</button>
+          <button class="ch-btn ghost" onclick="chReveal()">أفكارٌ ${khG('للمعلمة','للمعلم')}</button>
           <button class="ch-btn main" onclick="chNext()">الجولة التالية</button>
         </div>
         <div id="ch-slot"></div>`;
@@ -16081,10 +16083,10 @@ async function libSave(){
     if(newItem){
       const typeLbl={pdf:'PDF',word:'Word',ppt:'PowerPoint',excel:'Excel',image:'صورة',other:'ملف'};
       const tLbl=libPendingFile?(typeLbl[fileType]||'ملف'):'دون ملف مرفق';
-      const uploaderName='أستاذة '+(profile.display_name||currentUser.email);
+      const uploaderName=khTitle()+' '+(profile.display_name||currentUser.email);
       sb.from('c1_messages').insert({
         kind:'library_share',title:'ملف جديد في مكتبة مادة '+libSubject,
-        body:`شاركت ${uploaderName} ملفاً جديداً بعنوان «${title}» (${tLbl}) في مكتبة مادة ${libSubject} — ${khG('اطّلعي','اطّلع')} عليه ${khG('وقيّميه','وقيّمه')} بلطف!`,
+        body:`${khG('شاركت','شارك')} ${uploaderName} ملفاً جديداً بعنوان «${title}» (${tLbl}) في مكتبة مادة ${libSubject} — للاطّلاع عليه وتقييمه بلطف!`,
         target_subject:libSubject,item_id:newItem.id,created_by:currentUser.email
       }).then(()=>{}).catch(()=>{});
       sb.from('c1_notifications').insert({
