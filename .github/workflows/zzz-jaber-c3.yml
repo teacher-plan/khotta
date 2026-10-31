@@ -1,0 +1,31 @@
+# مؤقّت: إضافة الشعبة التاسع/٣ لحساب أ. جابر المصلحي. يُحذف بعد التشغيل.
+name: zzz jaber add 9-3
+on: workflow_dispatch
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: patch
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -euo pipefail
+          export SK=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          echo "::add-mask::$SK"
+          cat > /tmp/c.mjs <<'JS'
+          const U=`https://${process.env.REF}.supabase.co`, K=process.env.SK;
+          const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
+          const j=async(r)=>{const t=await r.text();if(!r.ok)throw new Error(r.status+' '+t);return t?JSON.parse(t):null;};
+          const EMAIL='jaber.demo@khotati.com';
+          const [row]=await j(await fetch(`${U}/rest/v1/cycle1_profiles?email=eq.${EMAIL}&select=id,data`,{headers:H}));
+          if(!row)throw new Error('no profile');
+          const d=row.data, g=d.grades.find(x=>x.num===9);
+          if(!g.classes.some(c=>c.num===3)){
+            g.classes.push({id:'c1g9s3',name:'التاسع/٣',num:3,color:'#4878A8',subjects:['اللغة العربية'],students:[]});
+          }
+          d.updated_at=new Date().toISOString();
+          await j(await fetch(`${U}/rest/v1/cycle1_profiles?id=eq.${row.id}`,{method:'PATCH',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify({data:d,updated_at:d.updated_at})}));
+          console.log('DONE',g.classes.map(c=>c.name).join(' | '));
+          JS
+          node /tmp/c.mjs
