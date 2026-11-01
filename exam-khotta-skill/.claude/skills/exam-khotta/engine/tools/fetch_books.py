@@ -48,7 +48,7 @@ def moe_books(subject, grade, sem):
     home = http_get(MOE + '/ar/manaheg')
     g = None
     for href, text in links(home):
-        if re.search(r'manaheg/\d+$', href) and text.replace('الصف ', '').strip() == GRADE_AR[grade]:
+        if re.search(r'manaheg/\d+$', href) and re.sub(r'\s*\d+\s*كتاب\s*$', '', text.replace('الصف ', '')).strip() == GRADE_AR[grade]:   # البوابة تُلحق عدد الكتب: «الصف السابع 21 كتاب»
             g = urllib.parse.urljoin(MOE + '/', href)
     if not g:
         raise RuntimeError(f'لم أجد الصف {GRADE_AR[grade]} في البوابة')
@@ -59,12 +59,21 @@ def moe_books(subject, grade, sem):
     if not p:
         raise RuntimeError(f'لم أجد {SEM_AR[sem][0]}')
     page = http_get(p)
+    # البوابة الجديدة (٢٠٢٦): صفحة الفصل تسرد بطاقات «…/show/N» وفي كل بطاقة رابط Book…pdf — نجمعها بعناوينها
+    if not re.search(r'images/manaheg/file/Book\d+\.pdf', page):
+        cards = ''
+        for href, text in links(page):
+            if re.search(r'manaheg/\d+/show/\d+$', href):
+                sub = http_get(urllib.parse.urljoin(MOE + '/', href))
+                pdf = re.search(r'images/manaheg/file/Book\d+\.pdf', sub)
+                if pdf: cards += f'<p>{html.escape(text)}</p> /{pdf.group(0)}\n'
+        page = cards
     out = {}
     unnamed = []
     # كل كتاب: نصّ العنوان قبل رابط Book…pdf
-    for m in re.finditer(r"(.{0,500}?)(/images/manaheg/file/Book\d+\.pdf)", page, re.S):
+    for m in re.finditer(r"(.{0,500}?)/?(images/manaheg/file/Book\d+\.pdf)", page, re.S):
         title = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', ' ', m.group(1)))).strip()[-120:]
-        url = MOE + m.group(2)
+        url = MOE + '/' + m.group(2)
         if any(w in title for w in SKIP):
             continue
         kind = 'activity' if 'النشاط' in title else ('student' if 'الطالب' in title else None)
