@@ -8,6 +8,7 @@
 #   python3 tools/presentations/drive_upload.py <المجلد> <ملف> [<ملف> …]          ← بأسمائها كما هي
 #   python3 tools/presentations/drive_upload.py <المجلد> <ملف>=<الاسم في Drive> …
 #   python3 tools/presentations/drive_upload.py --spec دروس.json                 ← صيغة drive_sync.py نفسها
+#   python3 tools/presentations/drive_upload.py --pull <المجلد> <الاسم> <مسار>        ← ينزّل ملفاً بالاسم من المجلد
 #   python3 tools/presentations/drive_upload.py --check                           ← يتأكّد من المفتاح فقط
 #   python3 tools/presentations/drive_upload.py --mkdir <المجلد الأب> <الاسم>        ← ينشئ مجلداً (أو يعيد الموجود بالاسم نفسه) ويطبع معرّفه
 # الملف الموجود بالاسم نفسه في المجلد **يُستبدل محتواه** (يبقى رابطه كما هو)، وإلا يُنشأ ملفٌ جديد.
@@ -82,6 +83,11 @@ def main(a):
         r = req('POST', API + '?supportsAllDrives=true&fields=id', json.dumps({'name': a[2], 'mimeType': 'application/vnd.google-apps.folder', 'parents': [a[1]]}).encode(),
                 {'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8'})
         print(r['id']); return
+    if a[0] == '--pull':   # --pull <المجلد> <الاسم> <مسار الحفظ> ← ينزّل ملفاً بالاسم (لحالة البرنامج في Drive)
+        old = [f for f in find(tok, a[1], a[2])]
+        if not old: print('✘ لا يوجد:', a[2]); sys.exit(1)
+        _, body = req('GET', f"{API}/{old[0]['id']}?alt=media&supportsAllDrives=true", headers={'Authorization': 'Bearer ' + tok}, raw=True)
+        open(a[3], 'wb').write(body); print('✔ نُزّل:', a[2], '←', a[3]); return
     if a[0] == '--spec':
         for lesson in json.load(open(a[1], encoding='utf-8')):
             print('—', lesson['name'])
