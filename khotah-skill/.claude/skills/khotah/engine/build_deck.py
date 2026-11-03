@@ -24,6 +24,13 @@ if not _cp: print('⚠ لم يُعثر على khotah.config.json: الغلاف �
 TEACHER = CFG.get('teacher_name', '')                     # يظهر في الغلاف فقط: «إعداد: …»
 ME = ('إعداد: ' + TEACHER) if TEACHER else ''
 UI = float(CFG.get('ui_scale', 0.82))                      # التصغير العامّ (--ui)
+# سمة الزخارف بحسب المادّة: التربية الإسلامية نجومٌ هندسية بأخضر خفيف وخلفيةٌ خضراء هادئة بدل الرموز الرياضية الملوّنة
+DECO_THEMES = {'islamic': {'sym': ['✦', '✧', '✶', '✷', '❋', '✺'], 'col': ['#9ED8B4', '#B5E3C6', '#8CCFA7', '#C7EBD4', '#A6D9BC'],
+    'css': 'body::after{background:radial-gradient(38vmax 30vmax at 102% -6%,rgba(120,190,150,.16),transparent 70%),radial-gradient(34vmax 28vmax at -6% 104%,rgba(160,210,175,.20),transparent 70%),radial-gradient(26vmax 22vmax at 104% 104%,rgba(200,180,120,.10),transparent 70%)}'
+           '.dz{opacity:.75}'}}
+_dt = DECO_THEMES.get(CFG.get('deco') or CFG.get('subject'), None)
+DECO_THEME = ('<script>window.DECO_THEME=' + json.dumps({k: v for k, v in _dt.items() if k != 'css'}, ensure_ascii=False) + '</script>') if _dt else ''
+DECO_CSS = _dt.get('css', '') if _dt else ''
 HERE = os.path.dirname(os.path.abspath(ARGS.slides))       # مجلد ملف الدرس
 FIGS_DIR = ARGS.figs or os.path.join(HERE, 'figs')         # صور أسئلة الكتاب المقصوصة (FIG)
 def use(name): exec(open(os.path.join(LIB, name + '.py'), encoding='utf-8').read(), globals())
@@ -142,7 +149,7 @@ base_js = base_js.replace("document.querySelectorAll('.flip')", EXTRA_JS + "\n  
 html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{TITLE}</title>
-<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}:root{{--ui:{UI}}}</style></head><body>
+<style>{open(os.path.join(KIT,'fonts.css'),encoding='utf-8').read()}{base_css}{EXTRA_CSS}{EXTRA_CSS_LESSON}{EXTRA_CSS_LESSON_X}{globals().get('EXTRA_CSS_OWN','')}{open(os.path.join(KIT,'big.css'),encoding='utf-8').read()}{open(os.path.join(KIT,'deco.css'),encoding='utf-8').read()}{DECO_CSS}:root{{--ui:{UI}}}</style></head><body>
 <div class="deck" id="deck">
 {chr(10).join(S)}
 </div>
@@ -154,7 +161,7 @@ html = f'''<!DOCTYPE html>
   <button id="prev" title="السابق" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   <button id="next" class="next" title="التالي" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 </nav>
-<script>{base_js}</script><script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script></body></html>'''
+<script>{base_js}</script>{DECO_THEME}<script>{open(os.path.join(KIT,'deco.js'),encoding='utf-8').read()}</script><script>{open(os.path.join(KIT,'jump.js'),encoding='utf-8').read()}</script></body></html>'''
 # حدود العرض بوحدة vw تتصغّر مع zoom الشرائح (--ui و--fit و--ar)، فيضيق المربّع عن سطره ويخرج النص منه (iPad):
 # نقسمها على معامل التكبير --zz لتبقى بعرضها المرئي الأصلي، ويصغر الخط وحده.
 def _unz(css):
