@@ -27,11 +27,11 @@ on:
         required: true
         default: '1'
       student_book_drive_id:
-        description: 'معرّف ملف كتاب الطالب على Google Drive (اتركه فارغاً لتخطّي الكتاب)'
+        description: 'معرّف ملف كتاب الطالب على Google Drive أو رابط PDF مباشر (اتركه فارغاً لتخطّي الكتاب)'
         required: false
         default: ''
       teacher_guide_drive_id:
-        description: 'معرّف ملف دليل المعلم على Google Drive (اتركه فارغاً لتخطّي الدليل)'
+        description: 'معرّف ملف دليل المعلم على Google Drive أو رابط PDF مباشر (اتركه فارغاً لتخطّي الدليل)'
         required: false
         default: ''
 
@@ -69,6 +69,14 @@ jobs:
           SLUG=$(printf '%s|%s|%s' "$GRADE" "$SUBJECT" "$SEMESTER" | md5sum | cut -c1-10)
           fail=0
 
+          # يقبل معرّف Drive أو رابط PDF مباشراً (http/https)
+          fetch_pdf(){
+            case "$1" in
+              http*) curl -sSL --retry 3 -o "$2" "$1" ;;
+              *) gdown "https://drive.google.com/uc?id=$1" -O "$2" --quiet ;;
+            esac
+          }
+
           upload_pages(){
             # $1=pdf path  $2=storage base path  → يطبع عدد الصفحات المرفوعة على stdout
             local pdf="$1" base="$2"
@@ -94,7 +102,7 @@ jobs:
             echo "════════ كتاب الطالب ════════"
             base="books/manual-${SLUG}"
             rm -f /tmp/book.pdf
-            if gdown "https://drive.google.com/uc?id=${SB_ID}" -O /tmp/book.pdf --quiet && head -c4 /tmp/book.pdf | grep -q "%PDF"; then
+            if fetch_pdf "$SB_ID" /tmp/book.pdf && head -c4 /tmp/book.pdf | grep -q "%PDF"; then
               N=$(pdfinfo /tmp/book.pdf 2>/dev/null | awk -F': *' '/^Pages/{print $2}')
               echo "  عدد الصفحات: $N"
               up=$(upload_pages /tmp/book.pdf "$base")
@@ -122,7 +130,7 @@ jobs:
             echo "════════ دليل المعلم ════════"
             base="teacher-guides/manual-${SLUG}"
             rm -f /tmp/guide.pdf
-            if gdown "https://drive.google.com/uc?id=${TG_ID}" -O /tmp/guide.pdf --quiet && head -c4 /tmp/guide.pdf | grep -q "%PDF"; then
+            if fetch_pdf "$TG_ID" /tmp/guide.pdf && head -c4 /tmp/guide.pdf | grep -q "%PDF"; then
               N=$(pdfinfo /tmp/guide.pdf 2>/dev/null | awk -F': *' '/^Pages/{print $2}')
               echo "  عدد الصفحات: $N"
               up=$(upload_pages /tmp/guide.pdf "$base")
