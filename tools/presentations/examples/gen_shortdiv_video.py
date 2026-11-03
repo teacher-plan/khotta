@@ -186,9 +186,9 @@ window.seek = (i, t) => {
 '''
 CLEAN = lambda s: re.sub(r'\s*\[[^\]]*\]\s*', ' ', s).strip()
 
-def narr():
+def narr(S=S, key='shortdiv'):   # يُستدعى من مولّداتٍ أخرى بمشاهدها ومفتاحها (مثل gen_act50_video.py)
     out = [s['narr'] for s in S]
-    json.dump(out, open(os.path.join(HERE, 'narration_shortdiv.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    json.dump(out, open(os.path.join(HERE, f'narration_{key}.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(len(out), 'مشهداً', sum(len(CLEAN(x)) for x in out), 'حرفاً')
 
 def dur(p):
@@ -196,8 +196,8 @@ def dur(p):
     r = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), '-i', p], capture_output=True, text=True).stderr
     h, m_, s_ = re.search(r'Duration: (\d+):(\d+):([\d.]+)', r).groups(); return int(h) * 3600 + int(m_) * 60 + float(s_)
 
-def build():
-    aud = os.path.join(HERE, 'صوت_shortdiv')
+def build(S=S, key='shortdiv', title='القسمة المختصرة للأعداد العشرية', crumb='الصف السابع · الوحدة الثالثة · <b>الدرسان ٣-٥ و٣-٦</b>'):
+    aud = os.path.join(HERE, f'صوت_{key}')
     mp3 = sorted(x for x in os.listdir(aud) if x.endswith('.mp3')); assert len(mp3) == len(S), (len(mp3), len(S))
     A = [dur(os.path.join(aud, x)) for x in mp3]
     DURS = [round((a + .9 + s.get('hold', 0)) * 1000) for a, s in zip(A, S)]
@@ -231,15 +231,15 @@ def build():
                 body.append('<div class="sols">' + ''.join(f'<div class="el solc" data-t="{times[m]}"><div>{sc["items"][m][1]}</div></div>' for m in sols) + '</div>')
             else:
                 body.append(f'<div class="el {cls}" data-t="{times[n]}">{h}</div>')
-        title = f'<h2><b>{sc["title"]}</b></h2>' + (f'<div class="sub">{sc["sub"]}</div>' if sc.get('sub') and not sc['items'][0][2] == 'prob' else '')
-        html.append(f'<div class="sc{" card" if sc.get("card") else ""}">{title}<div class="body">{"".join(body)}</div></div>')
-    page = f'''<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>القسمة المختصرة للأعداد العشرية</title>
+        head = f'<h2><b>{sc["title"]}</b></h2>' + (f'<div class="sub">{sc["sub"]}</div>' if sc.get('sub') and not sc['items'][0][2] == 'prob' else '')
+        html.append(f'<div class="sc{" card" if sc.get("card") else ""}">{head}<div class="body">{"".join(body)}</div></div>')
+    page = f'''<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>{title}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&amp;display=swap"><style>{CSS}</style></head><body>
-<div class="hdr"><span>الصف السابع · الوحدة الثالثة · <b>الدرسان ٣-٥ و٣-٦</b></span><span>القسمة المختصرة للأعداد العشرية</span></div>
+<div class="hdr"><span>{crumb}</span><span>{title}</span></div>
 {"".join(html)}
 <div class="ftr"><span>إعداد: أ. عيسى الحارثي</span><div class="bar"><i></i></div></div>
 <script>const DURS = window.DURS = {json.dumps(DURS)};{JS}seek(0, 0);</script></body></html>'''
-    p = os.path.join(HERE, 'فيديو_shortdiv.html'); open(p, 'w', encoding='utf-8').write(page); print(p, round(sum(DURS) / 1000), 'ث')
+    p = os.path.join(HERE, f'فيديو_{key}.html'); open(p, 'w', encoding='utf-8').write(page); print(p, round(sum(DURS) / 1000), 'ث')
 
 if __name__ == '__main__':
     narr() if sys.argv[1:] == ['narr'] else build()
