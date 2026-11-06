@@ -1,5 +1,5 @@
 // ══ Service Worker - خطتي الفصلية ══
-const CACHE_NAME = 'khotta-eb6bf18'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
+const CACHE_NAME = 'khotta-8ae8e1a'; // يُرقَّى تلقائياً عبر GitHub Actions عند كل نشر
 
 self.addEventListener('install', e => {
   // تجهيز الصفحة الرئيسية في الكاش فور التثبيت — حتى أول فتحة بعد التحديث تكون فورية
