@@ -5232,7 +5232,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='eb6bf18';
+const KH_BUILD='8ae8e1a';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9293,6 +9293,8 @@ async function schLoad(){
     const{data,error}=await sb.rpc('c1_school_dashboard');if(error)throw error;
     SCH=schIndex(data);
     document.getElementById('sch-name').textContent=SCH.school.name;
+    // يومُ العطلة أو قبل تسجيل الحصص: نفتح على آخر يومٍ فيه تسجيل
+    if(schDate===schToday()){let last='';SCH.classes.forEach(C=>Object.keys(C.abs).forEach(d=>{if(d<=schToday()&&d>last)last=d;}));if(last)schDate=last;}
     schRender();
   }catch(e){el.innerHTML='<div class="plan-empty-card">تعذّر تحميل بيانات المدرسة — تحقّق من الاتصال ثم <button class="abs-mini" onclick="schLoad()">أعد المحاولة</button></div>';}
 }
