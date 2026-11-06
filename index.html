@@ -5048,14 +5048,14 @@ async function bootApp(session){
       return;
     }
     // فصل المراحل: حساب الحلقة الأولى لا يدخل التطبيق الرئيسي (إلا المشرف)
-    if(allowed.cycle==='cycle1' && userEmail!==ADMIN_EMAIL.toLowerCase()){
+    if((allowed.cycle==='cycle1'||allowed.cycle==='school') && userEmail!==ADMIN_EMAIL.toLowerCase()){
       await sb.auth.signOut();
       currentUser=null;googleAccessToken=null;
       hideLoader();
       showAuthGate();
       showAuthState('auth-login');
       const sub=document.querySelector('#auth-login .auth-sub');
-      if(sub)sub.innerHTML='⛔ هذا حساب معلّم الحلقة الأولى.<br/>الرجاء الدخول من صفحة الحلقة الأولى المخصّصة.';
+      if(sub)sub.innerHTML=allowed.cycle==='school'?'⛔ هذا حساب إدارة مدرسة.<br/>الرجاء الدخول من صفحة منصّة خُطّة (cycle1.html).':'⛔ هذا حساب معلّم الحلقة الأولى.<br/>الرجاء الدخول من صفحة الحلقة الأولى المخصّصة.';
       return;
     }
   }catch(e){
