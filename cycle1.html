@@ -1486,6 +1486,11 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 .abs-st i{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #9DB59D;background:#EAF3EA;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;color:#3C6E3C}
 .abs-st.ab{border-color:var(--red-d,#B83A2E);background:#FBECEA;color:#8A2A20}
 .abs-st.ab i{border-color:var(--red-d,#B83A2E);background:var(--red-d,#B83A2E);color:#fff}
+.abs-st.lt{border-color:#D9822B;background:#FDF1E2;color:#8A4E12}
+.abs-st.lt i{border-color:#D9822B;background:#D9822B;color:#fff;font-size:12px}
+.abs-p .bd.lt{background:#D9822B;inset-inline-end:auto;inset-inline-start:-5px}
+.abs-tbl td.lt{color:#8A4E12;background:#FDF1E2;font-weight:900}
+.abs-k-ab{color:var(--red-d,#B83A2E)}.abs-k-lt{color:#C26A12}
 .abs-st span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .abs-st em{font-style:normal;font-size:11px;font-weight:800}
 .abs-sec{margin-top:18px}
@@ -5774,7 +5779,7 @@ let _cy1Loaded=null;            // نسخة الملف كما حُمّل — ب�
 const _cy1Touched=new Set();    // المفاتيح التي مسّها هذا الجهاز منذ آخر حفظ ناجح
 
 // الخرائط المفهرسة بمعرّف: تُدمج بمفاتيحها الداخلية لا ككتلة واحدة
-const CY1_MAPS=['plan_units','plan_state','stars','beh_log','calendar_events','assets','absence','exams'];
+const CY1_MAPS=['plan_units','plan_state','stars','beh_log','calendar_events','assets','absence','absence_late','exams'];
 const _isMap=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const _same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b);}catch(e){return false;}};
 
@@ -9348,12 +9353,14 @@ function schIndex(d){
     const tc=[];
     (t.grades||[]).forEach(g=>(g.classes||[]).forEach(c=>{
       const key=c.name;tc.push(c.name);
-      const C=classes[key]=classes[key]||{name:c.name,grade:g.num,students:new Set(),teachers:[],abs:{},beh:[]};
+      const C=classes[key]=classes[key]||{name:c.name,grade:g.num,students:new Set(),teachers:[],abs:{},late:{},beh:[]};
       (c.students||[]).forEach(s=>s&&C.students.add(s));
       C.teachers.push({name:t.name,subjects:c.subjects||[]});
       const A=(t.absence||{})[c.id]||{};
       Object.keys(A).forEach(day=>{const D=C.abs[day]=C.abs[day]||{};Object.keys(A[day]||{}).forEach(p=>{
         const P=D[p]=D[p]||{set:new Set(),by:[]};(A[day][p]||[]).forEach(n=>P.set.add(n));P.by.push(t.name);});});
+      const L=(t.absence_late||{})[c.id]||{};
+      Object.keys(L).forEach(day=>{const D=C.late[day]=C.late[day]||{};Object.keys(L[day]||{}).forEach(p=>{const S=D[p]=D[p]||new Set();(L[day][p]||[]).forEach(n=>S.add(n));});});
       const B=(t.beh_log||{})[c.id]||[];
       (c.students||[]).forEach((nm,i)=>(B[i]||[]).forEach(e=>{if(e&&e.date)C.beh.push({...e,student:nm,cls:c.name,teacher:t.name,subj:(c.subjects||[])[0]||''});}));
     }));
@@ -9381,10 +9388,12 @@ function schDayAbs(C,day){
   const truant=[];if(q){const qs=q;SCH_P.slice(1).forEach(([k])=>{if(D[k])D[k].set.forEach(n=>{if(!qs.has(n)&&!truant.some(x=>x.n===n))truant.push({n,p:k});});});}
   return{D,rec,dayAbs:q||anyP,truant,recorded:rec.length>0};
 }
+// المتأخّرون في يومٍ لشعبة: [{n,p}] — أوّل حصةٍ تأخّر فيها كل طالب
+function schDayLate(C,day){const D=C.late[day]||{},out=[];SCH_P.forEach(([k])=>{if(D[k])D[k].forEach(n=>{if(!out.some(x=>x.n===n))out.push({n,p:k});});});return out;}
 function schRenderToday(el){
-  const day=schDate;let tot=0,absN=0,recC=0;const rows=[],truAll=[];
+  const day=schDate;let tot=0,absN=0,recC=0;const rows=[],truAll=[],lateAll=[];
   schClasses().forEach(C=>{const r=schDayAbs(C,day);const n=C.students.size;tot+=n;if(r.recorded){recC++;absN+=r.dayAbs.size;}
-    r.truant.forEach(t=>truAll.push({...t,cls:C.name}));rows.push({C,r,n});});
+    r.truant.forEach(t=>truAll.push({...t,cls:C.name}));schDayLate(C,day).forEach(l=>lateAll.push({...l,cls:C.name}));rows.push({C,r,n});});
   const att=tot&&recC?(1-absN/tot)*100:null;
   // تنبيهات آخر ٣٠ يوماً
   const since=schDaysAgo(30),chronic=[],behHi=[];
@@ -9394,12 +9403,15 @@ function schRenderToday(el){
     const vc={};C.beh.filter(e=>e.kind==='viol'&&String(e.date).slice(0,10)>=since).forEach(e=>vc[e.student]=(vc[e.student]||0)+1);
     Object.entries(vc).filter(([,v])=>v>=3).forEach(([n,v])=>behHi.push({n,v,cls:C.name}));
   });
-  chronic.sort((a,b)=>b.v-a.v);behHi.sort((a,b)=>b.v-a.v);
+  const lateHi=[];schClasses().forEach(C=>{const cnt={};Object.keys(C.late).filter(d=>d>=since).forEach(d=>schDayLate(C,d).forEach(l=>cnt[l.n]=(cnt[l.n]||0)+1));
+    Object.entries(cnt).filter(([,v])=>v>=3).forEach(([n,v])=>lateHi.push({n,v,cls:C.name}));});
+  chronic.sort((a,b)=>b.v-a.v);behHi.sort((a,b)=>b.v-a.v);lateHi.sort((a,b)=>b.v-a.v);
   const notRec=rows.filter(x=>!x.r.recorded).map(x=>x.C.name);
   let h=`<div class="abs-head"><input type="date" class="abs-date" value="${day}" max="${schToday()}" onchange="schDate=this.value;schRender()"><span class="abs-day">${escHtml(schDayName(day))}${day===schToday()?' — اليوم':''}</span>${schClassFilter()}</div>
   <div class="beh-sum">
     <div class="beh-sum-c" style="--sc:#2E7D4F"><b>${att===null?'—':egArNum(Math.round(att))+'٪'}</b><span>نسبة الحضور (من الشعب المسجّلة)</span></div>
     <div class="beh-sum-c" style="--sc:var(--red-d)"><b>${egArNum(absN)}</b><span>غائب اليوم</span></div>
+    <div class="beh-sum-c" style="--sc:${lateAll.length?'#C26A12':'var(--border)'}"><b>${egArNum(lateAll.length)}</b><span>متأخّرون اليوم</span></div>
     <div class="beh-sum-c" style="--sc:${truAll.length?'#D9822B':'var(--border)'}"><b>${egArNum(truAll.length)}</b><span>تسرّب من الحصص (حضر الطابور ثم غاب)</span></div>
     <div class="beh-sum-c" style="--sc:${notRec.length?'#C0A848':'var(--border)'}"><b>${egArNum(recC)} / ${egArNum(rows.length)}</b><span>شعبٌ سُجّل غيابها</span></div>
   </div>`;
@@ -9407,6 +9419,8 @@ function schRenderToday(el){
   const al=[];
   if(truAll.length)al.push(schAlertCard('⚠️ تسرّب من الحصص اليوم','#D9822B','حضروا الطابور ثم غابوا',truAll.map(t=>({n:t.n,m:t.cls+' · من الحصة '+egArNum(t.p)}))));
   if(chronic.length)al.push(schAlertCard('🔴 غيابٌ متكرّر','#B83A2E','٣ أيام فأكثر خلال ٣٠ يوماً',chronic.map(t=>({n:t.n,m:t.cls+' · '+egArNum(t.v)+' أيام'}))));
+  if(lateAll.length)al.push(schAlertCard('⏰ متأخّرون اليوم','#C26A12','حضروا متأخّرين',lateAll.map(t=>({n:t.n,m:t.cls+' · '+(t.p==='q'?'الطابور':'الحصة '+egArNum(t.p))}))));
+  if(lateHi.length)al.push(schAlertCard('⏰ تأخّرٌ متكرّر','#A0560F','٣ أيام فأكثر خلال ٣٠ يوماً',lateHi.map(t=>({n:t.n,m:t.cls+' · '+egArNum(t.v)+' أيام'}))));
   if(behHi.length)al.push(schAlertCard('📋 مخالفاتٌ متكرّرة','#8A5AA8','٣ فأكثر خلال ٣٠ يوماً',behHi.map(t=>({n:t.n,m:t.cls+' · '+egArNum(t.v)}))));
   if(notRec.length&&day===schToday())al.push(schAlertCard('⏳ لم يُسجَّل غيابها بعد','#C0A848','شعبٌ بلا تسجيلٍ اليوم',notRec.map(n=>({n,m:''}))));
   h+=al.length?`<div class="sch-alg">${al.join('')}</div>`:'<div class="sch-ok">✓ لا تنبيهات</div>';
@@ -9416,7 +9430,7 @@ function schRenderToday(el){
   // جدول الشعب × الحصص
   h+=`<div class="abs-sec"><h3>غياب الشعب حسب الحصص</h3><div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الشعبة</th><th>الطلاب</th>${SCH_P.map(([k,n])=>`<th>${k==='q'?'طابور':n}</th>`).join('')}<th>غائبو اليوم</th></tr></thead><tbody>`
     +rows.map(({C,r,n})=>`<tr><td><b>${escHtml(C.name)}</b></td><td>${egArNum(n)}</td>${SCH_P.map(([k])=>{const P=r.D[k];return P?`<td class="${P.set.size?'x':''}" title="${escAttr([...P.set].join('، ')+' — سجّلها: '+P.by.join('، '))}">${P.set.size?egArNum(P.set.size):'✓'}</td>`:'<td class="nr">·</td>';}).join('')}
-      <td style="text-align:start;white-space:normal;min-width:160px">${r.dayAbs.size?[...r.dayAbs].map(escHtml).join('، '):(r.recorded?'—':'<span style="color:var(--muted)">لم يُسجَّل</span>')}</td></tr>`).join('')
+      <td style="text-align:start;white-space:normal;min-width:160px">${r.dayAbs.size?[...r.dayAbs].map(escHtml).join('، '):(r.recorded?'—':'<span style="color:var(--muted)">لم يُسجَّل</span>')}${(()=>{const L=schDayLate(C,day);return L.length?`<div style="color:#A0560F;font-size:12px">⏰ متأخّر: ${L.map(x=>escHtml(x.n)).join('، ')}</div>`:'';})()}</td></tr>`).join('')
     +`</tbody></table></div><div class="ex-note">✓ سُجّلت الحصة والكل حاضر · الرقم = عدد الغائبين (مرّر المؤشّر لرؤية الأسماء ومن سجّلها) · «·» لم تُسجَّل.</div></div>`;
   el.innerHTML=h;
 }
@@ -9428,19 +9442,21 @@ function schRenderAbsence(el){
       r.dayAbs.forEach(n=>{const s=per[n]=per[n]||{days:0,periods:0,last:'',tr:0};s.days++;if(d>s.last)s.last=d;});
       Object.keys(r.D).forEach(k=>r.D[k].set.forEach(n=>{const s=per[n]=per[n]||{days:0,periods:0,last:'',tr:0};s.periods++;if(d>s.last)s.last=d;}));
       r.truant.forEach(t=>{const s=per[t.n];if(s)s.tr++;});});
-    Object.entries(per).forEach(([n,s])=>stu.push({n,cls:C.name,...s}));
+    Object.keys(C.late).filter(d=>d>=since).forEach(d=>schDayLate(C,d).forEach(l=>{const s=per[l.n]=per[l.n]||{days:0,periods:0,last:'',tr:0};s.late=(s.late||0)+1;}));
+    Object.entries(per).forEach(([n,s])=>stu.push({n,cls:C.name,late:0,...s}));
   });
   stu.sort((a,b)=>b.days-a.days||b.periods-a.periods);
   // أيام الأسبوع الأعلى غياباً
   const wd={};schClasses().forEach(C=>Object.keys(C.abs).filter(d=>d>=since).forEach(d=>{const k=new Date(d+'T12:00:00').getDay();wd[k]=(wd[k]||0)+schDayAbs(C,d).dayAbs.size;}));
   const wnames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];const wmax=Math.max(1,...[0,1,2,3,4].map(k=>wd[k]||0));
   let h=`<div class="abs-head">${schRangeSel()}${schClassFilter()}<button class="abs-mini" onclick="schPrint()">طباعة</button></div>
-  <div class="beh-sum"><div class="beh-sum-c" style="--sc:var(--red-d)"><b>${egArNum(stu.length)}</b><span>طالباً غاب يوماً على الأقل</span></div>
+  <div class="beh-sum"><div class="beh-sum-c" style="--sc:var(--red-d)"><b>${egArNum(stu.filter(s=>s.days>0).length)}</b><span>طالباً غاب يوماً على الأقل</span></div>
     <div class="beh-sum-c" style="--sc:#D9822B"><b>${egArNum(stu.filter(s=>s.days>=3).length)}</b><span>غيابٌ متكرّر (٣ أيام فأكثر)</span></div>
     <div class="beh-sum-c" style="--sc:#8A5AA8"><b>${egArNum(stu.filter(s=>s.tr>0).length)}</b><span>تسرّبوا من حصصٍ بعد الطابور</span></div>
+    <div class="beh-sum-c" style="--sc:#C26A12"><b>${egArNum(stu.filter(s=>s.late>0).length)}</b><span>تأخّروا يوماً على الأقل</span></div>
     <div class="beh-sum-c" style="--sc:var(--border)"><b>${egArNum(days.size)}</b><span>يوماً مسجّلاً</span></div></div>
   <div class="abs-sec"><h3>الغياب حسب أيام الأسبوع</h3><div class="sch-bars">${[0,1,2,3,4].map(k=>`<div class="sch-bar-r"><span>${wnames[k]}</span><div class="ex-bar"><i style="width:${(wd[k]||0)/wmax*100}%;background:#B83A2E"></i><span>${egArNum(wd[k]||0)}</span></div></div>`).join('')}</div></div>
-  <div class="abs-sec"><h3>الطلاب الغائبون</h3>${stu.length?`<div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أيام الغياب</th><th>حصص الغياب</th><th>تسرّب</th><th>آخر غياب</th></tr></thead><tbody>${stu.map(s=>`<tr><td>${escHtml(s.n)}</td><td>${escHtml(s.cls)}</td><td class="${s.days>=3?'x':''}"><b>${egArNum(s.days)}</b></td><td>${egArNum(s.periods)}</td><td>${s.tr?egArNum(s.tr):'—'}</td><td>${escHtml(s.last)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="plan-empty-card">لا غياب مسجّل في هذه الفترة.</div>'}</div>`;
+  <div class="abs-sec"><h3>الطلاب الغائبون والمتأخّرون</h3>${stu.length?`<div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أيام الغياب</th><th>حصص الغياب</th><th>تسرّب</th><th>أيام التأخّر</th><th>آخر غياب</th></tr></thead><tbody>${stu.map(s=>`<tr><td>${escHtml(s.n)}</td><td>${escHtml(s.cls)}</td><td class="${s.days>=3?'x':''}"><b>${egArNum(s.days)}</b></td><td>${egArNum(s.periods)}</td><td>${s.tr?egArNum(s.tr):'—'}</td><td class="${s.late>=3?'lt':''}">${s.late?egArNum(s.late):'—'}</td><td>${escHtml(s.last||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="plan-empty-card">لا غياب مسجّل في هذه الفترة.</div>'}</div>`;
   el.innerHTML=h;
 }
 function schRangeSel(){return `<div class="beh-sort sch-rng">${[[7,'أسبوع'],[30,'شهر'],[90,'٣ أشهر'],[0,'الكل']].map(([v,l])=>`<button class="${schRange===v?'on':''}" onclick="schRange=${v};schRender()">${l}</button>`).join('')}</div>`;}
@@ -9656,6 +9672,9 @@ function stuTab(t){
   if(stuTabCur==='abs')absRender();
 }
 function absDay(classId,date){const a=profile.absence&&profile.absence[classId];return (a&&a[date])||{};}
+// المتأخّرون: profile.absence_late[classId][YYYY-MM-DD][period]=[أسماء] — منفصلٌ عن الغياب
+// فلا يُحسب المتأخّر غائباً في أيّ تحليل، وتبقى بيانات الغياب القديمة كما هي.
+function absLateDay(classId,date){const a=profile.absence_late&&profile.absence_late[classId];return (a&&a[date])||{};}
 // الحصة الافتراضية: أوّل حصةٍ لم تُسجَّل بعد في اليوم المختار (أو الطابور)
 function absDefaultPeriod(day){const p=ABS_PERIODS.find(x=>!day[x[0]]);return p?p[0]:'q';}
 function absRender(){
@@ -9667,7 +9686,7 @@ function absRender(){
   if(!cls){pane.innerHTML='';return;}
   const students=(cls.students||[]).filter(Boolean);
   if(!absDate)absDate=absToday();
-  const day=absDay(cls.id,absDate);
+  const day=absDay(cls.id,absDate),lateDay=absLateDay(cls.id,absDate);
   if(!absPeriod)absPeriod=absDefaultPeriod(day);
   const dt=new Date(absDate+'T12:00:00');
   const dayName=isNaN(dt)?'':dt.toLocaleDateString('ar-OM',{weekday:'long',day:'numeric',month:'long'});
@@ -9682,30 +9701,31 @@ function absRender(){
     return;
   }
   h+='<div class="abs-periods" role="tablist">'+ABS_PERIODS.map(([k,nm])=>{
-    const rec=Array.isArray(day[k]),n=rec?day[k].length:0;
-    return `<button class="abs-p ${k===absPeriod?'on':''} ${rec?'rec':''}" onclick="absSetPeriod('${k}')">${k==='q'?nm:'الحصة<small>'+nm+'</small>'}${k==='q'?'<small>'+(rec?'سُجّل':'—')+'</small>':''}${n?`<span class="bd">${egArNum(n)}</span>`:''}</button>`;
+    const rec=Array.isArray(day[k]),n=rec?day[k].length:0,nl=(lateDay[k]||[]).length;
+    return `<button class="abs-p ${k===absPeriod?'on':''} ${rec?'rec':''}" onclick="absSetPeriod('${k}')">${k==='q'?nm:'الحصة<small>'+nm+'</small>'}${k==='q'?'<small>'+(rec?'سُجّل':'—')+'</small>':''}${n?`<span class="bd">${egArNum(n)}</span>`:''}${nl?`<span class="bd lt">${egArNum(nl)}</span>`:''}</button>`;
   }).join('')+'</div>';
-  const cur=day[absPeriod],recorded=Array.isArray(cur),absSet=new Set(recorded?cur:[]);
+  const cur=day[absPeriod],recorded=Array.isArray(cur),absSet=new Set(recorded?cur:[]),lateSet=new Set(lateDay[absPeriod]||[]);
   const pIdx=ABS_PERIODS.findIndex(x=>x[0]===absPeriod);
   let prevK=null;for(let i=pIdx-1;i>=0;i--){if(Array.isArray(day[ABS_PERIODS[i][0]])){prevK=ABS_PERIODS[i][0];break;}}
   const pNm=ABS_PERIODS[pIdx][0]==='q'?'الطابور':'الحصة '+ABS_PERIODS[pIdx][1];
   h+=`<div class="abs-tools">
-      <div class="abs-hint">${khG('اضغطي','اضغط')} على اسم الطالب الغائب في <b>${pNm}</b> — ${recorded?'<b style="color:#3C6E3C">✓ مسجّلة</b> · غائب: '+egArNum(absSet.size)+' من '+egArNum(students.length):'لم تُسجَّل بعد'}</div>
+      <div class="abs-hint">${khG('اضغطي','اضغط')} على اسم الطالب في <b>${pNm}</b>: مرّةً <b class="abs-k-ab">غائب</b>، ومرّتين <b class="abs-k-lt">متأخّر</b>، وثالثةً يعود حاضراً — ${recorded?'<b style="color:#3C6E3C">✓ مسجّلة</b> · غائب: '+egArNum(absSet.size)+(lateSet.size?' · متأخّر: '+egArNum(lateSet.size):'')+' من '+egArNum(students.length):'لم تُسجَّل بعد'}</div>
       ${prevK?`<button class="abs-mini" onclick="absCopyPrev('${prevK}')">نسخ غياب ${prevK==='q'?'الطابور':'الحصة السابقة'}</button>`:''}
       <button class="abs-mini" onclick="absAllPresent()">${recorded&&!absSet.size?'✓ الكل حاضر':'الكل حاضر'}</button>
     </div>`;
   h+='<div class="abs-grid">'+students.map(nm=>{
-    const ab=absSet.has(nm);
-    return `<button class="abs-st ${ab?'ab':''}" onclick="absToggle('${escJs(nm)}')" aria-pressed="${ab}"><i>${ab?'✕':'✓'}</i><span>${escHtml(nm)}</span>${ab?'<em>غائب</em>':''}</button>`;
+    const ab=absSet.has(nm),lt=!ab&&lateSet.has(nm);
+    return `<button class="abs-st ${ab?'ab':''} ${lt?'lt':''}" onclick="absToggle('${escJs(nm)}')" aria-label="${escAttr(nm)}: ${ab?'غائب':lt?'متأخّر':'حاضر'}"><i>${ab?'✕':lt?'⏰':'✓'}</i><span>${escHtml(nm)}</span>${ab?'<em>غائب</em>':lt?'<em>متأخّر</em>':''}</button>`;
   }).join('')+'</div>';
   // ملخّص اليوم: من غاب، وفي أيّ الحصص
-  const absentToday=students.filter(nm=>ABS_PERIODS.some(([k])=>Array.isArray(day[k])&&day[k].includes(nm)));
-  h+='<div class="abs-sec"><h3>ملخّص غياب '+(isToday?'اليوم':'هذا اليوم')+'</h3>';
+  const isLate=(k,nm)=>(lateDay[k]||[]).includes(nm);
+  const absentToday=students.filter(nm=>ABS_PERIODS.some(([k])=>Array.isArray(day[k])&&day[k].includes(nm)||isLate(k,nm)));
+  h+='<div class="abs-sec"><h3>ملخّص غياب '+(isToday?'اليوم':'هذا اليوم')+' وتأخّره</h3>';
   if(!absentToday.length){
     h+='<div class="plan-empty-card">'+(ABS_PERIODS.some(([k])=>Array.isArray(day[k]))?'لا غياب مسجّل في هذا اليوم 🎉':'لم يُسجَّل غيابٌ لهذا اليوم بعد.')+'</div>';
   }else{
-    h+='<div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th>'+ABS_PERIODS.map(([k,nm])=>`<th>${k==='q'?'طابور':egArNum(k)}</th>`).join('')+'<th>العدد</th></tr></thead><tbody>'
-      +absentToday.map(nm=>{let c=0;const tds=ABS_PERIODS.map(([k])=>{const x=Array.isArray(day[k])&&day[k].includes(nm);if(x)c++;return x?'<td class="x">✕</td>':'<td>'+(Array.isArray(day[k])?'·':'')+'</td>';}).join('');
+    h+='<div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th>'+ABS_PERIODS.map(([k,nm])=>`<th>${k==='q'?'طابور':egArNum(k)}</th>`).join('')+'<th>حصص الغياب</th></tr></thead><tbody>'
+      +absentToday.map(nm=>{let c=0;const tds=ABS_PERIODS.map(([k])=>{const x=Array.isArray(day[k])&&day[k].includes(nm);if(x)c++;return x?'<td class="x">✕</td>':isLate(k,nm)?'<td class="lt">⏰</td>':'<td>'+(Array.isArray(day[k])?'·':'')+'</td>';}).join('');
         return `<tr><td>${escHtml(nm)}</td>${tds}<td><b>${egArNum(c)}</b></td></tr>`;}).join('')
       +'</tbody></table></div>';
   }
@@ -9713,10 +9733,12 @@ function absRender(){
   // إجمالي الفصل: أيام الغياب لكل طالب (يومٌ يُحسب إن غاب عن الطابور أو أيّ حصة)
   const all=(profile.absence&&profile.absence[cls.id])||{};
   const tot={};Object.keys(all).forEach(d=>{const dd=all[d]||{};const seen=new Set();Object.keys(dd).forEach(k=>(dd[k]||[]).forEach(nm=>seen.add(nm)));seen.forEach(nm=>{tot[nm]=(tot[nm]||0)+1;});});
-  const totRows=students.map(nm=>({nm,n:tot[nm]||0})).filter(r=>r.n).sort((a,b)=>b.n-a.n);
+  const allL=(profile.absence_late&&profile.absence_late[cls.id])||{},totL={};
+  Object.keys(allL).forEach(d=>{const seen=new Set();Object.values(allL[d]||{}).forEach(l=>(l||[]).forEach(nm=>seen.add(nm)));seen.forEach(nm=>{totL[nm]=(totL[nm]||0)+1;});});
+  const totRows=students.map(nm=>({nm,n:tot[nm]||0,l:totL[nm]||0})).filter(r=>r.n||r.l).sort((a,b)=>b.n-a.n||b.l-a.l);
   if(totRows.length){
-    h+='<div class="abs-sec"><h3>أيام الغياب منذ بداية التسجيل</h3><div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th><th>أيام الغياب</th></tr></thead><tbody>'
-      +totRows.map(r=>`<tr><td>${escHtml(r.nm)}</td><td><b>${egArNum(r.n)}</b></td></tr>`).join('')+'</tbody></table></div></div>';
+    h+='<div class="abs-sec"><h3>الغياب والتأخّر منذ بداية التسجيل</h3><div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>الطالب</th><th>أيام الغياب</th><th>أيام التأخّر</th></tr></thead><tbody>'
+      +totRows.map(r=>`<tr><td>${escHtml(r.nm)}</td><td>${r.n?'<b>'+egArNum(r.n)+'</b>':'—'}</td><td class="${r.l?'lt':''}">${r.l?'<b>'+egArNum(r.l)+'</b>':'—'}</td></tr>`).join('')+'</tbody></table></div></div>';
   }
   pane.innerHTML=h;
 }
@@ -9728,19 +9750,35 @@ function absWrite(classId,date,period,list){
   cls[date]={...(cls[date]||{}),[period]:list};
   all[classId]=cls;profile.absence=all;
   clearTimeout(_absSaveT);
-  _absSaveT=setTimeout(()=>{cy1Save({absence:profile.absence});},700);
+  _absSaveT=setTimeout(()=>{cy1Save(profile.absence_late?{absence:profile.absence,absence_late:profile.absence_late}:{absence:profile.absence});},700);
 }
+function absWriteLate(classId,date,period,list){
+  const all={...(profile.absence_late||{})};
+  const cls={...(all[classId]||{})};
+  const d={...(cls[date]||{})};
+  if(list.length)d[period]=list;else delete d[period];
+  if(Object.keys(d).length)cls[date]=d;else delete cls[date];
+  all[classId]=cls;profile.absence_late=all;
+  clearTimeout(_absSaveT);
+  _absSaveT=setTimeout(()=>{cy1Save({absence:profile.absence,absence_late:profile.absence_late});},700);
+}
+// الضغط يدور بين: حاضر ← غائب ← متأخّر ← حاضر
 function absToggle(nm){
   const cls=starClassObj(starClass);if(!cls)return;
   const cur=absDay(cls.id,absDate)[absPeriod];
   const set=new Set(Array.isArray(cur)?cur:[]);
-  if(set.has(nm))set.delete(nm);else set.add(nm);
+  const late=new Set(absLateDay(cls.id,absDate)[absPeriod]||[]);
+  if(set.has(nm)){set.delete(nm);late.add(nm);}
+  else if(late.has(nm)){late.delete(nm);}
+  else set.add(nm);
+  // تُكتب قائمة الغياب دائماً (ولو فارغة) فتُعدّ الحصة مسجّلة
   absWrite(cls.id,absDate,absPeriod,[...set]);
+  absWriteLate(cls.id,absDate,absPeriod,[...late]);
   absRender();
 }
 function absAllPresent(){
   const cls=starClassObj(starClass);if(!cls)return;
-  absWrite(cls.id,absDate,absPeriod,[]);
+  absWrite(cls.id,absDate,absPeriod,[]);absWriteLate(cls.id,absDate,absPeriod,[]);
   // ننتقل للحصة التالية غير المسجّلة لتسريع التسجيل
   absRender();toast('سُجّلت '+(absPeriod==='q'?'الطابور':'الحصة')+': الكل حاضر','ok');
 }
