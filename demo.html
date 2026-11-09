@@ -1481,6 +1481,20 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 .abs-p.rec:not(.on){border-color:#9DB59D}
 .abs-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .abs-tools .abs-hint{flex:1;min-width:180px;font-size:12px;color:var(--muted);line-height:1.7}
+.abs-list{display:flex;flex-direction:column;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+.abs-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border)}
+.abs-row:last-child{border-bottom:0}
+.abs-row.ab{background:#FBECEA}.abs-row.lt{background:#FDF1E2}
+.abs-n{flex:none;width:24px;text-align:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.abs-nm{flex:1;min-width:0;font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.abs-seg{flex:none;display:flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.abs-seg button{border:0;background:var(--card);font-family:inherit;font-size:13px;font-weight:800;color:var(--muted);padding:8px 12px;cursor:pointer;min-width:58px}
+.abs-seg button+button{border-inline-start:1.5px solid var(--border)}
+.abs-seg button.pr.on{background:#3C6E3C;color:#fff}
+.abs-seg button.ab.on{background:var(--red-d,#B83A2E);color:#fff}
+.abs-seg button.lt.on{background:#D9822B;color:#fff}
+.abs-seg button:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
+@media(max-width:420px){.abs-seg button{padding:8px 8px;min-width:48px;font-size:12px}.abs-row{gap:6px;padding:7px 8px}}
 .abs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .abs-st{display:flex;align-items:center;gap:8px;border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;text-align:start;min-height:48px}
 .abs-st i{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #9DB59D;background:#EAF3EA;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;color:#3C6E3C}
@@ -5280,7 +5294,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='01e8a22';
+const KH_BUILD='3b2a035';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9710,13 +9724,19 @@ function absRender(){
   let prevK=null;for(let i=pIdx-1;i>=0;i--){if(Array.isArray(day[ABS_PERIODS[i][0]])){prevK=ABS_PERIODS[i][0];break;}}
   const pNm=ABS_PERIODS[pIdx][0]==='q'?'الطابور':'الحصة '+ABS_PERIODS[pIdx][1];
   h+=`<div class="abs-tools">
-      <div class="abs-hint">${khG('اضغطي','اضغط')} على اسم الطالب في <b>${pNm}</b>: مرّةً <b class="abs-k-ab">غائب</b>، ومرّتين <b class="abs-k-lt">متأخّر</b>، وثالثةً يعود حاضراً — ${recorded?'<b style="color:#3C6E3C">✓ مسجّلة</b> · غائب: '+egArNum(absSet.size)+(lateSet.size?' · متأخّر: '+egArNum(lateSet.size):'')+' من '+egArNum(students.length):'لم تُسجَّل بعد'}</div>
+      <div class="abs-hint">${khG('اختاري','اختر')} حالة كل طالب في <b>${pNm}</b> (الكل حاضر افتراضياً) — ${recorded?'<b style="color:#3C6E3C">✓ مسجّلة</b> · غائب: '+egArNum(absSet.size)+(lateSet.size?' · متأخّر: '+egArNum(lateSet.size):'')+' من '+egArNum(students.length):'لم تُسجَّل بعد'}</div>
       ${prevK?`<button class="abs-mini" onclick="absCopyPrev('${prevK}')">نسخ غياب ${prevK==='q'?'الطابور':'الحصة السابقة'}</button>`:''}
       <button class="abs-mini" onclick="absAllPresent()">${recorded&&!absSet.size?'✓ الكل حاضر':'الكل حاضر'}</button>
     </div>`;
-  h+='<div class="abs-grid">'+students.map(nm=>{
-    const ab=absSet.has(nm),lt=!ab&&lateSet.has(nm);
-    return `<button class="abs-st ${ab?'ab':''} ${lt?'lt':''}" onclick="absToggle('${escJs(nm)}')" aria-label="${escAttr(nm)}: ${ab?'غائب':lt?'متأخّر':'حاضر'}"><i>${ab?'✕':lt?'⏰':'✓'}</i><span>${escHtml(nm)}</span>${ab?'<em>غائب</em>':lt?'<em>متأخّر</em>':''}</button>`;
+  // قائمة: اسمٌ في كل صف، وبجانبه حالته (حاضر افتراضياً · غائب · متأخّر)
+  h+='<div class="abs-list">'+students.map((nm,i)=>{
+    const st=absSet.has(nm)?'ab':lateSet.has(nm)?'lt':'pr',j=escJs(nm);
+    return `<div class="abs-row ${st}"><span class="abs-n">${egArNum(i+1)}</span><span class="abs-nm">${escHtml(nm)}</span>
+      <div class="abs-seg" role="radiogroup" aria-label="${escAttr(nm)}">
+        <button class="pr ${st==='pr'?'on':''}" role="radio" aria-checked="${st==='pr'}" onclick="absSetState('${j}','pr')">حاضر</button>
+        <button class="ab ${st==='ab'?'on':''}" role="radio" aria-checked="${st==='ab'}" onclick="absSetState('${j}','ab')">غائب</button>
+        <button class="lt ${st==='lt'?'on':''}" role="radio" aria-checked="${st==='lt'}" onclick="absSetState('${j}','lt')">متأخّر</button>
+      </div></div>`;
   }).join('')+'</div>';
   // ملخّص اليوم: من غاب، وفي أيّ الحصص
   const isLate=(k,nm)=>(lateDay[k]||[]).includes(nm);
@@ -9764,6 +9784,18 @@ function absWriteLate(classId,date,period,list){
   _absSaveT=setTimeout(()=>{cy1Save({absence:profile.absence,absence_late:profile.absence_late});},700);
 }
 // الضغط يدور بين: حاضر ← غائب ← متأخّر ← حاضر
+// حالة طالب في الحصة المختارة: pr حاضر · ab غائب · lt متأخّر
+function absSetState(nm,stt){
+  const cls=starClassObj(starClass);if(!cls)return;
+  const cur=absDay(cls.id,absDate)[absPeriod];
+  const set=new Set(Array.isArray(cur)?cur:[]);
+  const late=new Set(absLateDay(cls.id,absDate)[absPeriod]||[]);
+  set.delete(nm);late.delete(nm);
+  if(stt==='ab')set.add(nm);else if(stt==='lt')late.add(nm);
+  absWrite(cls.id,absDate,absPeriod,[...set]);
+  absWriteLate(cls.id,absDate,absPeriod,[...late]);
+  absRender();
+}
 function absToggle(nm){
   const cls=starClassObj(starClass);if(!cls)return;
   const cur=absDay(cls.id,absDate)[absPeriod];
