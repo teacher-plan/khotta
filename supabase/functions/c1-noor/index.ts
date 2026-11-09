@@ -229,6 +229,7 @@ Deno.serve(async (req) => {
         cid: c.cid, prepId: String(b.prep_id), lessonId: String(b.lesson_id), title: String(b.title || file!.name),
         comments: String(b.comments || ""), date: String(b.date), sections: (b.sections || []).map(String),
         file: file!, filename: String(b.filename || file!.name || "file"), criteria: (b.criteria || []).map(String),
+        kind: b.kind === "Scorm" ? "Scorm" : "Material",
       }));
       await persist();
       if (!r.ok) return json({ error: r.err || "upload_failed", message: MSG[r.err] || "لم تؤكّد نور حفظ الملف." }, 502);

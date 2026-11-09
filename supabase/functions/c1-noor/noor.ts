@@ -246,10 +246,11 @@ export class Noor {
   // ── رفع ملفٍّ مرفق ──
   async uploadFile(p: {
     cid: string; prepId: string; lessonId: string; title: string; comments?: string;
-    date: string; sections: string[]; file: Blob; filename: string; criteria?: string[];
+    date: string; sections: string[]; file: Blob; filename: string; criteria?: string[]; kind?: "Material" | "Scorm";
   }) {
-    const page = await this.req(`/teacher/attachments/upload/Material/cid:${p.cid}`);
-    const action = (page.text.match(/<form action="(\/teacher\/attachments\/upload\/Material\/cid:[^"]+)"/) || [])[1];
+    const kind = p.kind || "Material";
+    const page = await this.req(`/teacher/attachments/upload/${kind}/cid:${p.cid}` + (kind === "Scorm" ? "/prep:0" : ""));
+    const action = (page.text.match(new RegExp(`<form action="(/teacher/attachments/upload/${kind}/cid:[^"]+)"`)) || [])[1];
     if (!action) throw new NoorError("upload_form_missing");
     const csrf = (page.text.match(/name="data\[Token\]\[csrf_token\]"[^>]*value="([^"]+)"/) || [])[1] || "";
     const fd = new FormData();
@@ -262,8 +263,9 @@ export class Noor {
     add("data[Attachment][language_id]", "2");
     add("data[Attachment][upload_from]", "2");
     fd.append("data[UploadedFile][file][]", p.file, p.filename);
+    if (kind === "Scorm") add("data[Attachment][interactive_lesson_type]", "1"); // ١ = SCORM
     add("data[Base64Image][file]", "");
-    add("data[Attachment][allow_download]", "1");
+    if (kind === "Material") add("data[Attachment][allow_download]", "1");
     add("data[Attachment][publish_date]", p.date);
     add("data[Attachment][preparation_id]", "");
     add("data[Attachment][preparation_id][]", p.prepId);
