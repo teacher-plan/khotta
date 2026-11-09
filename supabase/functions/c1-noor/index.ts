@@ -79,6 +79,12 @@ Deno.serve(async (req) => {
       try { b = JSON.parse(String(fd.get("meta") || "{}")); } catch { b = {}; }
       const f = fd.get("file");
       if (f && typeof f !== "string") file = f as File;
+      // الملف يصل مضغوطاً (gzip) من المتصفح: جدار Cloudflare أمام Supabase يحجب
+      // جسماً فيه HTML وسكربتات (ملف اللعبة) ظنّاً أنه هجوم، والمضغوط لا يُقرأ.
+      if (file && b.gz) {
+        const raw = await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).blob();
+        file = new File([raw], String(b.filename || "file"), { type: String(b.mime || "application/octet-stream") });
+      }
     } else {
       b = await req.json().catch(() => ({}));
     }
