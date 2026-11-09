@@ -5309,7 +5309,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='d7c939a';
+const KH_BUILD='da64ec8';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9357,7 +9357,11 @@ async function noorCall(body,file){
   if(!session)throw new Error('سجّل الدخول أولاً');
   const headers={Authorization:'Bearer '+session.access_token,apikey:SUPABASE_ANON_KEY};
   let opt;
-  if(file){const fd=new FormData();fd.append('meta',JSON.stringify(body));fd.append('file',file.blob,file.name);opt={method:'POST',body:fd,headers};}
+  if(file){
+    // ضغط gzip قبل الإرسال: جدار Cloudflare أمام الخادم يحجب ملف HTML فيه سكربتات (اللعبة)
+    let blob=file.blob,meta={...body,mime:file.blob.type||'application/octet-stream'};
+    if(typeof CompressionStream!=='undefined'){blob=await new Response(file.blob.stream().pipeThrough(new CompressionStream('gzip'))).blob();meta.gz=1;}
+    const fd=new FormData();fd.append('meta',JSON.stringify(meta));fd.append('file',new Blob([blob],{type:'application/octet-stream'}),'f.bin');opt={method:'POST',body:fd,headers};}
   else opt={method:'POST',body:JSON.stringify(body),headers:{...headers,'Content-Type':'application/json'}};
   let r;
   try{r=await fetch(SUPABASE_URL+'/functions/v1/c1-noor',opt);}
