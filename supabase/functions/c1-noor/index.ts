@@ -33,6 +33,8 @@ const MSG: Record<string, string> = {
   no_week: "لا يوجد أسبوع دراسي في نور يشمل هذا التاريخ.",
   upload_form_missing: "تعذّر فتح صفحة رفع الملفات في نور.",
   no_file: "لم تستقبل نور الملف.",
+  homework_form_missing: "تعذّر فتح صفحة إنشاء الواجب في نور.",
+  homework_not_created: "لم تُنشئ نور الواجب.",
   prep_not_found: "أُرسل التحضير لكن لم يظهر في قائمة تحاضير نور. تحقّق من نور قبل إعادة المحاولة.",
   noor_down: "تعذّر الوصول إلى منصّة نور الآن.",
 };
@@ -231,6 +233,25 @@ Deno.serve(async (req) => {
       await persist();
       if (!r.ok) return json({ error: r.err || "upload_failed", message: MSG[r.err] || "لم تؤكّد نور حفظ الملف." }, 502);
       return json({ ok: true });
+    }
+
+    if (action === "homework") {
+      const c = course(b.cid);
+      const items = (Array.isArray(b.items) ? b.items : []).filter((q: Any) => q && q.text && Array.isArray(q.choices) && q.choices.length >= 2 && q.choices.length <= 6)
+        .map((q: Any) => ({ text: String(q.text).slice(0, 2000), choices: q.choices.map((x: Any) => String(x).slice(0, 500)), answer: Math.max(1, Math.min(q.choices.length, +q.answer || 1)) }));
+      const dt = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+      if (!c || !items.length || items.length > 20 || !b.title || !dt.test(String(b.publish || "")) || !dt.test(String(b.due || ""))) {
+        return json({ error: "bad_input", message: "بيانات الواجب ناقصة (١–٢٠ سؤالاً وتاريخا النشر والتسليم)." }, 400);
+      }
+      const out = await run(async (x) => {
+        const qurl = await x.createHomework({ cid: c.cid, title: String(b.title).slice(0, 200), publish: b.publish, due: b.due,
+          prepId: b.prep_id ? String(b.prep_id) : "", lessonId: b.lesson_id ? String(b.lesson_id) : "", sections: (b.sections || []).map(String) });
+        const r = await x.addQuestions(qurl, items);
+        return { qurl, added: r.ok };
+      });
+      await persist();
+      if (!out.added) return json({ error: "questions_failed", message: "أُنشئ الواجب لكن لم تُضَف أسئلته — افتحه في نور.", qurl: out.qurl }, 502);
+      return json({ ok: true, qurl: out.qurl, count: items.length });
     }
 
     return json({ error: "bad_action" }, 400);

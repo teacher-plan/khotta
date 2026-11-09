@@ -284,4 +284,80 @@ export class Noor {
     const err = /يجب رفع ملف/.test(r.text) ? "no_file" : "";
     return { ok, err, status: r.status, url: r.url };
   }
+  // ── واجب منزلي بأسئلة اختيار من متعدد ──
+  async createHomework(p: {
+    cid: string; title: string; publish: string; due: string; prepId?: string; lessonId?: string; sections: string[];
+  }): Promise<string> {
+    const page = await this.req(`/teacher/homeworks/create/cid:${p.cid}`);
+    const action = (page.text.match(/<form action="(\/teacher\/homeworks\/create\/cid:[^"]+)"[^>]*id="AssignmentCreateForm"/) || [])[1]
+      || (page.text.match(/<form action="(\/teacher\/homeworks\/create\/cid:[^"]+)"[^>]*multipart/) || [])[1];
+    if (!action) throw new NoorError("homework_form_missing");
+    const csrf = (page.text.match(/name="data\[Token\]\[csrf_token\]"[^>]*value="([^"]+)"/) || [])[1] || "";
+    const fd = new FormData();
+    const add = (k: string, v: string) => fd.append(k, v);
+    add("_method", "POST");
+    add("data[Token][csrf_token]", csrf);
+    add("data[Assignment][title]", p.title);
+    add("data[Assignment][type]", "Homework");
+    add("data[Assignment][publishing_datetime]", p.publish);
+    add("data[Assignment][due_datetime]", p.due);
+    add("data[Assignment][cutoff_datetime]", p.due);
+    add("data[Assignment][publish_later]", "0");
+    add("data[Assignment][preparation_id]", p.prepId || "");
+    add("data[Assignment][lessons]", "");
+    if (p.lessonId) add("data[Assignment][lessons][]", p.lessonId);
+    add("data[Assignment][comments]", "");
+    add("data[AssignmentsSetting][map_with_gradebook]", "0");
+    add("data[Assignment][enable_password]", "0");
+    add("data[Assignment][assignment_password]", "");
+    add("data[Assignment][private]", "0");
+    add("data[Assignment][private]", "1");
+    add("data[Assignment][show_event]", "0");
+    add("data[Assignment][share_to_SGQB]", "0");
+    add("data[Assignment][share_to_SGQB]", "1");
+    add("data[Assignment][share_to_CQB]", "0");
+    add("data[Assignment][share_to_CQB]", "1");
+    add("data[Assignment][share_to_question_bank_id]", "0");
+    add("data[AssignmentsSetting][allow_missed_student_view_answer]", "0");
+    add("data[AssignmentsSetting][set_zero_after_cutoff]", "0");
+    add("data[Assignment][view_answers_radio]", "view_answers_after_cutoff");
+    add("data[Assignment][random_questions]", "0");
+    add("data[Assignment][allow_multiple_submissions]", "0");
+    add("data[Assignment][max_submissions_allowed]", "1");
+    add("data[Assignment][accept_submission_attachment]", "0");
+    add("data[Assignment][sub_attach_mark]", "");
+    add("data[Assignment][new]", "true");
+    add("data[Assignment][hide_score]", "0");
+    add("data[Assignment][publish_to]", "0");
+    for (const s of p.sections) { add(`data[Lecture][checkbox][${s}]`, "0"); add(`data[Lecture][checkbox][${s}]`, "1"); }
+    add("data[Assignment][tier]", "0");
+    add("data[Save]", "إضافة");
+    const r = await this.req(action, { method: "POST", body: fd });
+    if (!/\/questions\/index\//.test(r.url)) throw new NoorError("homework_not_created", r.url);
+    return r.url.replace(/#.*$/, "");
+  }
+
+  async addQuestions(qIndexUrl: string, items: { text: string; choices: string[]; answer: number }[]) {
+    const bulk = qIndexUrl.replace("/questions/index/", "/questions/add_bulk_questions/");
+    const page = await this.req(bulk);
+    const csrf = (page.text.match(/name="data\[Token\]\[csrf_token\]"[^>]*value="([^"]+)"/) || [])[1] || "";
+    const esc = (t: string) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const P = (t: string) => `<p dir="rtl">${esc(t)}</p>`;
+    const f = new URLSearchParams();
+    f.append("_method", "POST");
+    f.append("data[Token][csrf_token]", csrf);
+    items.forEach((q, i) => {
+      f.append(`data[type][${i}]`, "mcq");
+      f.append(`data[mark][${i}]`, "1");
+      f.append(`data[text][${i}]`, P(q.text));
+      f.append(`data[correct_answer][${i}]`, String(q.answer));
+      f.append(`data[number_of_choices][${i}]`, String(q.choices.length));
+      for (let j = 1; j <= 6; j++) f.append(`data[option][${i}][${j}]`, q.choices[j - 1] != null ? P(q.choices[j - 1]) : "");
+    });
+    f.append("data[Question][number]", "");
+    f.append("data[Question][sub-text]", "");
+    const r = await this.req(bulk, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: f.toString() });
+    return { status: r.status, url: r.url, ok: /\/questions\/index\//.test(r.url) };
+  }
 }
+
