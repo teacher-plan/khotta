@@ -9565,7 +9565,9 @@ function noorGameQuestions(g){
   }else if(str==='tf'){
     items.forEach(x=>{if(x&&x.s)out.push({text:String(x.s),choices:['صح','خطأ'],answer:x.t?1:2});});
   }
-  return noorShuffle(out);
+  // سؤالٌ مكرّر في اللعبة لا يُرسل مرّتين: نور تُعاقب على التكرار
+  const seen=new Set();
+  return noorShuffle(out.filter(q=>{const k=noorNorm(q.text);if(seen.has(k))return false;seen.add(k);return true;}));
 }
 // أيام الدراسة المتتالية (الأحد–الخميس) ابتداءً من تاريخ
 function noorSchoolDays(start,n){
@@ -9573,7 +9575,25 @@ function noorSchoolDays(start,n){
   while(out.length<n){const w=d.getDay();if(w!==5&&w!==6)out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}
   return out;
 }
-const NOOR_HW_MAX=20; // نقاط الأسئلة في نور تُحسب لعشرين سؤالاً في تاريخ النشر الواحد
+const NOOR_HW_MAX=20;
+// اللعبة ← حزمة SCORM 1.2 (درسٌ تفاعلي في نور): imsmanifest.xml + اللعبة نفسها، ومعها
+// سطرٌ يُبلغ نور أن الطالب فتح الدرس (completed) — بلا أي مكتبة، والضغط بلا ضغط (stored).
+function noorScormZip(html,title){
+  const X=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const api="<script>(function(){function f(w){for(var i=0;i<10&&w;i++){if(w.API)return w.API;if(w===w.parent)break;w=w.parent;}"
+    +"return(window.opener&&window.opener.API)||null}var A=f(window);if(!A)return;try{A.LMSInitialize('');"
+    +"A.LMSSetValue('cmi.core.lesson_status','completed');A.LMSCommit('');}catch(e){}"
+    +"window.addEventListener('pagehide',function(){try{A.LMSFinish('')}catch(e){}});})();<\/script>";
+  const page=/<head[^>]*>/i.test(html)?html.replace(/<head[^>]*>/i,m=>m+api):api+html;
+  const man='<?xml version="1.0" encoding="UTF-8"?>\n'
+    +'<manifest identifier="khotta-'+Date.now()+'" version="1.0" xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2">'
+    +'<metadata><schema>ADL SCORM</schema><schemaversion>1.2</schemaversion></metadata>'
+    +'<organizations default="org1"><organization identifier="org1"><title>'+X(title)+'</title>'
+    +'<item identifier="item1" identifierref="res1"><title>'+X(title)+'</title></item></organization></organizations>'
+    +'<resources><resource identifier="res1" type="webcontent" adlcp:scormtype="sco" href="index.html"><file href="index.html"/></resource></resources></manifest>';
+  const z=khZipBlob({'imsmanifest.xml':man,'index.html':page});
+  return new Blob([z],{type:'application/zip'});
+} // نقاط الأسئلة في نور تُحسب لعشرين سؤالاً في تاريخ النشر الواحد
 async function noorPublishOpen(id){
   const st=planGet(id),l=planFindLesson(id);
   if(!st.prep||!l){toast(khG('أنشئي','أنشئ')+' التحضير أولاً',true);return;}
@@ -9599,7 +9619,8 @@ async function noorPublishOpen(id){
   const items=[
     {k:'prep',t:'التحضير في نور',on:!pub,lock:!pub},
     {k:'word',t:'ملف Word للتحضير (مرفق)',on:true},
-    st.game_id?{k:'game',t:'اللعبة (ملف HTML يعمل بلا إنترنت)',on:true}:null,
+    st.game_id?{k:'scorm',t:'اللعبة درساً تفاعلياً (SCORM) يفتحه الطالب داخل نور',on:!(pub&&pub.files&&pub.files.scorm)}:null,
+    st.game_id?{k:'game',t:'اللعبة ملفاً للتنزيل (HTML)',on:false}:null,
     st.info_url?{k:'info',t:'ملخّص الدرس (PDF)',on:true}:null,
     hwN?{k:'hw',t:'واجب من أسئلة اللعبة: '+egArNum(hwN)+' سؤالاً'+(hwParts>1?' في '+egArNum(hwParts)+' واجبات على أيامٍ متتالية (٢٠ سؤالاً لكل يوم)':'')+(hwDone?' — منشور سابقاً':''),on:!hwDone}:null,
   ].filter(Boolean);
@@ -9678,7 +9699,7 @@ async function noorPublishRun(){
   if(!c.run||c.run.sig!==sig){
     c.run={sig,prep_id:newPrep?'':st.noor.prep_id,done:{},steps:[
       ...(newPrep?[{k:'prep',t:'نشر التحضير في نور',st:'wait'}]:[]),
-      ...ks.filter(k=>k!=='prep'&&k!=='hw').map(k=>({k,t:{word:'رفع ملف Word للتحضير',game:'رفع اللعبة',info:'رفع الملخّص PDF'}[k],st:'wait'})),
+      ...ks.filter(k=>k!=='prep'&&k!=='hw').map(k=>({k,t:{word:'رفع ملف Word للتحضير',game:'رفع اللعبة',scorm:'رفع اللعبة درساً تفاعلياً (SCORM)',info:'رفع الملخّص PDF'}[k],st:'wait'})),
     ]};
     if(ks.includes('hw')&&c.hwq.length){
       const parts=[];for(let i=0;i<c.hwq.length;i+=NOOR_HW_MAX)parts.push(c.hwq.slice(i,i+NOOR_HW_MAX));
@@ -9722,14 +9743,15 @@ async function noorPublishRun(){
         }
         let file,title;
         if(s.k==='word'){file={blob:khZipBlob(planDocx(st.prep,meta)),name:'تحضير - '+safe(l.name)+'.docx'};title='تحضير درس '+l.name;}
-        else if(s.k==='game'){
+        else if(s.k==='game'||s.k==='scorm'){
           const g=c.game||(await sb.from('games').select('*').eq('id',st.game_id).maybeSingle()).data;
           if(!g)throw new Error('لم نجد اللعبة');
           const gn=(g.content&&g.content.groupNames)||gmGroupNames;
-          file={blob:await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة'),name:'لعبة - '+safe(g.title||l.name)+'.html'};
-          title='لعبة: '+(g.title||l.name);
+          const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة');
+          if(s.k==='scorm'){file={blob:noorScormZip(await html.text(),g.title||l.name),name:'lesson.zip',kind:'Scorm'};title='درس تفاعلي: '+(g.title||l.name);}
+          else{file={blob:html,name:'لعبة - '+safe(g.title||l.name)+'.html'};title='لعبة: '+(g.title||l.name);}
         }else if(s.k==='info'){file={blob:await noorImgPdf(st.info_url),name:'ملخص - '+safe(l.name)+'.pdf'};title='ملخّص درس '+l.name;}
-        await noorCall({action:'upload',cid:c.cid,prep_id:run.prep_id,lesson_id:lessonId,title,date,sections:secs,criteria,filename:file.name},file);
+        await noorCall({action:'upload',cid:c.cid,prep_id:run.prep_id,lesson_id:lessonId,title,date,sections:secs,criteria,filename:file.name,kind:file.kind||'Material'},file);
         const cur=planGet(id).noor||{};
         await planSetState(id,{noor:{...cur,files:{...(cur.files||{}),[s.k]:new Date().toISOString()}}});
       }
