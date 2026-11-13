@@ -10,6 +10,7 @@
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendPush, type PushSub, type Vapid } from "../_shared/webpush.ts";
+import { isServiceRoleRequest } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -95,7 +96,8 @@ Deno.serve(async (req) => {
     };
 
     // ══ نداءات القاعدة (مفتاح الخدمة) ══
-    if (token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    // للمشروع صيغتان لمفتاح الخدمة (JWT قديم و«sb_secret_…»)، فالتحقّق بالصلاحية لا بالحروف (adminGuard)
+    if (isServiceRoleRequest(req)) {
       if (!v) return json({ error: "vapid_missing" }, 500);
       const mode = String(b.mode || "");
 
