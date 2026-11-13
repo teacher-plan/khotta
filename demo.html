@@ -9577,6 +9577,16 @@ function noorSchoolDays(start,n){
   return out;
 }
 const NOOR_HW_MAX=20;
+// موعد نشر الواجب: الثانية ظهراً، فإن كان اليوم نفسه وقد فات الموعد (أو قارب) فبعد عشر دقائق من الآن
+function noorHwPublishAt(day){
+  const now=new Date(),today=now.toLocaleDateString('en-CA');
+  if(day===today&&(now.getHours()*60+now.getMinutes())>=13*60+50){
+    const t=new Date(now.getTime()+10*60000),p=n=>String(n).padStart(2,'0');
+    if(t.toLocaleDateString('en-CA')===today)return day+' '+p(t.getHours())+':'+p(t.getMinutes());
+    return noorSchoolDays(new Date(now.getTime()+864e5).toLocaleDateString('en-CA'),1)[0]+' 14:00';
+  }
+  return day+' 14:00';
+}
 // اللعبة ← حزمة SCORM 1.2 (درسٌ تفاعلي في نور): imsmanifest.xml + اللعبة نفسها، ومعها
 // سطرٌ يُبلغ نور أن الطالب فتح الدرس (completed) — بلا أي مكتبة، والضغط بلا ضغط (stored).
 function noorScormZip(html,title){
@@ -9704,7 +9714,10 @@ async function noorPublishRun(){
     ]};
     if(ks.includes('hw')&&c.hwq.length){
       const parts=[];for(let i=0;i<c.hwq.length;i+=NOOR_HW_MAX)parts.push(c.hwq.slice(i,i+NOOR_HW_MAX));
-      const days=noorSchoolDays(date,parts.length);
+      // نور يرفض واجباً جديداً بتاريخ نشرٍ ماضٍ: عند تحضير درسٍ قديم يُنشر الواجب
+      // ابتداءً من اليوم (لا من تاريخ الدرس)، فلا يفشل النشر بصمت.
+      const today=new Date().toLocaleDateString('en-CA');
+      const days=noorSchoolDays(date<today?today:date,parts.length);
       parts.forEach((qs,i)=>c.run.steps.push({k:'hw'+(i+1),hw:{qs,day:days[i],part:i+1,of:parts.length},
         t:'واجب'+(parts.length>1?' '+egArNum(i+1)+' من '+egArNum(parts.length):'')+': '+egArNum(qs.length)+' سؤالاً، يُنشر '+days[i],st:'wait'}));
     }
@@ -9737,7 +9750,7 @@ async function noorPublishRun(){
           const h=s.hw,due=noorSchoolDays(h.day,6)[5]+' 23:59';
           const r=await noorCall({action:'homework',cid:c.cid,prep_id:run.prep_id,lesson_id:lessonId,
             title:'واجب: '+l.name+(h.of>1?' ('+egArNum(h.part)+' من '+egArNum(h.of)+')':''),
-            publish:h.day+' 14:00',due,sections:secs,items:h.qs});
+            publish:noorHwPublishAt(h.day),due,sections:secs,items:h.qs});
           const cur=planGet(id).noor||{};
           await planSetState(id,{noor:{...cur,hw:{...(cur.hw||{}),[s.k]:{date:h.day,n:h.qs.length,qurl:r.qurl}}}});
           s.st='ok';noorProg(run.steps);continue;
