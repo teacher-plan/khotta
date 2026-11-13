@@ -3454,6 +3454,11 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   .task-item{min-height:44px}
 }
 @media (max-width:760px) and (prefers-reduced-motion:no-preference){#c1-tabbar button{transition:color .15s,background .15s}}
+
+.push-row{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px dashed var(--border);cursor:pointer}
+.push-row input{width:20px;height:20px;margin-top:2px;accent-color:var(--red-d);flex:none}
+.push-row span{display:flex;flex-direction:column;font-size:13px}
+.push-row small{color:var(--muted);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -3557,6 +3562,8 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <input class="acct-in" id="acct-name" type="text" placeholder="الاسم"/>
     <div class="grp">مدرستي</div>
     <div id="acct-school"></div>
+    <div class="grp">إشعارات الهاتف</div>
+    <div id="acct-push"></div>
     <div class="grp">منصّة نور</div>
     <div id="acct-noor"></div>
     <div class="grp">التواصل مع الإدارة</div>
@@ -5341,7 +5348,7 @@ async function afterAuth(session){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
-  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
+  setTimeout(()=>{try{c1OpenFromHash();c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   // الخطاب يُضبط هنا: بعد معرفة الحلقة وقراءة الملف، وقبل أوّل رسمٍ للتطبيق
   khSetGender(profile.teacher_gender);
@@ -5482,7 +5489,7 @@ function demoBoot(){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp','demo');
-  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
+  setTimeout(()=>{try{c1OpenFromHash();c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   const nm=document.getElementById('c1-menu-name');
   if(nm)nm.textContent='أ. '+profile.display_name;
   khSetGender(profile.teacher_gender);
@@ -5506,7 +5513,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='7c7e6bf';
+const KH_BUILD='9e62b2e';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -5595,6 +5602,7 @@ function acctOpen(){
   if(bd)bd.innerHTML='نسخة <bdi dir="ltr">'+escHtml(KH_BUILD)+'</bdi>';
   document.getElementById('acct-modal').classList.add('open');
   acctSchoolLoad();
+  pushAcctLoad();
   noorAcctLoad();
 }
 // حلقة الرصيد الموحّدة — رقمٌ واحد (النسبة المتبقّية من حصّة الفصل بالريال)
@@ -6169,7 +6177,7 @@ function c1OfflineBoot(){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
-  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
+  setTimeout(()=>{try{c1OpenFromHash();c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   khSetGender(profile.teacher_gender);khApplyGender();
   renderYawmi();
@@ -10147,6 +10155,89 @@ async function nlDevGo(path,ajax){
   try{nl.dev.res=await noorCall({action:'lab_raw',path,ajax:!!ajax});}catch(e){toast(e.message,true);}
   nl.dev.busy=false;if(nl.tab==='dev')nlBody();
 }
+
+
+// ══ إشعارات الهاتف (Web Push) — الدالّة c1-push ══
+// رسائل الإدارة والاستبيانات فوراً، وتذكير صباحي بحصص اليوم، ومسائي بدروس الغد بلا تحضير.
+async function pushCall(body){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('سجّل الدخول أولاً');
+  const r=await fetch(SUPABASE_URL+'/functions/v1/c1-push',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let j={};try{j=await r.json();}catch(_){}
+  if(!r.ok||j.error){const e=new Error(j.message||'تعذّر الاتصال بخدمة الإشعارات');e.code=j.error;throw e;}
+  return j;
+}
+function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
+function pushIsIOS(){return /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+function pushStandalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}
+async function pushReg(){
+  let r=await navigator.serviceWorker.getRegistration('/');
+  if(!r)r=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+  return navigator.serviceWorker.ready.then(()=>r);
+}
+async function pushCurrentSub(){try{const r=await pushReg();return await r.pushManager.getSubscription();}catch(_){return null;}}
+function pushKeyBytes(k){const b=k.replace(/-/g,'+').replace(/_/g,'/');const s=atob(b+'==='.slice((b.length+3)%4));return Uint8Array.from(s,c=>c.charCodeAt(0));}
+async function pushEnable(){
+  if(!pushSupported()){toast(pushIsIOS()?'على iPhone: '+khG('أضيفي','أضف')+' خُطّة إلى الشاشة الرئيسية أولاً (مشاركة ← إضافة إلى الشاشة الرئيسية) ثم '+khG('افتحيها','افتحها')+' من الأيقونة':'هذا المتصفح لا يدعم الإشعارات',true);return;}
+  const btn=document.getElementById('push-on-btn');if(btn){btn.disabled=true;btn.textContent='يفعّل…';}
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast(perm==='denied'?'الإشعارات محظورة لهذا الموقع — '+khG('فعّليها','فعّلها')+' من إعدادات المتصفح':'لم يُمنح الإذن',true);pushAcctLoad();return;}
+    const{key}=await pushCall({action:'key'});
+    if(!key)throw new Error('الإشعارات غير مهيّأة على الخادم بعد.');
+    const reg=await pushReg();
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){const cur=sub.options&&sub.options.applicationServerKey;if(cur){const a=new Uint8Array(cur),k=pushKeyBytes(key);if(a.length!==k.length||a.some((x,i)=>x!==k[i])){await sub.unsubscribe();sub=null;}}}
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKeyBytes(key)});
+    await pushCall({action:'subscribe',subscription:sub.toJSON()});
+    toast('🔔 فُعّلت الإشعارات على هذا الجهاز','ok');
+    pushCall({action:'test'}).catch(()=>{});
+  }catch(e){toast(e.message||'تعذّر التفعيل',true);}
+  pushAcctLoad();
+}
+async function pushDisable(){
+  const sub=await pushCurrentSub();
+  try{if(sub){await pushCall({action:'unsubscribe',endpoint:sub.endpoint});await sub.unsubscribe();}toast('أُوقفت الإشعارات على هذا الجهاز','ok');}
+  catch(e){toast(e.message,true);}
+  pushAcctLoad();
+}
+async function pushPref(k,v){
+  try{await pushCall({action:'prefs',prefs:{[k]:v}});toast('حُفظ','ok');}catch(e){toast(e.message,true);pushAcctLoad();}
+}
+async function pushTest(){try{const r=await pushCall({action:'test'});toast(r.sent?'أُرسل إشعار تجريبي ✓':'لا جهاز مشترك',!r.sent);}catch(e){toast(e.message,true);}}
+async function pushAcctLoad(){
+  const box=document.getElementById('acct-push');if(!box)return;
+  if(KH_DEMO){box.innerHTML='<p class="acct-note">الإشعارات متاحة في الحساب الكامل.</p>';return;}
+  if(!pushSupported()){
+    box.innerHTML='<p class="acct-note">'+(pushIsIOS()&&!pushStandalone()
+      ?'📱 على iPhone تعمل الإشعارات بعد إضافة خُطّة إلى الشاشة الرئيسية: '+khG('اضغطي','اضغط')+' زرّ المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية»، ثم '+khG('افتحي','افتح')+' خُطّة من الأيقونة '+khG('وعودي','وعد')+' إلى هنا.'
+      :'هذا المتصفح لا يدعم إشعارات الهاتف.')+'</p>';return;
+  }
+  const sub=await pushCurrentSub();
+  const denied=Notification.permission==='denied';
+  if(!sub||Notification.permission!=='granted'){
+    box.innerHTML=`<p class="acct-note">تصلك على هذا الجهاز حتى وخُطّة مغلقة: رسائل الإدارة والاستبيانات فوراً، وتذكير صباحي بحصص اليوم ودروسها، وتذكير مسائي بدروس الغد التي لم ${khG('تحضّريها','تحضّرها')} بعد.</p>
+      ${denied?`<p class="acct-note" style="color:var(--red-d)">الإشعارات محظورة لهذا الموقع في المتصفح — ${khG('فعّليها','فعّلها')} من إعدادات الموقع ثم ${khG('أعيدي','أعد')} المحاولة.</p>`:''}
+      <button class="c1-mbtn go" id="push-on-btn" style="width:100%" onclick="pushEnable()">🔔 تفعيل الإشعارات على هذا الجهاز</button>`;
+    return;
+  }
+  box.innerHTML='<p class="acct-note">…</p>';
+  let st={prefs:{msgs:true,morning:true,evening:true},devices:1};
+  try{st=await pushCall({action:'prefs'});}catch(_){}
+  const row=(k,t,d)=>`<label class="push-row"><input type="checkbox" ${st.prefs[k]?'checked':''} onchange="pushPref('${k}',this.checked)"><span><b>${t}</b><small>${d}</small></span></label>`;
+  box.innerHTML=`<div class="sch-mine"><b>✅ الإشعارات مفعّلة على هذا الجهاز</b><span>${egArNum(st.devices||1)} ${(st.devices||1)>1?'أجهزة':'جهاز'}</span></div>
+    ${row('msgs','رسائل الإدارة والاستبيانات','فور وصولها')}
+    ${row('morning','تذكير صباحي','٦:٣٠ صباحاً — حصص اليوم ودروسها')}
+    ${row('evening','تذكير مسائي','٧:٣٠ مساءً — دروس الغد بلا تحضير (لا يصل إن كانت كلها جاهزة)')}
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="abs-mini" onclick="pushTest()">إرسال إشعار تجريبي</button><button class="abs-mini" onclick="pushDisable()">إيقاف على هذا الجهاز</button></div>`;
+}
+// فتح القسم من رابط الإشعار (#msgs، #plan…)
+function c1OpenFromHash(){
+  const id=(location.hash||'').replace('#','');
+  if(id&&document.getElementById('page-'+id)&&c1Sections().some(s=>s.id===id)){try{history.replaceState(history.state,'',location.pathname);}catch(_){}c1Go(id);}
+}
+window.addEventListener('hashchange',()=>{if(document.body.classList.contains('inapp'))c1OpenFromHash();});
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='NAV'&&d.url){try{const h=new URL(d.url).hash;if(h){if(location.hash===h)c1OpenFromHash();else location.hash=h;}}catch(_){}}});
 
 // ── تحويل تحضير خطة إلى حقول نموذج التحضير في نور ──
 function noorPrepFields(plan,lessonName){
