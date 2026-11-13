@@ -5446,7 +5446,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='5133128';
+const KH_BUILD='b778472';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9680,6 +9680,7 @@ function nlPts(){
     <div class="nl-cap">${nlCapDays(10).map(x=>{const over=x.q>NL_CAP_Q;return `<div class="nl-capd ${x.d===o.today?'today':''}"><b>${nlDayName(x.d)}</b><small>${nlShort(x.d)}</small>
       <div class="nl-capbar" title="${x.q} سؤال"><i style="height:${Math.min(100,nlPct(x.q,NL_CAP_Q))}%;background:${over?'#C2452D':x.q>=NL_CAP_Q?'#9AA9A6':'linear-gradient(0deg,#127A72,#3FB59C)'}"></i></div>
       <span class="${over?'bad':x.q>=NL_CAP_Q?'':'free'}">${over?'+'+egArNum(x.q-NL_CAP_Q)+' ضائع':x.q>=NL_CAP_Q?'ممتلئ':'متاح '+egArNum(NL_CAP_Q-x.q)}</span><em>📎 ${egArNum(x.f)}/${egArNum(NL_CAP_F)}</em></div>`;}).join('')}</div></div>
+  ${nlPrepGapCard()}
   <div class="nl-card h6"><h3>🏆 موقعك بين أنشط معلّمي مدرستك</h3><p class="sub">بإجمالي كل الفصول كما تعرضه نور.</p>
     <ol class="nl-lb">${shown.map(x=>`<li class="${x.me?'me':''}"><span class="r">${egArNum(all.indexOf(x)+1)}</span><span class="n">${escHtml(x.name)}</span><span class="p">${nlN(x.pts)}</span></li>`).join('')}</ol>
     ${next?`<div class="nl-gap">تفصلك <b>${nlN(next.pts-sc.total+1)}</b> نقطة عن المركز ${egArNum(pos)}${daysTo?` — بمعدّلك الحالي (${nlN(avg7)} يومياً) تتجاوزه خلال <b>${egArNum(daysTo)}</b> يوم دراسي تقريباً`:''}.</div>`:'<div class="nl-gap">🥇 أنت الأول في مدرستك.</div>'}
@@ -9725,6 +9726,41 @@ async function nlCoach(){
   if(nl.tab==='pts')nlBody();
 }
 
+// ── تحاضير بلا واجب: مطابقةٌ بنصّ اسم الدرس (ترقيم الدروس غير متّسق بين التحاضير والواجبات) ──
+function nlLessonKey(t){
+  t=noorAr2En(t).replace(/^\s*واجب(\s*قصير)?\s*:\s*/,'').replace(/\([^)]*\)/g,' ');
+  if(t.includes(':'))t=t.slice(t.lastIndexOf(':')+1);
+  return noorNorm(t.replace(/(^|\s)درس(?=\s|$)/g,' ').replace(/[\d\-–_.]+/g,' '));
+}
+function nlPrepGaps(){
+  const o=nl.ov;if(!o||!o.preps)return null;
+  const hk=(o.hwTitles||[]).map(h=>({cid:h.cid,k:nlLessonKey(h.title)})).filter(h=>h.k);
+  const secLbl={};((noorSt||{}).courses||[]).forEach(c=>(c.sections||[]).forEach(x=>secLbl[x.id]=x.label));
+  const groups={};
+  o.preps.forEach(p=>{const k=nlLessonKey(p.title);if(!k)return;const g=groups[p.cid+'|'+k]=groups[p.cid+'|'+k]||{cid:p.cid,k,title:p.title.replace(/\s*\(\d+\)\s*$/,''),secs:[],created:p.created};
+    if(p.lecture&&!g.secs.includes(p.lecture))g.secs.push(p.lecture);if(p.created>g.created)g.created=p.created;});
+  const has=g=>hk.some(h=>h.cid===g.cid&&(h.k===g.k||(Math.min(h.k.length,g.k.length)>=6&&(h.k.includes(g.k)||g.k.includes(h.k)))));
+  const all=Object.values(groups);
+  return {all,missing:all.filter(g=>!has(g)).sort((a,b)=>b.created.localeCompare(a.created)).map(g=>({...g,secs:g.secs.map(x=>secLbl[x]||x)}))};
+}
+function nlPrepGapCard(){
+  const pg=nlPrepGaps();if(!pg)return '';
+  const m=pg.missing;
+  return `<div class="nl-card"><h3>📚 دروسٌ نشرت لها تحضيراً بلا واجب (${egArNum(m.length)} من ${egArNum(pg.all.length)})</h3>
+    <p class="sub">الواجب هو ما يجلب النقاط (٥+٢ للسؤال حين يحلّه الطلاب)، والتحضير وحده لا يُحتسب. المطابقة باسم الدرس بين تحاضيرك وواجباتك في نور.</p>
+    ${m.length?`<ul class="nl-feed" style="max-height:none">${m.map((g,i)=>`<li><span class="nl-ico">📘</span><span class="t" title="${escAttr(g.title)}">${escHtml(g.title)}</span>${g.secs.length?`<span class="nl-pill mid">${escHtml(g.secs.join('، '))}</span>`:''}<span class="d">${nlShort(g.created)}</span><button class="nl-btn ghost" style="padding:6px 10px;font-size:12px" onclick="nlGapGen(${i})">✨ ولّد واجباً</button></li>`).join('')}</ul>`
+      :'<div class="nl-gap">✅ لكل تحضيرٍ منشور واجبٌ مرتبطٌ به.</div>'}</div>`;
+}
+async function nlGapGen(i){
+  const pg=nlPrepGaps();const g=pg&&pg.missing[i];if(!g)return;
+  nl.gen=nl.gen||{};nl.gen.cid=g.cid;nl.gen.items=null;nl.gen.done=null;nl.post=null;
+  nlTab('gen');await nlGenInit();
+  const ls=nl.lessons[g.cid]||[];
+  const best=ls.find(l=>nlLessonKey(l.name)===g.k)||ls.find(l=>{const k=nlLessonKey(l.name);return k.length>=6&&(k.includes(g.k)||g.k.includes(k));});
+  if(best){nl.gen.lesson=best.id;toast('اخترنا الدرس: '+best.name,'ok');}else toast('لم نجد الدرس في شجرة نور — '+khG('اختاريه','اختره')+' من القائمة',true);
+  nlBody();
+}
+
 // ── ٢) حصص الأسبوع ──
 function nlWeekStats(){
   const o=nl.ov;if(!o)return null;let tot=0,ok=0;
@@ -9742,7 +9778,7 @@ function nlWeek(){
     <div class="nl-stats" style="margin-bottom:12px"><div class="nl-stat"><b>${egArNum(ws.slots)}</b><span>حصة هذا الأسبوع</span></div><div class="nl-stat"><b>${egArNum(ws.prepared)}</b><span>لها تحضير</span></div><div class="nl-stat ${ws.missing?'warn':''}"><b>${egArNum(ws.missing)}</b><span>بلا تحضير</span></div><div class="nl-stat"><b>${egArNum(nlPct(ws.prepared,ws.slots))}٪</b><span>نسبة التغطية</span></div></div>
     <div class="nl-week">${keys.map(d=>`<div class="nl-day ${d===o.today?'today':''}"><h4>${nlDayName(d)}<small>${nlShort(d)}</small></h4>${days[d].sort((a,b)=>pn(a)-pn(b)).map(s=>`<div class="nl-slot ${s.prep?'y':'n'}"><span>${escHtml(s.period)}</span><span>شعبة ${egArNum(s.sec)} ${s.prep?'✓':'✕'}</span></div>`).join('')||'<p class="sub">لا حصص</p>'}</div>`).join('')}</div>
     ${ws.missing?`<div class="nl-gap">⚠️ ${egArNum(ws.missing)} حصة بلا تحضير. التحضير نفسه لا يُحتسب نقاطاً في نور، لكنه الوعاء الذي تُعلَّق عليه الملفات والواجبات (وهي التي تُحتسب)، والمشرف يراه. انشره من «الخطة» ← بطاقة الدرس ← «📤 نشر في نور».</div><div class="nl-actions"><button class="nl-btn" onclick="c1Go('plan')">الذهاب إلى الخطة</button></div>`:'<div class="nl-gap">✅ كل حصص الأسبوع محضّرة في نور.</div>'}
-  </div></div>`;
+  </div>${nlPrepGapCard()}</div>`;
 }
 
 // ── ٣) تحليل الطلاب ──
