@@ -446,6 +446,16 @@ export class Noor {
     })).filter((a) => a.id);
   }
 
+  // قائمة التحاضير المنشورة (مع الشعبة وتاريخ الإنشاء)
+  async prepsList(cid: string) {
+    const j = await this.ajaxJson(`/teacher/courses/preparations_index/cid:${cid}?start=0&length=500&draw=1`);
+    // deno-lint-ignore no-explicit-any
+    return ((j.data || []) as any[]).map((x) => ({
+      id: String(x?.PreparationsView?.id || ""), title: clean(String(x?.PreparationsView?.title || "")),
+      created: String(x?.PreparationsView?.created || ""), lecture: String(x?.PreparationLectures?.lecture_id || ""),
+    })).filter((p) => p.id);
+  }
+
   async studentsScores(cid: string) {
     const j = await this.ajaxJson(`/teacher/scores/students_scores/cid:${cid}`);
     // deno-lint-ignore no-explicit-any
