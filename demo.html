@@ -5448,7 +5448,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='ff6a7e2';
+const KH_BUILD='589908a';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10329,7 +10329,7 @@ async function noorPublishRun(){
           const g=c.game||(await sb.from('games').select('*').eq('id',st.game_id).maybeSingle()).data;
           if(!g)throw new Error('لم نجد اللعبة');
           const gn=(g.content&&g.content.groupNames)||gmGroupNames;
-          const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة');
+          const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||'لعبة',{solo:true});
           if(s.k==='scorm'){file={blob:noorScormZip(await html.text(),g.title||l.name),name:'lesson.zip',kind:'Scorm'};title='درس تفاعلي: '+(g.title||l.name);}
           else{file={blob:html,name:'لعبة - '+safe(g.title||l.name)+'.html'};title='لعبة: '+(g.title||l.name);}
         }else if(s.k==='info'){file={blob:await noorImgPdf(st.info_url),name:'ملخص - '+safe(l.name)+'.pdf'};title='ملخّص درس '+l.name;}
@@ -14299,18 +14299,55 @@ async function gmFetchB64(url){
     return await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res(null);fr.readAsDataURL(b);});
   }catch(e){return null;}
 }
+// تكييف الألعاب لشاشة الهاتف — يُضاف إلى الملف المستقلّ (التنزيل ونور) فقط، ولا يمسّ العرض على الشاشة الكبيرة
+const GM_MOBILE_CSS=`@media (max-width:600px){
+#gm-stage-head{gap:6px;padding:6px 8px;min-height:46px}
+#gm-stage-brand{display:none}
+#gm-stage-title{font-size:12.5px}
+#gm-stage-actions{gap:4px;min-width:0}
+#gm-stage-actions .gm-x{padding:5px 8px;min-height:30px}
+#gm-stage-hud{min-width:0;max-width:44vw;overflow:hidden}
+#gm-stage-hud span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+#gm-teams{top:50px;gap:4px;padding:4px;max-width:96vw}
+.gm-team{padding:5px 9px;font-size:12.5px;gap:5px}
+#gm-stage-bg:has(#gm-teams) #gm-stage-body{padding-top:58px}
+.gm-g3q{padding:9px 10px;gap:8px;border-radius:16px}
+.gm-g3q-t{font-size:clamp(15px,4.4vw,21px);max-height:none;line-height:1.5}
+.gm-g3q-n{width:38px;height:38px;font-size:17px;border-radius:11px;box-shadow:0 3px 0 #3F28A8}
+.gm-g3q-say{width:34px;height:34px}
+.gm-g3q-team{padding:0 9px;font-size:12px}
+.gm-bx-grid,.gm-bx-grid.sz-m{grid-template-columns:repeat(4,1fr)!important;gap:10px 8px!important}
+.gm-bx,.gm-bx-grid.sz-m .gm-bx{height:66px!important}
+.gm-bx-lid{height:24px;top:-4px}
+.gm-bx-n{font-size:15px;bottom:6px}
+.gm-bx-in,.gm-bx-grid.sz-m .gm-bx-in{font-size:22px!important;inset:20px 3px 4px!important}
+.gm-bd-grid{gap:4px;width:100%}
+.gm-bd-cell{border-radius:9px}
+.gm-bd-cell i{font-size:13px;font-style:normal}
+.gm-bd-tok{width:18px;height:18px;border-width:2px}
+}`;
+const GM_CSS_RE=/\.gm-|#gm-|gmShake|gmPop\b|gmBob|gmPopOut|gmPickPulse|gmMillCountPulse|gmGrpHit|gmGrpLand|gmK|gmTBump|gmCd\b|gmSlotGlow|gmGulp|gmDeal|gmHop|gmRoll|gmPodUp|gmBx|gmRattle/;
 function gmCollectCss(){
   let out='';
   for(const sh of document.styleSheets){
     let rules;try{rules=sh.cssRules;}catch(e){continue;}
     for(const r of rules){
+      // قواعد @media (تكييف الهاتف) لا selectorText لها، فكانت تسقط كلّها من الملف المستقلّ
+      // فتصل الألعاب إلى نور بتصميم الشاشة الكبيرة وحده — تُؤخذ الآن بقواعدها الداخلية الخاصة بالألعاب
+      if(r.media&&r.cssRules){
+        let inner='';
+        for(const x of r.cssRules){const k=(x.selectorText||'')+' '+(x.name||'');if(GM_CSS_RE.test(k))inner+=x.cssText+'\n';}
+        if(inner)out+='@media '+r.media.mediaText+'{\n'+inner+'}\n';
+        continue;
+      }
       const key=(r.selectorText||'')+' '+(r.name||'');
-      if(/\.gm-|#gm-|gmShake|gmPop\b|gmBob|gmPopOut|gmPickPulse|gmMillCountPulse|gmGrpHit|gmGrpLand|gmK|gmTBump|gmCd\b|gmSlotGlow|gmGulp|gmDeal|gmHop|gmRoll|gmPodUp|gmBx|gmRattle/.test(key))out+=r.cssText+'\n';
+      if(GM_CSS_RE.test(key))out+=r.cssText+'\n';
     }
   }
   return out;
 }
-async function gmBuildStandalone(tpl,items,groupNames,title){
+async function gmBuildStandalone(tpl,items,groupNames,title,opts){
+  const solo=!!(opts&&opts.solo);
   const bg=gmWorldUrl(tpl);
   const stCls=bg?' class="gm-world'+(GM_FILL_TPL[tpl]===1?' gm-fill':'')+'"':'';
   const sfx={};
@@ -14329,6 +14366,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title){
   parts.push("*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif}");
   parts.push(gmCollectCss());
   parts.push('#gm-stage-bg{position:fixed;inset:0;display:flex;flex-direction:column;background-position:center;background-size:cover;}');
+  parts.push(GM_MOBILE_CSS);
   parts.push('</style></head><body>');
   parts.push(`<div id="gm-stage-bg"${stCls} style="background-image:${bgStyle}">`);
   parts.push('<div id="gm-stage-veil"></div><canvas id="gm-confetti"></canvas>');
@@ -14361,7 +14399,12 @@ async function gmBuildStandalone(tpl,items,groupNames,title){
   {const a='/*GMKIT-'+'START*/',z='/*GMKIT-'+'END*/';
    const src=[...document.scripts].map(x=>x.textContent).find(t=>t.includes(a)&&t.includes(z))||'';
    parts.push(src.slice(src.indexOf(a),src.indexOf(z)));}
-  parts.push('var gmTeamsN='+(GM_NO_TEAMS[tpl]?0:(GM_MIN2[tpl]?Math.max(2,gmTeamsN):gmTeamsN))+';');
+  parts.push('var GM_SOLO='+solo+';');
+  parts.push('var gmTeamsN='+(solo||GM_NO_TEAMS[tpl]?0:(GM_MIN2[tpl]?Math.max(2,gmTeamsN):gmTeamsN))+';');
+  // صيغ المخاطَب داخل المحرّكات (khG/khS) لم تكن تُصدَّر، فكانت «الذاكرة» و«من سيربح المليون»
+  // تتوقّف في الملف المستقلّ (وفي نور) عند الضغط على «ابدأ» بخطأ مرجعٍ غير معرَّف
+  parts.push('var KH_TG='+JSON.stringify((function(){try{return khTeacherGender();}catch(e){return '';}})())+',KH_SG='+JSON.stringify((function(){try{return khStuGender();}catch(e){return 'mixed';}})())+';');
+  parts.push('function khG(f,m){return '+(solo?'KH_SG':'KH_TG')+'==="f"?f:m;}function khS(f,m){return KH_SG==="f"?f:m;}function khC(f,m){return KH_TG==="f"?f:m;}');
   // egToArabic اسمٌ مستعار لـegArNum، وtoString يطبع الدالة باسمها الأصلي —
   // فكان المصدَّر يُعرّف egArNum بينما المحرّكات تنادي egToArabic، فتسقط كل
   // لعبةٍ مُنزَّلة بـReferenceError أوّل ما تُعرَض النتيجة. الجسر يُصلح ذلك.
@@ -14376,7 +14419,7 @@ async function gmBuildStandalone(tpl,items,groupNames,title){
   }
   // شاشة البداية: العنوان + تعليماتٌ تُقرأ للطلاب + زر البدء
   parts.push('var GM_HOWTO='+JSON.stringify(GM_TPL_HOWTO()[tpl]||'')+';');
-  parts.push("function gmHome(){document.getElementById('gm-stage-body').innerHTML='<div class=\"gm-panel gm-end\" style=\"max-width:520px\"><h2 style=\"margin:6px 0\">'+"+JSON.stringify(title)+"+'</h2>'+(GM_HOWTO?'<p style=\"font-size:15.5px;line-height:1.8;opacity:.9;margin:4px 0 14px\">'+GM_HOWTO+'</p>':'')+"+(GM_NO_TEAMS[tpl]?"''":"gmKitTeamsPicker()")+"+'<button class=\"gm-btn\" style=\"font-size:18px;padding:14px 44px\" id=\"gm-start-btn\">"+khG('ابدئي','ابدأ')+" اللعب</button></div>';document.getElementById('gm-start-btn').onclick=function(){gmKitStart("+runFn+");};}");
+  parts.push("function gmHome(){document.getElementById('gm-stage-body').innerHTML='<div class=\"gm-panel gm-end\" style=\"max-width:520px\"><h2 style=\"margin:6px 0\">'+"+JSON.stringify(title)+"+'</h2>'+(GM_HOWTO?'<p style=\"font-size:15.5px;line-height:1.8;opacity:.9;margin:4px 0 14px\">'+GM_HOWTO+'</p>':'')+"+(GM_NO_TEAMS[tpl]||solo?"''":"gmKitTeamsPicker()")+"+'<button class=\"gm-btn\" style=\"font-size:18px;padding:14px 44px\" id=\"gm-start-btn\">"+(solo?khS('ابدئي','ابدأ'):khG('ابدئي','ابدأ'))+" اللعب</button></div>';document.getElementById('gm-start-btn').onclick=function(){gmKitStart("+runFn+");};}");
   parts.push("gmHome();");
   parts.push("document.getElementById('gm-again-btn').onclick=function(){if(typeof gmQuizTimer!=='undefined')clearInterval(gmQuizTimer);if(typeof gmMemTimer!=='undefined')clearTimeout(gmMemTimer);document.getElementById('gm-stage-hud').innerHTML='';gmT.on=false;gmKitBar();gmHome();};");
   // ملء الشاشة: البروجكتر يريد الشاشة كلّها، والمفتاح F لمن تُقدّم من بعيد
@@ -14778,6 +14821,9 @@ var GM_MANY={boxes:1,penalty:1};
 var GM_KIT_AUTO={balloon:1,memory:1,groups:1};
 // قوالب تنافس الفرق بطبيعتها: لا خيار «فردي» فيها
 var GM_MIN2={board:1,race:1,boxes:1};
+// «وضع الطالب» (ملفّ نور): الطالب يلعب وحده على هاتفه، فلا فرق ولا أدوار — حتى في قوالب التنافس
+function gmTurnTxt(i,verb){return (typeof GM_SOLO!=='undefined'&&GM_SOLO)?'دورك':(verb||'دور الفريق')+' '+GM_TEAM_NAMES[i];}
+function gmMinTeams(){return (typeof GM_SOLO!=='undefined'&&GM_SOLO)?1:Math.max(2,gmTeamsN||2);}
 var gmT={n:0,s:[0,0,0,0,0,0],cur:0,streak:0,best:0,solo:0,stats:{},on:false};
 function gmKitReset(n){
   gmT={n:n||0,s:[0,0,0,0,0,0],cur:0,streak:0,best:0,solo:0,stats:{},on:true};
@@ -14889,7 +14935,12 @@ function gmKitResults(replayFn){
     .filter(function(x){return x.w>0;}).sort(function(a,b){return b.w-a.w;}).slice(0,3);
   var head;
   if(gmT.n>=2)head=gmKitWinnerH()+gmKitPodiumHtml();
-  else head='<h2 class="gm-res-h">🏆 '+egToArabic(gmT.solo)+' نقطة</h2>';
+  else{
+    var okN=0,badN=0;Object.keys(gmT.stats).forEach(function(q){okN+=gmT.stats[q].r?1:0;badN+=gmT.stats[q].w&&!gmT.stats[q].r?1:0;});
+    var tot=okN+badN;
+    var pts=gmT.solo||gmT.s[0]||0;
+    head='<h2 class="gm-res-h">🏆 '+egToArabic(pts)+' نقطة</h2>'+(tot?'<div class="gm-res-chip">✅ أجبت '+egToArabic(okN)+' من '+egToArabic(tot)+' إجابةً صحيحة</div>':'');
+  }
   var h='<div class="gm-panel gm-end gm-res">'+head
     +(gmT.best>=3?'<div class="gm-res-chip">🔥 أطول سلسلة: '+egToArabic(gmT.best)+' إجابات متتالية</div>':'')
     +(hard.length?'<div class="gm-res-hard"><b>⚠️ تحتاج مراجعة:</b>'+hard.map(function(x){return '<div><span>'+escHtml(x.q)+'</span><em>'+egToArabic(x.w)+' ✗</em></div>';}).join('')+'</div>':'')
@@ -15131,7 +15182,7 @@ function gmRunSort(items){
 function gmRunBoard(qs){
   var body=document.getElementById('gm-stage-body');
   var N=24,pos=[0,0,0,0],qi=0,busy=false;
-  var n=Math.max(2,gmTeamsN||2);
+  var n=gmMinTeams();
   gmKitReset(n);
   var SPEC={5:'⭐',11:'🌀',16:'⭐',20:'🌀'};
   var cells='';
@@ -15139,7 +15190,7 @@ function gmRunBoard(qs){
     var k=r*6+(r%2?5-c:c);
     cells+='<div class="gm-bd-cell'+(k===N-1?' fin':'')+(k===0?' start':'')+(SPEC[k]?' sp':'')+'" style="grid-row:'+(4-r)+';grid-column:'+(c+1)+';--rc:'+['#7DD3FC','#A7F3D0','#FDE68A','#FBCFE8'][r]+'" id="gm-bd-'+k+'"><i>'+(k===N-1?'🏁':k===0?'🚩':SPEC[k]||egToArabic(k+1))+'</i></div>';
   }
-  body.innerHTML='<div class="gm-bd"><div class="gm-bd-grid" id="gm-bd-grid">'+cells+'</div><div class="gm-bd-side"><div class="gm-bd-die" id="gm-bd-die" data-v="6">'+'<i></i>'.repeat(9)+'</div><button class="gm-btn" id="gm-bd-q">سؤال الفريق ▶</button><div class="gm-bd-note">⭐ تقدّم خطوتين · 🌀 ارجع خطوتين</div></div></div><div id="gm-bd-modal"></div>';
+  body.innerHTML='<div class="gm-bd"><div class="gm-bd-grid" id="gm-bd-grid">'+cells+'</div><div class="gm-bd-side"><div class="gm-bd-die" id="gm-bd-die" data-v="6">'+'<i></i>'.repeat(9)+'</div><button class="gm-btn" id="gm-bd-q">'+((typeof GM_SOLO!=='undefined'&&GM_SOLO)?'سؤالك':'سؤال الفريق')+' ▶</button><div class="gm-bd-note">⭐ تقدّم خطوتين · 🌀 ارجع خطوتين</div></div></div><div id="gm-bd-modal"></div>';
   var toks='';for(var t=0;t<n;t++)toks+='<div class="gm-bd-tok" id="gm-bd-t'+t+'" style="--tc:'+GM_TEAM_COLS[t]+'"></div>';
   document.getElementById('gm-bd-grid').insertAdjacentHTML('beforeend',toks);
   function place(t){
@@ -15154,7 +15205,7 @@ function gmRunBoard(qs){
     var tok=document.getElementById('gm-bd-t'+t);tok.classList.remove('hop');void tok.offsetWidth;tok.classList.add('hop');
     setTimeout(function(){if(pos[t]>=N-1&&dir>0){cb();return;}hop(t,steps-dir,cb);},260);
   }
-  function hud(){gmHudSet('دور الفريق '+GM_TEAM_NAMES[gmT.cur]);var b=document.getElementById('gm-bd-q');if(b)b.style.setProperty('--tc',GM_TEAM_COLS[gmT.cur]);}
+  function hud(){gmHudSet(gmTurnTxt(gmT.cur));var b=document.getElementById('gm-bd-q');if(b)b.style.setProperty('--tc',GM_TEAM_COLS[gmT.cur]);}
   hud();
   document.getElementById('gm-bd-q').onclick=function(){
     if(busy)return;busy=true;
@@ -15199,7 +15250,7 @@ function gmRunBoard(qs){
 var GM_QZ=[['#E21B3C','▲'],['#1368CE','◆'],['#D89E00','●'],['#26890C','■']];
 function gmTurnTag(){
   if(gmT.n<2)return '';
-  return '<div class="gm-turn" style="--tc:'+GM_TEAM_COLS[gmT.cur]+'">دور الفريق '+GM_TEAM_NAMES[gmT.cur]+'</div>';
+  return '<div class="gm-turn" style="--tc:'+GM_TEAM_COLS[gmT.cur]+'">'+gmTurnTxt(gmT.cur)+'</div>';
 }
 function gmKitScore(ok,q,pts){gmKitDirect=true;var s=gmKitAnswer(ok,q,pts);gmKitDirect=false;gmSound(ok?(s?'streak':'ok'):'bad');return s;}
 
@@ -15356,7 +15407,7 @@ function gmRunQuiz(qs){
 // ─ سباق الفرق: مضمارٌ حقيقيّ وسيّارات تنزلق، وخطف السؤال، ونيترو للسلسلة ─
 function gmRunRace(qs){
   var body=document.getElementById('gm-stage-body');
-  var n=Math.max(2,gmTeamsN||2);gmKitReset(n);
+  var n=gmMinTeams();gmKitReset(n);
   var FIN=GM_OPT.finish?Math.max(3,Math.min(10,Math.round(GM_OPT.finish))):Math.max(4,Math.min(8,Math.ceil(qs.length*1.2/n)+2));
   var pos=[0,0,0,0],qi=0,TINT=['hue-rotate(215deg) saturate(1.3)','none','hue-rotate(110deg)','hue-rotate(45deg) saturate(1.4)'];
   var lanes='';for(var t=0;t<n;t++)lanes+='<div class="gm-rc-lane" style="--tc:'+GM_TEAM_COLS[t]+'"><span class="gm-rc-nm">'+GM_TEAM_NAMES[t]+'</span><div class="gm-rc-road"><div class="gm-rc-car" id="gm-rc-c'+t+'"><span style="filter:'+TINT[t]+'">🏎️</span><i></i></div></div><span class="gm-rc-fin">🏁</span></div>';
@@ -15368,7 +15419,7 @@ function gmRunRace(qs){
     var Q=qs[qi%qs.length],box=document.getElementById('gm-rc-q');
     gmT.cur=team;gmKitBar();
     gmHudSet('الهدف: '+egToArabic(FIN)+' خطوات');
-    box.innerHTML='<div class="gm-rc-qp" style="--tc:'+GM_TEAM_COLS[team]+'"><div class="gm-rc-who">'+(steal?'⚡ فرصة خطف للفريق ':'دور الفريق ')+GM_TEAM_NAMES[team]+'</div>'
+    box.innerHTML='<div class="gm-rc-qp" style="--tc:'+GM_TEAM_COLS[team]+'"><div class="gm-rc-who">'+(steal?'⚡ فرصة خطف للفريق '+GM_TEAM_NAMES[team]:gmTurnTxt(team))+'</div>'
       +'<div class="gm-qz-qt" style="font-size:22px">'+escHtml(Q.q)+'</div><div class="gm-qz-tiles sm">'
       +Q.c.map(function(c,i){return c?'<button class="gm-qz-t" data-i="'+i+'" style="--qc:'+GM_QZ[i%4][0]+'"><em>'+GM_QZ[i%4][1]+'</em><span>'+escHtml(c)+'</span></button>':'';}).join('')+'</div></div>';
     box.querySelectorAll('.gm-qz-t').forEach(function(b){b.onclick=function(){
@@ -15400,13 +15451,14 @@ function gmRunRace(qs){
 // محتوى الصندوق يُسحب لحظة فتحه من مجموعة المرحلة الحالية (لا يُرى قبل الفتح، فلا فرق للطلاب).
 function gmRunBoxes(qs){
   var body=document.getElementById('gm-stage-body');
-  var n=Math.max(2,gmTeamsN||2);gmKitReset(n);gmBxClear();
+  var n=gmMinTeams();gmKitReset(n);gmBxClear();
   var run=++gmRun3;
   var NB=Math.max(1,qs.length),half=Math.ceil(qs.length/2);
   var open=[],got=[];for(var b=0;b<NB;b++){open.push(false);got.push(null);}
   var qi=0,turn=0,warned=false;
   // المكافآت: [النوع، القيمة، الأيقونة]
   var R1=[['gem',50,'💰'],['gem',100,'💎'],['gem',150,'💎'],['gem',200,'👑'],['gem',250,'💎'],['gem',300,'🏆'],['x2',0,'✨'],['steal',100,'🎯'],['steal',150,'🎯']];
+  if(n<2)R1=R1.filter(function(x){return x[0]!=='steal';});
   var R2=R1.concat([['bomb',50,'💣'],['bomb',100,'💣'],['bomb',150,'💥'],['bomb',100,'💣']]);
   var bag1=[],bag2=[];
   function draw(late){var bag=late?bag2:bag1;if(!bag.length){var src=gmShuffle(late?R2:R1);for(var i=0;i<src.length;i++)bag.push(src[i]);}return bag.pop();}
@@ -15417,7 +15469,7 @@ function gmRunBoxes(qs){
     if(qi>=qs.length||open.every(Boolean)){gmKitResults('gmRunBoxes');return;}
     var Q=qs[qi];gmT.cur=turn;gmKitBar();
     gmHudSet('السؤال '+egToArabic(qi+1)+' / '+egToArabic(qs.length)+(qi>=half?' · 💣 مرحلة القنابل':' · 💎 مرحلة الكنوز'));
-    body.innerHTML='<div class="gm-rc-qp gm-bx-q" style="--tc:'+GM_TEAM_COLS[turn]+'"><div class="gm-rc-who">دور الفريق '+GM_TEAM_NAMES[turn]+' — أجيبوا لتفتحوا صندوقاً</div>'
+    body.innerHTML='<div class="gm-rc-qp gm-bx-q" style="--tc:'+GM_TEAM_COLS[turn]+'"><div class="gm-rc-who">'+((typeof GM_SOLO!=='undefined'&&GM_SOLO)?'أجب لتفتح صندو':'دور الفريق '+GM_TEAM_NAMES[turn]+' — أجيبوا لتفتحوا صندو')+'قاً</div>'
       +'<div class="gm-qz-qt">'+escHtml(Q.q)+'</div><div class="gm-qz-tiles">'
       +Q.c.map(function(c,i){return c?'<button class="gm-qz-t" data-i="'+i+'" style="--qc:'+GM_QZ[i%4][0]+'"><em>'+GM_QZ[i%4][1]+'</em><span>'+escHtml(c)+'</span></button>':'';}).join('')+'</div></div>';
     body.querySelectorAll('.gm-qz-t').forEach(function(b){b.onclick=function(){
@@ -15430,7 +15482,7 @@ function gmRunBoxes(qs){
         var card=body.querySelector('.gm-bx-q');if(card)card.classList.add('gm-bx-wrong');
         var nx=(turn+1)%n,right=Q.c[Q.a||0]||'';
         g3Later(run,function(){
-          gmBxPhrase(gmBxOops(),'الإجابة الصحيحة: '+right+' · الدور للفريق '+GM_TEAM_NAMES[nx],'wrong');gmSound('groan');
+          gmBxPhrase(gmBxOops(),'الإجابة الصحيحة: '+right+(n>=2?' · الدور للفريق '+GM_TEAM_NAMES[nx]:''),'wrong');gmSound('groan');
           gmBxNext(run,'السؤال التالي',function(){turn=nx;ask();});
         },1000);}
     };});
@@ -15536,12 +15588,12 @@ function g3QCard(text,idx,total,extra){
 // شارة الفريق صاحب الدور داخل بطاقة السؤال (بدل شريطٍ منفصل يزاحم لوحة النقاط)
 function g3TeamChip(verb){
   if(gmT.n<2)return '';
-  return '<div class="gm-g3q-team" style="--tc:'+GM_TEAM_COLS[gmT.cur]+'">'+(verb||'دور الفريق')+' '+GM_TEAM_NAMES[gmT.cur]+'</div>';
+  return '<div class="gm-g3q-team" style="--tc:'+GM_TEAM_COLS[gmT.cur]+'">'+gmTurnTxt(gmT.cur,verb)+'</div>';
 }
 // بعد كل إجابةٍ يتبدّل صاحب الدور: تُحدَّث الشارة في مكانها
 function g3ChipRefresh(verb){
   var el=document.querySelector('.gm-g3q-team');if(!el||gmT.n<2)return;
-  el.style.setProperty('--tc',GM_TEAM_COLS[gmT.cur]);el.textContent=(verb||'دور الفريق')+' '+GM_TEAM_NAMES[gmT.cur];
+  el.style.setProperty('--tc',GM_TEAM_COLS[gmT.cur]);el.textContent=gmTurnTxt(gmT.cur,verb);
   el.classList.remove('flip');void el.offsetWidth;el.classList.add('flip');
 }
 // اختصارات لوحة المفاتيح للمعلّم أمام جهاز العرض: ١–٤ (أو 1–4) تختار الخيار، وEnter/مسافة كالنقر
