@@ -286,6 +286,44 @@ export class Noor {
     const err = /يجب رفع ملف/.test(r.text) ? "no_file" : "";
     return { ok, err, status: r.status, url: r.url };
   }
+  // ── تغيير تاريخ نشر واجبٍ قائم وموعد تسليمه (يُعيد إرسال نموذج التعديل كما هو
+  //    بقيمه الحالية كلّها، ولا يغيّر إلا التواريخ — كما يفعل المتصفح تماماً) ──
+  async rescheduleHomework(encCid: string, aid: string, publish: string, due: string) {
+    const page = await this.req(`/teacher/homeworks/edit/${encCid}/aid:${aid}`);
+    const i = page.text.indexOf('id="AssignmentEditForm"');
+    if (i < 0) throw new NoorError("homework_form_missing");
+    const fs = page.text.lastIndexOf("<form", i);
+    const form = page.text.slice(fs, page.text.indexOf("</form>", i));
+    const action = decodeEntities((form.match(/action="([^"]+)"/) || [])[1] || "");
+    const fd = new FormData();
+    const attr = (tag: string, a: string) => { const m = tag.match(new RegExp(`\\s${a}="([^"]*)"`)); return m ? decodeEntities(m[1]) : null; };
+    for (const m of form.matchAll(/<(input|select|textarea)\b[^>]*>/g)) {
+      const tag = m[0], name = attr(tag, "name");
+      if (!name || /disabled/.test(tag)) continue;
+      if (m[1] === "input") {
+        const type = (attr(tag, "type") || "text").toLowerCase();
+        if (type === "submit" || type === "button" || type === "file" || type === "image") continue;
+        if ((type === "checkbox" || type === "radio") && !/\schecked/.test(tag)) continue;
+        let v = attr(tag, "value") ?? (type === "checkbox" ? "on" : "");
+        if (name === "data[Assignment][publishing_datetime]") v = publish;
+        if (name === "data[Assignment][due_datetime]" || name === "data[Assignment][cutoff_datetime]") v = due;
+        fd.append(name, v);
+      } else if (m[1] === "select") {
+        const end = form.indexOf("</select>", m.index!);
+        const opts = [...form.slice(m.index!, end).matchAll(/<option\b[^>]*>/g)].map((o) => o[0]);
+        const sel = opts.filter((o) => /\sselected/.test(o));
+        const pick = sel.length ? sel : (/\smultiple/.test(tag) ? [] : opts.slice(0, 1));
+        for (const o of pick) fd.append(name, attr(o, "value") ?? "");
+      } else {
+        const end = form.indexOf("</textarea>", m.index!);
+        fd.append(name, decodeEntities(form.slice(m.index! + tag.length, end)));
+      }
+    }
+    fd.append("data[Save]", "قبول التعديلات");
+    const r = await this.req(action, { method: "POST", body: fd });
+    return { status: r.status, url: r.url };
+  }
+
   // ── واجب منزلي بأسئلة اختيار من متعدد ──
   async createHomework(p: {
     cid: string; title: string; publish: string; due: string; prepId?: string; lessonId?: string; sections: string[];

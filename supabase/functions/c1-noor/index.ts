@@ -66,6 +66,7 @@ async function dec(s: string) {
 }
 
 const SESSION_MS = 25 * 60e3;
+const HW_DAY_CAP = 20; // حدّ نور: أسئلة الواجبات والاختبارات المحتسبة لكل تاريخ نشر
 
 // ══ مختبر نور — حساباتٌ تجريبية فقط؛ لا يراه أي معلّمٍ آخر ولا تقبله الدالّة منه ══
 const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
@@ -327,6 +328,35 @@ Deno.serve(async (req) => {
       const dt = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
       if (!c || !items.length || items.length > 20 || !b.title || !dt.test(String(b.publish || "")) || !dt.test(String(b.due || ""))) {
         return json({ error: "bad_input", message: "بيانات الواجب ناقصة (١–٢٠ سؤالاً وتاريخا النشر والتسليم)." }, 400);
+      }
+      // ── حدّ نور اليومي: ٢٠ سؤالاً لكل تاريخ نشر (لكل مقرّرات المعلّم). ما زاد لا تحتسبه
+      //    نور نقاطاً، فيُمنع النشر ويُشرح السبب ويُقترح أقرب يومٍ فيه متّسع ──
+      const day = String(b.publish).slice(0, 10);
+      const used: Record<string, number> = await run(async (x) => {
+        const m: Record<string, number> = {};
+        for (const cc of (row.courses || [])) {
+          for (const h of await x.homeworksList(cc.cid)) { const d = h.publish.slice(0, 10); if (d >= day) m[d] = (m[d] || 0) + h.q; }
+        }
+        return m;
+      });
+      const onDay = used[day] || 0;
+      if (onDay + items.length > HW_DAY_CAP) {
+        await persist();
+        const t = new Date(day + "T12:00:00Z");
+        let free = "";
+        for (let k = 1; k < 40 && !free; k++) {
+          const d = new Date(t.getTime() + k * 864e5); const wd = d.getUTCDay(); const ds = d.toISOString().slice(0, 10);
+          if (wd !== 5 && wd !== 6 && (used[ds] || 0) + items.length <= HW_DAY_CAP) free = ds;
+        }
+        const left = Math.max(0, HW_DAY_CAP - onDay);
+        const ar = (v: number | string) => String(v).replace(/\d/g, (c) => "٠١٢٣٤٥٦٧٨٩"[+c]);
+        return json({
+          error: "daily_cap", used: onDay, cap: HW_DAY_CAP, left, suggest: free,
+          message: `لم يُنشر الواجب: نور تحتسب ${ar(HW_DAY_CAP)} سؤالاً فقط لكل تاريخ نشر، وما زاد عليها لا يُحسب لك نقاطاً. ` +
+            `بتاريخ ${ar(day)} في نور الآن ${ar(onDay)} سؤالاً، وهذا الواجب ${ar(items.length)} سؤالاً` +
+            (left ? ` (المتاح ${ar(left)} فقط).` : " (لا متّسع).") +
+            (free ? ` اختر تاريخ نشر آخر — أقرب يومٍ فيه متّسع: ${ar(free)}.` : " اختر تاريخ نشر آخر أو قلّل عدد الأسئلة."),
+        }, 409);
       }
       const out = await run(async (x) => {
         const qurl = await x.createHomework({ cid: c.cid, title: String(b.title).slice(0, 200), publish: b.publish, due: b.due,

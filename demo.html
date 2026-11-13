@@ -9367,7 +9367,7 @@ async function noorCall(body,file){
   try{r=await fetch(SUPABASE_URL+'/functions/v1/c1-noor',opt);}
   catch(_){const e=new Error('تعذّر الاتصال — '+khG('تحقّقي','تحقّق')+' من الإنترنت');e.code='net';throw e;}
   let j={};try{j=await r.json();}catch(_){}
-  if(!r.ok||j.error){const e=new Error(j.message||'تعذّر الاتصال بمنصّة نور');e.code=j.error||('http'+r.status);throw e;}
+  if(!r.ok||j.error){const e=new Error(j.message||'تعذّر الاتصال بمنصّة نور');e.code=j.error||('http'+r.status);e.data=j;throw e;}
   return j;
 }
 async function noorStatus(force){
@@ -9770,7 +9770,10 @@ async function noorPublishRun(){
         await planSetState(id,{noor:{...cur,files:{...(cur.files||{}),[s.k]:new Date().toISOString()}}});
       }
       s.st='ok';
-    }catch(e){s.st='err';s.msg=e.message||'تعذّر';failed=true;noorProg(run.steps);if(s.k==='prep')break;}
+    }catch(e){s.st='err';s.msg=e.message||'تعذّر';failed=true;
+      // تجاوز حدّ نور اليومي: يُنقل الواجب إلى أقرب يومٍ فيه متّسع، فيكفي الضغط على «نشر» مرةً أخرى
+      if(e.code==='daily_cap'&&s.hw&&e.data&&e.data.suggest){s.hw.day=e.data.suggest;s.t=s.t.replace(/يُنشر \S+$/,'يُنشر '+e.data.suggest);s.msg+=' — '+khG('اضغطي','اضغط')+' «نشر» مرةً أخرى لنشره بتاريخ '+e.data.suggest+'.';}
+      noorProg(run.steps);if(s.k==='prep')break;}
     noorProg(run.steps);
   }
   // يُحفظ اختيار الدرس والمقرّر للمرّات القادمة
