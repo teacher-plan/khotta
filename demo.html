@@ -5448,7 +5448,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='366bd02';
+const KH_BUILD='bec48c7';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9636,7 +9636,7 @@ function nlHero(s){
 async function nlLoadOverview(force){
   if(nl.busy.ov)return;nl.busy.ov=true;
   if(force)nlRender();
-  try{nl.ov=await noorCall({action:'lab_overview'});nl.np=null;}
+  try{nl.ov=await noorCall({action:'lab_overview'});nl.np=null;nl.ns=null;}
   catch(e){toast(e.message,true);}
   finally{nl.busy.ov=false;}
   if(document.getElementById('page-noor').classList.contains('active'))nlRender();
@@ -9683,6 +9683,7 @@ function nlPts(){
       <div class="nl-capbar" title="${x.q} سؤال"><i style="height:${Math.min(100,nlPct(x.q,NL_CAP_Q))}%;background:${over?'#C2452D':x.q>=NL_CAP_Q?'#9AA9A6':'linear-gradient(0deg,#127A72,#3FB59C)'}"></i></div>
       <span class="${over?'bad':x.q>=NL_CAP_Q?'':'free'}">${over?'+'+egArNum(x.q-NL_CAP_Q)+' ضائع':x.q>=NL_CAP_Q?'ممتلئ':'متاح '+egArNum(NL_CAP_Q-x.q)}</span><em>📎 ${egArNum(x.f)}/${egArNum(NL_CAP_F)}</em></div>`;}).join('')}</div></div>
   ${nlNoPrepCard()}
+  ${nlNoScormCard()}
   ${nlPrepGapCard()}
   <div class="nl-card h6"><h3>🏆 موقعك بين أنشط معلّمي مدرستك</h3><p class="sub">بإجمالي كل الفصول كما تعرضه نور.</p>
     <ol class="nl-lb">${shown.map(x=>`<li class="${x.me?'me':''}"><span class="r">${egArNum(all.indexOf(x)+1)}</span><span class="n">${escHtml(x.name)}</span><span class="p">${nlN(x.pts)}</span></li>`).join('')}</ol>
@@ -9774,25 +9775,89 @@ function nlKeys(t){
   return out.filter(k=>k&&k.length>=4);
 }
 function nlNum(t){const m=noorAr2En(t).match(/(\d+)\s*-\s*(\d+)/);return m?(+m[1])+'-'+(+m[2]):'';}
+// مطابقة اسمَي درس: برقم الدرس إن وُجد في الطرفين، ثم بالنصّ (تضمّنٌ أو تشابه كلماتٍ ≥ النصف عند تطابق الرقم)
+function nlWords(t){return noorAr2En(String(t||'')).replace(/\([^)]*\)/g,' ').split(/[^\p{L}]+/u).map(w=>noorNorm(w).replace(/^(ال|وال)/,'')).filter(w=>w.length>=3);}
+function nlSame(a,b){
+  const na=nlNum(a),nb=nlNum(b);if(na&&nb&&na!==nb)return false;
+  if(nlKeyMatch(nlKeys(a),nlKeys(b)))return true;
+  if(na&&nb){const A=new Set(nlWords(a)),B=new Set(nlWords(b));let k=0;A.forEach(w=>{if(B.has(w))k++;});return k>=2&&k/Math.min(A.size,B.size)>=.5;}
+  return false;
+}
 function nlKeyMatch(a,b){return a.some(x=>b.some(y=>x===y||(Math.min(x.length,y.length)>=6&&(x.includes(y)||y.includes(x)))));}
 async function nlNoPrepLoad(force){
   if(nl.busy.np||(!force&&nl.np))return;nl.busy.np=true;
-  const o=nl.ov,courses=((noorSt||{}).courses||[]);const out=[];
+  const o=nl.ov,courses=((noorSt||{}).courses||[]);const out=[],ns=[];
   try{
     for(const g of planGradesList())for(const subj of planSubjectsFor(g)){
       const c=courses.find(c=>c.name.includes(subj)&&c.name.includes(gradeName(g)));if(!c)continue;
       const units=await planUnitsRefresh(g,subj);
       // الاسم وحده لا يكفي: موضوعاتٌ تتكرّر في الفصل الثاني (جمع الكسور، فك الأقواس…)، فإن حمل الطرفان رقم درسٍ وجب أن يتطابق
-      const pk=(o.preps||[]).filter(p=>p.cid===c.cid).map(p=>({k:nlKeys(p.title),n:nlNum(p.title)}));
+      const pk=(o.preps||[]).filter(p=>p.cid===c.cid).map(p=>({t:p.title}));
       const flat=[];units.forEach((u,ui)=>u.lessons.forEach((l,li)=>flat.push({g,subj,ui,li,unit:u.name,id:l.id,name:l.name})));
-      flat.forEach(l=>{const st=planGet(l.id);l.kprep=!!st.prep;const lk=nlKeys(l.name),ln=nlNum(l.name);l.noor=!!(st.noor&&st.noor.prep_id)||pk.some(x=>(!x.n||!ln||x.n===ln)&&nlKeyMatch(x.k,lk));});
+      flat.forEach(l=>{const st=planGet(l.id);l.kprep=!!st.prep;const lk=nlKeys(l.name),ln=nlNum(l.name);l.noor=!!(st.noor&&st.noor.prep_id)||pk.some(x=>nlSame(x.t,l.name));});
       // «حتى الآن»: إلى آخر درسٍ نُشر له تحضير؛ وما بعده «القادمة» (أقرب ٥)
       let last=-1;flat.forEach((l,i)=>{if(l.noor)last=i;});
       flat.forEach((l,i)=>{if(l.noor)return;if(i<=last)out.push({...l,grp:'past'});else if(i<=last+5)out.push({...l,grp:'next'});});
+      // الدروس بلا درسٍ تفاعلي في نور (حتى آخر درسٍ محضَّر وخمسةٍ بعده)
+      const sk=(o.scorms||[]).filter(x=>x.cid===c.cid).map(x=>nlScormName(x.title));
+      flat.forEach((l,i)=>{if(i>last+5)return;const st=planGet(l.id);const lk=nlKeys(l.name),ln=nlNum(l.name);
+        const has=!!(st.noor&&st.noor.files&&st.noor.files.scorm)||sk.some(t=>nlSame(t,l.name));
+        if(!has)ns.push({...l,cid:c.cid,game:!!st.game_id,grp:i<=last?'past':'next'});});
     }
-    nl.np=out;
+    nl.np=out;nl.ns=ns;
   }catch(e){toast(e.message||'تعذّر',true);nl.np=[];}
   nl.busy.np=false;if(nl.tab==='pts'||nl.tab==='week')nlBody();
+}
+function nlScormName(t){return String(t||'').replace(/^\s*درس\s*تفاعلي\s*:\s*/,'').replace(/\s+[—–-]\s+[^—–]*$/,'');}
+// ── دروسٌ ليس لها درسٌ تفاعلي في نور، وزرّ رفع اللعبة الجاهزة مباشرةً ──
+function nlNoScormCard(){
+  if(!nl.ov)return '';
+  if(!nl.ns)return `<div class="nl-card"><h3>🎮 دروسٌ ليس لها درسٌ تفاعلي في نور</h3>${nlLoading('يطابق دروس خطّتك مع الدروس التفاعلية في نور…')}</div>`;
+  const ready=nl.ns.filter(l=>l.game),none=nl.ns.filter(l=>!l.game);
+  const fl=((nl.ov.fByDate||{})[nl.ov.today])||0;
+  const row=(l,i)=>`<li><span class="nl-ico">${l.game?'🎮':'🎲'}</span><span class="t" title="${escAttr(l.unit+' — '+l.name)}">${escHtml(l.name)}<small style="display:block;color:#5C7470;font-size:11px">${escHtml(l.subj)} · ${escHtml(l.unit)}${l.grp==='next'?' · قادم':''}</small></span>
+    ${l.game?`<span class="nl-pill ok">اللعبة جاهزة</span><button class="nl-btn gold" style="padding:6px 10px;font-size:12px" id="nl-sc-${i}" onclick="nlScormUp(${i})">📤 ارفعها درساً تفاعلياً (+٤٠)</button>`
+      :`<span class="nl-pill bad">لا لعبة بعد</span><button class="nl-btn ghost" style="padding:6px 10px;font-size:12px" onclick="nlGoLesson(${l.g},'${escJs(l.subj)}',${l.ui},'${escJs(l.id)}')">🎲 أنشئ اللعبة من بطاقة الدرس</button>`}</li>`;
+  return `<div class="nl-card"><h3>🎮 دروسٌ ليس لها درسٌ تفاعلي في نور (${egArNum(nl.ns.length)})</h3>
+    <p class="sub">الدرس التفاعلي ٤٠ نقطة، ويلعبه الطالب داخل نور على الهاتف والحاسوب (بوضع الطالب: لاعبٌ واحد ونتيجته). الرفع يُرفق اللعبة بتحضير الدرس في نور. ملفات اليوم: ${egArNum(fl)} من ١٠.</p>
+    ${ready.length?`<b class="sub" style="display:block;margin:4px 0">لعبتها جاهزة — ارفعها الآن</b><ul class="nl-feed" style="max-height:none">${ready.map(l=>row(l,nl.ns.indexOf(l))).join('')}</ul>`:''}
+    ${none.length?`<b class="sub" style="display:block;margin:10px 0 4px">بلا لعبة بعد</b><ul class="nl-feed" style="max-height:none">${none.map(l=>row(l,nl.ns.indexOf(l))).join('')}</ul>`:''}
+    ${!nl.ns.length?'<div class="nl-gap">✅ لكل درسٍ حتى الآن درسٌ تفاعلي في نور.</div>':''}</div>`;
+}
+async function nlScormUp(i){
+  const l=nl.ns&&nl.ns[i];if(!l)return;
+  const o=nl.ov,c=((noorSt||{}).courses||[]).find(x=>x.cid===l.cid);if(!c)return;
+  const st=planGet(l.id);
+  // تحضير الدرس في نور: المحفوظ في الخطة، وإلا المطابق باسمه ورقمه من قائمة نور
+  const lk=nlKeys(l.name),ln=nlNum(l.name);
+  let prepId=st.noor&&st.noor.prep_id;
+  if(!prepId){const m=(o.prepOpts||[]).find(p=>p.cid===c.cid&&nlSame(p.title,l.name));prepId=m&&m.id;}
+  if(!prepId){
+    if(await c1Confirm('لا يوجد لهذا الدرس تحضيرٌ في نور، والدرس التفاعلي يُرفق بالتحضير. أفتح بطاقة الدرس لتنشر التحضير واللعبة معاً؟')){nlGoLesson(l.g,l.subj,l.ui,l.id);setTimeout(()=>{try{noorPublishOpen(l.id);}catch(_){}} ,900);}
+    return;
+  }
+  // درس نور (العقدة) للدرس: المحفوظ، وإلا الأقرب اسماً
+  let lessonId=((noorSt.cfg||{}).lessons||{})[l.id]&&noorSt.cfg.lessons[l.id].lesson;
+  if(!lessonId){try{const r=await noorCall({action:'lessons',cid:c.cid});lessonId=noorBestLesson(r.lessons||[],{name:l.name,unit:l.unit},null);}catch(_){}}
+  if(!lessonId){toast('لم نجد الدرس في شجرة نور — انشره من بطاقة الدرس',true);return;}
+  // التاريخ: اليوم إن بقي متّسعٌ في حدّ الملفات العشرة، وإلا أقرب يومٍ فيه متّسع
+  const days=noorSchoolDays(o.today,15);const date=days.find(d=>((o.fByDate||{})[d]||0)<10)||o.today;
+  if(!await c1Confirm('رفع لعبة «'+l.name+'» درساً تفاعلياً في نور بتاريخ '+date+' لكل شعب '+c.name+'؟'))return;
+  const b=document.getElementById('nl-sc-'+i);if(b){b.disabled=true;b.textContent='يرفع إلى نور…';}
+  try{
+    const{data:g}=await sb.from('games').select('*').eq('id',st.game_id).maybeSingle();
+    if(!g)throw new Error('لم نجد اللعبة');
+    const gn=(g.content&&g.content.groupNames)||gmGroupNames;
+    const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||l.name,{solo:true});
+    const title='درس تفاعلي: '+(g.title||l.name);
+    await noorCall({action:'upload',cid:c.cid,prep_id:prepId,lesson_id:lessonId,title,date,sections:(c.sections||[]).map(x=>x.id),criteria:[],filename:'lesson.zip',kind:'Scorm'},{blob:noorScormZip(await html.text(),g.title||l.name),name:'lesson.zip'});
+    const cur=planGet(l.id).noor||{};
+    await planSetState(l.id,{noor:{...cur,files:{...(cur.files||{}),scorm:new Date().toISOString()}}});
+    o.fByDate=o.fByDate||{};o.fByDate[date]=(o.fByDate[date]||0)+1;
+    (o.scorms=o.scorms||[]).push({cid:c.cid,title,publish:date});
+    nl.ns.splice(i,1);toast('✅ رُفع الدرس التفاعلي إلى نور','ok');
+  }catch(e){toast(e.message||'تعذّر الرفع',true);if(b){b.disabled=false;b.textContent='📤 أعد المحاولة';}return;}
+  if(nl.tab==='pts'||nl.tab==='week')nlBody();
 }
 function nlNoPrepCard(){
   if(!nl.ov)return '';
@@ -9805,7 +9870,7 @@ function nlNoPrepCard(){
     <p class="sub">«فاتت»: دروسٌ قبل آخر درسٍ حضّرته في نور ولم يُنشر لها تحضير. «قادمة»: الدروس الخمسة التالية. الزرّ يفتح بطاقة الدرس في «الخطة» مباشرةً.</p>
     ${past.length?`<b class="sub" style="display:block;margin:4px 0">فاتت</b><ul class="nl-feed" style="max-height:none">${past.map(row).join('')}</ul>`:'<div class="nl-gap">✅ لا دروس فائتة بلا تحضير.</div>'}
     ${next.length?`<b class="sub" style="display:block;margin:10px 0 4px">القادمة</b><ul class="nl-feed" style="max-height:none">${next.map(row).join('')}</ul>`:''}
-    <div class="nl-actions"><button class="nl-btn ghost" onclick="nl.np=null;nlNoPrepLoad(true)">↻ إعادة المطابقة</button></div></div>`;
+    <div class="nl-actions"><button class="nl-btn ghost" onclick="nl.np=null;nl.ns=null;nlNoPrepLoad(true)">↻ إعادة المطابقة</button></div></div>`;
 }
 // يفتح «الخطة» على الصف والمادة والوحدة، ثم يمرّر إلى بطاقة الدرس ويُبرزها
 async function nlGoLesson(g,subj,ui,id){
@@ -9835,7 +9900,7 @@ function nlWeek(){
     <div class="nl-stats" style="margin-bottom:12px"><div class="nl-stat"><b>${egArNum(ws.slots)}</b><span>حصة هذا الأسبوع</span></div><div class="nl-stat"><b>${egArNum(ws.prepared)}</b><span>لها تحضير</span></div><div class="nl-stat ${ws.missing?'warn':''}"><b>${egArNum(ws.missing)}</b><span>بلا تحضير</span></div><div class="nl-stat"><b>${egArNum(nlPct(ws.prepared,ws.slots))}٪</b><span>نسبة التغطية</span></div></div>
     <div class="nl-week">${keys.map(d=>`<div class="nl-day ${d===o.today?'today':''}"><h4>${nlDayName(d)}<small>${nlShort(d)}</small></h4>${days[d].sort((a,b)=>pn(a)-pn(b)).map(s=>`<div class="nl-slot ${s.prep?'y':'n'}"><span>${escHtml(s.period)}</span><span>شعبة ${egArNum(s.sec)} ${s.prep?'✓':'✕'}</span></div>`).join('')||'<p class="sub">لا حصص</p>'}</div>`).join('')}</div>
     ${ws.missing?`<div class="nl-gap">⚠️ ${egArNum(ws.missing)} حصة بلا تحضير. التحضير نفسه لا يُحتسب نقاطاً في نور، لكنه الوعاء الذي تُعلَّق عليه الملفات والواجبات (وهي التي تُحتسب)، والمشرف يراه. انشره من «الخطة» ← بطاقة الدرس ← «📤 نشر في نور».</div><div class="nl-actions"><button class="nl-btn" onclick="c1Go('plan')">الذهاب إلى الخطة</button></div>`:'<div class="nl-gap">✅ كل حصص الأسبوع محضّرة في نور.</div>'}
-  </div>${nlNoPrepCard()}${nlPrepGapCard()}</div>`;
+  </div>${nlNoPrepCard()}${nlNoScormCard()}${nlPrepGapCard()}</div>`;
 }
 
 // ── ٣) تحليل الطلاب ──
