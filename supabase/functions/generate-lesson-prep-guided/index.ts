@@ -146,7 +146,9 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 6000,
+          // نفس سبب generate-lesson-plan: تفكير Gemini يأكل من الحدّ فيُبتر الـJSON
+          max_tokens: 16000,
+          reasoning: { max_tokens: 1024 },
         }),
       }, { st, task: "guided_prep" });
       const j = await r.json();

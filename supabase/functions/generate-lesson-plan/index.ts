@@ -71,7 +71,7 @@ async function guideContextFor(admin: Admin, st: Record<string, string>, apiKey:
           ].join("\n") },
           { role: "user", content: [{ type: "text", text: `صفحات دليل المعلم لدرس: ${lesson}` }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))] },
         ],
-        response_format: { type: "json_object" }, temperature: 0.1, max_tokens: 5000,
+        response_format: { type: "json_object" }, temperature: 0.1, max_tokens: 12000, reasoning: { max_tokens: 1024 },
       }),
     }, { st, task: "guide_read" });
     if (!r.ok) return "";
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
       "التقويم الختامي (summative): 3 أسئلة تقيس المخرجات تحديداً، كل سؤال مرتبط بمخرج (حقل outcome) مع إجابته النموذجية.",
       "صُغ بالعربية الفصحى بلغة تربوية رسمية دقيقة.",
       "الأرقام دائماً بالترقيم العربي-الهندي (٠١٢٣٤٥٦٧٨٩) لا اللاتيني، وأي معادلة أو عملية حسابية تُكتب من اليمين إلى اليسار متوافقة مع اتجاه النص العربي.",
-      `أعد الناتج JSON فقط بهذا الشكل حصراً: ${schema}`,
+      `أعد الناتج JSON فقط بهذا الشكل حصراً، مضغوطاً في سطر واحد بلا مسافات بادئة ولا أسطر فارغة: ${schema}`,
     ].filter(Boolean).join("\n");
 
     const userMsg = [
@@ -253,7 +253,11 @@ Deno.serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 6000,
+          // كان ٦٠٠٠: التحضير العربي بحقوله العشرين (ومع سياق الدليل) يقارب الحدّ، و«تفكير»
+          // Gemini 2.5 يُحسَب من الحدّ نفسه قبل الكتابة — فيُبتَر الـJSON أحياناً فيُرفض bad_output
+          // في المحاولات الثلاث. نرفع الحدّ ونقيّد التفكير ليبقى معظم الحدّ للناتج.
+          max_tokens: 16000,
+          reasoning: { max_tokens: 1024 },
         }),
       }, { st, task: "plan" }); } catch (e) {
         return { ok: false as const, detail: String(e), status: 504, msg: "انتهت مهلة النموذج" };
@@ -268,7 +272,11 @@ Deno.serve(async (req) => {
       const _pp = parseAiJson(text);
       const plan: unknown = _pp.ok ? _pp.value : null;
       const pl = plan as { procedures?: unknown[]; outcomes?: unknown[]; phases?: unknown[] } | null;
-      if (!pl || !(pl.procedures || pl.phases)) return { ok: false as const, detail: text.slice(0, 300) };
+      if (!pl || !(pl.procedures || pl.phases)) {
+        const fr = j?.choices?.[0]?.finish_reason;
+        console.error(`plan bad_output finish=${fr} len=${text.length} usage=${JSON.stringify(j?.usage || {})}`);
+        return { ok: false as const, detail: (fr === "length" ? "[truncated] " : "") + text.slice(0, 300) };
+      }
       return { ok: true as const, plan, usage: j?.usage || null };
     };
 
