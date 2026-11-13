@@ -1,0 +1,38 @@
+# مؤقّت: حذف دليل التربية الإسلامية للصف الثامن (منهج قديم لا يطابق الكتاب) بعد نسخه احتياطياً. يُحذف بعد التشغيل.
+name: zzz drop isl8 guide
+on: workflow_dispatch
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -euo pipefail
+          export SK=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          echo "::add-mask::$SK"
+          mkdir -p bk
+          cat > /tmp/d.py <<'PY'
+          import os,json,urllib.request,urllib.parse
+          U=f"https://{os.environ['REF']}.supabase.co";K=os.environ['SK']
+          H={'apikey':K,'Authorization':'Bearer '+K,'Content-Type':'application/json'}
+          def req(m,u,b=None,h=H,raw=False):
+              d=urllib.request.urlopen(urllib.request.Request(u,method=m,headers=h,data=json.dumps(b).encode() if b is not None else None),timeout=120).read()
+              return d if raw else (json.loads(d) if d else None)
+          f=lambda s:urllib.parse.quote(s)
+          rows=req('GET',f"{U}/rest/v1/teacher_guides?semester=eq.{f('الفصل الأول')}&grade=eq.8&subject=eq.{f('التربية الإسلامية')}")
+          json.dump(rows,open('bk/row.json','w'),ensure_ascii=False); assert len(rows)==1, rows
+          base=rows[0]['base_path'].rstrip('/'); print('base',base)
+          lst=[o for o in req('POST',f'{U}/storage/v1/object/list/library-files',{'prefix':base+'/','limit':1000}) if o.get('id')]
+          names=[f"{base}/{o['name']}" for o in lst]
+          for n in names:
+              os.makedirs('bk/'+os.path.dirname(n),exist_ok=True); open('bk/'+n,'wb').write(req('GET',f'{U}/storage/v1/object/library-files/{n}',h={'apikey':K,'Authorization':'Bearer '+K},raw=True))
+          for i in range(0,len(names),100): req('DELETE',f'{U}/storage/v1/object/library-files',{'prefixes':names[i:i+100]})
+          req('DELETE',f"{U}/rest/v1/teacher_guides?id=eq.{rows[0]['id']}",h={**H,'Prefer':'return=minimal'})
+          print('DONE deleted',len(names))
+          PY
+          python3 /tmp/d.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: backup-isl8-guide, path: bk, retention-days: 30 }
