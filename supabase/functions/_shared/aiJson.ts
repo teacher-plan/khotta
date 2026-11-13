@@ -49,6 +49,28 @@ function* candidates(s: string): Generator<string> {
   }
 }
 
+// النماذج — حين نطلب منها الأرقام العربية-الهندية في النصّ — تكتبها أحياناً في
+// قيم JSON الرقمية أيضاً: ‏"minutes":١٠‏ ← JSON غير صالح فيُرفض الناتج كلّه
+// (كان هذا سببَ فشل التحضير المتقطّع). نحوّل الأرقام الشرقية خارج النصوص فقط
+// إلى لاتينية، ونترك ما داخل النصوص كما هو.
+export function normalizeJsonDigits(s: string): string {
+  let out = "", inStr = false, esc = false;
+  for (const ch of s) {
+    if (inStr) {
+      out += ch;
+      if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; out += ch; continue; }
+    const c = ch.charCodeAt(0);
+    if (c >= 0x0660 && c <= 0x0669) out += String(c - 0x0660);
+    else if (c >= 0x06F0 && c <= 0x06F9) out += String(c - 0x06F0);
+    else if (ch === "٫") out += ".";
+    else out += ch;
+  }
+  return out;
+}
+
 export function parseAiJson<T = unknown>(text: string): AiJsonResult<T> {
   const raw = String(text ?? "");
   if (!raw.trim()) return { ok: false, reason: "empty", raw };
@@ -61,6 +83,14 @@ export function parseAiJson<T = unknown>(text: string): AiJsonResult<T> {
   for (const slice of candidates(body)) {
     sawCandidate = true;
     try { return { ok: true, value: JSON.parse(slice) as T }; } catch { /* نُجرّب التالي */ }
+  }
+  // محاولة أخيرة: أرقام شرقية خارج النصوص
+  const fixed = normalizeJsonDigits(body);
+  if (fixed !== body) {
+    try { return { ok: true, value: JSON.parse(fixed) as T }; } catch { /* نُكمل */ }
+    for (const slice of candidates(fixed)) {
+      try { return { ok: true, value: JSON.parse(slice) as T }; } catch { /* التالي */ }
+    }
   }
   return {
     ok: false,
