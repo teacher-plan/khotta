@@ -339,6 +339,83 @@ export class Noor {
     return r.url.replace(/#.*$/, "");
   }
 
+  // ══ مختبر نور (حساب المطوّر فقط) — قراءةٌ بحتة، لا تُغيّر شيئاً في نور ══
+  // deno-lint-ignore no-explicit-any
+  async ajaxJson(path: string): Promise<any> {
+    const r = await this.req(path, { ajax: true });
+    try { return JSON.parse(r.text || "{}"); } catch { return {}; }
+  }
+
+  // صفحة «بطاقتي»: نقاط اليوم والفصل وكل الفصول، والبطاقة، وتاريخ ١٥ يوماً، وأنشط معلّمي المدرسة
+  async myScore() {
+    const t = (await this.req("/teacher/scores/myscore")).text.replace(/<!--[\s\S]*?-->/g, "");
+    const num = (re: RegExp) => +((t.match(re) || [])[1] || "0").replace(/[^\d.]/g, "") || 0;
+    const nums = [...t.matchAll(/class="points_card_number">\s*([\d.,]+)/g)].map((m) => +m[1].replace(/,/g, ""));
+    const table = (id: string) => {
+      const i = t.indexOf(`id="${id}"`);
+      if (i < 0) return [] as { d: string; v: number }[];
+      const blk = t.slice(i, t.indexOf("</table>", i));
+      return [...blk.matchAll(/<td>(\d{4}-\d{2}-\d{2})<\/td>\s*<td>([\d.]+)<\/td>/g)].map((m) => ({ d: m[1], v: +m[2] }));
+    };
+    const list = (id: string) => {
+      const i = t.indexOf(`id="${id}"`);
+      if (i < 0) return [] as { name: string; sub: string; pts: number }[];
+      const j = t.indexOf('class="tab-pane', i + 80);
+      const blk = t.slice(i, j > 0 ? j : i + 30000);
+      return [...blk.matchAll(/class="main_text"[^>]*>([\s\S]*?)<\/span>([\s\S]*?)class="sub_text">\s*([\d.]+)/g)]
+        .map((m) => ({ name: clean(m[1]), sub: clean((m[2].match(/sub_text_details">([^<]*)/) || [])[1] || ""), pts: +m[3] }));
+    };
+    const tierMatch = t.match(/class="card_info_Indicator">\s*([^<]+)/);
+    return {
+      total: num(/class="score_number">\s*([\d.,]+)/),
+      today: nums[0] || 0, semester: nums[1] || 0,
+      card: tierMatch ? clean(tierMatch[1]) : "",
+      cumulative: table("gChart01"), daily: table("gChart02"),
+      teachers: list("teachers_in_school"), students: list("students_in_school"),
+    };
+  }
+
+  async homeworksList(cid: string) {
+    const j = await this.ajaxJson(`/teacher/homeworks/index/cid:${cid}?start=0&length=500&draw=1`);
+    // deno-lint-ignore no-explicit-any
+    return ((j.data || []) as any[]).map((x) => x.Assignment || {}).map((a) => ({
+      id: String(a.id || ""), title: clean(String(a.title || "")), q: +a.questions_count || 0,
+      publish: String(a.publishing_datetime || ""), due: String(a.due_datetime || ""),
+    })).filter((a) => a.id);
+  }
+
+  // رموز رابط «متابعة التسليمات» تأتي من صفحة الواجبات نفسها
+  async monitorTokens(cid: string) {
+    const t = (await this.req(`/teacher/homeworks/index/cid:${cid}`)).text;
+    const m = t.match(/\/teacher\/assignments\/monitor\/(cid:[^/"]+)\/aid:%idx%\/(type:[^/"]+)\/(filter:[^/"]+)"/);
+    return m ? { cid: m[1], type: m[2], filter: m[3] } : null;
+  }
+
+  async submissions(tok: { cid: string; type: string; filter: string }, aid: string) {
+    const j = await this.ajaxJson(`/teacher/assignments/monitor/${tok.cid}/aid:${aid}/${tok.type}/${tok.filter}?start=0&length=1000&draw=1`);
+    // deno-lint-ignore no-explicit-any
+    return ((j.data || []) as any[]).map((x) => x.StudentSubmissionStatus || {}).map((s) => ({
+      sid: String(s.std_u_id || s.student_number || ""), name: clean(String(s.full_name || "")), sec: clean(String(s.section_title || "")),
+      at: String(s.submission_time || ""), mark: s.submission_mark === "" || s.submission_mark == null ? null : +s.submission_mark,
+    }));
+  }
+
+  async attachmentsList(cid: string, kind: string) {
+    const j = await this.ajaxJson(`/teacher/attachments/index/${kind}/cid:${cid}?start=0&length=500&draw=1`);
+    // deno-lint-ignore no-explicit-any
+    return ((j.data || []) as any[]).map((x) => x.Attachment || {}).map((a) => ({
+      id: String(a.id || ""), title: clean(String(a.title || "")), publish: String(a.publish_date || ""), created: String(a.created || ""),
+    })).filter((a) => a.id);
+  }
+
+  async studentsScores(cid: string) {
+    const j = await this.ajaxJson(`/teacher/scores/students_scores/cid:${cid}`);
+    // deno-lint-ignore no-explicit-any
+    return ((j.data || []) as any[]).map((s) => ({
+      sid: String(s.student_user_id || ""), name: clean(String(s.student_full_name || "")), sec: clean(String(s.section_title || "")), score: +s.score || 0,
+    }));
+  }
+
   async addQuestions(qIndexUrl: string, items: { text: string; choices: string[]; answer: number }[]) {
     const bulk = qIndexUrl.replace("/questions/index/", "/questions/add_bulk_questions/");
     const page = await this.req(bulk);

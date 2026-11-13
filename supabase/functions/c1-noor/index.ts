@@ -5,13 +5,17 @@
 // • كلمة مرور نور تُشفَّر (AES-GCM) وتُحفظ في جدول c1_noor_accounts الذي لا
 //   يقرؤه المتصفح إطلاقاً (RLS بلا سياسات) — الدالّة وحدها تقرؤه بمفتاح الخدمة.
 // • جلسة نور (الكوكيز) تُحفظ مشفّرةً كذلك وتُعاد ٢٥ دقيقة، ثم يُعاد الدخول.
-// • لا ذكاء اصطناعي هنا: لا كلفة استدعاء، ولا حصّة.
+// • لا ذكاء اصطناعي في أفعال المعلّمين؛ «مختبر نور» (lab_*) وحده يستعمله، وهو
+//   مقصورٌ على حسابات LAB_EMAILS ويُحسب من حصّة صاحبه.
 //
 // الأفعال (body.action): status · connect · disconnect · refresh · set_cfg ·
 //   lessons · slots · criteria · publish_prep · upload (multipart)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Noor, NoorError } from "./noor.ts";
+import { orFetch, orErrCode } from "../_shared/ai.ts";
+import { takeQuota, logAiCost } from "../_shared/quota.ts";
+import { parseAiJson } from "../_shared/aiJson.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -62,6 +66,86 @@ async function dec(s: string) {
 }
 
 const SESSION_MS = 25 * 60e3;
+
+// ══ مختبر نور — حساباتٌ تجريبية فقط؛ لا يراه أي معلّمٍ آخر ولا تقبله الدالّة منه ══
+const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
+// المستكشف قراءةٌ فقط: يُرفض أي مسارٍ قد يُغيّر شيئاً حتى لو كان GET
+const RAW_BLOCK = /delete|remove|logout|publish|archive|trash|toggle|edit|add|create|save|update|set_|mark|send|compose|upload|approve|reject|copy|move|restore|import|reset|grade/i;
+// تاريخ مسقط (UTC+4) بعد إزاحة أيام
+function mctDate(addDays: number) {
+  return new Date(Date.now() + 4 * 3600e3 + addDays * 864e5).toISOString().slice(0, 10);
+}
+// أيام الدراسة (الأحد–الخميس) للأسبوع الذي فيه التاريخ؛ الجمعة والسبت ← الأسبوع القادم
+function schoolWeek(d: string) {
+  const t = new Date(d + "T12:00:00Z");
+  const wd = t.getUTCDay(); // 0 الأحد
+  const start = new Date(t.getTime() + (wd >= 5 ? 7 - wd : -wd) * 864e5);
+  return [0, 1, 2, 3, 4].map((i) => new Date(start.getTime() + i * 864e5).toISOString().slice(0, 10));
+}
+
+async function labAi(admin: Any, user: Any, b: Any) {
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) return json({ error: "server_not_configured" }, 500);
+  const { data: rows } = await admin.from("ai_settings").select("key,value");
+  const st: Record<string, string> = {};
+  (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
+  const task = String(b.task || "");
+  const data = JSON.stringify(b.data || {}).slice(0, 9000);
+  const base = "أنت مستشارٌ خبير في منصّة نور التعليمية (كلاسيرا) بسلطنة عُمان، تعمل لمعلّم رياضيات (خاطبه بصيغة المذكّر) بالعربية الفصحى الميسّرة.";
+  const rules = "قواعد نقاط نور: سؤال واجب/اختبار ٥ نقاط (+٢ إن كان عامّاً في البنك) وحدّه ٢٠ سؤالاً لكل تاريخ نشر؛ ملف مرفق ١٥ نقطة (+١٠٪ مشاركة مع المدرسة، +٣٠٪ في المكتبة العامة) وحدّ الملفات ١٠ يومياً؛ درس تفاعلي سكورم ٤٠ نقطة؛ فيديو يوتيوب ١٠؛ موضوع نقاش ٢٠ بحسب نسبة ردود الطلاب؛ فصل افتراضي ١٠٠ بحسب الحضور؛ رسالة ١ (حدّ ٥ يومياً) عند قراءتها. كل نشاط يُضرب في نسبة تفاعل الطلاب، والمكرّر والفارغ لا يُحتسب وقد يُصفّر النقاط، وحذف المحتوى يحذف نقاطه. البطاقات: أفضل ٥٪ في المدرسة ماسية، ٤٠٪ ذهبية، ٥٥٪ خضراء.";
+  let system = "", user_ = "", jsonOut = false, maxT = 1500;
+  if (task === "coach") {
+    system = [base, rules, "أمامك بيانات المعلّم الحالية من نور (النقاط اليومية، ما نُشر اليوم مقابل الحدود، تغطية تحضير حصص الأسبوع، تفاعل الطلاب مع الواجبات).",
+      "اكتب «خطة اليوم لرفع النقاط» بعناوين Markdown (##) وقوائم قصيرة:",
+      "## أين تقف (٣ نقاط بالأرقام: الاتجاه، الفجوة مع أنشط معلّمي المدرسة، ما تبقّى من حدود اليوم)",
+      "## افعل اليوم (٣–٥ خطوات مرتّبة بالأثر، لكل خطوةٍ النقاط المتوقّعة تقريباً وكيف تُنفّذ من خُطّة)",
+      "## ارفع تفاعل الطلاب (لأنه المضاعِف: ٢–٣ أفكار عملية مرتبطة بالأرقام)",
+      "## تجنّب (ما يُسقط النقاط)",
+      "لا تخترع أرقاماً غير الموجودة. ٢٠٠–٣٥٠ كلمة."].join("\n");
+    user_ = "البيانات:\n" + data;
+  } else if (task === "students") {
+    system = [base, "أمامك تحليلٌ مجمّع لتفاعل طلاب المعلّم مع واجبات نور (بلا أسماء: معرّفات رقمية وفئات).",
+      "اكتب قراءةً تربوية عملية بعناوين Markdown: ## الصورة العامة، ## الشعب (مقارنة وتفسير محتمل)، ## الواجبات (أيها تفاعلٌ ضعيف ولماذا قد يكون: الطول، التوقيت، الصعوبة)، ## خطة أسبوع لرفع نسبة التسليم (خطوات محدّدة: توقيت النشر، طول الواجب، تذكير، تحفيز، متابعة غير المسلّمين).",
+      "تفاعل الطلاب يضاعف نقاط المعلّم في نور، فاربط التوصيات بذلك. لا تخترع أرقاماً. ٢٥٠–٤٠٠ كلمة."].join("\n");
+    user_ = "التحليل:\n" + data;
+  } else if (task === "hw") {
+    const n = Math.max(3, Math.min(20, +b.n || 10));
+    jsonOut = true; maxT = 5000;
+    system = [base, `أنشئ ${n} سؤال اختيار من متعدد لواجب منزلي قصير في نور، من درسٍ واحد في منهج سلطنة عُمان.`,
+      "الشروط: لكل سؤال ٤ خيارات، إجابة صحيحة واحدة، مشتّتات مأخوذة من أخطاء الطلاب الشائعة، تدرّج من السهل إلى الأصعب، لغة واضحة قصيرة، أرقام عربية مشرقية داخل النصوص، بلا رسوم.",
+      "تنوّع: مفهوم، إجراء، تطبيق حياتي من البيئة العُمانية، تحليل خطأ. لا تكرّر سؤالاً.",
+      'أعد JSON فقط في سطر واحد: {"items":[{"text":"...","choices":["...","...","...","..."],"answer":1}]} حيث answer رقم الخيار الصحيح (١–٤ بأرقام لاتينية في JSON).'].join("\n");
+    user_ = `الصف: ${String(b.grade || "")}\nالمادة: ${String(b.subject || "الرياضيات")}\nالوحدة: ${String(b.unit || "")}\nالدرس: ${String(b.lesson || "")}\nالمستوى: ${String(b.level || "متوسط")}`;
+  } else if (task === "post") {
+    jsonOut = true; maxT = 1500;
+    system = [base, "اكتب لدرسٍ واحد: (١) موضوع نقاش قصير يثير ردود الطلاب في غرفة النقاش بنور (سؤال مفتوح ممتع مرتبط بالحياة، يطلب من كل طالب ردّاً قصيراً بمثاله الخاص)، (٢) رسالة تذكير ودّية قصيرة للطلاب بالواجب المنشور وموعد تسليمه، (٣) فكرة فيديو يوتيوب قصير يُبحث عنه (كلمات بحث).",
+      'أعد JSON فقط: {"topic_title":"...","topic_body":"...","message_title":"...","message_body":"...","video_query":"..."}'].join("\n");
+    user_ = `الصف: ${String(b.grade || "")}\nالدرس: ${String(b.lesson || "")}\nموعد التسليم: ${String(b.due || "")}`;
+  } else return json({ error: "bad_task" }, 400);
+
+  const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
+  if (!quota.ok) return json({ error: "quota_exceeded", message: "نفدت حصّة الذكاء الاصطناعي." }, 429);
+  const model = st.model_insights || st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash";
+  const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Noor Lab" },
+    body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: user_ }], temperature: jsonOut ? 0.5 : 0.4, max_tokens: maxT }),
+  }, { st, task: "chat" });
+  const or = await orResp.json();
+  if (!orResp.ok) return json({ error: orErrCode(orResp.status, String(or?.error?.message || "")), message: "تعذّر الاتصال بالذكاء الاصطناعي." }, 502);
+  const text = String(or?.choices?.[0]?.message?.content || "").trim();
+  await logAiCost(admin, user.id, "c1-noor-lab", "text", model, or?.usage);
+  if (!jsonOut) return text ? json({ text }) : json({ error: "bad_output", message: "لم يُرجع النموذج نصاً." }, 502);
+  const p = parseAiJson<Any>(text);
+  if (!p.ok) return json({ error: "bad_output", message: "تعذّر قراءة ردّ النموذج، أعد المحاولة." }, 502);
+  if (task === "hw") {
+    const items = (Array.isArray(p.value?.items) ? p.value.items : []).filter((q: Any) => q && q.text && Array.isArray(q.choices) && q.choices.length >= 2)
+      .map((q: Any) => ({ text: String(q.text), choices: q.choices.slice(0, 6).map(String), answer: Math.max(1, Math.min(q.choices.length, +q.answer || 1)) }));
+    if (!items.length) return json({ error: "bad_output", message: "لم تُولَّد أسئلة صالحة." }, 502);
+    return json({ items });
+  }
+  return json(p.value || {});
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -253,6 +337,94 @@ Deno.serve(async (req) => {
       await persist();
       if (!out.added) return json({ error: "questions_failed", message: "أُنشئ الواجب لكن لم تُضَف أسئلته — افتحه في نور.", qurl: out.qurl }, 502);
       return json({ ok: true, qurl: out.qurl, count: items.length });
+    }
+
+    // ══ مختبر نور: حسابات المطوّر فقط (قراءةٌ من نور + ذكاء اصطناعي) ══
+    if (action.startsWith("lab_")) {
+      if (!LAB_EMAILS.includes((user.email || "").toLowerCase())) return json({ error: "forbidden" }, 403);
+      const cids: string[] = (row.courses || []).map((c: Any) => c.cid);
+      const today = mctDate(0);
+
+      if (action === "lab_overview") {
+        const out = await run(async (x) => {
+          const score = await x.myScore();
+          const caps = { q: 0, files: 0, scorm: 0, hw: 0 };
+          const qByDate: Record<string, number> = {}, fByDate: Record<string, number> = {};
+          const recent: Any[] = [];
+          const week: Any[] = [];
+          const days = schoolWeek(today);
+          for (const cid of cids) {
+            const hws = await x.homeworksList(cid);
+            for (const h of hws) {
+              const d = h.publish.slice(0, 10);
+              if (d >= today) qByDate[d] = (qByDate[d] || 0) + h.q;
+              if (d === today) { caps.q += h.q; caps.hw++; }
+              recent.push({ kind: "hw", cid, title: h.title, at: h.publish, q: h.q });
+            }
+            for (const k of ["Material", "Scorm"]) {
+              for (const a of await x.attachmentsList(cid, k)) {
+                const d = a.publish.slice(0, 10);
+                if (d >= today) fByDate[d] = (fByDate[d] || 0) + 1;
+                if (d === today) { caps.files++; if (k === "Scorm") caps.scorm++; }
+                recent.push({ kind: k === "Scorm" ? "scorm" : "file", cid, title: a.title, at: a.publish });
+              }
+            }
+            for (const d of days) {
+              const sl = await x.slots(cid, d).catch(() => []);
+              week.push({ cid, date: d, slots: sl.map((s) => ({ sec: s.section, period: s.period, prep: s.has_prep })) });
+            }
+          }
+          recent.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+          return { score, caps, qByDate, fByDate, today, week, recent: recent.slice(0, 40), totals: { hw: recent.filter((r) => r.kind === "hw").length, files: recent.filter((r) => r.kind === "file").length, scorm: recent.filter((r) => r.kind === "scorm").length } };
+        });
+        await persist();
+        return json(out);
+      }
+
+      if (action === "lab_students") {
+        const c = course(b.cid) || course(cids[0]);
+        if (!c) return json({ error: "bad_course" }, 400);
+        const cache = row.cache || {};
+        const key = "lab_st_" + c.cid;
+        if (!b.refresh && cache[key] && Date.now() - (cache[key].at || 0) < 30 * 60e3) return json(cache[key].data);
+        const data = await run(async (x) => {
+          const scores = await x.studentsScores(c.cid);
+          const tok = await x.monitorTokens(c.cid);
+          // واجباتٌ مضى على نشرها يومٌ على الأقل: واجب اليوم لم يُتح للطلاب وقتٌ لحلّه بعد
+          const cut = mctDate(0);
+          const hws = (await x.homeworksList(c.cid)).filter((h) => h.publish.slice(0, 10) < cut).sort((a, b) => b.publish.localeCompare(a.publish)).slice(0, Math.min(20, +b.n || 12));
+          const subs: Record<string, Any[]> = {};
+          if (tok) {
+            for (let i = 0; i < hws.length; i += 4) {
+              const part = hws.slice(i, i + 4);
+              const res = await Promise.all(part.map((h) => x.submissions(tok, h.id).catch(() => [])));
+              part.forEach((h, k) => { subs[h.id] = res[k]; });
+            }
+          }
+          // جدولٌ مضغوط: لكل واجبٍ مصفوفة [معرّف الطالب، العلامة أو null إن لم يسلّم]
+          const students: Record<string, Any> = {};
+          for (const s of scores) students[s.sid] = { name: s.name, sec: s.sec, score: s.score };
+          const hw = hws.map((h) => {
+            const list = subs[h.id] || [];
+            for (const s of list) if (!students[s.sid]) students[s.sid] = { name: s.name, sec: s.sec, score: 0 };
+            return { id: h.id, title: h.title, q: h.q, publish: h.publish, due: h.due, sub: list.filter((s) => s.at).map((s) => [s.sid, s.mark, s.at.slice(0, 16)]) };
+          });
+          return { cid: c.cid, course: c.name, students, hw, at: new Date().toISOString() };
+        });
+        cache[key] = { at: Date.now(), data };
+        await persist({ cache });
+        return json(data);
+      }
+
+      if (action === "lab_raw") {
+        const path = String(b.path || "").trim();
+        if (!/^\/(teacher|schadmin\/nodes)\/[\w\-/:.%?=&]*$/.test(path) || RAW_BLOCK.test(path)) return json({ error: "bad_path", message: "مسارٌ غير مسموح (قراءة فقط، يبدأ بـ /teacher/)." }, 400);
+        const r = await run((x) => x.req(path, { ajax: !!b.ajax }));
+        await persist();
+        return json({ status: r.status, url: r.url, size: r.text.length, text: r.text.slice(0, 250000) });
+      }
+
+      if (action === "lab_ai") return await labAi(admin, user, b);
     }
 
     return json({ error: "bad_action" }, 400);
