@@ -275,7 +275,12 @@ Deno.serve(async (req) => {
       if (!pl || !(pl.procedures || pl.phases)) {
         const fr = j?.choices?.[0]?.finish_reason;
         console.error(`plan bad_output finish=${fr} len=${text.length} usage=${JSON.stringify(j?.usage || {})}`);
-        return { ok: false as const, detail: (fr === "length" ? "[truncated] " : "") + text.slice(0, 300) };
+        let why = "";
+        if (!_pp.ok) {
+          why = "parse=" + _pp.reason;
+          try { JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch (e) { why += " err=" + String(e).slice(0, 120); }
+        } else why = "keys=" + Object.keys((plan as Record<string, unknown>) || {}).join(",");
+        return { ok: false as const, detail: `[finish=${fr} len=${text.length} ${why}] tail=` + text.slice(-200) };
       }
       return { ok: true as const, plan, usage: j?.usage || null };
     };
