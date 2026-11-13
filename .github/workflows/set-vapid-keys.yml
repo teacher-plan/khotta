@@ -1,0 +1,41 @@
+# تشغيلٌ يدويٌّ لمرّةٍ واحدة: يولّد زوج مفاتيح VAPID لإشعارات الهاتف (Web Push)
+# داخل هذا التشغيل نفسه ويضعه سرَّين في Supabase — المفتاح الخاص لا يُطبع ولا يغادر التشغيل.
+#   VAPID_PUBLIC_KEY   (base64url، 65 بايت) — تعطيه الدالّة c1-push للمتصفح
+#   VAPID_PRIVATE_JWK  (JWK) — توقّع به الدالّة الإشعارات
+# إعادة التشغيل تُبطل كل اشتراكات الأجهزة السابقة، فلا يُعاد إلا بـ force.
+name: Set VAPID Keys (Web Push)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "اكتب yes لتوليد مفاتيح جديدة حتى لو وُجدت (يُبطل الاشتراكات القائمة)"
+        required: false
+        default: "no"
+
+jobs:
+  set-keys:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: توليد المفاتيح وضبطها (بلا طباعة)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          if supabase secrets list --project-ref mkdsnnfkkdwdkywnwnjh | grep -q VAPID_PRIVATE_JWK && [ "$FORCE" != "yes" ]; then
+            echo "المفاتيح موجودة أصلاً — لم يُغيَّر شيء."; exit 0
+          fi
+          node -e '
+            const c=require("crypto");
+            const {privateKey}=c.generateKeyPairSync("ec",{namedCurve:"prime256v1"});
+            const j=privateKey.export({format:"jwk"});
+            const pub=Buffer.concat([Buffer.from([4]),Buffer.from(j.x,"base64url"),Buffer.from(j.y,"base64url")]).toString("base64url");
+            require("fs").writeFileSync("/tmp/vapid.env","VAPID_PUBLIC_KEY="+pub+"\nVAPID_PRIVATE_JWK=\x27"+JSON.stringify(j)+"\x27\n");
+          '
+          supabase secrets set --env-file /tmp/vapid.env --project-ref mkdsnnfkkdwdkywnwnjh
+          rm -f /tmp/vapid.env
+          echo "✅ ضُبطت مفاتيح VAPID"
