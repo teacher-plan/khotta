@@ -3426,6 +3426,34 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-tiers span.on.g{background:#E2F4EC;color:#126B4E;border-color:#9BD8BE}
 .nl-tiers span.on.y{background:#FCF0D6;color:#8A5E10;border-color:#E9C877}
 .nl-tiers span.on.d{background:#E5ECFB;color:#2E4FA3;border-color:#A9BCEB}
+
+/* ═══ الهاتف: شريط تنقّلٍ سفلي في متناول الإبهام، ومساحات لمسٍ ≥ ٤٤ نقطة ═══
+   الأقسام كانت تُبلَغ فقط من زاوية الشاشة العليا (أبعد نقطةٍ عن الإبهام)، والأزرار الصغيرة
+   (٢٤–٣٣ نقطة) تُخطئها الإصبع. التوسيع بطبقةٍ شفّافة حول الزرّ (::after) لا يغيّر التصميم. */
+#c1-tabbar{display:none}
+@media (max-width:760px){
+  body.inapp #c1-tabbar{display:flex}
+  body.inapp.c1-notab #c1-tabbar,body.sch-mode #c1-tabbar{display:none}
+  #c1-tabbar{position:fixed;inset-inline:0;bottom:0;z-index:180;justify-content:space-around;align-items:stretch;gap:2px;
+    background:rgba(255,253,249,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--border);
+    padding:5px 6px calc(5px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(48,24,0,.08)}
+  #c1-tabbar button{position:relative;flex:1;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:none;border:0;border-radius:14px;font-family:inherit;font-size:10.5px;font-weight:800;color:var(--muted);cursor:pointer;padding:4px 2px}
+  #c1-tabbar button svg{width:22px;height:22px}
+  #c1-tabbar button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #c1-tabbar button.on{color:var(--red-d);background:rgba(216,96,72,.09)}
+  #c1-tabbar button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+  body.inapp #main-app{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  /* نسخة التجربة: شريطها يعلو شريط التنقّل لا يغطّيه */
+  body.demo .demo-bar{bottom:calc(62px + env(safe-area-inset-bottom))}
+  body.inapp.demo #main-app{padding-bottom:calc(76px + var(--db-h,58px) + env(safe-area-inset-bottom))}
+  .plan-chk,.wk-add-btn,.task-delete,.tt2-btn,.arc-btn,.stu-cert,.stu-b,.fh-hbtn,.lib-rate-badge{position:relative}
+  .plan-chk::after,.wk-add-btn::after,.task-delete::after,.tt2-btn::after,.arc-btn::after,.stu-cert::after,.stu-b::after,.fh-hbtn::after,.lib-rate-badge::after{content:'';position:absolute;inset:-8px}
+  .stu-b{min-height:34px;min-width:34px}
+  .sh-b{min-height:40px}
+  .task-item{min-height:44px}
+}
+@media (max-width:760px) and (prefers-reduced-motion:no-preference){#c1-tabbar button{transition:color .15s,background .15s}}
 </style>
 </head>
 <body>
@@ -3456,6 +3484,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 </div>
 <div id="cy-busy-light" role="status"><div class="cbl-spin"></div><span id="cy-busy-light-txt"></span></div>
 <button id="c1-corner" onclick="c1Board(true)" title="التنقل بين الأقسام" aria-label="التنقل"></button>
+<nav id="c1-tabbar" aria-label="الأقسام"></nav>
 <button id="c1-budget-btn" onclick="qhelpOpen()" title="رصيد الذكاء الاصطناعي" aria-label="رصيد الذكاء الاصطناعي"></button>
 <button id="c1-notif-btn" onclick="c1NotifToggle()" title="الإشعارات" aria-label="الإشعارات">
   <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .8-.3 1.6-.8 2.2L4 15.5V17h16v-1.5l-1.2-1.7c-.5-.6-.8-1.4-.8-2.2V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/></svg>
@@ -4969,8 +4998,31 @@ function trackUsage(eventType,featureName){
     }).then(()=>{},()=>{});
   }catch(e){}
 }
+// ── شريط التنقّل السفلي (الهاتف): أربعة أقسامٍ يومية + «المزيد» للوحة الأقسام كاملة ──
+const C1_TABS=['yawmi','plan','students','studio'];
+function c1TabbarRender(){
+  const bar=document.getElementById('c1-tabbar');if(!bar)return;
+  const cur=((document.querySelector('.page.active')||{}).id||'').replace('page-','');
+  const secs=c1Sections().filter(s=>s.built&&(!KH_DEMO||DEMO_SECTIONS.includes(s.id)));
+  const tabs=C1_TABS.map(t=>secs.find(s=>s.id===t)).filter(Boolean);
+  const more=!tabs.some(t=>t.id===cur);
+  bar.innerHTML=tabs.map(t=>`<button type="button" class="${t.id===cur?'on':''}" onclick="c1Go('${t.id}')" aria-current="${t.id===cur?'page':'false'}">${C1_ICONS[t.ic]||''}<span>${escHtml(t.nm)}</span></button>`).join('')
+    +`<button type="button" class="${more?'on':''}" onclick="c1Board(true)" aria-label="كل الأقسام"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"/></svg><span>${more&&cur?escHtml((secs.find(s=>s.id===cur)||{nm:'المزيد'}).nm):'المزيد'}</span></button>`;
+}
+// زرّ «رجوع» في الهاتف يعود إلى القسم السابق بدل الخروج من المنصّة
+let c1PopNav=false;
+window.addEventListener('popstate',e=>{
+  const b=document.getElementById('c1-board');
+  if(b&&b.classList.contains('open')){b.classList.remove('open');}
+  const id=e.state&&e.state.c1;
+  if(id&&document.getElementById('page-'+id)){c1PopNav=true;try{c1Go(id);}finally{c1PopNav=false;}}
+});
 function c1Go(id){
   trackUsage('feature_used',id);
+  try{
+    const prev=((document.querySelector('.page.active')||{}).id||'').replace('page-','');
+    if(!c1PopNav&&prev!==id){if(history.state&&history.state.c1)history.pushState({c1:id},'');else history.replaceState({c1:id},'');}
+  }catch(e){}
   // مؤقّت «يومي» كان يبقى دائراً بعد الخروج من القسم: دورةٌ كل ٣٠ ثانية
   // تستدعي ttNowState وتكتب في DOM لا يراه أحد. يُوقف كما يُوقف مؤقّت الذكر.
   if(id!=='yawmi'){clearInterval(ywTick);ywTick=null;ywDhikrStop();}
@@ -4993,6 +5045,10 @@ function c1Go(id){
   if(id==='studio'){studioRender();}
   if(id==='exams')exRender();
   if(id==='noor')nlRender();
+  // «خُطّة AI» محادثةٌ بملء الشاشة وحقل كتابتها في الأسفل — الشريط يُخفى فيها
+  document.body.classList.toggle('c1-notab',id==='fahim');
+  c1TabbarRender();
+  try{window.scrollTo(0,0);}catch(e){}
 }
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -5284,6 +5340,7 @@ async function afterAuth(session){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
+  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   // الخطاب يُضبط هنا: بعد معرفة الحلقة وقراءة الملف، وقبل أوّل رسمٍ للتطبيق
   khSetGender(profile.teacher_gender);
@@ -5424,6 +5481,7 @@ function demoBoot(){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp','demo');
+  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   const nm=document.getElementById('c1-menu-name');
   if(nm)nm.textContent='أ. '+profile.display_name;
   khSetGender(profile.teacher_gender);
@@ -6110,6 +6168,7 @@ function c1OfflineBoot(){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.body.classList.add('inapp');
+  setTimeout(()=>{try{c1TabbarRender();if(!(history.state&&history.state.c1))history.replaceState({c1:((document.querySelector('.page.active')||{}).id||'page-yawmi').replace('page-','')},'');}catch(e){}},0);
   document.getElementById('c1-menu-name').textContent=profile.display_name||currentUser.email;
   khSetGender(profile.teacher_gender);khApplyGender();
   renderYawmi();
