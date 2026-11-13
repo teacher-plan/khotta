@@ -71,6 +71,32 @@ export function normalizeJsonDigits(s: string): string {
   return out;
 }
 
+// إصلاح أقواس الإغلاق: النموذج يُخطئ أحياناً في ترتيب الأقواس في آخر الناتج
+// (يكتب ‏]}‏ حيث المطلوب ‏}]}‏). نتتبّع الأقواس المفتوحة خارج النصوص، فإن جاء
+// قوسُ إغلاقٍ لا يطابق أُغلق ما قبله أولاً، وما بقي مفتوحاً في النهاية يُغلَق.
+export function repairJsonBrackets(s: string): string {
+  const stack: string[] = [];
+  let out = "", inStr = false, esc = false;
+  for (const ch of s) {
+    if (inStr) {
+      out += ch;
+      if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; out += ch; continue; }
+    if (ch === "{" || ch === "[") { stack.push(ch === "{" ? "}" : "]"); out += ch; continue; }
+    if (ch === "}" || ch === "]") {
+      if (!stack.includes(ch)) continue; // قوس زائد لا يقابله شيء
+      while (stack.length && stack[stack.length - 1] !== ch) out += stack.pop();
+      stack.pop(); out += ch; continue;
+    }
+    out += ch;
+  }
+  if (inStr) out += '"';
+  while (stack.length) out += stack.pop();
+  return out;
+}
+
 export function parseAiJson<T = unknown>(text: string): AiJsonResult<T> {
   const raw = String(text ?? "");
   if (!raw.trim()) return { ok: false, reason: "empty", raw };
@@ -79,18 +105,20 @@ export function parseAiJson<T = unknown>(text: string): AiJsonResult<T> {
 
   try { return { ok: true, value: JSON.parse(body) as T }; } catch { /* نُكمل */ }
 
+  // الكائن كاملاً أولاً بعد الإصلاحَين (أرقام شرقية خارج النصوص، ثم ترتيب أقواس
+  // الإغلاق) — قبل تجربة الكائنات الداخلية، وإلا رجع جزءٌ صغير بدل الناتج كله.
+  const fixed = normalizeJsonDigits(body);
+  const start = fixed.indexOf("{");
+  const whole = start >= 0 ? fixed.slice(start) : "";
+  for (const t of [fixed, whole && repairJsonBrackets(whole), whole && repairJsonBrackets(whole.replace(/[^\]}"]*$/, ""))]) {
+    if (!t || t === body) continue;
+    try { return { ok: true, value: JSON.parse(t) as T }; } catch { /* التالي */ }
+  }
+
   let sawCandidate = false;
   for (const slice of candidates(body)) {
     sawCandidate = true;
     try { return { ok: true, value: JSON.parse(slice) as T }; } catch { /* نُجرّب التالي */ }
-  }
-  // محاولة أخيرة: أرقام شرقية خارج النصوص
-  const fixed = normalizeJsonDigits(body);
-  if (fixed !== body) {
-    try { return { ok: true, value: JSON.parse(fixed) as T }; } catch { /* نُكمل */ }
-    for (const slice of candidates(fixed)) {
-      try { return { ok: true, value: JSON.parse(slice) as T }; } catch { /* التالي */ }
-    }
   }
   return {
     ok: false,
