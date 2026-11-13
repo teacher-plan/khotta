@@ -3420,6 +3420,8 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-capd span{font-weight:800;color:#5C7470}.nl-capd span.free{color:#126B4E}.nl-capd span.bad{color:#A0341F}
 .nl-capd em{font-style:normal;color:#5C7470;font-size:10px}
 .nl-tiers{display:flex;gap:6px;margin-top:10px}
+.plan-lesson.nl-flash{animation:nlFlash 2.6s ease-out}
+@keyframes nlFlash{0%,40%{box-shadow:0 0 0 4px #3FB59C,0 10px 30px -10px rgba(18,122,114,.5)}100%{box-shadow:0 2px 10px rgba(48,24,0,.05)}}
 .nl-tiers span{flex:1;text-align:center;border-radius:10px;padding:7px 4px;font-size:11px;font-weight:800;border:1.5px solid var(--nl-line);color:#5C7470}
 .nl-tiers span.on.g{background:#E2F4EC;color:#126B4E;border-color:#9BD8BE}
 .nl-tiers span.on.y{background:#FCF0D6;color:#8A5E10;border-color:#E9C877}
@@ -5446,7 +5448,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='b778472';
+const KH_BUILD='ff6a7e2';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9634,7 +9636,7 @@ function nlHero(s){
 async function nlLoadOverview(force){
   if(nl.busy.ov)return;nl.busy.ov=true;
   if(force)nlRender();
-  try{nl.ov=await noorCall({action:'lab_overview'});}
+  try{nl.ov=await noorCall({action:'lab_overview'});nl.np=null;}
   catch(e){toast(e.message,true);}
   finally{nl.busy.ov=false;}
   if(document.getElementById('page-noor').classList.contains('active'))nlRender();
@@ -9680,6 +9682,7 @@ function nlPts(){
     <div class="nl-cap">${nlCapDays(10).map(x=>{const over=x.q>NL_CAP_Q;return `<div class="nl-capd ${x.d===o.today?'today':''}"><b>${nlDayName(x.d)}</b><small>${nlShort(x.d)}</small>
       <div class="nl-capbar" title="${x.q} سؤال"><i style="height:${Math.min(100,nlPct(x.q,NL_CAP_Q))}%;background:${over?'#C2452D':x.q>=NL_CAP_Q?'#9AA9A6':'linear-gradient(0deg,#127A72,#3FB59C)'}"></i></div>
       <span class="${over?'bad':x.q>=NL_CAP_Q?'':'free'}">${over?'+'+egArNum(x.q-NL_CAP_Q)+' ضائع':x.q>=NL_CAP_Q?'ممتلئ':'متاح '+egArNum(NL_CAP_Q-x.q)}</span><em>📎 ${egArNum(x.f)}/${egArNum(NL_CAP_F)}</em></div>`;}).join('')}</div></div>
+  ${nlNoPrepCard()}
   ${nlPrepGapCard()}
   <div class="nl-card h6"><h3>🏆 موقعك بين أنشط معلّمي مدرستك</h3><p class="sub">بإجمالي كل الفصول كما تعرضه نور.</p>
     <ol class="nl-lb">${shown.map(x=>`<li class="${x.me?'me':''}"><span class="r">${egArNum(all.indexOf(x)+1)}</span><span class="n">${escHtml(x.name)}</span><span class="p">${nlN(x.pts)}</span></li>`).join('')}</ol>
@@ -9761,6 +9764,60 @@ async function nlGapGen(i){
   nlBody();
 }
 
+// ── دروس خُطّة التي ليس لها تحضير في نور ──
+// المطابقة باسم الدرس مع تحاضير نور (منشورةٍ من خُطّة أو يدوياً)، أو بعلامة النشر المحفوظة في الخطة.
+function nlKeys(t){
+  const x=noorAr2En(t).replace(/^\s*واجب(\s*قصير)?\s*:\s*/,'').replace(/\([^)]*\)/g,' ');
+  const clean=v=>noorNorm(v.replace(/(^|\s)درس(?=\s|$)/g,' ').replace(/[\d\-–_.]+/g,' '));
+  const out=[clean(x.replace(/:/g,' '))];
+  if(x.includes(':'))out.push(clean(x.slice(0,x.indexOf(':'))),clean(x.slice(x.lastIndexOf(':')+1)));
+  return out.filter(k=>k&&k.length>=4);
+}
+function nlNum(t){const m=noorAr2En(t).match(/(\d+)\s*-\s*(\d+)/);return m?(+m[1])+'-'+(+m[2]):'';}
+function nlKeyMatch(a,b){return a.some(x=>b.some(y=>x===y||(Math.min(x.length,y.length)>=6&&(x.includes(y)||y.includes(x)))));}
+async function nlNoPrepLoad(force){
+  if(nl.busy.np||(!force&&nl.np))return;nl.busy.np=true;
+  const o=nl.ov,courses=((noorSt||{}).courses||[]);const out=[];
+  try{
+    for(const g of planGradesList())for(const subj of planSubjectsFor(g)){
+      const c=courses.find(c=>c.name.includes(subj)&&c.name.includes(gradeName(g)));if(!c)continue;
+      const units=await planUnitsRefresh(g,subj);
+      // الاسم وحده لا يكفي: موضوعاتٌ تتكرّر في الفصل الثاني (جمع الكسور، فك الأقواس…)، فإن حمل الطرفان رقم درسٍ وجب أن يتطابق
+      const pk=(o.preps||[]).filter(p=>p.cid===c.cid).map(p=>({k:nlKeys(p.title),n:nlNum(p.title)}));
+      const flat=[];units.forEach((u,ui)=>u.lessons.forEach((l,li)=>flat.push({g,subj,ui,li,unit:u.name,id:l.id,name:l.name})));
+      flat.forEach(l=>{const st=planGet(l.id);l.kprep=!!st.prep;const lk=nlKeys(l.name),ln=nlNum(l.name);l.noor=!!(st.noor&&st.noor.prep_id)||pk.some(x=>(!x.n||!ln||x.n===ln)&&nlKeyMatch(x.k,lk));});
+      // «حتى الآن»: إلى آخر درسٍ نُشر له تحضير؛ وما بعده «القادمة» (أقرب ٥)
+      let last=-1;flat.forEach((l,i)=>{if(l.noor)last=i;});
+      flat.forEach((l,i)=>{if(l.noor)return;if(i<=last)out.push({...l,grp:'past'});else if(i<=last+5)out.push({...l,grp:'next'});});
+    }
+    nl.np=out;
+  }catch(e){toast(e.message||'تعذّر',true);nl.np=[];}
+  nl.busy.np=false;if(nl.tab==='pts'||nl.tab==='week')nlBody();
+}
+function nlNoPrepCard(){
+  if(!nl.ov)return '';
+  if(!nl.np){setTimeout(()=>nlNoPrepLoad(),0);return `<div class="nl-card"><h3>📕 دروسٌ ليس لها تحضير في نور</h3>${nlLoading('يطابق دروس خطّتك مع تحاضير نور…')}</div>`;}
+  const row=l=>`<li><span class="nl-ico">${l.grp==='past'?'⚠️':'🗓️'}</span><span class="t" title="${escAttr(l.unit+' — '+l.name)}">${escHtml(l.name)}<small style="display:block;color:#5C7470;font-size:11px">${escHtml(l.subj)} · ${escHtml(gradeName(l.g))} · ${escHtml(l.unit)}</small></span>
+    <span class="nl-pill ${l.kprep?'mid':'bad'}">${l.kprep?'تحضيرٌ جاهز في خُطّة':'لا تحضير بعد'}</span>
+    <button class="nl-btn ${l.kprep?'':'ghost'}" style="padding:6px 10px;font-size:12px" onclick="nlGoLesson(${l.g},'${escJs(l.subj)}',${l.ui},'${escJs(l.id)}')">${l.kprep?'📤 افتح البطاقة وانشر':'📝 افتح بطاقة الدرس'}</button></li>`;
+  const past=nl.np.filter(l=>l.grp==='past'),next=nl.np.filter(l=>l.grp==='next');
+  return `<div class="nl-card"><h3>📕 دروسٌ ليس لها تحضير في نور (${egArNum(past.length)} فاتت · ${egArNum(next.length)} قادمة)</h3>
+    <p class="sub">«فاتت»: دروسٌ قبل آخر درسٍ حضّرته في نور ولم يُنشر لها تحضير. «قادمة»: الدروس الخمسة التالية. الزرّ يفتح بطاقة الدرس في «الخطة» مباشرةً.</p>
+    ${past.length?`<b class="sub" style="display:block;margin:4px 0">فاتت</b><ul class="nl-feed" style="max-height:none">${past.map(row).join('')}</ul>`:'<div class="nl-gap">✅ لا دروس فائتة بلا تحضير.</div>'}
+    ${next.length?`<b class="sub" style="display:block;margin:10px 0 4px">القادمة</b><ul class="nl-feed" style="max-height:none">${next.map(row).join('')}</ul>`:''}
+    <div class="nl-actions"><button class="nl-btn ghost" onclick="nl.np=null;nlNoPrepLoad(true)">↻ إعادة المطابقة</button></div></div>`;
+}
+// يفتح «الخطة» على الصف والمادة والوحدة، ثم يمرّر إلى بطاقة الدرس ويُبرزها
+async function nlGoLesson(g,subj,ui,id){
+  planGrade=g;planSubject=subj;planUnitIdx=ui;
+  c1Go('plan');
+  for(let i=0;i<30;i++){
+    const el=document.querySelector('.plan-lesson[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('nl-flash');setTimeout(()=>el.classList.remove('nl-flash'),2600);return;}
+    await new Promise(r=>setTimeout(r,150));
+  }
+}
+
 // ── ٢) حصص الأسبوع ──
 function nlWeekStats(){
   const o=nl.ov;if(!o)return null;let tot=0,ok=0;
@@ -9778,7 +9835,7 @@ function nlWeek(){
     <div class="nl-stats" style="margin-bottom:12px"><div class="nl-stat"><b>${egArNum(ws.slots)}</b><span>حصة هذا الأسبوع</span></div><div class="nl-stat"><b>${egArNum(ws.prepared)}</b><span>لها تحضير</span></div><div class="nl-stat ${ws.missing?'warn':''}"><b>${egArNum(ws.missing)}</b><span>بلا تحضير</span></div><div class="nl-stat"><b>${egArNum(nlPct(ws.prepared,ws.slots))}٪</b><span>نسبة التغطية</span></div></div>
     <div class="nl-week">${keys.map(d=>`<div class="nl-day ${d===o.today?'today':''}"><h4>${nlDayName(d)}<small>${nlShort(d)}</small></h4>${days[d].sort((a,b)=>pn(a)-pn(b)).map(s=>`<div class="nl-slot ${s.prep?'y':'n'}"><span>${escHtml(s.period)}</span><span>شعبة ${egArNum(s.sec)} ${s.prep?'✓':'✕'}</span></div>`).join('')||'<p class="sub">لا حصص</p>'}</div>`).join('')}</div>
     ${ws.missing?`<div class="nl-gap">⚠️ ${egArNum(ws.missing)} حصة بلا تحضير. التحضير نفسه لا يُحتسب نقاطاً في نور، لكنه الوعاء الذي تُعلَّق عليه الملفات والواجبات (وهي التي تُحتسب)، والمشرف يراه. انشره من «الخطة» ← بطاقة الدرس ← «📤 نشر في نور».</div><div class="nl-actions"><button class="nl-btn" onclick="c1Go('plan')">الذهاب إلى الخطة</button></div>`:'<div class="nl-gap">✅ كل حصص الأسبوع محضّرة في نور.</div>'}
-  </div>${nlPrepGapCard()}</div>`;
+  </div>${nlNoPrepCard()}${nlPrepGapCard()}</div>`;
 }
 
 // ── ٣) تحليل الطلاب ──
