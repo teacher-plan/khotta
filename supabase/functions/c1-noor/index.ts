@@ -380,6 +380,7 @@ Deno.serve(async (req) => {
           const score = await x.myScore();
           const caps = { q: 0, files: 0, scorm: 0, hw: 0 };
           const qByDate: Record<string, number> = {}, fByDate: Record<string, number> = {};
+          const preps: Any[] = [], hwTitles: Any[] = [];
           const recent: Any[] = [];
           const week: Any[] = [];
           const days = schoolWeek(today);
@@ -399,13 +400,15 @@ Deno.serve(async (req) => {
                 recent.push({ kind: k === "Scorm" ? "scorm" : "file", cid, title: a.title, at: a.publish });
               }
             }
+            for (const pr of await x.prepsList(cid).catch(() => [])) preps.push({ ...pr, cid });
+            for (const h of hws) hwTitles.push({ cid, title: h.title, publish: h.publish });
             for (const d of days) {
               const sl = await x.slots(cid, d).catch(() => []);
               week.push({ cid, date: d, slots: sl.map((s) => ({ sec: s.section, period: s.period, prep: s.has_prep })) });
             }
           }
           recent.sort((a, b) => String(b.at).localeCompare(String(a.at)));
-          return { score, caps, qByDate, fByDate, today, week, recent: recent.slice(0, 40), totals: { hw: recent.filter((r) => r.kind === "hw").length, files: recent.filter((r) => r.kind === "file").length, scorm: recent.filter((r) => r.kind === "scorm").length } };
+          return { score, caps, qByDate, fByDate, preps, hwTitles, today, week, recent: recent.slice(0, 40), totals: { hw: recent.filter((r) => r.kind === "hw").length, files: recent.filter((r) => r.kind === "file").length, scorm: recent.filter((r) => r.kind === "scorm").length } };
         });
         await persist();
         return json(out);
