@@ -156,13 +156,14 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'خطتي الفصلية 📚', {
       body: data.body || '',
-      icon: '/khottah_icon_192.png',
-      badge: '/khottah_icon_192.png',
+      // منصّة الحلقة الأولى (cycle1) ترسل رابطها وأيقونتها؛ وما سواها كما كان
+      icon: data.icon || (String(data.url || '').includes('cycle1') ? '/khottah1_icon_192.png' : '/khottah_icon_192.png'),
+      badge: data.icon || (String(data.url || '').includes('cycle1') ? '/khottah1_icon_192.png' : '/khottah_icon_192.png'),
       dir: 'rtl',
       lang: 'ar',
       tag: data.tag || 'khotta',
       renotify: true,
-      data: { url: 'https://khotati.com/' }
+      data: { url: data.url || 'https://khotati.com/' }
     })
   );
 });
@@ -186,8 +187,16 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || 'https://khotati.com/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // نافذةٌ مفتوحة للصفحة نفسها: تُستحضَر ويُرسَل إليها القسم المطلوب (#msgs…) بلا إعادة تحميل
+      const path = new URL(url).pathname;
       for (const c of list) {
-        if (c.url.includes('khotati.com') && 'focus' in c) return c.focus();
+        if (c.url.includes('khotati.com') && new URL(c.url).pathname === path && 'focus' in c) {
+          c.postMessage({ type: 'NAV', url });
+          return c.focus();
+        }
+      }
+      for (const c of list) {
+        if (c.url.includes('khotati.com') && 'focus' in c) return c.focus().then(w => (w && w.navigate) ? w.navigate(url) : w).catch(() => clients.openWindow(url));
       }
       if (clients.openWindow) return clients.openWindow(url);
     })
