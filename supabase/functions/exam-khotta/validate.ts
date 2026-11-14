@@ -37,6 +37,20 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       if (!lessons.includes(String(it?.lesson))) E.push(`${k}: الدرس «${it?.lesson}» ليس من الدروس المحدّدة (${lessons.join("، ")}).`);
       else used.add(String(it.lesson));
       if (!["mcq", "long", ...OTHER].includes(it?.type)) E.push(`${k}: النوع «${it?.type}» غير معروف.`);
+      // ── الدرجة على قدر العمل (ملاحظة الأستاذ عيسى): الاختيار من متعدد درجة واحدة دائماً،
+      // وكل درجةٍ فوق الأولى يقابلها جزءٌ أو خطوةٌ مستقلّة تُصحَّح وحدها ويُذكر توزيعها في الإرشادات.
+      const nSteps = Array.isArray(it?.steps) ? it.steps.filter((x: Any) => String(x ?? "").trim()).length : 0;
+      const nParts = Array.isArray(it?.parts) ? it.parts.length : 0;
+      if (it?.type === "mcq" && m !== 1) E.push(`${k}: الاختيار من متعدد درجته ١ دائماً (وجدتُ ${m}).`);
+      if (it?.type === "tf" && m > 2) E.push(`${k}: الصواب والخطأ مع التفسير ١–٢ درجة.`);
+      if (Number.isInteger(m) && m >= 2 && it?.type !== "mcq") {
+        if (Math.max(nSteps, nParts) < 2) E.push(`${k}: درجتها ${m} فيجب أن تتطلّب ${m} خطوات/أجزاء مستقلّة على الأقل مكتوبة في steps أو parts، وإلا فاجعلها درجة واحدة أو زِد مطلوبها.`);
+        if (!/درج/.test(String(it?.guidance || ""))) E.push(`${k}: الإرشادات يجب أن توزّع الدرجات (${m}) على الخطوات: «درجة لـ… ودرجة لـ…».`);
+      }
+      if (m === 1 && nParts >= 2) E.push(`${k}: مفردة من ${nParts} أجزاء لا تكون بدرجة واحدة؛ لكل جزء درجة.`);
+      if (m === 1 && it?.type !== "mcq" && /جميع|كلّ? عوامل|كلّ? مضاعفات|كلّ? القيم|كلّ? الحلول|اذكر ثلاث|اكتب ثلاث|اكتب أربع/.test(String(it?.stem || "")))
+        E.push(`${k}: السؤال يطلب عدّة إجابات («${String(it.stem).slice(0, 40)}…») فدرجته ٢ على الأقل مع توزيعها في الإرشادات.`);
+      if (m === 1 && it?.type !== "mcq" && nSteps >= 4) E.push(`${k}: حلّه ${nSteps} خطوات فلا يكون بدرجة واحدة؛ اجعله درجتين أو بسّط المطلوب.`);
       if (it?.type === "mcq") {
         if (!Array.isArray(it.choices) || it.choices.length !== 4) E.push(`${k}: الاختيار من متعدد بأربعة بدائل.`);
         if (!Number.isInteger(it.answer) || it.answer < 0 || it.answer > 3) E.push(`${k}: answer رقم البديل الصحيح ٠–٣.`);
@@ -52,6 +66,11 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       }
     });
     if (total !== tool.total) E.push(`النموذج (${name}): مجموع الدرجات ${total}، والمطلوب ${tool.total}.`);
+    if (kind === "quiz") {
+      const pat = items.map((x) => x?.marks).sort().join("+");
+      if (!["1+2+2", "1+1+3", "2+3"].includes(pat)) E.push(`النموذج (${name}): توزيع درجات السؤال القصير ${pat}؛ المسموح فقط: ١+٢+٢ أو ١+١+٣ (ثلاث مفردات) أو ٢+٣ (مفردتان).`);
+      if (items.filter((x) => x?.type === "mcq").length > 1) E.push(`النموذج (${name}): مفردة اختيار من متعدد واحدة على الأكثر في السؤال القصير.`);
+    }
     if (kind === "quiz" && (used.size < tool.lessons[0] || used.size > tool.lessons[1])) E.push(`النموذج (${name}): السؤال القصير من درس أو درسين.`);
     if (kind === "short_test") {
       for (const [a, v] of Object.entries(tool.ao as Record<string, number>)) if ((aoSum[a] || 0) !== v) E.push(`النموذج (${name}): درجات ${a} = ${aoSum[a] || 0}، والمطلوب ${v}.`);
