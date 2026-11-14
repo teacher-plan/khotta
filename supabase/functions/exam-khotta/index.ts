@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
     const pub = (base: string, sheet: number) => admin.storage.from("library-files").getPublicUrl(`${base}/p${sheet}.jpg`).data.publicUrl;
     const codeOf = (r: Any) => (String(r.lesson).match(/^\s*([0-9٠-٩]+\s*[-–]\s*[0-9٠-٩]+)/) || [])[1]?.replace(/\s/g, "").replace(/[–]/g, "-") || ar(r.sort);
     const lessonsOut: Any[] = [];
+    const ranges: Record<string, [number, number]> = {};
     const bookImgs: Record<string, { url: string; tag: string }[]> = {}, guideImgs: Record<string, { url: string; tag: string }[]> = {};
     const perBook = Math.max(2, Math.floor(18 / sel.length)), perGuide = Math.max(1, Math.floor(8 / sel.length));
     for (const r of sel) {
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
       let end = start;
       for (let j = i + 1; j < rows.length; j++) { const np = parseInt(rows[j].page); if (np && np > start) { end = np - 1; break; } }
       const code = ar(codeOf(r)), title = String(r.lesson).replace(/^\s*[0-9٠-٩]+\s*[-–]\s*[0-9٠-٩]+\s*/, "");
+      ranges[code] = [start, Math.max(start, end)];
       lessonsOut.push({ code, title, unit: r.unit, pages: start ? (end > start ? `${ar(start)}–${ar(end)}` : ar(start)) : "" });
       if (bs?.base_path && start) {
         const off = bs.offset_pages || 1;
@@ -208,7 +210,7 @@ Deno.serve(async (req) => {
       }
       const p = parseAiJson(raw);
       ex = p.ok ? p.value : null;
-      errs = ex ? validate(ex, kind, grade, codes, gridRows) : ["الردّ ليس JSON صالحاً بالشكل المطلوب."];
+      errs = ex ? validate(ex, kind, grade, codes, gridRows, ranges) : ["الردّ ليس JSON صالحاً بالشكل المطلوب."];
       if (!errs.length) break;
       messages.push({ role: "assistant", content: raw.slice(0, 12000) });
       messages.push({ role: "user", content: "الفحص الآلي بمواصفات الوثيقة وجد هذه المخالفات؛ صحّحها كلها وأعد JSON كاملاً بالشكل نفسه:\n- " + errs.join("\n- ") });
