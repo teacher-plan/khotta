@@ -126,6 +126,7 @@ Deno.serve(async (req) => {
       "كتابة الرموز في الرياضيات:\n" + MATH_RULES,
       "الصور المرفقة: صفحات الدروس من كتاب الطالب، وصفحات دليل المعلم (الأهداف برموزها والأخطاء الشائعة). اقرأها بدقّة وابنِ المفردات منها وفي حدود أهدافها، ولا تنسخ تمريناً حرفياً.",
       "حلّ كل مفردة بنفسك قبل كتابتها وتأكّد: إجابة واحدة صحيحة، وكل بديل خاطئ خاطئٌ فعلاً، والإرشادات أعداد صحيحة.",
+      "الإجابة الطويلة: الأجزاء في parts، وإجابة كل جزء سطراً في steps («(أ) …»، «(ب) …»). النموذج (ب): المفردة رقم ن فيه من الدرس نفسه والنوع نفسه والهدف والصعوبة والدرجة نفسها للمفردة ن في (أ)، بأعداد وسياق مختلفين.",
       `أعد JSON فقط بالشكل: {"title":"…","forms":{"أ":[مفردة…],"ب":[مفردة…]}} والمفردة: ${itemShape} — احذف الحقول غير اللازمة لنوعها.`,
     ].filter(Boolean).join("\n\n");
     const userText = [
@@ -152,7 +153,7 @@ Deno.serve(async (req) => {
     let ex: Any = null, errs: string[] = [], raw = "";
     for (let attempt = 0; attempt < 2; attempt++) {
       try { raw = await call(messages); } catch (e) {
-        if (attempt === 0) continue;
+        if (attempt < 1) continue;
         await refundQuota(admin, user.id, user.email || "", "text");
         return json({ error: "ai_error", message: "تعذّر الاتصال بنموذج الذكاء الاصطناعي: " + String((e as Error).message) }, 502);
       }

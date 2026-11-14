@@ -32,7 +32,8 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       if (!Number.isInteger(m) || m < 1) E.push(`${k}: الدرجة يجب أن تكون عدداً صحيحاً موجباً.`);
       total += Number.isInteger(m) ? m : 0;
       for (const f of ["stem", "objective", "page", "lesson"]) if (!String(it?.[f] ?? "").trim()) E.push(`${k}: الحقل ${f} مطلوب.`);
-      if (it?.answer == null && !(Array.isArray(it?.steps) && it.steps.length)) E.push(`${k}: answer أو steps مطلوب.`);
+      const partsAnswered = Array.isArray(it?.parts) && it.parts.length && it.parts.every((p: Any) => p && p.answer != null && String(p.answer).trim());
+      if (it?.answer == null && !(Array.isArray(it?.steps) && it.steps.length) && !partsAnswered) E.push(`${k}: answer أو steps مطلوب (وللإجابة الطويلة: إجابة كل جزء في steps).`);
       if (!lessons.includes(String(it?.lesson))) E.push(`${k}: الدرس «${it?.lesson}» ليس من الدروس المحدّدة (${lessons.join("، ")}).`);
       else used.add(String(it.lesson));
       if (!["mcq", "long", ...OTHER].includes(it?.type)) E.push(`${k}: النوع «${it?.type}» غير معروف.`);
