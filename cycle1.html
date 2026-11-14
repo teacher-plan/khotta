@@ -3344,6 +3344,20 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-lb li .p{font-weight:800;font-variant-numeric:tabular-nums;color:var(--nl-ink)}
 .nl-lb li.me{background:linear-gradient(90deg,rgba(18,122,114,.14),rgba(63,181,156,.05));outline:1.5px solid var(--nl-mint)}
 .nl-lb li.me .n{font-weight:800;color:var(--nl-teal)}
+.nl-room-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.nl-room-opt{display:flex;flex-direction:column;gap:3px;text-align:start;border:1.5px solid var(--nl-line);border-radius:14px;padding:10px 12px;background:#fff;font-family:inherit;cursor:pointer;color:var(--nl-ink)}
+.nl-room-opt span{font-size:11.5px;color:#5b6f6b}
+.nl-room-opt b{font-size:13.5px;line-height:1.6}
+.nl-room-opt small{font-size:11px;color:#5b6f6b}
+.nl-room-opt.on{border-color:var(--nl-teal);background:var(--nl-soft);box-shadow:0 0 0 2px rgba(18,122,114,.14)}
+.nl-room-opt:disabled{opacity:.5;cursor:default}
+.nl-sub-t{font-size:12px;font-weight:800;color:var(--nl-ink);margin:12px 0 6px}
+.nl-room-secs{display:flex;flex-wrap:wrap;gap:8px}
+.nl-room-sec{display:flex;align-items:center;gap:6px;border:1.5px solid var(--nl-line);border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff;cursor:pointer}
+.nl-room-sec small{color:#5b6f6b;font-size:11px}
+.nl-room-q{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.nl-room-q label.sub{display:flex;flex-direction:column;gap:4px;margin:0}
+@media (max-width:520px){.nl-room-opts{grid-template-columns:1fr}}
 .nl-gap{font-size:12px;color:var(--nl-ink);background:var(--nl-soft);border-radius:10px;padding:8px 10px;margin-top:8px;line-height:1.8}
 .nl-btn{border:none;border-radius:12px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:var(--nl-deep);color:#fff}
 .nl-btn.ai{background:linear-gradient(135deg,#127A72,#0B3B3C 60%,#2A2F6E)}
@@ -9915,7 +9929,7 @@ async function noorImpApply(){
 const NL_EMAILS=['xx@y.com','teacherplane2026project@gmail.com'];
 function nlIsLab(){return !KH_DEMO&&!!(currentUser&&NL_EMAILS.includes(String(currentUser.email||'').toLowerCase()));}
 const nl={tab:'pts',ov:null,st:null,stCid:'',lessons:{},gen:null,post:null,ai:{},dev:null,busy:{}};
-const NL_TABS=[['pts','لوحة النقاط',''],['week','حصص الأسبوع',''],['stu','تحليل الطلاب',''],['gen','مولّد الواجب الذكي',''],['dev','وصول المطوّر','']];
+const NL_TABS=[['pts','لوحة النقاط',''],['week','حصص الأسبوع',''],['stu','تحليل الطلاب',''],['gen','مولّد الواجب الذكي',''],['room','غرفة نقاش',''],['dev','وصول المطوّر','']];
 const nlN=n=>egArNum(Math.round(+n||0).toLocaleString('en-US'));
 const nlPct=(a,b)=>b?Math.round(100*a/b):0;
 const NL_DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -9958,8 +9972,9 @@ async function nlLoadOverview(force){
 }
 function nlBody(){
   const b=document.getElementById('nl-body');if(!b)return;
-  const f={pts:nlPts,week:nlWeek,stu:nlStu,gen:nlGen,dev:nlDev}[nl.tab];
+  const f={pts:nlPts,week:nlWeek,stu:nlStu,gen:nlGen,room:nlRoom,dev:nlDev}[nl.tab];
   b.innerHTML=f();
+  if(nl.tab==='room')nlRoomInit();
   if(nl.tab==='stu'&&!nl.st&&!nl.busy.st)nlLoadStudents();
   if(nl.tab==='gen')nlGenInit();
 }
@@ -10370,6 +10385,78 @@ async function nlPostRun(){
 function nlCopy(k){
   const p=nl.post||{};const t=k==='topic'?(p.topic_title+'\n\n'+p.topic_body):(p.message_title+'\n\n'+p.message_body);
   navigator.clipboard.writeText(t).then(()=>toast('نُسخ','ok'),()=>toast('تعذّر النسخ',true));
+}
+
+// ── غرفة نقاش ذكية ← نور ──
+// الدرس من خطّة المعلّم نفسها: «آخر درسٍ وصلت إليه» = آخر درسٍ مُنجَز أو مُعلَّمٍ لشعبة،
+// و«القادم» = أول درسٍ بعده لم يُنجَز. يولّد الذكاء سؤالاً مفتوحاً، يراجعه المعلّم، ثم
+// تُنشأ الغرفة في نور لطلاب الشعب المختارة (٢٠ نقطة × نسبة ردود الطلاب).
+function nlPlanSubjects(){
+  const pu=profile.plan_units||{};
+  return Object.keys(pu).filter(k=>(pu[k]||[]).some(u=>(u.lessons||[]).length));
+}
+function nlPlanPick(key){
+  const flat=[];((profile.plan_units||{})[key]||[]).forEach(u=>(u.lessons||[]).forEach(l=>flat.push({...l,unit:u.name})));
+  let li=-1;
+  flat.forEach((l,i)=>{const st=planGet(l.id);if(st.done||Object.values(st.classes||{}).some(Boolean))li=i;});
+  const last=li>=0?flat[li]:null;
+  let next=null;for(let i=li+1;i<flat.length;i++){if(!planGet(flat[i].id).done){next=flat[i];break;}}
+  return{last,next};
+}
+function nlRoom(){
+  const r=nl.room=nl.room||{};
+  const keys=nlPlanSubjects();
+  if(!r.key||!keys.includes(r.key))r.key=keys[0]||'';
+  const pk=r.key?nlPlanPick(r.key):{};
+  if(!r.when)r.when=pk.last?'last':'next';
+  const les=r.when==='next'?pk.next:pk.last;
+  const opt=(w,l,t)=>`<button class="nl-room-opt ${r.when===w?'on':''}" ${l?'':'disabled'} onclick="nlRoomSet('when','${w}')"><span>${t}</span><b>${l?escHtml(l.name):'—'}</b>${l?`<small>${escHtml(l.unit)}</small>`:''}</button>`;
+  const lec=r.lectures;
+  return `<div class="nl-grid nl-reveal"><div class="nl-card"><h3><i class="ki ki-chat" aria-hidden="true"></i> غرفة نقاش ذكية ← نور مباشرةً</h3>
+    <p class="sub">${khG('اختاري','اختر')} الدرس، فيكتب الذكاء الاصطناعي سؤالاً مفتوحاً يتحاور فيه الطلاب، ${khG('تراجعينه','تراجعه')} ثم تُنشأ الغرفة في نور لطلاب الشعب المختارة. غرفة النقاش ٢٠ نقطة تُضرب في نسبة ردود الطلاب.</p>
+    ${keys.length>1?`<select class="nl-in" style="margin-bottom:8px" onchange="nlRoomSet('key',this.value)">${keys.map(k=>`<option value="${escAttr(k)}" ${k===r.key?'selected':''}>${escHtml(k.replace('|',' · الصف '))}</option>`).join('')}</select>`:''}
+    ${keys.length?`<div class="nl-room-opts">${opt('last',pk.last,'آخر درس وصلت إليه')}${opt('next',pk.next,'الدرس القادم')}</div>`:`<div class="nl-gap">لا دروس في خطّتك بعد — ${khG('افتحي','افتح')} قسم «الخطة» مرةً لتُحمَّل الدروس.</div>`}
+    <input class="nl-in" style="margin-top:8px" placeholder="ملاحظة للذكاء الاصطناعي (اختياري): مثلاً اربطه بالتسوّق أو بالرياضة" value="${escAttr(r.hint||'')}" onchange="nlRoomSet('hint',this.value,1)">
+    <div class="nl-sub-t">الشعب</div>
+    <div class="nl-room-secs">${lec?lec.map(l=>`<label class="nl-room-sec"><input type="checkbox" ${(r.sel||{})[l.id]!==false?'checked':''} onchange="nlRoomSec('${escJs(l.id)}',this.checked)"><span>${escHtml(l.label)}</span><small>${egArNum(l.students)} طالباً</small></label>`).join(''):(r.lecErr?`<span class="sub">${escHtml(r.lecErr)}</span>`:nlLoading('يجلب شعبك من نور…'))}</div>
+    <div class="nl-actions"><button class="nl-btn ai" id="nl-r-go" onclick="nlRoomGen()" ${les?'':'disabled'}><i class="ki ki-sparkle" aria-hidden="true"></i> ${r.q?'ولّد سؤالاً آخر':'ولّد سؤال النقاش'}</button></div>
+    ${r.q?`<div class="nl-room-q">
+      <label class="sub">العنوان (حتى ٥٠ حرفاً)<input class="nl-in" id="nl-r-title" maxlength="50" value="${escAttr(r.q.title||'')}" onchange="nl.room.q.title=this.value"></label>
+      <label class="sub">السؤال وتعليمات الغرفة<textarea class="nl-in" id="nl-r-body" rows="9" onchange="nl.room.q.body=this.value">${escHtml(r.q.body||'')}</textarea></label>
+      ${r.q.why?`<div class="nl-gap"><i class="ki ki-bulb" aria-hidden="true"></i> ${escHtml(r.q.why)}</div>`:''}
+      <div class="nl-actions"><button class="nl-btn gold" id="nl-r-pub" onclick="nlRoomPublish()"><i class="ki ki-upload" aria-hidden="true"></i> أنشئ الغرفة في نور</button></div></div>`:''}
+    ${r.done?`<div class="nl-gap"><i class="ki ki-check" aria-hidden="true"></i> أُنشئت الغرفة لـ${egArNum(r.done.students)} طالباً. <a href="${escAttr(r.done.url)}" target="_blank" rel="noopener">افتح غرف النقاش في نور ↗</a></div>`:''}
+  </div></div>`;
+}
+async function nlRoomInit(){
+  const r=nl.room=nl.room||{};
+  if(r.lectures||nl.busy.room)return;
+  nl.busy.room=true;
+  try{const x=await noorCall({action:'lab_room_form'});r.lectures=x.lectures||[];r.lecErr='';}
+  catch(e){r.lecErr=e.message;}
+  nl.busy.room=false;if(nl.tab==='room')nlBody();
+}
+function nlRoomSet(k,v,quiet){const r=nl.room=nl.room||{};r[k]=v;if(k==='when'||k==='key'){r.q=null;r.done=null;}if(!quiet&&nl.tab==='room')nlBody();}
+function nlRoomSec(id,on){const r=nl.room;r.sel=r.sel||{};r.sel[id]=on;}
+async function nlRoomGen(){
+  const r=nl.room||{};const pk=nlPlanPick(r.key);const l=r.when==='next'?pk.next:pk.last;if(!l)return;
+  const [g,sub]=String(r.key).split('|');
+  const b=document.getElementById('nl-r-go');if(b){b.disabled=true;b.textContent='يكتب السؤال…';}
+  try{r.q=await noorCall({action:'lab_ai',task:'room',lesson:l.name,unit:l.unit,grade:'الصف '+(NOOR_GRADES[+g]||g),subject:sub,when:r.when,hint:r.hint||''});r.done=null;}
+  catch(e){toast(e.message,true);}
+  if(nl.tab==='room')nlBody();
+}
+async function nlRoomPublish(){
+  const r=nl.room||{};if(!r.q)return;
+  const t=(document.getElementById('nl-r-title')||{}).value||r.q.title,bd=(document.getElementById('nl-r-body')||{}).value||r.q.body;
+  r.q.title=t;r.q.body=bd;
+  const lec=(r.lectures||[]).filter(l=>(r.sel||{})[l.id]!==false).map(l=>l.id);
+  if(!lec.length){toast(khG('اختاري','اختر')+' شعبة واحدة على الأقل',true);return;}
+  if(!await c1Confirm('إنشاء غرفة النقاش «'+t.trim()+'» في نور لطلاب '+egArNum(lec.length)+' شعب؟'))return;
+  const b=document.getElementById('nl-r-pub');if(b){b.disabled=true;b.textContent='يُنشئ الغرفة في نور…';}
+  try{r.done=await noorCall({action:'lab_room',title:t.trim(),body:bd.trim(),lectures:lec});toast('أُنشئت غرفة النقاش في نور','ok');}
+  catch(e){toast(e.message,true);}
+  if(nl.tab==='room')nlBody();
 }
 
 // ── ٥) وصول المطوّر ──
