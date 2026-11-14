@@ -1406,6 +1406,20 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 
 /* ── تحليل الاختبارات ── */
 .ex-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.ek-open{background:linear-gradient(135deg,#127A72,#0B3B3C);color:#fff;border:none}
+.ek-badge{font-size:11px;font-weight:800;color:#127A72;background:#EAF4F1;border-radius:999px;padding:3px 10px}
+.ek-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ek-seg button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;border:1.5px solid var(--border);background:var(--card);border-radius:12px;padding:10px 12px;font-family:inherit;color:var(--ink);cursor:pointer}
+.ek-seg button.on{border-color:#127A72;box-shadow:0 0 0 2px rgba(18,122,114,.15);background:#F2FAF8}.ek-seg small{font-size:11.5px;color:var(--muted)}
+.ek-note{font-size:12px;color:var(--muted);line-height:1.8;margin:8px 0 0}.ek-cnt{font-size:11.5px;font-weight:700;color:#c0262d;margin-inline-start:6px}.ek-cnt.ok{color:#0a7a3d}
+.ek-unit{margin-bottom:10px}.ek-unit-t{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.ek-les{display:flex;align-items:center;gap:8px;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:13px;cursor:pointer;background:var(--card)}
+.ek-les.on{border-color:#127A72;background:#F2FAF8}.ek-les small{margin-inline-start:auto;color:var(--muted);font-size:11px}.ek-les input{width:17px;height:17px;accent-color:#127A72}
+.ek-chk{font-size:12px;font-weight:800;border-radius:999px;padding:4px 12px}.ek-chk.ok{background:#E3F5EA;color:#0a7a3d}.ek-chk.bad{background:#FDECEC;color:#c0262d}
+.ek-warn ul{margin:6px 0;padding-inline-start:18px;font-size:12.5px;line-height:1.9}
+.ek-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.ek-tabs button{border:1.5px solid var(--border);background:var(--card);border-radius:999px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.ek-tabs button.on{background:#127A72;border-color:#127A72;color:#fff}.ek-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.ek-sheet{background:#fff;color:#000;border-radius:12px;padding:10px;overflow-x:auto;font-size:12px;border:1px solid var(--border)}.ek-sheet .ekp{min-height:0;margin-bottom:12px}
+
 .ex-top-hint{flex:1;min-width:220px;font-size:12.5px;color:var(--muted);line-height:1.8}
 .ex-step-t{font-size:15px}
 .ex-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
@@ -5684,7 +5698,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='b4b42cd';
+const KH_BUILD='b48531d';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9483,11 +9497,13 @@ function exSave(e){
 function exRender(){
   const el=document.getElementById('ex-body');if(!el)return;
   if(exView==='edit')return exRenderEdit(el);
+  if(exView==='ek')return ekRender(el);
   if(exView==='report'&&exCur&&profile.exams&&profile.exams[exCur])return exRenderReport(el,profile.exams[exCur]);
   exView='list';
   const list=exAll();
   const classes=c1AllClasses();
   let h='<div class="ex-top"><button class="c1-mbtn go" onclick="exNew()" '+(classes.length?'':'disabled')+'>＋ تحليل اختبارٍ جديد</button>'
+    +(typeof nlIsLab==='function'&&nlIsLab()?'<button class="c1-mbtn ek-open" onclick="ekOpen()"><i class="ki ki-sparkle" aria-hidden="true"></i> إعداد اختبار وفق وثيقة التقويم</button>':'')
     +'<span class="ex-top-hint">'+khG('أدخلي','أدخل')+' درجات كل سؤال، '+khG('واحصلي','واحصل')+' على تحليلٍ كامل: سهولة الأسئلة وتمييزها، ومستويات الطلاب، والدروس التي تحتاج إعادة تدريس، وخطة علاجية.</span></div>';
   if(!classes.length){h+='<div class="plan-empty-card">'+khG('أكملي','أكمل')+' إعداد شعبك وطلابها أولاً من قسم «يومي».</div>';el.innerHTML=h;return;}
   if(!list.length){h+='<div class="plan-empty-card">لا تحليلات بعد — '+khG('ابدئي','ابدأ')+' بأوّل اختبار.</div>';el.innerHTML=h;return;}
@@ -9501,6 +9517,168 @@ function exRender(){
     </button>`;}).join('')+'</div>';
   el.innerHTML=h;
 }
+// ══ إعداد الاختبارات وفق وثيقة التقويم (مهارة exam-khotta) — تجريبي لحساب المختبر ══
+// الدالّة exam-khotta تقرأ صفحات الدروس من الكتاب والدليل، وتكتب النموذجين (أ) و(ب) بالشبكة نفسها،
+// وتفحصهما بقواعد الوثيقة على الخادم. هنا: الاختيار، والعرض، والطباعة، وWord، والتحويل إلى «تحليل».
+const ek={kind:'short_test',number:1,grid:'مقترح ١',grade:null,sel:{},note:'',lessons:null,res:null,form:'أ',tab:'paper'};
+const EK_TOOLS={short_test:{name:'الاختبار القصير',lessons:[4,6],total:10},quiz:{name:'السؤال القصير',lessons:[1,2],total:5}};
+const EK_AO={AO1:'المعرفة',AO2:'التطبيق',AO3:'الاستدلال'},EK_LV={L:'منخفض',M:'متوسط',H:'مرتفع'};
+const EK_TYPES={mcq:'اختيار من متعدد',short:'إجابة قصيرة',fill:'إكمال',tf:'صواب وخطأ مع التفسير',match:'مزاوجة',order:'ترتيب',table:'إكمال جدول',explain:'تفسير',creative:'إبداعي',long:'إجابة طويلة'};
+function ekGrades(){
+  const gs=new Set();c1AllClasses().forEach(c=>{if((c.subjects||[]).includes('الرياضيات')&&+c.grade>=5&&+c.grade<=10)gs.add(+c.grade);});
+  return [...gs].sort((a,b)=>a-b);
+}
+function ekOpen(){if(!ek.grade)ek.grade=ekGrades()[0]||7;exView='ek';ek.lessons=null;exRender();ekLoadLessons();window.scrollTo(0,0);}
+async function ekLoadLessons(){
+  const rows=await c1Curriculum(profile.semester||'الفصل الأول','الرياضيات',ek.grade,'unit,lesson,sort,page');
+  ek.lessons=(rows||[]).map(r=>({unit:r.unit,lesson:r.lesson,page:r.page}));
+  if(exView==='ek')exRender();
+}
+function ekSet(k,v){ek[k]=v;if(k==='grade'){ek.sel={};ek.lessons=null;ekLoadLessons();}if(k==='kind'){ek.sel={};}exRender();}
+function ekToggle(key){ek.sel[key]=!ek.sel[key];if(!ek.sel[key])delete ek.sel[key];exRender();}
+function ekSelList(){return (ek.lessons||[]).filter(l=>ek.sel[l.unit+'|'+l.lesson]);}
+function ekRender(el){
+  const t=EK_TOOLS[ek.kind],n=ekSelList().length,ok=n>=t.lessons[0]&&n<=t.lessons[1];
+  const gs=ekGrades();
+  if(ek.res)return ekRenderResult(el);
+  let units={};(ek.lessons||[]).forEach(l=>{(units[l.unit]=units[l.unit]||[]).push(l);});
+  el.innerHTML=`<div class="ex-top"><button class="c1-mbtn no" onclick="exBack()">→ رجوع</button><b class="ex-step-t">إعداد اختبار وفق وثيقة التقويم</b><span class="ek-badge">تجريبي · حسابك فقط</span></div>
+  <div class="ex-box"><div class="ex-h">١ · الأداة</div>
+    <div class="ek-seg">${Object.entries(EK_TOOLS).map(([k,v])=>`<button class="${ek.kind===k?'on':''}" onclick="ekSet('kind','${k}')"><b>${v.name}</b><small>${egArNum(v.total)} درجات · ${egArNum(v.lessons[0])}–${egArNum(v.lessons[1])} ${v.lessons[1]>2?'دروس':'درس'}</small></button>`).join('')}</div>
+    <div class="ex-row" style="margin-top:10px">
+      <label>الرقم<select class="c1-select" onchange="ekSet('number',+this.value)"><option value="1" ${ek.number===1?'selected':''}>الأول</option><option value="2" ${ek.number===2?'selected':''}>الثاني</option></select></label>
+      <label>الصف<select class="c1-select" onchange="ekSet('grade',+this.value)">${(gs.length?gs:[7]).map(g=>`<option value="${g}" ${g===ek.grade?'selected':''}>${NOOR_GRADES[g]}</option>`).join('')}</select></label>
+      ${ek.kind==='short_test'&&ek.grade>=5?`<label>الشبكة<select class="c1-select" onchange="ekSet('grid',this.value)">${['مقترح ١','مقترح ٢'].map(g=>`<option ${ek.grid===g?'selected':''}>${g}</option>`).join('')}</select></label>`:''}
+    </div>
+    <p class="ek-note">المادة: الرياضيات · الوثيقة: تقويم تعلّم الطلبة في الرياضيات (٥–١٠)، سبتمبر ٢٠٢٤ · ${ek.kind==='short_test'?'٤ معرفة، ٤ تطبيق، ٢ استدلال · الصعوبة ٤ منخفض، ٤ متوسط، ٢ مرتفع':'٢–٣ مفردات · ١٠ دقائق'}</p>
+  </div>
+  <div class="ex-box"><div class="ex-h">٢ · الدروس <span class="ek-cnt ${ok?'ok':''}">${egArNum(n)} مختار · المطلوب ${egArNum(t.lessons[0])}–${egArNum(t.lessons[1])}</span></div>
+    ${ek.lessons==null?'<p class="ek-note">يجلب دروس المنهج…</p>':!ek.lessons.length?'<p class="ek-note">لا دروس لهذا الصف في المنهج.</p>':Object.entries(units).map(([u,ls])=>`<div class="ek-unit"><div class="ek-unit-t">${escHtml(u)}</div>${ls.map(l=>{const k=l.unit+'|'+l.lesson;return `<label class="ek-les ${ek.sel[k]?'on':''}"><input type="checkbox" ${ek.sel[k]?'checked':''} onchange="ekToggle('${escJs(k)}')"><span>${escHtml(l.lesson)}</span>${l.page?`<small>ص ${egArNum(l.page)}</small>`:''}</label>`;}).join('')}</div>`).join('')}
+  </div>
+  <div class="ex-box"><div class="ex-h">٣ · ملاحظة للمولّد (اختياري)</div>
+    <textarea class="ex-in" rows="2" placeholder="مثال: ركّز على المسائل الكلامية من البيئة العُمانية" oninput="ek.note=this.value">${escHtml(ek.note||'')}</textarea></div>
+  <div class="ex-top"><button class="c1-mbtn go" id="ek-go" ${ok?'':'disabled'} onclick="ekGenerate()"><i class="ki ki-sparkle" aria-hidden="true"></i> أعدّ النموذجين (أ) و(ب) ودليل التصحيح</button>
+    <span class="ex-top-hint">يقرأ صفحات الدروس من الكتاب ودليل المعلم، ويفحص الناتج بقواعد الوثيقة قبل التسليم (دقيقة إلى دقيقتين).</span></div>`;
+}
+async function ekGenerate(){
+  const b=document.getElementById('ek-go');if(b){b.disabled=true;b.innerHTML='يُعدّ الاختبار ويفحصه…';}
+  cyBusyLight('يقرأ صفحات الدروس ويكتب النموذجين ثم يفحصهما بالوثيقة…');
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const r=await fetch(SUPABASE_URL+'/functions/v1/exam-khotta',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(session&&session.access_token||''),apikey:SUPABASE_ANON_KEY},
+      body:JSON.stringify({kind:ek.kind,number:ek.number,grid:ek.grid,grade:ek.grade,semester:profile.semester||'الفصل الأول',note:ek.note||'',lessons:ekSelList().map(l=>({unit:l.unit,lesson:l.lesson}))})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.error)throw new Error(j.message||'تعذّر إعداد الاختبار');
+    ek.res=j;ek.form='أ';ek.tab='paper';
+    const list=(profile.ek_tests||[]).slice(0,9);list.unshift({...j,saved_at:new Date().toISOString()});profile.ek_tests=list;
+    cy1Save({ek_tests:list});
+    toast(j.check&&j.check.ok?'جاهز — مطابق لمواصفات الوثيقة':'جاهز مع ملاحظات من الفحص',j.check&&j.check.ok?'ok':true);
+  }catch(e){toast(e.message,true);}
+  finally{cyBusyLightDone();exRender();}
+}
+// ── كتابة الرموز (صيغة المهارة: {أ/ب}، ^{ }، _{ }، √{ }، √[ن]{ }، ‾{ }، **غامق**، ___) ──
+function ekDigits(s){return String(s).replace(/(^|[^A-Za-z])([0-9]+)(?![A-Za-z])/g,(m,p,d)=>p+d.replace(/[0-9]/g,x=>'٠١٢٣٤٥٦٧٨٩'[+x]));}
+function ekMath(src,word){
+  let s=escHtml(String(src??''));
+  s=s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/_{3,}/g,'<span class="ekb">&nbsp;</span>');
+  for(let i=0;i<8;i++){
+    const t=s;
+    s=s.replace(/\^\{([^{}]*)\}/g,'<sup>$1</sup>').replace(/_\{([^{}]*)\}/g,'<sub>$1</sub>')
+      .replace(/√\[([^\]]*)\]\{([^{}]*)\}/g,word?'<sup>$1</sup>√($2)':'<span class="eksq"><sup class="eksq-i">$1</sup><span class="eksq-r">√</span><span class="eksq-b">$2</span></span>')
+      .replace(/√\{([^{}]*)\}/g,word?'√($1)':'<span class="eksq"><span class="eksq-r">√</span><span class="eksq-b">$1</span></span>')
+      .replace(/‾\{([^{}]*)\}/g,'<span style="text-decoration:overline">$1</span>')
+      .replace(/\{([^{}\/]*?)\s*([^{}\/\s]+)\/([^{}\/]+)\}/g,(m,a,n,d)=>{const whole=a.trim();return (whole?whole+' ':'')+(word?`<sup>${n}</sup>⁄<sub>${d}</sub>`:`<span class="ekf"><span>${n}</span><span>${d}</span></span>`);});
+    if(s===t)break;
+  }
+  return ekDigits(s.replace(/\\n|\n/g,'<br>')).replace(/ - /g,' − ').replace(/%/g,'٪');
+}
+function ekYear(){const d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;const a=m>=8?y:y-1;return egArNum(a)+'/'+egArNum(a+1);}
+function ekItemHtml(it,i,word){
+  const M=x=>ekMath(x,word),L=n=>Array.from({length:Math.max(1,n||1)},()=>'<div class="ekl"></div>').join('');
+  let q=`<div class="ekq-s">${M(it.stem)}</div>`;
+  if(it.type==='mcq')q+=`<div class="ekq-c">${(it.choices||[]).map(c=>`<span>${M(c)}</span>`).join('')}</div>`;
+  if(it.type==='tf')q+=`<div class="ekq-s">(صواب / خطأ) &nbsp; التفسير:</div>${L(it.lines||2)}`;
+  if(it.type==='match')q+=`<table class="ekt"><tr><th>${escHtml(it.left_title||'')}</th><th>${escHtml(it.right_title||'')}</th></tr>${Array.from({length:Math.max((it.left||[]).length,(it.right||[]).length)},(_,k)=>`<tr><td>${it.left&&it.left[k]!=null?egArNum(k+1)+') '+M(it.left[k]):''}</td><td>${it.right&&it.right[k]!=null?'( &nbsp; ) '+M(it.right[k]):''}</td></tr>`).join('')}</table>`;
+  if(it.type==='order')q+=`<div class="ekq-c">${(it.items||[]).map(x=>`<span>${M(x)}</span>`).join('')}</div>${L(1)}`;
+  if(it.type==='table'&&it.grid&&Array.isArray(it.grid.rows))q+=`<table class="ekt">${it.grid.rows.map((r,ri)=>`<tr>${r.map(c=>ri===0&&it.grid.header?`<th>${M(c)}</th>`:`<td>${c===''?'&nbsp;':M(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  if(Array.isArray(it.parts)&&it.parts.length)q+=it.parts.map(p=>`<div class="ekq-p"><b>(${escHtml(p.label||'')})</b> ${M(p.stem)}</div>${L(p.lines||1)}`).join('');
+  else if(['short','fill','explain','creative','long'].includes(it.type))q+=L(it.lines||(it.type==='explain'||it.type==='creative'?2:1));
+  return `<tr><td class="ekn">${egArNum(i+1)}</td><td>${q}</td><td class="ekm">[${egArNum(it.marks)}]</td></tr>`;
+}
+const EK_STY_O='<'+'style>',EK_STY_C='</'+'style>';
+const EK_CSS=`@page{size:A4;margin:12mm}body{font-family:Arial,'Noto Sans Arabic',sans-serif;direction:rtl;color:#000;font-size:14pt;margin:0}
+.ekp{border:3px double #000;padding:10px 14px;min-height:260mm;box-sizing:border-box;page-break-after:always}.ekp:last-child{page-break-after:auto}
+.ekh{display:flex;justify-content:space-between;align-items:flex-start;font-size:12pt;font-weight:700;line-height:1.6}.ekh .sc{border:1.5px solid #000;width:70px;text-align:center}.ekh .sc div{height:34px;border-bottom:1.5px solid #000}
+.ekti{text-align:center;font-size:16pt;font-weight:700;text-decoration:underline;margin:8px 0 4px;line-height:1.7}.ekmeta{display:flex;justify-content:space-between;font-size:13pt;margin:4px 0}
+.ekins{font-weight:700;margin:6px 0}.ekmain{width:100%;border-collapse:collapse}.ekmain>tbody>tr>td,.ekmain>thead>tr>th{border:1.5px solid #000;padding:6px 8px;vertical-align:top}
+.ekmain th{background:#eee}.ekmain tr,.ekk tr{page-break-inside:avoid;break-inside:avoid}.ekmain thead{display:table-header-group}.ekn{width:42px;text-align:center;font-weight:700}.ekm{width:52px;text-align:center;font-weight:700}
+.ekq-s{line-height:2}.ekq-c{display:flex;flex-wrap:wrap;gap:8px 34px;margin:6px 4px;line-height:2}.ekq-p{margin-top:6px;line-height:2}
+.ekl{border-bottom:1.5px dotted #555;height:30px}.ekt{border-collapse:collapse;margin:6px 0}.ekt td,.ekt th{border:1px solid #000;padding:4px 14px;min-width:44px;text-align:center}
+.ekf{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.15;margin:0 2px}.ekf span:first-child{border-bottom:1.5px solid #000;padding:0 3px}
+.eksq{display:inline-flex;align-items:flex-start;white-space:nowrap}.eksq-r{display:inline-block;transform:scaleX(-1)}.eksq-b{border-top:1.5px solid #000;padding:0 2px}.eksq-i{font-size:.6em}
+.ekb{display:inline-block;min-width:70px;border-bottom:1.5px solid #000}.ekclose{border:1.5px solid #000;text-align:center;font-weight:700;padding:6px;margin-top:12px}
+@page land{size:A4 landscape;margin:10mm}.ekkey{page:land;min-height:0}.ekk{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}.ekk th,.ekk td{border:1px solid #000;padding:4px 6px;vertical-align:top}.ekk th{background:#eee}
+.ekok{color:#0a7a3d;font-weight:700}.ekbad{color:#c0262d;font-weight:700}h3{margin:10px 0 6px;font-size:13pt}`;
+function ekPaperHtml(r,form,word){
+  const items=r.forms[form]||[];const sch=(typeof achProfile==='function'&&achProfile().school)||'';
+  const dir=(profile.directorate||'المديرية العامة للتعليم بمحافظة ……');
+  return `<div class="ekp"><div class="ekh"><div>سلطنة عُمان<br>وزارة التعليم<br>${escHtml(dir)}<br>${/^\s*مدرسة/.test(sch)?escHtml(sch):'مدرسة '+escHtml(sch||'……')}</div><div></div><div class="sc"><div></div>${egArNum(r.tool.total)}</div></div>
+  <div class="ekti">${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} للصف ${NOOR_GRADES[r.grade]} في مادة الرياضيات<br>${escHtml(r.semester==='الفصل الثاني'?'للفصل الدراسي الثاني':'للفصل الدراسي الأول')} للعام الدراسي ${ekYear()}م</div>
+  <div class="ekmeta"><span>النموذج (${form})</span><span>الزمن: ${escHtml(r.tool.duration||'')}</span></div>
+  <div class="ekmeta"><span>الاسم: ……………………………………</span><span>الصف: ${egArNum(r.grade)}/ ……</span></div>
+  <div class="ekins">أجب عن جميع الأسئلة التالية${r.kind==='short_test'?(r.calculator?' (يُسمح باستخدام الآلة الحاسبة)':' (لا يُسمح باستخدام الآلة الحاسبة)'):''}</div>
+  <table class="ekmain"><thead><tr><th>المفردة</th><th>السؤال</th><th>الدرجة</th></tr></thead><tbody>${items.map((it,i)=>ekItemHtml(it,i,word)).join('')}</tbody></table>
+  <div class="ekclose">انتهت الأسئلة مع تمنياتي للجميع بالنجاح والتفوّق</div></div>`;
+}
+function ekKeyHtml(r,word){
+  const M=x=>ekMath(x,word);
+  const sumBy=(items,f)=>items.reduce((o,it)=>{o[it[f]]=(o[it[f]]||0)+(it.marks||0);return o;},{});
+  return Object.keys(r.forms).map(form=>{
+    const items=r.forms[form];
+    const cmp=(got,need,names)=>need?Object.entries(need).map(([k,v])=>`<td class="${(got[k]||0)===v?'ekok':'ekbad'}">${escHtml(names[k]||k)}: ${egArNum(got[k]||0)} / ${egArNum(v)}</td>`).join(''):'';
+    const ans=it=>{if(it.type==='mcq'&&Number.isInteger(it.answer))return M((it.choices||[])[it.answer]);let a=it.answer!=null?M(it.answer):'';if(Array.isArray(it.steps)&&it.steps.length)a+=(a?'<br>':'')+it.steps.map(M).join('<br>');return a;};
+    return `<div class="ekp ekkey"><h3>دليل التصحيح — ${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} — الصف ${NOOR_GRADES[r.grade]} — النموذج (${form})</h3>
+    <table class="ekk"><tr><th>المفردة</th><th>النوع</th>${r.kind==='short_test'?'<th>هدف التقويم</th><th>الصعوبة</th>':''}<th>الدرجة</th><th>الدرس</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${EK_TYPES[it.type]||it.type}</td>${r.kind==='short_test'?`<td>${it.ao} ${EK_AO[it.ao]||''}</td><td>${EK_LV[it.level]||it.level}</td>`:''}<td>${egArNum(it.marks)}</td><td>${escHtml(it.lesson)}</td></tr>`).join('')}</table>
+    ${r.kind==='short_test'?`<table class="ekk"><tr>${cmp(sumBy(items,'ao'),r.tool.ao,EK_AO)}</tr><tr>${cmp(sumBy(items,'level'),r.tool.level,EK_LV)}</tr></table>`:''}
+    <table class="ekk"><tr><th>رقم المفردة</th><th>عنصر التقويم</th><th>الهدف التعليمي</th><th>رقم الصفحة</th><th>الإجابة</th><th>الدرجة</th><th>الإرشادات</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${r.kind==='short_test'?(EK_AO[it.ao]||''):'—'}</td><td>${escHtml(it.objective||'')}</td><td>${M(it.page||'')}</td><td>${ans(it)}</td><td>${egArNum(it.marks)}</td><td>${M(it.guidance||'')}</td></tr>`).join('')}</table></div>`;
+  }).join('');
+}
+function ekRenderResult(el){
+  const r=ek.res,ok=r.check&&r.check.ok;
+  const body=ek.tab==='key'?ekKeyHtml(r):ekPaperHtml(r,ek.form);
+  el.innerHTML=`<div class="ex-top"><button class="c1-mbtn no" onclick="ek.res=null;exRender()">→ اختبار جديد</button><b class="ex-step-t">${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} · الصف ${NOOR_GRADES[r.grade]}</b>
+    <span class="ek-chk ${ok?'ok':'bad'}">${ok?'✓ مطابق لمواصفات الوثيقة':'⚠ ملاحظات من الفحص'}</span></div>
+  ${!ok?`<div class="ex-box ek-warn"><b>الفحص الآلي وجد:</b><ul>${(r.check.errors||[]).map(e=>`<li>${escHtml(e)}</li>`).join('')}</ul>راجعها قبل الطباعة، أو أعد الإعداد.</div>`:''}
+  <div class="ek-tabs">${['أ','ب'].map(f=>`<button class="${ek.tab==='paper'&&ek.form===f?'on':''}" onclick="ek.tab='paper';ek.form='${f}';exRender()">النموذج (${f})</button>`).join('')}<button class="${ek.tab==='key'?'on':''}" onclick="ek.tab='key';exRender()">دليل التصحيح والشبكة</button></div>
+  <div class="ek-actions"><button class="c1-mbtn go" onclick="ekPrint()"><i class="ki ki-download" aria-hidden="true"></i> طباعة / PDF</button><button class="c1-mbtn no" onclick="ekWord()">تنزيل Word</button><button class="c1-mbtn no" onclick="ekToAnalysis()"><i class="ki ki-chart" aria-hidden="true"></i> تحليل نتائج هذا الاختبار</button></div>
+  <div class="ek-sheet">${EK_STY_O}${EK_CSS.replace(/body\{[^}]*\}/,'').replace(/@page\{[^}]*\}/,'')}${EK_STY_C}${body}</div>
+  <p class="ek-note">الدروس: ${r.lessons.map(l=>escHtml(l.code+' '+l.title)).join('، ')} · قرأ ${egArNum(r.pages_used||0)} صفحة من الكتاب والدليل · يُراجَع من المعلّم الأول أو المشرف قبل التطبيق.</p>`;
+}
+function ekDocHtml(word){
+  const r=ek.res;
+  const all=['أ','ب'].map(f=>ekPaperHtml(r,f,word)).join('')+ekKeyHtml(r,word);
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(r.tool.name)}</title>${EK_STY_O}${EK_CSS}${EK_STY_C}</head><body>${all}</body></html>`;
+}
+function ekPrint(){
+  const w=window.open('','_blank');if(!w){toast('اسمح بالنوافذ المنبثقة للطباعة',true);return;}
+  w.document.open();w.document.write(ekDocHtml(false));w.document.close();setTimeout(()=>{try{w.focus();w.print();}catch(e){}},600);
+}
+function ekWord(){
+  const r=ek.res;
+  const blob=new Blob(['﻿'+ekDocHtml(true)],{type:'application/msword'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${r.tool.name} ${r.number===2?'الثاني':'الأول'} - الصف ${r.grade}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+// التحويل إلى «تحليل اختبار»: أسئلة النموذج (أ) بدرجاتها ودروسها، لإدخال درجات الطلاب لاحقاً
+function ekToAnalysis(){
+  const r=ek.res;const c=c1AllClasses().find(x=>+x.grade===+r.grade&&(x.subjects||[]).includes('الرياضيات'))||c1AllClasses()[0];
+  if(!c){toast('أكمل إعداد شعبك أولاً',true);return;}
+  const les=exLessonsOf(c.grade,'الرياضيات');
+  const find=code=>{const l=r.lessons.find(x=>x.code===code);if(!l)return null;return les.find(x=>x.name.includes(l.title)||l.title.includes(x.name))||null;};
+  exDraft={id:'ex'+Date.now().toString(36),title:`${r.tool.name} ${r.number===2?'الثاني':'الأول'}`,date:absToday(),classId:c.id,grade:c.grade,subject:'الرياضيات',
+    questions:r.forms['أ'].map(it=>{const m=find(it.lesson);return{max:it.marks,lessonId:m?m.id:'',lesson:m?m.name:''};}),marks:{},absent:[],created_at:new Date().toISOString()};
+  exView='edit';exRender();window.scrollTo(0,0);
+}
+
 function exNew(){
   const c=c1AllClasses()[0];
   exDraft={id:'ex'+Date.now().toString(36),title:'',date:absToday(),classId:c.id,grade:c.grade,subject:(c.subjects||[])[0]||'',
