@@ -36,7 +36,7 @@ const MARKS_RULES = (kind: string) => [
   "٤) مفردة الدرجتين أو الثلاث: اكتب خطوات حلّها في steps (خطوة لكل درجة على الأقل) أو قسّمها أجزاءً في parts (جزء لكل درجة). وإن كانت أجزاء فلكل جزء درجة.",
   "٥) لا تضع درجة واحدة على سؤال من أجزاء (أ، ب)، ولا درجات كثيرة على سؤال من خطوة واحدة.",
   kind === "quiz"
-    ? "٦) السؤال القصير (٥ درجات): أحد ثلاثة توزيعات فقط — ثلاث مفردات ١+٢+٢ أو ١+١+٣، أو مفردتان ٢+٣. مفردة اختيار من متعدد واحدة على الأكثر وبدرجة ١. مفردة الثلاث درجات تكون بأجزاء (أ، ب، ج) لكل جزء درجة أو بثلاث خطوات مستقلّة."
+    ? "٦) السؤال القصير (٥ درجات) ثلاث مفردات بالترتيب: (١) اختيار من متعدد بالتحويط يبدأ بـ«حوّط» — معرفة، منخفض، درجة واحدة؛ (٢) مفردة تطبيق متوسطة بدرجتين (خطوتان)؛ (٣) مفردة استدلال مرتفعة بدرجتين (تبرير، اكتشف الخطأ وصحّحه، أوجد عدداً يحقّق شرطين…) — من نوعٍ غير نوع المفردة الثانية."
     : "٦) الاختبار القصير: التزم بدرجات الشبكة حرفياً؛ ومفردة الدرجتين فيها خطوتان مستقلّتان على الأقل.",
 ].join("\n");
 
@@ -73,8 +73,11 @@ Deno.serve(async (req) => {
     const wanted: { unit: string; lesson: string }[] = (Array.isArray(b.lessons) ? b.lessons : []).map((x: Any) => ({ unit: String(x.unit || ""), lesson: String(x.lesson || "") }));
     if (wanted.length < tool.lessons[0] || wanted.length > tool.lessons[1])
       return json({ error: "bad_lessons", message: `${tool.name}: حدّد ${ar(tool.lessons[0])}–${ar(tool.lessons[1])} دروس.` }, 400);
-    const gridName = kind === "short_test" ? String(b.grid || "مقترح ١") : "";
-    const gridRows: Any[] | null = kind === "short_test" ? ((tool.grids[band(grade, tool.grids)] || {})[gridName] || null) : null;
+    // السؤال القصير: الوثيقة لا تحدّد أنواعه ولا توزيعه، فنعتمد «توصية المهارة» (مثل أمثلتها math7-1_quiz-1):
+    // مفردة معرفة (اختيار من متعدد بالتحويط)، ومفردة تطبيق، ومفردة استدلال — ١+٢+٢.
+    const QUIZ_GRID: Any[] = [["mcq", "AO1", "L", 1], ["other", "AO2", "M", 2], ["other", "AO3", "H", 2]];
+    const gridName = kind === "short_test" ? String(b.grid || "مقترح ١") : "توصية المهارة للسؤال القصير";
+    const gridRows: Any[] | null = kind === "short_test" ? ((tool.grids[band(grade, tool.grids)] || {})[gridName] || null) : QUIZ_GRID;
 
     // ── الدروس وصفحاتها من curriculum + book_sources + teacher_guides ──
     const { data: cur } = await admin.from("curriculum").select("id,unit,lesson,sort,page,book_no")
@@ -156,13 +159,13 @@ Deno.serve(async (req) => {
     const bg = kind === "short_test" ? tool.by_grade[band(grade, tool.by_grade)] : null;
     const calc = kind === "short_test" ? (tool.calculator[band(grade, tool.calculator)] ? "يُسمح بالآلة الحاسبة." : "لا آلة حاسبة: أعداد تُحسب ذهنياً أو كتابياً بسرعة.") : "";
     const gridText = gridRows ? gridRows.map((r, i) => `${i + 1}) ${r[0] === "other" ? "أي نوع من الأنواع الأخرى (" + OTHER.join("/") + ")" : r[0]}، ${r[1]}، ${r[2]}، ${r[3]} درجة`).join("\n") : "";
-    const itemShape = `{"type":"mcq|short|fill|tf|match|order|table|explain|creative|long",${kind === "short_test" ? '"ao":"AO1|AO2|AO3","level":"L|M|H",' : ""}"marks":1,"lesson":"رمز الدرس من القائمة","page":"ص ٢٤–٢٥","objective":"الهدف التعليمي برمزه من الدليل إن وُجد","stem":"نص السؤال","choices":["للـmcq أربعة بدائل"],"answer":"الإجابة (للـmcq رقم البديل الصحيح ٠–٣)","steps":["خطوات الحل إن وُجدت"],"guidance":"توزيع الدرجة وما يُقبل","lines":1,"parts":[{"label":"أ","stem":"…","lines":1}],"explain":true,"left":[],"right":[],"pairs":[],"items":[],"grid":{"rows":[["",""]],"header":true}}`;
+    const itemShape = `{"type":"mcq|short|fill|tf|match|order|table|explain|creative|long","ao":"AO1|AO2|AO3","level":"L|M|H","marks":1,"lesson":"رمز الدرس من القائمة","page":"ص ٢٤–٢٥","objective":"الهدف التعليمي برمزه من الدليل إن وُجد","stem":"نص السؤال","choices":["للـmcq أربعة بدائل"],"answer":"الإجابة (للـmcq رقم البديل الصحيح ٠–٣)","steps":["خطوات الحل إن وُجدت"],"guidance":"توزيع الدرجة وما يُقبل","lines":1,"parts":[{"label":"أ","stem":"…","lines":1}],"explain":true,"left":[],"right":[],"pairs":[],"items":[],"grid":{"rows":[["",""]],"header":true}}`;
     const system = [
       "أنت خبير تقويم في الرياضيات بسلطنة عُمان، تُعدّ أدوات التقويم مطابقةً حرفياً لوثيقة تقويم تعلّم الطلبة المعتمدة.",
       `الوثيقة: ${SPEC_MATH.document.title} (${SPEC_MATH.document.edition}).`,
       `الأداة: ${tool.name} — الدرجة ${tool.total}، المفردات ${tool.items[0]}–${tool.items[1]}، الدروس ${tool.lessons[0]}–${tool.lessons[1]}، الزمن ${tool.duration_text}.`,
       "قواعد الوثيقة لهذه الأداة:\n- " + tool.rules.join("\n- "),
-      kind === "short_test" ? `أهداف التقويم: ${Object.entries(SPEC_MATH.ao).map(([k, v]: Any) => `${k} ${v.name}`).join("، ")}. الصعوبة: ${Object.entries(SPEC_MATH.levels).map(([k, v]: Any) => `${k} ${v.name}: ${v.desc}`).join(" | ")}` : "",
+      `أهداف التقويم: ${Object.entries(SPEC_MATH.ao).map(([k, v]: Any) => `${k} ${v.name}`).join("، ")}. الصعوبة: ${Object.entries(SPEC_MATH.levels).map(([k, v]: Any) => `${k} ${v.name}: ${v.desc}`).join(" | ")}`,
       bg ? `للصف ${grade}: اختيار من متعدد ${bg.mcq.count} مفردتان بدرجة ${bg.mcq.each}؛ ${bg.long ? `إجابة طويلة واحدة بـ${bg.long.marks} درجات (أجزاء أ، ب، ج لكل جزء درجة)؛ ` : ""}مفردات أخرى ${bg.other.count[0]}–${bg.other.count[1]} مجموعها ${bg.other.marks} درجات، كلٌّ بـ${bg.other.each[0]}–${bg.other.each[1]}. ${calc}` : "",
       gridRows ? `الشبكة المعتمدة (${gridName}) — التزم بها بالترتيب حرفياً (النوع، الهدف، الصعوبة، الدرجة) في النموذجين:\n${gridText}` : "",
       MARKS_RULES(kind),
