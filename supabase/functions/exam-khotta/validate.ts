@@ -113,6 +113,8 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
     const b = B[i];
     if (cat(a.type) !== cat(b?.type) || a.marks !== b?.marks || a.lesson !== b?.lesson || (a.ao !== b?.ao || a.level !== b?.level))
       E.push(`المفردة ${i + 1}: النموذج (ب) يجب أن يطابق (أ) في النوع والدرجة والدرس والهدف والصعوبة.`);
+    if (String(a.objective || "").trim() !== String(b?.objective || "").trim())
+      E.push(`المفردة ${i + 1}: النموذج (ب) يقيس الهدف نفسه في (أ) — انسخ نصّ objective حرفياً، وصُغ سؤالاً من النمط نفسه (لا «كوّن عدداً» مقابل «هل فلان على صواب؟») بصعوبة مكافئة.`);
     if (a.type === "mcq" && b?.type === "mcq" && JSON.stringify(a.choices?.[a.answer]) === JSON.stringify(b.choices?.[b.answer]))
       E.push(`المفردة ${i + 1}: الإجابة الصحيحة نفسها في النموذجين؛ غيّر الأعداد في (ب).`);
   });
