@@ -15,6 +15,7 @@ import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { SPEC_MATH, WRITING, MATH_RULES } from "./spec.ts";
 import { validate, SUBJECT, OTHER, ar, band } from "./validate.ts";
 import { isServiceRoleRequest } from "../_shared/adminGuard.ts";
+import { readCache, bookKey, guideKey, bookExtract, guideContextFor, EXTRACT_VERSION } from "../_shared/lessonExtract.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -82,11 +83,11 @@ Deno.serve(async (req) => {
     const sel = wanted.map((w) => rows.find((r) => r.unit === w.unit && r.lesson === w.lesson)).filter(Boolean);
     if (sel.length !== wanted.length) return json({ error: "lesson_not_found", message: "تعذّر العثور على بعض الدروس في المنهج." }, 400);
     const { data: bs } = await admin.from("book_sources").select("*").eq("grade", String(grade)).eq("subject", SUBJECT).eq("semester", semester).eq("book_no", 1).maybeSingle();
-    const { data: tg } = await admin.from("teacher_guides").select("base_path,page_count,offset_pages,toc").eq("grade", grade).eq("subject", SUBJECT).eq("semester", semester).maybeSingle();
+    const { data: tg } = await admin.from("teacher_guides").select("id,base_path,page_count,offset_pages,toc").eq("grade", grade).eq("subject", SUBJECT).eq("semester", semester).maybeSingle();
     const pub = (base: string, sheet: number) => admin.storage.from("library-files").getPublicUrl(`${base}/p${sheet}.jpg`).data.publicUrl;
     const codeOf = (r: Any) => (String(r.lesson).match(/^\s*([0-9٠-٩]+\s*[-–]\s*[0-9٠-٩]+)/) || [])[1]?.replace(/\s/g, "").replace(/[–]/g, "-") || ar(r.sort);
     const lessonsOut: Any[] = [];
-    const images: { url: string; tag: string }[] = [];
+    const bookImgs: Record<string, { url: string; tag: string }[]> = {}, guideImgs: Record<string, { url: string; tag: string }[]> = {};
     const perBook = Math.max(2, Math.floor(18 / sel.length)), perGuide = Math.max(1, Math.floor(8 / sel.length));
     for (const r of sel) {
       const i = rows.findIndex((x) => x.id === r.id);
@@ -97,8 +98,9 @@ Deno.serve(async (req) => {
       lessonsOut.push({ code, title, unit: r.unit, pages: start ? (end > start ? `${ar(start)}–${ar(end)}` : ar(start)) : "" });
       if (bs?.base_path && start) {
         const off = bs.offset_pages || 1;
-        for (let p = start, k = 0; p <= end && k < perBook; p++, k++) {
-          const sh = p + off - 1; if (sh >= 1 && sh <= (bs.page_count || 9999)) images.push({ url: pub(bs.base_path, sh), tag: `كتاب الطالب — الدرس ${code} — ص ${ar(p)}` });
+        const L = bookImgs[r.id] = [] as { url: string; tag: string }[];
+        for (let p = start; p <= end && L.length < 20; p++) {
+          const sh = p + off - 1; if (sh >= 1 && sh <= (bs.page_count || 9999)) L.push({ url: pub(bs.base_path, sh), tag: `كتاب الطالب — الدرس ${code} — ص ${ar(p)}` });
         }
       }
       const toc: Any[] = Array.isArray(tg?.toc) ? tg!.toc : [];
@@ -107,12 +109,13 @@ Deno.serve(async (req) => {
         const sorted = toc.filter((x) => x.guide_page).map((x) => x.guide_page).sort((a: number, b: number) => a - b);
         const gs = e.guide_page; const ge = (sorted.find((p: number) => p > gs) || gs + 3) - 1;
         const off = tg.offset_pages || 1;
-        for (let p = gs, k = 0; p <= ge && k < perGuide; p++, k++) {
-          const sh = p + off - 1; if (sh >= 1 && sh <= (tg.page_count || 9999)) images.push({ url: pub(tg.base_path, sh), tag: `دليل المعلم — الدرس ${code} — ص ${ar(p)}` });
+        const L = guideImgs[r.id] = [] as { url: string; tag: string }[];
+        for (let p = gs; p <= ge && L.length < perGuide; p++) {
+          const sh = p + off - 1; if (sh >= 1 && sh <= (tg.page_count || 9999)) L.push({ url: pub(tg.base_path, sh), tag: `دليل المعلم — الدرس ${code} — ص ${ar(p)}` });
         }
       }
     }
-    if (!images.length) return json({ error: "no_pages", message: "لا توجد صفحات كتابٍ مرفوعة لهذه الدروس في مكتبة المنصّة." }, 400);
+    if (!sel.some((r) => (bookImgs[r.id] || []).length)) return json({ error: "no_pages", message: "لا توجد صفحات كتابٍ مرفوعة لهذه الدروس في مكتبة المنصّة." }, 400);
     const codes = lessonsOut.map((l) => l.code);
 
     // ── الطلب ──
@@ -122,6 +125,31 @@ Deno.serve(async (req) => {
     const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
     if (!quota.ok) return json({ error: "quota_exceeded", message: "نفدت حصّة الذكاء الاصطناعي." }, 429);
     const model = st.model_exam_khotta || "google/gemini-2.5-pro";
+
+    // ── محتوى الدروس نصّاً (اقتراح الأستاذ عيسى): ما قُرئ عند التحضير مخزَّنٌ للمنصّة كلها —
+    // مستخلص كتاب الطالب (book-extracts/) ومستخلص دليل المعلم (guide-summaries/). الدرس الذي
+    // لم يُحضَّر بعد يُقرأ الآن بنموذج الرؤية الاقتصادي ويُخزَّن، ولا نرجع إلى الصور إلا عند الفشل.
+    const T0 = Date.now();
+    const within = <T,>(pr: Promise<T>, ms: number, dflt: T) => Promise.race([pr.catch(() => dflt), new Promise<T>((res) => setTimeout(() => res(dflt), ms))]);
+    const texts = await Promise.all(sel.map(async (r) => {
+      const cur = { ...r, semester };
+      let bx: Any = await readCache(admin, bookKey(r.id));
+      if (!(bx && bx.v === EXTRACT_VERSION && bx.exam)) {
+        bx = await within(bookExtract(admin, st, apiKey, cur, (bookImgs[r.id] || []).map((x) => x.url), { grade, subject: SUBJECT, userId: user.id }), 70_000, null);
+      }
+      let gx: Any = tg?.id ? await readCache(admin, guideKey(tg.id, r.id)) : null;
+      if (!gx && tg?.id && (guideImgs[r.id] || []).length) {
+        const t = await within(guideContextFor(admin, st, apiKey, String(grade), SUBJECT, r.unit, r.lesson, semester), 60_000, "");
+        try { gx = t ? JSON.parse(t) : null; } catch { gx = null; }
+      }
+      return { bx: bx && bx.exam ? bx : null, gx };
+    }));
+    const images: { url: string; tag: string }[] = [];
+    sel.forEach((r, i) => {
+      if (!texts[i].bx) images.push(...(bookImgs[r.id] || []).slice(0, perBook));
+      if (!texts[i].gx) images.push(...(guideImgs[r.id] || []));
+    });
+    const textLessons = texts.filter((t) => t.bx).length;
 
     const bg = kind === "short_test" ? tool.by_grade[band(grade, tool.by_grade)] : null;
     const calc = kind === "short_test" ? (tool.calculator[band(grade, tool.calculator)] ? "يُسمح بالآلة الحاسبة." : "لا آلة حاسبة: أعداد تُحسب ذهنياً أو كتابياً بسرعة.") : "";
@@ -138,7 +166,8 @@ Deno.serve(async (req) => {
       MARKS_RULES(kind),
       "قواعد كتابة المفردات (إلزامية):\n" + WRITING,
       "كتابة الرموز في الرياضيات:\n" + MATH_RULES,
-      "الصور المرفقة: صفحات الدروس من كتاب الطالب، وصفحات دليل المعلم (الأهداف برموزها والأخطاء الشائعة). اقرأها بدقّة وابنِ المفردات منها وفي حدود أهدافها، ولا تنسخ تمريناً حرفياً.",
+      "المرفق لكل درس: مستخلص نصّي أمين لصفحاته من كتاب الطالب (الأهداف، القواعد، الأمثلة المحلولة، التمارين بنصّها، الأشكال)، ومستخلص دليل المعلم (الأهداف برموزها، الأخطاء الشائعة، التمارين)؛ وقد تُرفق صور الصفحات لدرسٍ لم يُستخلص بعد. ابنِ المفردات منها وفي حدود أهدافها، ولا تنسخ تمريناً أو مثالاً حرفياً — غيّر الأعداد والسياق.",
+      "رمز الهدف في objective: انقله من objectives في المستخلص (الدليل ثم الكتاب) كما هو؛ وإن لم يوجد رمز فاكتب نصّ الهدف بلا رمز. لا تخترع رمزاً أبداً.",
       "حلّ كل مفردة بنفسك قبل كتابتها وتأكّد: إجابة واحدة صحيحة، وكل بديل خاطئ خاطئٌ فعلاً، والإرشادات أعداد صحيحة.",
       "الإجابة الطويلة: الأجزاء في parts، وإجابة كل جزء سطراً في steps («(أ) …»، «(ب) …»). النموذج (ب): المفردة رقم ن فيه من الدرس نفسه والنوع نفسه والهدف والصعوبة والدرجة نفسها للمفردة ن في (أ)، بأعداد وسياق مختلفين.",
       `أعد JSON فقط بالشكل: {"title":"…","forms":{"أ":[مفردة…],"ب":[مفردة…]}} والمفردة: ${itemShape} — احذف الحقول غير اللازمة لنوعها.`,
@@ -150,6 +179,11 @@ Deno.serve(async (req) => {
       String(b.note || "").trim() ? `ملاحظة المعلّم: ${String(b.note).slice(0, 500)}` : "",
     ].filter(Boolean).join("\n");
     const content: Any[] = [{ type: "text", text: userText }];
+    sel.forEach((r, i) => {
+      const l = lessonsOut[i], t = texts[i];
+      if (t.bx) content.push({ type: "text", text: `══ الدرس ${l.code} ${l.title} — مستخلص كتاب الطالب (ص ${l.pages}):\n${JSON.stringify(t.bx.exam).slice(0, 14000)}` });
+      if (t.gx) content.push({ type: "text", text: `══ الدرس ${l.code} — مستخلص دليل المعلم:\n${JSON.stringify(t.gx).slice(0, 8000)}` });
+    });
     for (const im of images) { content.push({ type: "text", text: im.tag }); content.push({ type: "image_url", image_url: { url: im.url } }); }
 
     const call = async (messages: Any[]) => {
@@ -166,6 +200,7 @@ Deno.serve(async (req) => {
     const messages: Any[] = [{ role: "system", content: system }, { role: "user", content }];
     let ex: Any = null, errs: string[] = [], raw = "";
     for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0 && Date.now() - T0 > 85_000) break; // لا وقت لإعادةٍ ضمن حدّ الدالة (~١٥٠ث): نسلّم مع الملاحظات
       try { raw = await call(messages); } catch (e) {
         if (attempt < 1) continue;
         await refundQuota(admin, user.id, user.email || "", "text");
@@ -186,7 +221,7 @@ Deno.serve(async (req) => {
       grid: gridName || null, lessons: lessonsOut, forms: { "أ": ex.forms["أ"], "ب": ex.forms["ب"] },
       tool: { name: tool.name, total: tool.total, duration: tool.duration_short || tool.duration_text, rules: tool.rules, answer_key_columns: tool.answer_key_columns || null, ao: tool.ao, level: tool.level },
       calculator: kind === "short_test" ? !!tool.calculator[band(grade, tool.calculator)] : false,
-      document: SPEC_MATH.document, model, pages_used: images.length,
+      document: SPEC_MATH.document, model, pages_used: images.length, text_lessons: textLessons,
       check: { ok: !errs.length, errors: errs },
     };
     return json(out);

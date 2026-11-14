@@ -10,83 +10,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
+import { guideContextFor } from "../_shared/lessonExtract.ts";
 
 /* ══ دليل المعلم ══
    صفحات الدرس نفسه من دليل المعلم الرسمي (المرفوع والمفهرس من لوحة المشرف)
    تُقرأ بالرؤية مرّةً واحدة لكل درس، ويُخزَّن ما استُخرج منها (JSON) في
    library-files/guide-summaries/ — فكل معلّمٍ بعد الأول يأخذه جاهزاً بلا تكلفة.
    أيّ عطلٍ هنا لا يُفشل التحضير: نكمل بالكتاب وحده كما كان. */
-type Admin = ReturnType<typeof createClient>;
-async function guideContextFor(admin: Admin, st: Record<string, string>, apiKey: string,
-  grade: string, subject: string, unit: string, lesson: string, semester: string): Promise<string> {
-  try {
-    let q = admin.from("curriculum").select("id,semester,unit,lesson").eq("grade", grade).eq("subject", subject).eq("lesson", lesson);
-    if (semester) q = q.eq("semester", semester);
-    const { data: curs } = await q;
-    const cur = (curs || []).find((c: { unit: string }) => !unit || c.unit === unit) || (curs || [])[0];
-    if (!cur) return "";
-    const { data: guide } = await admin.from("teacher_guides").select("id,base_path,page_count,offset_pages,toc")
-      .eq("grade", parseInt(grade)).eq("subject", subject).eq("semester", cur.semester).maybeSingle();
-    if (!guide || !guide.base_path || !Array.isArray(guide.toc)) return "";
-    const cacheKey = `guide-summaries/${guide.id}-${cur.id}.json`;
-    const cached = await admin.storage.from("library-files").download(cacheKey);
-    if (!cached.error && cached.data) { const t = await cached.data.text(); if (t.length > 20) return t; }
-
-    type E = { guide_page?: number; matched_curriculum_id?: number };
-    const toc = (guide.toc as E[]).filter((x) => x.guide_page).sort((a, b) => (a.guide_page || 0) - (b.guide_page || 0));
-    const e = toc.find((x) => x.matched_curriculum_id === cur.id);
-    if (!e) return "";
-    const start = e.guide_page!;
-    let end = guide.page_count || start;
-    for (const x of toc) if ((x.guide_page || 0) > start) { end = x.guide_page! - 1; break; }
-    if (end < start) end = start;
-    const off = guide.offset_pages || 1, images: string[] = [];
-    for (let bp = start; bp <= end && images.length < 12; bp++) {
-      const sheet = bp + off - 1; if (sheet < 1 || sheet > (guide.page_count || 9999)) continue;
-      images.push(admin.storage.from("library-files").getPublicUrl(`${guide.base_path}/p${sheet}.jpg`).data.publicUrl);
-    }
-    if (!images.length) return "";
-
-    const shape = JSON.stringify({
-      learning_points: ["نقاط/أهداف التعلّم كما وردت"], vocabulary: [{ ar: "المصطلح", en: "term" }],
-      prior_knowledge: "التعلّم القبلي المطلوب", resources: ["المواد والأدوات المطلوبة"],
-      starter: "نشاط التهيئة/البداية المقترح في الدليل بتفاصيله", activities: [{ name: "اسم النشاط", detail: "خطواته كما في الدليل" }],
-      misconceptions: [{ error: "الخطأ أو المفهوم الخاطئ الشائع", fix: "كيف يعالجه المعلم" }],
-      differentiation: { support: "دعم المتعثرين", extension: "إثراء المتقدمين" },
-      thinking: ["أسئلة التفكير/الاستقصاء المقترحة"], exercises: [{ ex: "رقم التمرين", note: "التعليق أو الإجابة أو التوجيه" }],
-      assessment: "أفكار التقويم في الدليل", homework: "الواجب المقترح", cross_links: "الربط بالحياة أو المواد الأخرى", other: "أي توجيه آخر مهم",
-    });
-    const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Guide Reader" },
-      body: JSON.stringify({
-        model: ensureVision(st.model_guided_prep || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash"),
-        messages: [
-          { role: "system", content: [
-            "أنت تقرأ صفحات دليل المعلم الرسمي (سلطنة عُمان) لدرسٍ واحد وتستخرج كل ما فيه بأمانة ودقة، دون إضافة شيءٍ من عندك.",
-            `الدرس المقصود: «${lesson}»${unit ? ` من وحدة «${unit}»` : ""}. قد تحوي الصفحات أجزاءً من دروسٍ مجاورة — تجاهلها.`,
-            "انقل التفاصيل كما وردت: أرقام التمارين، أسماء الأنشطة، الأخطاء الشائعة، المفردات بالعربية والإنجليزية، والأزمنة إن ذُكرت.",
-            "الحقل الذي لا يرد في الدليل اتركه فارغاً (\"\" أو []). الأرقام بالعربية-الهندية.",
-            `أعد JSON فقط بهذا الشكل: ${shape}`,
-          ].join("\n") },
-          { role: "user", content: [{ type: "text", text: `صفحات دليل المعلم لدرس: ${lesson}` }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))] },
-        ],
-        response_format: { type: "json_object" }, temperature: 0.1, max_tokens: 12000, reasoning: { max_tokens: 1024 },
-      }),
-    }, { st, task: "guide_read" });
-    if (!r.ok) return "";
-    const j = await r.json();
-    const pp = parseAiJson(j?.choices?.[0]?.message?.content || "");
-    if (!pp.ok) return "";
-    const txt = JSON.stringify(pp.value);
-    await admin.storage.from("library-files").upload(cacheKey, new Blob([txt], { type: "application/json" }), { upsert: true, contentType: "application/json" });
-    return txt;
-  } catch (e) {
-    console.error("guide_context_failed:", String(e));
-    return "";
-  }
-}
-
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
