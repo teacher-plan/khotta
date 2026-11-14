@@ -16,6 +16,7 @@ import { Noor, NoorError } from "./noor.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { takeQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
+import { isServiceRoleRequest } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -162,8 +163,23 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader) return json({ error: "unauthorized" }, 401);
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: { user }, error: userErr } = await admin.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (userErr || !user) return json({ error: "unauthorized" }, 401);
+    // مستكشف المطوّر من GitHub Actions: مفتاح الخدمة + x-lab-as (بريد من LAB_EMAILS)،
+    // ولا يُسمح فيه إلا بـ lab_raw (قراءة GET فقط) — لاكتشاف نماذج نور دون كلمة مرور.
+    let svcLab = false;
+    // deno-lint-ignore no-explicit-any
+    let user: any = null;
+    const labAs = (req.headers.get("x-lab-as") || "").trim().toLowerCase();
+    if (labAs && isServiceRoleRequest(req)) {
+      if (!LAB_EMAILS.includes(labAs)) return json({ error: "forbidden" }, 403);
+      const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      user = (data?.users || []).find((u: Any) => String(u.email || "").toLowerCase() === labAs) || null;
+      if (!user) return json({ error: "unauthorized" }, 401);
+      svcLab = true;
+    } else {
+      const { data: { user: u }, error: userErr } = await admin.auth.getUser(authHeader.replace("Bearer ", ""));
+      if (userErr || !u) return json({ error: "unauthorized" }, 401);
+      user = u;
+    }
 
     // الطلب: JSON عادةً، أو multipart لرفع ملف (meta + file)
     let b: Any = {};
@@ -184,6 +200,7 @@ Deno.serve(async (req) => {
       b = await req.json().catch(() => ({}));
     }
     const action = String(b.action || "");
+    if (svcLab && action !== "lab_raw") return json({ error: "forbidden" }, 403);
 
     const getRow = async () => (await admin.from("c1_noor_accounts").select("*").eq("user_id", user.id).maybeSingle()).data;
     const save = (patch: Any) => admin.from("c1_noor_accounts").update({ ...patch, updated_at: new Date().toISOString() }).eq("user_id", user.id);
