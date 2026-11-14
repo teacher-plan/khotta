@@ -4426,6 +4426,23 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   </div>
 </div>
 
+<div class="c1-modal" id="noor-imp-modal" onclick="if(event.target===this)noorImpClose()">
+  <div class="c1-mbox" style="max-width:420px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:var(--ink)">الاستيراد من نور</div>
+    <div id="noor-imp-body"></div>
+    <div class="c1-mrow" style="margin-top:12px">
+      <button class="c1-mbtn no" onclick="noorImpClose()">إلغاء</button>
+      <button class="c1-mbtn go" id="noor-imp-go" onclick="noorImpApply()">استيراد المحدَّد</button>
+    </div>
+  </div>
+</div>
+<style>
+.noor-imp-opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin-bottom:8px;border:1px solid var(--line,#e5ded2);border-radius:12px;font-size:13px;line-height:1.9;color:var(--ink);cursor:pointer}
+.noor-imp-opt input{margin-top:6px;width:18px;height:18px;flex:none;accent-color:var(--olive,#487848)}
+.noor-imp-opt ul{margin:4px 0;padding-inline-start:18px}
+.noor-imp-opt input:disabled+span{opacity:.6}
+</style>
+
 <div class="c1-modal" id="sug-modal" onclick="if(event.target===this)sugClose()">
   <div class="c1-mbox" style="max-width:380px;text-align:center">
     <div class="sug-head" style="justify-content:center">
@@ -9746,7 +9763,7 @@ async function noorAcctLoad(){
   try{s=await noorStatus(true);}catch(e){box.innerHTML='<p class="acct-note">'+escHtml(e.message)+'</p>';return;}
   if(!s.linked){
     box.innerHTML=`<p class="acct-note">${khG('اربطي','اربط')} حسابك في منصّة نور مرةً واحدة، ثم ${khG('انشري','انشر')} تحضير أي درسٍ ومرفقاته في نور بزرّ «<i class="ki ki-upload" aria-hidden="true"></i> نشر في نور» على بطاقة الدرس.</p>
-      <input class="acct-in" id="noor-user" type="text" placeholder="اسم المستخدم في نور" autocomplete="off" style="direction:ltr;text-align:center;margin-bottom:8px">
+      <input class="acct-in" id="noor-user" type="text" placeholder="اسم المستخدم أو البريد الوزاري (@moe.om)" autocomplete="off" style="direction:ltr;text-align:center;margin-bottom:8px">
       <input class="acct-in" id="noor-pass" type="password" placeholder="كلمة المرور في نور" autocomplete="new-password" style="direction:ltr;text-align:center">
       <p class="acct-note noor-consent"><i class="ki ki-lock" aria-hidden="true"></i> تُحفظ كلمة المرور <b>مشفّرةً</b> على خادم خُطّة ولا تُعرض لأحد، وتُستخدم فقط لتنفيذ ما ${khG('تطلبينه','تطلبه')} من نشرٍ في نور. ${khG('تستطيعين','تستطيع')} فصل الحساب وحذفها نهائياً في أي وقت.</p>
       <button class="c1-mbtn go" id="noor-link-btn" style="width:100%" onclick="noorConnect()">ربط الحساب والتحقّق منه</button>`;
@@ -9763,13 +9780,14 @@ async function noorAcctLoad(){
       <span>${(s.courses||[]).map(c=>escHtml(c.name)+' ('+egArNum((c.sections||[]).length)+' شعب)').join('، ')||'لا مقرّرات'}</span></div>
     ${classes.length&&all.length?`<p class="acct-note" style="margin-top:8px">ما يقابل شُعَب خُطّة في نور (تُحدَّد تلقائياً ${khG('وتستطيعين','وتستطيع')} تعديلها):</p>${rows}`:''}
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="abs-mini" onclick="noorImport()"><i class="ki ki-download" aria-hidden="true"></i> استيراد الجدول والطلاب من نور</button>
       <button class="abs-mini" onclick="noorRefresh()">تحديث المقرّرات</button>
       <button class="abs-mini" onclick="noorDisconnect()">فصل الحساب وحذف كلمة المرور</button>
     </div>`;
 }
 async function noorConnect(){
   const u=(document.getElementById('noor-user').value||'').trim(),p=document.getElementById('noor-pass').value||'';
-  if(!u||!p){toast(khG('أدخلي','أدخل')+' اسم المستخدم وكلمة المرور',true);return;}
+  if(!u||!p){toast(khG('أدخلي','أدخل')+' اسم المستخدم أو البريد الوزاري وكلمة المرور',true);return;}
   const btn=document.getElementById('noor-link-btn');if(btn){btn.disabled=true;btn.textContent='يتحقّق من نور…';}
   try{
     noorSt=await noorCall({action:'connect',username:u,password:p});
@@ -9790,6 +9808,97 @@ async function noorDisconnect(){
 async function noorMapSet(classId,sectionId){
   try{const r=await noorCall({action:'set_cfg',cfg:{map:{[classId]:sectionId}}});if(noorSt)noorSt.cfg=r.cfg;toast('حُفظ','ok');}
   catch(e){toast(e.message,true);}
+}
+
+// ── استيراد الجدول الأسبوعي وقوائم الطلاب من نور ──
+// نور تعطي لكل مقرّر: حصص أيام الأسبوع (رقم الحصة ورقم الشعبة) وأسماء الطلاب
+// بشعبهم. نُطابق كل (مقرّر، شعبة) بشعبة خطة عبر خريطة «ما يقابل شُعَب خطة»،
+// ثم نعرض ما سيتغيّر قبل الحفظ. الطلاب يُضافون فقط (لا يُحذف أحد)، والنجوم
+// والسلوك والمجموعات تُعاد فهرستها كما في محرّر الشعب.
+let noorImp=null;
+function noorSecNum(x){const m=noorAr2En(x).match(/(\d+)\s*$/);return m?+m[1]:null;}
+function noorClassFor(cid,sec){
+  const n=noorSecNum(sec);if(n==null)return null;
+  return c1AllClasses().find(c=>{const x=noorSectionFor(noorSt,c.id);return x&&String(x.cid)===String(cid)&&noorSecNum(x.label)===n;})||null;
+}
+function noorSubjFor(cls,cid){
+  const subs=cls.subjects||[];if(subs.length<2)return subs[0]||'';
+  const c=(noorSt.courses||[]).find(x=>String(x.cid)===String(cid));
+  const cn=noorTxt(c?c.name.split('/')[0]:'');
+  return subs.find(sb=>cn&&(cn.includes(noorTxt(sb))||noorTxt(sb).includes(cn)))||subs[0];
+}
+async function noorImport(){
+  if(!c1AllClasses().length){toast(khG('أكملي','أكمل')+' إعداد شعبك أولاً',true);return;}
+  cyBusyLight('يجلب الجدول وقوائم الطلاب من نور…');
+  let r;
+  try{r=await noorCall({action:'import_info'});}catch(e){toast(e.message,true);return;}finally{cyBusyLightDone();}
+  const t=await ttTimes();const maxP=(t.periods||[]).length;
+  const sch={},miss=new Set(),over=[];let nP=0;
+  (r.sched||[]).forEach(x=>{
+    const c=noorClassFor(x.cid,x.sec);
+    const crs=(noorSt.courses||[]).find(k=>String(k.cid)===String(x.cid));
+    if(!c){miss.add((crs?crs.name:'')+' · شعبة '+egArNum(x.sec));return;}
+    if(x.period>maxP){over.push(x.period);return;}
+    const d=TT_DAYS[x.day].id;(sch[d]=sch[d]||{})[x.period-1]={c:c.id,s:noorSubjFor(c,x.cid)};nP++;
+  });
+  const cur=ttData().schedule;let nChg=0;
+  Object.entries(sch).forEach(([d,ps])=>Object.entries(ps).forEach(([p,v])=>{const o=(cur[d]||{})[p];if(!o||o.c!==v.c||o.s!==v.s)nChg++;}));
+  const add={};let nS=0;
+  (r.rosters||[]).forEach(x=>{
+    const c=noorClassFor(x.cid,x.sec);
+    if(!c){const crs=(noorSt.courses||[]).find(k=>String(k.cid)===String(x.cid));miss.add((crs?crs.name:'')+' · شعبة '+egArNum(x.sec));return;}
+    const have=new Set((c.students||[]).map(noorNorm));
+    const nw=(x.names||[]).filter(nm=>!have.has(noorNorm(nm)));
+    if(nw.length){add[c.id]=(add[c.id]||[]).concat(nw);nS+=nw.length;}
+  });
+  noorImp={sch,add};
+  const cls=c1AllClasses();
+  const stuRows=Object.entries(add).map(([id,a])=>{const c=cls.find(x=>x.id===id);return `<li>${escHtml(c?c.name:id)}: ${egArNum(a.length)} ${a.length>10?'طالباً':'طلاب'}</li>`;}).join('');
+  const box=document.getElementById('noor-imp-body');
+  box.innerHTML=`
+    <label class="noor-imp-opt"><input type="checkbox" id="noor-imp-tt" ${nP?'checked':'disabled'}>
+      <span><b>الجدول الأسبوعي</b><br>${nP?egArNum(nP)+' حصة من نور'+(nChg?'، منها '+egArNum(nChg)+' ستُضاف أو تتغيّر في جدولك':'، وجدولك مطابقٌ لها')+'. الحصص الأخرى في جدولك تبقى كما هي.':'لم تُعِد نور حصصاً لهذا الأسبوع ولا اللذين بعده.'}</span></label>
+    <label class="noor-imp-opt"><input type="checkbox" id="noor-imp-stu" ${nS?'checked':'disabled'}>
+      <span><b>قوائم الطلاب</b><br>${nS?'إضافة '+egArNum(nS)+' اسماً غير موجودٍ في شعبك:<ul>'+stuRows+'</ul>لا يُحذف أي طالب، وتبقى النجوم والسلوك لأصحابها.':'كل طلاب نور موجودون في شعبك.'}</span></label>
+    ${miss.size?`<p class="acct-note"><i class="ki ki-alert" aria-hidden="true"></i> شُعَب في نور بلا شعبةٍ مقابلةٍ في خطة (تُتجاهل): ${[...miss].map(escHtml).join('، ')}. ${khG('اختاري','اختر')} مقابلها من «ما يقابل شُعَب خطة» ثم ${khG('أعيدي','أعد')} الاستيراد.</p>`:''}
+    ${over.length?`<p class="acct-note">حصص بعد الحصة ${egArNum(maxP)} تُتجاهل (${khG('زيدي','زد')} عدد الحصص من «تعديل الجدول ← الأوقات»).</p>`:''}`;
+  document.getElementById('noor-imp-go').disabled=!(nP||nS);
+  document.getElementById('noor-imp-modal').classList.add('open');
+}
+function noorImpClose(){document.getElementById('noor-imp-modal').classList.remove('open');noorImp=null;}
+async function noorImpApply(){
+  if(!noorImp)return;
+  const doTT=document.getElementById('noor-imp-tt').checked,doStu=document.getElementById('noor-imp-stu').checked;
+  const patch={};
+  if(doTT){
+    const tt=ttData();
+    Object.entries(noorImp.sch).forEach(([d,ps])=>{tt.schedule[d]={...(tt.schedule[d]||{}),...ps};});
+    patch.timetable=profile.timetable;
+  }
+  if(doStu&&Object.keys(noorImp.add).length){
+    const stars={...(profile.stars||{})},beh={...(profile.beh_log||{})},grp={...(profile.stu_groups||{})};
+    const grades=(profile.grades||[]).map(g=>({...g,classes:(g.classes||[]).map(c=>{
+      const nw=noorImp.add[c.id];if(!nw)return c;
+      const list=(c.students||[]).map((nm,si)=>({nm,si})).concat(nw.map(nm=>({nm,si:-1})));
+      list.sort((a,b)=>a.nm.localeCompare(b.nm,'ar'));
+      const oS=stars[c.id]||[],oB=beh[c.id]||[];
+      stars[c.id]=list.map(s=>s.si>=0?(oS[s.si]||0):0);
+      beh[c.id]=list.map(s=>s.si>=0?(oB[s.si]||[]):[]);
+      const m=new Map();list.forEach((s,ni)=>{if(s.si>=0)m.set(s.si,ni);});
+      const rg=grpRemapAfterRoster(c.id,m);if(rg)grp[c.id]=rg;
+      return{...c,students:list.map(s=>s.nm)};
+    })}));
+    Object.assign(patch,{grades,stars,beh_log:beh,stu_groups:grp});
+  }
+  if(!Object.keys(patch).length){noorImpClose();return;}
+  const btn=document.getElementById('noor-imp-go');btn.disabled=true;
+  const ok=await cy1Save(patch,'يحفظ ما جُلب من نور');
+  btn.disabled=false;
+  if(!ok)return;
+  if(patch.grades){profile.grades=patch.grades;profile.stars=patch.stars;profile.beh_log=patch.beh_log;profile.stu_groups=patch.stu_groups;}
+  noorImpClose();
+  toast('اكتمل الاستيراد من نور','ok');
+  try{ttRenderTable();ttRenderNow();}catch(_){}
 }
 
 // ══ مختبر نور — قسمٌ تجريبي لحساب المطوّر وحده ══
