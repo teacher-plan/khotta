@@ -16,6 +16,10 @@ on:
         description: 'نمط للروابط المطبوعة (regex)'
         required: false
         default: 'discussion|post|forum|room|topic'
+      ajax:
+        description: 'طلب AJAX (يعيد JSON)'
+        required: false
+        default: 'false'
       dump:
         description: 'نمطٌ يُطبع حوله HTML خام (اختياري)'
         required: false
@@ -33,6 +37,7 @@ jobs:
           AS: ${{ inputs.as }}
           GREP: ${{ inputs.grep }}
           DUMP: ${{ inputs.dump }}
+          AJAX: ${{ inputs.ajax }}
         run: |
           set -uo pipefail
           KEY=$(curl -s "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" -H "Authorization: Bearer $TOKEN" \
@@ -42,7 +47,7 @@ jobs:
           for p in "${arr[@]}"; do
             p=$(echo "$p" | xargs)
             echo "════════ $p"
-            body=$(jq -n --arg p "$p" '{action:"lab_raw",path:$p}')
+            body=$(jq -n --arg p "$p" --arg a "$AJAX" '{action:"lab_raw",path:$p,ajax:($a=="true")}')
             curl -s -X POST "https://$REF.supabase.co/functions/v1/c1-noor" \
               -H "Authorization: Bearer $KEY" -H "apikey: $KEY" -H "x-lab-as: $AS" \
               -H "Content-Type: application/json" --data-binary "$body" > /tmp/r.json
@@ -53,6 +58,15 @@ jobs:
           if 'text' not in j:
               print('ERROR', json.dumps(j, ensure_ascii=False)[:400]); sys.exit()
           t = j['text']
+          if t.lstrip()[:1] in '[{':
+              try:
+                  jj = json.loads(t)
+                  def strip(o):
+                      if isinstance(o, dict): return {k: strip(v) for k, v in o.items() if k not in ('full_name', 'name', 'student_full_name')}
+                      if isinstance(o, list): return [strip(x) for x in o[:12]]
+                      return o if not isinstance(o, str) else o[:160]
+                  print('JSON', json.dumps(strip(jj), ensure_ascii=False)[:6000]); sys.exit()
+              except Exception as e: print('JSONERR', e)
           print('status', j.get('status'), 'url', j.get('url'), 'size', j.get('size'))
           for m in re.finditer(r'<form\b[^>]*>', t, re.I):
               print('FORM', re.sub(r'\s+', ' ', m.group(0))[:300])
