@@ -1,0 +1,75 @@
+# مستكشف نور للمطوّر (قراءة فقط): يفتح صفحات نور بحساب المعلّم المربوط في خطّة
+# عبر الفعل lab_raw في c1-noor، ويطبع بنية النماذج والروابط فقط (لا كوكيز ولا أسماء).
+name: Noor probe (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: 'مسارات نور مفصولة بفواصل (تبدأ بـ /teacher/)'
+        required: true
+      as:
+        description: 'بريد حساب المختبر'
+        required: true
+        default: 'xx@y.com'
+      grep:
+        description: 'نمط للروابط المطبوعة (regex)'
+        required: false
+        default: 'discussion|post|forum|room|topic'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          PATHS: ${{ inputs.paths }}
+          AS: ${{ inputs.as }}
+          GREP: ${{ inputs.grep }}
+        run: |
+          set -uo pipefail
+          KEY=$(curl -s "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" -H "Authorization: Bearer $TOKEN" \
+            | jq -r '[.[] | select(.name=="service_role")][0].api_key')
+          echo "::add-mask::$KEY"
+          IFS=',' read -ra arr <<< "$PATHS"
+          for p in "${arr[@]}"; do
+            p=$(echo "$p" | xargs)
+            echo "════════ $p"
+            body=$(jq -n --arg p "$p" '{action:"lab_raw",path:$p}')
+            curl -s -X POST "https://$REF.supabase.co/functions/v1/c1-noor" \
+              -H "Authorization: Bearer $KEY" -H "apikey: $KEY" -H "x-lab-as: $AS" \
+              -H "Content-Type: application/json" --data-binary "$body" > /tmp/r.json
+            python3 - "$GREP" <<'PY'
+          import json, re, sys, html
+          g = sys.argv[1]
+          j = json.load(open('/tmp/r.json'))
+          if 'text' not in j:
+              print('ERROR', json.dumps(j, ensure_ascii=False)[:400]); sys.exit()
+          t = j['text']
+          print('status', j.get('status'), 'url', j.get('url'), 'size', j.get('size'))
+          for m in re.finditer(r'<form\b[^>]*>', t, re.I):
+              print('FORM', re.sub(r'\s+', ' ', m.group(0))[:300])
+          seen = set()
+          for m in re.finditer(r'<(input|select|textarea)\b[^>]*>', t, re.I):
+              tag = m.group(0)
+              nm = re.search(r'name="([^"]*)"', tag)
+              if not nm or nm.group(1) in seen: continue
+              seen.add(nm.group(1))
+              ty = re.search(r'type="([^"]*)"', tag)
+              val = re.search(r'value="([^"]{0,40})', tag)
+              extra = ''
+              if m.group(1).lower() == 'select':
+                  end = t.find('</select>', m.end())
+                  opts = re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]{0,40})', t[m.end():end])
+                  extra = ' OPTS ' + json.dumps(opts[:12], ensure_ascii=False)
+              v = '' if (ty and ty.group(1) in ('password',)) or 'token' in nm.group(1).lower() else (val.group(1) if val else '')
+              print('FIELD', m.group(1), nm.group(1), ty.group(1) if ty else '', repr(v), extra)
+          links = sorted(set(html.unescape(x) for x in re.findall(r'(?:href|action|url)\s*[=:]\s*["\']([^"\']+)', t) if re.search(g, x, re.I)))
+          for l in links[:60]: print('LINK', l)
+          for m in re.finditer(r'\$\.(?:ajax|post)\(\s*\{?[^)]{0,200}', t):
+              s = m.group(0)
+              if re.search(g, s, re.I): print('AJAX', re.sub(r'\s+', ' ', s)[:220])
+          PY
+          done
