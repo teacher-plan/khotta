@@ -44,6 +44,7 @@ const MSG: Record<string, string> = {
   noor_down: "تعذّر الوصول إلى منصّة نور الآن.",
   room_form_missing: "تعذّر فتح نموذج إنشاء غرفة النقاش في نور.",
   room_no_students: "لا طلاب في الشعب المختارة.",
+  topic_form_missing: "تعذّر فتح نموذج «إضافة موضوع» في غرفة النقاش.",
   room_not_created: "أُرسلت الغرفة لكن لم تظهر في قائمة غرف النقاش في نور. تحقّق من نور قبل إعادة المحاولة.",
   ms_mfa: "حسابك الوزاري يطلب رمز تحقّق، فاربطه بزرّ «الربط بالبريد الوزاري مع رمز التحقّق».",
   ms_code_expired: "انتهت مهلة الرمز قبل إكمال الدخول. ابدأ الربط من جديد.",
@@ -568,13 +569,29 @@ Deno.serve(async (req) => {
         await persist();
         return json({ lectures: f.lectures.map((l) => ({ ...l, students: f.students.filter((s) => s.lecture === l.id).length })) });
       }
+      if (action === "lab_rooms") {
+        const rooms = await run((x) => x.rooms(30));
+        await persist();
+        return json({ rooms: rooms.filter((r) => r.mine) });
+      }
+      // نشر السؤال «موضوعاً» (هو ما تُحسب له النقاط): في غرفةٍ قائمة (pid)،
+      // أو في غرفةٍ جديدة تُنشأ أولاً للشعب المختارة.
       if (action === "lab_room") {
         const title = String(b.title || "").trim(), body = String(b.body || "").trim();
-        if (!title || !body) return json({ error: "missing", message: "العنوان والتعليمات مطلوبان." }, 400);
-        const lectures = (Array.isArray(b.lectures) ? b.lectures : []).map(String);
-        const r = await run((x) => x.createRoom({ title, body, lectures }));
+        if (!title || !body) return json({ error: "missing", message: "العنوان والسؤال مطلوبان." }, 400);
+        let pid = String(b.pid || "");
+        let created: Any = null;
+        if (!pid) {
+          const lectures = (Array.isArray(b.lectures) ? b.lectures : []).map(String);
+          const roomTitle = String(b.room_title || title).trim();
+          const roomBody = String(b.room_body || "غرفة نقاش لمادّتنا: اقرأ الموضوع، واكتب ردّك مع التبرير، ثم علّق على ردّ زميل واحد بأدب.").trim();
+          created = await run((x) => x.createRoom({ title: roomTitle, body: roomBody, lectures }));
+          pid = created.pid;
+          if (!pid) { await persist(); return json({ ok: true, room: created, topic: null, warn: "أُنشئت الغرفة لكن تعذّر العثور عليها لإضافة الموضوع. أضفه من نور." }); }
+        }
+        const t = await run((x) => x.addTopic(pid, title, body));
         await persist();
-        return json({ ok: true, ...r });
+        return json({ ok: true, room: created, topic: t, url: t.url });
       }
 
       if (action === "lab_ai") return await labAi(admin, user, b);

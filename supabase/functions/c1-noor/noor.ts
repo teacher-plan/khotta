@@ -595,6 +595,46 @@ export class Noor {
     return [...r.text.matchAll(/<h\d[^>]*class="[^"]*(?:room|post)[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h\d>/g)].map((m) => clean(m[1]));
   }
 
+  // قائمة غرف النقاش (JSON كما يجلبها discussion-forum.js في نور)
+  async rooms(limit = 20) {
+    const r = await this.req(`/teacher/posts/view/p:1/limit:${limit}`, { ajax: true });
+    // deno-lint-ignore no-explicit-any
+    let j: any = [];
+    try { j = JSON.parse(r.text || "[]"); } catch { j = []; }
+    // deno-lint-ignore no-explicit-any
+    return (Array.isArray(j) ? j : []).map((x: any) => ({
+      pid: String(x.id || ""), title: clean(String(x.title || "")), created: String(x.created || ""),
+      comments: +x.comments_count || 0, mine: String(x.show_edit) === "1",
+    })).filter((x) => x.pid);
+  }
+
+  // «إضافة موضوع جديد» داخل غرفة: /teacher/posts/reply — والموضوع هو ما تحسب له نور
+  // ٢٠ نقطة × نسبة ردود الطلاب (لا الغرفة نفسها).
+  async addTopic(pid: string, title: string, body: string) {
+    const page = await this.req(`/teacher/posts/article/pid:${pid}`);
+    const i = page.text.indexOf('id="PostReplyForm"');
+    if (i < 0) throw new NoorError("topic_form_missing");
+    const form = page.text.slice(page.text.lastIndexOf("<form", i), page.text.indexOf("</form>", i));
+    const fd = new URLSearchParams();
+    for (const m of form.matchAll(/<input\b[^>]*>/g)) {
+      const tag = m[0];
+      const name = (tag.match(/name="([^"]+)"/) || [])[1];
+      if (!name || /data\[Post\]\[(title|post)\]/.test(name)) continue;
+      fd.append(name, decodeEntities((tag.match(/value="([^"]*)"/) || [])[1] || ""));
+    }
+    if (!fd.get("data[Post][parentid]")) throw new NoorError("topic_form_missing");
+    const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html = body.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join("\n");
+    fd.set("data[Post][title]", title.slice(0, 255));
+    fd.set("data[Post][post]", html);
+    const r = await this.req("/teacher/posts/reply", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: fd.toString(),
+    });
+    return { status: r.status, url: BASE + `/teacher/posts/article/pid:${pid}` };
+  }
+
   async createRoom(p: { title: string; body: string; lectures: string[] }) {
     const f = await this.roomForm();
     const lect = new Set(p.lectures.length ? p.lectures : f.lectures.map((l) => l.id));
@@ -618,7 +658,9 @@ export class Noor {
     const v = await this.req("/teacher/posts/view");
     const ok = v.text.includes(p.title.slice(0, 50).replace(/&/g, "&amp;")) || v.text.includes(p.title.slice(0, 50));
     if (!ok) throw new NoorError("room_not_created", r.url);
-    return { students: n, url: BASE + "/teacher/posts/view" };
+    const t50 = clean(p.title.slice(0, 50));
+    const room = (await this.rooms(10)).find((x) => x.title === t50 || x.title.startsWith(t50.slice(0, 40)));
+    return { students: n, pid: room?.pid || "", url: BASE + "/teacher/posts/view" };
   }
 
   async addQuestions(qIndexUrl: string, items: { text: string; choices: string[]; answer: number }[]) {
