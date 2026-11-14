@@ -42,6 +42,9 @@ const MSG: Record<string, string> = {
   homework_not_created: "لم تُنشئ نور الواجب.",
   prep_not_found: "أُرسل التحضير لكن لم يظهر في قائمة تحاضير نور. تحقّق من نور قبل إعادة المحاولة.",
   noor_down: "تعذّر الوصول إلى منصّة نور الآن.",
+  room_form_missing: "تعذّر فتح نموذج إنشاء غرفة النقاش في نور.",
+  room_no_students: "لا طلاب في الشعب المختارة.",
+  room_not_created: "أُرسلت الغرفة لكن لم تظهر في قائمة غرف النقاش في نور. تحقّق من نور قبل إعادة المحاولة.",
   ms_mfa: "حسابك الوزاري يطلب رمز تحقّق، فاربطه بزرّ «الربط بالبريد الوزاري مع رمز التحقّق».",
   ms_code_expired: "انتهت مهلة الرمز قبل إكمال الدخول. ابدأ الربط من جديد.",
   ms_declined: "رُفض طلب الدخول من صفحة Microsoft.",
@@ -133,6 +136,14 @@ async function labAi(admin: Any, user: Any, b: Any) {
     system = [base, "اكتب لدرسٍ واحد: (١) موضوع نقاش قصير يثير ردود الطلاب في غرفة النقاش بنور (سؤال مفتوح ممتع مرتبط بالحياة، يطلب من كل طالب ردّاً قصيراً بمثاله الخاص)، (٢) رسالة تذكير ودّية قصيرة للطلاب بالواجب المنشور وموعد تسليمه، (٣) فكرة فيديو يوتيوب قصير يُبحث عنه (كلمات بحث).",
       'أعد JSON فقط: {"topic_title":"...","topic_body":"...","message_title":"...","message_body":"...","video_query":"..."}'].join("\n");
     user_ = `الصف: ${String(b.grade || "")}\nالدرس: ${String(b.lesson || "")}\nموعد التسليم: ${String(b.due || "")}`;
+  } else if (task === "room") {
+    jsonOut = true; maxT = 1200;
+    system = [base,
+      "اكتب سؤالاً واحداً لغرفة نقاش في نور يتفاعل معه طلاب الصف مكتوبةً (ردٌّ قصير من كل طالب، ويردّ بعضهم على بعض).",
+      "شروط السؤال: مفتوح له أكثر من إجابة صحيحة أو طريقة حلّ، أو يطلب رأياً مدعوماً بتبرير رياضي، أو مثالاً من حياة الطالب في عُمان، أو مقارنة بين طريقتين، أو اكتشاف خطأ شائع. لا يُجاب بكلمة واحدة ولا يُنسخ من الكتاب. لغةٌ قريبة من الطالب، بلا رموز معقّدة (اكتب الأعداد والعمليات ببساطة).",
+      "التعليمات (body): ٣–٥ أسطر: السؤال واضحاً في أوّلها، ثم ما المطلوب في الردّ (مثلاً: اكتب إجابتك مع خطوة التبرير، ثم علّق على ردّ زميل واحد)، وتشجيعٌ قصير.",
+      'أعد JSON فقط: {"title":"عنوان جذّاب ≤ ٤٥ حرفاً","body":"التعليمات كاملة","why":"جملة للمعلّم: لماذا يثير هذا السؤال النقاش"}'].join("\n");
+    user_ = `الصف: ${String(b.grade || "")}\nالمادة: ${String(b.subject || "")}\nالدرس: ${String(b.lesson || "")}\nالوحدة: ${String(b.unit || "")}\nالحالة: ${b.when === "next" ? "درسٌ قادم لم يُدرَّس بعد — اجعل السؤال تمهيدياً يستثير الفضول ويستدعي معرفةً سابقة" : "آخر درسٍ دُرِّس — اجعل السؤال يعمّق الفهم ويطبّقه"}${b.hint ? "\nملاحظة المعلّم: " + String(b.hint).slice(0, 300) : ""}`;
   } else return json({ error: "bad_task" }, 400);
 
   const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
@@ -550,6 +561,20 @@ Deno.serve(async (req) => {
         const r = await run((x) => x.req(path, { ajax: !!b.ajax }));
         await persist();
         return json({ status: r.status, url: r.url, size: r.text.length, text: r.text.slice(0, 250000) });
+      }
+
+      if (action === "lab_room_form") {
+        const f = await run((x) => x.roomForm());
+        await persist();
+        return json({ lectures: f.lectures.map((l) => ({ ...l, students: f.students.filter((s) => s.lecture === l.id).length })) });
+      }
+      if (action === "lab_room") {
+        const title = String(b.title || "").trim(), body = String(b.body || "").trim();
+        if (!title || !body) return json({ error: "missing", message: "العنوان والتعليمات مطلوبان." }, 400);
+        const lectures = (Array.isArray(b.lectures) ? b.lectures : []).map(String);
+        const r = await run((x) => x.createRoom({ title, body, lectures }));
+        await persist();
+        return json({ ok: true, ...r });
       }
 
       if (action === "lab_ai") return await labAi(admin, user, b);

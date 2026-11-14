@@ -566,6 +566,61 @@ export class Noor {
     }));
   }
 
+  // ── غرف النقاش (/teacher/posts) ──
+  // نموذج «إنشاء غرفة» في صفحة الغرف نفسها: عنوان (≤٥٠) وتعليمات، ثم الشعب (Lecture)
+  // وطلابها (User، وصنف كل طالبٍ رقم شعبته). نقرأ الحقول المخفيّة كما هي ونُرسلها.
+  async roomForm() {
+    const r = await this.req("/teacher/posts/view");
+    const i = r.text.indexOf('id="PostTeacherAddForm"');
+    if (i < 0) throw new NoorError("room_form_missing");
+    const start = r.text.lastIndexOf("<form", i);
+    const form = r.text.slice(start, r.text.indexOf("</form>", i));
+    const hidden: [string, string][] = [];
+    for (const m of form.matchAll(/<input\b[^>]*>/g)) {
+      const tag = m[0];
+      const name = (tag.match(/name=["']([^"']+)["']/) || [])[1];
+      if (!name || /type="checkbox"/.test(tag)) continue;
+      if (/\[(Lecture|User)\]\[checkbox\]|\[Post\]\[(title|tier|hide_comments)\]|data\[publish_to\]/.test(name)) continue;
+      hidden.push([name, decodeEntities((tag.match(/value=["']([^"']*)["']/) || [])[1] || "")]);
+    }
+    const lectures = [...form.matchAll(/name="data\[Lecture\]\[checkbox\]\[(\d+)\]"[^>]*>\s*<span[^>]*><\/span>([^<]*)</g)]
+      .map((m) => ({ id: m[1], label: clean(m[2]) }));
+    const students = [...form.matchAll(/name="data\[User\]\[checkbox\]\[(\d+)\]"\s+class="(\d+) students_checkbox"/g)]
+      .map((m) => ({ id: m[1], lecture: m[2] }));
+    return { hidden, lectures, students };
+  }
+
+  async roomTitles(): Promise<string[]> {
+    const r = await this.req("/teacher/posts/view");
+    return [...r.text.matchAll(/<h\d[^>]*class="[^"]*(?:room|post)[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h\d>/g)].map((m) => clean(m[1]));
+  }
+
+  async createRoom(p: { title: string; body: string; lectures: string[] }) {
+    const f = await this.roomForm();
+    const lect = new Set(p.lectures.length ? p.lectures : f.lectures.map((l) => l.id));
+    const fd = new URLSearchParams();
+    for (const [k, v] of f.hidden) fd.append(k, v);
+    fd.set("data[Post][title]", p.title.slice(0, 50));
+    fd.set("data[Post][post]", p.body);
+    fd.set("data[Post][hide_comments]", "0");
+    fd.set("data[publish_to]", "1");
+    fd.set("data[Post][tier]", lect.size === f.lectures.length ? "1" : "0");
+    for (const l of f.lectures) if (lect.has(l.id)) fd.set(`data[Lecture][checkbox][${l.id}]`, "1");
+    let n = 0;
+    for (const st of f.students) if (lect.has(st.lecture)) { fd.set(`data[User][checkbox][${st.id}]`, "1"); n++; }
+    if (!n) throw new NoorError("room_no_students");
+    const r = await this.req("/teacher/posts/add", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: fd.toString(),
+    });
+    // التحقّق: يظهر العنوان في صفحة الغرف بعد الإنشاء
+    const v = await this.req("/teacher/posts/view");
+    const ok = v.text.includes(p.title.slice(0, 50).replace(/&/g, "&amp;")) || v.text.includes(p.title.slice(0, 50));
+    if (!ok) throw new NoorError("room_not_created", r.url);
+    return { students: n, url: BASE + "/teacher/posts/view" };
+  }
+
   async addQuestions(qIndexUrl: string, items: { text: string; choices: string[]; answer: number }[]) {
     const bulk = qIndexUrl.replace("/questions/index/", "/questions/add_bulk_questions/");
     const page = await this.req(bulk);
