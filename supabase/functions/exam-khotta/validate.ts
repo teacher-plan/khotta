@@ -13,7 +13,7 @@ export const band = (g: number, map: Record<string, unknown>) => {
 };
 
 // ── الفحص: قواعد الوثيقة كما في exam_lib.py (ما يخصّ الرياضيات) ──
-export function validate(ex: Any, kind: string, grade: number, lessons: string[], gridRows: Any[] | null): string[] {
+export function validate(ex: Any, kind: string, grade: number, lessons: string[], gridRows: Any[] | null, ranges: Record<string, [number, number]> = {}): string[] {
   const E: string[] = [];
   const tool = SPEC_MATH.tools[kind];
   const forms = ex?.forms || {};
@@ -36,6 +36,12 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       if (it?.answer == null && !(Array.isArray(it?.steps) && it.steps.length) && !partsAnswered) E.push(`${k}: answer أو steps مطلوب (وللإجابة الطويلة: إجابة كل جزء في steps).`);
       if (!lessons.includes(String(it?.lesson))) E.push(`${k}: الدرس «${it?.lesson}» ليس من الدروس المحدّدة (${lessons.join("، ")}).`);
       else used.add(String(it.lesson));
+      // رقم الصفحة يجب أن يقع ضمن صفحات الدرس في الكتاب
+      const rg = ranges[String(it?.lesson)];
+      if (rg && rg[0]) {
+        const nums = String(it?.page ?? "").replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).match(/\d+/g)?.map(Number) || [];
+        if (nums.some((n) => n < rg[0] || n > rg[1])) E.push(`${k}: الصفحة «${it.page}» خارج صفحات الدرس ${it.lesson} (${ar(rg[0])}–${ar(rg[1])}).`);
+      }
       if (!["mcq", "long", ...OTHER].includes(it?.type)) E.push(`${k}: النوع «${it?.type}» غير معروف.`);
       // ── الدرجة على قدر العمل (ملاحظة الأستاذ عيسى): الاختيار من متعدد درجة واحدة دائماً،
       // وكل درجةٍ فوق الأولى يقابلها جزءٌ أو خطوةٌ مستقلّة تُصحَّح وحدها ويُذكر توزيعها في الإرشادات.
