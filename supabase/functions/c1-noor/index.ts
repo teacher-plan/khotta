@@ -41,7 +41,10 @@ const MSG: Record<string, string> = {
   homework_not_created: "لم تُنشئ نور الواجب.",
   prep_not_found: "أُرسل التحضير لكن لم يظهر في قائمة تحاضير نور. تحقّق من نور قبل إعادة المحاولة.",
   noor_down: "تعذّر الوصول إلى منصّة نور الآن.",
-  ms_mfa: "حسابك الوزاري يطلب تحقّقاً إضافياً (رمزاً على الجوال)، فلا يمكن الدخول به من خُطّة. استعمل اسم المستخدم وكلمة مرور نور بدلاً منه.",
+  ms_mfa: "حسابك الوزاري يطلب رمز تحقّق، فاربطه بزرّ «الربط بالبريد الوزاري مع رمز التحقّق».",
+  ms_code_expired: "انتهت مهلة الرمز قبل إكمال الدخول. ابدأ الربط من جديد.",
+  ms_declined: "رُفض طلب الدخول من صفحة Microsoft.",
+  ms_relink: "انتهت صلاحية ربط البريد الوزاري. افصل حساب نور ثم اربطه من جديد.",
   ms_pass_expired: "انتهت صلاحية كلمة مرور البريد الوزاري. غيّرها من بوابة Microsoft ثم أعد الربط.",
   ms_locked: "حساب البريد الوزاري مقفل مؤقتاً بعد محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.",
   ms_unsupported: "رفضت Microsoft الدخول بالبريد الوزاري من خارج صفحة نور. استعمل اسم المستخدم وكلمة مرور نور.",
@@ -205,6 +208,32 @@ Deno.serve(async (req) => {
       return json(pub(row));
     }
 
+    // ── الربط بالبريد الوزاري مع رمز التحقّق: رمز الجهاز من Microsoft ──
+    if (action === "ms_start") {
+      const d = await Noor.msDeviceStart();
+      return json({ user_code: d.user_code, uri: d.uri, interval: d.interval, expires_in: d.expires_in, dc: await enc(d.device_code) });
+    }
+    if (action === "ms_poll") {
+      let dc = "";
+      try { dc = await dec(String(b.dc || "")); } catch { return json({ error: "ms_code_expired", message: MSG.ms_code_expired }, 400); }
+      const t = await Noor.msDevicePoll(dc);
+      if (!t) return json({ pending: true });
+      if (!t.refresh) return json({ error: "ms_unsupported", message: MSG.ms_unsupported }, 400);
+      const n = new Noor();
+      await n.msTokenLogin(t.access);
+      const courses = await n.courses();
+      const email = (await Noor.msEmail(t.access)) || "البريد الوزاري";
+      const prev = await getRow();
+      const row = {
+        user_id: user.id, username: email, pass_enc: await enc("msrt:" + t.refresh),
+        sess_enc: await enc(JSON.stringify(n.jar)), sess_at: new Date().toISOString(),
+        courses, cfg: prev?.cfg || {}, updated_at: new Date().toISOString(),
+      };
+      const { error } = await admin.from("c1_noor_accounts").upsert(row);
+      if (error) throw error;
+      return json(pub(row));
+    }
+
     const row = await getRow();
     if (!row) return json({ error: "not_linked", message: MSG.not_linked }, 400);
 
@@ -230,7 +259,13 @@ Deno.serve(async (req) => {
       }
       if (n && !force) return n;
       n = new Noor();
-      await n.login(row.username, await dec(row.pass_enc));
+      const secret = await dec(row.pass_enc);
+      if (secret.startsWith("msrt:")) {
+        // حساب بريدٍ وزاري مربوطٌ برمز الجهاز: نجدّد رمز Microsoft ونحفظ الجديد
+        const t = await Noor.msRefresh(secret.slice(5));
+        await n.msTokenLogin(t.access);
+        if (t.refresh !== secret.slice(5)) { row.pass_enc = await enc("msrt:" + t.refresh); await save({ pass_enc: row.pass_enc }); }
+      } else await n.login(row.username, secret);
       fresh = true;
       return n;
     };

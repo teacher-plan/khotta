@@ -8,6 +8,8 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 // معرّف تطبيق نور في Microsoft (من صفحة الدخول نفسها: msal clientId)
 const NOOR_MS_CLIENT = "fecfb103-b416-464a-96b2-bd19dd058dc6";
+const MS_AUTH = "https://login.microsoftonline.com/organizations/oauth2/v2.0";
+const MS_SCOPE = "User.Read openid profile offline_access";
 
 export type Jar = Record<string, string>;
 export type Course = { cid: string; enc: string; name: string; sections: { id: string; label: string }[] };
@@ -101,6 +103,60 @@ export class Noor {
       method: "POST", anon: true,
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ access_token: j.access_token }).toString(),
+    });
+    if (/\/users\/login/.test(r.url) || r.url.replace(/[#?].*$/, "") === BASE + "/") throw new NoorError("ms_noor_refused");
+    if (!/\/teacher/.test(r.url)) throw new NoorError("not_teacher", r.url);
+    return r;
+  }
+
+  // ── الدخول بالبريد الوزاري مع التحقّق الثنائي (تدفّق رمز الجهاز) ──
+  // يعرض المعلّم رمزاً قصيراً، يُدخله في صفحة Microsoft ويوافق على جواله مرةً،
+  // فنأخذ رمز وصولٍ ورمز تجديد (offline_access) يُغني عن كلمة المرور بعدها.
+  static async msDeviceStart() {
+    const r = await fetch(MS_AUTH + "/devicecode", {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: NOOR_MS_CLIENT, scope: MS_SCOPE }).toString(),
+    });
+    // deno-lint-ignore no-explicit-any
+    const j: any = await r.json().catch(() => ({}));
+    if (!j.device_code) throw new NoorError("ms_unsupported", String(j.error_description || j.error || r.status).slice(0, 160));
+    return { device_code: String(j.device_code), user_code: String(j.user_code), uri: String(j.verification_uri), expires_in: +j.expires_in || 900, interval: +j.interval || 5 };
+  }
+  // deno-lint-ignore no-explicit-any
+  static async msToken(params: Record<string, string>): Promise<any> {
+    const r = await fetch(MS_AUTH + "/token", {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: NOOR_MS_CLIENT, scope: MS_SCOPE, ...params }).toString(),
+    });
+    return await r.json().catch(() => ({}));
+  }
+  static async msDevicePoll(device_code: string) {
+    const j = await Noor.msToken({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code });
+    if (j.access_token) return { access: String(j.access_token), refresh: String(j.refresh_token || "") };
+    if (j.error === "authorization_pending" || j.error === "slow_down") return null;
+    if (j.error === "expired_token" || j.error === "code_expired") throw new NoorError("ms_code_expired");
+    if (j.error === "authorization_declined") throw new NoorError("ms_declined");
+    throw new NoorError("ms_unsupported", String(j.error_description || j.error).slice(0, 160));
+  }
+  static async msRefresh(refresh_token: string) {
+    const j = await Noor.msToken({ grant_type: "refresh_token", refresh_token });
+    if (!j.access_token) throw new NoorError("ms_relink", String(j.error_description || j.error).slice(0, 160));
+    return { access: String(j.access_token), refresh: String(j.refresh_token || refresh_token) };
+  }
+  static async msEmail(access: string) {
+    try {
+      const r = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName", { headers: { authorization: "Bearer " + access } });
+      const j = await r.json();
+      return String(j.mail || j.userPrincipalName || "");
+    } catch { return ""; }
+  }
+  async msTokenLogin(access: string) {
+    this.jar = {};
+    await this.req("/", { anon: true });
+    const r = await this.req("/users/microsoft_login", {
+      method: "POST", anon: true,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ access_token: access }).toString(),
     });
     if (/\/users\/login/.test(r.url) || r.url.replace(/[#?].*$/, "") === BASE + "/") throw new NoorError("ms_noor_refused");
     if (!/\/teacher/.test(r.url)) throw new NoorError("not_teacher", r.url);
