@@ -80,6 +80,8 @@ const HW_DAY_CAP = 20; // حدّ نور: أسئلة الواجبات والاخ�
 // ══ مختبر نور — حساباتٌ تجريبية فقط؛ لا يراه أي معلّمٍ آخر ولا تقبله الدالّة منه ══
 const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
 // المستكشف قراءةٌ فقط: يُرفض أي مسارٍ قد يُغيّر شيئاً حتى لو كان GET
+// المستكشف من GitHub يفتح صفحات النماذج (add/create/edit) بطلب GET فقط لقراءة حقولها
+const RAW_BLOCK_SVC = /delete|remove|logout|publish|archive|trash|toggle|save|update|set_|mark|send|upload|approve|reject|copy|move|restore|import|reset|grade/i;
 const RAW_BLOCK = /delete|remove|logout|publish|archive|trash|toggle|edit|add|create|save|update|set_|mark|send|compose|upload|approve|reject|copy|move|restore|import|reset|grade/i;
 // تاريخ مسقط (UTC+4) بعد إزاحة أيام
 function mctDate(addDays: number) {
@@ -544,7 +546,7 @@ Deno.serve(async (req) => {
 
       if (action === "lab_raw") {
         const path = String(b.path || "").trim();
-        if (!/^\/(teacher|schadmin\/nodes)\/[\w\-/:.%?=&]*$/.test(path) || RAW_BLOCK.test(path)) return json({ error: "bad_path", message: "مسارٌ غير مسموح (قراءة فقط، يبدأ بـ /teacher/)." }, 400);
+        if (!/^\/(teacher|schadmin\/nodes)\/[\w\-/:.%?=&]*$/.test(path) || (svcLab ? RAW_BLOCK_SVC : RAW_BLOCK).test(path)) return json({ error: "bad_path", message: "مسارٌ غير مسموح (قراءة فقط، يبدأ بـ /teacher/)." }, 400);
         const r = await run((x) => x.req(path, { ajax: !!b.ajax }));
         await persist();
         return json({ status: r.status, url: r.url, size: r.text.length, text: r.text.slice(0, 250000) });
