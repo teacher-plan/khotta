@@ -9616,7 +9616,7 @@ const EK_CSS=`@page{size:A4;margin:12mm}body{font-family:Arial,'Noto Sans Arabic
 .ekf{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.15;margin:0 2px}.ekf span:first-child{border-bottom:1.5px solid #000;padding:0 3px}
 .eksq{display:inline-flex;align-items:flex-start;white-space:nowrap}.eksq-r{display:inline-block;transform:scaleX(-1)}.eksq-b{border-top:1.5px solid #000;padding:0 2px}.eksq-i{font-size:.6em}
 .ekb{display:inline-block;min-width:70px;border-bottom:1.5px solid #000}.ekclose{border:1.5px solid #000;text-align:center;font-weight:700;padding:6px;margin-top:12px}
-.ekland{size:A4 landscape}.ekk{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}.ekk th,.ekk td{border:1px solid #000;padding:4px 6px;vertical-align:top}.ekk th{background:#eee}
+@page land{size:A4 landscape;margin:10mm}.ekkey{page:land;min-height:0}.ekk{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}.ekk th,.ekk td{border:1px solid #000;padding:4px 6px;vertical-align:top}.ekk th{background:#eee}
 .ekok{color:#0a7a3d;font-weight:700}.ekbad{color:#c0262d;font-weight:700}h3{margin:10px 0 6px;font-size:13pt}`;
 function ekPaperHtml(r,form,word){
   const items=r.forms[form]||[];const sch=(typeof achProfile==='function'&&achProfile().school)||'';
@@ -9636,7 +9636,7 @@ function ekKeyHtml(r,word){
     const items=r.forms[form];
     const cmp=(got,need,names)=>need?Object.entries(need).map(([k,v])=>`<td class="${(got[k]||0)===v?'ekok':'ekbad'}">${escHtml(names[k]||k)}: ${egArNum(got[k]||0)} / ${egArNum(v)}</td>`).join(''):'';
     const ans=it=>{if(it.type==='mcq'&&Number.isInteger(it.answer))return M((it.choices||[])[it.answer]);let a=it.answer!=null?M(it.answer):'';if(Array.isArray(it.steps)&&it.steps.length)a+=(a?'<br>':'')+it.steps.map(M).join('<br>');return a;};
-    return `<div class="ekp"><h3>دليل التصحيح — ${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} — الصف ${NOOR_GRADES[r.grade]} — النموذج (${form})</h3>
+    return `<div class="ekp ekkey"><h3>دليل التصحيح — ${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} — الصف ${NOOR_GRADES[r.grade]} — النموذج (${form})</h3>
     <table class="ekk"><tr><th>المفردة</th><th>النوع</th>${r.kind==='short_test'?'<th>هدف التقويم</th><th>الصعوبة</th>':''}<th>الدرجة</th><th>الدرس</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${EK_TYPES[it.type]||it.type}</td>${r.kind==='short_test'?`<td>${it.ao} ${EK_AO[it.ao]||''}</td><td>${EK_LV[it.level]||it.level}</td>`:''}<td>${egArNum(it.marks)}</td><td>${escHtml(it.lesson)}</td></tr>`).join('')}</table>
     ${r.kind==='short_test'?`<table class="ekk"><tr>${cmp(sumBy(items,'ao'),r.tool.ao,EK_AO)}</tr><tr>${cmp(sumBy(items,'level'),r.tool.level,EK_LV)}</tr></table>`:''}
     <table class="ekk"><tr><th>رقم المفردة</th><th>عنصر التقويم</th><th>الهدف التعليمي</th><th>رقم الصفحة</th><th>الإجابة</th><th>الدرجة</th><th>الإرشادات</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${r.kind==='short_test'?(EK_AO[it.ao]||''):'—'}</td><td>${escHtml(it.objective||'')}</td><td>${M(it.page||'')}</td><td>${ans(it)}</td><td>${egArNum(it.marks)}</td><td>${M(it.guidance||'')}</td></tr>`).join('')}</table></div>`;
