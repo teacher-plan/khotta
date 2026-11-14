@@ -1,0 +1,49 @@
+# تجربة دالّة exam-khotta من GitHub (حساب المختبر): يطبع ملخّص الناتج ونتيجة الفحص، ويحفظ JSON كاملاً ملفاً مرفقاً.
+name: exam-khotta test (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      body:
+        description: 'JSON الطلب (kind, grade, number, grid, lessons:[{unit,lesson}])'
+        required: true
+      as:
+        description: 'بريد حساب المختبر'
+        required: true
+        default: 'xx@y.com'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          BODY: ${{ inputs.body }}
+          AS: ${{ inputs.as }}
+        run: |
+          set -uo pipefail
+          KEY=$(curl -s "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" -H "Authorization: Bearer $TOKEN" \
+            | jq -r '[.[] | select(.name=="service_role")][0].api_key')
+          echo "::add-mask::$KEY"
+          curl -s -m 400 -X POST "https://$REF.supabase.co/functions/v1/exam-khotta" \
+            -H "Authorization: Bearer $KEY" -H "apikey: $KEY" -H "x-lab-as: $AS" -H "Content-Type: application/json" \
+            --data-binary "$BODY" > out.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open('out.json'))
+          if 'forms' not in d:
+              print('ERROR', json.dumps(d, ensure_ascii=False)[:800]); raise SystemExit
+          print('model', d.get('model'), 'pages', d.get('pages_used'), 'check', json.dumps(d.get('check'), ensure_ascii=False))
+          for f, items in d['forms'].items():
+              print('════ النموذج', f)
+              for i, it in enumerate(items, 1):
+                  print(i, it.get('type'), it.get('ao'), it.get('level'), it.get('marks'), it.get('lesson'), '|', it.get('objective'))
+                  print('   ', it.get('stem'))
+                  if it.get('choices'): print('    choices:', it.get('choices'), 'answer:', it.get('answer'))
+                  if it.get('parts'): print('    parts:', [p.get('stem') for p in it['parts']])
+                  print('    answer:', it.get('answer') if it.get('type') != 'mcq' else '', it.get('steps') or '')
+          PY
+      - uses: actions/upload-artifact@v4
+        with: { name: exam-khotta-out, path: out.json }
