@@ -5698,7 +5698,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='7a160d3';
+const KH_BUILD='a725ef3';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -9638,13 +9638,13 @@ function ekKeyHtml(r,word){
   const M=x=>ekMath(x,word);
   const sumBy=(items,f)=>items.reduce((o,it)=>{o[it[f]]=(o[it[f]]||0)+(it.marks||0);return o;},{});
   return Object.keys(r.forms).map(form=>{
-    const items=r.forms[form];
+    const items=r.forms[form];const hasAo=items.some(it=>it.ao);
     const cmp=(got,need,names)=>need?Object.entries(need).map(([k,v])=>`<td class="${(got[k]||0)===v?'ekok':'ekbad'}">${escHtml(names[k]||k)}: ${egArNum(got[k]||0)} / ${egArNum(v)}</td>`).join(''):'';
     const ans=it=>{if(it.type==='mcq'&&Number.isInteger(it.answer))return M((it.choices||[])[it.answer]);let a=it.answer!=null?M(it.answer):'';if(Array.isArray(it.steps)&&it.steps.length)a+=(a?'<br>':'')+it.steps.map(M).join('<br>');return a;};
     return `<div class="ekp ekkey"><h3>دليل التصحيح — ${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} — الصف ${NOOR_GRADES[r.grade]} — النموذج (${form})</h3>
-    <table class="ekk"><tr><th>المفردة</th><th>النوع</th>${r.kind==='short_test'?'<th>هدف التقويم</th><th>الصعوبة</th>':''}<th>الدرجة</th><th>الدرس</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${EK_TYPES[it.type]||it.type}</td>${r.kind==='short_test'?`<td>${it.ao} ${EK_AO[it.ao]||''}</td><td>${EK_LV[it.level]||it.level}</td>`:''}<td>${egArNum(it.marks)}</td><td>${escHtml(it.lesson)}</td></tr>`).join('')}</table>
+    <table class="ekk"><tr><th>المفردة</th><th>النوع</th>${hasAo?'<th>هدف التقويم</th><th>الصعوبة</th>':''}<th>الدرجة</th><th>الدرس</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${EK_TYPES[it.type]||it.type}</td>${hasAo?`<td>${escHtml(it.ao||'')} ${EK_AO[it.ao]||''}</td><td>${EK_LV[it.level]||escHtml(it.level||'')}</td>`:''}<td>${egArNum(it.marks)}</td><td>${escHtml(it.lesson)}</td></tr>`).join('')}</table>
     ${r.kind==='short_test'?`<table class="ekk"><tr>${cmp(sumBy(items,'ao'),r.tool.ao,EK_AO)}</tr><tr>${cmp(sumBy(items,'level'),r.tool.level,EK_LV)}</tr></table>`:''}
-    <table class="ekk"><tr><th>رقم المفردة</th><th>عنصر التقويم</th><th>الهدف التعليمي</th><th>رقم الصفحة</th><th>الإجابة</th><th>الدرجة</th><th>الإرشادات</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${r.kind==='short_test'?(EK_AO[it.ao]||''):'—'}</td><td>${escHtml(it.objective||'')}</td><td>${M(it.page||'')}</td><td>${ans(it)}</td><td>${egArNum(it.marks)}</td><td>${M(it.guidance||'')}</td></tr>`).join('')}</table></div>`;
+    <table class="ekk"><tr><th>رقم المفردة</th><th>عنصر التقويم</th><th>الهدف التعليمي</th><th>رقم الصفحة</th><th>الإجابة</th><th>الدرجة</th><th>الإرشادات</th></tr>${items.map((it,i)=>`<tr><td>${egArNum(i+1)}</td><td>${EK_AO[it.ao]||'—'}</td><td>${escHtml(it.objective||'')}</td><td>${M(it.page||'')}</td><td>${ans(it)}</td><td>${egArNum(it.marks)}</td><td>${M(it.guidance||'')}</td></tr>`).join('')}</table></div>`;
   }).join('');
 }
 function ekRenderResult(el){
