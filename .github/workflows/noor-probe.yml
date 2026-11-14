@@ -16,6 +16,10 @@ on:
         description: 'نمط للروابط المطبوعة (regex)'
         required: false
         default: 'discussion|post|forum|room|topic'
+      dump:
+        description: 'نمطٌ يُطبع حوله HTML خام (اختياري)'
+        required: false
+        default: ''
 
 jobs:
   probe:
@@ -28,6 +32,7 @@ jobs:
           PATHS: ${{ inputs.paths }}
           AS: ${{ inputs.as }}
           GREP: ${{ inputs.grep }}
+          DUMP: ${{ inputs.dump }}
         run: |
           set -uo pipefail
           KEY=$(curl -s "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" -H "Authorization: Bearer $TOKEN" \
@@ -77,6 +82,14 @@ jobs:
               if n >= 8: break
           for m in re.finditer(r'<a\b[^>]*href="([^"]+)"[^>]*>([^<]{0,60})', t):
               if re.search(g, m.group(2), re.I): print('ALINK', m.group(1), '|', m.group(2).strip())
+          import os
+          dp = os.environ.get('DUMP', '')
+          if dp:
+              k = 0
+              for m in re.finditer(dp, t):
+                  seg = re.sub(r'selected_students\]\[\d+\]', 'selected_students][N]', t[max(0, m.start() - 300): m.start() + 3500])
+                  print('DUMP<<<', seg, '>>>'); k += 1
+                  if k >= 4: break
           for m in re.finditer(r'\$\.(?:ajax|post)\(\s*\{?[^)]{0,200}', t):
               s = m.group(0)
               if re.search(g, s, re.I): print('AJAX', re.sub(r'\s+', ' ', s)[:220])
