@@ -1418,7 +1418,7 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 .ek-warn ul{margin:6px 0;padding-inline-start:18px;font-size:12.5px;line-height:1.9}
 .ek-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.ek-tabs button{border:1.5px solid var(--border);background:var(--card);border-radius:999px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
 .ek-tabs button.on{background:#127A72;border-color:#127A72;color:#fff}.ek-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.ek-sheet{background:#fff;color:#000;border-radius:12px;padding:10px;overflow-x:auto;font-size:12px;border:1px solid var(--border)}.ek-sheet .ekp{min-height:0;margin-bottom:12px}
+.ek-frame{position:relative;overflow:hidden;background:#e7e9ec;border-radius:12px;border:1px solid var(--border);padding:0}.ek-frame iframe{display:block;border:0;background:#fff;transform-origin:top right;box-shadow:0 2px 10px rgba(0,0,0,.12)}.ek-edit-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;color:#127A72;font-weight:700;margin:0 0 8px}
 
 .ex-top-hint{flex:1;min-width:220px;font-size:12.5px;color:var(--muted);line-height:1.8}
 .ex-step-t{font-size:15px}
@@ -9568,8 +9568,8 @@ async function ekGenerate(){
       body:JSON.stringify({kind:ek.kind,number:ek.number,grid:ek.grid,grade:ek.grade,semester:profile.semester||'الفصل الأول',note:ek.note||'',lessons:ekSelList().map(l=>({unit:l.unit,lesson:l.lesson}))})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||j.error)throw new Error(j.message||'تعذّر إعداد الاختبار');
-    ek.res=j;ek.form='أ';ek.tab='paper';
-    const list=(profile.ek_tests||[]).slice(0,9);list.unshift({...j,saved_at:new Date().toISOString()});profile.ek_tests=list;
+    j.saved_at=new Date().toISOString();ek.res=j;ek.form='أ';ek.tab='paper';
+    const list=(profile.ek_tests||[]).slice(0,9);list.unshift(j);profile.ek_tests=list;
     cy1Save({ek_tests:list});
     toast(j.check&&j.check.ok?'جاهز — مطابق لمواصفات الوثيقة':'جاهز مع ملاحظات من الفحص',j.check&&j.check.ok?'ok':true);
   }catch(e){toast(e.message,true);}
@@ -9602,20 +9602,24 @@ function ekItemHtml(it,i,word){
   if(it.type==='table'&&it.grid&&Array.isArray(it.grid.rows))q+=`<table class="ekt">${it.grid.rows.map((r,ri)=>`<tr>${r.map(c=>ri===0&&it.grid.header?`<th>${M(c)}</th>`:`<td>${c===''?'&nbsp;':M(c)}</td>`).join('')}</tr>`).join('')}</table>`;
   if(Array.isArray(it.parts)&&it.parts.length)q+=it.parts.map(p=>`<div class="ekq-p"><b>(${escHtml(p.label||'')})</b> ${M(p.stem)}</div>${L(p.lines||1)}`).join('');
   else if(['short','fill','explain','creative','long'].includes(it.type))q+=L(it.lines||(it.type==='explain'||it.type==='creative'?2:1));
+  // مساحة إضافية للحل تُوزَّع لتملأ الصفحة (ekFill) بحسب الدرجة؛ أسطرٌ للأسئلة المقالية
+  const w=it.type==='mcq'?0.35:['tf','match','order','table','fill'].includes(it.type)?0.6*(it.marks||1):(it.marks||1);
+  const lined=['short','explain','creative','long','tf'].includes(it.type)?1:0;
+  q+=`<div class="ekgap" data-w="${w}" data-l="${lined}" contenteditable="false"></div>`;
   return `<tr><td class="ekn">${egArNum(i+1)}</td><td>${q}</td><td class="ekm">[${egArNum(it.marks)}]</td></tr>`;
 }
 const EK_STY_O='<'+'style>',EK_STY_C='</'+'style>';
 const EK_CSS=`@page{size:A4;margin:12mm}body{font-family:Arial,'Noto Sans Arabic',sans-serif;direction:rtl;color:#000;font-size:14pt;margin:0}
-.ekp{border:3px double #000;padding:10px 14px;min-height:260mm;box-sizing:border-box;page-break-after:always}.ekp:last-child{page-break-after:auto}
+.ekp{border:3px double #000;padding:12px 16px;box-sizing:border-box;page-break-after:always;background:#fff}@media screen{body{background:#fff;padding:12mm;width:max-content}.ekp{width:186mm;margin-bottom:12mm}.ekkey{width:273mm}[contenteditable]:focus{outline:none}.ekp td:hover,.ekp .ekti:hover{background:#fffbe6}}.ekgap{overflow:hidden}.ekp:last-child{page-break-after:auto}
 .ekh{display:flex;justify-content:space-between;align-items:flex-start;font-size:12pt;font-weight:700;line-height:1.6}.ekh .sc{border:1.5px solid #000;width:70px;text-align:center}.ekh .sc div{height:34px;border-bottom:1.5px solid #000}
-.ekti{text-align:center;font-size:16pt;font-weight:700;text-decoration:underline;margin:8px 0 4px;line-height:1.7}.ekmeta{display:flex;justify-content:space-between;font-size:13pt;margin:4px 0}
-.ekins{font-weight:700;margin:6px 0}.ekmain{width:100%;border-collapse:collapse}.ekmain>tbody>tr>td,.ekmain>thead>tr>th{border:1.5px solid #000;padding:6px 8px;vertical-align:top}
+.ekti{text-align:center;font-size:16pt;font-weight:700;text-decoration:underline;margin:16px 0 12px;line-height:1.8}.ekmeta{display:flex;justify-content:space-between;font-size:13pt;margin:4px 0}
+.ekins{font-weight:700;margin:12px 0 10px}.ekmain{width:100%;border-collapse:collapse}.ekmain>tbody>tr>td,.ekmain>thead>tr>th{border:1.5px solid #000;padding:10px 10px;vertical-align:top}
 .ekmain th{background:#eee}.ekmain tr,.ekk tr{page-break-inside:avoid;break-inside:avoid}.ekmain thead{display:table-header-group}.ekn{width:42px;text-align:center;font-weight:700}.ekm{width:52px;text-align:center;font-weight:700}
-.ekq-s{line-height:2}.ekq-c{display:flex;flex-wrap:wrap;gap:8px 34px;margin:6px 4px;line-height:2}.ekq-p{margin-top:6px;line-height:2}
+.ekq-s{line-height:2.1}.ekq-c{display:flex;flex-wrap:wrap;gap:8px 34px;margin:6px 4px;line-height:2}.ekq-p{margin-top:6px;line-height:2}
 .ekl{border-bottom:1.5px dotted #555;height:30px}.ekt{border-collapse:collapse;margin:6px 0}.ekt td,.ekt th{border:1px solid #000;padding:4px 14px;min-width:44px;text-align:center}
 .ekf{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.15;margin:0 2px}.ekf span:first-child{border-bottom:1.5px solid #000;padding:0 3px}
 .eksq{display:inline-flex;align-items:flex-start;white-space:nowrap}.eksq-r{display:inline-block;transform:scaleX(-1)}.eksq-b{border-top:1.5px solid #000;padding:0 2px}.eksq-i{font-size:.6em}
-.ekb{display:inline-block;min-width:70px;border-bottom:1.5px solid #000}.ekclose{border:1.5px solid #000;text-align:center;font-weight:700;padding:6px;margin-top:12px}
+.ekb{display:inline-block;min-width:70px;border-bottom:1.5px solid #000}.ekclose{border:1.5px solid #000;text-align:center;font-weight:700;padding:6px;margin-top:16px}
 @page land{size:A4 landscape;margin:10mm}.ekkey{page:land;min-height:0}.ekk{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}.ekk th,.ekk td{border:1px solid #000;padding:4px 6px;vertical-align:top}.ekk th{background:#eee}
 .ekok{color:#0a7a3d;font-weight:700}.ekbad{color:#c0262d;font-weight:700}h3{margin:10px 0 6px;font-size:13pt}`;
 function ekPaperHtml(r,form,word){
@@ -9643,29 +9647,95 @@ function ekKeyHtml(r,word){
   }).join('');
 }
 function ekRenderResult(el){
-  const r=ek.res,ok=r.check&&r.check.ok;
-  const body=ek.tab==='key'?ekKeyHtml(r):ekPaperHtml(r,ek.form);
+  const r=ek.res,ok=r.check&&r.check.ok,part=ekPartKey(),edited=!!(r.edited&&r.edited[part]);
   el.innerHTML=`<div class="ex-top"><button class="c1-mbtn no" onclick="ek.res=null;exRender()">→ اختبار جديد</button><b class="ex-step-t">${escHtml(r.tool.name)} ${r.number===2?'الثاني':'الأول'} · الصف ${NOOR_GRADES[r.grade]}</b>
     <span class="ek-chk ${ok?'ok':'bad'}">${ok?'✓ مطابق لمواصفات الوثيقة':'⚠ ملاحظات من الفحص'}</span></div>
   ${!ok?`<div class="ex-box ek-warn"><b>الفحص الآلي وجد:</b><ul>${(r.check.errors||[]).map(e=>`<li>${escHtml(e)}</li>`).join('')}</ul>راجعها قبل الطباعة، أو أعد الإعداد.</div>`:''}
   <div class="ek-tabs">${['أ','ب'].map(f=>`<button class="${ek.tab==='paper'&&ek.form===f?'on':''}" onclick="ek.tab='paper';ek.form='${f}';exRender()">النموذج (${f})</button>`).join('')}<button class="${ek.tab==='key'?'on':''}" onclick="ek.tab='key';exRender()">دليل التصحيح والشبكة</button></div>
-  <div class="ek-actions"><button class="c1-mbtn go" onclick="ekPrint()"><i class="ki ki-download" aria-hidden="true"></i> طباعة / PDF</button><button class="c1-mbtn no" onclick="ekWord()">تنزيل Word</button><button class="c1-mbtn no" onclick="ekToAnalysis()"><i class="ki ki-chart" aria-hidden="true"></i> تحليل نتائج هذا الاختبار</button></div>
-  <div class="ek-sheet">${EK_STY_O}${EK_CSS.replace(/body\{[^}]*\}/,'').replace(/@page\{[^}]*\}/,'')}${EK_STY_C}${body}</div>
+  <div class="ek-actions"><button class="c1-mbtn go" onclick="ekPrint()"><i class="ki ki-download" aria-hidden="true"></i> طباعة / PDF</button><button class="c1-mbtn no" onclick="ekWord()">تنزيل Word</button><button class="c1-mbtn no" onclick="ekToAnalysis()"><i class="ki ki-chart" aria-hidden="true"></i> تحليل نتائج هذا الاختبار</button><button class="c1-mbtn no" onclick="ek.zoom=!ek.zoom;exRender()">${ek.zoom?'⊖ ملء الشاشة':'⊕ تكبير للتعديل'}</button>${edited?`<button class="c1-mbtn no" onclick="ekReset()">↺ استعادة الأصل لهذه الصفحة</button>`:''}</div>
+  <div class="ek-edit-hint">✎ المعاينة كما تُطبع تماماً — اضغط على أي نص لتعديله، وتُحفظ التعديلات تلقائياً وتدخل في الطباعة وWord.</div>
+  <div class="ek-frame" id="ek-frame-wrap"><iframe id="ek-frame" title="معاينة الاختبار"></iframe></div>
   <p class="ek-note">الدروس: ${r.lessons.map(l=>escHtml(l.code+' '+l.title)).join('، ')} · قرأ ${egArNum(r.pages_used||0)} صفحة من الكتاب والدليل · يُراجَع من المعلّم الأول أو المشرف قبل التطبيق.</p>`;
+  setTimeout(ekMountFrame,0);
+}
+function ekPartKey(){return ek.tab==='key'?'key':ek.form;}
+// نصّ الصفحة: نسخة المعلّم المعدَّلة إن وُجدت، وإلا المولَّدة
+function ekPartHtml(r,part,word){
+  if(r.edited&&r.edited[part])return r.edited[part];
+  return part==='key'?ekKeyHtml(r,word):ekPaperHtml(r,part,word);
+}
+// ملء الصفحات: يحاكي تقسيم الطباعة على ورق A4 (الصفوف لا تنقسم، ورأس الجدول يتكرّر)،
+// ثم يوزّع الفراغ المتبقي أسفل كل صفحة على مساحات الحل في صفوفها بحسب درجة كل مفردة.
+function ekFill(doc){
+  const PX=96/25.4,PAGE=273*PX,SAFE=18;
+  doc.querySelectorAll('.ekp:not(.ekkey)').forEach(p=>{
+    const gaps=[...p.querySelectorAll('.ekgap')];
+    gaps.forEach(g=>{g.innerHTML='';g.style.height='0px';});
+    const rows=[...p.querySelectorAll('.ekmain>tbody>tr')];if(!rows.length)return;
+    const th=(p.querySelector('.ekmain>thead')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height;
+    const top0=p.getBoundingClientRect().top;
+    let start=0,shift=0;const pages=[{start:0,rows:[],bottom:0}];
+    rows.forEach(r=>{
+      const R=r.getBoundingClientRect();let t=R.top-top0+shift,bt=R.bottom-top0+shift;
+      const pg=pages[pages.length-1];
+      if(bt>pg.start+PAGE-SAFE&&pg.rows.length){start=pg.start+PAGE;shift+=start+th-t;bt=R.bottom-top0+shift;pages.push({start,rows:[],bottom:0});}
+      const cur=pages[pages.length-1];cur.rows.push(r);cur.bottom=bt;
+    });
+    const last=pages[pages.length-1];last.bottom=p.getBoundingClientRect().bottom-top0+shift;
+    if(last.bottom>last.start+PAGE-SAFE)return; // خاتمة الورقة على صفحة جديدة: نترك التخطيط كما هو
+    pages.forEach(pg=>{
+      const extra=pg.start+PAGE-SAFE-pg.bottom;if(extra<24)return;
+      const gs=pg.rows.map(r=>r.querySelector('.ekgap')).filter(Boolean);if(!gs.length)return;
+      const sum=gs.reduce((a,g)=>a+(+g.dataset.w||1),0);
+      gs.forEach(g=>{
+        const hh=Math.floor(extra*(+g.dataset.w||1)/sum);
+        g.style.height=hh+'px';
+        if(g.dataset.l==='1')g.innerHTML='<div class="ekl"></div>'.repeat(Math.floor(hh/30));
+      });
+    });
+  });
+}
+function ekDocShell(body,editable){
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(ek.res.tool.name)}</title>${EK_STY_O}${EK_CSS}${EK_STY_C}</head><body${editable?' contenteditable="true" spellcheck="false"':''}>${body}</body></html>`;
+}
+let ekSaveT=null;
+function ekMountFrame(){
+  const f=document.getElementById('ek-frame'),wrap=document.getElementById('ek-frame-wrap');if(!f||!ek.res)return;
+  const r=ek.res,part=ekPartKey(),W=((part==='key'?297:210))*96/25.4;
+  const d=f.contentDocument;d.open();d.write(ekDocShell(ekPartHtml(r,part,false),true));d.close();
+  f.style.width=W+'px';
+  const fit=()=>{if(!document.body.contains(f))return;ekFill(d);const s=ek.zoom?1:Math.min(1,wrap.clientWidth/W);wrap.style.overflowX=ek.zoom?'auto':'hidden';const h=d.documentElement.scrollHeight;f.style.height=h+'px';f.style.transform=`scale(${s})`;wrap.style.height=Math.ceil(h*s)+'px';};
+  fit();setTimeout(fit,120);if(d.fonts&&d.fonts.ready)d.fonts.ready.then(fit);
+  d.addEventListener('input',()=>{
+    r.edited=r.edited||{};r.edited[part]=d.body.innerHTML;
+    clearTimeout(ekSaveT);ekSaveT=setTimeout(()=>{fit();r.edited[part]=d.body.innerHTML;if(profile.ek_tests)cy1Save({ek_tests:profile.ek_tests});},800);
+  });
+}
+function ekReset(){
+  const r=ek.res,part=ekPartKey();if(!r.edited)return;
+  if(!confirm('حذف تعديلاتك على هذه الصفحة واستعادة النسخة المولَّدة؟'))return;
+  delete r.edited[part];if(profile.ek_tests)cy1Save({ek_tests:profile.ek_tests});exRender();
 }
 function ekDocHtml(word){
   const r=ek.res;
-  const all=['أ','ب'].map(f=>ekPaperHtml(r,f,word)).join('')+ekKeyHtml(r,word);
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(r.tool.name)}</title>${EK_STY_O}${EK_CSS}${EK_STY_C}</head><body>${all}</body></html>`;
+  return ekDocShell(['أ','ب','key'].map(p=>ekPartHtml(r,p,word)).join(''),false);
 }
 function ekPrint(){
   const w=window.open('','_blank');if(!w){toast('اسمح بالنوافذ المنبثقة للطباعة',true);return;}
-  w.document.open();w.document.write(ekDocHtml(false));w.document.close();setTimeout(()=>{try{w.focus();w.print();}catch(e){}},600);
+  w.document.open();w.document.write(ekDocHtml(false));w.document.close();
+  setTimeout(()=>{try{ekFill(w.document);w.focus();w.print();}catch(e){}},700);
 }
 function ekWord(){
   const r=ek.res;
-  const blob=new Blob(['﻿'+ekDocHtml(true)],{type:'application/msword'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${r.tool.name} ${r.number===2?'الثاني':'الأول'} - الصف ${r.grade}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  // يُملأ في إطار مخفي بعرض الورقة نفسه، ثم يُحفظ بالارتفاعات المحسوبة
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;left:-3000px;top:0;width:1300px;height:800px;visibility:hidden';document.body.appendChild(f);
+  f.contentDocument.open();f.contentDocument.write(ekDocHtml(true));f.contentDocument.close();
+  setTimeout(()=>{
+    try{ekFill(f.contentDocument);}catch(e){}
+    const html='<!doctype html>'+f.contentDocument.documentElement.outerHTML;f.remove();
+    const blob=new Blob(['﻿'+html],{type:'application/msword'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${r.tool.name} ${r.number===2?'الثاني':'الأول'} - الصف ${r.grade}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  },400);
 }
 // التحويل إلى «تحليل اختبار»: أسئلة النموذج (أ) بدرجاتها ودروسها، لإدخال درجات الطلاب لاحقاً
 function ekToAnalysis(){
