@@ -41,6 +41,11 @@ const MSG: Record<string, string> = {
   homework_not_created: "لم تُنشئ نور الواجب.",
   prep_not_found: "أُرسل التحضير لكن لم يظهر في قائمة تحاضير نور. تحقّق من نور قبل إعادة المحاولة.",
   noor_down: "تعذّر الوصول إلى منصّة نور الآن.",
+  ms_mfa: "حسابك الوزاري يطلب تحقّقاً إضافياً (رمزاً على الجوال)، فلا يمكن الدخول به من خُطّة. استعمل اسم المستخدم وكلمة مرور نور بدلاً منه.",
+  ms_pass_expired: "انتهت صلاحية كلمة مرور البريد الوزاري. غيّرها من بوابة Microsoft ثم أعد الربط.",
+  ms_locked: "حساب البريد الوزاري مقفل مؤقتاً بعد محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.",
+  ms_unsupported: "رفضت Microsoft الدخول بالبريد الوزاري من خارج صفحة نور. استعمل اسم المستخدم وكلمة مرور نور.",
+  ms_noor_refused: "تحقّقت Microsoft من بريدك لكن نور لم تقبل الدخول. استعمل اسم المستخدم وكلمة مرور نور.",
 };
 
 // ── التشفير: AES-GCM بمفتاح NOOR_KEY (أو مشتقٍّ من مفتاح الخدمة إن لم يُضبط) ──
@@ -245,6 +250,39 @@ Deno.serve(async (req) => {
       const courses = await run((x) => x.courses());
       await persist({ courses });
       return json(pub({ ...row, courses }));
+    }
+
+    // ── استيراد الجدول الأسبوعي وقوائم الطلاب من نور ──
+    // الجدول: حصص كل مقرّرٍ في أيام هذا الأسبوع (الأحد–الخميس)، وإن خلا الأسبوع
+    // (إجازة) جُرّب الأسبوع التالي. الطلاب: قائمة الدرجات لكل مقرّر وفيها الشعبة.
+    if (action === "import_info") {
+      const cids: string[] = (row.courses || []).map((c: Any) => c.cid);
+      const out = await run(async (x) => {
+        const sched: Any[] = [];
+        for (const off of [0, 7, 14]) {
+          const days = schoolWeek(mctDate(off));
+          for (const cid of cids) {
+            for (let i = 0; i < days.length; i++) {
+              const sl = await x.slots(cid, days[i]).catch(() => [] as Any[]);
+              for (const s of sl) {
+                const p = +((String(s.period).replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).match(/\d+/) || [])[0] || 0);
+                if (p) sched.push({ cid, day: i, period: p, sec: s.section });
+              }
+            }
+          }
+          if (sched.length) return { sched, week: days[0] };
+        }
+        return { sched, week: "" };
+      });
+      const rosters: Any[] = [];
+      for (const cid of cids) {
+        const list = await run((x) => x.studentsScores(cid)).catch(() => [] as Any[]);
+        const by: Record<string, string[]> = {};
+        for (const s of list) if (s.name) (by[s.sec] = by[s.sec] || []).includes(s.name) || by[s.sec].push(s.name);
+        for (const [sec, names] of Object.entries(by)) rosters.push({ cid, sec, names: names.sort((a, b) => a.localeCompare(b, "ar")) });
+      }
+      await persist();
+      return json({ ...out, rosters });
     }
 
     if (action === "lessons") {
@@ -465,7 +503,10 @@ Deno.serve(async (req) => {
 
     return json({ error: "bad_action" }, 400);
   } catch (e) {
-    if (e instanceof NoorError) return json({ error: e.code, message: MSG[e.code] || e.message }, e.code === "bad_credentials" ? 400 : 502);
+    if (e instanceof NoorError) {
+      if (e.code.startsWith("ms_")) console.error("c1-noor ms", e.code, e.message);
+      return json({ error: e.code, message: MSG[e.code] || e.message }, e.code === "bad_credentials" || e.code.startsWith("ms_") ? 400 : 502);
+    }
     const msg = String((e as Error)?.message || e);
     if (/fetch|network|connect|timed? ?out|dns/i.test(msg)) return json({ error: "noor_down", message: MSG.noor_down }, 502);
     console.error("c1-noor", msg);

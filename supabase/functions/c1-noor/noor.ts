@@ -6,6 +6,9 @@
 export const BASE = "https://lms.moe.gov.om";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
+// معرّف تطبيق نور في Microsoft (من صفحة الدخول نفسها: msal clientId)
+const NOOR_MS_CLIENT = "fecfb103-b416-464a-96b2-bd19dd058dc6";
+
 export type Jar = Record<string, string>;
 export type Course = { cid: string; enc: string; name: string; sections: { id: string; label: string }[] };
 export type Slot = { lts: string; timeslot: string; section: string; period: string; has_prep: boolean };
@@ -73,7 +76,50 @@ export class Noor {
     throw new NoorError("redirect_loop");
   }
 
+  // الدخول بالبريد الوزاري (@moe.om): زرّ «البريد الإلكتروني الوزاري» في صفحة نور
+  // يأخذ رمز Microsoft (تطبيق نور نفسه) ثم يرسله إلى /users/microsoft_login.
+  // نأخذ الرمز هنا بالبريد وكلمة المرور مباشرةً (تدفّق ROPC) ثم نسلك الطريق نفسه.
+  async msLogin(email: string, password: string) {
+    this.jar = {};
+    const t = await fetch("https://login.microsoftonline.com/organizations/oauth2/v2.0/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: NOOR_MS_CLIENT, grant_type: "password", scope: "User.Read openid profile", username: email, password }).toString(),
+    });
+    // deno-lint-ignore no-explicit-any
+    let j: any = {};
+    try { j = await t.json(); } catch { j = {}; }
+    if (!j.access_token) {
+      const d = String(j.error_description || "");
+      const code = (d.match(/AADSTS(\d+)/) || [])[1] || "";
+      if (["50126", "50034", "50055", "50057", "50053"].includes(code)) throw new NoorError(code === "50055" ? "ms_pass_expired" : code === "50053" ? "ms_locked" : "bad_credentials", d);
+      if (["50076", "50079", "50074", "53003", "50158"].includes(code)) throw new NoorError("ms_mfa", d);
+      throw new NoorError("ms_unsupported", d.slice(0, 160) || String(j.error || t.status));
+    }
+    await this.req("/", { anon: true });
+    const r = await this.req("/users/microsoft_login", {
+      method: "POST", anon: true,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ access_token: j.access_token }).toString(),
+    });
+    if (/\/users\/login/.test(r.url) || r.url.replace(/[#?].*$/, "") === BASE + "/") throw new NoorError("ms_noor_refused");
+    if (!/\/teacher/.test(r.url)) throw new NoorError("not_teacher", r.url);
+    return r;
+  }
+
   async login(username: string, password: string) {
+    if (username.includes("@")) {
+      // بعض الحسابات تقبل البريد في نموذج الدخول العادي؛ نجرّب طريق Microsoft أولاً
+      // ثم النموذج العادي إن رفض Microsoft الطريقة نفسها (لا كلمة المرور).
+      try { return await this.msLogin(username, password); } catch (e) {
+        if (!(e instanceof NoorError) || !["ms_unsupported", "ms_noor_refused"].includes(e.code)) throw e;
+        try { return await this.formLogin(username, password); } catch { throw e; }
+      }
+    }
+    return await this.formLogin(username, password);
+  }
+
+  async formLogin(username: string, password: string) {
     this.jar = {};
     await this.req("/", { anon: true });
     const r = await this.req("/users/login", {
