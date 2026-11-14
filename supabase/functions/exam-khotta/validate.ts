@@ -64,7 +64,7 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       if (it?.type === "tf" && it.explain !== true) E.push(`${k}: الصواب والخطأ مع التفسير دائماً (explain: true).`);
       if (it?.type === "match" && !(Array.isArray(it.right) && Array.isArray(it.left) && it.right.length > it.left.length && it.right.length >= 4))
         E.push(`${k}: المزاوجة: بدائل العمود الثاني أكثر من البنود بواحد على الأقل، و٤ على الأقل.`);
-      if (kind === "short_test") {
+      {
         if (!SPEC_MATH.ao[it?.ao]) E.push(`${k}: ao يجب أن يكون AO1 أو AO2 أو AO3.`);
         if (!SPEC_MATH.levels[it?.level]) E.push(`${k}: level يجب أن يكون L أو M أو H.`);
         aoSum[it?.ao] = (aoSum[it?.ao] || 0) + (m || 0);
@@ -72,11 +72,21 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
       }
     });
     if (total !== tool.total) E.push(`النموذج (${name}): مجموع الدرجات ${total}، والمطلوب ${tool.total}.`);
+    if (gridRows) {
+      if (items.length !== gridRows.length) E.push(`النموذج (${name}): الشبكة المختارة ${gridRows.length} مفردات بهذا الترتيب.`);
+      else gridRows.forEach((r, i) => {
+        const it = items[i];
+        if (cat(it.type) !== r[0] || it.ao !== r[1] || it.level !== r[2] || it.marks !== r[3])
+          E.push(`النموذج (${name}) المفردة ${i + 1}: الشبكة تطلب (${r[0]}، ${r[1]}، ${r[2]}، ${r[3]} درجة) ووجدتُ (${cat(it.type)}، ${it.ao}، ${it.level}، ${it.marks}).`);
+      });
+    }
     if (kind === "quiz") {
       const pat = items.map((x) => x?.marks).sort().join("+");
       if (!["1+2+2", "1+1+3", "2+3"].includes(pat)) E.push(`النموذج (${name}): توزيع درجات السؤال القصير ${pat}؛ المسموح فقط: ١+٢+٢ أو ١+١+٣ (ثلاث مفردات) أو ٢+٣ (مفردتان).`);
+      if (items.length === 3 && items[1]?.type === items[2]?.type) E.push(`النموذج (${name}): نوّع: المفردة الثالثة (استدلال) من نوعٍ غير نوع الثانية.`);
       if (items.filter((x) => x?.type === "mcq").length > 1) E.push(`النموذج (${name}): مفردة اختيار من متعدد واحدة على الأكثر في السؤال القصير.`);
     }
+    if (kind === "quiz" && items.filter((x) => x?.type === "mcq").some((x) => !/حوّط|حوط/.test(String(x?.stem || "")))) E.push(`النموذج (${name}): مفردة الاختيار من متعدد تبدأ بـ«حوّط» (أو تنتهي بـ«حوّط الإجابة الصحيحة.»).`);
     if (kind === "quiz" && (used.size < tool.lessons[0] || used.size > tool.lessons[1])) E.push(`النموذج (${name}): السؤال القصير من درس أو درسين.`);
     if (kind === "short_test") {
       for (const [a, v] of Object.entries(tool.ao as Record<string, number>)) if ((aoSum[a] || 0) !== v) E.push(`النموذج (${name}): درجات ${a} = ${aoSum[a] || 0}، والمطلوب ${v}.`);
@@ -94,14 +104,6 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
         const types = new Set(oth.map((x) => x.type));
         if (oth.length >= 3 && types.size < 2) E.push(`النموذج (${name}): نوّع أنواع المفردات الأخرى.`);
       }
-      if (gridRows) {
-        if (items.length !== gridRows.length) E.push(`النموذج (${name}): الشبكة المختارة ${gridRows.length} مفردات بهذا الترتيب.`);
-        else gridRows.forEach((r, i) => {
-          const it = items[i];
-          if (cat(it.type) !== r[0] || it.ao !== r[1] || it.level !== r[2] || it.marks !== r[3])
-            E.push(`النموذج (${name}) المفردة ${i + 1}: الشبكة تطلب (${r[0]}، ${r[1]}، ${r[2]}، ${r[3]} درجة) ووجدتُ (${cat(it.type)}، ${it.ao}، ${it.level}، ${it.marks}).`);
-        });
-      }
       const minL = tool.lessons[0];
       if (used.size < Math.min(minL, lessons.length)) E.push(`النموذج (${name}): يغطّي ${used.size} دروس فقط؛ وزّع المفردات على الدروس المحدّدة.`);
     }
@@ -109,8 +111,8 @@ export function validate(ex: Any, kind: string, grade: number, lessons: string[]
   checkForm("أ", A); checkForm("ب", B);
   if (A.length === B.length) A.forEach((a, i) => {
     const b = B[i];
-    if (cat(a.type) !== cat(b?.type) || a.marks !== b?.marks || a.lesson !== b?.lesson || (kind === "short_test" && (a.ao !== b?.ao || a.level !== b?.level)))
-      E.push(`المفردة ${i + 1}: النموذج (ب) يجب أن يطابق (أ) في النوع والدرجة والدرس${kind === "short_test" ? " والهدف والصعوبة" : ""}.`);
+    if (cat(a.type) !== cat(b?.type) || a.marks !== b?.marks || a.lesson !== b?.lesson || (a.ao !== b?.ao || a.level !== b?.level))
+      E.push(`المفردة ${i + 1}: النموذج (ب) يجب أن يطابق (أ) في النوع والدرجة والدرس والهدف والصعوبة.`);
     if (a.type === "mcq" && b?.type === "mcq" && JSON.stringify(a.choices?.[a.answer]) === JSON.stringify(b.choices?.[b.answer]))
       E.push(`المفردة ${i + 1}: الإجابة الصحيحة نفسها في النموذجين؛ غيّر الأعداد في (ب).`);
   });
