@@ -11,6 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
+import { curFor, bookExtract, readCache, bookKey, EXTRACT_VERSION } from "../_shared/lessonExtract.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,18 @@ Deno.serve(async (req) => {
     const st: Record<string, string> = {};
     (rows || []).forEach((r: { key: string; value: string }) => { st[r.key] = r.value; });
 
+    const b = await req.json().catch(() => ({}));
+    const grade = String(b.grade || "");
+    const subject = String(b.subject || "");
+    const unit = String(b.unit || "");
+    const lesson = String(b.lesson || "");
+    // الدرس مقروءٌ من قبل على المنصّة (من أي معلّم): نعيد ملخّصه بلا تكلفة ولا خصم حصّة
+    const cur = grade && subject && lesson ? await curFor(admin, grade, subject, unit, lesson).catch(() => null) : null;
+    if (cur) {
+      const c = await readCache(admin, bookKey(cur.id));
+      if (c && c.v === EXTRACT_VERSION && c.summary) return json({ summary: c.summary, cached: true });
+    }
+
     // حصة اقتصادية (نص) رغم أن المدخل صور — المخرج نص قصير فقط
     const quota = await takeQuota(admin, user.id, user.email || "", "text", st);
     // تمييزٌ لازم: fail-closed يعني أنّ عطلاً في القاعدة يمنع التوليد أيضاً —
@@ -58,16 +71,17 @@ Deno.serve(async (req) => {
       return json(body, status);
     };
 
-    const b = await req.json().catch(() => ({}));
-    const grade = String(b.grade || "");
-    const subject = String(b.subject || "");
-    const unit = String(b.unit || "");
-    const lesson = String(b.lesson || "");
     // عشرون صفحةً لا ستّ عشرة: الدرس ثلاث صفحاتٍ وسطياً، لكنّ دروس المراجعة
     // وآخر الوحدة تطول — وما يزيد كان يُقصّ صامتاً فيُلخَّص الدرس ناقصاً بلا
     // أن يُلحظ، ويُبنى على الملخّص الناقص خطةٌ وانفوجرافيك ولعبةٌ وأسئلة.
     const images: string[] = Array.isArray(b.images) ? b.images.slice(0, 20) : [];
     if (!images.length) return json({ error: "no_images" }, 400);
+
+    // الدرس معروف في المنهج: قراءة واحدة تُنتج الملخّص و«مستخلص الاختبارات» معاً وتُخزَّن للمنصّة كلها
+    if (cur) {
+      const ex = await bookExtract(admin, st, apiKey, cur, images, { grade, subject, userId: user.id }).catch(() => null);
+      if (ex?.summary) return json({ summary: ex.summary, model: ex.model, extracted: true });
+    }
 
     const model = ensureVision(st.model_summary || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
 
