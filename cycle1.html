@@ -3760,6 +3760,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button type="button" class="rs-act-btn danger" id="rs-del-btn" onclick="rosterDeleteToggle()" disabled><i class="ki ki-trash" aria-hidden="true"></i> حذف طالب</button>
       <button type="button" class="rs-act-btn" id="rs-upload-btn" onclick="document.getElementById('roster-file').click()" disabled><i class="ki ki-clip" aria-hidden="true"></i> رفع قوائم الطلاب</button>
       <button type="button" class="rs-act-btn" id="rs-paste-btn" onclick="khPasteToggle('roster')" disabled><i class="ki ki-list" aria-hidden="true"></i> لصق الأسماء</button>
+      <button type="button" class="rs-act-btn danger" id="rs-delcls-btn" onclick="rosterDeleteClass()" disabled><i class="ki ki-trash" aria-hidden="true"></i> حذف الشعبة</button>
     </div>
     <div class="rs-paste" id="roster-paste" hidden></div>
     <span class="su-roster-hint" id="roster-upload-msg"></span>
@@ -5703,10 +5704,10 @@ function acctDigits(s){
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
                       .replace(/\D/g,'');
 }
-let acctRoster={},acctCls=null;
+let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
-  const cls=c1AllClasses();
+  const cls=c1AllClasses().filter(c=>!acctDelCls.has(c.id));
   document.getElementById('roster-del-list').innerHTML='';
   // بطاقةٌ متقطّعة الحدّ في آخر الشبكة: إضافة الشعب مكانها الطبيعي مع
   // إدارتها، لا في إعدادات الحساب. وتظهر حتى حين لا شعب بعد.
@@ -5716,7 +5717,7 @@ function acctRenderRoster(){
     </button>`;
   if(!cls.length){
     grid.innerHTML='<div class="plan-empty-card" style="grid-column:1/-1">لا شعب بعد — '+khG('أضيفي','أضف')+' أولى '+khG('شُعَبكِ','شُعَبك')+' من الزرّ أدناه.</div>'+addCard;
-    ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn'].forEach(id=>document.getElementById(id).disabled=true);
+    ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn','rs-delcls-btn'].forEach(id=>document.getElementById(id).disabled=true);
     return;
   }
   grid.innerHTML=cls.map(c=>{
@@ -5727,7 +5728,7 @@ function acctRenderRoster(){
     </button>`;
   }).join('')+addCard;
   const has=!!acctCls;
-  ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn'].forEach(id=>document.getElementById(id).disabled=!has);
+  ['rs-add-btn','rs-del-btn','rs-upload-btn','rs-paste-btn','rs-delcls-btn'].forEach(id=>document.getElementById(id).disabled=!has);
   if(!has){const pb=document.getElementById('roster-paste');if(pb)pb.hidden=true;}
 }
 function acctTab(id){
@@ -5757,6 +5758,19 @@ function rosterDeleteToggle(){
     :'<p class="acct-note">لا '+khS('طالبات','طلاب')+' في هذه الشعبة بعد.</p>';
 }
 // تعديل اسم طالب: الترتيب (ومعه النجوم وسجلّ السلوك) يبقى كما هو، ويُحفظ مع زرّ «حفظ»
+// حذف شعبة كاملة (طلب الأستاذ عيسى): بعد استيرادٍ من نور قد تُدمج شعبتان في شعبةٍ
+// واحدة لاختلاف أسمائهما. الحذف في نسخة العمل فقط، ويُعتمد بزرّ «حفظ» — فالإغلاق يتراجع.
+async function rosterDeleteClass(){
+  if(!acctCls)return;
+  const c=c1AllClasses().find(x=>x.id===acctCls);if(!c)return;
+  const n=(acctRoster[c.id]||[]).length;
+  const ok=await c1Confirm('حذف شعبة «'+(c.name||'')+'» كاملة؟ '+(n?'سيُحذف معها '+khS('طالباتها','طلابها')+' ('+egArNum(n)+') ونجومهم وسجلّ سلوكهم، و':'وستُحذف ')+'حصصها من الجدول. يُعتمد الحذف بعد الضغط على «حفظ».');
+  if(!ok)return;
+  acctDelCls.add(c.id);delete acctRoster[c.id];acctCls=null;
+  document.getElementById('roster-del-list').innerHTML='';
+  acctRenderRoster();
+  toast('حُذفت شعبة «'+(c.name||'')+'» — اضغط «حفظ» لاعتماد الحذف','ok');
+}
 function rosterRenameStu(i){
   const l=acctRoster[acctCls]||[];if(!l[i])return;
   const nm=(prompt('تعديل الاسم:',l[i].nm||'')||'').trim();
@@ -5987,7 +6001,7 @@ function rosterOpen(){
   const rp=document.getElementById('roster-paste');if(rp)rp.hidden=true;
   // نسخةُ عملٍ منفصلة: التعديل لا يمسّ الملف حتى تضغط «حفظ»، فالإغلاق يتراجع.
   // كل طالبة تحمل si = موضعها الأصلي، وهو ما تُبنى عليه إعادةُ ترتيب النجوم.
-  acctRoster={};
+  acctRoster={};acctDelCls=new Set();
   c1AllClasses().forEach(c=>{
     acctRoster[c.id]=(c.students||[]).map((nm,i)=>({nm,si:i}));
   });
@@ -6001,7 +6015,15 @@ async function rosterSave(){
   // بناء المصفوفتين بالسحب من الموضع الأصلي (si)، والمنضمّة الجديدة تبدأ نظيفة.
   const stars={...(profile.stars||{})}, beh={...(profile.beh_log||{})};
   const stuGroupsNext={...(profile.stu_groups||{})};
-  const grades=(profile.grades||[]).map(g=>({...g,classes:(g.classes||[]).map(c=>{
+  const del=acctDelCls;
+  del.forEach(id=>{delete stars[id];delete beh[id];delete stuGroupsNext[id];});
+  // حصص الشعب المحذوفة في الجدول تُزال، فلا تبقى خلايا تشير إلى شعبةٍ غير موجودة
+  let tt=null;
+  if(del.size&&profile.timetable&&profile.timetable.schedule){
+    tt={...profile.timetable,schedule:{}};
+    Object.entries(profile.timetable.schedule).forEach(([d,row])=>{const r={};Object.entries(row||{}).forEach(([p,v])=>{if(!(v&&del.has(v.c)))r[p]=v;});tt.schedule[d]=r;});
+  }
+  const grades=(profile.grades||[]).map(g=>({...g,classes:(g.classes||[]).filter(c=>!del.has(c.id)).map(c=>{
     const list=acctRoster[c.id];
     if(!list)return c;
     const kept=list.filter(s=>(s.nm||'').trim());
@@ -6016,8 +6038,8 @@ async function rosterSave(){
     const remapped=grpRemapAfterRoster(c.id,oldToNew);
     if(remapped)stuGroupsNext[c.id]=remapped;
     return{...c,students:kept.map(s=>s.nm.trim())};
-  })}));
-  const _ok=await cy1Save({grades,stars,beh_log:beh,stu_groups:stuGroupsNext},'يحفظ الشعب');
+  })})).filter(g=>(g.classes||[]).length);
+  const _ok=await cy1Save({grades,stars,beh_log:beh,stu_groups:stuGroupsNext,...(tt?{timetable:tt}:{})},'يحفظ الشعب');
   profile.stars=stars;profile.beh_log=beh;profile.stu_groups=stuGroupsNext;
   if(!_ok)return;
   rosterClose();toast('حُفظت الشعب');
