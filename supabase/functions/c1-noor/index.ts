@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       const row = {
         user_id: user.id, username, pass_enc: await enc(password),
         sess_enc: await enc(JSON.stringify(n.jar)), sess_at: new Date().toISOString(),
-        courses, cfg: prev?.cfg || {}, updated_at: new Date().toISOString(),
+        courses, cfg: { ...(prev?.cfg || {}), school: n.chosenSchool || undefined }, updated_at: new Date().toISOString(),
       };
       const { error } = await admin.from("c1_noor_accounts").upsert(row);
       if (error) throw error;
@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       const row = {
         user_id: user.id, username: email, pass_enc: await enc("msrt:" + t.refresh),
         sess_enc: await enc(JSON.stringify(n.jar)), sess_at: new Date().toISOString(),
-        courses, cfg: prev?.cfg || {}, updated_at: new Date().toISOString(),
+        courses, cfg: { ...(prev?.cfg || {}), school: n.chosenSchool || undefined }, updated_at: new Date().toISOString(),
       };
       const { error } = await admin.from("c1_noor_accounts").upsert(row);
       if (error) throw error;
@@ -298,6 +298,8 @@ Deno.serve(async (req) => {
         await n.msTokenLogin(t.access);
         if (t.refresh !== secret.slice(5)) { row.pass_enc = await enc("msrt:" + t.refresh); await save({ pass_enc: row.pass_enc }); }
       } else await n.login(row.username, secret);
+      // حسابٌ بأكثر من مدرسة: نور يفتح على مدرسته الافتراضية بعد كل دخول، فنعيد اختيار مدرسة المعلّم
+      if (row.cfg?.school) { try { await n.chooseSchool(String(row.cfg.school)); } catch { /* */ } }
       fresh = true;
       return n;
     };
@@ -315,7 +317,8 @@ Deno.serve(async (req) => {
 
     if (action === "refresh") {
       const courses = await run((x) => x.courses());
-      await persist({ courses });
+      const nn = n as Noor | null;
+      await persist(nn && nn.chosenSchool ? { courses, cfg: { ...(row.cfg || {}), school: nn.chosenSchool } } : { courses });
       return json(pub({ ...row, courses }));
     }
 
