@@ -5699,7 +5699,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='4923cbf';
+const KH_BUILD='7d3238a';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -10987,6 +10987,14 @@ function noorHwPublishAt(day){
 }
 // اللعبة ← حزمة SCORM 1.2 (درسٌ تفاعلي في نور): imsmanifest.xml + اللعبة نفسها، ومعها
 // سطرٌ يُبلغ نور أن الطالب فتح الدرس (completed) — بلا أي مكتبة، والضغط بلا ضغط (stored).
+// مفتاح ثابت لمرفقٍ نُشر في نور (لا يتغيّر بحذف مرفقٍ آخر قبله في القائمة)
+function noorAttKey(f){return 'att:'+(f.path||f.name||'');}
+// «المرفق: ورقة العمل (PDF)» — الاسم بلا امتداد (الامتداد اللاتيني يربك اتجاه السطر العربي)
+function noorAttLabel(f){
+  const nm=String(f.name||'مرفق'),m=nm.match(/\.([a-z0-9]{1,5})$/i),base=m?nm.slice(0,-m[0].length):nm;
+  if(isHtmlAttachment(f))return 'العرض التفاعلي «'+base+'» درساً تفاعلياً داخل نور';
+  return 'المرفق: '+base+(m?' ('+m[1].toUpperCase()+')':'');
+}
 function noorScormZip(html,title){
   const X=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const api="<script>(function(){function f(w){for(var i=0;i<10&&w;i++){if(w.API)return w.API;if(w===w.parent)break;w=w.parent;}"
@@ -11031,6 +11039,11 @@ async function noorPublishOpen(id){
     st.game_id?{k:'scorm',t:'اللعبة درساً تفاعلياً يلعبه الطالب داخل نور (على الهاتف والحاسوب)',on:!(pub&&pub.files&&pub.files.scorm)}:null,
     // (أُزيل خيار «اللعبة ملفاً للتنزيل»: نور تعرضه للطالب تحميلاً لا لعبة، ولا يُفتح على الهاتف — الدرس التفاعلي وحده يُلعب داخل نور)
     st.info_url?{k:'info',t:'ملخّص الدرس (PDF)',on:true}:null,
+    // مرفقات بطاقة الدرس المرفوعة من الجهاز تُرفع مرفقاتٍ لتحضير الدرس نفسه في نور؛
+    // والعرض التفاعلي (HTML) يُرفع درساً تفاعلياً يُفتح داخل نور. روابط Drive تُستثنى
+    // (لا نصل إلى ملفاتها من المتصفح).
+    ...(st.files||[]).map((f,fi)=>f&&f.path&&!f.drive?{k:'att'+fi,t:noorAttLabel(f),
+      on:!(pub&&pub.files&&pub.files[noorAttKey(f)])}:null),
     hwN?{k:'hw',t:'واجب من أسئلة اللعبة: '+egArNum(hwN)+' سؤالاً'+(hwParts>1?' في '+egArNum(hwParts)+' واجبات على أيامٍ متتالية (٢٠ سؤالاً لكل يوم)':'')+(hwDone?' — منشور سابقاً':''),on:!hwDone}:null,
   ].filter(Boolean);
   document.getElementById('today-modal-title').textContent='نشر في نور — '+l.name;
@@ -11108,7 +11121,7 @@ async function noorPublishRun(){
   if(!c.run||c.run.sig!==sig){
     c.run={sig,prep_id:newPrep?'':st.noor.prep_id,done:{},steps:[
       ...(newPrep?[{k:'prep',t:'نشر التحضير في نور',st:'wait'}]:[]),
-      ...ks.filter(k=>k!=='prep'&&k!=='hw').map(k=>({k,t:{word:'رفع ملف Word للتحضير',game:'رفع اللعبة',scorm:'رفع اللعبة درساً تفاعلياً (SCORM)',info:'رفع الملخّص PDF'}[k],st:'wait'})),
+      ...ks.filter(k=>k!=='prep'&&k!=='hw').map(k=>({k,t:/^att\d+$/.test(k)?'رفع '+noorAttLabel((st.files||[])[+k.slice(3)]||{}):{word:'رفع ملف Word للتحضير',game:'رفع اللعبة',scorm:'رفع اللعبة درساً تفاعلياً (SCORM)',info:'رفع الملخّص PDF'}[k],st:'wait'})),
     ]};
     if(ks.includes('hw')&&c.hwq.length){
       const parts=[];for(let i=0;i<c.hwq.length;i+=NOOR_HW_MAX)parts.push(c.hwq.slice(i,i+NOOR_HW_MAX));
@@ -11153,8 +11166,19 @@ async function noorPublishRun(){
           await planSetState(id,{noor:{...cur,hw:{...(cur.hw||{}),[s.k]:{date:h.day,n:h.qs.length,qurl:r.qurl}}}});
           s.st='ok';noorProg(run.steps);continue;
         }
-        let file,title;
-        if(s.k==='word'){file={blob:khZipBlob(planDocx(st.prep,meta)),name:'تحضير - '+safe(l.name)+'.docx'};title='تحضير درس '+l.name;}
+        let file,title,doneKey=s.k;
+        if(/^att\d+$/.test(s.k)){
+          const f=(planGet(id).files||[])[+s.k.slice(3)];
+          if(!f||!f.path)throw new Error('لم نجد المرفق — ربما حُذف من البطاقة');
+          const{data:blob,error}=await sb.storage.from('user-files').download(f.path);
+          if(error||!blob)throw new Error('تعذّر تنزيل المرفق من التخزين');
+          if(blob.size>25*1024*1024)throw new Error('المرفق أكبر من ٢٥ ميغابايت (حدّ نور)');
+          const base=String(f.name||'مرفق').replace(/\.[^.]+$/,'');
+          if(isHtmlAttachment(f)){file={blob:noorScormZip(await blob.text(),base),name:'lesson.zip',kind:'Scorm'};title='درس تفاعلي: '+base;}
+          else{file={blob:new Blob([blob],{type:f.type||blob.type||'application/octet-stream'}),name:safe(f.name)||'file'};title=base;}
+          doneKey=noorAttKey(f);
+        }
+        else if(s.k==='word'){file={blob:khZipBlob(planDocx(st.prep,meta)),name:'تحضير - '+safe(l.name)+'.docx'};title='تحضير درس '+l.name;}
         else if(s.k==='game'||s.k==='scorm'){
           const g=c.game||(await sb.from('games').select('*').eq('id',st.game_id).maybeSingle()).data;
           if(!g)throw new Error('لم نجد اللعبة');
@@ -11165,7 +11189,7 @@ async function noorPublishRun(){
         }else if(s.k==='info'){file={blob:await noorImgPdf(st.info_url),name:'ملخص - '+safe(l.name)+'.pdf'};title='ملخّص درس '+l.name;}
         await noorCall({action:'upload',cid:c.cid,prep_id:run.prep_id,lesson_id:lessonId,title,date,sections:secs,criteria,filename:file.name,kind:file.kind||'Material'},file);
         const cur=planGet(id).noor||{};
-        await planSetState(id,{noor:{...cur,files:{...(cur.files||{}),[s.k]:new Date().toISOString()}}});
+        await planSetState(id,{noor:{...cur,files:{...(cur.files||{}),[doneKey]:new Date().toISOString()}}});
       }
       s.st='ok';
     }catch(e){s.st='err';s.msg=e.message||'تعذّر';failed=true;
