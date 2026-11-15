@@ -197,8 +197,35 @@ export class Noor {
     try { const r = await this.req("/teacher"); return /\/teacher/.test(r.url); } catch { return false; }
   }
 
-  // ── المقرّرات وشُعَبها ──
-  async courses(): Promise<Course[]> {
+  // ── تعدّد المدارس: حسابٌ واحد في نور قد يرتبط بأكثر من مدرسة (منها مدارس أبناء المعلّم)،
+  // فيفتح نور على مدرسةٍ لا مقرّرات للمعلّم فيها. نقرأ مدارس الحساب ونختار التي فيها مقرّراته.
+  chosenSchool = "";
+  async schoolsInfo(): Promise<{ current: string; original: string; list: { id: string; name: string }[] }> {
+    const home = await this.req("/teacher/");
+    const g = (k: string) => (home.text.match(new RegExp(`var ${k} = '(\\d+)'`)) || [])[1] || "";
+    const uid = g("user_id"), current = g("school_id"), original = g("original_school_id");
+    const list: { id: string; name: string }[] = [];
+    if (uid) {
+      try {
+        const r = await this.req(`/teacher/schools/get_school_sidebar_list?user_id=${uid}`, { ajax: true });
+        // deno-lint-ignore no-explicit-any
+        const walk = (x: any) => {
+          if (Array.isArray(x)) return x.forEach(walk);
+          if (!x || typeof x !== "object") return;
+          const id = String(x.id ?? "");
+          if (/^\d+$/.test(id) && !list.some((s) => s.id === id)) list.push({ id, name: clean(String(x.text ?? x.name ?? "")) });
+          if (x.children) walk(x.children);
+        };
+        walk(JSON.parse(r.text || "[]"));
+      } catch { /* القائمة اختيارية */ }
+    }
+    return { current, original, list };
+  }
+  async chooseSchool(id: string) {
+    await this.req(`/schools/chooseSchool/${encodeURIComponent(id)}`);
+    this.chosenSchool = id;
+  }
+  async courseList(): Promise<Course[]> {
     const r = await this.req("/teacher/lectures/teachersCoursesListTitles", { ajax: true });
     // deno-lint-ignore no-explicit-any
     let j: any = {};
@@ -209,6 +236,24 @@ export class Noor {
       const cid = String(v.course_id || "");
       if (!cid || out.some((c) => c.cid === cid)) continue;
       out.push({ cid, enc: "", name: clean(`${v.course_title || ""} / ${v.level_title || ""}`), sections: [] });
+    }
+    return out;
+  }
+
+  // ── المقرّرات وشُعَبها ──
+  async courses(): Promise<Course[]> {
+    let out = await this.courseList();
+    if (!out.length) {
+      // لا مقرّرات في المدرسة المفتوحة: نجرّب المدرسة الأصلية للحساب ثم بقية مدارسه
+      const info = await this.schoolsInfo().catch(() => null);
+      if (info) {
+        const ids = [info.original, ...info.list.map((s) => s.id)].filter((id, i, a) => id && id !== info.current && a.indexOf(id) === i).slice(0, 10);
+        for (const id of ids) {
+          try { await this.chooseSchool(id); out = await this.courseList(); } catch { out = []; }
+          if (out.length) break;
+        }
+        if (!out.length && info.current) { try { await this.chooseSchool(info.current); } catch { /* */ } this.chosenSchool = ""; }
+      }
     }
     for (const c of out) {
       try { Object.assign(c, await this.courseInfo(c.cid)); } catch { /* يُكمل لاحقاً */ }
