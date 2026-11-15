@@ -779,6 +779,47 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
 .plan-cls-chip.on{background:var(--cc,var(--red));color:#fff}
 .plan-empty-card{text-align:center;padding:44px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:20px;color:var(--muted);font-size:13.5px;line-height:1.9}
 /* ── بطاقة الدرس الموسّعة: وحدة+درس، أزرار لعبة/ملخص/إرفاق، ابدئي الحصة، مرفقات ── */
+/* تصميم «أ» لبطاقة الدرس (pl2) */
+.pl2-top{display:flex;align-items:center;gap:12px}
+.pl2 .plan-lesson-nm{font-family:var(--disp);font-size:17px;line-height:1.35}
+.pl2 .pl-unit{font-size:11.5px}
+.pl2-ring{--p:0;width:46px;height:46px;flex:none;border-radius:50%;border:0;padding:0;cursor:pointer;display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--olive) calc(var(--p)*1%),#EDE3D4 0);font-family:inherit;color:var(--olive-d);font-size:12px;font-weight:900}
+.pl2-ring::after{content:'';position:absolute;inset:5px;border-radius:50%;background:var(--surface)}
+.pl2-ring b{position:relative;z-index:1;display:flex;font-weight:900}
+.pl2-ring.full::after{background:var(--olive)}.pl2-ring.full{color:#fff}
+.pl2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px}
+@media(min-width:900px){.pl2-grid{grid-template-columns:repeat(6,1fr)}}
+.pl2-tile{position:relative;min-height:72px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  font-family:inherit;font-weight:800;font-size:12.5px;color:var(--ink);cursor:pointer;padding:6px 4px;transition:transform .15s,border-color .15s}
+.pl2-tile span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media(hover:hover){.pl2-tile:hover{border-color:var(--red)}}
+.pl2-tile:active{transform:scale(.96)}
+.pl2-tile.ok{background:#EEF3EA;border-color:#B9CDB1;color:var(--olive-d)}
+.pl2-tile.off{opacity:.55}
+.pl2-tile:disabled{opacity:.7;cursor:progress}
+.pl2-ck{position:absolute;top:6px;inset-inline-start:7px;width:18px;height:18px;border-radius:50%;background:var(--olive);color:#fff;display:grid;place-items:center}
+.pl2-ck svg{width:11px;height:11px}
+.pl2-start{width:100%;margin-top:11px;height:52px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;
+  font-family:inherit;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 6px 16px rgba(168,48,48,.25)}
+.pl2-start:active{transform:scale(.98)}
+.pl2-sub{font-size:13px;color:var(--muted);margin:-4px 0 12px;font-weight:700}
+.pl2-clist{display:flex;flex-direction:column;gap:8px}
+.pl2-crow{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);font-weight:800;cursor:pointer}
+.pl2-crow input{width:20px;height:20px;accent-color:var(--olive)}
+.pl2-crow:has(input:checked){border-color:var(--olive);background:#EEF3EA;color:var(--olive-d)}
+.pl2-flist{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto}
+.pl2-frow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:13px;background:var(--card)}
+.pl2-fic{flex:none;min-width:44px;height:36px;border-radius:9px;color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center;padding:0 6px}
+.pl2-fnm{flex:1;min-width:0;display:flex;flex-direction:column}
+.pl2-fnm b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl2-fnm small{font-size:11px;color:var(--muted);direction:ltr;text-align:right}
+.pl2-fb{flex:none;border:0;background:none;font-family:inherit;font-weight:800;font-size:13px;color:var(--red-d);cursor:pointer;padding:8px 6px}
+.pl2-fb.del{color:var(--muted)}
+.pl2-fempty{text-align:center;color:var(--muted);padding:22px 0;font-size:13.5px}
+.pl2-fadd{width:100%;margin-top:12px;height:48px;border-radius:13px;border:1.5px dashed var(--olive);background:#F3F7F0;color:var(--olive-d);font-family:inherit;font-weight:900;font-size:14.5px;
+  display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+
 .pl-tt{flex:1;min-width:0}
 .pl-unit{font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:1px}
 /* مؤشّرات الجاهزية: مستطيلات متساوية العرض بدل البيضاويات المتفاوتة */
@@ -8090,44 +8131,97 @@ async function planRenderUnits(){
   const offSaved=c1OffSavedMap();
   const lessonsHtml=u.lessons.map((l,li)=>{
     const st=planGet(l.id);
-    const clsChips=classes.map(c=>{
-      const on=!!st.classes[c.id];
-      return `<div class="plan-cls-chip ${on?'on':''}" style="--cc:${c.color}" onclick="event.stopPropagation();planToggleClass('${l.id}','${c.id}')">${escHtml(c.name)}</div>`;
-    }).join('');
+    // تصميم «أ» (اختيار الأستاذ عيسى): ستّ أدوات بحجمٍ واحد في شبكة، و✓ على الجاهز،
+    // و«ابدأ الحصة» الزرّ الكبير الوحيد. إنجاز الدرس لكل شعبة في دائرةٍ أعلى البطاقة
+    // (يومي والحصة الحيّة يعتمدان عليه لاختيار الدرس التالي لكل شعبة) لا صفّ أزرار.
     const files=st.files||[];
-    const rb=[];
-    if(st.game_id)rb.push('لعبة');
-    if(st.info_url)rb.push('ملخص');
-    if(files.length)rb.push('ملفات');
-    const ready=rb.length?`<div class="pl-ready">${rb.map(t=>`<span class="pl-rbox">${t}</span>`).join('')}</div>`:'';
-    const fileRows=files.map((f,fi)=>
-      `<div class="pl-file"><span class="fic p">م</span><span class="fnm">${escHtml(f.name)}</span><span class="fmeta">Drive · ${achFmtSize(f.size)}</span><button onclick="planFileOpen('${l.id}',${fi})">معاينة</button><button onclick="planFileDel('${l.id}',${fi})"><i class="ki ki-x" aria-hidden="true"></i></button></div>`
-    ).join('');
-    return `<div class="plan-lesson ${st.done?'done':''}" data-id="${l.id}">
-      <div class="plan-lesson-top">
-        <div class="plan-chk" onclick="planToggleDone('${l.id}')">${st.done?'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</div>
+    const nDone=classes.filter(c=>st.classes[c.id]).length;
+    const pct=classes.length?Math.round(nDone/classes.length*100):(st.done?100:0);
+    const ringTxt=classes.length>1&&!st.done?`${egArNum(nDone)}/${egArNum(classes.length)}`:(st.done||pct===100?PL2_CK:'');
+    const pub=!!(st.noor&&st.noor.prep_id);
+    const tile=(k,ok,svg,label,onclick,extra='')=>`<button class="pl2-tile${ok?' ok':''}${extra}" onclick="${onclick}">${ok?`<span class="pl2-ck">${PL2_CK}</span>`:''}${svg}<span>${label}</span></button>`;
+    return `<div class="plan-lesson pl2 ${st.done?'done':''}" data-id="${l.id}">
+      <div class="pl2-top">
+        <button class="pl2-ring${st.done?' full':''}" style="--p:${pct}" onclick="planDoneTap('${l.id}')" aria-label="إنجاز الدرس${classes.length>1?' مع الشعب':''}"><b>${ringTxt}</b></button>
         <div class="pl-tt">
           <div class="pl-unit">الدرس ${egArNum(li+1)}</div>
           <div class="plan-lesson-nm">${escHtml(l.name)}</div>
         </div>
       </div>
-      ${ready}
-      <div class="plan-cls-row">${clsChips}</div>
-      <div class="pl-btnrow">
-        <button class="pl-btn ${st.prep?'ready':''}" onclick="planPrepBtn('${l.id}')"><span class="d" style="background:var(--red,#D86048)"></span>${st.prep?'عرض التحضير':'إنشاء التحضير'}</button>
-        <button class="pl-btn ${st.game_id?'ready':''}" onclick="planGameBtn('${l.id}')"><span class="d" style="background:#8b5cf6"></span>${st.game_id?'تشغيل اللعبة':'إنشاء لعبة'}</button>
-        <button class="pl-btn ${st.info_url?'ready':''}" onclick="planInfoBtn('${l.id}')"><span class="d" style="background:var(--gold,#C8A03C)"></span>${st.info_url?'عرض الملخص':'إنشاء ملخص'}</button>
-        ${st.prep?`<button class="pl-btn noor ${st.noor&&st.noor.prep_id?'ready':''}" onclick="noorPublishOpen('${l.id}')" title="${khG('انشري','انشر')} التحضير ومرفقاته في منصّة نور"><span class="d" style="background:#1F7A4D"></span>${st.noor&&st.noor.prep_id?'<i class="ki ki-check" aria-hidden="true"></i> منشور في نور':'<i class="ki ki-upload" aria-hidden="true"></i> نشر في نور'}</button>`:''}
-        <button class="pl-btn" onclick="planAttach('${l.id}')"><span class="d" style="background:var(--olive-d)"></span>إرفاق ملف</button>
-        <button class="pl-btn off ${offSaved[l.id]?'ready':''}" onclick="c1OffSaveLessonBtn(this,'${l.id}')" title="${khG('احفظي','احفظ')} مرفقات الدرس وصفحات الكتاب واللعبة على هذا الجهاز لتعمل بلا إنترنت"><span class="d" style="background:#2A5183"></span>${offSaved[l.id]?'<i class="ki ki-check" aria-hidden="true"></i> محفوظ بلا إنترنت':'<i class="ki ki-download" aria-hidden="true"></i> حفظ بلا إنترنت'}</button>
-        <button class="pl-btn live" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7L8 5z"/></svg>${khG('ابدئي','ابدأ')} الحصة</button>
+      <div class="pl2-grid">
+        ${tile('prep',!!st.prep,PL2_I.prep,'التحضير',`planPrepBtn('${l.id}')`)}
+        ${tile('game',!!st.game_id,PL2_I.game,'اللعبة',`planGameBtn('${l.id}')`)}
+        ${tile('info',!!st.info_url,PL2_I.info,'الملخّص',`planInfoBtn('${l.id}')`)}
+        ${tile('noor',pub,PL2_I.noor,pub?'منشور في نور':'نور',st.prep?`noorPublishOpen('${l.id}')`:`toast('${khG('أنشئي','أنشئ')} التحضير أولاً ثم ${khG('انشريه','انشره')} في نور')`,st.prep?' noor':' off')}
+        ${tile('files',files.length>0,PL2_I.files,files.length?'المرفقات '+egArNum(files.length):'المرفقات',`planFilesOpen('${l.id}')`)}
+        ${tile('off',!!offSaved[l.id],PL2_I.off,'بلا إنترنت',`c1OffSaveLessonBtn(this,'${l.id}')`,' offl')}
       </div>
-      ${fileRows?`<div class="pl-files-t">مرفقات الدرس (${egArNum(files.length)})</div>${fileRows}`:''}
+      <button class="pl2-start" onclick="planStartLive('${l.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7L8 5z"/></svg>${khG('ابدئي','ابدأ')} الحصة</button>
     </div>`;
   }).join('');
+  if(_plFilesReopen&&Date.now()-_plFilesReopen.t<600000&&!document.getElementById('attach-pick')){const r=_plFilesReopen;_plFilesReopen=null;setTimeout(()=>planFilesOpen(r.id),0);}
   box.innerHTML=`<div class="plan-units">${chips}</div>
     <div class="plan-uhead"><b>${escHtml(u.name)}</b><span>${egArNum(uDone)}/${egArNum(u.lessons.length)} درس منجز</span><button class="pl-offall" onclick="c1OffSaveUnit(this)"><i class="ki ki-download" aria-hidden="true"></i> حفظ الوحدة كاملة بلا إنترنت</button></div>
     ${lessonsHtml}`;
+}
+const PL2_CK='<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>';
+const PL2_I={
+  prep:'<svg viewBox="0 0 24 24" width="24" height="24"><path fill="#D86048" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="#fff" opacity=".9" d="M8 12h8v1.6H8zm0 3.4h8V17H8zM13.5 3.5V9H19"/></svg>',
+  game:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#8b5cf6"><path d="M7 6h10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.44 1.9L14.5 15h-5l-1.06 1.4A3.5 3.5 0 0 1 2 14.5V11a5 5 0 0 1 5-5zm1 3v2H6v2h2v2h2v-2h2v-2h-2V9H8zm8.5 1a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-2.5 3a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg>',
+  info:'<svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="3" fill="#C8A03C"/><path fill="#fff" d="M7 7.5h10v1.7H7zm0 3.7h10v1.7H7zm0 3.7h6.5v1.7H7z"/></svg>',
+  noor:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#1F7A4D"><path d="M12 3l5.5 5.5h-3.6V15h-3.8V8.5H6.5L12 3zM5 18h14v2.5H5z"/></svg>',
+  files:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#35603A" stroke-width="2.2" stroke-linecap="round"><path d="M20.5 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>',
+  off:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#2A5183"><path d="M11 3h2v9.2l3.3-3.3 1.4 1.4L12 16l-5.7-5.7 1.4-1.4 3.3 3.3V3zM5 18h14v2.5H5z"/></svg>'
+};
+// دائرة الإنجاز: شعبةٌ واحدة أو لا شعب ← لمسةٌ تُنجز الدرس؛ أكثر ← اختيار الشعب
+function planDoneTap(id){
+  const classes=planClassesFor(planGrade,planSubject);
+  if(classes.length<=1){
+    if(classes.length===1)planToggleClass(id,classes[0].id);else planToggleDone(id);
+    return;
+  }
+  document.getElementById('pl2-done-pick')?.remove();
+  const st=planGet(id),l=planFindLesson(id)||{};
+  const m=document.createElement('div');m.id='pl2-done-pick';m.className='c1-modal open';
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  m.innerHTML=`<div class="c1-mbox"><h3>إنجاز الدرس</h3><p class="pl2-sub">${escHtml(l.name||'')}</p>
+    <div class="pl2-clist">${classes.map(c=>`<label class="pl2-crow" style="--cc:${c.color}"><input type="checkbox" data-c="${c.id}" ${st.classes[c.id]?'checked':''}><span>${escHtml(c.name)}</span></label>`).join('')}</div>
+    <div class="c1-mrow"><button class="c1-mbtn" id="pl2-all">الكل</button><button class="c1-mbtn go" id="pl2-save">حفظ</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector('#pl2-all').onclick=()=>m.querySelectorAll('input[data-c]').forEach(i=>i.checked=true);
+  m.querySelector('#pl2-save').onclick=async()=>{
+    const cur=planGet(id),cls={...cur.classes};
+    m.querySelectorAll('input[data-c]').forEach(i=>{cls[i.dataset.c]=i.checked;});
+    const all=classes.every(c=>cls[c.id]);
+    m.remove();khHaptic(12);
+    await cy1Save({plan_state:{...(profile.plan_state||{}),[id]:{...cur,classes:cls,done:all}}},'يحفظ الخطة');
+    planRenderUnits();
+  };
+}
+// قائمة المرفقات: أسماء الملفات منسّقة، ومعاينة/حذف لكلٍّ منها، و«إرفاق ملف آخر»
+let _plFilesReopen=null;
+function planFilesOpen(id){
+  document.getElementById('pl2-files')?.remove();
+  const files=planGet(id).files||[],l=planFindLesson(id)||{};
+  const kind=f=>{const n=String(f.name||'').toLowerCase(),t=String(f.type||'');
+    if(f.drive)return['Drive','#1a73e8'];if(isHtmlAttachment(f))return['عرض','#8b5cf6'];if(/pdf/.test(t)||/\.pdf$/.test(n))return['PDF','#C0392B'];
+    if(/image\//.test(t))return['صورة','#C8A03C'];if(/word|\.docx?$/.test(t+n))return['Word','#2A5183'];if(/presentation|\.pptx?$/.test(t+n))return['عرض','#D86048'];
+    if(/video\//.test(t))return['فيديو','#35603A'];return['ملف','#7A6350'];};
+  const m=document.createElement('div');m.id='pl2-files';m.className='c1-modal open';
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  m.innerHTML=`<div class="c1-mbox"><h3>مرفقات الدرس</h3><p class="pl2-sub">${escHtml(l.name||'')}</p>
+    ${files.length?`<div class="pl2-flist">${files.map((f,fi)=>{const[k,c]=kind(f);return `<div class="pl2-frow">
+      <span class="pl2-fic" style="background:${c}">${k}</span>
+      <div class="pl2-fnm"><b>${escHtml(String(f.name||'ملف').replace(/\.[a-z0-9]{1,5}$/i,''))}</b><small>${f.drive?'رابط من Google Drive':(f.size?achFmtSize(f.size):'')}</small></div>
+      <button class="pl2-fb" data-open="${fi}">معاينة</button>
+      <button class="pl2-fb del" data-del="${fi}" aria-label="حذف"><i class="ki ki-x" aria-hidden="true"></i></button></div>`;}).join('')}</div>`
+      :'<div class="pl2-fempty">لا مرفقات لهذا الدرس بعد</div>'}
+    <button class="pl2-fadd" id="pl2-fadd"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>${files.length?'إرفاق ملف آخر':'إرفاق ملف'}</button>
+    <div class="c1-mrow"><button class="c1-mbtn no" onclick="document.getElementById('pl2-files').remove()">إغلاق</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>planFileOpen(id,+b.dataset.open));
+  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{await planFileDel(id,+b.dataset.del);planFilesOpen(id);});
+  m.querySelector('#pl2-fadd').onclick=()=>{m.remove();_plFilesReopen={id,t:Date.now()};planAttach(id);};
 }
 function planPickUnit(i){planUnitIdx=i;planRenderUnits();}
 async function planToggleDone(id){
