@@ -1097,7 +1097,9 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
 /* عارض صورة بملء الشاشة — الملخص صار عريضاً (١٦:٩) فلا تكفيه نافذة ضيّقة */
 #img-full{position:fixed;inset:0;z-index:4350;background:rgba(20,14,8,.95);display:none;align-items:center;justify-content:center;padding:52px 16px 16px}
 #img-full.on{display:flex}
-#img-full img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#img-full{overflow:hidden}
+#img-full img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);touch-action:none;transition:transform .12s ease-out;cursor:zoom-in;-webkit-user-drag:none;user-select:none}
+#img-full img.zoomed{cursor:grab;transition:none}
 .imgf-x{position:absolute;top:12px;inset-inline-end:14px;width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);
   background:rgba(255,255,255,.12);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
 .imgf-x:hover{background:rgba(255,255,255,.24)}
@@ -8381,14 +8383,51 @@ async function planInfoBtn(id){
 }
 // الملخص يُعرض بملء الشاشة — مقاسه العريض لا يظهر في نافذة ضيّقة
 function imgFullOpen(url,title){
+  imgfZoomReset();
   document.getElementById('imgf-title').textContent=title||'';
   document.getElementById('imgf-img').src=url;
   document.getElementById('img-full').classList.add('on');
 }
 function imgFullClose(){
+  imgfZoomReset();
   document.getElementById('img-full').classList.remove('on');
   document.getElementById('imgf-img').removeAttribute('src');
 }
+// تكبير الملخّص بملء الشاشة: إصبعان للتكبير، إصبعٌ (أو الفأرة) للتحريك، ونقرتان
+// متتاليتان للتكبير/الإرجاع، وعجلة الفأرة على الحاسوب — لا يعتمد على تكبير الصفحة.
+let _imgf={z:1,x:0,y:0};
+function imgfApply(){const im=document.getElementById('imgf-img');if(im){im.style.transform=_imgf.z>1?`translate(${_imgf.x}px,${_imgf.y}px) scale(${_imgf.z})`:'';im.classList.toggle('zoomed',_imgf.z>1);}}
+function imgfZoomReset(){_imgf={z:1,x:0,y:0};imgfApply();}
+function imgfClamp(){
+  const im=document.getElementById('imgf-img');if(!im)return;
+  if(_imgf.z<=1){_imgf={z:1,x:0,y:0};return;}
+  const mx=im.offsetWidth*(_imgf.z-1)/2+20, my=im.offsetHeight*(_imgf.z-1)/2+20;
+  _imgf.x=Math.max(-mx,Math.min(mx,_imgf.x));_imgf.y=Math.max(-my,Math.min(my,_imgf.y));
+}
+(function imgfGestures(){
+  const im=document.getElementById('imgf-img');if(!im)return;
+  const pts=new Map();let pinch=null,pan=null,lastTap=0;
+  im.addEventListener('pointerdown',e=>{
+    e.preventDefault();try{im.setPointerCapture(e.pointerId);}catch(_){}
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){const [a,b]=[...pts.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:_imgf.z};pan=null;}
+    else if(pts.size===1){
+      const now=Date.now();
+      if(now-lastTap<300){_imgf.z=_imgf.z>1?1:2.5;if(_imgf.z===1){_imgf.x=0;_imgf.y=0;}imgfClamp();imgfApply();lastTap=0;return;}
+      lastTap=now;pan={x0:e.clientX,y0:e.clientY,px:_imgf.x,py:_imgf.y};
+    }
+  });
+  im.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch&&pts.size===2){const [a,b]=[...pts.values()];_imgf.z=Math.max(1,Math.min(5,pinch.z0*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d0));}
+    else if(pan&&_imgf.z>1){_imgf.x=pan.px+(e.clientX-pan.x0);_imgf.y=pan.py+(e.clientY-pan.y0);}
+    else return;
+    imgfClamp();imgfApply();
+  });
+  const end=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;if(!pts.size)pan=null;};
+  im.addEventListener('pointerup',end);im.addEventListener('pointercancel',end);
+  im.addEventListener('wheel',e=>{e.preventDefault();_imgf.z=Math.max(1,Math.min(5,_imgf.z*(e.deltaY<0?1.15:1/1.15)));imgfClamp();imgfApply();},{passive:false});
+})();
 /* ══ توليد ملفّ وورد لخطة الدرس ══════════════════════════════════ */
 // مولّد ملفّ وورد لخطة الدرس — النصّ نفسه يعمل في المتصفّح وفي node.
 // OOXML خامٌ بلا مكتبة: القالب ثابت والمحتوى يُحقن، والتنسيق داخل الفقرات
@@ -10911,6 +10950,14 @@ const C1_STANDALONE=(()=>{try{return matchMedia('(display-mode: standalone)').ma
 if(C1_STANDALONE)document.documentElement.classList.add('c1-pwa');
 function khHaptic(p){try{if(C1_STANDALONE&&navigator.vibrate&&matchMedia('(pointer:coarse)').matches)navigator.vibrate(p||10);}catch(_){}}
 function c1ThemeColor(c){const m=document.getElementById('c1-theme-color');if(m)m.setAttribute('content',c);}
+// التطبيق المثبّت لا يُكبَّر كلّه بإصبعين (كالتطبيقات الأصلية): أندرويد يحترم وسم viewport،
+// وiOS يتجاهله فتُمنع إيماءته (gesturestart) مباشرةً. ما يحتاج تكبيراً له تكبيره الخاص:
+// صفحات الكتاب في الحصة، وعارض الملخّص بملء الشاشة (imgfZoom أدناه). في المتصفح العادي
+// يبقى تكبير الصفحة متاحاً لمن يحتاجه من ضعاف البصر.
+if(C1_STANDALONE){
+  try{const vp=document.querySelector('meta[name=viewport]');if(vp&&!/user-scalable/.test(vp.content))vp.content+=', maximum-scale=1, user-scalable=no';}catch(_){}
+  ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+}
 if(C1_STANDALONE){try{if(Math.min(screen.width,screen.height)<600&&screen.orientation&&screen.orientation.lock)screen.orientation.lock('portrait').catch(()=>{});}catch(_){}}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#c1-tabbar button'))khHaptic(8);},true);
 // فتح القسم من رابط الإشعار (#msgs، #plan…)
