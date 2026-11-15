@@ -1116,6 +1116,9 @@ html.live-lock body{position:fixed;inset-inline:0;width:100%;top:var(--live-lock
   transition:transform .25s ease;background:#fff;border-radius:10px;overflow:hidden;
   box-shadow:0 10px 34px rgba(0,0,0,.5)}
 .lv-spread.panning{transition:none}
+.lv-vbody.zoomed .lv-spread{cursor:grab}
+.lv-vbody.zoomed .lv-spread.panning{cursor:grabbing}
+.lv-spread img{-webkit-user-drag:none;user-select:none}
 .lv-spread img{max-width:50%;max-height:100%;width:auto;object-fit:contain;border-radius:0;
   background:#fff;-webkit-user-drag:none;user-select:none}
 .lv-spread.one img{max-width:100%}
@@ -13858,9 +13861,15 @@ function lvPenClear(){
   // التكبير بإصبعين عاملاً حتى في وضع القلم — الكنفس يلتقط أحداث اللمس
   // (pointer-events:auto) لكنها تصعد هنا بالتفويض فتُعالَج كتصفّح، والقلم
   // وحده يُمرَّر لمعالج الحبر.
+  // والفأرة (ولوحة اللمس والقلم) تسحب الصفحة المكبَّرة أيضاً حين لا يكون وضع القلم
+  // مفعّلاً — كثيرٌ من المعلّمين يعرضون من حاسوبٍ بلا شاشة لمس، فكان التكبير
+  // يحبسهم في وسط الصفحة.
   body.addEventListener('pointerdown',e=>{
-    if(!active()||e.pointerType!=='touch')return;
+    if(!active())return;
+    const mousePan=e.pointerType!=='touch'&&!_lvPenOn&&e.button===0&&_liveBookZoom>1&&!!e.target.closest('.lv-spread');
+    if(e.pointerType!=='touch'&&!mousePan)return;
     if(_lvCurStroke)return;                                // القلم يكتب: نتجاهل لمسة الراحة (منع تنقّلٍ عرضيّ)
+    if(mousePan){e.preventDefault();try{body.setPointerCapture(e.pointerId);}catch(_){}}   // بلا سحب الصورة نفسها، ويستمرّ السحب خارج العارض
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){
       swipeX0=e.clientX;swipeY0=e.clientY;
@@ -13923,6 +13932,17 @@ function lvPenClear(){
   }
   body.addEventListener('pointerup',endPointer);
   body.addEventListener('pointercancel',endPointer);
+  // عجلة الفأرة ولوحة اللمس: تحريك الصفحة المكبَّرة (Shift للأفقي)، وCtrl+العجلة للتكبير
+  body.addEventListener('wheel',e=>{
+    if(!active())return;
+    if(e.ctrlKey){e.preventDefault();liveBookZoom(e.deltaY<0?1:-1);return;}
+    if(_liveBookZoom<=1)return;
+    e.preventDefault();
+    const k=e.deltaMode===1?32:1;                           // أسطرٌ لا بكسلات (بعض الفئران)
+    const dx=(e.shiftKey&&!e.deltaX?e.deltaY:e.deltaX)*k, dy=(e.shiftKey&&!e.deltaX?0:e.deltaY)*k;
+    _liveBookPanX-=dx;_liveBookPanY-=dy;
+    clampPan();applyVars();
+  },{passive:false});
   document.addEventListener('keydown',e=>{
     if(!active())return;
     if(e.key==='ArrowRight')liveBookGo(_lvLtr()?1:-1);
