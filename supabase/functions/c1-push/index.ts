@@ -104,6 +104,13 @@ Deno.serve(async (req) => {
       if (mode === "notif") {
         const { data: n } = await admin.from("c1_notifications").select("*").eq("id", String(b.id || "")).maybeSingle();
         if (!n || !n.user_id) return json({ ok: true, skipped: true });
+        if (n.kind === "prep") {
+          // التحضير الذي أُعِدّ في الخلفية (c1-prep-job) — يصل وإن كانت المنصّة مغلقة
+          const ok = String(n.message || "").startsWith("✅");
+          const sent = await pushUser(n.user_id, null, { title: ok ? "✅ التحضير جاهز" : "⚠️ تعذّر إعداد التحضير",
+            body: String(n.message || "").replace(/^[✅⚠️]️?\s*/u, "").slice(0, 180), url: APP_URL + "#plan", tag: "c1-prep-" + n.id }, "prep");
+          return json({ ok: true, sent });
+        }
         const title = n.kind === "survey" ? "📋 استبيان جديد من الإدارة" : "📩 رسالة من الإدارة";
         const body = String(n.message || "").replace(/^(رسالة (خاصة )?جديدة من الإدارة|استبيان جديد):\s*/, "").slice(0, 180);
         const sent = await pushUser(n.user_id, "msgs", { title, body, url: APP_URL + "#msgs", tag: "c1-msg-" + n.id }, "msg");
