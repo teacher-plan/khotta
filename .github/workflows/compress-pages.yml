@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - run: pip install pillow==10.4.0
+      - run: pip install --only-binary=:all: pillow
       - name: ضغط
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -55,8 +55,8 @@ jobs:
       - name: حفظ التقرير والعيّنات في الفرع
         if: always()
         run: |
-          set -euo pipefail
-          mkdir -p tools/compress_out
+          MODE="${MODE:-unknown}"
+          mkdir -p tools/compress_out /tmp/out
           rm -f /tmp/out/originals.tar
           cp -r /tmp/out/. tools/compress_out/ || true
           git config user.name "github-actions[bot]"
