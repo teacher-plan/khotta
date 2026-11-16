@@ -1,0 +1,66 @@
+# ضغط صور صفحات الكتب وأدلّة المعلّم في مخزن Supabase في مكانها (نفس الأسماء والروابط والأبعاد).
+# يعمل فقط عند تعديل tools/compress_pages.mode على فرع العمل، لا على main.
+#   sample      → قياس التوفير على عيّنة + أمثلة قبل/بعد (بلا أي كتابة في المخزن)
+#   apply <q>   → نسخة احتياطية كاملة للأصول في إصدار GitHub، ثم الاستبدال بجودة q
+name: Compress page images
+
+on:
+  push:
+    branches: ['claude/vibrant-gates-3a8c6q']
+    paths: ['tools/compress_pages.mode']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compress-pages
+  cancel-in-progress: false
+
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow==10.4.0
+      - name: ضغط
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          OUT: /tmp/out
+        run: |
+          set -euo pipefail
+          read -r MODE QUALITY < tools/compress_pages.mode || true
+          export MODE QUALITY="${QUALITY:-65}"
+          echo "MODE=$MODE QUALITY=$QUALITY" | tee -a "$GITHUB_ENV"
+          SERVICE_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          [ -n "$SERVICE_KEY" ] && [ "$SERVICE_KEY" != "null" ] || { echo "::error::no service key"; exit 1; }
+          echo "::add-mask::$SERVICE_KEY"
+          export SERVICE_KEY
+          python3 tools/compress_pages.py
+
+      - name: حفظ النسخة الاحتياطية في إصدار GitHub
+        if: always() && env.MODE == 'apply'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [ -f /tmp/out/originals.tar ] || exit 0
+          TAG="storage-pages-backup-$(date -u +%Y%m%d-%H%M)"
+          gh release create "$TAG" /tmp/out/originals.tar --target "$GITHUB_SHA" \
+            --title "نسخة احتياطية: صور الصفحات الأصلية قبل الضغط" \
+            --notes "الصور الأصلية لمجلدي books و teacher-guides في library-files قبل الضغط. للاسترجاع: فك الأرشيف وارفع كل ملف إلى المسار نفسه."
+          echo "BACKUP_TAG=$TAG" >> /tmp/out/report.json.tag
+
+      - name: حفظ التقرير والعيّنات في الفرع
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p tools/compress_out
+          rm -f /tmp/out/originals.tar
+          cp -r /tmp/out/. tools/compress_out/ || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/compress_out
+          git commit -m "تقرير ضغط صور الصفحات ($MODE)" || exit 0
+          git push origin HEAD:${GITHUB_REF_NAME}
