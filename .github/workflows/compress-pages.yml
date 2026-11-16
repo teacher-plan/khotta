@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           read -r MODE QUALITY < tools/compress_pages.mode || true
           export MODE QUALITY="${QUALITY:-65}"
-          echo "MODE=$MODE QUALITY=$QUALITY" | tee -a "$GITHUB_ENV"
+          { echo "MODE=$MODE"; echo "QUALITY=$QUALITY"; } | tee -a "$GITHUB_ENV"
           SERVICE_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
           [ -n "$SERVICE_KEY" ] && [ "$SERVICE_KEY" != "null" ] || { echo "::error::no service key"; exit 1; }
           echo "::add-mask::$SERVICE_KEY"
@@ -45,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [ -f /tmp/out/originals.tar ] || exit 0
+          [ -f /tmp/out/originals.tar ] || { echo "::error::لا توجد نسخة احتياطية"; exit 1; }
           TAG="storage-pages-backup-$(date -u +%Y%m%d-%H%M)"
           gh release create "$TAG" /tmp/out/originals.tar --target "$GITHUB_SHA" \
             --title "نسخة احتياطية: صور الصفحات الأصلية قبل الضغط" \
