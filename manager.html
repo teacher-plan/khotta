@@ -2276,6 +2276,19 @@ input,textarea,select{font-size:16px !important;}
 .c1pk-sel .nm{font-weight:800;font-size:13.5px;color:#221E17}
 .c1pk-sel .em{font-size:11px;color:#7A715B;direction:ltr;text-align:right}
 .c1pk-sel button{flex:none;background:#F0EBDF;border:1.5px solid #E3DCC9;border-radius:9px;padding:5px 11px;font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:800;color:#8F3D22;cursor:pointer}
+.c1ex{margin-bottom:12px}
+.c1ex-toggle{background:none;border:1.5px dashed #E3DCC9;border-radius:10px;padding:8px;width:100%;color:#7A715B;font-family:'Cairo',sans-serif;font-weight:800;font-size:12.5px;cursor:pointer}
+.c1ex-toggle.on{border-style:solid;border-color:#8F3D22;color:#8F3D22}
+.c1ex-chosen{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.c1ex-chosen:empty{display:none}
+.c1ex-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(143,61,34,.1);border:1.5px solid rgba(143,61,34,.35);color:#8F3D22;border-radius:16px;
+  padding:3px 6px 3px 10px;font-size:12px;font-weight:800;font-family:'Cairo',sans-serif}
+.c1ex-chip button{background:none;border:none;color:#8F3D22;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+.c1ex .c1pk{margin:8px 0 0}
+.c1pk-it .ck{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid #E3DCC9;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800}
+.c1pk-it.on{border-color:#8F3D22;background:rgba(143,61,34,.06)}
+.c1pk-it.on .ck{background:#8F3D22;border-color:#8F3D22}
+.c1msg-row .ex{font-size:11px;color:#8F3D22;margin-top:6px}
 .c1msg-closed-tag{background:#E3DCC9;color:#7A715B;font-size:10.5px;font-weight:800;border-radius:10px;padding:2px 9px}
 
 </style>
@@ -2667,7 +2680,15 @@ input,textarea,select{font-size:16px !important;}
         <input id="c1msg-b-title" placeholder="مثال: تذكير باجتماع الغد">
         <label>نص الرسالة</label>
         <textarea id="c1msg-b-body" placeholder="اكتب الرسالة هنا..."></textarea>
-        <button class="c1msg-send" onclick="c1msgSendBroadcast()">إرسال لكل المعلّمين والمعلّمات</button>
+        <div class="c1ex">
+          <button type="button" class="c1ex-toggle" id="c1ex-toggle" onclick="c1exToggle()">استثناء بعض المعلّمين من هذه الرسالة</button>
+          <div class="c1ex-chosen" id="c1ex-chosen"></div>
+          <div class="c1pk" id="c1ex-pk" hidden>
+            <input id="c1ex-q" placeholder="ابحث عمّن تريد استثناءه..." oninput="c1exRender()" autocomplete="off">
+            <div class="c1pk-list" id="c1ex-list"></div>
+          </div>
+        </div>
+        <button class="c1msg-send" id="c1msg-b-send" onclick="c1msgSendBroadcast()">إرسال لكل المعلّمين والمعلّمات</button>
       </div>
       <div class="c1msg-list" id="c1msg-broadcast-list"><div style="text-align:center;color:#7A715B;font-size:12.5px">يجري التحميل</div></div>
     </div>
@@ -6897,8 +6918,7 @@ async function mc1GoldenLoadStats(){
 let c1msgInited=false;
 let c1msgTeacherIds=[];
 function c1msgInit(){
-  c1msgLoadTeacherOptions();
-  c1msgLoadBroadcast();
+  c1msgLoadTeacherOptions().then(()=>c1msgLoadBroadcast());
   c1msgLoadPrivate();
   if(!c1msgInited){c1srvResetForm();c1msgInited=true;}
   c1srvLoad();
@@ -6966,20 +6986,55 @@ function c1pkClear(){
   C1PK.sel=null;document.getElementById('c1msg-p-target').value='';
   document.getElementById('c1pk-sel').hidden=true;document.getElementById('c1pk').hidden=false;
 }
+// استثناء معلّمين من رسالةٍ جماعيةٍ واحدة — القائمة نفسها (C1PK)، لأصحاب الحسابات فقط
+let C1EX=new Set();
+function c1exToggle(){
+  const pk=document.getElementById('c1ex-pk');pk.hidden=!pk.hidden;
+  document.getElementById('c1ex-toggle').classList.toggle('on',!pk.hidden||C1EX.size>0);
+  if(!pk.hidden){c1exRender();document.getElementById('c1ex-q').focus();}
+}
+function c1exName(t){return t.name||String(t.email||'').split('@')[0];}
+function c1exRender(){
+  const list=document.getElementById('c1ex-list');if(!list)return;
+  const q=(document.getElementById('c1ex-q')?.value||'').trim().toLowerCase();
+  const rows=C1PK.all.filter(t=>t.id&&(!q||String(t.name).toLowerCase().includes(q)||String(t.email).toLowerCase().includes(q)));
+  list.innerHTML=rows.length?rows.map(t=>{const on=C1EX.has(t.id);
+    return `<button type="button" class="c1pk-it ${on?'on':''}" onclick="c1exFlip('${escJs(t.id)}')">
+      <span class="ck">${on?'✓':''}</span>
+      <span class="tx"><span class="nm">${escHtml(c1exName(t))}</span><span class="em" style="display:block">${escHtml(t.email)}</span></span>
+      <span class="c1pk-tag">${t.cycle==='main'?'صفوف ٥–١٢':'صفوف ١–٤'}</span></button>`;}).join('')
+    :'<div class="c1pk-empty">لا نتائج مطابقة</div>';
+  c1exSummary();
+}
+function c1exFlip(id){C1EX.has(id)?C1EX.delete(id):C1EX.add(id);c1exRender();}
+function c1exSummary(){
+  const box=document.getElementById('c1ex-chosen'),btn=document.getElementById('c1msg-b-send');
+  const ex=C1PK.all.filter(t=>C1EX.has(t.id));
+  if(box)box.innerHTML=ex.map(t=>`<span class="c1ex-chip">${escHtml(c1exName(t))}<button type="button" title="إلغاء الاستثناء" onclick="c1exFlip('${escJs(t.id)}')">✕</button></span>`).join('');
+  const total=C1PK.all.filter(t=>t.id).length;
+  if(btn)btn.textContent=ex.length?`إرسال إلى ${ADM_N(total-ex.length)} من ${ADM_N(total)} (مستثنى ${ADM_N(ex.length)})`:'إرسال لكل المعلّمين والمعلّمات';
+  document.getElementById('c1ex-toggle')?.classList.toggle('on',ex.length>0||!document.getElementById('c1ex-pk').hidden);
+}
+function c1exReset(){C1EX=new Set();const pk=document.getElementById('c1ex-pk');if(pk)pk.hidden=true;const q=document.getElementById('c1ex-q');if(q)q.value='';c1exSummary();}
 async function c1msgSendBroadcast(){
   if(!isAdmin())return;
   const title=document.getElementById('c1msg-b-title').value.trim();
   const body=document.getElementById('c1msg-b-body').value.trim();
   if(!title||!body){toast('❌ أدخل العنوان والنص',true);return;}
   try{
-    const{error}=await sb.from('c1_messages').insert({kind:'broadcast',title,body,created_by:currentUser.email});
+    const excluded=[...C1EX];
+    const row={kind:'broadcast',title,body,created_by:currentUser.email};
+    if(excluded.length)row.excluded_user_ids=excluded;
+    const{error}=await sb.from('c1_messages').insert(row);
     if(error)throw error;
     document.getElementById('c1msg-b-title').value='';
     document.getElementById('c1msg-b-body').value='';
-    toast('✅ أُرسلت الرسالة لكل المعلّمين والمعلّمات');
+    toast(excluded.length?`✅ أُرسلت الرسالة (مستثنى ${ADM_N(excluded.length)})`:'✅ أُرسلت الرسالة لكل المعلّمين والمعلّمات');
+    c1exReset();
     c1msgLoadBroadcast();
-    if(c1msgTeacherIds.length){
-      sb.from('c1_notifications').insert(c1msgTeacherIds.map(uid=>({user_id:uid,message:'رسالة جديدة من الإدارة: '+title}))).then(()=>{}).catch(()=>{});
+    const notify=c1msgTeacherIds.filter(uid=>!excluded.includes(uid));
+    if(notify.length){
+      sb.from('c1_notifications').insert(notify.map(uid=>({user_id:uid,message:'رسالة جديدة من الإدارة: '+title}))).then(()=>{}).catch(()=>{});
     }
   }catch(e){toast('❌ تعذّر الإرسال: '+escHtml(e.message||''),true);}
 }
@@ -7007,6 +7062,7 @@ function c1msgRowHtml(m){
   return `<div class="c1msg-row">
     <div class="t">${escHtml(m.title)}</div>
     <div class="b">${escHtml(m.body)}</div>
+    ${(m.excluded_user_ids||[]).length?`<div class="ex">مستثنى من هذه الرسالة: ${(m.excluded_user_ids||[]).map(id=>{const t=C1PK.all.find(x=>x.id===id);return escHtml(t?c1exName(t):'حساب محذوف');}).join('، ')}</div>`:''}
     <div class="meta">
       <span>${m.target_label?('إلى: '+escHtml(m.target_label)+' · '):''}${new Date(m.created_at).toLocaleDateString('ar')}</span>
       <button class="del" onclick="c1msgDelete('${m.id}')">حذف</button>
