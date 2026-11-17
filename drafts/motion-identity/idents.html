@@ -1,0 +1,99 @@
+<!doctype html><html lang="ar"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&family=Tajawal:wght@500;800&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#000}canvas{display:block;width:100vw}</style></head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=1920,H=1080;
+const P={cream:'#F1E3C8',green:'#5B8F5B',gold:'#C9A84A',brown:'#3D2416',coral:'#E8664A',crim:'#B03040',dark:'#1E120B',line:'#CDB98E'};
+const cl=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)), seg=(t,a,b)=>cl((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, eback=x=>{const c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const spring=x=>x<=0?0:1-Math.exp(-6*x)*Math.cos(11*x);
+function rnd(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// tiles from the current icon (512 grid)
+const S=1.6,OX=960-255*S,OY=150;
+const TILES=[[44,42,156,146,'green'],[170,42,258,248,'gold'],[272,42,376,146,'brown'],[390,42,466,146,'outline'],[44,160,156,248,'coral'],[272,160,376,248,'crim'],[404,160,466,248,'brown']]
+ .map(([a,b,c,d,k])=>({x:OX+a*S,y:OY+b*S,w:(c-a)*S,h:(d-b)*S,k}));
+function rr(x,y,w,h,r){X.beginPath();X.roundRect(x,y,w,h,r)}
+function tile(T,opt={}){const {s=1,a=1,dx=0,dy=0,rot=0,fill=true}=opt;if(a<=0||s<=0)return;X.save();X.globalAlpha*=a;
+ X.translate(T.x+T.w/2+dx,T.y+T.h/2+dy);X.rotate(rot);X.scale(s,s);rr(-T.w/2,-T.h/2,T.w,T.h,26);
+ if(T.k==='outline'){X.lineWidth=5;X.strokeStyle=P.line;X.stroke()}else{X.fillStyle=P[T.k];X.fill()}X.restore()}
+function word(txt,x,y,size,color,opt={}){X.save();X.font=`${opt.w||900} ${size}px ${opt.f||'Cairo'}`;X.textAlign='center';X.textBaseline='alphabetic';X.direction='rtl';
+ if(opt.ls){X.letterSpacing=opt.ls+'px';X.direction='ltr'}X.fillStyle=color;X.fillText(txt,x,y);X.restore()}
+const LOGO='خُطّة', LY=890, LS=300;
+function latin(t0,t,col=P.brown){const a=eo(seg(t,t0,t0+.5));if(a<=0)return;X.save();X.globalAlpha=a;word('KHOTTAH',960,1010,46,col,{f:'Tajawal',w:800,ls:4+18*a});X.restore()}
+function bgArcs(a){X.save();X.globalAlpha=a*.5;X.strokeStyle=P.line;X.lineWidth=2;for(let i=0;i<4;i++){X.beginPath();X.arc(960,1900+i*60,1300,Math.PI*1.25,Math.PI*1.75);X.stroke()}X.restore()}
+
+const STYLES=[
+// 1 Bento / tile assembly
+t=>{X.fillStyle=P.cream;X.fillRect(0,0,W,H);bgArcs(seg(t,0,.6));
+ const dirs=[[-900,-200],[0,-900],[0,900],[900,-300],[-900,300],[600,900],[900,400]];
+ TILES.forEach((T,i)=>{const p=spring(seg(t,.05+i*.09,1.25+i*.09)*1.4);tile(T,{dx:dirs[i][0]*(1-p),dy:dirs[i][1]*(1-p),rot:(1-p)*.5*(i%2?1:-1),s:.6+.4*cl(p,0,1.2)})});
+ const p=spring(seg(t,1.2,2.0)*1.3);if(p>0){X.save();X.translate(960,LY-110);X.scale(p,p);X.translate(-960,-(LY-110));word(LOGO,960,LY,LS,P.brown);X.restore()}
+ latin(1.75,t);},
+// 2 Kinetic typography
+t=>{const words=[['عروض',P.green],['ملخّصات',P.gold],['فيديوهات',P.coral]];
+ if(t<1.5){const i=Math.floor(t/.5),lt=t-i*.5,[w,c]=words[i];X.fillStyle=c;X.fillRect(0,0,W,H);
+  // previous colour wipes out right->left
+  if(i>0){X.fillStyle=words[i-1][1];X.fillRect(0,0,W*(1-eo(seg(lt,0,.18))),H)}
+  const p=eback(seg(lt,.02,.3)),s=1.6-.6*p;X.save();X.translate(960,560);X.scale(s,s);X.globalAlpha=cl(lt/.08);word(w,0,120,330,P.cream);X.restore();
+  X.save();X.globalAlpha=.25*cl(lt/.1);word(w,960+(lt*400),560+120+20,330,P.brown);X.restore();
+  // small counter
+  word(['١','٢','٣'][i]+' / ٣',1760,120,48,P.cream,{f:'Tajawal',w:800});return}
+ const lt=t-1.5;X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ // crimson block slides out
+ X.fillStyle=P.crim;X.fillRect(0,0,W*(1-eio(seg(lt,0,.35))),H);
+ const p=eo(seg(lt,.15,.45)),s=3-2*p,sh=(1-seg(lt,.45,.7))*(lt>.45?1:0)*14*Math.sin(lt*90);
+ X.save();X.translate(960+sh,LY-260);X.scale(s,s);X.globalAlpha=cl(seg(lt,.15,.25));word(LOGO,0,150,LS+40,P.brown);X.restore();
+ // underline bars
+ [P.green,P.gold,P.coral].forEach((c,i)=>{const q=eo(seg(lt,.5+i*.08,.9+i*.08));X.fillStyle=c;X.fillRect(960+330-660*q*0+(-330+ (i-1)*0),830+i*0,0,0);X.fillRect(1250-580*q,820+i*18,580*q,12)});
+ latin(2.1,t);},
+// 3 Shape wipes (flat circles)
+t=>{X.fillStyle=P.cream;X.fillRect(0,0,W,H);const R=Math.hypot(960,540)+20;
+ [[P.green,0],[P.gold,.22],[P.coral,.44],[P.crim,.66],[P.cream,.88]].forEach(([c,a])=>{const r=R*eio(seg(t,a,a+.5));if(r>0){X.fillStyle=c;X.beginPath();X.arc(960,540,r,0,7);X.fill()}});
+ bgArcs(seg(t,1.3,1.8));
+ TILES.forEach((T,i)=>{const p=eback(seg(t,1.25+i*.06,1.65+i*.06));tile(T,{s:p,a:cl(p*3)})});
+ const p=eo(seg(t,1.7,2.2));X.save();X.beginPath();X.rect(0,500,W,LY+45-500);X.clip();word(LOGO,960,LY+420*(1-p),LS,P.brown);X.restore();
+ // bouncing dots
+ [[P.green,700],[P.gold,960],[P.coral,1220]].forEach(([c,x],i)=>{const q=seg(t,1.9+i*.07,2.5+i*.07);if(q>0&&q<1){X.fillStyle=c;X.globalAlpha=1-q;X.beginPath();X.arc(x+(i-1)*300*q,600-200*Math.sin(q*Math.PI),16,0,7);X.fill();X.globalAlpha=1}});
+ latin(2.15,t);},
+// 4 Line draw / stroke reveal
+t=>{X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ X.save();X.globalAlpha=.35;X.strokeStyle=P.line;X.lineWidth=1;for(let x=0;x<W;x+=60){X.beginPath();X.moveTo(x,0);X.lineTo(x,H*eo(seg(t,0,.8)));X.stroke()}X.restore();
+ TILES.forEach((T,i)=>{const L=2*(T.w+T.h),p=eio(seg(t,.05+i*.1,.75+i*.1));if(p<=0)return;X.save();rr(T.x,T.y,T.w,T.h,26);
+  X.setLineDash([L*p,L]);X.lineWidth=5;X.strokeStyle=P.brown;X.stroke();
+  const f=seg(t,1.0+i*.07,1.4+i*.07);if(f>0&&T.k!=='outline'){X.clip();X.fillStyle=P[T.k];X.fillRect(T.x,T.y+T.h*(1-eo(f)),T.w,T.h)}X.restore()});
+ const q=eio(seg(t,1.35,2.25));if(q>0){const x0=1280,x1=640,xe=x0-(x0-x1)*q;X.save();X.beginPath();X.rect(xe,560,x0-xe+40,420);X.clip();word(LOGO,960,LY,LS,P.brown);X.restore();
+  if(q<1){X.fillStyle=P.coral;X.beginPath();X.arc(xe,LY-60+Math.sin(t*40)*25,12,0,7);X.fill()}}
+ [925,940].forEach((y,i)=>{const r=eo(seg(t,2.1+i*.08,2.5+i*.08));X.fillStyle=P.brown;X.globalAlpha=.6;X.fillRect(960-200*r,y,400*r,3);X.globalAlpha=1});
+ latin(2.3,t);},
+// 5 Glitch / RGB split
+t=>{X.fillStyle=P.dark;X.fillRect(0,0,W,H);const r=rnd(Math.floor(t*24)*977+5);
+ const burst=t<.25?0:(t<1.9?(.55+.45*Math.sin(t*9))*(r()>.25?1:.15):Math.max(0,1-(t-1.9)*4));const vis=t<.25?(r()>.6?.5:0):1;
+ const off=document.createElement('canvas');off.width=W;off.height=H;const o=off.getContext('2d');
+ const draw=(col)=>{o.clearRect(0,0,W,H);o.font=`900 ${LS+60}px Cairo`;o.textAlign='center';o.direction='rtl';o.fillStyle=col;o.fillText(LOGO,960,700)};
+ X.save();X.globalAlpha=vis;X.globalCompositeOperation='lighter';
+ [[P.coral,-1],[P.green,1],['#6C8AE0',0]].forEach(([c,s],k)=>{draw(c);const d=burst*(30+r()*40)*(k==2?.5:1);X.globalAlpha=vis*.8;X.drawImage(off,s*d+(k==2?d:0),k==2?-d*.4:0)});
+ X.globalCompositeOperation='source-over';draw(P.cream);X.globalAlpha=vis;
+ const n=burst>0?8:0;let y=0;for(let i=0;i<12;i++){const h=40+r()*120,dx=(r()<n/12?(r()-.5)*260*burst:0);X.drawImage(off,0,y,W,h,dx,y,W,h);y+=h;if(y>H)break}
+ X.restore();
+ // scanlines + noise blocks
+ X.fillStyle='rgba(0,0,0,.18)';for(let y=0;y<H;y+=4)X.fillRect(0,y,W,2);
+ if(burst>.3)for(let i=0;i<6;i++){X.fillStyle=[P.gold,P.coral,P.green,P.crim][i%4];X.globalAlpha=.7;X.fillRect(r()*W,r()*H,r()*300,6+r()*16)}X.globalAlpha=1;
+ const a=eo(seg(t,2.0,2.4));X.save();X.globalAlpha=a;word('KHOTTAH',960,860,50,P.gold,{f:'Tajawal',w:800,ls:22});
+ [P.green,P.gold,P.brown,P.coral,P.crim].forEach((c,i)=>{X.fillStyle=c==P.brown?'#6b4a33':c;X.fillRect(810+i*64,900,52,12)});X.restore();
+ if(t>2.45&&t<2.55){X.fillStyle='rgba(241,227,200,.12)';X.fillRect(0,0,W,H)}},
+// 6 Particles assemble
+(()=>{let pts=null;return t=>{X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ if(!pts){pts=[];const o=document.createElement('canvas');o.width=W;o.height=H;const g=o.getContext('2d');g.font=`900 ${LS+80}px Cairo`;g.textAlign='center';g.direction='rtl';g.fillStyle='#000';g.fillText(LOGO,960,760);
+  const d=g.getImageData(0,0,W,H).data,r=rnd(42),cols=[P.green,P.gold,P.brown,P.coral,P.crim,P.brown,P.brown];
+  for(let y=0;y<H;y+=6)for(let x=0;x<W;x+=6)if(d[(y*W+x)*4+3]>128){const a=r()*7,R=600+r()*900;pts.push({x,y,sx:960+Math.cos(a)*R,sy:540+Math.sin(a)*R*.7,c:cols[(r()*cols.length)|0],dl:r()*.5+(1920-x)/1920*.35,sw:(r()-.5)*3})}}
+ const m=eo(seg(t,2.0,2.5));
+ for(const p of pts){const q=eio(seg(t,p.dl,p.dl+1.2)),ang=(1-q)*p.sw;
+  const x=p.sx+(p.x-p.sx)*q+Math.sin(ang*3)*80*(1-q),y=p.sy+(p.y-p.sy)*q+Math.cos(ang*3)*80*(1-q);
+  X.fillStyle=m>0?(p.c):p.c;X.globalAlpha=.35+.65*q;const s=2+3*q+(1-q)*4;X.fillRect(x-s/2,y-s/2,s,s)}
+ X.globalAlpha=1;if(m>0){X.save();X.globalAlpha=m;word(LOGO,960,760,LS+80,P.brown);X.restore()}
+ const a=eo(seg(t,2.2,2.7));X.save();X.globalAlpha=a;word('KHOTTAH',960,900,48,P.brown,{f:'Tajawal',w:800,ls:4+18*a});X.restore()}})(),
+];
+window.render=(i,t)=>{X.save();STYLES[i](t);X.restore()};
+window.ready=document.fonts.load('900 100px Cairo').then(()=>document.fonts.load('800 50px Tajawal')).then(()=>document.fonts.ready).then(()=>true);
+</script></body></html>
