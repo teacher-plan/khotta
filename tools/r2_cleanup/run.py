@@ -47,7 +47,8 @@ print(f"size match: {len(cand)}  changed since copy: {len(changed)}  in Supabase
 def r2ok(p):
     for _ in range(3):
         try:
-            st, hd, _ = req("HEAD", R2 + urllib.parse.quote(p, safe="/"), timeout=30)
+            # وكيلٌ صريح: Cloudflare يرفض وكيل Python الافتراضي (Python-urllib) بـ 403
+            st, hd, _ = req("HEAD", R2 + urllib.parse.quote(p, safe="/"), headers={"User-Agent": "khotta-cleanup/1.0"}, timeout=30)
             return st == 200 and int(hd.get("Content-Length", -1)) == want[p]
         except Exception:
             pass
