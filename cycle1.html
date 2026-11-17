@@ -775,6 +775,12 @@ body.inapp #c1-budget-btn{display:flex}
 .plan-uchip.sel .cnt{color:var(--red-d)}
 .plan-uhead{display:flex;align-items:center;gap:9px;margin:6px 0 11px}
 .pl-offall{margin-inline-start:auto;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:#2A5183;border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
+.pl-uprep{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 12px;font-family:inherit;font-size:15px;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,#D86048,#A8322A);border:0;border-radius:14px;padding:13px 16px;cursor:pointer;box-shadow:0 4px 14px rgba(168,50,42,.25)}
+.pl-uprep small{font-weight:700;opacity:.85;font-size:12px}
+.pl-uprep.busy{background:#fff;color:#A8322A;border:2px solid #E8B4A8;box-shadow:none}
+.pl-uprep.done{background:#EAF3EC;color:#2F6B3E;box-shadow:none;cursor:default}
+.pl-uprep .pl2-spin{width:16px;height:16px;border-color:rgba(168,50,42,.25);border-top-color:#A8322A}
 .pl-offall:disabled,.pl-btn.off:disabled{opacity:.7;cursor:progress}
 #c1-offbar{position:fixed;bottom:14px;left:14px;z-index:9000;font-family:inherit;font-size:13px;font-weight:800;color:#fff;background:#4A5568;border:0;border-radius:999px;padding:7px 16px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 #c1-offbar.on{background:#2F7D74;cursor:pointer}
@@ -8217,7 +8223,7 @@ async function planRenderUnits(){
   }).join('');
   if(_plFilesReopen&&Date.now()-_plFilesReopen.t<600000&&!document.getElementById('attach-pick')){const r=_plFilesReopen;_plFilesReopen=null;setTimeout(()=>planFilesOpen(r.id),0);}
   box.innerHTML=`<div class="plan-units">${chips}</div>
-    <div class="plan-uhead"><b>${escHtml(u.name)}</b><span>${egArNum(uDone)}/${egArNum(u.lessons.length)} درس منجز</span><button class="pl-offall" onclick="c1OffSaveUnit(this)"><i class="ki ki-download" aria-hidden="true"></i> حفظ الوحدة كاملة بلا إنترنت</button></div>
+    <div class="plan-uhead"><b>${escHtml(u.name)}</b><span>${egArNum(uDone)}/${egArNum(u.lessons.length)} درس منجز</span><button class="pl-offall" onclick="c1OffSaveUnit(this)"><i class="ki ki-download" aria-hidden="true"></i> حفظ الوحدة كاملة بلا إنترنت</button></div>${planUnitPrepBtn(u)}
     ${lessonsHtml}`;
 }
 const PL2_CK='<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>';
@@ -8876,19 +8882,72 @@ async function planPrepBtn(id){
   }catch(e){toast('تعذّر بدء إعداد الخطة — '+khG('أعيدي','أعد')+' المحاولة',true);}
   finally{_c1GenUnlock(id);}
 }
+/* ══ تحضير الوحدة كاملة بضغطة (تجريبي لحساب الأستاذ عيسى وحده) ══
+   الخادم يُعدّ الدروس واحداً بعد الآخر (طابور c1-prep-job action=unit) مع إعادة
+   تلقائية لكل درس حتى ٣ مرات، وإشعارٌ واحد عند النهاية. الجاهز عند الزملاء
+   يُؤخذ أولاً (فوري ولا يمسّ الحصّة). الضغط مجدداً يُعدّ الناقص فقط. */
+const KH_UNIT_USERS=['xx@y.com'];
+function planUnitPrepAllowed(){return !KH_DEMO&&!!currentUser&&KH_UNIT_USERS.includes(String(currentUser.email||'').toLowerCase());}
+function planUnitPrepBtn(u){
+  if(!planUnitPrepAllowed()||!u||!u.lessons.length)return '';
+  const miss=u.lessons.filter(l=>!planGet(l.id).prep);
+  const busy=miss.filter(l=>_prepRunning[l.id]).length;
+  if(!miss.length)return `<button class="pl-uprep done" disabled><i class="ki ki-check" aria-hidden="true"></i> دروس الوحدة كلها محضّرة</button>`;
+  if(busy)return `<button class="pl-uprep busy" onclick="toast('تحضير الوحدة جارٍ — سيصلك إشعار عند انتهائه','ok')"><span class="pl2-spin"></span> يُعَدّ تحضير الوحدة… <small>جهز ${egArNum(u.lessons.length-miss.length)} من ${egArNum(u.lessons.length)}</small></button>`;
+  const all=miss.length===u.lessons.length;
+  return `<button class="pl-uprep" onclick="planUnitPrep()"><i class="ki ki-sparkle" aria-hidden="true"></i> ${all?'حضّر الوحدة كاملة بضغطة':'حضّر الدروس الناقصة'} <small>(${planLessonsCount(miss.length)})</small></button>`;
+}
+function planLessonsCount(n){return n===1?'درس واحد':n===2?'درسان':n<11?egArNum(n)+' دروس':egArNum(n)+' درساً';}
+let _unitPrepBusy=false;
+async function planUnitPrep(){
+  if(_unitPrepBusy||!planUnitPrepAllowed())return;
+  const key=planKey(planGrade,planSubject);
+  const u=((profile.plan_units&&profile.plan_units[key])||[])[planUnitIdx];if(!u)return;
+  let miss=u.lessons.filter(l=>!planGet(l.id).prep&&!_prepRunning[l.id]);
+  if(!miss.length){toast('كل دروس الوحدة محضّرة أو قيد الإعداد','ok');return;}
+  if(!confirm(`سيُعَدّ تحضير ${planLessonsCount(miss.length)} من «${u.name}» واحداً بعد الآخر (نحو ${egArNum(Math.max(2,Math.round(miss.length*1.5)))} دقيقة).\n${khG('تستطيعين','تستطيع')} الخروج من خُطّة، وسيصلك إشعار عند الانتهاء.`))return;
+  _unitPrepBusy=true;toast('يُجهَّز الطلب…','ok');
+  try{
+    await c1AssetsLoad();
+    // الجاهز عند الزملاء أولاً
+    let adopted=0;
+    for(const l of miss){
+      try{const found=await shPoolFetch(l.id,['prep']);if((await shAdopt(l.id,found)).includes('prep'))adopted++;}catch(_){}
+    }
+    miss=miss.filter(l=>!planGet(l.id).prep);
+    const lessons=[];
+    for(const l of miss){
+      const bookContext=c1Asset(l.id).book_summary||'';
+      const images=bookContext?[]:((await c1LessonBookImages(planGrade,planSubject,u.name,l.name))||[]);
+      lessons.push({lessonId:l.id,lesson:l.name,bookContext,images});
+    }
+    if(!lessons.length){planRenderUnits();toast('أخذنا تحضير الوحدة كاملة مما جهّزه الزملاء','ok');return;}
+    const res=await sb.functions.invoke('c1-prep-job',{body:{action:'unit',grade:String(planGrade),subject:planSubject,unit:u.name,semester:profile.semester||'الفصل الأول',lessons}});
+    const{data,error}=res;
+    if(error||!data||!data.ok){toast(c1ErrMsg(await c1FnErr(res),'تعذّر بدء تحضير الوحدة — '+khG('أعيدي','أعد')+' المحاولة'),true);planRenderUnits();return;}
+    lessons.forEach(l=>{_prepRunning[l.lessonId]=_prepRunning[l.lessonId]||'q';});
+    planRenderUnits();khHaptic(12);
+    toast(`بدأ تحضير ${planLessonsCount(data.n||lessons.length)}${adopted?' (و'+egArNum(adopted)+' من الزملاء)':''} — سيصلك إشعار عند الانتهاء`,'ok');
+    c1PrepPoll();
+  }catch(e){toast('تعذّر بدء تحضير الوحدة — '+khG('أعيدي','أعد')+' المحاولة',true);}
+  finally{_unitPrepBusy=false;}
+}
 // يدمج ما جهز على الخادم في الخطة ويعلّمه مستهلكاً؛ ويعرف ما زال جارياً (ولو بدأ من جهازٍ آخر)
-let _prepSyncBusy=false,_prepPollT=null;
+let _prepSyncBusy=false,_prepPollT=null,_prepKickAt=0;
 async function c1PrepJobsSync(){
   if(_prepSyncBusy||!currentUser||!profile)return;
   _prepSyncBusy=true;
   try{
-    const{data,error}=await sb.from('c1_prep_jobs').select('id,lesson_id,lesson_name,meta,status,plan,summary,error,created_at').eq('user_id',currentUser.id).eq('consumed',false).order('created_at');
+    const{data,error}=await sb.from('c1_prep_jobs').select('id,lesson_id,lesson_name,meta,status,plan,summary,error,created_at,started_at,batch_id').eq('user_id',currentUser.id).eq('consumed',false).order('created_at');
     if(error)return;
-    const run={};let changed=false;
+    const run={};let changed=false,stale=false;const okN=[],errN=[];
     for(const j of data||[]){
-      if(j.status==='running'){
-        if(Date.now()-new Date(j.created_at)<15*60e3){run[j.lesson_id]=j.id;continue;}
-        await sb.from('c1_prep_jobs').update({consumed:true}).eq('id',j.id);continue;   // عالقة: تُترك ليعاد طلبها
+      if(j.status==='running'||j.status==='queued'){
+        run[j.lesson_id]=j.id;
+        // يُعَدّ منذ أكثر من ٦ دقائق = انقطع استدعاؤه على الخادم: الحارس يعيده أو يُعلن فشله
+        if(j.status==='running'&&Date.now()-new Date(j.started_at||j.created_at)>6*60e3)stale=true;
+        if(j.status==='queued'&&j.batch_id&&Date.now()-new Date(j.created_at)>8*60e3)stale=true;
+        continue;
       }
       if(j.status==='done'&&j.plan&&!planGet(j.lesson_id).prep){
         await planSetState(j.lesson_id,{prep:j.plan,prep_at:new Date().toISOString()});
@@ -8896,12 +8955,16 @@ async function c1PrepJobsSync(){
         qBump();
         const m=j.meta||{};
         if(m.grade&&m.subject)shAutoPublish({kind:'prep',lessonId:j.lesson_id,grade:m.grade,subject:m.subject,unit:m.unit,lesson:j.lesson_name,content:j.plan});
-        toast('جهز تحضير «'+(j.lesson_name||'الدرس')+'»','ok');changed=true;
+        okN.push(j.lesson_name||'الدرس');changed=true;
       }else if(j.status==='error'){
-        toast('تعذّر إعداد تحضير «'+(j.lesson_name||'الدرس')+'»'+(j.error?' — '+j.error:'')+' · '+khG('أعيدي','أعد')+' المحاولة',true);changed=true;
+        errN.push({n:j.lesson_name||'الدرس',e:j.error});changed=true;
       }
       await sb.from('c1_prep_jobs').update({consumed:true}).eq('id',j.id);
     }
+    if(okN.length===1)toast('جهز تحضير «'+okN[0]+'»','ok');else if(okN.length>1)toast('جهز تحضير '+egArNum(okN.length)+' دروس','ok');
+    if(errN.length===1)toast('تعذّر إعداد تحضير «'+errN[0].n+'»'+(errN[0].e?' — '+errN[0].e:'')+' · '+khG('أعيدي','أعد')+' المحاولة',true);
+    else if(errN.length>1)toast('تعذّر إعداد '+egArNum(errN.length)+' دروس'+(errN[0].e?' — '+errN[0].e:'')+' · '+khG('أعيدي','أعد')+' المحاولة',true);
+    if(stale&&Date.now()-_prepKickAt>120e3){_prepKickAt=Date.now();sb.functions.invoke('c1-prep-job',{body:{action:'kick'}}).catch(()=>{});}
     const before=Object.keys(_prepRunning).sort().join();
     _prepRunning=run;
     if(changed||before!==Object.keys(run).sort().join()){try{planRenderUnits();}catch(_){}}
