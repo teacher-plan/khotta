@@ -604,6 +604,22 @@ body.inapp #c1-budget-btn{display:flex}
 .chip.sel{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-color:var(--red-d)}
 .chip.olv.sel{background:linear-gradient(135deg,var(--olive),var(--olive-d));border-color:var(--olive-d)}
 .c1-mrow{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* رسالة الإدارة عند الدخول */
+.amsg-box{max-width:440px;position:relative;overflow:hidden;padding-top:24px}
+.amsg-box::before{content:'';position:absolute;top:0;inset-inline:0;height:5px;background:linear-gradient(90deg,var(--red),var(--red-d))}
+.amsg-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.amsg-ic{flex:none;width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;display:flex;align-items:center;justify-content:center}
+.amsg-ic svg{width:19px;height:19px}
+.amsg-from{flex:1;font-size:13px;font-weight:800;color:var(--red-d)}
+.amsg-cnt{flex:none;font-size:11.5px;font-weight:800;color:var(--muted);background:var(--card);border-radius:10px;padding:3px 10px}
+.amsg-cnt:empty{display:none}
+.amsg-tag{display:inline-block;font-size:11px;font-weight:800;border-radius:9px;padding:2px 10px;background:var(--card);color:var(--muted);margin-bottom:8px}
+.amsg-tag.private{background:rgba(168,48,48,.1);color:var(--red-d)}
+.amsg-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.6;margin-bottom:8px}
+.amsg-body{font-size:14.5px;line-height:2;color:var(--ink);white-space:pre-wrap;max-height:46vh;overflow-y:auto}
+.amsg-date{font-size:11.5px;color:var(--muted);margin-top:10px}
+.amsg-row{justify-content:space-between}
+.amsg-go{background:linear-gradient(135deg,var(--red),var(--red-d))!important;flex:1;max-width:220px}
 .c1-mbtn{border:none;border-radius:10px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
 .c1-mbtn.go{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff}
 .c1-mbtn.go:disabled{opacity:.45;cursor:not-allowed}
@@ -4576,6 +4592,25 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
   </div>
 </div>
 
+<!-- رسائل الإدارة الجديدة: تظهر في وجه المعلّم عند دخوله المنصّة، ولا تُغلق إلا بزرّ -->
+<div class="c1-modal" id="amsg-modal">
+  <div class="c1-mbox amsg-box" role="dialog" aria-modal="true" aria-labelledby="amsg-title">
+    <div class="amsg-head">
+      <span class="amsg-ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg></span>
+      <span class="amsg-from">رسالة من إدارة خُطّة</span>
+      <span class="amsg-cnt" id="amsg-cnt"></span>
+    </div>
+    <div class="amsg-tag" id="amsg-tag"></div>
+    <div class="amsg-title" id="amsg-title"></div>
+    <div class="amsg-body" id="amsg-body"></div>
+    <div class="amsg-date" id="amsg-date"></div>
+    <div class="c1-mrow amsg-row">
+      <button class="c1-mbtn no" id="amsg-all" onclick="amsgAll()">كل الرسائل</button>
+      <button class="c1-mbtn go amsg-go" id="amsg-next" onclick="amsgNext()">تم، قرأتها</button>
+    </div>
+  </div>
+</div>
+
 <div class="c1-modal" id="c1-confirm-modal" onclick="if(event.target===this)c1ConfirmAnswer(false)">
   <div class="c1-mbox" style="max-width:340px;text-align:center">
     <div id="c1-confirm-msg" style="font-size:13.5px;font-weight:700;line-height:2;margin-bottom:16px;color:var(--ink)"></div>
@@ -5686,6 +5721,7 @@ async function afterAuth(session){
   trackUsage('login');
   renderYawmi(); // معالج الإعداد يظهر داخلها تلقائياً عند عدم اكتماله
   c1NotifLoad();
+  setTimeout(amsgCheck,900);
   khBudgetRing();
   c1OffAutoSoon();
 }
@@ -5840,7 +5876,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='9688d3e';
+const KH_BUILD='f9998ff';
 function acctDigits(s){
   return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
                       .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -19077,6 +19113,54 @@ function c1NotifToggle(){
       if(c1Notifs.some(n=>!n.user_id))cy1Save({notifSeenAt:new Date().toISOString()});
     });
   }
+}
+
+// ══ رسائل الإدارة عند الدخول ══
+// كل رسالةٍ جماعية أو خاصة من الإدارة لم يقرأها المعلّم تظهر في وجهه فور دخوله،
+// واحدةً بعد واحدة، ولا تُغلق إلا بـ«تم، قرأتها». وقت آخر رسالةٍ مقروءة يُحفظ في
+// ملف المعلّم نفسه (adminMsgSeenAt) لا في الجهاز، فلا تتكرّر على جهازٍ آخر.
+// أول مرة (لا وقت محفوظ): رسائل آخر ١٤ يوماً فقط، لا الأرشيف كلّه.
+let _amsgList=[],_amsgI=0;
+async function amsgCheck(){
+  if(KH_DEMO||C1_OFF||!currentUser||!profile||!profile.setupDone)return;
+  try{
+    const since=profile.adminMsgSeenAt||new Date(Date.now()-14*864e5).toISOString();
+    const{data,error}=await sb.from('c1_messages').select('id,kind,title,body,target_user_id,created_by,created_at')
+      .in('kind',['broadcast','private']).gt('created_at',since).order('created_at',{ascending:true}).limit(10);
+    if(error)throw error;
+    const me=String(currentUser.email||'').toLowerCase();
+    const list=(data||[]).filter(m=>String(m.created_by||'').toLowerCase()!==me&&(!m.target_user_id||m.target_user_id===currentUser.id));
+    if(list.length)amsgShow(list);
+  }catch(e){}
+}
+function amsgShow(list){
+  _amsgList=list;_amsgI=0;amsgRender();
+  document.getElementById('amsg-modal').classList.add('open');
+}
+function amsgRender(){
+  const m=_amsgList[_amsgI];if(!m)return;
+  const n=_amsgList.length,last=_amsgI===n-1;
+  document.getElementById('amsg-cnt').textContent=n>1?egArNum(_amsgI+1)+' من '+egArNum(n):'';
+  const tag=document.getElementById('amsg-tag');
+  tag.textContent=m.target_user_id?'خاصة لك':'رسالة جماعية';tag.className='amsg-tag'+(m.target_user_id?' private':'');
+  document.getElementById('amsg-title').textContent=m.title||'';
+  document.getElementById('amsg-body').textContent=m.body||'';
+  document.getElementById('amsg-date').textContent=c1Date(m.created_at);
+  document.getElementById('amsg-next').textContent=last?'تم، قرأتها':'التالية';
+}
+function amsgSeen(){
+  const m=_amsgList[_amsgList.length-1];
+  if(m)cy1Save({adminMsgSeenAt:m.created_at});
+}
+function amsgNext(){
+  if(_amsgI<_amsgList.length-1){_amsgI++;amsgRender();return;}
+  amsgSeen();
+  document.getElementById('amsg-modal').classList.remove('open');
+}
+function amsgAll(){
+  amsgSeen();
+  document.getElementById('amsg-modal').classList.remove('open');
+  c1Go('msgs');
 }
 
 // ══ قسم المراسلات — رسائل الإدارة + الاستبيانات ══
