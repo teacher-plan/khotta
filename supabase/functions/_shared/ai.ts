@@ -99,11 +99,32 @@ function withKey(init: RequestInit, key: string): RequestInit {
   return { ...init, headers: h };
 }
 
+// ══ صفحات الكتب وأدلّة المعلّم: Cloudflare R2 أولاً، وSupabase احتياطاً ══
+// نُسخت الصفحات إلى R2 (files.khotati.com) لتُحذف من مخزن Supabase. كل رابط صفحةٍ
+// (books/ أو teacher-guides/) في طلبٍ إلى الذكاء الاصطناعي — أيّاً كان مصدره،
+// خادماً أو واجهة — يُرسَل برابط R2 إن وُجدت الصفحة هناك، وإلا برابط Supabase
+// (كتابٌ رُفع للتوّ ولم يُنسخ بعد). فحصٌ HEAD واحد لكل صفحةٍ مختلفة، بالتوازي.
+const R2_LIB = "https://files.khotati.com/library-files/";
+const SB_LIB = "https://mkdsnnfkkdwdkywnwnjh.supabase.co/storage/v1/object/public/library-files/";
+const LIB_PAGE_RE = /https:\/\/(?:files\.khotati\.com|mkdsnnfkkdwdkywnwnjh\.supabase\.co\/storage\/v1\/object\/public)\/library-files\/((?:books|teacher-guides)\/[^"\s?#\\]+)/g;
+async function libPagesPreferR2(body: string): Promise<string> {
+  const paths = [...new Set([...body.matchAll(LIB_PAGE_RE)].map((m) => m[1]))];
+  if (!paths.length) return body;
+  const onR2 = new Set<string>();
+  await Promise.all(paths.map(async (p) => {
+    try { const r = await fetch(R2_LIB + p, { method: "HEAD" }); if (r.ok) onR2.add(p); } catch { /* احتياطاً: Supabase */ }
+  }));
+  return body.replace(LIB_PAGE_RE, (_m, p) => (onR2.has(p) ? R2_LIB : SB_LIB) + p);
+}
+
 export interface OrOpts { st?: Record<string, string>; task?: string }
 
 // بديلٌ مباشر عن fetch لنداءات OpenRouter — نفس التوقيع ونفس المخرَج،
 // فلا يحتاج ما بعده أيّ تغيير. يتنقّل بين المفاتيح عند عطلٍ يخصّها.
 export async function orFetch(url: string, init: RequestInit, opts?: OrOpts): Promise<Response> {
+  if (typeof init.body === "string" && init.body.includes("/library-files/")) {
+    try { init = { ...init, body: await libPagesPreferR2(init.body) }; } catch { /* يبقى الطلب كما هو */ }
+  }
   const keys = keyOrder(opts?.st || {}, opts?.task);
   // بلا مفاتيح في البيئة نمضي بما في الترويسة كما هي (توافقاً مع القديم)
   const pool: (string | null)[] = keys.length ? keys : [null];
