@@ -1,0 +1,24 @@
+# حذف صفحات الكتب والأدلّة من Supabase بعد التحقّق من وجودها على Cloudflare R2.
+# يعمل فقط عند تعديل tools/r2_cleanup/mode على فرع العمل (verify ثم delete).
+name: R2 cleanup (Supabase book pages)
+on:
+  push:
+    branches: ['claude/vibrant-gates-3a8c6q']
+    paths: ['tools/r2_cleanup/mode']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: تحقّق/حذف
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+        run: |
+          set -euo pipefail
+          MODE=$(tr -d '[:space:]' < tools/r2_cleanup/mode); export MODE
+          SERVICE_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys" | jq -r '.[] | select(.name=="service_role") | .api_key')
+          [ -n "$SERVICE_KEY" ] && [ "$SERVICE_KEY" != "null" ] || { echo "::error::no service key"; exit 1; }
+          echo "::add-mask::$SERVICE_KEY"; export SERVICE_KEY
+          python3 tools/r2_cleanup/run.py
