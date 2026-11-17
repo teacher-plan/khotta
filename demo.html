@@ -5103,6 +5103,26 @@ const sb=KH_DEMO?(function(){
     storage:{from:()=>({upload:()=>nores,remove:()=>nores,
       getPublicUrl:()=>({data:{publicUrl:''}}),createSignedUrl:()=>nores})}};
 })():window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+// ══ صفحات الكتب وأدلّة المعلّم من Cloudflare R2 (files.khotati.com) ══
+// نُسخت كلّها إلى R2 (١٧ نوفمبر) — getPublicUrl يُعيد رابط R2 لمساري books/ و
+// teacher-guides/ فقط، وبقية الملفات (ملفات المعلّمين، الأصوات، التحضيرات) على
+// Supabase كما هي حتى يتحوّل الرفع. صفحةٌ لم تُنسخ بعد (كتابٌ رُفع للتوّ) تُحمَّل
+// تلقائياً من Supabase عند فشلها، فلا تظهر صورةٌ مكسورة أبداً.
+const KH_R2='https://files.khotati.com/';
+const KH_R2_RE=/^(books|teacher-guides)\//;
+if(!KH_DEMO)(function(){
+  const from=sb.storage.from.bind(sb.storage);
+  sb.storage.from=b=>{const o=from(b);
+    if(b==='library-files'&&o&&o.getPublicUrl){const g=o.getPublicUrl.bind(o);
+      o.getPublicUrl=(p,opt)=>{const r=g(p,opt);
+        if(!opt&&KH_R2_RE.test(String(p||'')))r.data.publicUrl=KH_R2+'library-files/'+String(p).split('/').map(encodeURIComponent).join('/');
+        return r;};}
+    return o;};
+  document.addEventListener('error',e=>{const t=e.target;
+    if(t&&t.tagName==='IMG'&&t.src&&t.src.indexOf(KH_R2)===0&&!t.dataset.khFb){
+      t.dataset.khFb='1';t.src=SUPABASE_URL+'/storage/v1/object/public/'+t.src.slice(KH_R2.length);}},true);
+})();
 const CY1_ADMIN_EMAIL='teacherplane2026project@gmail.com';
 let currentUser=null,profile={};
 
