@@ -5252,7 +5252,6 @@ function khColGender(){ return khTeacherGender(); }
 function khC(fem,masc){ return khColGender()==='f'?fem:masc; }
 // ألقابٌ جاهزة، أكثر ما يتكرّر
 function khTitle(){ return khG('الأستاذة','الأستاذ'); }
-function khRole(){ return khG('معلّمة','معلّم'); }
 
 /* يُطبّق الخطاب على النصوص الثابتة في غلاف HTML. ما يُبنى في JS يستدعي
    khG/khS مباشرةً عند الرسم فلا يحتاج هذه الدالّة.
@@ -5876,12 +5875,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f9998ff';
-function acctDigits(s){
-  return String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660)
-                      .replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
-                      .replace(/\D/g,'');
-}
+const KH_BUILD='9fad6c0';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -7771,22 +7765,6 @@ async function suFinish(){
 // ظاهراً، وإن لم يوجد شيء عرضنا البطاقة في الوسط بلا إضاءة — الشرح يصل في
 // الحالين، ولا تنكسر الجولة على حسابٍ فارغ.
 // دالّة لا ثابتاً: نصوصها تستدعي khG/khS، والجنس لا يُعرف إلا بعد الدخول
-function TOUR(){return [
-  {sec:'yawmi', at:['#yw-now-card','#yw-main','#c1-greet'], ic:'cal', nm:'يومي',
-   lv:'مبدأ يومك. بطاقة الحصّة الجارية '+khG('تُريكِ','تُريك')+' ما '+khG('تُدرّسينه','تُدرّسه')+' الآن، ومنها '+khG('تفتحين','تفتح')+' تحضيره مباشرةً بلا بحث.'},
-  {sec:'plan', at:['#plan-sections','#plan-empty','#plan-grade-sel'], ic:'chart', nm:'الخطة',
-   lv:'وحدات مادّتك ودروسها. '+khG('تُعلّمين','تُعلّم')+' الدرس مُنجَزاً فيتقدّم مؤشّر خطّتك وحده — بلا جدول متابعةٍ منفصل.'},
-  {sec:'studio', at:['#studio-game-options-card','#studio-grade-sel'], ic:'game', nm:'الاستوديو',
-   lv:''+khG('اختاري','اختر')+' الدرس، ويُبنى '+khG('لكِ','لك')+' لعبةٌ أو إنفوجرافيك من الكتاب المعتمد — جاهزٌ للعرض على شاشة الصفّ.'},
-  {sec:'students', at:['#stu-board','#stu-empty','#stu-grade-sel'], ic:'star', nm:'طلابي',
-   lv:'نجمةٌ بضغطة، وسلوكٌ يُسجَّل بتاريخه. يتراكم طوال الفصل فتخرج تقارير أولياء الأمور جاهزة.'},
-  {sec:'fahim', at:['#fh-body','#fh-head'], ic:'fox', nm:'خُطّة AI',
-   lv:''+khG('اسأليه','اسأله')+' عن أيّ شيء في درسك أو صفّك. ويقرأ صور صفحات الكتاب أيضاً، ف'+khG('اسأليه','اسأله')+' عمّا بين يديك.'},
-  {sec:'shared', at:['#sh-tab-all','#sh-grade-sel'], ic:'archive', nm:'المحفوظات',
-   lv:khC('ما أعدّته معلّمات الحلقة قبلك. ','ما أعدّه معلّمو الحلقة قبلك. ')+khG('استدعي','استدعِ')+' الجاهز قبل أن تُ'+khG('ولّدي','ولّد')+' — أسرع، ولا يستهلك رصيدك.'},
-  {sec:null, at:['#c1-corner'], ic:'book', nm:'وأين البقية؟',
-   lv:'هذا الزرّ يفتح كل الأقسام. ومن قائمة حسابك «دليل الاستخدام» يشرحها بالتفصيل، ومنه '+khG('تُعيدين','تُعيد')+' هذه الجولة.'},
-]}
 let tourIdx=0,tourOn=false;
 function tourSteps(){
   const first=(profile.display_name||'').split(' ')[0];
@@ -8295,22 +8273,6 @@ async function planToggleClass(id,classId){
   const all={...(profile.plan_state||{}),[id]:st};
   await cy1Save({plan_state:all},'يحفظ الخطة');
   planRenderUnits();
-}
-async function planRefresh(){
-  if(!planGrade||!planSubject)return;
-  const key=planKey(planGrade,planSubject);
-  cyBusy('يجلب الدروس من قاعدة البيانات');
-  try{
-    const semester=profile.semester||'الفصل الأول';
-    // زر يدوي: نتجاوز المخزون ونُحدّثه بأحدث نسخة من الخادم
-    const data=await c1Curriculum(semester,planSubject,planGrade,null,true);
-    if(!data)throw new Error('fetch failed');
-    const units=data.length?buildUnitsFromRows(data,semester,planSubject):[];
-    const all={...(profile.plan_units||{}),[key]:units};
-    await cy1Save({plan_units:all});
-    toast(units.length?'تحدّثت الدروس':'لا يوجد كتاب مرفوع لهذه المادة بعد');
-  }catch(e){toast('تعذّر التحديث — '+khG('تحققي','تحقق')+' من الاتصال',true);}
-  finally{cyBusyDone();planRenderUnits();}
 }
 
 // ═══════════ بطاقة الدرس الموسّعة — لعبة/ملخص/إرفاق/ابدئي الحصة ═══════════
@@ -9466,11 +9428,6 @@ function todayPreview(){
   document.getElementById('today-modal').classList.add('open');
 }
 function todayModalClose(){document.getElementById('today-modal').classList.remove('open');}
-async function todayGoGame(){
-  if(!todayCache||!todayCache.lessonId){toast('لا يوجد درس محدد اليوم',true);return;}
-  todayAttachLessonId=todayCache.lessonId;
-  await studioJumpTo(todayCache.grade,todayCache.subject,todayCache.lessonName);
-}
 
 // ═══════════ قسم النجوم — تحفيز فوري ومسرح احتفال ═══════════
 let gmAC=null;
@@ -11991,20 +11948,6 @@ function absSetState(nm,stt){
   absWriteLate(cls.id,absDate,absPeriod,[...late]);
   absRender();
 }
-function absToggle(nm){
-  khHaptic(8);
-  const cls=starClassObj(starClass);if(!cls)return;
-  const cur=absDay(cls.id,absDate)[absPeriod];
-  const set=new Set(Array.isArray(cur)?cur:[]);
-  const late=new Set(absLateDay(cls.id,absDate)[absPeriod]||[]);
-  if(set.has(nm)){set.delete(nm);late.add(nm);}
-  else if(late.has(nm)){late.delete(nm);}
-  else set.add(nm);
-  // تُكتب قائمة الغياب دائماً (ولو فارغة) فتُعدّ الحصة مسجّلة
-  absWrite(cls.id,absDate,absPeriod,[...set]);
-  absWriteLate(cls.id,absDate,absPeriod,[...late]);
-  absRender();
-}
 function absAllPresent(){
   const cls=starClassObj(starClass);if(!cls)return;
   absWrite(cls.id,absDate,absPeriod,[]);absWriteLate(cls.id,absDate,absPeriod,[]);
@@ -12793,16 +12736,6 @@ function rsUsedAgo(id){
 }
 
 // البنك يُجلب مرة واحدة. عامل الخدمة خزّنه مسبقاً، فالجلب من القرص لا الشبكة.
-function rsLoad(){
-  if(rsLoaded)return Promise.resolve(true);
-  return new Promise(res=>{
-    const s=document.createElement('script');
-    s.src='/reserve.js';
-    s.onload=()=>{rsLoaded=true;res(true);};
-    s.onerror=()=>res(false);
-    document.head.appendChild(s);
-  });
-}
 
 /* ═ القائمة الجديدة: أنشطة activities/ ═
    واحدٌ وعشرون نشاطاً مستقلاً، كلٌّ ملفُّ HTML كامل ببداية ولوحة معلّمة
@@ -12915,23 +12848,6 @@ function rsOpenAct(n){
   rsRender(); // تحديث شارة «استعملتِه»
 }
 
-function rsCardHtml(a){
-  const vals=window.RESERVE_VALUES||{},fmts=window.RESERVE_FMT||{};
-  const v=vals[a.val]||{nm:'',c:'#A83030'},f=fmts[a.fmt]||{nm:'',ic:''};
-  const ago=rsUsedAgo(a.id);
-  return `<button class="rs-card" style="--vc:${v.c}" onclick="rsOpen('${a.id}')">
-      <div class="rs-card-top"><span class="v">${escHtml(v.nm)}</span><span class="f">${f.ic} ${escHtml(f.nm)}</span></div>
-      <div class="rs-card-b">
-        <div class="rs-card-nm">${escHtml(a.nm)}</div>
-        <div class="rs-card-goal">${escHtml(a.goal)}</div>
-        <div class="rs-card-meta">
-          <span class="rs-tag">${rsMinsAr(a.mins)}</span>
-          ${a.screen?'':'<span class="rs-tag noscr">بلا عارض</span>'}
-          ${ago?`<span class="rs-tag used">${escHtml(ago)}</span>`:''}
-        </div>
-      </div>
-    </button>`;
-}
 
 // «فاجئيني»: أسرع طريق — ضغطة واحدة تعطيها نشاطاً،
 // ويتجنّب ما استعملته حديثاً حتى لا يتكرّر على الطلاب أنفسهم
@@ -14355,15 +14271,6 @@ function liveTimerDone(){
 }
 // نطقٌ عبر قارئ المتصفح المدمج (Web Speech API) — بلا أي استدعاء ذكاءٍ
 // اصطناعي، فلا يُحسب على حصة المعلمة الشهرية ولا يحتاج اتصالاً بالخادم
-function liveAnnounce(text){
-  try{
-    if(!('speechSynthesis' in window))return;
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang='ar-SA';u.rate=0.95;
-    speechSynthesis.speak(u);
-  }catch(e){}
-}
 function liveQuiet(){liveAlarm('هدوء');}
 // الوميض الأحمر بملء الشاشة + صوت الإنذار — لإشارة الهدوء ولانتهاء وقت المؤقّت
 function liveAlarm(text){
@@ -14458,7 +14365,6 @@ function liveRenderQuickStars(){
 // ══════════════════════════════════════════════════════════════
 const uiBusy=cyBusy,uiBusyDone=cyBusyDone;
 function uiConfirm(a,b){return c1Confirm(b||a);}
-function isAdmin(){return false;}
 const egToArabic=egArNum;
 
 // ── اختيار الصف/المادة/الدرس ──
@@ -14969,14 +14875,6 @@ let gmSfx={},gmSfxT={},GM_OPT={},gmSfxLoaded=false;
 function gmSfxUrl(kind){return sb.storage.from('library-files').getPublicUrl('game-sfx/'+kind+'.mp3').data.publicUrl;}
 // تشغيلٌ صامتٌ فورَ التحميل: يجبر المتصفح على فكّ ترميز الملف مرةً واحدة الآن
 // بدل تأجيله للحظة الضغط، فلا يظهر تأخّرٌ مسموعٌ عند أول استخدامٍ للصوت
-function gmPrimeAudio(a){
-  try{
-    const v=a.volume;a.volume=0;
-    const p=a.play();
-    if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.volume=v;}).catch(()=>{a.volume=v;});
-    else{a.volume=v;}
-  }catch(e){}
-}
 function gmLoadSfx(){khSfxLoad();}
 function gmLoadSfxT(tpl){}
 // مستويات صوت اللعبة. كانت المؤثرات ٠٫٩ والموسيقى ٠٫٢٥ — عالية في صف مكبّر
