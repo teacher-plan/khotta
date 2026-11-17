@@ -13716,9 +13716,11 @@ function certNameSize(name){
 // ثلاثة تصاميم تختارها المعلّمة، ولكل نوع شهادةٍ لونه. كل الزخارف SVG متّجهية
 // في طبقةٍ واحدة بمقاس الصفحة (٢٩٧×٢١٠مم)، فتبقى حادّةً في الطباعة وفي الصورة
 // (html2canvas يرسم SVG المضمَّن صورةً كما هو)، والنصوص HTML فوقها.
-const CERT_STYLES={royal:'الإطار الذهبي',night:'الليلة الملكية',modern:'العصري'};
-const CERT_STYLE_ORDER=['royal','night','modern'];
-function certStyle(){const v=localStorage.getItem('c1_cert_style');return CERT_STYLES[v]?v:'royal';}
+const CERT_STYLES={canva:'المزخرف',royal:'الإطار الذهبي',night:'الليلة الملكية',modern:'العصري'};
+const CERT_STYLE_ORDER=['canva','royal','night','modern'];
+// خلفيات «المزخرف» صُمّمت في كانفا (بلا نصوص) بدقّة طباعة A4، لونٌ لكل نوع، مخزّنة في R2
+const CERT_BG='https://files.khotati.com/library-files/cert-templates/v1/';
+function certStyle(){const v=localStorage.getItem('c1_cert_style');return CERT_STYLES[v]?v:'canva';}
 const CERT_PAL={
   star:    {a:'#9C6B12',d:'#5A3B05',n:'#1C1406',n2:'#3A2A0C'},
   excel:   {a:'#9E1F2E',d:'#5C0F19',n:'#1E070B',n2:'#3D0E17'},
@@ -13780,7 +13782,8 @@ function cxDefs(p,u){
   </defs>`;
 }
 // طبقة الزخرفة لكل تصميم
-function certArt(style,p,u){
+function certArt(style,p,u,type){
+  if(style==='canva')return `<img class="art" crossorigin="anonymous" alt="" src="${CERT_BG}${CERT_PAL[type]?type:'thanks'}.jpg"/>`;
   const open=`<svg class="art" viewBox="0 0 297 210" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${cxDefs(p,u)}`;
   if(style==='night'){
     return open+`<rect width="297" height="210" fill="${p.n}"/>
@@ -13840,7 +13843,7 @@ function certPageHtml(it){
     : `<b class="sm">★</b><span>${escHtml(t.nm)}</span>`;
   const pre=`${khG('تُهدي المعلّمة','يُهدي المعلّم')} هذه الشهادة بكل فخرٍ واعتزاز`;
   return `<section class="cert cs-${style}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
-  ${certArt(style,p,u)}
+  ${certArt(style,p,u,it.type)}
   <div class="body">
     <div class="school">${escHtml(it.school||'')}</div>
     <h1 class="ttl">${escHtml(t.ttl)}</h1>
@@ -13848,7 +13851,7 @@ function certPageHtml(it){
     <p class="pre">${pre}</p>
     <p class="to">${escHtml(w.to)}</p>
     <div class="nm" style="font-size:${certNameSize(it.name)}">${escHtml(it.name)}</div>
-    ${certFlourish(style==='night'?CG:style==='modern'?p.a:CG)}
+    ${certFlourish(style==='night'?CG:style==='modern'||style==='canva'?p.a:CG)}
     <p class="why">${escHtml(it.why)}</p>
     <p class="bless">${escHtml(w.bless)}</p>
   </div>
@@ -13936,6 +13939,25 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .cs-night .sig span,.cs-night .sig em{color:#F1E6CB}
 
 /* ── العصري ── */
+/* ── المزخرف (خلفية كانفا) ── */
+.cs-canva{color:#2A1A08;background:#FBF3E2}
+.cs-canva .body{left:34mm;right:34mm;top:33mm;bottom:50mm}
+.cs-canva .kind{margin-top:3mm}
+.cs-canva .pre{margin-top:5mm}
+.cs-canva .why{margin-top:3.5mm}
+.cs-canva .seal b{font-size:11mm}.cs-canva .seal b.sm{font-size:8mm}.cs-canva .seal span{font-size:3.2mm;max-width:24mm}
+.cs-canva .school{color:var(--d)}
+.cs-canva .ttl{font-size:19mm;color:var(--a)}
+.cs-canva .kind{color:#fff;background:var(--a)}
+.cs-canva .pre,.cs-canva .to{color:#5A4430}
+.cs-canva .nm{color:var(--d)}
+.cs-canva .why{color:#4A3624;max-width:190mm}
+.cs-canva .bless{color:var(--a)}
+.cs-canva .seal{width:28mm;height:28mm;left:134.4mm;top:165.8mm;color:#4A3204;text-shadow:0 .3mm 0 rgba(255,240,190,.7)}
+.cs-canva .sig{color:var(--d);bottom:27mm;width:66mm}
+.cs-canva .sig em{white-space:nowrap}
+.cs-canva .sig-r{right:44mm}.cs-canva .sig-l{left:44mm}
+
 .cs-modern{color:#1C1C22}
 .cs-modern .body{left:24mm;right:106mm;top:24mm;align-items:flex-start;text-align:right}
 .cs-modern .school{color:var(--a)}
@@ -14162,6 +14184,7 @@ async function certToPng(item){
   const d=f.contentDocument;
   d.open();d.write(certDocHtml([item]));d.close();
   try{await d.fonts.ready;}catch(e){}
+  await Promise.all([...d.images].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000);})));
   await new Promise(r=>setTimeout(r,450));
   const el=d.querySelector('.cert');
   if(!el)throw new Error('cert element missing');
