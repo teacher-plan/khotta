@@ -1,6 +1,9 @@
 // v2026.08.13 ════════════════════════════════════════════════════════════════
 // وكيل تنبيه التسجيلات (Registration Notifier Agent)
-// يرسل رسالة تلغرام فور حجز معلّمة مقعدها في صفحة ترويج الحلقة الأولى.
+// يرسل رسالة تلغرام فور أي حجزٍ في صفحة الترويج الموحّدة — لكل المراحل
+// (الحلقة الأولى ١–٤، الحلقة الثانية ٥–٩، ما بعد الأساسي ١٠–١٢). كان مقصوراً
+// على الحلقة الأولى فلم تصل ١١ حجزاً من ١٣ للصفوف ٥–١٢ (حتى ١٧ نوفمبر).
+// وضع digest: رسالة واحدة مجمّعة بكل حجزٍ لم يُبلَّغ عنه بعد (لتعويض ما فات).
 //
 // يعمل بمسلكين، وكلاهما يمرّ بالعلامة نفسها فلا يزدوج الإرسال:
 //  ١ خطّاف قاعدة البيانات (Database Webhook) على INSERT — الطريق الفوري.
@@ -65,12 +68,16 @@ function waLink(phone: string): string {
 
 // رسالة الترحيب — نصّها نفسه المستعمل في لوحة الإدارة، فلا تختلف صياغتان
 // لمعلّمتين حسب المكان الذي أُرسلت منه.
-function welcomeText(name: string): string {
+const STAGE_LBL: Record<string, string> = {
+  "cycle1": "الحلقة الأولى (١–٤)", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
+};
+function stageLbl(st?: string): string { return STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
+function welcomeText(name: string, stage?: string): string {
   const n = String(name || "").trim();
   return [
     n ? `أهلاً بكِ ${n} 🌸` : "أهلاً بكِ 🌸",
     "",
-    "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.",
+    `وصلَنا حجزُ مقعدكِ في منصّة «خُطّة» — ${stageLbl(stage)}، وسعدنا بانضمامكِ.`,
     "",
     "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.",
     "",
@@ -86,7 +93,7 @@ function buildMessage(r: Reg, rank: number | null): string {
   const when = r.created_at ? muscatTime(r.created_at) : "";
 
   const lines = [
-    "🎉 <b>حجز جديد — الحلقة الأولى</b>",
+    `🎉 <b>حجز جديد — ${escHtml(stageLbl(r.stage))}</b>`,
     "",
     `👩‍🏫 <b>${name}</b>`,
     wa ? `📱 <a href="${wa}">${phone}</a>` : `📱 ${phone}`,
@@ -107,7 +114,7 @@ function buildMessage(r: Reg, rank: number | null): string {
   // بدل أن تنتظر حتى تفتح لوحة الإدارة على الحاسوب.
   if (wa) {
     lines.push("");
-    lines.push(`<a href="${wa}?text=${encodeURIComponent(welcomeText(r.name || ""))}">🌸 إرسال الترحيب</a>`);
+    lines.push(`<a href="${wa}?text=${encodeURIComponent(welcomeText(r.name || "", r.stage))}">🌸 إرسال الترحيب</a>`);
   }
 
   return lines.join("\n");
@@ -146,6 +153,29 @@ Deno.serve(async (req) => {
     const hooked: Reg | null = body?.record ?? null;
     run = await startRun(sb, "registration-notifier", hooked ? "WEBHOOK" : "ON_DEMAND");
 
+    // ── رسالة مجمّعة واحدة بكل حجزٍ لم يُبلَّغ عنه (تعويض ما فات) ──
+    if (body?.digest === true) {
+      const { data: pend } = await sb.from("pre_registrations")
+        .select("id,name,phone,email,stage,referred_by,created_at")
+        .is("notified_at", null).order("created_at", { ascending: true }).limit(60);
+      const list = (pend || []) as Reg[];
+      if (!list.length) { await finishRun(sb, run, { status: "SUCCESS", resultSummary: "digest: لا شيء" }); return json({ ok: true, sent: 0 }); }
+      const lines = [`📬 <b>حجوزات لم تصلك سابقاً (${list.length})</b>`,
+        "كانت الإشعارات مقصورةً على الحلقة الأولى — صارت الآن لكل المراحل.", ""];
+      list.forEach((r, i) => {
+        const wa = waLink(r.phone || "");
+        const d = r.created_at ? new Date(new Date(r.created_at).getTime() + 4 * 3600e3).toISOString().slice(0, 10) : "";
+        lines.push(`${i + 1}. <b>${escHtml(r.name || "بلا اسم")}</b> — ${escHtml(stageLbl(r.stage))}`);
+        lines.push(`   ${wa ? `<a href="${wa}">${escHtml(r.phone || "")}</a>` : escHtml(r.phone || "—")} · ${escHtml(r.email || "—")}${d ? ` · ${d}` : ""}${r.referred_by ? ` · إحالة <code>${escHtml(r.referred_by)}</code>` : ""}`);
+      });
+      const result = await sendTelegram(lines.join("\n"));
+      if (result.ok) {
+        await sb.from("pre_registrations").update({ notified_at: new Date().toISOString() }).in("id", list.map((r) => r.id));
+      }
+      await finishRun(sb, run, { status: result.ok ? "SUCCESS" : "FAILED", resultSummary: `digest: ${list.length}`, error: result.ok ? undefined : result.error });
+      return json({ ok: result.ok, sent: result.ok ? list.length : 0, error: result.error });
+    }
+
     let rows: Reg[] = [];
     if (hooked && hooked.id != null) {
       // نقرأ الصف من الجدول لا من الحمولة: الحمولة نصٌّ يصل من الخارج، وقراءةُ
@@ -153,13 +183,13 @@ Deno.serve(async (req) => {
       const { data } = await sb.from("pre_registrations")
         .select("id,name,phone,email,stage,referred_by,created_at,notified_at")
         .eq("id", hooked.id).maybeSingle();
-      if (data && data.stage === "cycle1" && !data.notified_at) rows = [data];
+      if (data && !data.notified_at) rows = [data];
     } else {
       // المسح الاحتياطيّ: الأقدم أولاً ليصل ترتيب الرسائل كترتيب الحجوزات.
       // وسقفٌ خمسون يمنع سيلاً يُغرق المحادثة لو تعطّل الخطّاف طويلاً.
       const { data } = await sb.from("pre_registrations")
         .select("id,name,phone,email,stage,referred_by,created_at")
-        .eq("stage", "cycle1").is("notified_at", null)
+        .is("notified_at", null)
         .order("created_at", { ascending: true }).limit(50);
       rows = data || [];
     }
@@ -168,7 +198,7 @@ Deno.serve(async (req) => {
 
     // الترتيب الكلّي لكل حجز — رقمٌ يُطمئن أثناء حملة الترويج.
     const { count: total } = await sb.from("pre_registrations")
-      .select("id", { count: "exact", head: true }).eq("stage", "cycle1");
+      .select("id", { count: "exact", head: true });
     const base = (total || rows.length) - rows.length;
 
     let sent = 0;
