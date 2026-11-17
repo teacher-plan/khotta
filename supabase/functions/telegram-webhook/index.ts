@@ -31,7 +31,7 @@ const OPS_BOT_COMMANDS = [
 // من المشرفة: تنبيهات تسجيلٍ جديد كانت تقاطع تركيزها أثناء متابعة الدفع.
 const MAIN_BOT_COMMANDS = [
   { command: "pending", description: "🕐 في انتظار التفعيل — مع رابط ترحيب" },
-  { command: "registrations", description: "📊 تسجيلات الحلقة الأولى — الإجمالي واليوم" },
+  { command: "registrations", description: "📊 التسجيلات (كل المراحل) — الإجمالي واليوم" },
   { command: "summary", description: "📋 الملخص الشامل الآن" },
 ];
 
@@ -131,11 +131,15 @@ function _waNum(p: string): string {
   if (d.startsWith("00")) d = d.slice(2);
   return d ? (d.length === 8 ? "968" + d : d) : "";
 }
-function _welcomeText(n: string): string {
+const _STAGE_LBL: Record<string, string> = {
+  "cycle1": "الحلقة الأولى (١–٤)", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
+};
+function _stageLbl(st?: string): string { return _STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
+function _welcomeText(n: string, stage?: string): string {
   const nm = String(n || "").trim();
   return [
     nm ? `أهلاً بكِ ${nm} 🌸` : "أهلاً بكِ 🌸", "",
-    "وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.", "",
+    `وصلَنا حجزُ مقعدكِ في منصّة «خُطّة» — ${_stageLbl(stage)}، وسعدنا بانضمامكِ.`, "",
     "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.", "",
     "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
   ].join("\n");
@@ -146,8 +150,8 @@ async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?:
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const { data, error } = await sb.from("pre_registrations")
-    .select("id,name,phone")
-    .eq("stage", "cycle1").eq("payment_status", "pending")
+    .select("id,name,phone,stage")
+    .eq("payment_status", "pending")
     .is("welcomed_at", null)
     .order("created_at", { ascending: true })      // الأقدم أولاً: هي أطولهنّ انتظاراً
     .limit(60);
@@ -176,7 +180,7 @@ async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?:
   const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
   for (const r of page) {
     rows.push([{ text: `🌸 ${(r.name || "بلا اسم").slice(0, 26)}`,
-      url: `https://wa.me/${_waNum(r.phone || "")}?text=${encodeURIComponent(_welcomeText(r.name || ""))}` }]);
+      url: `https://wa.me/${_waNum(r.phone || "")}?text=${encodeURIComponent(_welcomeText(r.name || "", r.stage))}` }]);
   }
   if (page.length) {
     rows.push([{ text: `✅ رحّبتُ بهؤلاء (${page.length})`,
@@ -271,8 +275,8 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
   // ثانيةً بعد أيام لو لم تدفع بعد. فالترتيب يضع من لم تُتابَع قطّ أولاً،
   // ومن تابعناها ينتقلن لآخر الطابور بدل أن يختفين نهائياً كالترحيب.
   const { data, error } = await sb.from("pre_registrations")
-    .select("id,name,phone")
-    .eq("stage", "cycle1").eq("payment_status", "pending")
+    .select("id,name,phone,stage")
+    .eq("payment_status", "pending")
     .eq("payment_reminder_stage", stage)
     .order("payment_followup_at", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: true })
@@ -644,7 +648,7 @@ Deno.serve(async (req) => {
         );
 
         const { count: total } = await sb.from("pre_registrations")
-          .select("id", { count: "exact", head: true }).eq("stage", "cycle1");
+          .select("id", { count: "exact", head: true });
 
         // بداية يوم مسقط (UTC+4) محسوبةً بالإزاحة: لا توقيت صيفي فالإزاحة ثابتة.
         const since = new Date(Date.now() + 4 * 3600 * 1000);
@@ -653,24 +657,29 @@ Deno.serve(async (req) => {
 
         const { count: today } = await sb.from("pre_registrations")
           .select("id", { count: "exact", head: true })
-          .eq("stage", "cycle1").gte("created_at", dayStart);
+          .gte("created_at", dayStart);
 
         const { data: latest } = await sb.from("pre_registrations")
-          .select("name,created_at").eq("stage", "cycle1")
+          .select("name,created_at,stage")
           .order("created_at", { ascending: false }).limit(5);
+        // تفصيلٌ لكل مرحلة
+        const { data: allSt } = await sb.from("pre_registrations").select("stage");
+        const byStage: Record<string, number> = {};
+        (allSt || []).forEach((x: { stage?: string }) => { const k = _stageLbl(x.stage); byStage[k] = (byStage[k] || 0) + 1; });
 
         const esc = (s: string) => String(s ?? "")
           .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         const lines = [
-          "📊 <b>تسجيلات الحلقة الأولى</b>",
+          "📊 <b>التسجيلات — كل المراحل</b>",
           "",
           `👥 الإجمالي: <b>${total ?? 0}</b>`,
           `📅 اليوم: <b>${today ?? 0}</b>`,
+          ...Object.entries(byStage).map(([k, v]) => `• ${esc(k)}: ${v}`),
         ];
         if (latest?.length) {
           lines.push("", "<b>آخر المسجّلات:</b>");
-          for (const r of latest) lines.push(`• ${esc(r.name || "بلا اسم")}`);
+          for (const r of latest) lines.push(`• ${esc(r.name || "بلا اسم")} — ${esc(_stageLbl(r.stage))}`);
         }
 
         await sendTelegram(lines.join("\n"));
