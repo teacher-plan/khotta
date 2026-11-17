@@ -57,7 +57,8 @@ self.addEventListener('fetch', e => {
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) {
     // ملفات التخزين العامّة (مرفقات الدروس، صفحات الكتاب، الملخّصات): نسخة الجهاز أولاً إن حُفظت
-    if (url.pathname.includes('/storage/v1/object/public/')) {
+    // — من Supabase أو من Cloudflare R2 (files.khotati.com، صفحات الكتب والأدلّة منذ ١٧ نوفمبر)
+    if (url.pathname.includes('/storage/v1/object/public/') || url.hostname === 'files.khotati.com') {
       e.respondWith(caches.open('khotta-files').then(c => c.match(req.url)).then(hit => hit || fetch(req)).catch(() => fetch(req)));
       return;
     }
