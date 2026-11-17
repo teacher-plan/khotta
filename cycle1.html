@@ -4860,6 +4860,8 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <iframe class="cert-prev-frame" id="cert-prev" title="معاينة الشهادة"></iframe>
       <div class="cert-prev-nav" id="cert-prev-nav"></div>
     </div>
+    <div class="grp">التصميم</div>
+    <div class="chip-row" id="cert-styles"></div>
     <div class="grp">نوع الشهادة</div>
     <div class="chip-row" id="cert-types"></div>
     <div id="cert-single-wrap">
@@ -12303,34 +12305,149 @@ function certNameSize(name){
   if(n>9)return'13mm';
   return'15mm';
 }
-// صفحة شهادة واحدة. الهوية: مربّعات الشعار — مربّعات مائلة متداخلة في الأركان
+// ══ تصاميم الشهادات (١٧ نوفمبر — تصميمٌ جديد كلياً) ══
+// ثلاثة تصاميم تختارها المعلّمة، ولكل نوع شهادةٍ لونه. كل الزخارف SVG متّجهية
+// في طبقةٍ واحدة بمقاس الصفحة (٢٩٧×٢١٠مم)، فتبقى حادّةً في الطباعة وفي الصورة
+// (html2canvas يرسم SVG المضمَّن صورةً كما هو)، والنصوص HTML فوقها.
+const CERT_STYLES={royal:'الإطار الذهبي',night:'الليلة الملكية',modern:'العصري'};
+const CERT_STYLE_ORDER=['royal','night','modern'];
+function certStyle(){const v=localStorage.getItem('c1_cert_style');return CERT_STYLES[v]?v:'royal';}
+const CERT_PAL={
+  star:    {a:'#9C6B12',d:'#5A3B05',n:'#1C1406',n2:'#3A2A0C'},
+  excel:   {a:'#9E1F2E',d:'#5C0F19',n:'#1E070B',n2:'#3D0E17'},
+  behave:  {a:'#1F6B4A',d:'#0F3D2A',n:'#05170F',n2:'#0E3022'},
+  progress:{a:'#B4561F',d:'#6A2E0C',n:'#1C0C03',n2:'#3B1A08'},
+  thanks:  {a:'#1F4E7A',d:'#0F2A47',n:'#06101C',n2:'#10243C'},
+};
+const CG='#C9A24A',CG2='#F1DC9A',CG3='#8E6A1F';
+let _certUid=0;
+// نجمة ثمانية (الخاتم): ١٦ رأساً بالتناوب بين نصف قطرٍ خارجي وداخلي
+function cxStar(cx,cy,r,attrs,ratio){
+  const k=ratio||0.765,pts=[];
+  for(let i=0;i<16;i++){const t=-Math.PI/2+i*Math.PI/8,rr=i%2?r*k:r;pts.push((cx+rr*Math.cos(t)).toFixed(2)+','+(cy+rr*Math.sin(t)).toFixed(2));}
+  return `<polygon points="${pts.join(' ')}" ${attrs}/>`;
+}
+// ختمٌ مسنَّن الحافة
+function cxSeal(cx,cy,r,fill,stroke){
+  const pts=[];for(let i=0;i<72;i++){const t=i*Math.PI/36,rr=i%2?r*0.93:r;pts.push((cx+rr*Math.cos(t)).toFixed(2)+','+(cy+rr*Math.sin(t)).toFixed(2));}
+  return `<polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width=".35"/>`;
+}
+// إكليل غار: أوراقٌ على قوسين متقابلين
+function cxLaurel(cx,cy,R,color){
+  let out='';
+  [-1,1].forEach(side=>{
+    for(let i=0;i<11;i++){
+      const deg=side<0?(118+i*12.5):(62-i*12.5),t=deg*Math.PI/180;
+      const x=cx+R*Math.cos(t),y=cy+R*Math.sin(t),rot=deg+(side<0?-62:62)+90;
+      out+=`<ellipse cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" rx="3.1" ry="1.25" transform="rotate(${rot.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})" fill="${color}"/>`;
+    }
+    const a0=(side<0?118:62)*Math.PI/180,a1=(side<0?243:-63)*Math.PI/180;
+    out+=`<path d="M${(cx+R*Math.cos(a0)).toFixed(2)} ${(cy+R*Math.sin(a0)).toFixed(2)} A ${R} ${R} 0 0 ${side<0?1:0} ${(cx+R*Math.cos(a1)).toFixed(2)} ${(cy+R*Math.sin(a1)).toFixed(2)}" fill="none" stroke="${color}" stroke-width=".45"/>`;
+  });
+  return out;
+}
+// شريطا الختم المتدلّيان
+function cxRibbon(cx,cy,c1,c2){
+  return `<polygon points="${cx-9},${cy} ${cx-3},${cy} ${cx-6.5},${cy+19} ${cx-9.5},${cy+15.5} ${cx-13},${cy+18}" fill="${c2}"/>`
+    +`<polygon points="${cx+9},${cy} ${cx+3},${cy} ${cx+6.5},${cy+19} ${cx+9.5},${cy+15.5} ${cx+13},${cy+18}" fill="${c1}"/>`;
+}
+// زخرفة الركن: وردةٌ من نجمتين وأقواس — تُرسم في الركن الأعلى الأيمن وتُقلَب للبقية
+function cxCorner(p,u){
+  const g=`<g>
+    <path d="M0 26 Q0 0 26 0" fill="none" stroke="${CG}" stroke-width=".6"/>
+    <path d="M0 33 Q0 0 33 0" fill="none" stroke="${p.a}" stroke-width=".35" stroke-dasharray=".2 1.6" stroke-linecap="round"/>
+    ${cxStar(13,13,10.5,`fill="${p.a}"`)}
+    ${cxStar(13,13,7.4,`fill="url(#cgold${u})"`)}
+    <circle cx="13" cy="13" r="2.6" fill="${p.a}"/><circle cx="13" cy="13" r="1.1" fill="${CG2}"/>
+    <circle cx="30" cy="4" r=".9" fill="${CG}"/><circle cx="4" cy="30" r=".9" fill="${CG}"/>
+  </g>`;
+  return `<g transform="translate(10 10)">${g}</g><g transform="translate(287 10) scale(-1 1)">${g}</g>`
+    +`<g transform="translate(10 200) scale(1 -1)">${g}</g><g transform="translate(287 200) scale(-1 -1)">${g}</g>`;
+}
+function cxDefs(p,u){
+  return `<defs>
+  <linearGradient id="cgold${u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${CG2}"/><stop offset=".5" stop-color="${CG}"/><stop offset="1" stop-color="${CG3}"/></linearGradient>
+  <radialGradient id="cseal${u}" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#FFF4C8"/><stop offset=".45" stop-color="${CG}"/><stop offset="1" stop-color="${CG3}"/></radialGradient>
+  <radialGradient id="cvig${u}" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="${p.a}" stop-opacity=".10"/></radialGradient>
+  <pattern id="cpat${u}" width="18" height="18" patternUnits="userSpaceOnUse">${cxStar(9,9,6.2,`fill="none" stroke="${CG}" stroke-width=".28"`)}<circle cx="0" cy="0" r="1.1" fill="none" stroke="${CG}" stroke-width=".25"/><circle cx="18" cy="18" r="1.1" fill="none" stroke="${CG}" stroke-width=".25"/><circle cx="18" cy="0" r="1.1" fill="none" stroke="${CG}" stroke-width=".25"/><circle cx="0" cy="18" r="1.1" fill="none" stroke="${CG}" stroke-width=".25"/></pattern>
+  </defs>`;
+}
+// طبقة الزخرفة لكل تصميم
+function certArt(style,p,u){
+  const open=`<svg class="art" viewBox="0 0 297 210" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${cxDefs(p,u)}`;
+  if(style==='night'){
+    return open+`<rect width="297" height="210" fill="${p.n}"/>
+      <rect width="297" height="210" fill="url(#cpat${u})" opacity=".16"/>
+      <ellipse cx="148.5" cy="96" rx="125" ry="82" fill="${p.n2}" opacity=".85"/>
+      <rect x="7" y="7" width="283" height="196" fill="none" stroke="url(#cgold${u})" stroke-width="1.6"/>
+      <rect x="10.5" y="10.5" width="276" height="189" fill="none" stroke="${CG}" stroke-width=".35"/>
+      <rect x="13" y="13" width="271" height="184" fill="none" stroke="${CG}" stroke-width=".8" stroke-dasharray=".2 2.1" stroke-linecap="round"/>
+      ${[[7,7],[290,7],[7,203],[290,203]].map(([x,y])=>cxStar(x,y,5.4,`fill="url(#cgold${u})" stroke="${p.n}" stroke-width=".5"`)+`<circle cx="${x}" cy="${y}" r="1.6" fill="${p.n}"/>`).join('')}
+      ${cxStar(148.5,13,5.5,`fill="url(#cgold${u})"`)}${cxStar(148.5,197,5.5,`fill="url(#cgold${u})"`)}
+      ${cxLaurel(148.5,163,17,CG)}
+      ${cxRibbon(148.5,170,p.a,p.d)}
+      ${cxSeal(148.5,163,13.5,`url(#cseal${u})`,CG3)}
+      <circle cx="148.5" cy="163" r="10.2" fill="none" stroke="${p.n}" stroke-width=".5" opacity=".55"/>
+    </svg>`;
+  }
+  if(style==='modern'){
+    return open+`<rect width="297" height="210" fill="#FFFFFF"/>
+      <path d="M297 0 L297 210 L214 210 L262 0 Z" fill="${p.a}"/>
+      <path d="M262 0 L214 210 L196 210 L246 0 Z" fill="${p.d}" opacity=".9"/>
+      <path d="M246 0 L196 210 L190 210 L241 0 Z" fill="url(#cgold${u})"/>
+      <path d="M0 0 L58 0 L0 44 Z" fill="${p.a}" opacity=".12"/>
+      <path d="M0 0 L32 0 L0 24 Z" fill="${p.a}" opacity=".9"/>
+      ${Array.from({length:7},(_,r)=>Array.from({length:9},(_,c)=>`<circle cx="${14+c*4.4}" cy="${168+r*4.4}" r=".55" fill="${p.a}" opacity=".35"/>`).join('')).join('')}
+      <rect x="8" y="8" width="281" height="194" fill="none" stroke="${p.a}" stroke-width=".35" opacity=".35"/>
+      ${cxStar(271,40,13,`fill="none" stroke="#FFFFFF" stroke-width=".5" opacity=".55"`)}${cxStar(271,40,8,`fill="#FFFFFF" opacity=".18"`)}
+      ${cxSeal(232,164,15,`url(#cseal${u})`,CG3)}
+      <circle cx="232" cy="164" r="11.6" fill="none" stroke="#FFFFFF" stroke-width=".6" opacity=".8"/>
+    </svg>`;
+  }
+  // royal
+  return open+`<rect width="297" height="210" fill="#FBF6EA"/>
+    <rect x="16" y="16" width="265" height="178" fill="url(#cpat${u})" opacity=".55"/>
+    <rect width="297" height="210" fill="url(#cvig${u})"/>
+    <rect x="6" y="6" width="285" height="198" fill="none" stroke="${p.a}" stroke-width="2.2"/>
+    <rect x="9.6" y="9.6" width="277.8" height="190.8" fill="none" stroke="url(#cgold${u})" stroke-width=".9"/>
+    <rect x="12.2" y="12.2" width="272.6" height="185.6" fill="none" stroke="${CG}" stroke-width="1" stroke-dasharray=".2 1.9" stroke-linecap="round"/>
+    <rect x="14.6" y="14.6" width="267.8" height="180.8" fill="none" stroke="${p.a}" stroke-width=".35"/>
+    ${cxCorner(p,u)}
+    <g transform="translate(148.5 17.5)">${cxStar(0,0,7,`fill="${p.a}"`)}${cxStar(0,0,4.9,`fill="url(#cgold${u})"`)}<circle r="1.7" fill="${p.a}"/></g>
+    <path d="M118 17.5 L140 17.5 M157 17.5 L179 17.5" stroke="${CG}" stroke-width=".5"/>
+    ${cxRibbon(148.5,170,p.a,p.d)}
+    ${cxSeal(148.5,163,14,`url(#cseal${u})`,CG3)}
+    <circle cx="148.5" cy="163" r="10.6" fill="none" stroke="${p.d}" stroke-width=".4" opacity=".6"/>
+  </svg>`;
+}
+// زخرفةٌ تحت الاسم: خطّان ومعيّنٌ في الوسط
+function certFlourish(color){
+  return `<svg class="fl" viewBox="0 0 160 8" xmlns="http://www.w3.org/2000/svg"><path d="M2 4 L68 4 M92 4 L158 4" stroke="${color}" stroke-width=".7"/><path d="M72 4 L80 .6 L88 4 L80 7.4 Z" fill="${color}"/><circle cx="66" cy="4" r="1.1" fill="${color}"/><circle cx="94" cy="4" r="1.1" fill="${color}"/></svg>`;
+}
 function certPageHtml(it){
   const t=CERT_TYPES[it.type]||CERT_TYPES.thanks;
-  const w=certWords();
-  const stars=it.stars>0
-    ? `<div class="medal"><span class="mk"><i class="ki ki-star" aria-hidden="true"></i></span><b>${egArNum(it.stars)}</b><span class="lb">نجمة</span></div>`
-    : `<div class="medal"><span class="mk">${t.mark}</span><span class="lb" style="margin-top:4px">${escHtml(t.nm)}</span></div>`;
-  return `<section class="cert" style="--c1:${t.c1};--c2:${t.c2}">
-  <div class="frame"></div>
-  <span class="sq sq-a"></span><span class="sq sq-b"></span><span class="sq sq-c"></span>
-  <span class="sq sq-d"></span><span class="sq sq-e"></span><span class="sq sq-f"></span>
-  <div class="band"></div>
+  const p=CERT_PAL[it.type]||CERT_PAL.thanks;
+  const w=certWords(),style=it.style||certStyle(),u=++_certUid;
+  const seal=it.stars>0
+    ? `<b>${egArNum(it.stars)}</b><span>${it.stars===1?'نجمة':it.stars===2?'نجمتان':'نجمة'}</span>`
+    : `<b class="sm">★</b><span>${escHtml(t.nm)}</span>`;
+  const pre=`${khG('تُهدي المعلّمة','يُهدي المعلّم')} هذه الشهادة بكل فخرٍ واعتزاز`;
+  return `<section class="cert cs-${style}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
+  ${certArt(style,p,u)}
   <div class="body">
-    <div class="kicker">${escHtml(it.school||'')}</div>
+    <div class="school">${escHtml(it.school||'')}</div>
     <h1 class="ttl">${escHtml(t.ttl)}</h1>
-    <div class="rule"><i></i><span>${t.mark}</span><i></i></div>
-    <p class="pre">${khG('تُهدي المعلمة','يُهدي المعلم')} هذه الشهادة بكل فخر واعتزاز</p>
+    <div class="kind">${escHtml(t.nm)}</div>
+    <p class="pre">${pre}</p>
     <p class="to">${escHtml(w.to)}</p>
-    <div class="nmwrap"><div class="nm" style="font-size:${certNameSize(it.name)}">${escHtml(it.name)}</div><div class="nmline"></div></div>
+    <div class="nm" style="font-size:${certNameSize(it.name)}">${escHtml(it.name)}</div>
+    ${certFlourish(style==='night'?CG:style==='modern'?p.a:CG)}
     <p class="why">${escHtml(it.why)}</p>
-    ${stars}
     <p class="bless">${escHtml(w.bless)}</p>
-    <div class="feet">
-      <div class="ft"><b>${escHtml(it.cls||'')}</b><span>الشعبة</span></div>
-      <div class="ft wide"><b>${escHtml(it.date)}</b><span>التاريخ</span></div>
-      <div class="ft"><b>${escHtml(it.teacher||'')}</b><span>${khG('المعلمة','المعلم')}</span></div>
-    </div>
   </div>
+  <div class="seal">${seal}</div>
+  <div class="sig sig-r"><b>${escHtml(it.teacher||'')}</b><span>${khG('المعلّمة','المعلّم')}</span></div>
+  <div class="sig sig-l"><b>${escHtml(it.cls||'')}</b><span>الشعبة</span><em>${escHtml(it.date)}</em></div>
 </section>`;
 }
 
@@ -12358,60 +12475,75 @@ function certDocShell(pages,fitCss){
      الشهادة بيضاء حتى يصل — وبلا إنترنت لا تظهر أصلاً. هكذا تُرسم فوراً بخطّ
      النظام ثم تتبدّل حين يصل خطّ الويب. -->
 <link rel="stylesheet" media="print" onload="this.media='all'"
-  href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&family=Baloo+Bhaijaan+2:wght@500;700;800&display=swap"/>
+  href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;700;800&display=swap"/>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#E8DCCB;font-family:'Tajawal','Noto Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif;color:#301800;
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe UI',Tahoma,serif;color:#2A1A08;
   display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px}
-.cert{position:relative;width:297mm;height:210mm;flex:none;background:#FDF8F0;overflow:hidden;
-  box-shadow:0 6px 26px rgba(48,24,0,.22)}
-/* إطار مزدوج: خيط ذهبي خارجي وخط اللون الداخلي */
-.cert .frame{position:absolute;inset:7mm;border:1.6mm solid var(--c1);border-radius:2mm;
-  box-shadow:inset 0 0 0 .5mm #FDF8F0, inset 0 0 0 1.2mm rgba(184,134,11,.55);pointer-events:none}
-/* مربّعات الشعار: مائلة متداخلة، تتكرّر في ركنين متقابلين */
-.cert .sq{position:absolute;transform:rotate(45deg);border:1mm solid var(--c1);opacity:.16;border-radius:1mm}
-.sq-a{width:26mm;height:26mm;top:-8mm;inset-inline-start:-8mm}
-.sq-b{width:16mm;height:16mm;top:2mm;inset-inline-start:12mm;opacity:.3}
-.sq-c{width:9mm;height:9mm;top:16mm;inset-inline-start:4mm;background:var(--c1);border:none;opacity:.5}
-.sq-d{width:26mm;height:26mm;bottom:-8mm;inset-inline-end:-8mm}
-.sq-e{width:16mm;height:16mm;bottom:2mm;inset-inline-end:12mm;opacity:.3}
-.sq-f{width:9mm;height:9mm;bottom:16mm;inset-inline-end:4mm;background:var(--c1);border:none;opacity:.5}
-/* شريط لوني على حافة البداية (يمين في RTL) */
-.cert .band{position:absolute;top:7mm;bottom:7mm;inset-inline-start:7mm;width:5mm;
-  background:linear-gradient(180deg,var(--c1),var(--c2));opacity:.9}
-.cert .body{position:absolute;inset:7mm 7mm 7mm 12mm;padding:10mm 14mm 8mm;display:flex;flex-direction:column;align-items:center;text-align:center}
-/* بلا letter-spacing عمداً: يكسر تشابك الحروف العربية (تظهر منفصلة أو
-   متراكبة) — ظهر هذا فعلياً في الشهادات المُصوَّرة، فحُذف من كل النصوص
-   العربية هنا لا في مسار html2canvas وحده، لأن الخلل حقيقيٌّ في أي عارض */
-.kicker{font-size:4.2mm;font-weight:700;color:#8A6E56;min-height:5mm}
-.ttl{font-family:'Baloo Bhaijaan 2','Tajawal','Noto Sans Arabic',Tahoma,sans-serif;font-size:17mm;font-weight:800;line-height:1.25;
-  color:var(--c2);margin-top:1mm}
-.rule{display:flex;align-items:center;gap:3mm;margin:2mm 0 5mm;width:70%}
-.rule i{flex:1;height:.5mm;background:linear-gradient(90deg,transparent,var(--c1),transparent)}
-.rule span{color:var(--c1);font-size:6mm;line-height:1}
-.pre{font-size:4.6mm;color:#6A5240;font-weight:400}
-.to{font-size:5.4mm;color:#4A3524;font-weight:700;margin-top:2mm}
-.nmwrap{margin:4mm 0 3mm;width:100%}
-.nm{font-family:'Baloo Bhaijaan 2','Tajawal','Noto Sans Arabic',Tahoma,sans-serif;font-size:15mm;font-weight:800;line-height:1.3;color:#301800;
-  word-break:break-word;padding:0 6mm}
-.nmline{width:52%;height:.9mm;margin:2mm auto 0;border-radius:1mm;
-  background:linear-gradient(90deg,transparent,var(--c1) 22%,var(--c1) 78%,transparent)}
-.why{font-size:5mm;line-height:1.85;color:#5A4433;max-width:80%;margin-top:1mm;font-weight:400}
-/* الميدالية: عدد نجوم الطالب — أصدق دليل على استحقاقه، ويجعل الشهادة شخصية */
-.medal{margin-top:auto;width:33mm;height:33mm;border-radius:50%;flex:none;
-  background:radial-gradient(circle at 34% 28%,#FBF0D2,#E8C34A 52%,#A88420);
-  border:1.2mm solid #FDF8F0;box-shadow:0 0 0 .9mm var(--c1),0 3mm 7mm rgba(48,24,0,.2);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;color:#4A3A08;line-height:1}
-.medal .mk{font-size:8mm}
-.medal b{font-size:9mm;font-weight:800;margin-top:.5mm}
-.medal .lb{font-size:3.2mm;font-weight:700;opacity:.82}
-.bless{margin-top:4mm;font-size:4.4mm;color:var(--c2);font-weight:700;opacity:.85}
-.feet{display:flex;align-items:flex-end;justify-content:space-between;gap:8mm;width:100%;margin-top:auto}
-.ft{flex:1;min-width:0}
-.ft.wide{flex:1.4}
-.ft b{display:block;font-size:4.4mm;font-weight:700;color:#3A2612;min-height:6mm;padding-bottom:1.5mm;
-  border-bottom:.4mm dotted #B49878;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ft span{display:block;font-size:3.4mm;color:#8A6E56;margin-top:1.5mm;font-weight:700}
+/* بلا letter-spacing عمداً: يكسر تشابك الحروف العربية */
+.cert{position:relative;width:297mm;height:210mm;flex:none;overflow:hidden;background:#fff;box-shadow:0 6px 26px rgba(48,24,0,.22)}
+.cert .art{position:absolute;inset:0;width:297mm;height:210mm;display:block}
+.cert .body{position:absolute;left:30mm;right:30mm;top:27mm;bottom:52mm;display:flex;flex-direction:column;align-items:center;text-align:center}
+.school{font-family:'Tajawal',sans-serif;font-size:4mm;font-weight:700;min-height:5mm;opacity:.8}
+.ttl{font-family:'Aref Ruqaa','Amiri',serif;font-weight:700;line-height:1.15;margin-top:1mm}
+.kind{font-family:'Tajawal',sans-serif;font-size:3.6mm;font-weight:800;border-radius:3mm;padding:.6mm 4mm;margin-top:1mm}
+.pre{font-size:4.6mm;margin-top:4mm}
+.to{font-size:5.2mm;font-weight:700;margin-top:1mm}
+.nm{font-family:'Aref Ruqaa','Amiri',serif;font-weight:700;line-height:1.25;margin-top:2mm;max-width:100%;word-break:break-word}
+.fl{width:105mm;height:5.2mm;margin-top:1mm;flex:none}
+.why{font-size:5.1mm;line-height:1.8;max-width:200mm;margin-top:2.5mm}
+.bless{font-size:4.4mm;font-weight:700;margin-top:2mm}
+.seal{position:absolute;width:24mm;height:24mm;left:136.5mm;top:151mm;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Tajawal',sans-serif;line-height:1;color:#3E2A05;text-align:center}
+.seal b{font-size:8.2mm;font-weight:800}
+.seal b.sm{font-size:7mm}
+.seal span{font-size:2.6mm;font-weight:800;margin-top:.6mm;max-width:20mm}
+.sig{position:absolute;bottom:22mm;width:66mm;text-align:center;font-family:'Tajawal',sans-serif}
+.sig b{display:block;font-size:4.6mm;font-weight:800;min-height:6.5mm;padding-bottom:1.6mm;border-bottom:.35mm solid currentColor;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig span{display:block;font-size:3.3mm;font-weight:700;margin-top:1.4mm;opacity:.75}
+.sig em{display:block;font-style:normal;font-size:3.1mm;margin-top:1.4mm;opacity:.75}
+.sig-r{right:40mm}.sig-l{left:40mm}
+
+/* ── الإطار الذهبي ── */
+.cs-royal{color:#2A1A08}
+.cs-royal .school{color:var(--d)}
+.cs-royal .ttl{font-size:21mm;color:var(--a)}
+.cs-royal .kind{color:#6B4E12;background:rgba(201,162,74,.16);border:.3mm solid rgba(201,162,74,.6)}
+.cs-royal .pre,.cs-royal .to{color:#5A4430}
+.cs-royal .nm{color:var(--d)}
+.cs-royal .why{color:#4A3624}
+.cs-royal .bless{color:var(--a)}
+.cs-royal .sig{color:var(--d)}
+
+/* ── الليلة الملكية ── */
+.cs-night{color:#F6EBD0}
+.cs-night .school{color:#E8CF8E}
+.cs-night .ttl{font-size:21mm;color:#E7C46D}
+.cs-night .kind{color:#1C1406;background:#E0BD62}
+.cs-night .pre,.cs-night .to{color:#E9DDBF}
+.cs-night .nm{color:#FFF6DC}
+.cs-night .why{color:#EFE3C6}
+.cs-night .bless{color:#E7C46D}
+.cs-night .sig{color:#E7C46D}
+.cs-night .sig span,.cs-night .sig em{color:#F1E6CB}
+
+/* ── العصري ── */
+.cs-modern{color:#1C1C22}
+.cs-modern .body{left:24mm;right:106mm;top:24mm;align-items:flex-start;text-align:right}
+.cs-modern .school{color:var(--a)}
+.cs-modern .ttl{font-family:'Reem Kufi','Tajawal',sans-serif;font-size:19mm;color:#14141A;line-height:1.1}
+.cs-modern .kind{color:#fff;background:var(--a);margin-top:2.5mm}
+.cs-modern .pre{color:#5C5C68}
+.cs-modern .to{color:#2E2E38}
+.cs-modern .nm{font-family:'Reem Kufi','Tajawal',sans-serif;color:var(--a)}
+.cs-modern .fl{width:80mm;margin-right:0}
+.cs-modern .why{color:#3A3A46;max-width:165mm}
+.cs-modern .bless{color:var(--d)}
+.cs-modern .seal{left:220mm;top:152mm}
+.cs-modern .sig{color:#2E2E38;bottom:20mm;width:56mm}
+.cs-modern .sig-r{right:114mm}.cs-modern .sig-l{right:182mm;left:auto}
+
 @media print{
   @page{size:A4 landscape;margin:0}
   body{background:#fff;padding:0;gap:0;display:block}
@@ -12488,12 +12620,15 @@ function certRenderChips(){
   document.getElementById('cert-types').innerHTML=
     `<button class="chip ${cur?'':'sel'}" onclick="certSetType('')">تلقائي</button>`
     +CERT_ORDER.map(k=>`<button class="chip ${cur===k?'sel':''}" onclick="certSetType('${k}')">${CERT_TYPES[k].nm}</button>`).join('');
+  const st=certStyle();
+  document.getElementById('cert-styles').innerHTML=CERT_STYLE_ORDER.map(k=>`<button class="chip ${st===k?'sel':''}" onclick="certSetStyle('${k}')">${CERT_STYLES[k]}</button>`).join('');
   const g=certGender();
   document.getElementById('cert-gender').innerHTML=
     `<button class="chip ${g==='m'?'sel':''}" onclick="certSetGender('m')">الطالب</button>
      <button class="chip ${g==='f'?'sel':''}" onclick="certSetGender('f')">الطالبة</button>`;
 }
 function certSetType(k){certCtx.type=k;certRenderChips();if(certCtx.mode==='many')certRenderPick();certRefresh();}
+function certSetStyle(k){localStorage.setItem('c1_cert_style',k);certRenderChips();certRefresh();}
 function certSetGender(g){localStorage.setItem('c1_cert_g',g);certRenderChips();if(certCtx.mode==='many')certRenderPick();certRefresh();}
 
 function certRenderPick(){
