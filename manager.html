@@ -2892,6 +2892,11 @@ input,textarea,select{font-size:16px !important;}
         <tbody id="mc1g-top-b"><tr><td colspan="4" style="padding:14px;text-align:center;color:#7A715B">يجري التحميل</td></tr></tbody>
       </table></div>
     </div>
+    <div class="ab-card" id="fb-card">
+      <div class="ab-head"><h3>تقييمات «خُطّة AI»</h3><span class="ab-sub">ما قيّمه المعلّمون من ردود المساعد بـ👍 أو 👎 — الردود السيئة أولاً لتُحسَّن تعليماته.</span></div>
+      <div id="fb-sum" style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 10px"></div>
+      <div id="fb-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
     <div class="ab-card" id="ab-card">
       <div class="ab-head"><h3>ملفات المخزن: معاينة وتنزيل</h3><span class="ab-sub">كل ما ولّده المعلّمون من ملخّصات بصرية وتحاضير وألعاب (يُنشر في المخزن تلقائياً)</span></div>
       <div class="ab-tabs" id="ab-tabs"></div>
@@ -6984,6 +6989,24 @@ const AB={items:[],kind:'all',shown:60,loaded:false};
 const AB_KIND={info:'ملخّص بصري',prep:'تحضير',game:'لعبة'};
 const AB_IC={prep:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 13h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>',
   game:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM8 13H6v2H4v-2H2v-2h2V9h2v2h2v2zm7 2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>'};
+// تقييمات المساعد (ai_chat_feedback) — للقراءة فقط
+async function fbInit(){
+  const sum=document.getElementById('fb-sum'),list=document.getElementById('fb-list');if(!list)return;
+  list.innerHTML='<div style="color:#7A715B;font-size:13px">يجري التحميل…</div>';
+  try{
+    const{data,error}=await sb.from('ai_chat_feedback').select('id,rating,question,reply,model,created_at').order('created_at',{ascending:false}).limit(200);
+    if(error)throw error;
+    const up=data.filter(x=>x.rating>0).length,dn=data.length-up;
+    const chip=(t,v,c)=>`<div style="background:${c};border-radius:12px;padding:8px 14px;font-weight:800">${t}: ${v}</div>`;
+    sum.innerHTML=chip('👍 مفيد',up,'#EAF3EC')+chip('👎 غير مفيد',dn,'#FBEAE6')+chip('آخر ٢٠٠ تقييم',data.length,'#F0EBDF');
+    const rows=[...data.filter(x=>x.rating<0),...data.filter(x=>x.rating>0)].slice(0,40);
+    if(!rows.length){list.innerHTML='<div style="color:#7A715B;font-size:13px">لا تقييمات بعد.</div>';return;}
+    const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    list.innerHTML=rows.map(x=>`<details style="border:1px solid #E3DCC9;border-radius:12px;padding:9px 12px;background:${x.rating<0?'#FFF8F6':'#fff'}">
+      <summary style="cursor:pointer;font-size:13px"><b>${x.rating<0?'👎':'👍'}</b> ${esc(String(x.question||'').slice(0,110))} <span style="color:#7A715B;font-size:11px">— ${new Date(x.created_at).toLocaleDateString('ar-OM')}${x.model?' · '+esc(x.model):''}</span></summary>
+      <div style="margin-top:8px;font-size:12.5px;white-space:pre-wrap;line-height:1.8;max-height:260px;overflow:auto;background:#FAF7F0;border-radius:8px;padding:8px">${esc(x.reply)}</div></details>`).join('');
+  }catch(e){list.innerHTML='<div style="color:#A8322A;font-size:13px">تعذّر التحميل'+(String(e.message||'').includes('ai_chat_feedback')?' — لم يُنشأ جدول التقييمات بعد':'')+'</div>';}
+}
 async function abInit(){
   if(AB.loaded){abRender();return;}
   try{
@@ -7762,7 +7785,7 @@ function showPage(id,btn){
   if(id==='c1msgs')c1msgInit();
   if(id==='c1storage')mc1LoadStorage();
   if(id==='c1schools')mc1LoadSchools();
-  if(id==='c1golden'){mc1GoldenInit();abInit();}
+  if(id==='c1golden'){mc1GoldenInit();abInit();fbInit();}
   {const sw=document.querySelectorAll('.adm-curr-sw button');sw.forEach(b=>b.classList.toggle('on',b.dataset.c===id));}
   if(id==='ktops'){ktopsLoad();}
   // تهيئةٌ هنا لا في ktGoC1 وحدها: تحديثُ المتصفّح يستعيد آخر صفحةٍ عبر
