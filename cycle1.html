@@ -11151,7 +11151,8 @@ async function c1SchoolTimingLoad(){
     const prev=JSON.stringify(C1_SCHOOL_TT);
     C1_SCHOOL_TT=data&&!data.is_admin?data:null;
     try{C1_SCHOOL_TT?localStorage.setItem('c1_school_tt',JSON.stringify(C1_SCHOOL_TT)):localStorage.removeItem('c1_school_tt');}catch(_){}
-    if(prev!==JSON.stringify(C1_SCHOOL_TT)){try{ttRenderTable();ttRenderNow();}catch(_){}}
+    // كل ما يعرض أوقات الحصص يُعاد رسمه: «يومي» يُرسَم عند الفتح قبل وصول توقيت المدرسة
+    if(prev!==JSON.stringify(C1_SCHOOL_TT)){for(const f of [ywRenderTT,ttRenderTable,ttRenderNow]){try{const r=f();if(r&&r.catch)r.catch(()=>{});}catch(_){}}}
   }catch(_){}
   c1PeriodBanner();
 }
