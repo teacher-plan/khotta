@@ -13,10 +13,10 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#111;overflow:hidden;font-family:'Baloo','Lalezar',Tahoma,sans-serif;color:var(--ink)}
 /* المسرح ١٦٠٠×٩٠٠ يُكبَّر ليملأ الشاشة */
-#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:center;overflow:hidden;background:var(--paper)}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:center;transform:var(--fit);overflow:hidden;overflow:clip;background:var(--paper)}
 /* ── الخلفية: أشعة تدور + هافتون مزدوج (انزياح طباعة CMYK) + ورق ── */
 .bg{position:absolute;inset:-40%;z-index:0}
-.rays{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,var(--c1) 0 7.5deg,var(--c2) 7.5deg 15deg);animation:spin 60s linear infinite}
+.rays{position:absolute;left:50%;top:50%;width:3600px;height:3600px;margin:-1800px 0 0 -1800px;background:repeating-conic-gradient(from 0deg at 50% 50%,var(--c1) 0 7.5deg,var(--c2) 7.5deg 15deg);animation:spin 60s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .dots{position:absolute;inset:0;background-image:radial-gradient(circle,rgba(0,0,0,.22) 2.6px,transparent 3px);background-size:18px 18px;animation:drift 14s linear infinite}
 .dots.m{background-image:radial-gradient(circle,rgba(255,40,140,.18) 2.4px,transparent 3px);background-position:6px 5px;animation-duration:18s}
@@ -57,7 +57,7 @@ html,body{height:100%;background:#111;overflow:hidden;font-family:'Baloo','Lalez
 .burst.out{animation:boomOut .35s ease-in both}
 @keyframes boomOut{to{transform:scale(1.5);opacity:0}}
 .shake{animation:shake .45s}
-@keyframes shake{20%{transform:translate(-14px,6px) rotate(-.6deg)}40%{transform:translate(12px,-8px)}60%{transform:translate(-8px,4px)}80%{transform:translate(6px,-2px)}}
+@keyframes shake{20%{transform:var(--fit) translate(-14px,6px) rotate(-.6deg)}40%{transform:var(--fit) translate(12px,-8px)}60%{transform:var(--fit) translate(-8px,4px)}80%{transform:var(--fit) translate(6px,-2px)}}
 .flash{position:absolute;inset:0;z-index:29;background:#fff;animation:flash .35s ease-out forwards;pointer-events:none}
 @keyframes flash{from{opacity:.85}to{opacity:0}}
 /* انتقال قُطري بين الصفحات */
@@ -111,7 +111,7 @@ var COLS=['#1E7BFF','#FF3B30','#21C46B','#8B3DFF'],LET=['أ','ب','ج','د'];
 var GOOD=['بووم!','صح!','رائع!','بطل!'],BAD=['أوبس!','قريب!'];
 var st=document.getElementById('stage'),teams=0,turn=0,score=[0,0],qi=0,missed=[],muted=false,timer=null,locked=false,TIME=20;
 // ── تكبير المسرح ليملأ الشاشة ──
-function fit(){var s=Math.min(innerWidth/1600,innerHeight/900);st.style.transform='translate(-50%,-50%) scale('+s+')';}
+function fit(){var s=Math.min(innerWidth/1600,innerHeight/900);st.style.setProperty('--fit','translate(-50%,-50%) scale('+s+')');}
 addEventListener('resize',fit);fit();
 // ── أصوات مركّبة (بلا ملفات) ──
 var AC=null;function tone(f,d,type,v,slide){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type=type||'square';o.frequency.value=f;if(slide)o.frequency.exponentialRampToValueAtTime(slide,AC.currentTime+d);g.gain.value=v||.08;g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d);}catch(e){}}
