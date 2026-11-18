@@ -282,7 +282,8 @@ Deno.serve(async (req) => {
         ...(webOn ? { plugins: [{ id: "web", max_results: 3 }] } : {}),
       }),
     }, { st, task: "chat" });
-    const or = await orResp.json();
+    // في البثّ لا يُقرأ الجسم هنا (يُمرَّر سطراً سطراً أدناه) إلا عند الخطأ
+    const or = (!streamOn || !orResp.ok) ? await orResp.json().catch(() => ({})) : null;
     if (!orResp.ok) {
       const _m = String(or?.error?.message || or?.message || "");
       console.error(`openrouter ${orResp.status} في generate-chat: ${_m}`);
