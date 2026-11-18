@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     // كان السقف ١٥٠٠ حرفاً والعميل يرسل حتى ٢٨٠٠ — فيُقصّ نصف السياق صامتاً،
     // ويقع القصّ على آخره حيث النجوم والسلوك والإنجازات: أدقّ ما فيه وأكثره
     // فائدةً في سؤالٍ عن طالبةٍ بعينها. صار السقف يسع ما يُرسَل.
-    const context = String(b.context || "").slice(0, 3200);
+    const context = String(b.context || "").slice(0, 6500);
     // بحث الويب اختياريّ بضغطةٍ من المعلّمة، لا تلقائيّ: لكلّ استعمالٍ ثمنٌ
     // يقارب أربعين رسالةً عادية، فتفعيله على كل سؤالٍ يُنفق بلا حاجة
     const web = b.web === true;
@@ -148,12 +148,19 @@ Deno.serve(async (req) => {
     // نفس القيد في الاستوديو (generate-infographic).
     if (isEdit && !imageModel.startsWith("google/")) imageModel = "google/gemini-3.1-flash-image-preview";
 
+    // توجيه النموذج (١٨ نوفمبر): الطلبات الطويلة أو «الإنتاجية» (خطة، اختبار، ورقة عمل،
+    // تحليل) أو المرتبطة بدرسٍ محدّد تذهب لنموذجٍ أقوى وبحدٍّ أطول؛ والأسئلة القصيرة تبقى
+    // على الأرخص. الفرق في الكلفة للرسالة الثقيلة صغير، والفرق في الجودة كبير.
+    const heavy = !wantsImgQuota && !images.length && (userMsg.length > 350 || b.focus === true ||
+      /خط[ةّ]|اختبار|أسئلة|اسئلة|ورقة عمل|تحضير|حلّل|حلل|قارن|تقرير|برنامج|وحدة|علاج|تقويم|مقال|بحث/.test(userMsg));
     // مع صورة نحتاج نموذج رؤية مضموناً: النموذج النصي يُسقط الصور بصمت
     // فتظن المعلمة أنه قرأها وهو يجيب من فراغ.
     const model = wantsImgQuota
       ? imageModel
       : images.length
       ? ensureVision(st.model_chat_vision || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash")
+      : heavy
+      ? (st.model_chat_pro || "google/gemini-2.5-flash")
       : (st.model_chat || st.chat_model || st.ai_model || "google/gemini-2.5-flash-lite");
 
     // المساعد عامٌّ لا متخصّصٌ تربويّ. كان تعريفه يحصره في التعليم ويأمره
@@ -193,6 +200,39 @@ Deno.serve(async (req) => {
       context ? `معلوماتٌ عن مستخدمك — لا تستعملها إلا إن كان السؤال تعليمياً أو متّصلاً بعمله، ولا تعِدها حرفياً: ${context}` : "",
     ].filter(Boolean).join("\n");
 
+    // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) — يُستعمل في الردّ العادي والمبثوث ═
+    const saveChat = async (savedReply: string): Promise<string | null> => {
+      const askedText = userMsg || (isEdit ? "(طلب تعديل صورة)" : wantImage ? "(طلب رسم صورة)" : "(صورة مرفقة)");
+      const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: savedReply }].slice(-60);
+      const title = (history.find((m) => m.role === "user")?.content || askedText).slice(0, 60);
+      let savedId = chatId;
+      const doSave = async () => {
+        if (chatId) {
+          const { error } = await admin.from("ai_chats")
+            .update({ messages: newMessages, updated_at: new Date().toISOString() })
+            .eq("id", chatId).eq("user_id", user.id);
+          if (error) throw error;
+        } else {
+          const { data, error } = await admin.from("ai_chats")
+            .insert({ user_id: user.id, title, messages: newMessages })
+            .select("id").single();
+          if (error) throw error;
+          savedId = data.id;
+        }
+      };
+      try { await doSave(); }
+      catch (e) {
+        const msg = String((e as { message?: string })?.message || e);
+        if (/does not exist|42P01|schema cache/i.test(msg)) {
+          try { await ensureChatTable(); await doSave(); }
+          catch (e2) { console.error("chat save bootstrap failed", e2); }
+        } else console.error("chat save failed", msg);
+      }
+      return savedId;
+    };
+
+    // البثّ كلمةً بكلمة للنصّ فقط (الصور تأتي دفعةً واحدة)
+    const streamOn = b.stream === true && !wantsImgQuota;
     const orResp = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -231,7 +271,8 @@ Deno.serve(async (req) => {
         ...(wantImage ? { modalities: ["image", "text"], image_config: { aspect_ratio: "16:9", image_size: "2K" } } : {}),
         ...(isEdit ? { modalities: ["image", "text"] } : {}),
         temperature: 0.6,
-        max_tokens: images.length ? 1400 : 900,
+        max_tokens: images.length ? 1400 : heavy ? 2600 : 1100,
+        ...(streamOn ? { stream: true, usage: { include: true } } : {}),
         // OpenRouter يوزّع الطلب على عدة مزوّدين للنموذج نفسه، وترتيبه
         // الافتراضي يوازن السعر بالسرعة. المحادثة تُقاس بسرعة أوّل حرف،
         // فنطلب صراحةً أعلى إنتاجية.
@@ -246,6 +287,56 @@ Deno.serve(async (req) => {
       const _m = String(or?.error?.message || or?.message || "");
       console.error(`openrouter ${orResp.status} في generate-chat: ${_m}`);
       return refund({ error: orErrCode(orResp.status, _m), detail: _m.slice(0, 200) }, 502);
+    }
+    if (streamOn) {
+      const enc = new TextEncoder(), dec = new TextDecoder();
+      const src = orResp.body!.getReader();
+      const out = new ReadableStream({
+        async start(ctrl) {
+          const send = (o: unknown) => ctrl.enqueue(enc.encode(JSON.stringify(o) + "\n"));
+          let buf = "", full = "", usage: unknown = null;
+          try {
+            for (;;) {
+              const { value, done } = await src.read();
+              if (done) break;
+              buf += dec.decode(value, { stream: true });
+              let nl;
+              while ((nl = buf.indexOf("\n")) >= 0) {
+                const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+                if (!line.startsWith("data:")) continue;
+                const data = line.slice(5).trim();
+                if (data === "[DONE]") continue;
+                try {
+                  const j = JSON.parse(data);
+                  const d = j?.choices?.[0]?.delta?.content;
+                  if (typeof d === "string" && d) { full += d; send({ d }); }
+                  if (j?.usage) usage = j.usage;
+                } catch { /* سطرٌ ناقص */ }
+              }
+            }
+            if (!full.trim()) {
+              await refundQuota(admin, user.id, user.email || "", "text");
+              if (webOn) await refundQuota(admin, user.id, user.email || "", "search");
+              send({ error: "no_reply" });
+            } else {
+              const id = await saveChat(full);
+              await logAiCost(admin, user.id, "generate-chat", "text", model, usage);
+              send({ done: true, chatId: id, model, webUsed: webOn });
+            }
+          } catch (e) {
+            console.error("chat stream", String(e));
+            if (!full.trim()) {
+              await refundQuota(admin, user.id, user.email || "", "text");
+              send({ error: "provider_error" });
+            } else {
+              const id = await saveChat(full).catch(() => chatId);
+              send({ done: true, chatId: id, model, webUsed: webOn, cut: true });
+            }
+          }
+          ctrl.close();
+        },
+      });
+      return new Response(out, { headers: { ...cors, "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-cache" } });
     }
     const _msg = or?.choices?.[0]?.message || {};
     // نماذج الصور تعيدها في images[].image_url.url، وبعضها يضعها في content
@@ -262,38 +353,7 @@ Deno.serve(async (req) => {
     if (wantsImgQuota && !genImage) return refund({ error: "no_image" }, 502);
     if (!wantsImgQuota && !reply) return refund({ error: "no_reply" }, 502);
 
-    // ═ حفظ المحادثة (بإنشاء الجدول ذاتياً عند الحاجة) ═
-    // سقف حجم المحادثة المحفوظة — لا تنمو بلا حد
-    const askedText = userMsg || (isEdit ? "(طلب تعديل صورة)" : wantImage ? "(طلب رسم صورة)" : "(صورة مرفقة)");
-    // نحفظ نص السؤال لا الصور: تخزين data URI يضخّم الصف ويُعاد إرساله كل دور.
-    // والصورة المولَّدة كذلك: يُحفظ أثرها نصّاً، فالمعلّمة تنزّلها إن أرادتها
-    // باقيةً، وحفظُ عشرات الصور في صفٍّ واحد يُبطئ فتح المحادثة على الجوال.
-    const savedReply = wantsImgQuota ? "🖼️ (صورة مولَّدة)" : reply;
-    const newMessages = [...history, { role: "user", content: askedText + (images.length ? ` [${images.length} صورة]` : "") }, { role: "assistant", content: savedReply }].slice(-60);
-    const title = (history.find((m) => m.role === "user")?.content || askedText).slice(0, 60);
-    let savedId = chatId;
-    const doSave = async () => {
-      if (chatId) {
-        const { error } = await admin.from("ai_chats")
-          .update({ messages: newMessages, updated_at: new Date().toISOString() })
-          .eq("id", chatId).eq("user_id", user.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await admin.from("ai_chats")
-          .insert({ user_id: user.id, title, messages: newMessages })
-          .select("id").single();
-        if (error) throw error;
-        savedId = data.id;
-      }
-    };
-    try { await doSave(); }
-    catch (e) {
-      const msg = String((e as { message?: string })?.message || e);
-      if (/does not exist|42P01|schema cache/i.test(msg)) {
-        try { await ensureChatTable(); await doSave(); }
-        catch (e2) { console.error("chat save bootstrap failed", e2); }
-      } else console.error("chat save failed", msg);
-    }
+    const savedId = await saveChat(wantsImgQuota ? "🖼️ (صورة مولَّدة)" : reply);
 
     // webUsed يُخبر الواجهة إن جرى البحث فعلاً: من نفدت حصتها تُجاب بلا بحث
     // وينبغي أن ترى ذلك، لا أن تظنّ جوابها مبنيّاً على مصدرٍ حديث
