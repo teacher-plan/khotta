@@ -71,26 +71,6 @@ Deno.serve(async (req) => {
     });
   };
 
-  // ── المرحلة الثانية: الخطة نفسها (مفتاح الخدمة فقط — يستدعيها هذا الملف) ──
-  if (action === "plan") {
-    if (!isServiceRoleRequest(req)) return json({ error: "unauthorized" }, 401);
-    const { job_id, jwt, payload } = b;
-    const { data: job } = await admin.from("c1_prep_jobs").select("*").eq("id", String(job_id || "")).maybeSingle();
-    if (!job || job.status !== "running") return json({ ok: true, skipped: true });
-    if (job.batch_id) { bg(batchPlan(job, String(jwt || ""), payload || job.payload || {})); return json({ ok: true, accepted: true }); }
-    bg((async () => {
-      try {
-        const r = await callFn("generate-lesson-plan", String(jwt || ""), payload || {});
-        if (r.ok && r.j && r.j.plan) await finish(job.id, job.user_id, job.lesson_name, true, { plan: r.j.plan });
-        else await finish(job.id, job.user_id, job.lesson_name, false, { error: ERR[r.j?.error] || "حدث خطأ أثناء الإعداد" });
-      } catch (e) {
-        console.error("c1-prep-job plan", String(e));
-        await finish(job.id, job.user_id, job.lesson_name, false, { error: "حدث خطأ أثناء الإعداد" });
-      }
-    })());
-    return json({ ok: true, accepted: true });
-  }
-
   // ══ طابور الوحدة ══════════════════════════════════════════════
   // كل درسٍ مهمةٌ queued تحمل payload، و«run» يأخذ أقدمها ويُعدّها في استدعاءٍ
   // مستقل (كي لا يتراكم الوقت في دالّةٍ واحدة)، ونهاية كل درس تستدعي «run» للتالي.
@@ -122,9 +102,9 @@ Deno.serve(async (req) => {
       await admin.from("c1_prep_jobs").update({ status: "error", error: ERR[code], finished_at: new Date().toISOString() })
         .eq("batch_id", job.batch_id).in("status", ["queued", "running"]);
     } else if ((job.attempts || 0) < 3) {
-      await admin.from("c1_prep_jobs").update({ status: "queued", error: patch.error || null }).eq("id", job.id);
+      await admin.from("c1_prep_jobs").update({ status: "queued", error: patch.error || null }).eq("id", job.id).eq("status", "running");
     } else {
-      await admin.from("c1_prep_jobs").update({ status: "error", error: patch.error || "حدث خطأ أثناء الإعداد", finished_at: new Date().toISOString() }).eq("id", job.id);
+      await admin.from("c1_prep_jobs").update({ status: "error", error: patch.error || "حدث خطأ أثناء الإعداد", finished_at: new Date().toISOString() }).eq("id", job.id).eq("status", "running");
     }
     const r = await selfCall({ action: "run", batch_id: job.batch_id, jwt }).catch(() => null);
     if (!r || !r.ok) await batchDone(job.batch_id);
@@ -139,6 +119,26 @@ Deno.serve(async (req) => {
       console.error("c1-prep-job batchPlan", String(e));
       await settle(job, jwt, false, { error: "حدث خطأ أثناء الإعداد" });
     }
+  }
+
+  // ── المرحلة الثانية: الخطة نفسها (مفتاح الخدمة فقط — يستدعيها هذا الملف) ──
+  if (action === "plan") {
+    if (!isServiceRoleRequest(req)) return json({ error: "unauthorized" }, 401);
+    const { job_id, jwt, payload } = b;
+    const { data: job } = await admin.from("c1_prep_jobs").select("*").eq("id", String(job_id || "")).maybeSingle();
+    if (!job || job.status !== "running") return json({ ok: true, skipped: true });
+    if (job.batch_id) { bg(batchPlan(job, String(jwt || ""), payload || job.payload || {})); return json({ ok: true, accepted: true }); }
+    bg((async () => {
+      try {
+        const r = await callFn("generate-lesson-plan", String(jwt || ""), payload || {});
+        if (r.ok && r.j && r.j.plan) await finish(job.id, job.user_id, job.lesson_name, true, { plan: r.j.plan });
+        else await finish(job.id, job.user_id, job.lesson_name, false, { error: ERR[r.j?.error] || "حدث خطأ أثناء الإعداد" });
+      } catch (e) {
+        console.error("c1-prep-job plan", String(e));
+        await finish(job.id, job.user_id, job.lesson_name, false, { error: "حدث خطأ أثناء الإعداد" });
+      }
+    })());
+    return json({ ok: true, accepted: true });
   }
 
   if (action === "run") {
