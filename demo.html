@@ -18792,7 +18792,7 @@ function fhThumbs(){
     `<div class="fh-th"><img src="${u}" alt="مرفق"/><button onclick="fhImgs.splice(${i},1);fhThumbs()" title="إزالة">&times;</button></div>`).join('');
 }
 async function fhSend(){
-  if(fhBusy)return;
+  if(fhBusy){toast('لحظة — المساعد يكمل الردّ السابق',true);return;}
   const inp=document.getElementById('fh-input');
   const msg=(inp.value||'').trim();
   if(!msg&&!fhImgs.length)return;
@@ -18855,8 +18855,12 @@ async function fhSend(){
         let started=false,end=null,raf=0;
         const paint=()=>{raf=0;const el=document.querySelector('#fh-body .fh-msg.bot.streaming .fh-md');if(el){el.innerHTML=fhMdChat(m.content);const b=document.getElementById('fh-body');if(b.scrollHeight-b.scrollTop-b.clientHeight<220)b.scrollTop=b.scrollHeight;}};
         const rd=r.body.getReader(),dec=new TextDecoder();let buf='';
+        // نتوقّف عند سطر «done» نفسه لا عند إغلاق الاتصال: Safari (آيباد/آيفون) قد يُبقي
+        // الاتصال مفتوحاً بعده فيبقى المساعد «مشغولاً» ويتجاهل الطلب التالي بصمت.
+        // ومهلة ٩٠ ثانية بلا أي بيانات تُنهي الانتظار.
+        let idle;const arm=()=>{clearTimeout(idle);idle=setTimeout(()=>{try{rd.cancel();}catch(_){}},90000);};arm();
         for(;;){
-          const{value,done}=await rd.read();if(done)break;
+          const{value,done}=await rd.read();if(done)break;arm();
           buf+=dec.decode(value,{stream:true});let nl;
           while((nl=buf.indexOf('\n'))>=0){
             const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;
@@ -18867,7 +18871,9 @@ async function fhSend(){
               else if(!raf)raf=requestAnimationFrame(paint);
             }else if(o.done||o.error)end=o;
           }
+          if(end){try{rd.cancel();}catch(_){}break;}
         }
+        clearTimeout(idle);
         document.getElementById('fh-typing')?.remove();
         delete m.streaming;
         if(!started){fhMsgs.push({role:'assistant',err:true,content:c1ErrMsg((end&&end.error)||'','عذراً، تعثّرت في الردّ. '+khG('حاولي','حاول')+' مرة أخرى.')});}
