@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         const pr = { ...DEF_PREFS, ...(s.prefs || {}) };
         if (pref && !(pr as Any)[pref]) continue;
         try {
-          const r = await sendPush(s.sub as PushSub, data, v!, { topic, urgency: pref === "msgs" ? "high" : "normal" });
+          const r = await sendPush(s.sub as PushSub, data, v!, { topic, urgency: pref === "msgs" || topic === "period" ? "high" : "normal" });
           if (r.ok) { sent++; await admin.from("c1_push_subs").update({ last_ok: new Date().toISOString() }).eq("endpoint", s.endpoint); }
           else if (r.gone) await admin.from("c1_push_subs").delete().eq("endpoint", s.endpoint);
           else console.warn("push", r.status, r.text);
@@ -141,6 +141,28 @@ Deno.serve(async (req) => {
           }
         }
         return json({ ok: true, users: users.length, sent });
+      }
+      // قبل الحصة بخمس دقائق (c1_period_tick يرسلها حين تبدأ حصةٌ في مدرسةٍ بعد ٥ دقائق).
+      // إلزاميٌّ لمعلّمي المدارس: لا يمرّ بتفضيلات الإشعار (pref = null).
+      if (mode === "period") {
+        const schoolId = String(b.school_id || ""), p = Number(b.p);
+        if (!schoolId || !Number.isInteger(p) || p < 0) return json({ error: "bad_input" }, 400);
+        const [, dow] = mct(0);
+        if (dow > 4) return json({ ok: true, skipped: "weekend" });
+        const { data: sc } = await admin.from("c1_schools").select("timing").eq("id", schoolId).maybeSingle();
+        const per = ((sc?.timing || {}).periods || [])[p];
+        if (!per) return json({ ok: true, skipped: "no_period" });
+        const { data: mem } = await admin.from("c1_school_members").select("teacher_id").eq("school_id", schoolId);
+        let sent = 0, teachers = 0;
+        for (const m of mem || []) {
+          const { data: prof } = await admin.from("cycle1_profiles").select("data").eq("id", m.teacher_id).maybeSingle();
+          const x = dayLessons((prof && prof.data) || {}, dow).find((l) => l.p === p);
+          if (!x) continue;   // ليست حصّته
+          teachers++;
+          const body = `${x.cls} · ${x.subj}${x.lesson ? "\nالدرس: " + x.lesson.name : ""}\nتبدأ الساعة ${AR(per[0])}`;
+          sent += await pushUser(m.teacher_id, null, { title: `⏰ بعد ٥ دقائق: الحصة ${AR(p + 1)}`, body, url: APP_URL + "#yawmi", tag: "c1-period-" + p }, "period");
+        }
+        return json({ ok: true, teachers, sent });
       }
       return json({ error: "bad_mode" }, 400);
     }

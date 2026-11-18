@@ -775,6 +775,23 @@ body.inapp #c1-budget-btn{display:flex}
 .plan-uchip.sel .cnt{color:var(--red-d)}
 .plan-uhead{display:flex;align-items:center;gap:9px;margin:6px 0 11px}
 .pl-offall{margin-inline-start:auto;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:#2A5183;border:0;border-radius:9px;padding:7px 12px;cursor:pointer}
+.sch-tt-p{font-size:13.5px;line-height:1.9;color:var(--muted);margin:4px 0 12px}
+.sch-tt-note{font-size:13px;background:#FFF6E0;border-radius:10px;padding:8px 10px;color:#7A5608;margin:0 0 10px}
+.sch-tt-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sch-tt-btns .c1-mbtn{flex:1;min-width:140px}
+.sch-tt-msg{font-size:13px;margin-top:8px}
+.sch-tt-ok{font-size:12px;font-weight:800;color:#2F6B3E;background:#EAF3EC;border-radius:8px;padding:2px 8px;margin-inline-start:6px}
+.sch-tt-tbl td,.sch-tt-tbl th{text-align:center}
+.sch-tt-tbl tr.br td{background:#FFF6E0;color:#7A5608}
+.sch-tt-ed .time-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sch-tt-ed .time-row span{flex:1;font-weight:700;font-size:14px}
+.sch-tt-ed input[type=time],.sch-tt-ed select{font-family:inherit;font-size:15px;padding:6px 8px;border:1.5px solid var(--line,#ddd);border-radius:9px;background:#fff}
+.sch-tt-pm{display:flex;gap:8px;margin:2px 0 12px}
+.c1-period-banner{display:flex;align-items:center;gap:10px;background:#FFF3E8;border:2px solid #E89A5C;border-radius:14px;padding:11px 13px;margin:0 0 12px}
+.c1-period-banner div{flex:1;display:flex;flex-direction:column;gap:3px}
+.c1-period-banner b{font-size:14px;color:#8A3A12;font-weight:800}
+.c1-period-banner span{font-size:12.5px;color:#6A3A1A;line-height:1.6}
+.c1-period-banner button{flex:none;font-family:inherit;font-weight:800;font-size:13px;color:#fff;background:#C05A2A;border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
 .pl-uprep{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 12px;font-family:inherit;font-size:15px;font-weight:800;color:#fff;
   background:linear-gradient(135deg,#D86048,#A8322A);border:0;border-radius:14px;padding:13px 16px;cursor:pointer;box-shadow:0 4px 14px rgba(168,50,42,.25)}
 .pl-uprep small{font-weight:700;opacity:.85;font-size:12px}
@@ -3973,6 +3990,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button data-t="absence" onclick="schTabGo('absence')">الغياب</button>
       <button data-t="behavior" onclick="schTabGo('behavior')">السلوك</button>
       <button data-t="copilot" onclick="schTabGo('copilot')">المساعد الذكي</button>
+      <button data-t="timing" onclick="schTabGo('timing')">توقيت المدرسة</button>
       <button data-t="teachers" onclick="schTabGo('teachers')">المعلّمون والرمز</button>
     </div>
     <div id="sch-body"></div>
@@ -7330,6 +7348,7 @@ function ttData(){
 }
 async function ttTimes(){
   const t=ttData();
+  const sc=c1SchoolTimes();if(sc)return sc;
   if(t.times)return t.times;
   // افتراضيات المشرف من ai_settings ثم الافتراضي المدمج.
   // مسار اليوم يعتمد على هذه الأوقات، فلا نُبقيه فارغاً إن تعثّر الاتصال —
@@ -7995,6 +8014,7 @@ async function ttPickChoose(classId,sub){
 }
 // لوحة الأوقات
 async function ttOpenTimes(){
+  if(c1SchoolTimes()){toast('أوقات الحصص تحدّدها إدارة '+(C1_SCHOOL_TT.school||'المدرسة')+' — تُعدَّل من حسابها','ok');return;}
   const t=await ttTimes();
   document.getElementById('tt-times-rows').innerHTML=
     `<div class="time-row"><span>الطابور</span><input type="time" id="tta-0" value="${t.assembly[0]}"/><input type="time" id="tta-1" value="${t.assembly[1]}"/></div>`
@@ -11114,6 +11134,44 @@ async function nlDevGo(path,ajax){
 }
 
 
+// ══ توقيت المدرسة — يرفعه حساب إدارة المدرسة (c1_school_timing) ══
+// يصير أوقاتَ حصص كل معلّمٍ منضمّ، ومعه تنبيهٌ إلزاميّ قبل كل حصة بخمس دقائق (c1-push mode=period).
+let C1_SCHOOL_TT=(()=>{try{return JSON.parse(localStorage.getItem('c1_school_tt')||'null');}catch(_){return null;}})();
+function c1SchoolTimes(){
+  const t=C1_SCHOOL_TT&&C1_SCHOOL_TT.timing;
+  if(!t||!Array.isArray(t.periods)||!t.periods.length)return null;
+  const P=t.periods,ba=Math.min(Math.max(1,t.breakAfter||3),P.length);
+  return{assembly:t.assembly||[P[0][0],P[0][0]],periods:P.map(x=>[x[0],x[1]]),breakAfter:ba,
+    breakTime:t.breakTime||[P[ba-1][1],(P[ba]||P[ba-1])[0]],fromSchool:true};
+}
+function c1SchoolMandatory(){return !KH_DEMO&&!!c1SchoolTimes();}
+async function c1SchoolTimingLoad(){
+  if(KH_DEMO||!currentUser)return;
+  try{
+    const{data,error}=await sb.rpc('c1_school_timing');if(error)return;
+    const prev=JSON.stringify(C1_SCHOOL_TT);
+    C1_SCHOOL_TT=data&&!data.is_admin?data:null;
+    try{C1_SCHOOL_TT?localStorage.setItem('c1_school_tt',JSON.stringify(C1_SCHOOL_TT)):localStorage.removeItem('c1_school_tt');}catch(_){}
+    if(prev!==JSON.stringify(C1_SCHOOL_TT)){try{ttRenderTable();ttRenderNow();}catch(_){}}
+  }catch(_){}
+  c1PeriodBanner();
+}
+// شريطٌ ثابت أعلى «يومي» ما دامت الإشعارات غير مفعّلة على هذا الجهاز — الموقع لا يملك
+// أن يفرض إذن الإشعار على الهاتف، فيبقى التذكير ظاهراً حتى يُفعَّل.
+async function c1PeriodBanner(){
+  document.getElementById('c1-period-banner')?.remove();
+  if(!c1SchoolMandatory())return;
+  let ok=false;
+  if(pushSupported()){const sub=await pushCurrentSub();ok=!!sub&&Notification.permission==='granted';}
+  if(ok)return;
+  const ios=pushIsIOS()&&!pushStandalone();
+  const b=document.createElement('div');b.id='c1-period-banner';b.className='c1-period-banner';
+  b.innerHTML=`<div><b><i class="ki ki-bell" aria-hidden="true"></i> تنبيه الحصص إلزامي من إدارة ${escHtml(C1_SCHOOL_TT.school||'المدرسة')}</b>
+    <span>${ios?'على iPhone: '+khG('أضيفي','أضف')+' خُطّة إلى الشاشة الرئيسية (مشاركة ← إضافة إلى الشاشة الرئيسية) ثم '+khG('افتحيها','افتحها')+' من الأيقونة و'+khG('فعّلي','فعّل')+' الإشعارات.':'يصلك إشعارٌ قبل كل حصةٍ من حصصك بخمس دقائق — '+khG('فعّلي','فعّل')+' الإشعارات على هذا الجهاز.'}</span></div>
+    ${ios||!pushSupported()?'':`<button onclick="pushEnable().then(c1PeriodBanner)">تفعيل الآن</button>`}`;
+  const w=document.querySelector('#page-yawmi .wrap');if(w)w.prepend(b);
+}
+
 // ══ إشعارات الهاتف (Web Push) — الدالّة c1-push ══
 // رسائل الإدارة والاستبيانات فوراً، وتذكير صباحي بحصص اليوم، ومسائي بدروس الغد بلا تحضير.
 async function pushCall(body){
@@ -11147,12 +11205,13 @@ async function pushEnable(){
     if(sub){const cur=sub.options&&sub.options.applicationServerKey;if(cur){const a=new Uint8Array(cur),k=pushKeyBytes(key);if(a.length!==k.length||a.some((x,i)=>x!==k[i])){await sub.unsubscribe();sub=null;}}}
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKeyBytes(key)});
     await pushCall({action:'subscribe',subscription:sub.toJSON()});
-    toast('فُعّلت الإشعارات على هذا الجهاز','ok');
+    toast('فُعّلت الإشعارات على هذا الجهاز','ok');c1PeriodBanner();
     pushCall({action:'test'}).catch(()=>{});
   }catch(e){toast(e.message||'تعذّر التفعيل',true);}
   pushAcctLoad();
 }
 async function pushDisable(){
+  if(c1SchoolMandatory()){toast('تنبيه الحصص إلزاميّ من إدارة المدرسة — لا يمكن إيقافه',true);return;}
   const sub=await pushCurrentSub();
   try{if(sub){await pushCall({action:'unsubscribe',endpoint:sub.endpoint});await sub.unsubscribe();}toast('أُوقفت الإشعارات على هذا الجهاز','ok');}
   catch(e){toast(e.message,true);}
@@ -11186,7 +11245,8 @@ async function pushAcctLoad(){
     ${row('msgs','رسائل الإدارة والاستبيانات','فور وصولها')}
     ${row('morning','تذكير صباحي','٦:٣٠ صباحاً — حصص اليوم ودروسها')}
     ${row('evening','تذكير مسائي','٧:٣٠ مساءً — دروس الغد بلا تحضير (لا يصل إن كانت كلها جاهزة)')}
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="abs-mini" onclick="pushTest()">إرسال إشعار تجريبي</button><button class="abs-mini" onclick="pushDisable()">إيقاف على هذا الجهاز</button></div>`;
+    ${c1SchoolMandatory()?`<label class="push-row" style="opacity:.85"><input type="checkbox" checked disabled><span><b>تنبيه قبل كل حصة 🔒</b><small>قبل حصصك بخمس دقائق — إلزاميّ من إدارة ${escHtml(C1_SCHOOL_TT.school||'المدرسة')}</small></span></label>`:''}
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="abs-mini" onclick="pushTest()">إرسال إشعار تجريبي</button>${c1SchoolMandatory()?'':'<button class="abs-mini" onclick="pushDisable()">إيقاف على هذا الجهاز</button>'}</div>`;
 }
 // ══ إحساس التطبيق المثبّت على الهاتف ══
 // اهتزازٌ خفيف عند الأفعال المهمّة (أندرويد؛ iOS لا يتيحه لصفحات الويب)، ولون شريط
@@ -11208,6 +11268,7 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#c1
 // فتح القسم من رابط الإشعار (#msgs، #plan…)
 function c1OpenFromHash(){
   setTimeout(()=>{try{c1PrepJobsSync();}catch(_){}},1500);
+  setTimeout(()=>{try{c1SchoolTimingLoad();}catch(_){}},1200);
   const id=(location.hash||'').replace('#','');
   if(id&&document.getElementById('page-'+id)&&c1Sections().some(s=>s.id===id)){try{history.replaceState(history.state,'',location.pathname);}catch(_){}c1Go(id);}
 }
@@ -11624,9 +11685,9 @@ function schTabGo(t){schTab=t;schRender();window.scrollTo(0,0);}
 function schRender(){
   document.querySelectorAll('.sch-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===schTab));
   const el=document.getElementById('sch-body');
-  if(!SCH.teachers.length&&schTab!=='teachers'){
+  if(!SCH.teachers.length&&schTab!=='teachers'&&schTab!=='timing'){
     el.innerHTML=`<div class="plan-empty-card">لم ينضمّ معلّمون إلى المدرسة بعد.<br>أعطِ المعلّمين رمز المدرسة <b class="sch-code">${escHtml(SCH.school.code)}</b> ليُدخلوه من «إعدادات الحساب» في حساباتهم.</div>`;return;}
-  ({today:schRenderToday,phen:schRenderPhen,absence:schRenderAbsence,behavior:schRenderBehavior,teachers:schRenderTeachers,copilot:schRenderCopilot})[schTab](el);
+  ({today:schRenderToday,phen:schRenderPhen,absence:schRenderAbsence,behavior:schRenderBehavior,teachers:schRenderTeachers,timing:schRenderTiming,copilot:schRenderCopilot})[schTab](el);
 }
 function schClassFilter(){
   return `<select class="c1-select sch-f" onchange="schClassF=this.value;schRender()"><option value="">كل الشعب</option>${SCH.classes.map(c=>`<option ${c.name===schClassF?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>`;
@@ -11867,6 +11928,107 @@ function schRenderTeachers(el){
     <div class="sch-cbtn"><button class="abs-mini" onclick="schCopyCode()">نسخ الرمز</button><button class="abs-mini" onclick="schRegen()">تغيير الرمز</button></div></div>
   <div class="abs-sec"><h3>المعلّمون المنضمّون (${egArNum(SCH.teachers.length)})</h3>${SCH.teachers.length?`<div class="abs-tbl-wrap"><table class="abs-tbl"><thead><tr><th>المعلّم</th><th>الشعب</th><th>آخر نشاط</th><th></th></tr></thead><tbody>${SCH.teachers.map(t=>`<tr><td><b>${escHtml(t.name)}</b></td><td style="white-space:normal">${t.classes.map(escHtml).join('، ')||'—'}</td><td>${escHtml(String(t.updated||'').slice(0,10))}</td><td><button class="abs-mini" style="color:var(--red-d)" onclick="schRemove('${escJs(t.id)}','${escJs(t.name)}')">إزالة</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="plan-empty-card">لا معلّمين بعد.</div>'}</div>`;
   el.innerHTML=h;
+}
+// ══ توقيت المدرسة: رفع ملفٍ يقرؤه الذكاء الاصطناعي ← مراجعة ← حفظ ══
+let SCH_TT=undefined,schTtEdit=null;
+async function schTtLoad(){
+  try{const{data,error}=await sb.rpc('c1_school_timing');if(error)throw error;SCH_TT=data||{};}catch(e){SCH_TT=null;}
+}
+function schTtNorm(t){
+  const P=(t&&t.periods||[]).filter(x=>x&&x[0]&&x[1]);
+  return{assembly:t&&t.assembly||null,periods:P.length?P.map(x=>[x[0],x[1]]):[['07:20','08:00']],
+    breakAfter:Math.min(Math.max(1,(t&&t.breakAfter)||3),Math.max(1,P.length)),breakTime:t&&t.breakTime||null};
+}
+async function schRenderTiming(el){
+  if(SCH_TT===undefined){el.innerHTML='<div class="plan-empty-card"><div class="spin"></div></div>';await schTtLoad();}
+  if(schTab!=='timing')return;
+  if(schTtEdit){schTtEditor(el);return;}
+  const t=SCH_TT&&SCH_TT.timing,n=SCH.teachers.length;
+  const intro=`<p class="sch-tt-p">${khG('ارفعي','ارفع')} جدول توقيت الدوام (صورة أو PDF أو Word أو Excel)، فيقرأ الذكاء الاصطناعي أوقات الطابور والحصص والفسحة ${khG('وتراجعينها','وتراجعها')} قبل الحفظ.
+    بعد الحفظ تصير أوقاتَ حصص كل المعلّمين المنضمّين (${egArNum(n)})، ويصل كلَّ معلّمٍ <b>إشعارٌ إلزاميّ قبل كل حصةٍ من حصصه بخمس دقائق</b>.</p>`;
+  const up=`<input type="file" id="sch-tt-file" accept="image/*,application/pdf,.pdf,.docx,.xlsx,.csv,.txt" multiple hidden onchange="schTtUpload(this.files)">
+    <button class="c1-mbtn go" id="sch-tt-up" onclick="document.getElementById('sch-tt-file').click()"><i class="ki ki-upload" aria-hidden="true"></i> ${t?'رفع توقيت جديد':'رفع ملف التوقيت'}</button>
+    <button class="c1-mbtn" onclick="schTtEdit=schTtNorm(SCH_TT&&SCH_TT.timing);schRender()">${t?'تعديل يدوي':'إدخال يدوي'}</button>`;
+  if(!t){el.innerHTML=`<div class="abs-sec"><h3>توقيت المدرسة</h3>${intro}<div class="sch-tt-btns">${up}</div><p class="sch-tt-msg" id="sch-tt-msg"></p></div>`;return;}
+  const rows=[];
+  if(t.assembly)rows.push(['الطابور',t.assembly]);
+  t.periods.forEach((x,i)=>{rows.push(['الحصة '+egArNum(i+1),x]);if(t.breakTime&&i+1===t.breakAfter)rows.push(['الفسحة',t.breakTime,1]);});
+  el.innerHTML=`<div class="abs-sec"><h3>توقيت المدرسة <span class="sch-tt-ok"><i class="ki ki-check" aria-hidden="true"></i> مفعَّل</span></h3>
+    <p class="sch-tt-p">مرتبطٌ بـ${egArNum(n)} ${n===1?'معلّم':'معلّمين'}، والتنبيه قبل كل حصة بخمس دقائق إلزاميّ. آخر تحديث: ${escHtml(new Date(SCH_TT.timing_at).toLocaleDateString('ar-OM',{day:'numeric',month:'long',year:'numeric'}))}</p>
+    <table class="abs-tbl sch-tt-tbl"><thead><tr><th></th><th>من</th><th>إلى</th></tr></thead><tbody>${rows.map(([a,[f,z],br])=>`<tr class="${br?'br':''}"><td><b>${a}</b></td><td>${egArNum(String(f).replace(/^0/,''))}</td><td>${egArNum(String(z).replace(/^0/,''))}</td></tr>`).join('')}</tbody></table>
+    <div class="sch-tt-btns">${up}<button class="c1-mbtn no" onclick="schTtClear()">إيقاف التوقيت</button></div><p class="sch-tt-msg" id="sch-tt-msg"></p></div>`;
+}
+async function schTtUpload(fl){
+  const files=[...(fl||[])].slice(0,3);if(!files.length)return;
+  const msg=document.getElementById('sch-tt-msg'),btn=document.getElementById('sch-tt-up');
+  const say=(t,err)=>{if(msg){msg.textContent=t;msg.style.color=err?'var(--red-d)':'var(--muted)';}};
+  if(files.some(f=>f.size>8*1024*1024)){say('الملف أكبر من ٨ ميجا — '+khG('صوّريه','صوّره')+' بجودةٍ أقلّ',true);return;}
+  if(btn){btn.disabled=true;btn.textContent='يقرأ التوقيت…';}
+  say('قد يستغرق نصف دقيقة — لا '+khG('تُغلقي','تُغلق')+' الصفحة');
+  try{
+    const payload=[];
+    for(const f of files){
+      const nm=(f.name||'').toLowerCase();
+      if(/\.(docx|xlsx)$/.test(nm))payload.push({name:f.name,text:(await khOfficeText(f)||'').slice(0,20000)});
+      else if(/\.(csv|txt)$/.test(nm))payload.push({name:f.name,text:(await f.text()).slice(0,20000)});
+      else payload.push({name:f.name,data:await readAsDataUrl(f)});
+    }
+    const{data,error}=await sb.functions.invoke('c1-school-timing',{body:{files:payload}});
+    if(error||!data||data.error)throw new Error((data&&data.error)||'x');
+    if(!data.timing){say('لم يُعثر على أوقات حصص في الملف'+(data.note?' — '+data.note:'')+'. '+khG('جرّبي','جرّب')+' صورةً أوضح أو الإدخال اليدوي.',true);return;}
+    schTtEdit=schTtNorm(data.timing);schTtEdit.note=data.note||'';schTtEdit.fromAi=true;schRender();
+  }catch(e){say('تعذّرت قراءة الملف — '+khG('أعيدي','أعد')+' المحاولة أو '+khG('استعملي','استعمل')+' الإدخال اليدوي',true);}
+  finally{if(btn){btn.disabled=false;btn.textContent='رفع ملف التوقيت';}}
+}
+function schTtEditor(el){
+  const t=schTtEdit,inp=(id,v)=>`<input type="time" id="${id}" value="${v||''}">`;
+  el.innerHTML=`<div class="abs-sec"><h3>${t.fromAi?'راجِع التوقيت المقروء':'إدخال التوقيت'}</h3>
+    ${t.fromAi?`<p class="sch-tt-p">قرأه الذكاء الاصطناعي من الملف — ${khG('تأكّدي','تأكّد')} من كل وقتٍ قبل الحفظ، فالإشعارات تعتمد عليه.</p>`:''}
+    ${t.note?`<p class="sch-tt-note">ملاحظة من القراءة: ${escHtml(t.note)}</p>`:''}
+    <div class="sch-tt-ed">
+      <div class="time-row"><span>الطابور</span>${inp('stt-a0',t.assembly&&t.assembly[0])}${inp('stt-a1',t.assembly&&t.assembly[1])}</div>
+      ${t.periods.map((x,i)=>`<div class="time-row"><span>الحصة ${egArNum(i+1)}</span>${inp('stt-p'+i+'-0',x[0])}${inp('stt-p'+i+'-1',x[1])}</div>`).join('')}
+      <div class="sch-tt-pm"><button class="abs-mini" onclick="schTtRows(1)">+ حصة</button>${t.periods.length>1?'<button class="abs-mini" onclick="schTtRows(-1)">− حصة</button>':''}</div>
+      <div class="time-row"><span>الفسحة بعد الحصة</span><select id="stt-ba" class="c1-select">${t.periods.map((_,i)=>`<option value="${i+1}" ${i+1===t.breakAfter?'selected':''}>${egArNum(i+1)}</option>`).join('')}</select></div>
+      <div class="time-row"><span>وقت الفسحة</span>${inp('stt-b0',t.breakTime&&t.breakTime[0])}${inp('stt-b1',t.breakTime&&t.breakTime[1])}</div>
+    </div>
+    <div class="sch-tt-btns"><button class="c1-mbtn go" onclick="schTtSave()">حفظ وتفعيل للمعلّمين</button><button class="c1-mbtn no" onclick="schTtEdit=null;schRender()">إلغاء</button></div>
+    <p class="sch-tt-msg" id="sch-tt-msg"></p></div>`;
+}
+function schTtRead(){
+  const v=id=>(document.getElementById(id)||{}).value||'';
+  const t=schTtEdit;
+  t.periods=t.periods.map((_,i)=>[v('stt-p'+i+'-0'),v('stt-p'+i+'-1')]);
+  t.assembly=v('stt-a0')&&v('stt-a1')?[v('stt-a0'),v('stt-a1')]:null;
+  t.breakAfter=+v('stt-ba')||1;
+  t.breakTime=v('stt-b0')&&v('stt-b1')?[v('stt-b0'),v('stt-b1')]:null;
+}
+function schTtRows(d){
+  schTtRead();const P=schTtEdit.periods;
+  if(d>0){const l=P[P.length-1]||['07:20','08:00'];const m=x=>{const[a,b]=x.split(':').map(Number);return a*60+b;},f=x=>String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');
+    const len=Math.max(30,m(l[1])-m(l[0]));P.push([l[1],f(m(l[1])+len)]);}
+  else if(P.length>1)P.pop();
+  schTtEdit.breakAfter=Math.min(schTtEdit.breakAfter,P.length);schRender();
+}
+async function schTtSave(){
+  schTtRead();const t=schTtEdit,m=x=>{const[a,b]=x.split(':').map(Number);return a*60+b;};
+  const say=(x)=>{const e=document.getElementById('sch-tt-msg');if(e){e.textContent=x;e.style.color='var(--red-d)';}};
+  for(let i=0;i<t.periods.length;i++){
+    const[a,z]=t.periods[i];
+    if(!a||!z){say('أكمل وقت الحصة '+egArNum(i+1));return;}
+    if(m(z)<=m(a)){say('نهاية الحصة '+egArNum(i+1)+' قبل بدايتها');return;}
+    if(i&&m(a)<m(t.periods[i-1][1])){say('الحصة '+egArNum(i+1)+' تبدأ قبل انتهاء السابقة');return;}
+  }
+  const timing={assembly:t.assembly,periods:t.periods,breakAfter:t.breakAfter,breakTime:t.breakTime};
+  try{
+    const{error}=await sb.rpc('c1_school_set_timing',{p_timing:timing});if(error)throw error;
+    SCH_TT={...(SCH_TT||{}),timing,timing_at:new Date().toISOString()};schTtEdit=null;schRender();
+    toast('حُفظ التوقيت وفُعّل لكل المعلّمين المنضمّين','ok');
+  }catch(e){say('تعذّر الحفظ — '+(String(e.message||'').includes('bad_timing')?'تحقّق من الأوقات':'تحقّق من الاتصال'));}
+}
+async function schTtClear(){
+  if(!await c1Confirm('إيقاف توقيت المدرسة؟ يعود كل معلّمٍ إلى أوقاته الخاصة، وتتوقّف تنبيهات الحصص.'))return;
+  try{const{error}=await sb.rpc('c1_school_set_timing',{p_timing:null});if(error)throw error;SCH_TT={...(SCH_TT||{}),timing:null};schRender();toast('أُوقف التوقيت','ok');}catch(e){toast('تعذّر',true);}
 }
 function schCopyCode(){try{navigator.clipboard.writeText(SCH.school.code);toast('نُسخ الرمز','ok');}catch(e){}}
 async function schRegen(){
