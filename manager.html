@@ -385,6 +385,7 @@ button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 .adm-t-main .e{font-size:12px;color:var(--kt-color-text-muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .adm-t-main .s{font-size:12px;color:var(--kt-color-text-secondary);margin-top:2px}
 .adm-t-st{display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:left}.adm-t-st small{font-size:11.5px;color:var(--kt-color-text-muted);white-space:nowrap}
+.adm-ai-tg{margin-inline-start:8px;vertical-align:middle;border:1px solid var(--kt-color-border,#d6d6d6);background:transparent;color:var(--kt-color-text-muted);font:inherit;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;cursor:pointer;white-space:nowrap}.adm-ai-tg:hover{border-color:var(--kt-color-error);color:var(--kt-color-error)}.adm-ai-tg.off{background:color-mix(in srgb,var(--kt-color-error) 14%,transparent);border-color:transparent;color:var(--kt-color-error)}
 .adm-pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;white-space:nowrap}
 .adm-pill.ok{background:color-mix(in srgb,var(--kt-color-success) 14%,transparent);color:var(--kt-color-success)}
 .adm-pill.warn{background:color-mix(in srgb,var(--kt-color-warning) 16%,transparent);color:var(--kt-color-warning)}
@@ -14942,7 +14943,7 @@ async function admTLoad(){
   ADM_T.busy=true;
   try{
     const[{data:allowed,error:aErr},{data:profs}]=await Promise.all([
-      sb.from('allowed_emails').select('email,cycle,expires_at').in('cycle',['cycle1','main']),
+      sb.from('allowed_emails').select('email,cycle,expires_at,ai_blocked').in('cycle',['cycle1','main']),
       sb.from('cycle1_profiles').select('email,data,updated_at'),
     ]);
     if(aErr)throw aErr;
@@ -14952,7 +14953,7 @@ async function admTLoad(){
     const pmap={};(profs||[]).forEach(p=>{pmap[String(p.email||'').toLowerCase()]=p;});
     ADM_T.acc=(allowed||[]).map(a=>{
       const em=String(a.email||'').toLowerCase(),p=pmap[em],d=(p&&p.data)||{},r=regBy[em];
-      return{email:a.email,cycle:a.cycle,expires_at:a.expires_at,
+      return{email:a.email,cycle:a.cycle,expires_at:a.expires_at,aiBlocked:!!a.ai_blocked,
         name:d.display_name||(r&&r.name)||'',phone:d.phone||(r&&r.phone)||'',
         grades:(d.grades||[]).map(g=>ADM_GR[g.num-1]||g.num).join('، '),
         setup:!!d.setupDone,hasProfile:!!p,last:p&&p.updated_at,regId:r?r.id:null};
@@ -14971,7 +14972,7 @@ function admTTab(t){
   const n1=document.getElementById('adm-t-n-acc'),n2=document.getElementById('adm-t-n-reg');
   if(n1)n1.textContent=ADM_N(ADM_T.acc.length);if(n2){n2.textContent=ADM_N(ADM_T.reg.length);n2.className=ADM_T.reg.length?'hot':'';}
   const chips=t==='acc'
-    ?[['all','الكل'],['c1','الصفوف ١–٤'],['c2','الصفوف ٥–١٢'],['soon','تنتهي قريباً'],['off','موقوفة أو منتهية']]
+    ?[['all','الكل'],['c1','الصفوف ١–٤'],['c2','الصفوف ٥–١٢'],['soon','تنتهي قريباً'],['off','موقوفة أو منتهية'],['noai','الذكاء الاصطناعي محظور']]
     :[['all','الكل'],['paid','دفع'],['pending','بانتظار الدفع']];
   const box=document.getElementById('adm-t-chips');
   if(box)box.innerHTML=chips.map(([k,l])=>`<button class="${ADM_T.chip===k?'on':''}" onclick="ADM_T.chip='${k}';admTTab(ADM_T.tab)">${l}</button>`).join('');
@@ -14987,13 +14988,13 @@ function admTRender(){
   if(ADM_T.tab==='acc'){
     const c=ADM_T.chip;
     const rows=ADM_T.acc.map((a,i)=>({a,i,s:admTState(a)})).filter(({a,s})=>
-      hit(a.name,a.email,a.phone)&&(c==='all'||(c==='c1'&&a.cycle==='cycle1')||(c==='c2'&&a.cycle==='main')||(c==='soon'&&s.k==='warn')||(c==='off'&&s.k==='bad')));
+      hit(a.name,a.email,a.phone)&&(c==='all'||(c==='c1'&&a.cycle==='cycle1')||(c==='c2'&&a.cycle==='main')||(c==='soon'&&s.k==='warn')||(c==='off'&&s.k==='bad')||(c==='noai'&&a.aiBlocked)));
     list.innerHTML=rows.length?rows.map(({a,i,s})=>{
       const wa=admTWa(a.phone);
       const sub=[a.cycle==='cycle1'?'الصفوف ١–٤':'الصفوف ٥–١٢',a.grades&&('الصف '+a.grades),a.cycle==='cycle1'&&a.hasProfile&&!a.setup?'لم يُكمل الإعداد':'',a.cycle==='cycle1'&&!a.hasProfile?'لم يدخل بعد':''].filter(Boolean).map(escHtml).join(' · ');
       return `<div class="adm-t-row">
         <div class="adm-t-av">${escHtml(admTInit(a.name||a.email))}</div>
-        <div class="adm-t-main"><div class="n">${escHtml(a.name||'بلا اسم بعد')}</div>
+        <div class="adm-t-main"><div class="n">${escHtml(a.name||'بلا اسم بعد')}<button class="adm-ai-tg${a.aiBlocked?' off':''}" onclick="admTAiToggle(${i})" title="${a.aiBlocked?'الذكاء الاصطناعي محظور — اضغط للسماح':'اضغط لحظر استهلاك رصيد الذكاء الاصطناعي'}" aria-pressed="${a.aiBlocked}">${a.aiBlocked?'🚫 الذكاء الاصطناعي محظور':'✨ الذكاء الاصطناعي'}</button></div>
           <div class="e" dir="ltr">${escHtml(a.email||'')}</div><div class="s">${sub}</div></div>
         <div class="adm-t-st"><span class="adm-pill ${s.k}">${s.t}</span>${a.last?`<small>نشط ${new Date(a.last).toLocaleDateString('ar-OM',{day:'numeric',month:'short'})}</small>`:''}</div>
         <div class="adm-t-act">${wa?`<a class="adm-t-ib" href="${wa}" target="_blank" rel="noopener" title="واتساب" aria-label="واتساب">${ADM_WA_SVG}</a>`:''}
@@ -15035,6 +15036,7 @@ function admTMenu(i,btn){
   if(s.k==='bad')it.unshift({t:'إعادة التفعيل (٥ أشهر)',f:()=>admTExtend(i,150,true)});
   if(a.regId)it.push({t:'إعادة تعيين كلمة المرور',f:async()=>{await ref_resetTeacherPassword(a.regId);}});
   it.push({t:'رسالة خاصة',f:()=>{showPage('c1msgs');setTimeout(()=>{try{c1msgTab('private');}catch(_){}},120);}});
+  it.push({t:a.aiBlocked?'السماح باستعمال الذكاء الاصطناعي':'حظر استهلاك رصيد الذكاء الاصطناعي',danger:!a.aiBlocked,f:()=>admTAiToggle(i)});
   if(s.k!=='bad')it.push({t:'إيقاف الحساب',danger:true,f:()=>admTSuspend(i)});
   admTPop(btn,it);
 }
@@ -15045,6 +15047,15 @@ function admTRegMenu(i,btn){
   it.push({t:'إنشاء حساب ببريد وكلمة مرور أختارهما',f:async()=>{await ref_createCustomTeacherAccount(r.id);admTLoad();}});
   it.push({t:'حذف الطلب',danger:true,f:async()=>{await ref_deleteRegistration(r.id);admTLoad();}});
   admTPop(btn,it);
+}
+// حظر الذكاء الاصطناعي لمعلّمٍ بعينه (١٩ نوفمبر): يكتب allowed_emails.ai_blocked،
+// ويرفض takeQuota في الخادم كل نداءات التوليد لهذا الحساب ما دام الحظر قائماً.
+async function admTAiToggle(i){
+  const a=ADM_T.acc[i];if(!a)return;const to=!a.aiBlocked,who=a.name||a.email;
+  if(!await uiConfirm(to?`حظر «${who}» من استهلاك رصيد الذكاء الاصطناعي؟\nيبقى حسابه يعمل، لكن كل أدوات التوليد (التحضير، الأسئلة، الإنفوجرافيك، الألعاب، نور…) تتوقّف له حتى ترفع الحظر.`:`السماح لـ«${who}» باستعمال الذكاء الاصطناعي من جديد؟`))return;
+  const{error}=await sb.from('allowed_emails').update({ai_blocked:to}).eq('email',a.email);
+  if(error){toast('❌ تعذّر الحفظ: '+(error.message||''),true);return;}
+  a.aiBlocked=to;admTRender();toast(to?'🚫 حُظر الذكاء الاصطناعي لهذا المعلّم':'✅ أُعيد السماح بالذكاء الاصطناعي');
 }
 async function admTActivate(i,plan){const r=ADM_T.reg[i];if(r)await ref_activateTeacher(r.id,plan);}
 async function admTSetExpiry(a,iso){
