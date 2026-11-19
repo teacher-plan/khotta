@@ -4242,6 +4242,23 @@ const FIRST_CYCLE_SUBJECTS=['الهوية والمواطنة','ديني حيات
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
   auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
 });
+// ══ صفحات الكتب وأدلّة المعلّم من Cloudflare R2 (files.khotati.com) — كما في cycle1.html ══
+// نُقلت كلّها إلى R2 وحُذفت من مخزن Supabase (١٧ نوفمبر)، فـgetPublicUrl يُعيد رابط R2
+// لمساري books/ وteacher-guides/ فقط. صفحةٌ رُفعت للتوّ ولم تُنسخ بعد تُحمَّل من Supabase عند فشلها.
+const KH_R2='https://files.khotati.com/';
+const KH_R2_RE=/^(books|teacher-guides)\//;
+(function(){
+  const from=sb.storage.from.bind(sb.storage);
+  sb.storage.from=b=>{const o=from(b);
+    if(b==='library-files'&&o&&o.getPublicUrl){const g=o.getPublicUrl.bind(o);
+      o.getPublicUrl=(p,opt)=>{const r=g(p,opt);
+        if(!opt&&KH_R2_RE.test(String(p||'')))r.data.publicUrl=KH_R2+'library-files/'+String(p).split('/').map(encodeURIComponent).join('/');
+        return r;};}
+    return o;};
+  document.addEventListener('error',e=>{const t=e.target;
+    if(t&&t.tagName==='IMG'&&t.src&&t.src.indexOf(KH_R2)===0&&!t.dataset.khFb){
+      t.dataset.khFb='1';t.src=SUPABASE_URL+'/storage/v1/object/public/'+t.src.slice(KH_R2.length);}},true);
+})();
 let currentUser=null,displayName='';
 let googleAccessToken=null;   // توكن Google لرفع الملفات على Drive
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
