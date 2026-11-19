@@ -10,6 +10,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
+import { curFor, readCache, bookKey } from "../_shared/lessonExtract.ts";
+import { conceptPrompt, CONCEPT_EMAILS } from "./concept.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -77,6 +79,20 @@ Deno.serve(async (req) => {
     const editImage = (typeof b.editImage === "string" && b.editImage.startsWith("data:image/")) ? b.editImage : "";
     const isEdit = !!(editImage && editPrompt);
     if (!isEdit && !lessonNames.length) return json({ error: "no_lessons" }, 400);
+    // خريطة مفاهيم مرسومة (تجريبي لحساب المطوّر): تعليماتٌ خاصة بدل تعليمات الإنفوجرافيك
+    const cm = !isEdit && b.concept && typeof b.concept === "object" ? b.concept : null;
+    let cmPrompt = "";
+    if (cm) {
+      if (!CONCEPT_EMAILS.includes((user.email || "").toLowerCase())) return await refund({ error: "forbidden" }, 403);
+      const cur = await curFor(admin, grade, subject, String(b.unit || ""), lessonNames[0]).catch(() => null);
+      const ex = cur ? await readCache(admin, bookKey(cur.id)) : null;
+      if (!ex || !ex.summary) return await refund({ error: "no_extract", message: "حضّر الدرس أولاً: الخريطة تُبنى من قراءة صفحات الدرس أثناء التحضير." }, 409);
+      const mm = await readCache(admin, `mindmaps/${cur.id}.json`);
+      const want = ["radial", "tree", "flow"].includes(cm.type) ? cm.type : "radial";
+      const skeleton = mm && Array.isArray(mm.maps) ? (mm.maps.find((x: { type: string }) => x.type === want) || mm.maps[0]) : null;
+      const g = parseInt(grade) || 0;
+      cmPrompt = conceptPrompt(cm, { lesson: cur.lesson, unit: cur.unit, summary: ex.summary, exam: ex.exam, skeleton }, { grade, subject, age: g ? g + 6 : 0, aspect: b.aspect });
+    }
 
     // نموذج الصور — موحّد مع مولّد الشرائح (مفتاح slide_model في ai_settings)
     let model = st.model_infographic || st.slide_model || st.info_model || "google/gemini-2.5-flash-image";
@@ -100,7 +116,7 @@ Deno.serve(async (req) => {
     // (الحلقة الأولى) بالضبط: الأول=٧، الثاني=٨، الثالث=٩، الرابع=١٠.
     const AGE_BY_GRADE: Record<number, number> = { 1: 7, 2: 8, 3: 9, 4: 10 };
     const age = AGE_BY_GRADE[gradeNum] ?? (gradeNum ? gradeNum + 6 : 0);
-    const userPrompt = [
+    let userPrompt = [
       `أنشئ إنفوجرافيك تعليمياً واحداً متكاملاً بالعربية الفصحى لطلاب ${grade ? "الصف " + grade : "المدرسة"} في مادة ${subject}.`,
       `عنوان الدرس/الدروس: ${lessonNames.join("، ")} — استخدم هذا العنوان أولاً لتكوين فكرةٍ عامة عن موضوع الدرس واتجاهه قبل قراءة أي نصٍّ إضافي.`,
       "(معلومة خلفية للتوليد فقط — ممنوع كتابة أي جزءٍ منها كعنوانٍ أو نصٍّ داخل الإنفوجرافيك نفسه): المرجع المنهجي هو كامبردج (Cambridge) المعتمد في مدارس سلطنة عُمان تحديداً لا أي دولة أخرى. عنوان الإنفوجرافيك الظاهر يجب أن يكون اسم الدرس/الموضوع نفسه فقط، لا اسم المنهج أو الدولة.",
@@ -126,6 +142,7 @@ Deno.serve(async (req) => {
     ].filter(Boolean).join("\n");
 
     // محتوى الطلب: النص + صفحات الدرس المرجعية (إن وُجدت)
+    if (cmPrompt) userPrompt = cmPrompt;
     const genContent: unknown[] = [{ type: "text", text: userPrompt }];
     for (const u of bookImages) genContent.push({ type: "image_url", image_url: { url: u } });
 
