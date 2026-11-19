@@ -7084,7 +7084,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='d503944';
+const KH_BUILD='2bd2f19';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -13931,6 +13931,9 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .cs-night{color:#F6EBD0}
 .cs-night .school{color:#E8CF8E}
 .cs-night .ttl{font-size:21mm;color:#E7C46D}
+/* خطّ الرقعة طويل الصعود: مسافةٌ فوق العنوان كي لا يلامس سطر اسم المدرسة */
+.cs-night .ttl,.cs-royal .ttl{margin-top:4.5mm}
+.cs-modern .school{margin-bottom:3mm}
 .cs-night .kind{color:#1C1406;background:#E0BD62}
 .cs-night .pre,.cs-night .to{color:#E9DDBF}
 .cs-night .nm{color:#FFF6DC}
@@ -14184,6 +14187,10 @@ async function certToPng(item){
   const f=certHiddenFrame();
   const d=f.contentDocument;
   d.open();d.write(certDocHtml([item]));d.close();
+  // خطوط الشهادة تُحمَّل في الإطار (رابطٌ media=print يتبدّل عند وصوله): ننتظر وصول الرابط ثم الخطوط نفسها
+  const lk=d.querySelector('link[rel=stylesheet]');
+  if(lk&&lk.media!=='all')await new Promise(r=>{lk.addEventListener('load',r,{once:true});lk.addEventListener('error',r,{once:true});setTimeout(r,6000);});
+  try{await Promise.all(["700 20px 'Aref Ruqaa'","400 20px Amiri","700 20px Amiri","700 20px Tajawal","800 20px Tajawal","700 20px 'Reem Kufi'"].map(f=>d.fonts.load(f,'شهادة')));}catch(e){}
   try{await d.fonts.ready;}catch(e){}
   await Promise.all([...d.images].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000);})));
   await new Promise(r=>setTimeout(r,450));
@@ -14193,9 +14200,16 @@ async function certToPng(item){
   // عطلٌ معروفٌ في html2canvas مع تصاميم بطبقاتٍ absolute كثيرة كهذه الشهادة
   // (المربّعات المائلة والشريط والإطار كلّها فوق بعضها). التقاط DOM العادي
   // (بلا foreignObjectRendering) أبطأ قليلاً لكنه المطابق فعلياً للمعاينة.
-  const cv=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,
-    backgroundColor:'#FDF8F0',width:el.offsetWidth,height:el.offsetHeight,foreignObjectRendering:false});
-  return cv.toDataURL('image/png');
+  // اللوح يُنشأ داخل الإطار نفسه: خطوط اللوح هي خطوط الوثيقة التي أنشأته. كان يُنشأ في الصفحة
+  // الأم (بلا Amiri/Tajawal) فيقيس html2canvas الكلمات بخطّ الشهادة ويرسمها بخطٍّ أعرض،
+  // فتتراكب الكلمات وتضيع المسافات بينها (ظهر على الآيفون).
+  const base=d.createElement('canvas'),W=el.offsetWidth,H=el.offsetHeight;
+  base.width=Math.round(W*2);base.height=Math.round(H*2);base.style.cssText='position:absolute;left:-99999px;top:0;width:'+W+'px;height:'+H+'px';d.body.appendChild(base);
+  try{
+    const cv=await html2canvas(el,{canvas:base,scale:2,useCORS:true,allowTaint:true,
+      backgroundColor:'#FDF8F0',width:W,height:H,foreignObjectRendering:false});
+    return cv.toDataURL('image/png');
+  }finally{base.remove();}
 }
 
 function certDataUrlToFile(dataUrl,name){
