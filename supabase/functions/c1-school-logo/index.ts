@@ -38,6 +38,15 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // موضع الشعار وحجمه في الشهادات
+    const pos = ["left", "center", "right"].includes(b.pos) ? b.pos : null;
+    const size = ["s", "m", "l"].includes(b.size) ? b.size : null;
+    if (b.action === "style") {
+      if (!pos && !size) return json({ error: "bad_style" }, 400);
+      await admin.from("c1_schools").update({ ...(pos ? { logo_pos: pos } : {}), ...(size ? { logo_size: size } : {}) }).eq("id", school.id);
+      return json({ ok: true });
+    }
+
     if (b.action === "save") {
       const png = String(b.png || "");
       if (!png.startsWith("data:image/png;base64,")) return json({ error: "bad_image" }, 400);
@@ -47,7 +56,7 @@ Deno.serve(async (req) => {
       const { error } = await admin.storage.from("library-files").upload(key, new Blob([bin], { type: "image/png" }), { upsert: true, contentType: "image/png", cacheControl: "31536000" });
       if (error) return json({ error: "upload_failed" }, 500);
       const url = admin.storage.from("library-files").getPublicUrl(key).data.publicUrl;
-      await admin.from("c1_schools").update({ logo_url: url, logo_at: new Date().toISOString() }).eq("id", school.id);
+      await admin.from("c1_schools").update({ logo_url: url, logo_at: new Date().toISOString(), ...(pos ? { logo_pos: pos } : {}), ...(size ? { logo_size: size } : {}) }).eq("id", school.id);
       return json({ ok: true, logo_url: url });
     }
 

@@ -1487,6 +1487,8 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 .slg-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;align-items:start}
 .slg-src{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;touch-action:none;user-select:none}
 .slg-src img{display:block;width:100%;height:auto}
+.slg-seg{margin-top:10px}.slg-seg>span{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:4px}.slg-mode{margin-bottom:8px}
+.slg-src.free{cursor:crosshair}.slg-lasso{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.slg-lasso polygon{fill:rgba(224,123,57,.18);stroke:#E07B39;stroke-width:.5;vector-effect:non-scaling-stroke}
 .slg-box{position:absolute;border:3px solid #E07B39;box-shadow:0 0 0 9999px rgba(0,0,0,.38);border-radius:4px}
 .slg-box i{position:absolute;width:26px;height:26px;border-radius:50%;background:#E07B39;border:3px solid #fff;cursor:nwse-resize;touch-action:none}
 .slg-box i[data-h=a]{top:-14px;left:-14px}.slg-box i[data-h=b]{bottom:-14px;right:-14px}
@@ -7186,7 +7188,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='14544ab';
+const KH_BUILD='861c494';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -13353,28 +13355,37 @@ function schRenderTeachers(el){
   el.innerHTML=h;
 }
 
-// ══ شعار الشهادات (٢٠ نوفمبر): رفع صورة ← الذكاء يحدّد مكان الشعار فقط ← قصٌّ من الصورة الأصلية
-//    وإزالة الخلفية الفاتحة ← تعديل الحدود باليد ← معاينة على شهادة ← اعتماد لكل معلّمي المدرسة ══
-let SCH_LOGO=undefined,schLg=null;   // schLg: {img,W,H,box:[y0,x0,y1,x1] بكسل,rmbg,busy,out}
-async function schLogoLoad(){try{const{data}=await sb.rpc('c1_school_logo',{p_name:null});SCH_LOGO=(data&&data.logo_url)||'';}catch(e){SCH_LOGO='';}}
+// ══ شعار الشهادات (٢٠–٢١ نوفمبر): رفع صورة ← الذكاء يحدّد مكان الشعار فقط ← قصٌّ من الصورة الأصلية
+//    (إطار أو قصٌّ حرّ باليد) وإزالة الخلفية ← معاينة على شهادة بالموضع والحجم ← اعتماد لكل معلّمي المدرسة ══
+let SCH_LOGO=undefined,schLg=null;   // SCH_LOGO:{url,pos,size} · schLg:{img,W,H,box,poly,mode,rmbg,busy,out}
+const SLG_POS=[['left','أعلى اليسار'],['center','أعلى الوسط'],['right','أعلى اليمين']],SLG_SIZE=[['s','صغير'],['m','متوسط'],['l','كبير']];
+async function schLogoLoad(){try{const{data}=await sb.rpc('c1_school_logo',{p_name:null});SCH_LOGO={url:(data&&data.logo_url)||'',pos:(data&&data.logo_pos)||'left',size:(data&&data.logo_size)||'m'};}catch(e){SCH_LOGO={url:'',pos:'left',size:'m'};}}
+function schLogoSeg(k,cur,fn){const o=k==='pos'?SLG_POS:SLG_SIZE;return `<div class="slg-seg"><span>${k==='pos'?'الموضع':'الحجم'}</span><div class="cm-seg">${o.map(([v,t])=>`<button class="${cur===v?'on':''}" onclick="${fn}('${k}','${v}')">${t}</button>`).join('')}</div></div>`;}
 async function schRenderLogo(el){
   if(SCH_LOGO===undefined){el.innerHTML='<div class="plan-empty-card"><div class="spin"></div></div>';await schLogoLoad();if(schTab!=='logo')return;}
   if(schLg){schLogoEditor(el);return;}
+  const L=SCH_LOGO;
   el.innerHTML=`<div class="abs-sec slg"><h3>شعار المدرسة في الشهادات</h3>
-    <p class="sch-note">يظهر الشعار أعلى كل شهادة تقدير يصدرها معلّمو المدرسة: المنضمّون برمزها، ومن كتب اسمها في ملفّه. ارفع صورةً فيها الشعار — ملفّ الشعار نفسه، أو صورة ورقةٍ رسمية أو لافتة — فيحدّد الذكاء الاصطناعي مكانه ويُقصّ من صورتك كما هو بلا أي تعديل.</p>
-    ${SCH_LOGO?`<div class="slg-cur"><div class="slg-chk"><img src="${escAttr(SCH_LOGO)}" alt="شعار المدرسة"></div><div class="slg-prev" id="slg-prev"></div></div>`:'<div class="plan-empty-card">لا شعار بعد.</div>'}
-    <div class="slg-acts"><label class="c1-mbtn go slg-up"><input type="file" accept="image/*" hidden onchange="schLogoPick(this)">${SCH_LOGO?'تغيير الشعار':'رفع صورة الشعار'}</label>${SCH_LOGO?'<button class="abs-mini" onclick="schLogoRemove()">إزالة الشعار</button>':''}</div></div>`;
-  if(SCH_LOGO)schLogoCertPrev(SCH_LOGO);
+    <p class="sch-note">يظهر الشعار في كل شهادة تقدير يصدرها معلّمو المدرسة: المنضمّون برمزها، ومن كتب اسمها في ملفّه. ارفع صورةً فيها الشعار — ملفّ الشعار نفسه، أو صورة ورقةٍ رسمية أو لافتة — فيحدّد الذكاء الاصطناعي مكانه ويُقصّ من صورتك كما هو بلا أي تعديل.</p>
+    ${L.url?`<div class="slg-cur"><div class="slg-chk"><img src="${escAttr(L.url)}" alt="شعار المدرسة"></div><div>${schLogoSeg('pos',L.pos,'schLogoStyle')}${schLogoSeg('size',L.size,'schLogoStyle')}</div></div><div class="sch-cl" style="margin-top:12px">معاينة على شهادة</div><div class="slg-prev" id="slg-prev"></div>`:'<div class="plan-empty-card">لا شعار بعد.</div>'}
+    <div class="slg-acts"><label class="c1-mbtn go slg-up"><input type="file" accept="image/*" hidden onchange="schLogoPick(this)">${L.url?'تغيير الشعار':'رفع صورة الشعار'}</label>${L.url?'<button class="abs-mini" onclick="schLogoRemove()">إزالة الشعار</button>':''}</div></div>`;
+  if(L.url)schLogoCertPrev(L.url,L.pos,L.size);
 }
-function schLogoCertPrev(url){
+// تغيير الموضع/الحجم للشعار المعتمد: يُحفظ فوراً
+async function schLogoStyle(k,v){
+  const old=SCH_LOGO[k];SCH_LOGO[k]=v;schRender();
+  try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'style',[k]:v}});if(r.error)throw r.error;toast('حُفظ — يظهر هكذا في شهادات كل المعلّمين','ok');}
+  catch(e){SCH_LOGO[k]=old;schRender();toast('تعذّر الحفظ — حاول مجدداً',true);}
+}
+function schLogoCertPrev(url,pos,size){
   const box=document.getElementById('slg-prev');if(!box)return;
-  const it={name:'اسم الطالب',type:'excel',stars:12,why:'لتفوّقه وتميّزه',school:(SCH&&SCH.school&&SCH.school.name)||'',logo:url,teacher:'اسم المعلّم',cls:'الشعبة',date:certDateLine(),style:'royal'};
+  const it={name:'اسم الطالب',type:'excel',stars:12,why:'لتفوّقه وتميّزه',school:(SCH&&SCH.school&&SCH.school.name)||'',logo:url,logoPos:pos,logoSize:size,teacher:'اسم المعلّم',cls:'الشعبة',date:certDateLine(),style:'royal'};
   const f=document.createElement('iframe');f.className='slg-frame';f.setAttribute('aria-label','معاينة الشهادة');box.innerHTML='';box.appendChild(f);
   const sc=Math.min(1,(box.clientWidth||520)/1123);f.style.height=Math.round(794*sc)+'px';f.srcdoc=certDocHtml([it],sc);
 }
 async function schLogoRemove(){
   if(!await c1Confirm('إزالة شعار المدرسة من شهادات كل المعلّمين؟'))return;
-  try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'remove'}});if(r.error)throw r.error;SCH_LOGO='';toast('أُزيل الشعار','ok');schRender();}catch(e){toast('تعذّر — حاول مجدداً',true);}
+  try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'remove'}});if(r.error)throw r.error;SCH_LOGO.url='';toast('أُزيل الشعار','ok');schRender();}catch(e){toast('تعذّر — حاول مجدداً',true);}
 }
 function schLogoReadImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=u;});}
 function schLogoSmall(im,max){const s=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.9);}
@@ -13383,44 +13394,45 @@ async function schLogoPick(inp){
   if(!/^image\//.test(f.type)){toast('ارفع صورة (PNG أو JPG)',true);return;}
   let im;try{im=await schLogoReadImg(f);}catch(e){toast('تعذّر فتح الصورة',true);return;}
   const W=im.naturalWidth,H=im.naturalHeight;
-  schLg={img:im,W,H,box:[0,0,H,W],rmbg:true,busy:true,note:''};schRender();
+  schLg={img:im,W,H,box:[0,0,H,W],poly:null,mode:'box',rmbg:true,busy:true,note:'',pos:(SCH_LOGO&&SCH_LOGO.pos)||'left',size:(SCH_LOGO&&SCH_LOGO.size)||'m'};schRender();
   let v=null;
   try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'locate',image:schLogoSmall(im,1600)}});if(!r.error)v=r.data;}catch(e){}
   if(v&&v.found&&Array.isArray(v.box)){const [y0,x0,y1,x1]=v.box;schLg.box=[y0/1000*H,x0/1000*W,y1/1000*H,x1/1000*W];schLg.rmbg=v.bg!=='busy';schLg.note=v.note||'';}
-  else schLg.note=(v&&v.note?v.note+' — ':'')+'لم يُحدَّد الشعار تلقائياً؛ اسحب زوايا الإطار حوله بيدك.';
-  // هامشٌ صغير حول ما حدّده النموذج (يُقصّ الفائض بعدها مع الخلفية)
+  else schLg.note=(v&&v.note?v.note+' — ':'')+'لم يُحدَّد الشعار تلقائياً؛ اسحب زوايا الإطار حوله، أو استعمل «القصّ الحرّ».';
   const b=schLg.box,py=(b[2]-b[0])*.015+2,px=(b[3]-b[1])*.015+2;schLg.box=[Math.max(0,b[0]-py),Math.max(0,b[1]-px),Math.min(H,b[2]+py),Math.min(W,b[3]+px)];
   schLg.busy=false;schRender();
 }
-// القصّ من الصورة الأصلية + إزالة الخلفية الفاتحة بالتعبئة من الحواف (تبقى بيضاء الشعار الداخلية)
+// القصّ من الصورة الأصلية: الإطار أو الشكل الحرّ، ثم إزالة الخلفية بالتعبئة من الحواف
 function schLogoCrop(){
   const L=schLg,[y0,x0,y1,x1]=L.box.map(Math.round),w=Math.max(4,x1-x0),h=Math.max(4,y1-y0);
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(L.img,x0,y0,w,h,0,0,w,h);
+  if(L.mode==='free'&&L.poly&&L.poly.length>2){ // ما خارج الخطّ الحرّ يُمحى
+    g.globalCompositeOperation='destination-in';g.beginPath();L.poly.forEach(([x,y],i)=>i?g.lineTo(x-x0,y-y0):g.moveTo(x-x0,y-y0));g.closePath();g.fill();g.globalCompositeOperation='source-over';}
   if(L.rmbg){
     const d=g.getImageData(0,0,w,h),p=d.data,seen=new Uint8Array(w*h),q=[];
-    const at=(x,y)=>(y*w+x)*4;
-    // لون الخلفية: متوسّط الحواف
-    let r=0,gg=0,bb=0,n=0;for(let x=0;x<w;x++)for(const y of [0,h-1]){const k=at(x,y);r+=p[k];gg+=p[k+1];bb+=p[k+2];n++;}
-    for(let y=0;y<h;y++)for(const x of [0,w-1]){const k=at(x,y);r+=p[k];gg+=p[k+1];bb+=p[k+2];n++;}
-    r/=n;gg/=n;bb/=n;const light=(r+gg+bb)/3>150,T=light?60:45;
-    const near=k=>p[k+3]<20||Math.abs(p[k]-r)+Math.abs(p[k+1]-gg)+Math.abs(p[k+2]-bb)<T;
-    for(let x=0;x<w;x++){q.push(x,0,x,h-1);}for(let y=0;y<h;y++){q.push(0,y,w-1,y);}
-    while(q.length){const y=q.pop(),x=q.pop();if(x<0||y<0||x>=w||y>=h)continue;const i=y*w+x;if(seen[i])continue;seen[i]=1;const k=i*4;if(!near(k))continue;
-      p[k+3]=0;q.push(x+1,y,x-1,y,x,y+1,x,y-1);}
-    // بقايا ما حول الشعار: كل كتلةٍ صغيرة تلامس حافة القصّ (طرف سطرٍ أو ترويسة) تُحذف
+    // لون الخلفية: الأكثر تكراراً على الحواف (لا المتوسّط — خطٌّ داكن على الحافة كان يفسده)
+    const cnt=new Map();const tally=k=>{if(p[k+3]<20)return;const key=(p[k]>>4)<<8|(p[k+1]>>4)<<4|(p[k+2]>>4);cnt.set(key,(cnt.get(key)||0)+1);};
+    for(let x=0;x<w;x++){tally(x*4);tally(((h-1)*w+x)*4);}for(let y=0;y<h;y++){tally(y*w*4);tally((y*w+w-1)*4);}
+    let best=0,bk=0xfff;cnt.forEach((n,k)=>{if(n>best){best=n;bk=k;}});
+    const r=((bk>>8)&15)*16+8,gg=((bk>>4)&15)*16+8,bb=(bk&15)*16+8,light=(r+gg+bb)/3>170;
+    const near=k=>p[k+3]<20||Math.abs(p[k]-r)+Math.abs(p[k+1]-gg)+Math.abs(p[k+2]-bb)<72||(light&&p[k]>212&&p[k+1]>212&&p[k+2]>212);
+    for(let x=0;x<w;x++)q.push(x,0,x,h-1);for(let y=0;y<h;y++)q.push(0,y,w-1,y);
+    while(q.length){const y=q.pop(),x=q.pop();if(x<0||y<0||x>=w||y>=h)continue;const i=y*w+x;if(seen[i])continue;seen[i]=1;const k=i*4;if(!near(k))continue;p[k+3]=0;q.push(x+1,y,x-1,y,x,y+1,x,y-1);}
+    // بقايا ما حول الشعار: كل كتلةٍ صغيرة تلامس حافة القصّ (خطّ أو طرف سطر) تُحذف
     const lab=new Int32Array(w*h).fill(-1),comps=[];let total=0;
     for(let i0=0;i0<w*h;i0++){if(lab[i0]>=0||p[i0*4+3]<25)continue;const id=comps.length,st=[i0];lab[i0]=id;let n2=0,edge=false;const px=[];
-      while(st.length){const i=st.pop(),x=i%w,y=(i-x)/w;n2++;px.push(i);if(x===0||y===0||x===w-1||y===h-1)edge=true;
+      let mnx=w,mny=h,mxx=0,mxy=0;
+      while(st.length){const i=st.pop(),x=i%w,y=(i-x)/w;n2++;px.push(i);if(x===0||y===0||x===w-1||y===h-1)edge=true;if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;
         for(const j of [x>0?i-1:-1,x<w-1?i+1:-1,y>0?i-w:-1,y<h-1?i+w:-1])if(j>=0&&lab[j]<0&&p[j*4+3]>=25){lab[j]=id;st.push(j);}}
-      comps.push({n:n2,edge,px});total+=n2;}
-    comps.forEach(c=>{if(c.edge&&c.n<total*.05)c.px.forEach(i=>{p[i*4+3]=0;});});
+      const bw=mxx-mnx+1,bh=mxy-mny+1;comps.push({n:n2,edge,px,thin:Math.max(bw,bh)/Math.max(1,Math.min(bw,bh))>9});total+=n2;}
+    // يُحذف: ما يلامس الحافة وهو صغير، والخطوط الرفيعة الطويلة المنفصلة (سطرٌ تحت الشعار)، والنقاط الصغيرة جداً
+    comps.forEach(cc=>{if((cc.edge&&cc.n<total*.05)||(cc.thin&&cc.n<total*.03)||cc.n<total*.0015)cc.px.forEach(i=>{p[i*4+3]=0;});});
     g.putImageData(d,0,0);
   }
-  // قصّ الشفاف الزائد وتوسيط بهامش ٤٪
   const d2=g.getImageData(0,0,w,h).data;let a=w,bq=h,cq=-1,dq=-1;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d2[(y*w+x)*4+3]>24){if(x<a)a=x;if(x>cq)cq=x;if(y<bq)bq=y;if(y>dq)dq=y;}
   if(cq<0){a=0;bq=0;cq=w-1;dq=h-1;}
-  const cw=cq-a+1,ch=dq-bq+1,pad=Math.round(Math.max(cw,ch)*.04),S=Math.min(1,900/Math.max(cw,ch));
+  const cw=cq-a+1,ch=dq-bq+1,pad=Math.round(Math.max(cw,ch)*.03),S=Math.min(1,900/Math.max(cw,ch));
   const o=document.createElement('canvas');o.width=Math.round((cw+2*pad)*S);o.height=Math.round((ch+2*pad)*S);
   const og=o.getContext('2d');og.imageSmoothingQuality='high';og.drawImage(c,a,bq,cw,ch,pad*S,pad*S,cw*S,ch*S);
   return o.toDataURL('image/png');
@@ -13429,17 +13441,24 @@ function schLogoEditor(el){
   const L=schLg;
   if(L.busy){el.innerHTML='<div class="abs-sec slg"><h3>شعار المدرسة في الشهادات</h3><div class="plan-empty-card"><div class="spin"></div><p>يحدّد الذكاء الاصطناعي مكان الشعار في الصورة…</p></div></div>';return;}
   const url=schLogoCrop();L.out=url;
+  const poly=L.poly&&L.poly.length>2?L.poly.map(([x,y])=>(x/L.W*100).toFixed(2)+','+(y/L.H*100).toFixed(2)).join(' '):'';
   el.innerHTML=`<div class="abs-sec slg"><h3>راجع الشعار قبل اعتماده</h3>
     ${L.note?`<p class="sch-note">${escHtml(L.note)}</p>`:''}
     <div class="slg-grid">
-      <div><div class="sch-cl">الصورة الأصلية — اسحب الزاويتين لضبط الإطار حول الشعار</div><div class="slg-src" id="slg-src"><img src="${escAttr(L.img.src)}" alt=""><div class="slg-box" id="slg-box"><i data-h="a"></i><i data-h="b"></i></div></div></div>
+      <div><div class="cm-seg slg-mode"><button class="${L.mode==='box'?'on':''}" onclick="schLg.mode='box';schRender()">إطار</button><button class="${L.mode==='free'?'on':''}" onclick="schLg.mode='free';schRender()">✏️ قصٌّ حرّ</button></div>
+        <div class="sch-cl">${L.mode==='free'?'ارسم بإصبعك أو بالفأرة خطّاً حول حدود الشعار — يُمحى كل ما خارجه':'الصورة الأصلية — اسحب الزاويتين لضبط الإطار حول الشعار'}</div>
+        <div class="slg-src${L.mode==='free'?' free':''}" id="slg-src"><img src="${escAttr(L.img.src)}" alt="">
+          ${L.mode==='free'?`<svg class="slg-lasso" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon id="slg-poly" points="${poly}"/></svg>`:`<div class="slg-box" id="slg-box"><i data-h="a"></i><i data-h="b"></i></div>`}</div></div>
       <div><div class="sch-cl">الشعار بعد القصّ</div><div class="slg-chk big"><img src="${url}" alt="الشعار المقصوص"></div>
-        <label class="cm-chk"><input type="checkbox" ${L.rmbg?'checked':''} onchange="schLg.rmbg=this.checked;schRender()"> إزالة الخلفية حول الشعار</label></div>
+        <label class="cm-chk"><input type="checkbox" ${L.rmbg?'checked':''} onchange="schLg.rmbg=this.checked;schRender()"> إزالة الخلفية حول الشعار</label>
+        ${schLogoSeg('pos',L.pos,'schLgSet')}${schLogoSeg('size',L.size,'schLgSet')}</div>
     </div>
     <div class="sch-cl" style="margin-top:12px">معاينة على شهادة</div><div class="slg-prev" id="slg-prev"></div>
     <div class="slg-acts"><button class="c1-mbtn go" onclick="schLogoSave()">اعتماد الشعار لكل معلّمي المدرسة</button><button class="abs-mini" onclick="schLg=null;schRender()">إلغاء</button></div></div>`;
-  schLogoBoxDraw();schLogoBoxDrag();schLogoCertPrev(url);
+  if(L.mode==='free')schLogoLasso();else{schLogoBoxDraw();schLogoBoxDrag();}
+  schLogoCertPrev(url,L.pos,L.size);
 }
+function schLgSet(k,v){schLg[k]=v;schRender();}
 function schLogoBoxDraw(){
   const L=schLg,bx=document.getElementById('slg-box');if(!bx)return;const[y0,x0,y1,x1]=L.box;
   Object.assign(bx.style,{top:(y0/L.H*100)+'%',left:(x0/L.W*100)+'%',height:((y1-y0)/L.H*100)+'%',width:((x1-x0)/L.W*100)+'%'});
@@ -13452,10 +13471,22 @@ function schLogoBoxDrag(){
     const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);schRender();};
     h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);};});
 }
+// القصّ الحرّ: خطٌّ مغلق حول الشعار؛ الإطار يصير حدود الخطّ
+function schLogoLasso(){
+  const src=document.getElementById('slg-src'),pg=document.getElementById('slg-poly');if(!src)return;
+  src.onpointerdown=e=>{e.preventDefault();src.setPointerCapture(e.pointerId);const pts=[];
+    const at=ev=>{const r=src.getBoundingClientRect();return [Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width))*schLg.W,Math.max(0,Math.min(1,(ev.clientY-r.top)/r.height))*schLg.H];};
+    pts.push(at(e));
+    const mv=ev=>{pts.push(at(ev));pg.setAttribute('points',pts.map(([x,y])=>(x/schLg.W*100).toFixed(2)+','+(y/schLg.H*100).toFixed(2)).join(' '));};
+    const up=()=>{src.removeEventListener('pointermove',mv);src.removeEventListener('pointerup',up);
+      if(pts.length>8){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);schLg.poly=pts;schLg.box=[Math.min(...ys),Math.min(...xs),Math.max(...ys),Math.max(...xs)];}
+      schRender();};
+    src.addEventListener('pointermove',mv);src.addEventListener('pointerup',up);};
+}
 async function schLogoSave(){
   if(!schLg||!schLg.out)return;
-  try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'save',png:schLg.out}});if(r.error||!r.data||!r.data.ok)throw r.error||new Error('save');
-    SCH_LOGO=r.data.logo_url;schLg=null;toast('اعتُمد الشعار — يظهر في شهادات كل معلّمي المدرسة','ok');schRender();}
+  try{const r=await sb.functions.invoke('c1-school-logo',{body:{action:'save',png:schLg.out,pos:schLg.pos,size:schLg.size}});if(r.error||!r.data||!r.data.ok)throw r.error||new Error('save');
+    SCH_LOGO={url:r.data.logo_url,pos:schLg.pos,size:schLg.size};schLg=null;toast('اعتُمد الشعار — يظهر في شهادات كل معلّمي المدرسة','ok');schRender();}
   catch(e){toast('تعذّر حفظ الشعار — حاول مجدداً',true);}
 }
 
@@ -14183,13 +14214,13 @@ function certFlourish(color){
 }
 // شعار المدرسة في الشهادات (٢٠ نوفمبر): ترفعه إدارة المدرسة من حسابها (تبويب «شعار الشهادات»)،
 // ويصل كل معلّمٍ منضمٍّ إليها برمزها، أو كتب اسمها بيده في ملفّه (مطابقةٌ بعد التطبيع — c1_school_logo).
-let CERT_LOGO={at:0,url:'',name:null};
+let CERT_LOGO={at:0,url:'',pos:'left',size:'m',name:null};
 async function certLogoEnsure(){
   const nm=achProfile().school||'';
   if(KH_DEMO||(Date.now()-CERT_LOGO.at<10*60e3&&CERT_LOGO.name===nm))return false;
   const before=CERT_LOGO.url;
-  try{const{data,error}=await sb.rpc('c1_school_logo',{p_name:nm});if(error)throw error;CERT_LOGO={at:Date.now(),url:(data&&data.logo_url)||'',name:nm};}
-  catch(e){CERT_LOGO={at:Date.now(),url:before,name:nm};}
+  try{const{data,error}=await sb.rpc('c1_school_logo',{p_name:nm});if(error)throw error;CERT_LOGO={at:Date.now(),url:(data&&data.logo_url)||'',pos:(data&&data.logo_pos)||'left',size:(data&&data.logo_size)||'m',name:nm};}
+  catch(e){CERT_LOGO={...CERT_LOGO,at:Date.now(),name:nm};}
   return CERT_LOGO.url!==before;
 }
 function certPageHtml(it){
@@ -14202,8 +14233,9 @@ function certPageHtml(it){
   const pre=`${khG('تُهدي المعلّمة','يُهدي المعلّم')} هذه الشهادة بكل فخرٍ واعتزاز`;
   return `<section class="cert cs-${style}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
   ${certArt(style,p,u,it.type)}
+  ${it.logo&&it.logoPos!=='center'?`<img class="slogo-a p-${it.logoPos==='right'?'r':'l'} z-${escAttr(it.logoSize||'m')}" src="${escAttr(it.logo)}" alt="" onerror="this.remove()">`:''}
   <div class="body">
-    ${it.logo?`<img class="slogo" src="${escAttr(it.logo)}" alt="" onerror="this.remove()">`:''}<div class="school">${escHtml(it.school||'')}</div>
+    ${it.logo&&it.logoPos==='center'?`<img class="slogo z-${escAttr(it.logoSize||'m')}" src="${escAttr(it.logo)}" alt="" onerror="this.remove()">`:''}<div class="school">${escHtml(it.school||'')}</div>
     <h1 class="ttl">${escHtml(t.ttl)}</h1>
     <div class="kind">${escHtml(t.nm)}</div>
     <p class="pre">${pre}</p>
@@ -14258,6 +14290,15 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .school{font-family:'Tajawal',sans-serif;font-size:4mm;font-weight:700;min-height:5mm;opacity:.8}
 .slogo{display:block;height:17mm;max-width:40mm;object-fit:contain;margin:-6mm auto 1mm}
 .cs-royal .slogo{margin-top:2mm}.cs-modern .slogo{margin:-6mm 0 1mm auto}
+.slogo.z-s{height:13mm}.slogo.z-l{height:22mm}
+/* الشعار في زاوية الشهادة العليا — داخل الإطار وتحت زخارف الأركان */
+.slogo-a{position:absolute;z-index:4;object-fit:contain;top:21mm;height:31mm;max-width:50mm}
+.slogo-a.z-s{height:23mm;max-width:38mm}.slogo-a.z-l{height:40mm;max-width:62mm}
+.slogo-a.p-l{left:26mm;object-position:left top}.slogo-a.p-r{right:26mm;object-position:right top}
+.cs-royal .slogo-a{top:24mm}.cs-royal .slogo-a.p-l{left:28mm}.cs-royal .slogo-a.p-r{right:28mm}
+.cs-canva .slogo-a{top:27mm}.cs-canva .slogo-a.p-l{left:31mm}.cs-canva .slogo-a.p-r{right:31mm}
+.cs-night .slogo-a{top:20mm}
+.cs-modern .slogo-a{top:18mm}.cs-modern .slogo-a.p-r{right:auto;left:26mm}
 .ttl{font-family:'Aref Ruqaa','Amiri',serif;font-weight:700;line-height:1.15;margin-top:1mm}
 .kind{font-family:'Tajawal',sans-serif;font-size:3.6mm;font-weight:800;border-radius:3mm;padding:.6mm 4mm;margin-top:1mm}
 .pre{font-size:4.6mm;margin-top:4mm}
@@ -14364,7 +14405,7 @@ function certItemFor(classId,idx,typeOverride,reasonOverride){
     stars:starArr(classId)[idx]||0,
     why:(reasonOverride||'').trim()||certWhyText(type),
     school:ap.school||'',
-    logo:CERT_LOGO.url||'',
+    logo:CERT_LOGO.url||'',logoPos:CERT_LOGO.pos,logoSize:CERT_LOGO.size,
     teacher:ap.name||profile.display_name||'',
     cls:cls.name||'',
     date:certDateLine(),
