@@ -16398,22 +16398,28 @@ function lyOptsInit(){
 }
 const lyE=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function lyDocHtml(s){
-  const c=s.content||{},cards=c.cards||[];
+  const c=s.content||{},cards=c.cards||[],e=c.example,terms=c.terms||[],tip=c.tip;
   const pts=k=>(k.points||[]).map(p=>`<p>${lyE(p)}</p>`).join('');
   const fx=k=>k.formula?`<div class="eq">${lyE(k.formula)}</div>`:'';
-  const COL=['#3D7DB0','#2E8A57','#C57A1E','#7A5BA6'];
+  const exH=e?`<h3>${lyE(e.label||'مثال')}</h3>
+      ${(e.lines||[]).length?`<div class="v${e.lines.length===2&&s.layout!=='cols'?' verse':''}">${e.lines.map(l=>`<span>${lyE(l)}</span>`).join('')}</div>`:''}
+      ${(e.steps||[]).length?`<div class="steps">${e.steps.map((x,i)=>`<p class="stp"><i>${egArNum(i+1)}</i>${lyE(x)}</p>`).join('')}</div>`:''}
+      ${(e.head||[]).length?`<table><tr>${e.head.map(h=>`<th>${lyE(h)}</th>`).join('')}</tr><tr>${e.row.map(v=>`<td>${lyE(v)}</td>`).join('')}</tr></table>`:''}
+      ${e.note?`<p class="cv">${lyE(e.note)}</p>`:''}`:'';
+  const termsH=terms.length?`<h3>المصطلحات</h3><div class="terms">${terms.map(t=>`<p class="tm"><b>${lyE(t.t)}:</b> ${lyE(t.d)}</p>`).join('')}</div>`:'';
+  const tipH=tip?`<div class="tip ${tip.kind==='انتبه'?'warn':''}"><b>${tip.kind==='انتبه'?'⚠️ انتبه':'💡 تذكّر'}</b> ${lyE(tip.text)}</div>`:'';
+  const obj=c.objective?`<div class="obj">🎯 ${lyE(c.objective)}</div>`:'';
+  const COL=['#3D7DB0','#2E8A57','#C57A1E'];
   let body='';
   if(s.layout==='cols'){
-    body=`<h1><span>${lyE(c.title)}</span></h1>`+cards.slice(0,4).map((k,i)=>
-      `<div class="col" style="right:${20+i*480}px"><span class="b" style="background:${COL[i]}">${lyE(k.h)}</span><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('');
+    body=`<div class="top"><h1>${lyE(c.title)}</h1>${obj}</div>`+cards.slice(0,3).map((k,i)=>
+      `<div class="col" style="right:${20+i*480}px"><span class="b" style="background:${COL[i]}">${lyE(k.h)}</span><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('')
+      +`<div class="panel">${termsH}${e?`<div class="exb">${exH}</div>`:''}${tipH}</div>`;
   }else{
-    const BG=['#DDEEF6','#FBE3E6','#FFF1CF'],e=c.example;
-    const ex=e?`<div class="c c3"><h2>${lyE(e.label||'مثال')}</h2><div class="fit">
-      ${(e.lines||[]).length?`<div class="v${e.lines.length===2?' verse':''}">${e.lines.map(l=>`<span>${lyE(l)}</span>`).join('')}</div>`:''}
-      ${(e.head||[]).length?`<table><tr>${e.head.map(h=>`<th>${lyE(h)}</th>`).join('')}</tr><tr>${e.row.map(v=>`<td>${lyE(v)}</td>`).join('')}</tr></table>`:''}
-      ${e.note?`<p class="cv">${lyE(e.note)}</p>`:''}</div></div>`:'';
-    body=`<div class="ct${e?'':' noex'}"><h1>${lyE(c.title)}</h1><div class="r">${cards.slice(0,3).map((k,i)=>
-      `<div class="c" style="background:${BG[i]}"><h2>${lyE(k.h)}</h2><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('')}</div>${ex}</div>`;
+    const BG=['#DDEEF6','#FBE3E6','#FFF1CF'];
+    body=`<div class="ct"><h1>${lyE(c.title)}</h1>${obj}<div class="r">${cards.slice(0,3).map((k,i)=>
+      `<div class="c" style="background:${BG[i]}"><h2>${lyE(k.h)}</h2><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('')}</div>
+      ${(e||terms.length||tip)?`<div class="low${e?'':' noex'}">${e?`<div class="c c3">${exH}</div>`:''}${(terms.length||tip)?`<div class="side">${termsH}${tipH}</div>`:''}</div>`:''}</div>`;
   }
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=Amiri:wght@700&display=swap">
@@ -16422,27 +16428,38 @@ function lyDocHtml(s){
 body{font-family:'Tajawal',sans-serif;color:#24323A;--f:1}
 .st{position:relative;width:1920px;height:1072px;background:#FFF8EC center/1920px 1072px no-repeat}
 .fit{width:100%}
-p{font-size:calc(23px*var(--f));font-weight:700;line-height:1.55;margin-bottom:6px}
-.eq{display:inline-block;margin-top:6px;background:#fff;border:2px solid #E7DCC3;border-radius:14px;padding:6px 14px;font-size:calc(25px*var(--f));font-weight:900;line-height:1.6}
-/* cols */
-.cols h1{position:absolute;top:14px;left:480px;right:480px;text-align:center;font-size:56px;font-weight:900}
-.cols h1 span{background:#fff;border-radius:20px;padding:0 34px 6px;box-shadow:0 5px 0 rgba(36,50,58,.08)}
-.col{position:absolute;top:138px;width:440px;height:320px;padding:0 6px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
-.b{display:inline-block;font-size:28px;font-weight:900;color:#fff;border-radius:16px;padding:6px 18px 8px;margin-bottom:10px;white-space:nowrap}
-/* bg */
-.ct{position:absolute;left:380px;right:400px;top:110px;bottom:84px;display:flex;flex-direction:column;gap:14px}
-.ct h1{text-align:center;font-size:64px;font-weight:900}
-.r{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;min-height:0;flex:1}
-.bgl p{font-size:calc(26px*var(--f))}.noex p{font-size:calc(30px*var(--f))}
-.c{border-radius:22px;padding:14px 20px;border:2px solid rgba(255,255,255,.9);box-shadow:0 5px 0 rgba(42,42,56,.06);overflow:hidden;display:flex;flex-direction:column}.r .c .fit{flex:1;display:flex;flex-direction:column;justify-content:center}
-.c3{background:#E3F2E6;flex:0 0 auto;justify-content:center}
-h2{font-size:calc(30px*min(var(--f),1.15));font-weight:900;margin-bottom:6px}
-.v{font-family:'Tajawal',sans-serif;font-weight:800;font-size:calc(30px*var(--f));text-align:center;line-height:1.7;margin:2px 0 8px}
-.v span{display:inline-block;margin:0 22px}.v.verse{font-family:'Amiri',serif;font-weight:700;font-size:calc(40px*var(--f))}
-table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:14px;overflow:hidden;font-size:calc(24px*var(--f));font-weight:700;text-align:center}
-th{background:#1F5F4E;color:#fff;font-weight:900;padding:8px}td{padding:10px 8px;border-top:1px solid #E3DCC9}
+p{font-size:calc(22px*var(--f));font-weight:700;line-height:1.5;margin-bottom:5px}
+h3{font-size:calc(22px*min(var(--f),1.15));font-weight:900;color:#1F5F4E;margin:0 0 4px}
+.eq{display:inline-block;margin-top:4px;background:#fff;border:2px solid #E7DCC3;border-radius:12px;padding:4px 12px;font-size:calc(23px*var(--f));font-weight:900;line-height:1.6}
+.obj{display:inline-block;font-size:calc(19px*min(var(--f),1.1));font-weight:800;color:#5C5544;background:rgba(255,255,255,.92);border-radius:12px;padding:3px 14px}
+.terms{margin-bottom:8px}.tm{font-size:calc(19px*var(--f));line-height:1.45;color:#3f4a50;margin-bottom:4px}.tm b{color:#24323A;font-weight:900}
+.tip{margin-top:auto;background:#FFF4D6;border:2px solid #F0D58A;border-radius:14px;padding:8px 12px;font-size:calc(19px*var(--f));font-weight:700;line-height:1.5}
+.tip.warn{background:#FDE7E3;border-color:#F2B7AB}.tip b{font-weight:900}
+.steps{margin:2px 0 6px}.stp{display:flex;gap:8px;align-items:flex-start;font-size:calc(20px*var(--f));margin-bottom:4px}.stp i{flex:none;font-style:normal;width:1.45em;height:1.45em;border-radius:50%;background:#1F5F4E;color:#fff;font-weight:900;font-size:.85em;display:flex;align-items:center;justify-content:center;margin-top:.12em}
+.v{font-family:'Tajawal',sans-serif;font-weight:800;font-size:calc(22px*var(--f));line-height:1.6;margin:2px 0 6px}
+.v span{display:block}.v.verse{font-family:'Amiri',serif;font-weight:700;font-size:calc(34px*var(--f));text-align:center}.v.verse span{display:inline-block;margin:0 18px}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:12px;overflow:hidden;font-size:calc(20px*var(--f));font-weight:700;text-align:center;margin:4px 0}
+th{background:#1F5F4E;color:#fff;font-weight:900;padding:6px}td{padding:7px 6px;border-top:1px solid #E3DCC9}
 td+td,th+th{border-right:1px solid #E3DCC9}
-.cv{margin-top:12px;color:#1F5F4E;font-weight:800}
+.cv{margin-top:6px;color:#1F5F4E;font-weight:800}
+/* cols: ثلاثة أعمدة يميناً + لوحة يساراً */
+.cols .top{position:absolute;top:10px;left:480px;right:470px;text-align:center}
+.cols h1{display:inline-block;font-size:50px;font-weight:900;background:#fff;border-radius:18px;padding:0 30px 4px;box-shadow:0 5px 0 rgba(36,50,58,.08)}
+.cols .obj{display:block;width:max-content;max-width:100%;margin:6px auto 0}
+.col{position:absolute;top:170px;width:440px;height:452px;padding:0 6px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.b{display:inline-block;font-size:27px;font-weight:900;color:#fff;border-radius:14px;padding:5px 16px 7px;margin-bottom:8px;white-space:nowrap}
+.panel{position:absolute;left:22px;top:150px;width:436px;bottom:26px;background:rgba(255,255,255,.93);border:2px solid #E7DCC3;border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;overflow:hidden}
+.exb{background:#E9F4EC;border-radius:14px;padding:8px 12px;margin-bottom:8px}
+/* bg */
+.ct{position:absolute;left:380px;right:400px;top:108px;bottom:70px;display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.ct h1{text-align:center;font-size:52px;font-weight:900;line-height:1.2}.ct .obj{align-self:center;margin-top:-6px}
+.r{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-height:0;flex:1.15}
+.c{border-radius:20px;padding:12px 18px;border:2px solid rgba(255,255,255,.9);box-shadow:0 5px 0 rgba(42,42,56,.06);overflow:hidden;display:flex;flex-direction:column}
+.r .c .fit{flex:1;display:flex;flex-direction:column;justify-content:center}
+h2{font-size:calc(27px*min(var(--f),1.15));font-weight:900;margin-bottom:4px}
+.low{display:grid;grid-template-columns:1.55fr 1fr;gap:12px;flex:1;min-height:0}.low.noex{grid-template-columns:1fr}
+.c3{background:#E3F2E6;justify-content:center}
+.side{background:rgba(255,255,255,.93);border:2px solid #E7DCC3;border-radius:20px;padding:12px 16px;display:flex;flex-direction:column;overflow:hidden}
 </style></head><body><div class="st ${s.layout==='cols'?'cols':'bgl'}" id="ly">${body}</div></body></html>`;
 }
 let _lyFrame=null;
@@ -16464,11 +16481,12 @@ async function lyToJpg(s){
   await new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=im.onerror=r;im.src=s.art;setTimeout(r,12000);});
   st.style.backgroundImage='url("'+s.art+'")';
   // تصغير الخطّ حتى يتّسع النصّ لخاناته (لا قصّ صامتاً)
-  for(let f2=1.4;f2>=0.7;f2-=0.05){
-    d.body.style.setProperty('--f',f2.toFixed(2));
-    await new Promise(r=>setTimeout(r,30));
-    const over=[...d.querySelectorAll('.col,.c')].some(el=>el.scrollHeight>el.clientHeight+1);
-    if(!over)break;
+  // كل خانة تُحجَّم وحدها: أكبر خطٍّ يملؤها بلا فيضان (لا يصغُر الكلّ بسبب خانةٍ واحدة)
+  for(const el of d.querySelectorAll('.col,.c,.panel,.side')){
+    for(let f2=1.45;f2>=0.6;f2-=0.05){
+      el.style.setProperty('--f',f2.toFixed(2));
+      if(el.scrollHeight<=el.clientHeight+1)break;
+    }
   }
   await new Promise(r=>setTimeout(r,300));
   const base=d.createElement('canvas');base.width=1920;base.height=1072;
@@ -16521,18 +16539,22 @@ function lyFormOpen(){
   if(!lyS)return;const c=lyS.content,f=document.getElementById('ly-form');
   const inp=(id,v,ph)=>`<input class="c1-select ly-in" id="${id}" value="${escAttr(v||'')}" placeholder="${ph}">`;
   const ta=(id,v,ph)=>`<textarea class="c1-select ly-in" id="${id}" rows="3" placeholder="${ph}">${escHtml(v||'')}</textarea>`;
-  let h=`<label class="eg-lbl">العنوان</label>${inp('ly-t',c.title,'عنوان الدرس')}`;
+  let h=`<label class="eg-lbl">العنوان</label>${inp('ly-t',c.title,'عنوان الدرس')}<label class="eg-lbl">هدف الدرس</label>${inp('ly-o',c.objective,'أن يتعرّف الطالب…')}`;
   c.cards.forEach((k,i)=>{h+=`<div class="ly-card"><label class="eg-lbl">البطاقة ${egArNum(i+1)}</label>${inp('ly-h'+i,k.h,'عنوان البطاقة')}${ta('ly-p'+i,(k.points||[]).join('\n'),'كل سطر نقطة')}${inp('ly-f'+i,k.formula,'قانون أو معادلة (اختياري)')}</div>`;});
   const e=c.example;
-  if(e){h+=`<div class="ly-card"><label class="eg-lbl">${escHtml(e.label||'المثال')}</label>${ta('ly-el',(e.lines||[]).join('\n'),'سطور المثال')}${(e.head||[]).length?inp('ly-eh',(e.head||[]).join(' | '),'عناوين الجدول مفصولة بـ |')+inp('ly-er',(e.row||[]).join(' | '),'قيم الجدول مفصولة بـ |'):''}${inp('ly-en',e.note,'الخلاصة')}</div>`;}
+  h+=`<div class="ly-card"><label class="eg-lbl">المصطلحات</label>${ta('ly-tm',(c.terms||[]).map(t=>t.t+': '+t.d).join('\n'),'كل سطر: المصطلح: تعريفه')}</div>`;
+  h+=`<div class="ly-card"><label class="eg-lbl">تذكّر / انتبه</label><select class="c1-select ly-in" id="ly-tk"><option ${c.tip&&c.tip.kind==='انتبه'?'':'selected'}>تذكّر</option><option ${c.tip&&c.tip.kind==='انتبه'?'selected':''}>انتبه</option></select>${ta('ly-tx',c.tip?c.tip.text:'','نصّ الملاحظة (اتركه فارغاً لإخفائها)')}</div>`;
+  if(e){h+=`<div class="ly-card"><label class="eg-lbl">${escHtml(e.label||'المثال')}</label>${ta('ly-el',(e.lines||[]).join('\n'),'سطور المثال')}${ta('ly-es',(e.steps||[]).join('\n'),'خطوات الحلّ — كل سطر خطوة')}${(e.head||[]).length?inp('ly-eh',(e.head||[]).join(' | '),'عناوين الجدول مفصولة بـ |')+inp('ly-er',(e.row||[]).join(' | '),'قيم الجدول مفصولة بـ |'):''}${inp('ly-en',e.note,'الخلاصة')}</div>`;}
   h+=`<div class="eg-result-actions"><button class="eg-export" onclick="lyFormApply()">تطبيق التعديل (مجاناً)</button><button class="eg-regen" onclick="document.getElementById('ly-form').hidden=true">إلغاء</button></div>`;
   f.innerHTML=h;f.hidden=false;f.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 async function lyFormApply(){
   const v=id=>(document.getElementById(id)?.value||'').trim(),c=lyS.content;
-  c.title=v('ly-t')||c.title;
+  c.title=v('ly-t')||c.title;c.objective=v('ly-o');
+  c.terms=v('ly-tm').split('\n').map(x=>{const k=x.indexOf(':');return k>0?{t:x.slice(0,k).trim(),d:x.slice(k+1).trim()}:null;}).filter(t=>t&&t.t&&t.d).slice(0,6);
+  c.tip=v('ly-tx')?{kind:v('ly-tk')||'تذكّر',text:v('ly-tx')}:null;
   c.cards.forEach((k,i)=>{k.h=v('ly-h'+i)||k.h;k.points=v('ly-p'+i).split('\n').map(x=>x.trim()).filter(Boolean);k.formula=v('ly-f'+i);});
-  if(c.example){const e=c.example;e.lines=v('ly-el').split('\n').map(x=>x.trim()).filter(Boolean);
+  if(c.example){const e=c.example;e.lines=v('ly-el').split('\n').map(x=>x.trim()).filter(Boolean);e.steps=v('ly-es').split('\n').map(x=>x.trim()).filter(Boolean);
     if(document.getElementById('ly-eh')){const hd=v('ly-eh').split('|').map(x=>x.trim()),rw=v('ly-er').split('|').map(x=>x.trim());if(hd.length===rw.length){e.head=hd;e.row=rw;}}
     e.note=v('ly-en');}
   cyBusyLight('يكتب النصّ من جديد…');
