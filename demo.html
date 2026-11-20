@@ -7188,7 +7188,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='861c494';
+const KH_BUILD='f29dca3';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -14231,7 +14231,8 @@ function certPageHtml(it){
     ? `<b>${egArNum(it.stars)}</b><span>${it.stars===1?'نجمة':it.stars===2?'نجمتان':'نجمة'}</span>`
     : `<b class="sm">★</b><span>${escHtml(t.nm)}</span>`;
   const pre=`${khG('تُهدي المعلّمة','يُهدي المعلّم')} هذه الشهادة بكل فخرٍ واعتزاز`;
-  return `<section class="cert cs-${style}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
+  const lgCls=it.logo&&it.logoPos!=='center'?` has-lg lg-${escAttr(it.logoSize||'m')}`:'';
+  return `<section class="cert cs-${style}${lgCls}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
   ${certArt(style,p,u,it.type)}
   ${it.logo&&it.logoPos!=='center'?`<img class="slogo-a p-${it.logoPos==='right'?'r':'l'} z-${escAttr(it.logoSize||'m')}" src="${escAttr(it.logo)}" alt="" onerror="this.remove()">`:''}
   <div class="body">
@@ -14269,7 +14270,8 @@ html,body{overflow:hidden;background:#fff;padding:0;gap:0;display:block;height:1
   return certDocShell(wrapped,fitCss);
 }
 // يصغّر اسم المعلّم (والشعبة/التاريخ) حتى يتّسع لسطرٍ واحد، حتى ٦٠٪ من حجمه؛ ويُعاد بعد تحميل الخطوط
-const CERT_FIT_JS=`(function(){function fit(){document.querySelectorAll('.sig b').forEach(function(b){b.style.fontSize='';b.style.whiteSpace='nowrap';var f=parseFloat(getComputedStyle(b).fontSize),m=f*.6;while(b.scrollWidth>b.clientWidth+1&&f>m){f-=.5;b.style.fontSize=f+'px';}b.style.whiteSpace=b.scrollWidth>b.clientWidth+1?'normal':'nowrap';});}
+const CERT_FIT_JS=`(function(){function fit(){document.querySelectorAll('.sig b').forEach(function(b){b.style.fontSize='';b.style.whiteSpace='nowrap';var f=parseFloat(getComputedStyle(b).fontSize),m=f*.6;while(b.scrollWidth>b.clientWidth+1&&f>m){f-=.5;b.style.fontSize=f+'px';}b.style.whiteSpace=b.scrollWidth>b.clientWidth+1?'normal':'nowrap';});
+document.querySelectorAll('.ttl').forEach(function(t){t.style.fontSize='';t.style.whiteSpace='nowrap';var W=t.parentElement.clientWidth,f=parseFloat(getComputedStyle(t).fontSize),m=f*.6;while(t.scrollWidth>W+1&&f>m){f-=1;t.style.fontSize=f+'px';}t.style.whiteSpace=t.scrollWidth>W+1?'normal':'nowrap';});}
 fit();window.certFitSig=fit;if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);window.addEventListener('load',fit);})();`;
 function certDocShell(pages,fitCss){
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"/>
@@ -14299,6 +14301,8 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .cs-canva .slogo-a{top:27mm}.cs-canva .slogo-a.p-l{left:31mm}.cs-canva .slogo-a.p-r{right:31mm}
 .cs-night .slogo-a{top:20mm}
 .cs-modern .slogo-a{top:18mm}.cs-modern .slogo-a.p-r{right:auto;left:26mm}
+/* العصري نصّه يميناً وعريض: مع الشعار يضيق النصّ ليبتعد عنه (والعنوان يصغُر ليتّسع — certFitSig) */
+.cs-modern.has-lg.lg-s .body{left:54mm}.cs-modern.has-lg.lg-m .body{left:62mm}.cs-modern.has-lg.lg-l .body{left:72mm}
 .ttl{font-family:'Aref Ruqaa','Amiri',serif;font-weight:700;line-height:1.15;margin-top:1mm}
 .kind{font-family:'Tajawal',sans-serif;font-size:3.6mm;font-weight:800;border-radius:3mm;padding:.6mm 4mm;margin-top:1mm}
 .pre{font-size:4.6mm;margin-top:4mm}
