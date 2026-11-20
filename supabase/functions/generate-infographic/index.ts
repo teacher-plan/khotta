@@ -13,6 +13,7 @@ import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { curFor, readCache, bookKey } from "../_shared/lessonExtract.ts";
 import { conceptPrompt, CONCEPT_EMAILS } from "./concept.ts";
 import { layeredInfographic } from "./layered.ts";
+import { layeredConcept } from "./concept_layered.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +67,11 @@ Deno.serve(async (req) => {
     if (b.layered) {
       if (!CONCEPT_EMAILS.includes((user.email || "").toLowerCase())) return await refund({ error: "forbidden" }, 403);
       return await layeredInfographic(admin, user, st, apiKey, b, json);
+    }
+    // خريطة مفاهيم طبقية: هيكلٌ JSON يرسمه المتصفّح + خلفية بلا كتابة (concept_layered.ts)
+    if (b.cmLayered) {
+      if (!CONCEPT_EMAILS.includes((user.email || "").toLowerCase())) return await refund({ error: "forbidden" }, 403);
+      return await layeredConcept(admin, user, st, apiKey, b, json);
     }
     const grade = String(b.grade || "");
     const subject = String(b.subject || "");
