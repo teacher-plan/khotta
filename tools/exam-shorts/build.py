@@ -3,8 +3,8 @@
 import base64, importlib.util, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PAD = 350          # ملّي ثانية بعد كل مقطع صوتي
-TAIL = 1500        # ذيل المشهد الأخير
+PAD = 250          # ملّي ثانية بعد كل مقطع صوتي
+TAIL = 1200        # ذيل المشهد الأخير
 
 
 def CHK(t, ok=True, size=38):
