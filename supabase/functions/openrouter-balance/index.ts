@@ -59,11 +59,24 @@ Deno.serve(async (req) => {
       }
     }));
 
-    const live = per.filter((p) => (p as { ok?: boolean }).ok) as unknown as { total: number; used: number; remaining: number }[];
-    const total = live.reduce((s, p) => s + p.total, 0);
-    const used = live.reduce((s, p) => s + p.used, 0);
+    const live = per.filter((p) => (p as { ok?: boolean }).ok) as unknown as { key: number; total: number; used: number; remaining: number }[];
+    // /credits يُعيد رصيد «الحساب» كاملاً لا رصيد المفتاح (٢٠ نوفمبر): مفتاحان من
+    // الحساب نفسه يُعيدان الأرقام نفسها، فجمعُهما كان يُضاعف الرصيد. نجمع الحسابات
+    // لا المفاتيح: مفاتيح بنفس المشحون ونفس المستهلَك (بفارق سنتات استهلاكٍ بين
+    // الطلبين) حسابٌ واحد يُحسب مرّة.
+    const accounts: { total: number; used: number; keys: number[] }[] = [];
+    for (const k of live) {
+      const a = accounts.find((x) => Math.abs(x.total - k.total) < 0.005 && Math.abs(x.used - k.used) < 0.05);
+      if (a) { a.keys.push(k.key); a.used = Math.max(a.used, k.used); } else accounts.push({ total: k.total, used: k.used, keys: [k.key] });
+    }
+    const total = accounts.reduce((s, a) => s + a.total, 0);
+    const used = accounts.reduce((s, a) => s + a.used, 0);
     // total/used/remaining تبقى كما كانت: شاشات قديمة تقرؤها ولا تعرف keys
-    return json({ total, used, remaining: Math.max(0, total - used), keys: per });
+    return json({
+      total, used, remaining: Math.max(0, total - used), keys: per,
+      accounts: accounts.map((a) => ({ total: a.total, used: a.used, remaining: Math.max(0, a.total - a.used), keys: a.keys })),
+      at: new Date().toISOString(),
+    });
   } catch (e) {
     console.error("server_error:", String(e));
     return json({ error: "server_error" }, 500);
