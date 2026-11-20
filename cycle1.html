@@ -7171,7 +7171,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f181e2b';
+const KH_BUILD='d10bde9';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -14090,6 +14090,9 @@ html,body{overflow:hidden;background:#fff;padding:0;gap:0;display:block;height:1
   const wrapped=scale>0?`<div id="fit">${pages}</div>`:pages;
   return certDocShell(wrapped,fitCss);
 }
+// يصغّر اسم المعلّم (والشعبة/التاريخ) حتى يتّسع لسطرٍ واحد، حتى ٦٠٪ من حجمه؛ ويُعاد بعد تحميل الخطوط
+const CERT_FIT_JS=`(function(){function fit(){document.querySelectorAll('.sig b').forEach(function(b){b.style.fontSize='';b.style.whiteSpace='nowrap';var f=parseFloat(getComputedStyle(b).fontSize),m=f*.6;while(b.scrollWidth>b.clientWidth+1&&f>m){f-=.5;b.style.fontSize=f+'px';}b.style.whiteSpace=b.scrollWidth>b.clientWidth+1?'normal':'nowrap';});}
+fit();window.certFitSig=fit;if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);window.addEventListener('load',fit);})();`;
 function certDocShell(pages,fitCss){
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"/>
 <title>شهادات تقدير</title>
@@ -14121,8 +14124,9 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .seal b.sm{font-size:7mm}
 .seal span{font-size:2.6mm;font-weight:800;margin-top:.6mm;max-width:20mm}
 .sig{position:absolute;bottom:22mm;width:66mm;text-align:center;font-family:'Tajawal',sans-serif}
-.sig b{display:block;font-size:4.6mm;font-weight:800;min-height:6.5mm;padding-bottom:1.6mm;border-bottom:.35mm solid currentColor;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig b{display:block;font-size:4.6mm;font-weight:800;min-height:6.5mm;padding-bottom:1.6mm;border-bottom:.35mm solid currentColor;line-height:1.3}
+/* بلا قصّ ولا «…»: html2canvas يرسم النصّ العربي المقصوص حروفاً متراكبة (اسم المعلّم الطويل).
+   الاسم الطويل يُصغَّر ليتّسع لسطره (certFitSig)، والأطول جداً ينزل لسطرٍ ثانٍ. */
 .sig span{display:block;font-size:3.3mm;font-weight:700;margin-top:1.4mm;opacity:.75}
 .sig em{display:block;font-style:normal;font-size:3.1mm;margin-top:1.4mm;opacity:.75}
 .sig-r{right:40mm}.sig-l{left:40mm}
@@ -14197,6 +14201,7 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 ${fitCss}
 </style></head><body>
 ${pages}
+<script>${CERT_FIT_JS}<\/script>
 </body></html>`;
 }
 
@@ -14404,6 +14409,7 @@ async function certToPng(item){
   try{await Promise.all(["700 20px 'Aref Ruqaa'","400 20px Amiri","700 20px Amiri","700 20px Tajawal","800 20px Tajawal","700 20px 'Reem Kufi'"].map(f=>d.fonts.load(f,'شهادة')));}catch(e){}
   try{await d.fonts.ready;}catch(e){}
   await Promise.all([...d.images].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000);})));
+  try{f.contentWindow.certFitSig&&f.contentWindow.certFitSig();}catch(e){}
   await new Promise(r=>setTimeout(r,450));
   const el=d.querySelector('.cert');
   if(!el)throw new Error('cert element missing');
