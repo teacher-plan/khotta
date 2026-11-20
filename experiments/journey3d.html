@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>رحلة الدرس ثلاثية الأبعاد — نموذج</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&display=swap">
+<style>
+:root{--brand:#1F5F4E;--ink:#15302a;--gold:#f2b632;--fence:#b0723c;--grass:#4caf50;--card:rgba(255,255,255,.96)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#bfe3f5;font-family:Tajawal,system-ui,sans-serif;color:var(--ink)}
+button,input{font:inherit}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+/* خريطة الرحلة */
+.map{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;align-items:center;background:rgba(255,255,255,.9);padding:6px 10px;border-radius:40px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:5;max-width:calc(100% - 20px)}
+.map button{border:0;background:none;display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:30px;font-weight:800;font-size:14px;color:#8a9a94;cursor:pointer;white-space:nowrap}
+.map button i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e4ebe8;font-size:14px}
+.map button.done i{background:#cfe9dd}
+.map button.on{background:var(--brand);color:#fff}.map button.on i{background:var(--gold)}
+.map b{width:14px;height:3px;background:#d5dfdb;border-radius:2px;flex-shrink:0}
+.ttl{position:fixed;top:14px;right:16px;z-index:5;font-weight:900;font-size:16px;color:#173f33;background:rgba(255,255,255,.8);padding:6px 12px;border-radius:12px}
+.ttl small{display:block;font-size:11px;font-weight:700;color:#55706a}
+/* البطاقة */
+.card{position:fixed;right:16px;bottom:16px;width:min(430px,calc(100% - 32px));max-height:calc(100% - 100px);overflow:auto;background:var(--card);border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.2);padding:18px 20px;z-index:6;transition:transform .5s cubic-bezier(.3,1.3,.5,1),opacity .4s}
+.card.hide{transform:translateY(30px);opacity:0;pointer-events:none}
+.card .tag{display:inline-block;background:#e5f2ec;color:var(--brand);font-weight:800;font-size:13px;padding:3px 10px;border-radius:20px;margin-bottom:6px}
+.card h2{margin:0 0 6px;font-size:24px;font-weight:900;line-height:1.35}
+.card p{margin:6px 0;font-size:18px;line-height:1.75;font-weight:600}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btn{border:0;border-radius:14px;padding:11px 18px;font-weight:900;font-size:17px;background:#e9f2ee;color:var(--brand);cursor:pointer}
+.btn.go{background:var(--brand);color:#fff;box-shadow:0 4px 0 #134236}
+.btn.go:active{transform:translateY(2px);box-shadow:0 2px 0 #134236}
+.btn:disabled{opacity:.4}
+.eq{font-size:24px;font-weight:900;background:#fff8e3;border:2px dashed #f0cf7a;border-radius:14px;padding:8px 12px;margin:8px 0;text-align:center;direction:rtl;min-height:48px}
+.eq .p{color:#b0723c}.eq .a{color:#2e8b3e}
+.formula{font-size:26px;font-weight:900;text-align:center;background:var(--brand);color:#fff;border-radius:14px;padding:8px;margin:8px 0;animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.note{background:#eef6ff;border-radius:12px;padding:8px 12px;font-size:16px!important}
+/* منزلقات الورشة */
+.sl{display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:800;font-size:18px}
+.sl span{min-width:58px}.sl input{flex:1;accent-color:var(--brand);height:30px}
+.sl output{min-width:52px;text-align:center;background:#fff;border:2px solid #dbe7e2;border-radius:10px;padding:2px 6px}
+.read{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.read div{border-radius:14px;padding:8px;text-align:center;font-weight:900;font-size:15px}
+.read div b{display:block;font-size:26px}
+.read .ra{background:#e5f5e7;color:#2e7d32}.read .rp{background:#f8ece0;color:#9a5a24}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chips span{border:2px dashed #c9d8d2;border-radius:12px;padding:6px 12px;font-weight:900;min-width:76px;text-align:center;color:#a9b8b2}
+.chips span.ok{border-style:solid;border-color:#2e8b3e;background:#e8f6ea;color:#1f6b2e;animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+/* التحدي */
+.q{font-size:19px;font-weight:800;line-height:1.7}
+.ans{display:flex;align-items:center;gap:8px;margin:8px 0;font-weight:800;font-size:18px}
+.ans input{width:110px;font-size:24px;font-weight:900;text-align:center;border:3px solid #cfdcd6;border-radius:12px;padding:4px}
+.ans input.ok{border-color:#2e8b3e;background:#e8f6ea}.ans input.bad{border-color:#d9534f;background:#fdecea;animation:shake .4s}
+@keyframes shake{25%{transform:translateX(6px)}75%{transform:translateX(-6px)}}
+.hint{background:#fff4d6;border-radius:12px;padding:8px 12px;font-size:16px;font-weight:700;display:none}.hint.on{display:block}
+.prog{display:flex;gap:6px;margin-bottom:6px}.prog i{flex:1;height:6px;border-radius:4px;background:#e2e9e6}.prog i.on{background:var(--gold)}.prog i.ok{background:#2e8b3e}
+.stars{font-size:46px;text-align:center;letter-spacing:6px}
+.sum{display:grid;gap:8px;margin:8px 0}
+.sum div{background:#f3f8f6;border-radius:14px;padding:10px 12px;font-weight:800;font-size:17px;line-height:1.6}
+.sum b{color:var(--brand)}
+/* التنقل */
+.nav{position:fixed;left:16px;bottom:16px;display:flex;gap:10px;z-index:6}
+.nav button{width:58px;height:58px;border-radius:50%;border:0;background:#fff;color:var(--brand);font-size:26px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+.nav button.go{background:var(--gold);color:#3a2a00}
+.nav button:disabled{opacity:.35}
+/* ملصقات ثلاثية الأبعاد */
+.lbl{position:fixed;left:0;top:0;transform:translate(-50%,-50%);pointer-events:none;font-weight:900;font-size:20px;color:#fff;background:rgba(21,48,42,.82);padding:2px 10px;border-radius:10px;white-space:nowrap;z-index:4;transition:opacity .3s}
+.lbl.p{background:#b0723c}.lbl.a{background:#2e8b3e;font-size:26px}.lbl.hl{background:var(--gold);color:#3a2a00;transform:translate(-50%,-50%) scale(1.15)}
+.lbl.off{opacity:0}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:#2e8b3e;color:#fff;font-weight:900;font-size:20px;padding:10px 22px;border-radius:30px;opacity:0;transition:all .35s;z-index:9;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.bad{background:#d9534f}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#bfe3f5;z-index:20;font-weight:900;font-size:22px;color:var(--brand)}
+@media (max-width:820px){.map button span{display:none}.map button{padding:4px}.ttl{display:none}.card{right:10px;left:10px;width:auto;bottom:84px;max-height:52%;padding:14px 16px}.card h2{font-size:20px}.card p{font-size:16px}.nav{left:auto;right:50%;transform:translateX(50%);bottom:14px}.nav button{width:52px;height:52px}}
+</style>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="loading">يُجهَّز عالم الدرس…</div>
+<canvas id="c"></canvas>
+<div class="ttl">مساحة المستطيل ومحيطه<small>رياضيات · الصف السابع · ٧-٢</small></div>
+<div class="map" id="map"></div>
+<div class="card" id="card"></div>
+<div class="nav"><button id="next" class="go" aria-label="المحطة التالية">‹</button><button id="prev" aria-label="المحطة السابقة">›</button></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import * as THREE from 'three';
+const ar=n=>String(n).replace(/\./g,'٫').replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+const num=s=>parseFloat(String(s).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٫,]/g,'.'));
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ══ المشهد ══
+const canvas=$('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xbfe3f5);scene.fog=new THREE.Fog(0xbfe3f5,60,140);
+const cam=new THREE.PerspectiveCamera(45,1,.1,300);
+scene.add(new THREE.HemisphereLight(0xffffff,0x6b8f5a,1.1));
+const sun=new THREE.DirectionalLight(0xfff3dd,1.6);sun.position.set(20,40,15);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-60,right:60,top:40,bottom:-40,far:120});
+scene.add(sun);scene.add(sun.target);
+const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,flatShading:true,roughness:.9,...o});
+const mat={ground:M(0x8cc46b),path:M(0xe3c89a),grass:M(0x43a047),grass2:M(0x66bb6a),dirt:M(0x9c6b43),wood:M(0xb0723c),wood2:M(0x8d5a2b),white:M(0xffffff),roof:M(0xd65a4a),leaf:M(0x3e8e41),leaf2:M(0x5aa64a),trunk:M(0x7a4e2d),stone:M(0xb8b8b0),gold:M(0xf2b632,{metalness:.3,roughness:.4}),water:M(0x5fb6e6,{roughness:.3}),wall:M(0xf3e6cf),floor:M(0xd9b98c),red:M(0xe0533d),blue:M(0x3d7be0)};
+const add=(g,m,x=0,y=0,z=0,parent=scene)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o;};
+// الأرض والطريق
+const ground=add(new THREE.PlaneGeometry(260,120),mat.ground,-35,0,0);ground.rotation.x=-Math.PI/2;
+const ST=[{x:4},{x:-14},{x:-32},{x:-52},{x:-72},{x:-92}];
+for(let x=10;x>-100;x-=2.2){const s=add(new THREE.CylinderGeometry(1.1,1.1,.05,7),mat.path,x+Math.sin(x*.3)*.3,.02,7+Math.sin(x*.12)*1.2);s.scale.z=.7;}
+// أشجار وصخور حول الطريق
+const rnd=(s=>()=>(s=(s*16807)%2147483647)/2147483647)(42);
+function tree(x,z,s=1){const g=new THREE.Group();add(new THREE.CylinderGeometry(.18*s,.25*s,1.2*s,6),mat.trunk,0,.6*s,0,g);
+  add(new THREE.ConeGeometry(1.1*s,2*s,7),rnd()>.5?mat.leaf:mat.leaf2,0,1.9*s,0,g);add(new THREE.ConeGeometry(.8*s,1.5*s,7),mat.leaf2,0,2.8*s,0,g);g.position.set(x,0,z);scene.add(g);}
+for(let i=0;i<70;i++){const x=12-rnd()*112,z=(rnd()>.5?1:-1)*(12+rnd()*30);tree(x,z,.8+rnd()*.8);}
+for(let i=0;i<25;i++)add(new THREE.DodecahedronGeometry(.3+rnd()*.5,0),mat.stone,12-rnd()*112,.2,(rnd()>.5?1:-1)*(10+rnd()*25));
+// بيت سامي
+(function(){const g=new THREE.Group();add(new THREE.BoxGeometry(4,2.6,3.4),mat.wall,0,1.3,0,g);
+  const r=add(new THREE.ConeGeometry(3.3,1.8,4),mat.roof,0,3.5,0,g);r.rotation.y=Math.PI/4;r.scale.z=.85;
+  add(new THREE.BoxGeometry(.9,1.6,.1),mat.wood2,0,.8,1.72,g);add(new THREE.BoxGeometry(.7,.7,.1),mat.water,-1.2,1.6,1.72,g);add(new THREE.BoxGeometry(.7,.7,.1),mat.water,1.2,1.6,1.72,g);
+  g.position.set(-14,0,-7);scene.add(g);})();
+// بوابة الرحلة
+(function(){const g=new THREE.Group();add(new THREE.BoxGeometry(.5,4,.5),mat.wood,-2.2,2,0,g);add(new THREE.BoxGeometry(.5,4,.5),mat.wood,2.2,2,0,g);
+  add(new THREE.BoxGeometry(5.6,.7,.6),mat.wood2,0,4.1,0,g);add(new THREE.BoxGeometry(3.2,.9,.12),mat.gold,0,4.1,.36,g);g.position.set(4,0,7);g.rotation.y=Math.PI/2;scene.add(g);})();
+// تلّ القمّة وعلمها
+const hill=add(new THREE.SphereGeometry(7,12,8,0,Math.PI*2,0,Math.PI/2),mat.grass2,-92,-1.5,0);hill.scale.y=.55;
+const pole=add(new THREE.CylinderGeometry(.08,.08,4.5,6),mat.white,-92,4.1,0);
+const flag=add(new THREE.BoxGeometry(1.8,1.1,.05),mat.gold,-92.9,5.8,0);
+// لوحات المحطات
+function sign(x,z,color){const g=new THREE.Group();add(new THREE.BoxGeometry(.18,1.6,.18),mat.wood2,0,.8,0,g);add(new THREE.BoxGeometry(1.5,.8,.12),color,0,1.7,0,g);g.position.set(x,0,z);scene.add(g);return g;}
+ST.forEach((s,i)=>{if(i>0&&i<5)sign(s.x-3.5,-4.5,[mat.wood,mat.grass,mat.blue,mat.red][i-1]);});
+
+// ══ ملصقات HTML مرتبطة بمواضع ثلاثية الأبعاد ══
+const labels=[];
+function label(text,pos,cls=''){const e=document.createElement('div');e.className='lbl '+cls;e.innerHTML=text;document.body.appendChild(e);const L={e,pos:pos.clone()};labels.push(L);return L;}
+function clearLabels(){labels.splice(0).forEach(l=>l.e.remove());}
+const v=new THREE.Vector3();
+function placeLabels(){const w=innerWidth,h=innerHeight;labels.forEach(l=>{v.copy(l.pos).project(cam);
+  const vis=v.z<1&&v.z>-1;l.e.style.display=vis?'':'none';l.e.style.left=((v.x+1)/2*w)+'px';l.e.style.top=((1-v.y)/2*h)+'px';});}
+
+// ══ حركات ══
+const tweens=[];
+function tween(dur,fn,ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2){return new Promise(r=>{tweens.push({t0:performance.now(),dur:reduce?1:dur,fn,ease,r});});}
+const wait=ms=>new Promise(r=>setTimeout(r,reduce?0:ms));
+const back=t=>1+2.7*Math.pow(t-1,3)+1.7*Math.pow(t-1,2);
+let token=0; // يُلغي التسلسلات الجارية عند تغيير المحطة
+
+// ══ قطعة الأرض: عشب بمربّعات وحدة + سياج ══
+function plot(L,W,cx,cz){
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const base=add(new THREE.BoxGeometry(L+.3,.12,W+.3),mat.dirt,0,.06,0,g);
+  return {g,L,W,tiles:[],posts:[],rails:[],
+    // ركن البداية: أعلى اليمين من منظور الكاميرا
+    corner(){return new THREE.Vector3(cx+L/2,0,cz-W/2);} };
+}
+function tileAt(P,i,j,y=.17){const ww=Math.min(1,P.W-j),ll=Math.min(1,P.L-i);
+  const t=add(new THREE.BoxGeometry(ll*.94,.1,ww*.94),(i+j)%2?mat.grass:mat.grass2,P.L/2-i-ll/2,y,-P.W/2+j+ww/2,P.g);return t;}
+function perimPoints(L,W){const pts=[];const c=[[L/2,-W/2],[-L/2,-W/2],[-L/2,W/2],[L/2,W/2]];
+  const sides=[[c[0],c[1],L],[c[1],c[2],W],[c[2],c[3],L],[c[3],c[0],W]];
+  sides.forEach(([a,b,len],si)=>{const n=Math.round(len*2);for(let k=0;k<n;k++){const t=k/n;pts.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,side:si});}});return {pts,sides};}
+function post(P,x,z){return add(new THREE.BoxGeometry(.14,.9,.14),mat.wood2,x,.55,z,P.g);}
+function rail(P,a,b){const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);const r=add(new THREE.BoxGeometry(len,.08,.07),mat.wood,(a[0]+b[0])/2,.75,(a[1]+b[1])/2,P.g);r.rotation.y=-Math.atan2(dz,dx);
+  const r2=add(new THREE.BoxGeometry(len,.08,.07),mat.wood,(a[0]+b[0])/2,.45,(a[1]+b[1])/2,P.g);r2.rotation.y=r.rotation.y;return [r,r2];}
+function disposeGroup(g){if(!g)return;scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+
+// ══ الكاميرا ══
+const camPos=new THREE.Vector3(14,9,24),camLook=new THREE.Vector3(4,1,4);
+cam.position.copy(camPos);cam.lookAt(camLook);
+async function fly(pos,look,dur=1800){const p0=cam.position.clone(),l0=camLook.clone(),p1=new THREE.Vector3(...pos),l1=new THREE.Vector3(...look);
+  const mid=p0.clone().lerp(p1,.5);mid.y+=4;
+  await tween(dur,t=>{const a=p0.clone().lerp(mid,t),b=mid.clone().lerp(p1,t);cam.position.copy(a.lerp(b,t));camLook.copy(l0.clone().lerp(l1,t));});}
+function camFor(x,z,dist=1){const narrow=innerWidth<820;const k=(narrow?1.55:1)*dist;
+  // البطاقة يميناً: ننظر يمين القطعة فتظهر القطعة في النصف الأيسر الخالي
+  const off=narrow?0:2.1*dist;
+  return {pos:[x+off, 6.2*k, z+9.6*k], look:[x+off, 0, z+(narrow?3.1*k:.3)]};}
+
+// ══ الرحلة ══
+const STATIONS=[
+ {ic:'🚪',name:'البوابة'},{ic:'🪵',name:'السياج'},{ic:'🌱',name:'العشب'},{ic:'🛠',name:'الورشة'},{ic:'🎯',name:'التحدي'},{ic:'🏁',name:'القمّة'}];
+let cur=-1,done=new Set(),score={first:0,total:0};
+const card=$('card');
+function showCard(html){card.classList.add('hide');setTimeout(()=>{card.innerHTML=html;card.classList.remove('hide');card.scrollTop=0;},reduce?0:260);}
+function renderMap(){$('map').innerHTML=STATIONS.map((s,i)=>(i?'<b></b>':'')+`<button class="${i===cur?'on':''}${done.has(i)?' done':''}" onclick="go(${i})"><i>${s.ic}</i><span>${s.name}</span></button>`).join('');
+  $('prev').disabled=cur<=0;$('next').disabled=cur>=STATIONS.length-1;}
+function toast(t,bad){const e=$('toast');e.textContent=t;e.className='toast on'+(bad?' bad':'');clearTimeout(e._t);e._t=setTimeout(()=>e.className='toast',1600);}
+
+let P1=null,P2=null,P3=null,P4=null;
+window.go=async function(i){
+  if(i===cur||i<0||i>=STATIONS.length)return;
+  if(cur>=0)done.add(cur);cur=i;const my=++token;renderMap();clearLabels();
+  card.classList.add('hide');
+  const s=ST[i];
+  const c=i===0?{pos:[12,8,20],look:[2,1,4]}:i===5?{pos:[-80,8,16],look:[-92,3,0]}:camFor(s.x,0,i===3?1.35:i===4?1.25:1);
+  await fly(c.pos,c.look);
+  if(my!==token)return;
+  ENTER[i](my);
+};
+$('next').onclick=()=>go(cur+1);$('prev').onclick=()=>go(cur-1);
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft')go(cur+1);if(e.key==='ArrowRight')go(cur-1);});
+
+const ENTER=[
+// ٠ — البوابة: سؤال يثير الدرس
+my=>{showCard(`<span class="tag">البوابة · التهيئة</span><h2>حديقة سامي 🏡</h2>
+  <p>اشترى سامي قطعة أرض مستطيلة بجانب بيته، طولها <b>٤ م</b> وعرضها <b>٢ م</b>.</p>
+  <p>يريد أمرين: <b style="color:#9a5a24">سياجاً</b> يحيط بها، و<b style="color:#2e7d32">عشباً</b> يغطّيها.</p>
+  <p class="note">🤔 هل نشتري السياج والعشب بالمقياس نفسه؟ فكّر وناقش زميلك، ثم ادخل البوابة.</p>
+  <div class="btns"><button class="btn go" onclick="go(1)">ادخل الرحلة ‹</button></div>`);},
+// ١ — السياج: المحيط
+my=>{
+  if(!P1){P1=plot(4,2,ST[1].x,0);}
+  showCard(`<span class="tag">المحطة ١ · أنا أشرح</span><h2>نبني السياج 🪵</h2>
+   <p>السياج يسير على <b>حدود</b> الأرض. نمشي حولها ونعدّ الأمتار.</p>
+   <div class="eq" id="eq1">المحيط = …</div>
+   <div id="f1"></div>
+   <div class="btns"><button class="btn go" id="b1" onclick="buildFence()">ابنِ السياج</button></div>`);
+  sideLabels(P1,'p');
+},
+// ٢ — العشب: المساحة
+my=>{
+  if(!P2){P2=plot(4,2,ST[2].x,0);}
+  showCard(`<span class="tag">المحطة ٢ · أنا أشرح</span><h2>نزرع العشب 🌱</h2>
+   <p>العشب يغطّي <b>سطح</b> الأرض كلّه. نزرعه مربّعات، كل مربّع ١ م × ١ م = <b>١ م²</b>.</p>
+   <div class="eq" id="eq2">عدد المربّعات = …</div>
+   <div id="f2"></div>
+   <div class="btns"><button class="btn go" id="b2" onclick="plantGrass()">ازرع العشب</button></div>`);
+  sideLabels(P2,'');
+},
+// ٣ — الورشة: نجرّب معاً
+my=>{
+  showCard(`<span class="tag">المحطة ٣ · نحن نجرّب</span><h2>ورشة الأراضي 🛠</h2>
+   <p>غيّر الطول والعرض وراقب الأرض تتغيّر:</p>
+   <div class="sl"><span>الطول</span><input type="range" min="1" max="12" value="6" id="sL"><output id="oL"></output></div>
+   <div class="sl"><span>العرض</span><input type="range" min="1" max="12" value="4" id="sW"><output id="oW"></output></div>
+   <div class="read"><div class="ra">المساحة<b id="rA"></b></div><div class="rp">المحيط<b id="rP"></b></div></div>
+   <p class="note">🏆 <b>تحدّي مريم وخديجة:</b> قالت مريم: لا يمكن رسم أكثر من ٣ مستطيلات مساحتها ٢٤ م². وقالت خديجة: يوجد ٤. اكتشف كل المستطيلات التي مساحتها <b>٢٤ م²</b> بأطوالٍ صحيحة!</p>
+   <div class="chips" id="chips"><span>؟</span><span>؟</span><span>؟</span><span>؟</span></div>`);
+  setTimeout(()=>{if(my!==token)return;workshopInit();},reduce?0:300);
+},
+// ٤ — التحدي: أنتم
+my=>{chIdx=0;chTry=0;showChallenge();},
+// ٥ — القمّة
+my=>{
+  const st=score.total?Math.max(1,Math.round(score.first/score.total*3)):0;
+  showCard(`<span class="tag">القمّة · الخلاصة</span><h2>وصلت القمّة! 🏁</h2>
+   ${score.total?`<div class="stars">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</div><p style="text-align:center">أجبت ${ar(score.first)} من ${ar(score.total)} من المحاولة الأولى</p>`:''}
+   <div class="sum">
+    <div>🪵 <b>المحيط</b> طول الحدود حول الشكل:<br>ح = ٢ل + ٢ض · بوحدة الطول (م، سم)</div>
+    <div>🌱 <b>المساحة</b> ما يغطّي سطح الشكل:<br>م = ل × ض · بوحدة مربّعة (م²، سم²)</div>
+    <div>🔁 إن عرفت المساحة والطول: <b>العرض = المساحة ÷ الطول</b><br>وإن عرفت المحيط والطول: <b>٢ض = المحيط − ٢ل</b></div>
+   </div>
+   <p class="note">📝 تذكرة الخروج: مستطيل طوله ٥ سم وعرضه ٣ سم. احسب مساحته ومحيطه.</p>
+   <div class="btns"><button class="btn" onclick="location.reload()">ابدأ الرحلة من جديد</button></div>`);
+  celebrate();
+}];
+
+// ── ملصقات أبعاد القطعة
+function sideLabels(P,cls){const x=P.g.position.x,z=P.g.position.z;
+  P.lab=[label(ar(P.L)+' م',new THREE.Vector3(x,.2,z+P.W/2+.6),cls),label(ar(P.W)+' م',new THREE.Vector3(x-P.L/2-.7,.2,z),cls),
+         label(ar(P.L)+' م',new THREE.Vector3(x,.2,z-P.W/2-.6),cls+' off'),label(ar(P.W)+' م',new THREE.Vector3(x+P.L/2+.7,.2,z),cls+' off')];}
+
+// ── المحطة ١: السياج يُبنى ضلعاً ضلعاً، والعدّاد يجمع
+window.buildFence=async()=>{
+  const my=token,b=$('b1');if(b)b.disabled=true;const P=P1;
+  P.posts.forEach(o=>P.g.remove(o));P.rails.forEach(o=>P.g.remove(o));P.posts=[];P.rails=[];
+  const {sides}=perimPoints(P.L,P.W);const lens=[P.L,P.W,P.L,P.W];const parts=[];
+  for(let si=0;si<4;si++){
+    if(my!==token)return;
+    const [a,bb,len]=sides[si];
+    // الملصق المقابل لهذا الضلع
+    const li=[2,1,0,3][si];P.lab.forEach(l=>l.e.classList.remove('hl'));P.lab[li].e.classList.remove('off');P.lab[li].e.classList.add('hl');
+    const n=Math.round(len);
+    for(let k=0;k<=n;k++){if(my!==token)return;const t=k/n;const p=post(P,a[0]+(bb[0]-a[0])*t,a[1]+(bb[1]-a[1])*t);p.scale.y=.01;P.posts.push(p);
+      tween(350,e=>p.scale.y=Math.max(.01,back(e)));await wait(110);}
+    P.rails.push(...rail(P,a,bb));parts.push(lens[si]);
+    $('eq1').innerHTML='المحيط = <span class="p">'+parts.map(ar).join(' + ')+'</span>'+(si===3?' = <b class="p">'+ar(parts.reduce((s,x)=>s+x,0))+' م</b>':'');
+    await wait(450);
+  }
+  P.lab.forEach(l=>l.e.classList.remove('hl'));
+  $('f1').innerHTML='<div class="formula">المحيط = ٢ل + ٢ض = ٢×٤ + ٢×٢ = ١٢ م</div><p class="note">💡 المحيط <b>طول</b>، فوحدته المتر (م).</p>';
+  if(b){b.disabled=false;b.textContent='أعد البناء';}
+  toast('✔ أحطنا الأرض بسياج طوله ١٢ م');
+};
+// ── المحطة ٢: العشب يُزرع صفّاً صفّاً
+window.plantGrass=async()=>{
+  const my=token,b=$('b2');if(b)b.disabled=true;const P=P2;
+  P.tiles.forEach(o=>P.g.remove(o));P.tiles=[];let n=0;
+  for(let j=0;j<P.W;j++){
+    for(let i=0;i<P.L;i++){if(my!==token)return;const t=tileAt(P,i,j,3);P.tiles.push(t);n++;
+      const y0=3;tween(420,e=>t.position.y=y0+(.17-y0)*e,e=>1-Math.pow(1-e,3));
+      $('eq2').innerHTML='عدد المربّعات = <b class="a">'+ar(n)+'</b>';await wait(170);}
+    await wait(380);
+    $('eq2').innerHTML=`صفّ ${ar(j+1)}: ${ar(P.L)} مربّعات · المجموع <b class="a">${ar(n)}</b>`;await wait(500);
+  }
+  $('eq2').innerHTML=`<span class="a">${ar(P.W)} صفّ × ${ar(P.L)} مربّعات = <b>${ar(P.L*P.W)} م²</b></span>`;
+  const x=P.g.position.x;label(ar(P.L*P.W)+' م²',new THREE.Vector3(x,.6,P.g.position.z),'a');
+  $('f2').innerHTML='<div class="formula">المساحة = ل × ض = ٤ × ٢ = ٨ م²</div><p class="note">💡 المساحة <b>سطح</b>، فوحدتها مربّعة (م²). لذلك لا يُشترى السياج والعشب بالمقياس نفسه!</p>';
+  if(b){b.disabled=false;b.textContent='أعد الزراعة';}
+  toast('✔ غطّينا الأرض بـ ٨ م² من العشب');
+};
+// ── المحطة ٣: ورشة بمنزلقات
+let wsFound=new Set();
+function workshopBuild(L,W){
+  disposeGroup(P3&&P3.g);P3=plot(L,W,ST[3].x,0);
+  for(let j=0;j<W;j++)for(let i=0;i<L;i++)P3.tiles.push(tileAt(P3,i,j));
+  const {sides}=perimPoints(L,W);sides.forEach(([a,b,len])=>{const n=Math.round(len);for(let k=0;k<n;k++){const t=k/n;post(P3,a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);}rail(P3,a,b);});
+  P3.g.scale.set(.001,1,.001);tween(380,e=>{const s=Math.max(.001,back(e));P3.g.scale.set(s,1,s);});
+  clearLabels();const x=ST[3].x;
+  label(ar(L)+' م',new THREE.Vector3(x,.2,W/2+.7));label(ar(W)+' م',new THREE.Vector3(x-L/2-.8,.2,0));
+}
+function workshopInit(){
+  const sL=$('sL'),sW=$('sW');if(!sL)return;
+  const upd=()=>{const L=+sL.value,W=+sW.value;$('oL').textContent=ar(L)+' م';$('oW').textContent=ar(W)+' م';
+    $('rA').textContent=ar(L*W)+' م²';$('rP').textContent=ar(2*L+2*W)+' م';workshopBuild(L,W);
+    if(L*W===24){const k=Math.max(L,W)+'×'+Math.min(L,W);if(!wsFound.has(k)){wsFound.add(k);toast('✔ اكتشفت مستطيلاً: '+ar(Math.max(L,W))+' × '+ar(Math.min(L,W)));}}
+    const chips=$('chips');const all=['24×1','12×2','8×3','6×4'];
+    chips.innerHTML=all.map(k=>wsFound.has(k)?`<span class="ok">${ar(k.split('×')[0])} × ${ar(k.split('×')[1])}</span>`:'<span>؟</span>').join('')
+      +(wsFound.size===4?'<p class="note" style="width:100%">🎉 خديجة على صواب: ٤ مستطيلات مساحتها ٢٤ م² ومحيطاتها مختلفة!</p>':'');};
+  sL.oninput=sW.oninput=upd;upd();
+}
+// ── المحطة ٤: تحدّيات متدرّجة من الملخّص
+const CH=[
+ {q:'يعمل سامي على رصف حديقة طولها <b>٤ م</b> وعرضها <b>٢٫٥ م</b>. أوجد <b>مساحتها</b>.',L:4,W:2.5,a:10,u:'م²',hint:'المساحة = الطول × العرض = ٤ × ٢٫٥',show:'area'},
+ {q:'الحديقة نفسها (٤ م × ٢٫٥ م). أوجد <b>محيطها</b>.',L:4,W:2.5,a:13,u:'م',hint:'المحيط = ٢ × ٤ + ٢ × ٢٫٥ = ٨ + …',show:'fence'},
+ {q:'غرفة مستطيلة مساحتها <b>١٢ م²</b> وطولها <b>٤ م</b>. أوجد <b>عرضها</b>.',L:4,W:3,a:3,u:'م',hint:'المساحة = ل × ض ← ١٢ = ٤ × ض ← ض = ١٢ ÷ ٤',show:'area',unk:'W'},
+ {q:'مستطيل محيطه <b>٢٢ سم</b> وطوله <b>٨ سم</b>. أوجد <b>مساحته</b>.',L:8,W:3,a:24,u:'سم²',hint:'أولاً العرض: ٢٢ = ٢×٨ + ٢ض ← ٢ض = ٦ ← ض = ٣. ثم المساحة = ٨ × ٣',show:'both',unk:'W'},
+];
+let chIdx=0,chTry=0;
+function chBuild(c,reveal){
+  disposeGroup(P4&&P4.g);P4=plot(c.L,c.W,ST[4].x,0);clearLabels();
+  const x=ST[4].x;
+  if(reveal||c.show!=='fence'){if(reveal&&c.show!=='fence')for(let j=0;j<Math.ceil(c.W);j++)for(let i=0;i<c.L;i++)P4.tiles.push(tileAt(P4,i,j));}
+  if(reveal&&(c.show==='fence'||c.show==='both')){const {sides}=perimPoints(c.L,c.W);sides.forEach(([a,b,len])=>{const n=Math.round(len*2);for(let k=0;k<n;k++){const t=k/n;post(P4,a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);}rail(P4,a,b);});}
+  const u=c.u.replace('²','');
+  label(ar(c.L)+' '+u,new THREE.Vector3(x,.2,c.W/2+.7));
+  label(c.unk==='W'&&!reveal?'ض = ؟':ar(c.W)+' '+u,new THREE.Vector3(x-c.L/2-.8,.2,0),c.unk==='W'&&!reveal?'hl':'');
+  if(reveal)label(ar(c.a)+' '+c.u,new THREE.Vector3(x,.7,0),'a');
+}
+function showChallenge(){
+  const c=CH[chIdx];chTry=0;chBuild(c,false);
+  showCard(`<span class="tag">المحطة ٤ · أنتم تحلّون</span><div class="prog">${CH.map((_,i)=>`<i class="${i<chIdx?'ok':i===chIdx?'on':''}"></i>`).join('')}</div>
+   <h2>التحدي ${ar(chIdx+1)} من ${ar(CH.length)}</h2><p class="q">${c.q}</p>
+   <div class="ans"><input id="in" inputmode="decimal" autocomplete="off" aria-label="الإجابة"><span>${c.u}</span><button class="btn go" onclick="checkCh()">تحقّق</button></div>
+   <div class="hint" id="hint">💡 ${c.hint}</div><div class="btns" id="chn"></div>`);
+  setTimeout(()=>{const i=$('in');if(i){i.onkeydown=e=>{if(e.key==='Enter')checkCh();};}},400);
+}
+window.checkCh=()=>{
+  const c=CH[chIdx],i=$('in');if(!i)return;const v=num(i.value);if(isNaN(v)){toast('اكتب رقماً',true);return;}
+  chTry++;
+  if(Math.abs(v-c.a)<1e-6){i.className='ok';i.disabled=true;score.total++;if(chTry===1)score.first++;
+    chBuild(c,true);toast(chTry===1?'✔ ممتاز! من المحاولة الأولى':'✔ صحيح');
+    $('chn').innerHTML=chIdx<CH.length-1?`<button class="btn go" onclick="chIdx++;showChallenge()">التحدي التالي ‹</button>`:`<button class="btn go" onclick="go(5)">اصعد إلى القمّة 🏁</button>`;
+  }else{i.className='bad';setTimeout(()=>i.className='',450);$('hint').classList.add('on');toast(chTry>1?'حاول مرة أخرى مستعيناً بالتلميح':'ليس بعد — اقرأ التلميح',true);
+    if(chTry>=3){$('chn').innerHTML=`<button class="btn" onclick="document.getElementById('in').value='${ar(c.a)}';checkCh()">أظهر الحل</button>`;}}
+};
+window.showChallenge=showChallenge;
+// ── احتفال القمّة
+let confetti=null;
+function celebrate(){if(confetti)disposeGroup(confetti);confetti=new THREE.Group();scene.add(confetti);
+  const cols=[0xf2b632,0xe0533d,0x3d7be0,0x43a047,0xffffff];
+  for(let i=0;i<160;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(.18,.28),new THREE.MeshBasicMaterial({color:cols[i%5],side:THREE.DoubleSide}));
+    m.position.set(-92+(Math.random()-.5)*10,8+Math.random()*6,(Math.random()-.5)*8);m.userData.v=.02+Math.random()*.04;m.userData.r=Math.random()*.2;confetti.add(m);}}
+
+// ══ حلقة الرسم ══
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{
+  const now=performance.now(),t=clock.getElapsedTime();
+  for(let i=tweens.length-1;i>=0;i--){const w=tweens[i];const e=Math.min(1,(now-w.t0)/w.dur);w.fn(w.ease(e));if(e>=1){tweens.splice(i,1);w.r();}}
+  flag.rotation.y=Math.sin(t*2)*.15;flag.position.x=-92.9+Math.sin(t*2)*.05;
+  if(confetti)confetti.children.forEach(m=>{m.position.y-=m.userData.v*(reduce?0:1);m.rotation.x+=m.userData.r;m.rotation.z+=m.userData.r*.6;if(m.position.y<0)m.position.y=12;});
+  cam.position.x+=Math.sin(t*.4)*.0015;cam.lookAt(camLook);
+  renderer.render(scene,cam);placeLabels();
+});
+$('loading').remove();
+go(0);
+</script>
+</body>
+</html>
