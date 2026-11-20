@@ -12,6 +12,7 @@ import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { curFor, readCache, bookKey } from "../_shared/lessonExtract.ts";
 import { conceptPrompt, CONCEPT_EMAILS } from "./concept.ts";
+import { layeredInfographic } from "./layered.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -61,6 +62,11 @@ Deno.serve(async (req) => {
     };
 
     const b = await req.json().catch(() => ({}));
+    // الإنفوجرافيك الطبقي «الذكاء يرسم، والمنصّة تكتب» — تجريبي لحساب المطوّر (layered.ts)
+    if (b.layered) {
+      if (!CONCEPT_EMAILS.includes((user.email || "").toLowerCase())) return await refund({ error: "forbidden" }, 403);
+      return await layeredInfographic(admin, user, st, apiKey, b, json);
+    }
     const grade = String(b.grade || "");
     const subject = String(b.subject || "");
     const lessonNames: string[] = Array.isArray(b.lessonNames) ? b.lessonNames.map(String) : [];
