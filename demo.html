@@ -1575,6 +1575,17 @@ body.sch-mode #c1-corner,body.sch-mode #c1-user,body.sch-mode #c1-menu,body.sch-
 .sch-cat h5{margin:0 0 6px;font-size:12.5px;color:var(--muted)}
 .sch-chat-hi .sch-cat .chip-row{justify-content:flex-start}
 .sch-chat-tools{display:flex;gap:6px;flex-wrap:wrap}
+.sch-cp-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sch-cp-f .c1-select{max-width:220px}
+.sch-cp-cats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0 10px}
+.sch-cp-cats button{font:inherit;font-size:13px;font-weight:800;padding:7px 12px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;color:var(--ink)}
+.sch-cp-cats button.on{background:var(--olive-d);border-color:var(--olive-d);color:#fff}
+.sch-cp-qs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.sch-cp-qs button,.sch-cp-more button{font:inherit;font-size:13.5px;font-weight:700;text-align:right;line-height:1.6;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;color:var(--ink)}
+.sch-cp-qs button:hover,.sch-cp-more button:hover{border-color:var(--olive-d)}
+.sch-cp-more{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.sch-cp-more span{font-size:12.5px;font-weight:800;color:var(--muted)}.sch-cp-more button{padding:7px 12px;font-size:12.5px}
+.md-tbl{overflow-x:auto;margin:8px 0}.md-tbl table{border-collapse:collapse;min-width:100%;font-size:13px}.md-tbl th,.md-tbl td{border:1px solid var(--border);padding:6px 10px;text-align:right;white-space:nowrap}.md-tbl th{background:var(--card);font-weight:800}
+.sch-cp-acts{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);flex-wrap:wrap}
+.sch-cp-acts button{font:inherit;font-size:12px;font-weight:800;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer}
 @media print{
   body.sch-printing .sch-pc-a,body.sch-printing .sch-lnk{display:none!important}
   body.sch-printing .sch-top,body.sch-printing .sch-tabs,body.sch-printing .abs-head{display:none!important}
@@ -11581,7 +11592,18 @@ function exRenderReport(el,e){
 }
 function exPrint(){document.body.classList.add('ex-printing');const off=()=>{document.body.classList.remove('ex-printing');window.removeEventListener('afterprint',off);};window.addEventListener('afterprint',off);window.print();setTimeout(off,1500);}
 function exMd(t){
-  return escHtml(t).split('\n').map(l=>{
+  // جداول Markdown: سطر رأس | ثم سطر --- | ثم الصفوف (التقارير تحتاجها)
+  const L=escHtml(t).split('\n'),out=[];
+  for(let i=0;i<L.length;i++){
+    if(/^\s*\|.*\|\s*$/.test(L[i])&&i+1<L.length&&/^\s*\|?\s*:?-{2,}/.test(L[i+1])){
+      const cells=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      const head=cells(L[i]);i+=2;const rows=[];
+      while(i<L.length&&/^\s*\|.*\|\s*$/.test(L[i])){rows.push(cells(L[i]));i++;}i--;
+      out.push('\u0001<div class="md-tbl"><table><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</table></div>');
+    }else out.push(L[i]);
+  }
+  return out.map(l=>{
+    if(l.startsWith('\u0001'))return l.slice(1);
     if(/^#{1,3}\s/.test(l))return '<h4>'+l.replace(/^#{1,3}\s/,'')+'</h4>';
     if(/^\s*[-•*]\s/.test(l))return '<li>'+l.replace(/^\s*[-•*]\s/,'')+'</li>';
     return l.trim()?'<p>'+l+'</p>':'';
@@ -13600,25 +13622,78 @@ async function schRemove(id,name){
   if(!await c1Confirm('إزالة «'+name+'» من المدرسة؟ لن تظهر بيانات شعبه هنا بعد الآن.'))return;
   try{const{error}=await sb.rpc('c1_school_remove_teacher',{p_teacher:id});if(error)throw error;toast('أُزيل','ok');schLoad();}catch(e){toast('تعذّر',true);}
 }
+// ══ مساعد الإدارة (٢١ نوفمبر): مكتبة استعلامات جاهزة بفئات، وفترة وشعبة، وإجراءات على كل إجابة ══
+// «{ش}» في الاستعلام تُستبدل باسم الشعبة المختارة (وإن لم تُختر شعبةٌ يُطلب اختيارها).
 const SCH_SUGG=[
-  ['تقارير جاهزة',['اكتب التقرير الأسبوعي للإدارة: الغياب والتسرّب والسلوك وأبرز ما يحتاج إجراءً','ملخّص اليوم: من غاب، ومن تسرّب، وما الشعب التي لم تسجّل؟','قارن هذا الشهر بالشهر الماضي في الغياب والمخالفات']],
-  ['الظواهر والحلول',['ما أكثر ثلاث ظواهر سلوكية انتشاراً في المدرسة، وما خطة علاج كلٍّ منها؟','هل توجد مشكلة يسجّلها معلّمون كثيرون في الوقت نفسه؟','هل يختلف المعلّمون كثيراً في تسجيل المخالفات؟ وكيف نوحّد المعايير؟']],
-  ['‍الطلاب',['من الطلاب الذين يحتاجون إحالة للأخصائي الاجتماعي، ولماذا؟','من أكثر الطلاب غياباً هذا الشهر، ومن يجب التواصل مع وليّ أمره؟','من الطلاب المتميّزون سلوكياً لتكريمهم في الطابور؟']],
-  ['الشعب والأيام',['أيّ الشعب تحتاج زيارة صفية من الإدارة، ولماذا؟','هل يرتفع الغياب في يومٍ معيّن من الأسبوع؟','في أيّ الحصص يحدث التسرّب أكثر؟']],
+  ['📋','تقارير جاهزة',['اكتب تقرير اليوم: من غاب، ومن تسرّب من الحصص، ومن تأخّر، وما الشعب التي لم تسجّل بعد',
+    'اكتب التقرير الأسبوعي للإدارة: الغياب والتسرّب والتأخّر والسلوك، وأبرز ما يحتاج إجراءً',
+    'اكتب تقريراً شهرياً مختصراً يُرفع إلى المديرية: مؤشّرات الانضباط والإنجاز مع جدول أرقام',
+    'قارن النصف الأول من الفترة بنصفها الثاني في الغياب والمخالفات: ما الذي تحسّن وما الذي ساء؟',
+    'اكتب عرضاً لمجلس الآباء: أرقام الانضباط في المدرسة بلغةٍ بسيطة، ودور وليّ الأمر']],
+  ['🚸','الغياب والتسرّب',['ما نسبة الغياب في المدرسة، وأيّ الشعب أعلى غياباً؟',
+    'من الطلاب المتغيّبون ٣ أيام متتالية فأكثر، ومن يجب التواصل مع أوليائهم اليوم؟',
+    'من يحضر الطابور ثم يتسرّب من الحصص، وفي أيّ حصةٍ يحدث أكثر؟',
+    'من الطلاب كثيرو التأخّر الصباحي، وما خطة معالجة التأخّر؟',
+    'هل يرتفع الغياب في يومٍ معيّن من الأسبوع؟ ولماذا قد يحدث ذلك؟']],
+  ['⚖️','السلوك والظواهر',['ما أكثر ثلاث ظواهر سلوكية انتشاراً، وما خطة علاج كلٍّ منها؟',
+    'هل توجد مشكلة يسجّلها معلّمون كثيرون في شعبٍ كثيرة في الوقت نفسه؟',
+    'هل يختلف المعلّمون كثيراً في تسجيل المخالفات؟ وكيف نوحّد المعايير؟',
+    'اقترح برنامجاً تحفيزياً لشهرٍ واحد لتقليل أكثر مخالفةٍ تكراراً']],
+  ['🧒','الطلاب',['من الطلاب الذين يحتاجون إحالة للأخصائي الاجتماعي، ولماذا؟',
+    'من الطلاب الذين يجمعون بين الغياب المتكرّر والمخالفات؟ (أولوية المتابعة)',
+    'اكتب ملفّ متابعة لأكثر ثلاثة طلاب يحتاجون تدخّلاً: المؤشّرات والإجراء المقترح لكلٍّ منهم']],
+  ['👩‍🏫','المعلّمون والإنجاز',['ما خلاصة إنجاز المعلّمين في التحضير والألعاب والإنفوجرافيك والنشر في نور خلال الفترة؟',
+    'أيّ الشعب لا تُسجَّل فيها بيانات الغياب بانتظام؟ (لتحسين اكتمال البيانات لا للّوم)',
+    'اقترح دعماً عملياً للمعلّمين: من يحتاج تدريباً على أداة، وكيف نخفّف العبء؟',
+    'اكتب رسالة شكر جماعية للمعلّمين على إنجازهم هذا الأسبوع']],
+  ['🏫','الشعب والأيام',['أيّ الشعب تحتاج زيارة صفية من الإدارة، ولماذا؟',
+    'حلّل شعبة {ش}: الغياب والتأخّر والسلوك ونقاط القوة، وما الذي يحتاج إجراءً؟',
+    'رتّب الشعب من الأفضل انضباطاً إلى الأقل، مع سببٍ واحد لكلٍّ منها']],
+  ['✉️','الوثائق والمراسلات',['اكتب رسالة لوليّ أمر طالبٍ متغيّب ٣ أيام متتالية — رسمية ولطيفة',
+    'اكتب محضر اجتماع لجنة الانضباط المدرسي عن ظواهر هذه الفترة وقراراتها المقترحة',
+    'اكتب تعميماً للمعلّمين لتوحيد تسجيل الغياب والمخالفات',
+    'اكتب خطة علاجية للغياب على مستوى المدرسة لمدة شهر بجدول زمني ومسؤوليات']],
+  ['🏅','التكريم',['من الطلاب المتميّزون سلوكياً (أكثر النجوم وأقل المخالفات) لتكريمهم في الطابور؟',
+    'أيّ الشعب الأفضل انضباطاً لتكريمها هذا الأسبوع؟',
+    'اكتب كلمة تكريم قصيرة تُلقى في الطابور للمتميّزين']],
 ];
+let schCpCat=0,schCpDays=30,schCpCls='';
+function schCpQ(q){return q.replace('{ش}',schCpCls||'…');}
+function schCpPick(q){
+  if(q.includes('{ش}')&&!schCpCls){toast('اختر الشعبة أولاً من أعلى الصفحة',true);const s=document.getElementById('sch-cp-cls');if(s)s.focus();return;}
+  schAsk(schCpQ(q));
+}
 function schRenderCopilot(el){
-  el.innerHTML=`<div class="sch-chat"><div class="sch-chat-b" id="sch-chat-b">${schChat.length?schChat.map(m=>`<div class="fh-msg ${m.role==='user'?'user':'bot'}${m.err?' err':''}">${m.role==='user'?escHtml(m.content):exMd(m.content)}</div>`).join(''):
-    `<div class="sch-chat-hi"><b><i class="ki ki-bot" aria-hidden="true"></i> مساعد الإدارة</b><p>اسأل بلغتك عن غياب الطلاب وسلوكهم في مدرستك، فيجيبك من بيانات المعلّمين المنضمّين (آخر ٩٠ يوماً).</p>${SCH_SUGG.map(([t,qs])=>`<div class="sch-cat"><h5>${t}</h5><div class="chip-row">${qs.map(q=>`<button class="chip" onclick="schAsk('${escJs(q)}')">${escHtml(q)}</button>`).join('')}</div></div>`).join('')}</div>`}
-    ${schBusy?'<div class="fh-msg bot"><div class="spin"></div> يحلّل البيانات…</div>':''}</div>
-    ${schChat.length?`<div class="sch-chat-tools"><button class="abs-mini" onclick="schChat=[];schRender()">محادثة جديدة</button>${SCH_SUGG[0][1].slice(0,2).map(q=>`<button class="abs-mini" onclick="schAsk('${escJs(q)}')">${escHtml(q.split(':')[0])}</button>`).join('')}</div>`:''}
-    <div class="sch-chat-in"><textarea id="sch-q" rows="1" placeholder="اكتب سؤالك…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();schAsk();}"></textarea><button class="c1-mbtn go" onclick="schAsk()" ${schBusy?'disabled':''}>إرسال</button></div></div>`;
-  const b=document.getElementById('sch-chat-b');if(b)b.scrollTop=b.scrollHeight;
+  const cls=[...new Set((SCH.classes||[]).map(c=>c.name))];
+  const filt=`<div class="sch-cp-f"><div class="cm-seg">${[[7,'أسبوع'],[30,'شهر'],[90,'الفصل']].map(([d,t])=>`<button class="${schCpDays===d?'on':''}" onclick="schCpDays=${d};schRender()">${t}</button>`).join('')}</div>
+    <select class="c1-select" id="sch-cp-cls" onchange="schCpCls=this.value;schRender()"><option value="">كل الشعب</option>${cls.map(c=>`<option ${c===schCpCls?'selected':''}>${escHtml(c)}</option>`).join('')}</select></div>`;
+  const cat=SCH_SUGG[schCpCat]||SCH_SUGG[0];
+  const lib=`<div class="sch-cp-cats">${SCH_SUGG.map(([ic,t],i)=>`<button class="${i===schCpCat?'on':''}" onclick="schCpCat=${i};schRender()">${ic} ${t}</button>`).join('')}</div>
+    <div class="sch-cp-qs">${cat[2].map(q=>`<button onclick="schCpPick('${escJs(q)}')">${escHtml(schCpQ(q))}</button>`).join('')}</div>`;
+  const msgs=schChat.map((m,i)=>m.role==='user'?`<div class="fh-msg user">${escHtml(m.content)}</div>`
+    :`<div class="fh-msg bot${m.err?' err':''}">${m.err?escHtml(m.content):exMd(m.content)}${m.err?'':`<div class="sch-cp-acts"><button onclick="schCpCopy(${i})">📋 نسخ</button><button onclick="schCpPrint(${i})">🖨 طباعة</button><button onclick="schCpWa(${i})">💬 واتساب</button></div>`}</div>`).join('');
+  const last=schChat.length&&!schBusy?`<div class="sch-cp-more"><span>اسأل أيضاً:</span>${cat[2].filter(q=>!schChat.some(m=>m.content===schCpQ(q))).slice(0,3).map(q=>`<button onclick="schCpPick('${escJs(q)}')">${escHtml(schCpQ(q))}</button>`).join('')}</div>`:'';
+  el.innerHTML=`<div class="sch-chat">${filt}<div class="sch-chat-b" id="sch-chat-b">${schChat.length?msgs:
+    `<div class="sch-chat-hi"><b><i class="ki ki-bot" aria-hidden="true"></i> مساعد الإدارة</b><p>اسأل بلغتك، أو اختر من الاستعلامات الجاهزة. يحلّل غياب الطلاب وتأخّرهم وسلوكهم وإنجاز المعلّمين من بيانات المعلّمين المنضمّين، ويكتب التقارير والرسائل والمحاضر جاهزةً للطباعة.</p></div>${lib}`}
+    ${schBusy?'<div class="fh-msg bot"><div class="spin"></div> يحلّل البيانات…</div>':''}${last}</div>
+    ${schChat.length?`<div class="sch-chat-tools"><button class="abs-mini" onclick="schChat=[];schRender()">محادثة جديدة</button><button class="abs-mini" onclick="schChat=[];schRender();setTimeout(()=>document.querySelector('.sch-cp-cats')?.scrollIntoView({block:'center'}),50)">الاستعلامات الجاهزة</button></div>`:''}
+    <div class="sch-chat-in"><textarea id="sch-q" rows="1" placeholder="اكتب سؤالك… مثل: من غاب اليوم في ${escAttr(cls[0]||'الشعبة')}؟" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();schAsk();}"></textarea><button class="c1-mbtn go" onclick="schAsk()" ${schBusy?'disabled':''}>إرسال</button></div></div>`;
+  const b=document.getElementById('sch-chat-b');if(b&&schChat.length)b.scrollTop=b.scrollHeight;
+}
+function schCpText(i){return String((schChat[i]||{}).content||'');}
+function schCpCopy(i){try{navigator.clipboard.writeText(schCpText(i));toast('نُسخت الإجابة','ok');}catch(e){toast('تعذّر النسخ',true);}}
+function schCpWa(i){window.open('https://wa.me/?text='+encodeURIComponent(schCpText(i).replace(/[#*_`]/g,'').slice(0,3500)),'_blank');}
+function schCpPrint(i){
+  const w=window.open('','_blank');if(!w){toast('اسمح بالنوافذ المنبثقة للطباعة',true);return;}
+  const sch=(SCH&&SCH.school&&SCH.school.name)||'';
+  w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${escHtml(sch)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap"><style>body{font-family:Tajawal,sans-serif;padding:24px 32px;line-height:1.9;color:#222}h1,h2,h3{color:#1F5F4E}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}th{background:#f1efe8}.hd{display:flex;justify-content:space-between;border-bottom:2px solid #1F5F4E;margin-bottom:14px;padding-bottom:6px;font-weight:800}</style></head><body><div class="hd"><span>${escHtml(sch)}</span><span>${new Date().toLocaleDateString('ar-OM')}</span></div>${exMd(schCpText(i))}<script>onload=()=>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
 }
 async function schAsk(q){
   if(schBusy)return;const inp=document.getElementById('sch-q');q=(q||(inp&&inp.value)||'').trim();if(!q)return;
   schChat.push({role:'user',content:q});schBusy=true;schRender();
   try{
-    const res=await sb.functions.invoke('c1-insights',{body:{mode:'copilot',question:q,history:schChat.slice(0,-1).filter(m=>!m.err).slice(-6)}});
+    const res=await sb.functions.invoke('c1-insights',{body:{mode:'copilot',question:q,days:schCpDays,cls:schCpCls,history:schChat.slice(0,-1).filter(m=>!m.err).slice(-6)}});
     const{data,error}=res;
     if(error||!data||!data.text){const r=await c1FnErr(res);schChat.push({role:'assistant',err:true,content:c1ErrMsg(r,'تعذّر الردّ — أعد المحاولة.')});}
     else schChat.push({role:'assistant',content:data.text});
