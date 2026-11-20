@@ -14059,6 +14059,14 @@ function certArt(style,p,u,type){
 function certFlourish(color){
   return `<svg class="fl" viewBox="0 0 160 8" xmlns="http://www.w3.org/2000/svg"><path d="M2 4 L68 4 M92 4 L158 4" stroke="${color}" stroke-width=".7"/><path d="M72 4 L80 .6 L88 4 L80 7.4 Z" fill="${color}"/><circle cx="66" cy="4" r="1.1" fill="${color}"/><circle cx="94" cy="4" r="1.1" fill="${color}"/></svg>`;
 }
+// شعارات المدارس (٢٠ نوفمبر): يظهر الشعار تلقائياً في شهادات كل معلّمٍ اسمُ مدرسته يطابق —
+// سواءٌ انضمّ برمز المدرسة (يُكتب اسمها في ملفّه آلياً) أو كتب الاسم بيده في إعدادات الحساب.
+// المطابقة بعد التطبيع: بلا مسافات ولا «مدرسة» ولا تشكيل، والهمزات ألفاً — فتقبل «عبدالرحمن» و«عبد الرحمن» و«ابي/أبي».
+const CERT_SCHOOL_LOGOS=[
+  {ok:n=>n.includes('عبدالرحمن')&&n.includes('ابيبكر'),src:'/img/schools/abdulrahman-bin-abibakr.png'},
+];
+function certSchoolNorm(s){return String(s||'').replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/مدرسه|مدرسة/g,'').replace(/\s+/g,'').replace(/باابي/g,'بنابي');}
+function certSchoolLogo(school){const n=certSchoolNorm(school);if(!n)return '';const h=CERT_SCHOOL_LOGOS.find(x=>x.ok(n));return h?h.src:'';}
 function certPageHtml(it){
   const t=CERT_TYPES[it.type]||CERT_TYPES.thanks;
   const p=CERT_PAL[it.type]||CERT_PAL.thanks;
@@ -14070,7 +14078,7 @@ function certPageHtml(it){
   return `<section class="cert cs-${style}" style="--a:${p.a};--d:${p.d};--n:${p.n}">
   ${certArt(style,p,u,it.type)}
   <div class="body">
-    <div class="school">${escHtml(it.school||'')}</div>
+    ${it.logo?`<img class="slogo" src="${escAttr(it.logo)}" alt="" onerror="this.remove()">`:''}<div class="school">${escHtml(it.school||'')}</div>
     <h1 class="ttl">${escHtml(t.ttl)}</h1>
     <div class="kind">${escHtml(t.nm)}</div>
     <p class="pre">${pre}</p>
@@ -14123,6 +14131,8 @@ body{background:#E8DCCB;font-family:'Amiri','Tajawal','Noto Naskh Arabic','Segoe
 .cert .art{position:absolute;inset:0;width:297mm;height:210mm;display:block}
 .cert .body{position:absolute;left:30mm;right:30mm;top:27mm;bottom:52mm;display:flex;flex-direction:column;align-items:center;text-align:center}
 .school{font-family:'Tajawal',sans-serif;font-size:4mm;font-weight:700;min-height:5mm;opacity:.8}
+.slogo{display:block;height:17mm;max-width:40mm;object-fit:contain;margin:-6mm auto 1mm}
+.cs-royal .slogo{margin-top:2mm}.cs-modern .slogo{margin:-6mm 0 1mm auto}
 .ttl{font-family:'Aref Ruqaa','Amiri',serif;font-weight:700;line-height:1.15;margin-top:1mm}
 .kind{font-family:'Tajawal',sans-serif;font-size:3.6mm;font-weight:800;border-radius:3mm;padding:.6mm 4mm;margin-top:1mm}
 .pre{font-size:4.6mm;margin-top:4mm}
@@ -14229,6 +14239,7 @@ function certItemFor(classId,idx,typeOverride,reasonOverride){
     stars:starArr(classId)[idx]||0,
     why:(reasonOverride||'').trim()||certWhyText(type),
     school:ap.school||'',
+    logo:certSchoolLogo(ap.school),
     teacher:ap.name||profile.display_name||'',
     cls:cls.name||'',
     date:certDateLine(),
