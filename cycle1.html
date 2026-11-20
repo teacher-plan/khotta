@@ -2345,6 +2345,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .gmg-filters::-webkit-scrollbar{display:none}
 .gmg-filters button{flex:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);background:#fff;border:1.5px solid var(--border);border-radius:99px;padding:6px 14px;cursor:pointer}
 .gmg-filters button.on{color:#fff;background:var(--red-d);border-color:var(--red-d)}
+.cm-meth{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.cm-meth button{font:inherit;text-align:right;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer}.cm-meth button b{display:block;font-size:14px}.cm-meth button small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}.cm-meth button.on{border-color:var(--olive-d);background:rgba(72,120,72,.1)}.cml-form{margin-top:10px;display:grid;gap:8px;max-height:420px;overflow:auto;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}.cml-f span{display:block;font-size:12px;font-weight:800;color:var(--muted)}
 .ly-opts{margin:12px 0 4px;padding:12px;border:1.5px dashed var(--border);border-radius:12px;background:var(--card)}.ly-mode{display:grid;gap:8px;margin-bottom:10px}.ly-mode label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface)}.ly-mode label:has(input:checked){border-color:var(--olive-d);background:rgba(72,120,72,.08)}.ly-mode small{display:block;font-size:12px;color:var(--muted);margin-top:2px}.ly-edit{margin-top:12px}.ly-card{border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:10px;background:var(--surface)}.ly-in{max-width:none!important;width:100%;margin-top:6px;background-image:none!important;padding:10px 12px!important;font-size:15px!important;line-height:1.6}#ly-form{margin-top:10px}
 .gmg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px}
 .gmg-card{display:flex;flex-direction:column;gap:3px;text-align:start;font-family:inherit;background:#fff;border:2px solid var(--border);border-radius:14px;padding:6px 6px 9px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
@@ -16580,7 +16581,7 @@ const CM_OPTS={
   aspect:{t:'المقاس',o:[['3:4','عمودي — ورقة A4'],['16:9','أفقي — للعرض'],['1:1','مربع']]},
   student:{t:'النسخة',o:[['full','كاملة'],['gaps','للطالب — بفراغات']],h:'نسخة الطالب تترك صناديق فارغة يكملها من ذاكرته بعد الدرس؛ الاسترجاع يثبّت التعلّم أكثر من إعادة القراءة.'},
 };
-let cmS={key:'',opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
+let cmS={key:'',m:'ly',ly:null,opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
 const _mmFired={};
 function mmIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
 function mmLesson(){const l=studioSelectedLessons()[0];return l?{grade:String(studioGrade||''),subject:studioSubject||'',unit:l.unit||'',lesson:l.name}:null;}
@@ -16589,30 +16590,36 @@ function mmPrebuild(grade,subject,unit,lesson){
   if(!mmIsOn()||KH_DEMO)return;const k=grade+'|'+subject+'|'+lesson;if(_mmFired[k])return;_mmFired[k]=1;
   sb.functions.invoke('generate-mindmap',{body:{grade:String(grade),subject,unit,lesson}}).catch(()=>{});
 }
-function mmOpen(){const L=mmLesson(),k=L?L.grade+'|'+L.subject+'|'+L.lesson:'';if(k!==cmS.key){cmS.key=k;cmS.img=null;cmS.prev=null;}cmDraw();}
-function cmSet(k,v){cmS.opt[k]=v;cmDraw();}
+function mmOpen(){const L=mmLesson(),k=L?L.grade+'|'+L.subject+'|'+L.lesson:'';if(k!==cmS.key){cmS.key=k;cmS.img=null;cmS.prev=null;cmS.ly=null;}cmDraw();}
+function cmSet(k,v){cmS.opt[k]=v;
+  // في الطريقة الطبقية: الألوان ونسخة الطالب وعبارات الربط والرسوم تُطبَّق فوراً بلا تكلفة
+  if(cmS.m==='ly'&&cmS.ly&&!cmS.busy&&(['colors','student','links'].includes(k)||(k==='art'&&(v==='none'||cmS.ly.art))))return cmlRerender('طُبّق فوراً — بلا تكلفة');
+  cmDraw();}
 function cmRow(k){const d=CM_OPTS[k],cur=cmS.opt[k];
   return `<div class="cm-row"><span>${d.t}</span><div class="cm-seg">${d.o.map(([v,t])=>`<button class="${cur===v?'on':''}" onclick="cmSet('${k}','${v}')">${t}</button>`).join('')}</div>${d.h?`<small>${d.h}</small>`:''}</div>`;}
 function cmDraw(){
   const box=document.getElementById('mm-body');if(!box)return;
   const L=mmLesson();if(!L){box.innerHTML='<div class="eg-hint">'+khG('اختاري','اختر')+' درساً أولاً.</div>';return;}
   const o=cmS.opt,ty=CM_OPTS.type.o.find(x=>x[0]===o.type);
-  box.innerHTML=`<div class="cm-steps"><b>١</b> ${khG('اختاري','اختر')} نوع الخريطة <b>٢</b> ${khG('حدّدي','حدّد')} الشكل <b>٣</b> ${khG('ارسميها','ارسمها')} ثم ${khG('عدّليها','عدّلها')} بالوصف أو ${khG('نزّليها','نزّلها')}</div>
+  box.innerHTML=`<div class="cm-steps"><b>١</b> ${khG('اختاري','اختر')} نوع الخريطة <b>٢</b> ${khG('حدّدي','حدّد')} الشكل <b>٣</b> ${khG('ارسميها','ارسمها')} ثم ${khG('عدّليها','عدّلها')} ${cmS.m==='ly'?'نصوصها':'بالوصف'} أو ${khG('نزّليها','نزّلها')}</div>
+  <div class="cm-meth"><button class="${cmS.m==='ly'?'on':''}" onclick="cmS.m='ly';cmS.img=null;cmS.ly=null;cmDraw()"><b>الذكاء يرسم، والمنصّة تكتب</b><small>إملاء صحيح دائماً · تعديل مجاني · أرخص</small></button><button class="${cmS.m!=='ly'?'on':''}" onclick="cmS.m='full';cmS.img=null;cmS.ly=null;cmDraw()"><b>رسم كامل بالذكاء</b><small>الطريقة السابقة</small></button></div>
   <div class="cm-types">${CM_OPTS.type.o.map(([v,t])=>`<button class="${o.type===v?'on':''}" onclick="cmSet('type','${v}')">${t}</button>`).join('')}</div>
   <div class="cm-why"><b>${ty[1]}:</b> ${ty[2]}</div>
   <div class="cm-grid"><div class="cm-opts">
     ${cmRow('style')}${cmRow('detail')}${cmRow('art')}${cmRow('colors')}${cmRow('aspect')}${cmRow('student')}
-    ${o.type==='concept'?`<label class="cm-chk"><input type="checkbox" ${o.links?'checked':''} onchange="cmS.opt.links=this.checked"> كتابة عبارات الربط على الأسهم</label>`:''}
+    ${o.type==='concept'?`<label class="cm-chk"><input type="checkbox" ${o.links?'checked':''} onchange="cmSet('links',this.checked)"> كتابة عبارات الربط على الأسهم</label>`:''}
     <div class="cm-row"><span>تعليمات إضافية <small style="display:inline">(اختياري)</small></span><textarea class="cm-ta" placeholder="مثلاً: ركّز على الفرق بين المحلول والمخلوط، واجعل العنوان باللون الأزرق" oninput="cmS.opt.extra=this.value">${escHtml(o.extra||'')}</textarea></div>
     <button class="eg-generate cm-go" ${cmS.busy?'disabled':''} onclick="cmGenerate()">${cmS.busy?'يرسم الخريطة… (قد يستغرق دقيقة)':(cmS.img?'↻ ارسم نسخة جديدة':'🖌 ارسم الخريطة')}</button>
-    <div class="eg-hint">تُرسم من قراءة صفحات الدرس أثناء التحضير، وتُحسب من رصيد الصور (مثل الإنفوجرافيك).</div>
+    <div class="eg-hint">${cmS.m==='ly'?'الهيكل من صفحات الدرس، والمنصّة ترسم الصناديق والأسهم والنصوص. الخلفية تُرسم مرّة لكل وحدة ونمط ومقاس، و«بلا رسوم» لا يستهلك رسمة. الألوان ونسخة الطالب وعبارات الربط تتغيّر فوراً.':'تُرسم من قراءة صفحات الدرس أثناء التحضير، وتُحسب من رصيد الصور (مثل الإنفوجرافيك).'}</div>
   </div><div class="cm-out">${cmS.img?`<img class="cm-img" src="${escAttr(cmS.img)}" alt="خريطة الدرس" onclick="imgFullOpen(cmS.img,'خريطة — '+mmLesson().lesson)">
-    <div class="cm-edit"><input id="cm-edit-in" class="c1-select" placeholder="عدّل بالوصف: مثلاً «صحّح كلمة المحاليل» أو «كبّر خط العنوان»"><button class="eg-regen" onclick="cmEdit()">نفّذ</button>${cmS.prev?`<button class="eg-regen" onclick="cmUndo()">النسخة السابقة</button>`:''}</div>
+    ${cmS.ly?`<div class="cm-acts"><button class="eg-export" onclick="cmlEditOpen()">✏️ تعديل النصوص (مجاناً)</button>${cmS.opt.art!=='none'?`<button class="eg-regen" onclick="cmlRedraw()">🎨 خلفية جديدة</button>`:''}</div><div id="cml-form" class="cml-form" hidden></div>`
+    :`<div class="cm-edit"><input id="cm-edit-in" class="c1-select" placeholder="عدّل بالوصف: مثلاً «صحّح كلمة المحاليل» أو «كبّر خط العنوان»"><button class="eg-regen" onclick="cmEdit()">نفّذ</button>${cmS.prev?`<button class="eg-regen" onclick="cmUndo()">النسخة السابقة</button>`:''}</div>`}
     <div class="cm-acts"><button class="eg-export" onclick="cmPng()">⬇ PNG</button><button class="eg-export" onclick="cmPdf()">⬇ PDF</button><button class="eg-regen" onclick="cmSave()">حفظ في بطاقة الدرس</button></div>
-    <div class="eg-hint">⚠️ ${khG('راجعي','راجع')} النصوص قبل الطباعة: الرسم بالذكاء الاصطناعي قد يُخطئ في حرف، ${khG('صحّحيه','صحّحه')} بالتعديل بالوصف.</div>`
+    ${cmS.ly?'':`<div class="eg-hint">⚠️ ${khG('راجعي','راجع')} النصوص قبل الطباعة: الرسم بالذكاء الاصطناعي قد يُخطئ في حرف، ${khG('صحّحيه','صحّحه')} بالتعديل بالوصف.</div>`}`
     :`<div class="cm-ph">${cmS.busy?'<span class="mm-spin"></span> يقرأ محتوى الدرس ويرسم الخريطة…':'ستظهر الخريطة هنا'}</div>`}</div></div>`;
 }
 async function cmGenerate(){
+  if(cmS.m==='ly')return cmlGenerate(false);
   const L=mmLesson();if(!L||cmS.busy)return;cmS.busy=true;cmDraw();
   let images=[];try{images=await c1LessonBookImages(L.grade,L.subject,L.unit,L.lesson)||[];}catch(_){}
   let img=null,why='';
@@ -16657,6 +16664,228 @@ async function cmSave(){
     await planSetState(id,{files:[...(st.files||[]),{name:f.name,type:f.type,size:f.size,path:res.path,viewLink:res.viewLink,previewLink:res.previewLink}]});
     toast('حُفظت الخريطة في مرفقات الدرس','ok');}catch(_){toast('تعذّر الحفظ',true);}finally{cyBusyDone();}
 }
+
+// ══ خرائط المفاهيم الطبقية «الذكاء يرسم، والمنصّة تكتب» (٢٠ نوفمبر — تجريبي لحساب المطوّر) ══
+// الهيكل JSON من مستخلص الكتاب (generate-infographic ‹cmLayered›)، والخلفية مرسومة بلا كتابة
+// (أو سادة)، والمتصفّح يرسم الصناديق والأسهم والنصوص ثم يصوّرها. الألوان ونسخة الطالب
+// وعبارات الربط والرسوم تتبدّل فوراً بلا تكلفة، وكل كلمةٍ قابلة للتعديل.
+const CML_SIZE={'3:4':[1500,2000],'16:9':[1920,1080],'1:1':[1600,1600]};
+const CML_PAL={vivid:['#2F6FA6','#2E8A57','#C2701A','#7A5BA6','#B8433E','#17807F','#A8780A','#4E62A8'],
+  calm:['#4A7A8C','#5E8C6A','#8C7A5B','#6B7FA0','#7E8F6E','#6E8E99','#8A6E7E','#6F7F5E'],bw:['#222','#222','#222','#222','#222','#222','#222','#222']};
+// html2canvas لا يفهم color-mix: الدرجات تُحسب هنا
+function cmlHex(c){const m=String(c).replace('#','');const f=m.length===3?m.split('').map(x=>x+x).join(''):m;return [0,2,4].map(i=>parseInt(f.slice(i,i+2),16));}
+function cmlMix(c,w,p){const a=cmlHex(c),b=cmlHex(w);return 'rgb('+a.map((v,i)=>Math.round(v*p+b[i]*(1-p))).join(',')+')';}
+function cmlA(c,al){return 'rgba('+cmlHex(c).join(',')+','+al+')';}
+function cmlVars(c){return `--c:${c};--bg:${cmlMix(c,'#ffffff',.13)};--tx:${cmlMix(c,'#111111',.75)};--sh:${cmlA(c,.3)};--ds:${cmlA(c,.4)}`;}
+function cmlNode(o){ // o:{id,label,note,icon,c,cls,blank,items}
+  const e=lyE;const ic=o.icon?`<i class="ic">${e(o.icon)}</i>`:'';
+  const items=(o.items||[]).length?`<ul>${o.items.map(t=>`<li>${o.blankItems?'&nbsp;':e(t)}</li>`).join('')}</ul>`:'';
+  return `<div class="nd ${o.cls||''}${o.blank?' blank':''}" data-id="${e(o.id)}" style="${cmlVars(o.c)}">${ic}<span class="lb">${o.blank?'&nbsp;':e(o.label)}</span>${o.note&&!o.blank?`<small>${e(o.note)}</small>`:''}${items}</div>`;
+}
+// يبني HTML الخريطة ويُعيد قائمة الوصلات: [from,to,{arrow,label,curve,w}]
+function cmlBuild(s){
+  const t=s.type,m=s.map,o=s.opt,pal=CML_PAL[o.colors]||CML_PAL.vivid,bw=o.colors==='bw';
+  const icAll=o.art==='rich',icMain=o.art!=='none';
+  const gap=i=>o.student==='gaps'&&i%3===1;  // ثلث العُقد فارغة في نسخة الطالب
+  const E=[];let h='';
+  const C=i=>pal[i%pal.length];
+  if(t==='radial'){
+    h+=cmlNode({id:'c',label:m.center,cls:'center',c:bw?'#222':'#1F5F4E'});
+    m.branches.forEach((b,i)=>{h+=cmlNode({id:'b'+i,label:b.label,icon:icMain?b.icon:'',c:C(i),cls:'br abs',items:b.items,blank:gap(i),blankItems:o.student==='gaps'&&i%2===0});E.push(['c','b'+i,{w:7,curve:.18,color:C(i)}]);});
+  }else if(t==='tree'){
+    h+=`<div class="trow">${cmlNode({id:'r',label:m.root,cls:'center',c:bw?'#222':'#1F5F4E'})}</div><div class="trow kids">`;
+    m.children.forEach((k,i)=>{h+=`<div class="tcol">${cmlNode({id:'k'+i,label:k.label,icon:icMain?k.icon:'',c:C(i),cls:'main',blank:gap(i)})}${(k.items||[]).map((it,j)=>cmlNode({id:'k'+i+'_'+j,label:it,c:C(i),cls:'leaf',blank:gap(i+j+1)})).join('')}</div>`;
+      E.push(['r','k'+i,{elbow:1,color:C(i)}]);(k.items||[]).forEach((_,j)=>E.push([j?'k'+i+'_'+(j-1):'k'+i,'k'+i+'_'+j,{color:C(i),w:3}]));});
+    h+='</div>';
+  }else if(t==='flow'){
+    const st=m.steps,cols=s.aspect==='16:9'?4:(s.aspect==='1:1'?3:2);
+    h+=m.title?`<div class="mtitle">${lyE(m.title)}</div>`:'';
+    h+=`<div class="fgrid" style="grid-template-columns:repeat(${cols},1fr)">`;
+    st.forEach((x,i)=>{const r=Math.floor(i/cols),c=i%cols,col=r%2?cols-c:c+1; // متعرّج يبدأ من اليمين (العمود ١ يمينٌ في RTL)
+      h+=`<div style="grid-row:${r+1};grid-column:${col}">${cmlNode({id:'s'+i,label:x.label,note:x.note,icon:icMain?x.icon:'',c:C(i),cls:'main num',blank:gap(i)}).replace('<span class="lb">',`<b class="no">${egArNum(i+1)}</b><span class="lb">`)}</div>`;
+      if(i)E.push(['s'+(i-1),'s'+i,{arrow:1,color:bw?'#222':'#5C5544',w:5}]);});
+    h+='</div>';
+  }else if(t==='cycle'){
+    h+=cmlNode({id:'c',label:m.title||'',cls:'center ring',c:bw?'#222':'#1F5F4E'});
+    m.stages.forEach((x,i)=>{h+=cmlNode({id:'s'+i,label:x.label,note:x.note,icon:icMain?x.icon:'',c:C(i),cls:'main abs num',blank:gap(i)}).replace('<span class="lb">',`<b class="no">${egArNum(i+1)}</b><span class="lb">`);
+      E.push(['s'+i,'s'+((i+1)%m.stages.length),{arrow:1,curve:-.28,color:bw?'#222':C(i),w:5}]);});
+  }else if(t==='compare'){
+    const col=(arr,p,c)=>`<div class="ccol">${arr.map((x,i)=>cmlNode({id:p+i,label:x,c,cls:'bub',blank:gap(i+(p==='s'?1:0))})).join('')}</div>`;
+    const cA=bw?'#222':C(0),cB=bw?'#222':C(1),cS=bw?'#222':'#5C5544';
+    h+=`<div class="cmp${s.aspect==='16:9'?'':' v'}">${col(m.onlyA,'a',cA)}<div class="ccol">${cmlNode({id:'A',label:m.a,cls:'big',c:cA})}</div>${col(m.same,'s',cS)}<div class="ccol">${cmlNode({id:'B',label:m.b,cls:'big',c:cB})}</div>${col(m.onlyB,'b',cB)}</div>`;
+    m.onlyA.forEach((_,i)=>E.push(['A','a'+i,{color:cA,w:4}]));m.onlyB.forEach((_,i)=>E.push(['B','b'+i,{color:cB,w:4}]));
+    m.same.forEach((_,i)=>{E.push(['A','s'+i,{color:cA,w:4}]);E.push(['B','s'+i,{color:cB,w:4}]);});
+  }else if(t==='cause'){
+    const cC=bw?'#222':C(4),cE=bw?'#222':C(0);
+    h+=`<div class="cse${s.aspect==='16:9'?'':' v'}"><div class="ccol"><div class="chd" style="${cmlVars(cC)}">الأسباب</div>${m.causes.map((x,i)=>cmlNode({id:'c'+i,label:x,c:cC,cls:'main',blank:gap(i)})).join('')}</div>
+      <div class="ccol mid">${cmlNode({id:'E',label:m.event,cls:'big',c:bw?'#222':'#1F5F4E'})}</div>
+      <div class="ccol"><div class="chd" style="${cmlVars(cE)}">النتائج</div>${m.effects.map((x,i)=>cmlNode({id:'e'+i,label:x,c:cE,cls:'main',blank:gap(i+1)})).join('')}</div></div>`;
+    m.causes.forEach((_,i)=>E.push(['c'+i,'E',{arrow:1,color:cC,w:5}]));m.effects.forEach((_,i)=>E.push(['E','e'+i,{arrow:1,color:cE,w:5}]));
+  }else{ // concept — مستويات من الأعمّ إلى الأخصّ
+    const lv={1:[],2:[],3:[]};m.nodes.forEach((n,i)=>{(lv[n.level]||lv[3]).push([n,i]);});
+    const color={root:bw?'#222':'#1F5F4E'};m.nodes.forEach((n,i)=>{color[n.id]=bw?'#222':C(n.level===1?i:(m.links.find(l=>l.to===n.id)?.from||'').length+i);});
+    h+=`<div class="crow">${cmlNode({id:'root',label:m.title,cls:'center',c:color.root})}</div>`;
+    [1,2,3].forEach(k=>{if(lv[k].length)h+=`<div class="crow">${lv[k].map(([n,i])=>cmlNode({id:n.id,label:n.label,icon:(k===1?icMain:icAll)?n.icon:'',c:color[n.id],cls:k===1?'main':'',blank:gap(i)})).join('')}</div>`;});
+    m.links.forEach(l=>E.push([l.from,l.to,{arrow:1,label:o.links===false?'':l.label,color:bw?'#222':'#5C5544',w:3.5,curve:0}]));
+  }
+  return {html:h,edges:E};
+}
+function cmlDoc(s){
+  const [W,H]=CML_SIZE[s.aspect]||CML_SIZE['3:4'],bw=s.opt.colors==='bw';
+  const {html}=cmlBuild(s);
+  return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}html,body{width:${W}px;height:${H}px;overflow:hidden}
+body{font-family:'Tajawal',sans-serif;color:#24323A;--s:1}
+.st{position:relative;width:${W}px;height:${H}px;background:${bw?'#fff':'#FFFAF0'} center/${W}px ${H}px no-repeat}
+h1{position:absolute;top:${Math.round(H*.045)}px;left:10%;right:10%;text-align:center;font-size:${s.aspect==='16:9'?54:62}px;font-weight:900;line-height:1.3}
+h1 span{background:rgba(255,255,255,.94);border-radius:20px;padding:2px 30px 8px;${bw?'border:2px solid #222':'box-shadow:0 5px 0 rgba(36,50,58,.08)'}}
+.area{position:absolute;left:8%;right:8%;top:${s.aspect==='16:9'?16:12}%;bottom:7%}
+svg.ed{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.nd{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;background:${bw?'#fff':'var(--bg)'};border:3px solid var(--c);border-radius:18px;padding:10px 14px;font-size:calc(25px*var(--s));font-weight:800;line-height:1.35;box-shadow:${bw?'none':'0 4px 0 var(--sh)'}}
+.nd .lb{color:${bw?'#222':'var(--tx)'}}
+.nd .ic{font-style:normal;font-size:1.35em;line-height:1}
+.nd small{font-size:.72em;font-weight:700;color:#4b555b}
+.nd ul{list-style:none;padding:0;margin-top:4px;font-size:.78em;font-weight:700;color:#3a454b;text-align:right;width:100%}
+.nd li{padding:3px 8px;border-top:1px dashed var(--ds)}
+.nd.blank{border-style:dashed;background:#fff;min-width:150px;min-height:62px}
+.nd.center{font-size:calc(34px*min(var(--s),${s.type==='radial'||s.type==='cycle'?1.6:9}));font-weight:900;color:#fff;background:var(--c);border-radius:26px;padding:16px 26px}
+.nd.center .lb{color:#fff}
+.nd.ring{padding:.6em;border-radius:50%;width:min(calc(260px*var(--s)),26%);aspect-ratio:1;height:auto;justify-content:center}
+.nd.main{font-size:calc(27px*var(--s))}
+.nd.leaf{font-size:calc(22px*var(--s));font-weight:700}
+.nd.abs{position:absolute;width:min(calc(${s.aspect==='16:9'?250:280}px*var(--s)),${s.aspect==='16:9'?24:30}%)}
+.nd.big{padding:.6em;font-size:calc(32px*var(--s));font-weight:900;border-radius:50%;width:calc(230px*var(--s));max-width:100%;aspect-ratio:1;height:auto;justify-content:center;background:var(--c)}
+.nd.big .lb{color:#fff}
+.nd.bub{border-radius:999px;padding:10px 22px;font-size:calc(23px*var(--s))}
+.no{display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--c);color:#fff;font-size:.8em}
+.mtitle{text-align:center;font-size:calc(30px*var(--s));font-weight:900;color:#1F5F4E;margin-bottom:20px}
+.trow{display:flex;justify-content:center}.trow.kids{margin-top:calc(70px*var(--s));gap:calc(22px*var(--s));align-items:flex-start}
+.tcol{flex:1;display:flex;flex-direction:column;align-items:stretch;gap:calc(26px*var(--s));max-width:340px}
+.area.fl{display:flex;flex-direction:column}.fgrid{display:grid;gap:calc(70px*var(--s)) calc(60px*var(--s));align-content:center;flex:1;min-height:0}
+.fgrid>div{display:flex;align-items:center;justify-content:center}.fgrid .nd{width:100%}
+.cmp,.cse{display:flex;height:100%;align-items:center;justify-content:space-between;gap:calc(34px*var(--s))}
+.ccol{display:flex;flex-direction:column;gap:calc(22px*var(--s));justify-content:center;align-items:center;flex:1;min-width:0}.cmp .ccol .nd.bub{max-width:100%}
+.cse .ccol.mid{flex:.9}.cse .ccol .nd.main{width:100%}
+.cmp.v,.cse.v{flex-direction:column;justify-content:space-around}.cmp.v .ccol,.cse.v .ccol{flex-direction:row;flex-wrap:nowrap;width:100%;flex:none}.cse.v .ccol .nd.main{width:auto;flex:1}.cse.v .chd{writing-mode:horizontal-tb;margin:0 0 0 8px}.cmp.v .nd.big,.cse.v .nd.big{width:calc(260px*var(--s))}
+.chd{font-size:calc(30px*var(--s));font-weight:900;color:var(--c);margin-bottom:4px}
+.crow{display:flex;justify-content:center;flex-wrap:nowrap;gap:calc(26px*var(--s)) calc(30px*var(--s))}.crow .nd{max-width:${s.aspect==='16:9'?22:30}%}
+.cpt{display:flex;flex-direction:column;justify-content:space-around}
+.elb{position:absolute;z-index:3;transform:translate(-50%,-50%);background:#fff;border:2px solid #E3DCC9;border-radius:10px;padding:1px 9px 3px;font-size:calc(19px*var(--s));font-weight:800;color:#5C5544;white-space:nowrap}
+</style></head><body><div class="st" id="st"><h1><span>${lyE(s.title||'')}</span></h1><div class="area${s.type==='concept'?' cpt':''}${s.type==='flow'?' fl':''}" id="area">${html}</div></div></body></html>`;
+}
+// تموضع العُقد المطلقة (شعاعية/دورة) ثم رسم الوصلات بعد القياس
+function cmlLayout(d,s){
+  const area=d.getElementById('area'),AW=area.clientWidth,AH=area.clientHeight;
+  if(s.type==='radial'||s.type==='cycle'){
+    const c=d.querySelector('.nd.center');c.style.position='absolute';
+    c.style.left=(AW-c.offsetWidth)/2+'px';c.style.top=(AH-c.offsetHeight)/2+'px';
+    const ns=[...d.querySelectorAll('.nd.abs')],n=ns.length;
+    ns.forEach((el,i)=>{const a=(-90+i*360/n)*Math.PI/180,rx=(AW-el.offsetWidth)/2,ry=(AH-el.offsetHeight)/2*(s.type==='cycle'?.92:.98);
+      el.style.left=(AW/2+rx*Math.cos(a)-el.offsetWidth/2)+'px';el.style.top=(AH/2+ry*Math.sin(a)-el.offsetHeight/2)+'px';});
+  }
+}
+function cmlOverflow(d){
+  const area=d.getElementById('area'),r=area.getBoundingClientRect();
+  if(area.scrollHeight>area.clientHeight+2||area.scrollWidth>area.clientWidth+2)return true;
+  const els=[...d.querySelectorAll('.nd')];
+  // النصّ داخل شكله: الدائرة تبقى دائرة، ولا نصّ يفيض من صندوقه
+  if(els.some(n=>n.scrollWidth>n.clientWidth+2||((n.classList.contains('big')||n.classList.contains('ring'))&&n.offsetHeight>n.offsetWidth+3)))return true;
+  // صفوف خريطة المفاهيم: مسافةٌ بينها تتّسع لعبارات الربط
+  const rows=[...d.querySelectorAll('.crow')].map(x=>x.getBoundingClientRect());
+  for(let i=1;i<rows.length;i++)if(rows[i].top-rows[i-1].bottom<90)return true;
+  const ns=els.map(n=>n.getBoundingClientRect());
+  if(ns.some(b=>b.top<r.top-2||b.bottom>r.bottom+2||b.left<r.left-2||b.right>r.right+2))return true;
+  for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){const a=ns[i],b=ns[j];if(a.left<b.right-4&&b.left<a.right-4&&a.top<b.bottom-4&&b.top<a.bottom-4)return true;}
+  return false;
+}
+function cmlEdges(d,s,edges){
+  const area=d.getElementById('area'),R=area.getBoundingClientRect();
+  const box=id=>{const el=d.querySelector(`.nd[data-id="${CSS.escape(id)}"]`);if(!el)return null;const b=el.getBoundingClientRect();return {x:b.left-R.left,y:b.top-R.top,w:b.width,h:b.height,cx:b.left-R.left+b.width/2,cy:b.top-R.top+b.height/2,round:el.classList.contains('big')||el.classList.contains('ring')};};
+  const clip=(b,tx,ty)=>{const dx=tx-b.cx,dy=ty-b.cy;if(!dx&&!dy)return [b.cx,b.cy];
+    if(b.round){const r=b.w/2+3,l=Math.hypot(dx,dy);return [b.cx+dx/l*r,b.cy+dy/l*r];}
+    const sx=(b.w/2+3)/Math.abs(dx||1e-6),sy=(b.h/2+3)/Math.abs(dy||1e-6),k=Math.min(sx,sy);return [b.cx+dx*k,b.cy+dy*k];};
+  let svg=`<svg class="ed" xmlns="http://www.w3.org/2000/svg"><defs>`,mk={},body='',labels='';
+  const grp={};edges.forEach(([f,,op])=>{if(op.label){const k=f+'|'+op.label;grp[k]=(grp[k]||0)+1;}});const said={};
+  edges.forEach(([f,t,op])=>{
+    const A=box(f),B=box(t);if(!A||!B)return;const col=op.color||'#5C5544';
+    if(op.arrow&&!mk[col]){mk[col]='m'+Object.keys(mk).length;svg+=`<marker id="${mk[col]}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker>`;}
+    let p,mx,my;
+    if(op.elbow){const y1=A.y+A.h,y2=B.y,ym=(y1+y2)/2;p=`M${A.cx} ${y1} V${ym} H${B.cx} V${y2-2}`;mx=B.cx;my=ym;}
+    else{const [x1,y1]=clip(A,B.cx,B.cy),[x2,y2]=clip(B,A.cx,A.cy);
+      if(op.curve){const nx=-(y2-y1),ny=x2-x1;mx=(x1+x2)/2+nx*op.curve;my=(y1+y2)/2+ny*op.curve;p=`M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`;mx=(x1+2*mx+x2)/4;my=(y1+2*my+y2)/4;}
+      else{p=`M${x1} ${y1} L${x2} ${y2}`;mx=x1+(x2-x1)*.62;my=y1+(y2-y1)*.62;}}
+    body+=`<path d="${p}" fill="none" stroke="${col}" stroke-width="${op.w||4}" stroke-linecap="round" stroke-linejoin="round"${op.arrow?` marker-end="url(#${mk[col]})"`:''}/>`;
+    if(op.label){const k=f+'|'+op.label;
+      if(grp[k]>1){if(!said[k]){said[k]=1;const ly=A.y+A.h+Math.min(46,(B.y-(A.y+A.h))*.35);labels+=`<div class="elb" style="left:${A.cx}px;top:${ly}px">${lyE(op.label)}</div>`;}}
+      else labels+=`<div class="elb" style="left:${mx}px;top:${my}px">${lyE(op.label)}</div>`;}
+  });
+  area.insertAdjacentHTML('afterbegin',svg+'</defs>'+body+'</svg>'+labels);
+}
+let _cmlFrame=null;
+async function cmlRender(s){
+  if(!(await certLoadH2C()))throw new Error('html2canvas');
+  const [W,H]=CML_SIZE[s.aspect]||CML_SIZE['3:4'];
+  if(!_cmlFrame||!_cmlFrame.isConnected){_cmlFrame=document.createElement('iframe');_cmlFrame.style.cssText='position:fixed;top:0;left:-40000px;border:none;opacity:0;pointer-events:none';document.body.appendChild(_cmlFrame);}
+  const f=_cmlFrame;f.style.width=W+'px';f.style.height=H+'px';
+  const d=f.contentDocument;d.open();d.write(cmlDoc(s));d.close();
+  const lk=d.querySelector('link[rel=stylesheet]');
+  if(lk)await new Promise(r=>{lk.addEventListener('load',r,{once:true});lk.addEventListener('error',r,{once:true});setTimeout(r,5000);});
+  try{await Promise.all(["800 20px Tajawal","900 20px Tajawal","700 20px Tajawal"].map(x=>d.fonts.load(x,'نص')));await d.fonts.ready;}catch(e){}
+  if(s.art){await new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=im.onerror=r;im.src=s.art;setTimeout(r,12000);});d.getElementById('st').style.backgroundImage='url("'+s.art+'")';}
+  // أكبر حجمٍ يتّسع بلا فيضانٍ ولا تداخل
+  for(let k=4;k>=0.5;k-=0.08){d.body.style.setProperty('--s',k.toFixed(2));await new Promise(r=>setTimeout(r,16));cmlLayout(d,s);if(!cmlOverflow(d))break;}
+  cmlEdges(d,s,cmlBuild(s).edges);
+  await new Promise(r=>setTimeout(r,250));
+  const base=d.createElement('canvas');base.width=W;base.height=H;base.style.cssText=`position:absolute;left:-99999px;top:0;width:${W}px;height:${H}px`;d.body.appendChild(base);
+  try{const cv=await html2canvas(d.getElementById('st'),{canvas:base,scale:1,useCORS:true,allowTaint:false,backgroundColor:'#fff',width:W,height:H,foreignObjectRendering:false});return cv.toDataURL('image/png');}
+  finally{base.remove();}
+}
+// حالة الخريطة الطبقية الحالية وإعادة رسمها بلا تكلفة
+function cmlState(){const L=mmLesson()||{};return {type:cmS.ly.type,map:cmS.ly.map,art:cmS.opt.art==='none'?'':cmS.ly.art,aspect:cmS.ly.aspect,title:cmS.ly.title||L.lesson||'',opt:{...cmS.opt}};}
+async function cmlRerender(msg){
+  if(!cmS.ly)return;cmS.busy=true;cmDraw();
+  try{cmS.img=await cmlRender(cmlState());if(msg)toast(msg,'ok');}catch(e){toast('تعذّر رسم الخريطة',true);}
+  cmS.busy=false;cmDraw();
+}
+async function cmlGenerate(redraw){
+  const L=mmLesson();if(!L||cmS.busy)return;cmS.busy=true;cmDraw();
+  let images=[];if(!redraw){try{images=await c1LessonBookImages(L.grade,L.subject,L.unit,L.lesson)||[];}catch(_){}}
+  let data=null,why='';
+  try{const body={cmLayered:true,grade:L.grade,subject:L.subject,unit:L.unit,lessonNames:[L.lesson],images:images.slice(0,8),concept:{...cmS.opt}};
+    if(redraw){body.redraw=true;body.map=cmS.ly.map;body.concept.type=cmS.ly.type;}
+    const r=await sb.functions.invoke('generate-infographic',{body});
+    if(!r.error&&r.data&&r.data.cmLayered)data=r.data;else why=await c1FnErr(r);}catch(e){why=String(e);}
+  if(!data){cmS.busy=false;cmDraw();toast(c1ErrMsg(why,'تعذّر بناء الخريطة — '+khG('أعيدي','أعد')+' المحاولة.'),true);return;}
+  cmS.ly={type:data.type,map:data.map,art:data.art||'',aspect:cmS.opt.aspect,title:L.lesson,cached:!!data.cached};
+  try{cmS.prev=cmS.img;cmS.img=await cmlRender(cmlState());qBump();toast(data.art_error?'رُسمت الخريطة على خلفية سادة (تعذّر رسم الزخرفة)':'رُسمت الخريطة','ok');}
+  catch(e){toast('تعذّر رسم الخريطة',true);}
+  cmS.busy=false;cmDraw();
+}
+// محرّر النصوص المجاني: كل نصٍّ في الخريطة حقلٌ قابل للتعديل
+const CML_KEY={title:'العنوان',center:'الفكرة المركزية',root:'العنوان',label:'',note:'توضيح',items:'تفصيل',a:'الأول',b:'الثاني',same:'وجه شبه',onlyA:'ينفرد به الأول',onlyB:'ينفرد به الثاني',event:'الحدث',causes:'سبب',effects:'نتيجة'};
+function cmlFields(){
+  const out=[];const walk=(v,path,lbl)=>{
+    if(typeof v==='string'){out.push({path,lbl,v});return;}
+    if(Array.isArray(v)){v.forEach((x,i)=>walk(x,path.concat(i),(typeof x==='string'?(lbl||'')+' '+egArNum(i+1):(lbl||'')+' '+egArNum(i+1))));return;}
+    if(v&&typeof v==='object')Object.keys(v).forEach(k=>{if(['id','icon','level','from','to'].includes(k))return;
+      const nm={branches:'الفرع',children:'الفئة',steps:'الخطوة',stages:'المرحلة',nodes:'المفهوم',links:'عبارة الربط'}[k];
+      walk(v[k],path.concat(k),nm||((CML_KEY[k]!==undefined?(CML_KEY[k]?(lbl?lbl+' — ':'')+CML_KEY[k]:lbl):k)));});};
+  walk(cmS.ly.map,[],'');return out;
+}
+function cmlEditOpen(){
+  const box=document.getElementById('cml-form');if(!box||!cmS.ly)return;
+  if(!box.hidden){box.hidden=true;return;}
+  box.innerHTML=cmlFields().map((f,i)=>`<label class="cml-f"><span>${escHtml(f.lbl||'نص')}</span><input class="c1-select ly-in" data-p="${escAttr(JSON.stringify(f.path))}" value="${escAttr(f.v)}"></label>`).join('')
+    +`<div class="cm-acts"><button class="eg-export" onclick="cmlEditApply()">تطبيق (مجاناً)</button><button class="eg-regen" onclick="document.getElementById('cml-form').hidden=true">إلغاء</button></div>`;
+  box.hidden=false;
+}
+function cmlEditApply(){
+  document.querySelectorAll('#cml-form input[data-p]').forEach(inp=>{const p=JSON.parse(inp.dataset.p);let o=cmS.ly.map;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p[p.length-1]]=inp.value.trim();});
+  document.getElementById('cml-form').hidden=true;cmlRerender('طُبّق التعديل — بلا تكلفة');
+}
+function cmlRedraw(){c1Confirm('رسم خلفية جديدة يستهلك رسمة (النصوص والهيكل يبقيان). متابعة؟').then(ok=>{if(ok)cmlGenerate(true);});}
 
 // ═══════════ الألعاب التفاعلية المتقدمة ═══════════
 /* ══ لوحة الألعاب الموحّدة ══
