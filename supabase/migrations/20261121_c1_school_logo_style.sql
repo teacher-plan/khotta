@@ -1,0 +1,26 @@
+-- ٢١ نوفمبر — موضع شعار المدرسة وحجمه في الشهادات (تختارهما إدارة المدرسة).
+-- logo_pos: 'left' (أعلى اليسار — الافتراضي) | 'center' | 'right'
+-- logo_size: 's' | 'm' (الافتراضي) | 'l'
+-- متعادلة.
+alter table public.c1_schools add column if not exists logo_pos text not null default 'left';
+alter table public.c1_schools add column if not exists logo_size text not null default 'm';
+
+create or replace function public.c1_school_logo(p_name text default null)
+returns json language plpgsql stable security definer set search_path = public as $$
+declare s c1_schools; n text := c1_norm_school(p_name);
+begin
+  if auth.uid() is null then return null; end if;
+  select * into s from c1_schools where id = c1_admin_school_id();
+  if s.id is null then
+    select c.* into s from c1_school_members m join c1_schools c on c.id = m.school_id where m.teacher_id = auth.uid();
+  end if;
+  if (s.id is null or s.logo_url is null) and length(n) >= 6 then
+    select c.* into s from c1_schools c
+      where c.logo_url is not null and length(c1_norm_school(c.name)) >= 6 and position(c1_norm_school(c.name) in n) > 0
+      order by length(c1_norm_school(c.name)) desc limit 1;
+  end if;
+  if s.id is null then return null; end if;
+  return json_build_object('school', s.name, 'logo_url', s.logo_url, 'logo_at', s.logo_at, 'logo_pos', s.logo_pos, 'logo_size', s.logo_size);
+end $$;
+revoke all on function public.c1_school_logo(text) from public, anon;
+grant execute on function public.c1_school_logo(text) to authenticated;
