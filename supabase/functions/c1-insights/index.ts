@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
         const { data: profs } = await admin.from("cycle1_profiles").select("id,email,data,updated_at").in("id", ids);
         teachers = profs || [];
       }
-      const digest = schoolDigest(school, teachers, { days: Number(b.days) || 30, cls: String(b.cls || "").slice(0, 60) });
+      const digest = schoolDigest(school, teachers, { days: Number(b.days) || 90, cls: String(b.cls || "").slice(0, 60) });
       system = [
         `أنت «مساعد الإدارة» في منصّة خُطّة لمدرسة «${school.name}» في سلطنة عُمان. تخدم فريق إدارة المدرسة (المدير ومساعده والأخصائي الاجتماعي).`,
         "تُجيب فقط من البيانات المرفقة أدناه (غياب الطلاب بالحصص، وسجلّ السلوك والنجوم) التي سجّلها المعلّمون. إن لم تكفِ البيانات للإجابة فقل ذلك صراحةً واذكر ما ينقص، ولا تخمّن ولا تخترع أرقاماً أو أسماء.",
