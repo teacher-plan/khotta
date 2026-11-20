@@ -410,8 +410,8 @@ button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 .adm-sys{display:flex;align-items:center;gap:10px;width:100%;text-align:start;font-family:inherit;font-size:14px;font-weight:700;color:var(--kt-color-text-primary);
   background:var(--kt-color-surface);border:1px solid var(--kt-color-border);border-radius:var(--kt-radius-xl);padding:12px 14px;cursor:pointer}
 .adm-sys small{margin-inline-start:auto;color:var(--kt-color-info);font-weight:700}
-.adm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-@media(max-width:900px){.adm-kpis{grid-template-columns:1fr 1fr}}
+.adm-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.adm-orb-rf{border:0;background:none;color:var(--kt-color-text-muted);font:inherit;font-weight:800;cursor:pointer;padding:0 4px}.adm-kpi-orb.low{border-color:var(--kt-color-warning)!important}.adm-kpi-orb.low .adm-kpi-v{color:var(--kt-color-warning)}.adm-kpi-orb.crit{border-color:var(--kt-color-error)!important}.adm-kpi-orb.crit .adm-kpi-v{color:var(--kt-color-error)}
+@media(max-width:900px){.adm-kpis{grid-template-columns:1fr 1fr}.adm-kpi-orb{grid-column:1/-1}}
 .adm-kpi-l{font-size:12.5px;font-weight:700;color:var(--kt-color-text-secondary)}
 .adm-kpi-v{font-size:28px;font-weight:800;margin:6px 0 2px;font-variant-numeric:tabular-nums;color:var(--kt-color-text-primary)}
 .adm-kpi-s{font-size:12px;color:var(--kt-color-text-muted)}
@@ -4106,6 +4106,7 @@ html body .violtype-tab-btn.active{background:var(--kt-color-brand-primary)!impo
       </div>
       <button class="adm-sys" onclick="showPage('ktops')"><span class="kt-status-dot" id="ktcc-status-dot"></span><span id="ktcc-status-text">جارٍ التحقّق من حالة النظام…</span><small>التفاصيل ←</small></button>
       <div class="adm-kpis">
+        <div class="kt-card adm-kpi adm-kpi-orb" id="adm-k-orb-card"><div class="adm-kpi-l">رصيد OpenRouter المتبقي <button class="adm-orb-rf" onclick="orbHome(true)" title="قراءة الرصيد الآن" aria-label="تحديث الرصيد">↻</button></div><div class="adm-kpi-v" id="adm-k-orb" dir="ltr">—</div><div class="adm-kpi-s" id="adm-k-orb-s">يُقرأ مباشرةً من OpenRouter…</div></div>
         <div class="kt-card adm-kpi"><div class="adm-kpi-l">نشطون هذا الأسبوع</div><div class="adm-kpi-v" id="adm-k-active">—</div><div class="adm-kpi-s" id="adm-k-active-s"></div></div>
         <div class="kt-card adm-kpi"><div class="adm-kpi-l">الحسابات</div><div class="adm-kpi-v" id="adm-k-acc">—</div><div class="adm-kpi-s" id="adm-k-acc-s"></div></div>
         <div class="kt-card adm-kpi"><div class="adm-kpi-l">تحاضير هذا الأسبوع</div><div class="adm-kpi-v" id="adm-k-preps">—</div><div class="adm-kpi-s" id="adm-k-preps-s"></div></div>
@@ -5280,8 +5281,6 @@ async function bootApp(session){
     return;
   }
 
-  // فحص الرصيد عند كل دخول — لا عند فتح تبويب الذكاء وحده
-  setTimeout(()=>{try{orbGuard();}catch(e){}},2500);
 
   // ─── المسار السريع: لو الكاش موجود اعرض التطبيق فوراً ───
   const cached=loadFromCache();
@@ -7812,7 +7811,7 @@ function showPage(id,btn){
   if(id==='library')loadLibrary();
   if(id==='c2teachers')loadC2Teachers();
   if(id==='aimanage'){loadAiSettings();ltInit();aiLayout();}
-  if(id==='ktcc'){ktccLoad();admDashLoad();}
+  if(id==='ktcc'){ktccLoad();admDashLoad();orbHome();}
   // صفحات كانت تُهيَّأ من ktGoC1 وحدها — الآن من هنا (القائمة الجديدة وتحديث المتصفح)
   if(id==='c1teachers')admTLoad();
   if(id==='c1live')c1SfxSlots();
@@ -8313,30 +8312,25 @@ let _orbLoaded=false;
 // فينفد والمنصة تعمل: تضغط المعلّمات «توليد» فتتوالى الأعطال، وأوّل من يعلم
 // هو آخر من يُبلَّغ. هذا الشريط يجعل نفادَ الرصيد حدثاً يُرى قبل أن يقع.
 const ORB_WARN_USD=5, ORB_WARN_PCT=0.15;
-async function orbGuard(){
+// رصيد OpenRouter في بطاقة «الرئيسية» (٢٠ نوفمبر) — بدل الشريط العلوي عند الدخول.
+// يُقرأ في كل مرّة من دالة openrouter-balance التي تسأل OpenRouter مباشرةً
+// (/api/v1/credits لكل مفتاح) — لا كاش. يتلوّن عند الانخفاض.
+async function orbHome(force){
+  const v=document.getElementById('adm-k-orb'),sub=document.getElementById('adm-k-orb-s'),card=document.getElementById('adm-k-orb-card');
+  if(!v)return;
+  if(force){v.textContent='…';if(sub)sub.textContent='يقرأ الرصيد من OpenRouter…';}
   try{
     const{data,error}=await sb.functions.invoke('openrouter-balance',{body:{}});
-    if(error||!data||data.error)return;
-    const rem=Number(data.remaining||0), tot=Number(data.total||0);
-    const low = rem<=ORB_WARN_USD || (tot>0 && rem/tot<=ORB_WARN_PCT);
-    if(!low)return;
-    const crit = rem<=1;
-    let el=document.getElementById('orb-alert');
-    if(!el){
-      el=document.createElement('div'); el.id='orb-alert';
-      el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:11px 44px 11px 16px;'
-        +'font-family:inherit;font-size:13.5px;font-weight:800;text-align:center;color:#fff;'
-        +'box-shadow:0 3px 14px rgba(0,0,0,.3);cursor:default';
-      document.body.appendChild(el);
-    }
-    el.style.background = crit ? '#8A1F1F' : '#B06D18';
-    el.innerHTML = (crit
-        ? '🔴 رصيد OpenRouter نفد أو كاد — التوليد متوقّف عن المعلّمات الآن. اشحن فوراً.'
-        : '⚠️ رصيد OpenRouter منخفض: $'+rem.toFixed(2)+' متبقٍّ. اشحن قبل أن يتوقّف التوليد.')
-      + ' <button onclick="this.parentNode.remove()" style="position:absolute;inset-inline-end:12px;top:8px;'
-      + 'background:rgba(255,255,255,.22);border:none;color:#fff;border-radius:7px;width:24px;height:24px;'
-      + 'cursor:pointer;font-weight:800">✕</button>';
-  }catch(e){}
+    if(error||!data||data.error)throw new Error((data&&data.error)||'error');
+    const rem=Number(data.remaining||0),tot=Number(data.total||0),used=Number(data.used||0);
+    const keys=(data.keys||[]).filter(k=>k.configured),bad=keys.filter(k=>!k.ok).length;
+    const low=rem<=ORB_WARN_USD||(tot>0&&rem/tot<=ORB_WARN_PCT),crit=rem<=1;
+    v.textContent='$'+rem.toFixed(2);
+    card.classList.toggle('low',low&&!crit);card.classList.toggle('crit',crit);
+    const t=new Date().toLocaleTimeString('ar-OM',{hour:'numeric',minute:'2-digit'});
+    if(sub)sub.innerHTML=(crit?'<b>نفد أو كاد — اشحن فوراً</b><br>':low?'<b>منخفض — اشحن قريباً</b><br>':'')
+      +'استُهلك <bdi>$'+used.toFixed(2)+'</bdi> من <bdi>$'+tot.toFixed(2)+'</bdi>'+(bad?' · تعذّرت قراءة '+bad+' من المفاتيح':'')+'<br>قُرئ مباشرةً '+t;
+  }catch(e){v.textContent='—';card.classList.remove('low','crit');if(sub)sub.textContent='تعذّرت قراءة الرصيد من OpenRouter — اضغط ↻';}
 }
 async function loadOrBalance(force){
   if(_orbLoaded&&!force)return;
