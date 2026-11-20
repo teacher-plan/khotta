@@ -18,9 +18,9 @@ import { curFor, bookExtract } from "../_shared/lessonExtract.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
-export const LAYERED_VERSION = 1;
+export const LAYERED_VERSION = 1;  // نسخة الخلفيات المحفوظة (info-bg) — لا تتغيّر بتغيّر المحتوى
 
-const S = (v: unknown, n = 200) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+const S = (v: unknown, n = 220) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 const A = (v: unknown) => (Array.isArray(v) ? v : []);
 
 // قالب المادة: العلوم والدراسات رسومٌ تشرح، والباقي نصٌّ على خلفية
@@ -42,12 +42,12 @@ const NO_TEXT = "ABSOLUTELY NO text of any kind anywhere in the image: no letter
 
 function artPrompt(layout: "cols" | "bg", c: Any, subject: string, unit: string): string {
   if (layout === "cols") {
-    const cards = A(c.cards).slice(0, 4);
-    const cols = cards.map((k: Any, i: number) => `Column ${i + 1}${i === 0 ? " (rightmost)" : i === 3 ? " (leftmost)" : ""}: ${S(k.art, 300) || "a simple illustration of the idea"}.`).join(" ");
+    const cards = A(c.cards).slice(0, 3);
+    const cols = cards.map((k: Any, i: number) => `Column ${i + 1}${i === 0 ? " (rightmost)" : ""}: ${S(k.art, 300) || "a simple illustration of the idea"}.`).join(" ");
     return [
       "Wide 16:9 educational poster illustration.", STYLE,
       "Soft cream background with a gentle Omani landscape strip (palm trees, distant mountains) along the very top edge.",
-      "The image is divided into FOUR equal vertical columns, ordered from right to left. The TOP HALF of every column must be completely empty plain cream space (text will be added there later). In the BOTTOM HALF of each column draw exactly one clear illustration:",
+      "Layout: the LEFT quarter of the image (25% of the width, full height below the top strip) is a plain, soft, completely empty cream panel with nothing in it. The RIGHT three quarters are divided into THREE equal vertical columns, ordered from right to left. The TOP 58% of every column must be completely empty plain cream space (text will be added there later). Only in the BOTTOM 42% of each of the three columns draw exactly one clear, compact illustration:",
       cols, NO_TEXT,
     ].join(" ");
   }
@@ -61,14 +61,16 @@ function artPrompt(layout: "cols" | "bg", c: Any, subject: string, unit: string)
 }
 
 function contentPrompt(layout: "cols" | "bg", cur: Any, grade: string, subject: string, teacher: string): string {
-  const shape = layout === "cols"
-    ? `{"title":"عنوان الدرس كما هو","cards":[{"h":"عنوان قصير (٢–٤ كلمات)","points":["جملة قصيرة من الدرس","..."],"formula":"معادلة أو قاعدة قصيرة إن وُجدت في الدرس وإلا فارغ","art":"English description of ONE wordless illustration that explains this card's idea (objects only, no text)"}]}  — أربع بطاقات بالضبط`
-    : `{"title":"عنوان الدرس كما هو","cards":[{"h":"عنوان قصير (١–٣ كلمات)","points":["جملة قصيرة من الدرس","..."]}],"example":{"label":"مثال وتحليله / مثال محلول","lines":["سطر المثال كما ورد (بيت شعر: شطران في سطرين؛ مسألة: نصّها)"],"head":["عنوان العمود","..."],"row":["قيمة","..."],"note":"خلاصة أو تحويل أو ناتج في جملة واحدة"}}  — ثلاث بطاقات بالضبط، والمثال واحد من أمثلة الدرس نفسها (الجدول من ٢–٣ أعمدة، ويجوز تركه فارغاً إن لم يناسب)`;
+  const n = 3;
+  const card = layout === "cols"
+    ? `{"h":"عنوان الفكرة (٢–٤ كلمات)","points":["٢–٤ جُمل: التعريف أو الفكرة، ثم شرحها، ثم مثالٌ من الدرس"],"formula":"معادلة أو قاعدة أو قانون إن ورد في هذه الفكرة، وإلا فارغ","art":"English description of ONE wordless illustration that explains this card's idea (objects only, no text)"}`
+    : `{"h":"عنوان الفكرة (١–٣ كلمات)","points":["٢–٤ جُمل: التعريف أو الفكرة، ثم شرحها، ثم مثالٌ من الدرس"],"formula":"قاعدة أو قانون إن وُجد، وإلا فارغ"}`;
+  const shape = `{"title":"عنوان الدرس كما هو","objective":"هدف الدرس في جملة تبدأ بـ «أن يتعرّف الطالب…/أن يحسب…» كما يُفهم من الكتاب","cards":[${card}] (${n} بطاقات بالضبط),"terms":[{"t":"مصطلح من الدرس","d":"تعريفه كما في الكتاب باختصار"}] (٢–٤),"example":{"label":"مثال محلول / مثال وتحليله / تجربة من الدرس","lines":["نصّ المثال أو المسألة أو بيت الشعر كما ورد (بيت الشعر: شطران في سطرين)"],"steps":["خطوة الحلّ أو التحليل ١","…"],"head":["عنوان عمود","…"],"row":["قيمة","…"],"note":"الناتج أو الخلاصة في جملة"},"tip":{"kind":"تذكّر أو انتبه","text":"أهمّ ما يجب تذكّره، أو خطأ شائع يقع فيه الطلاب في هذا الدرس، مبنيٌّ على محتوى الدرس نفسه"}}`;
   return [
-    "أنت مصمّم تعليمي عُماني. اكتب محتوى إنفوجرافيك لدرسٍ واحد من مستخلص صفحات الكتاب المرفق وحده.",
+    "أنت مصمّم تعليمي عُماني خبير في منهج كامبردج المعرَّب. اكتب محتوى إنفوجرافيك تعليمي غنيّ لدرسٍ واحد، يغني الطالب عن الرجوع إلى الكتاب للمراجعة، من مستخلص صفحات الكتاب المرفق وحده.",
     `الدرس: «${cur.lesson}» — ${cur.unit} — ${subject} — الصف ${grade}.`,
-    "الشروط: عربية فصحى سليمة إملائياً؛ انقل التعريفات والقواعد والمصطلحات والأرقام كما وردت حرفياً؛ لا تُضف معلومة ليست في المستخلص؛ لا أسئلة ولا تمارين؛ جُمل قصيرة (٨–١٨ كلمة)، ونقطتان أو ثلاث لكل بطاقة على الأكثر؛ الأرقام بالأرقام العربية (٠١٢٣٤٥٦٧٨٩) ما لم ترد بغيرها؛ المصطلح الإنجليزي (إن ورد في الكتاب) بين قوسين فقط.",
-    "رتّب البطاقات بترتيب أفكار الدرس. في الرياضيات اكتب القانون في formula بالرموز العربية كما في الكتاب (مثل: م = ل × ض).",
+    "المحتوى المطلوب: كل فكرة رئيسية في الدرس لها بطاقة بترتيب الدرس؛ في كل بطاقة التعريف أو القاعدة كما وردت حرفياً، ثم شرحٌ يوضّحها، ثم مثالٌ من الدرس؛ والمصطلحات الرئيسية بتعريفاتها؛ ومثالٌ محلول كامل بخطواته من أمثلة الدرس نفسها (في العلوم: نشاط أو تجربة الدرس وما نستنتجه منها؛ في اللغة: شاهدٌ وتحليله؛ في الرياضيات: مسألة بالتعويض والناتج)؛ و«تذكّر/انتبه».",
+    "الشروط: عربية فصحى سليمة إملائياً؛ انقل التعريفات والقواعد والمصطلحات والأرقام كما وردت؛ لا تُضف معلومة علمية ليست في المستخلص (الشرح إعادة صياغةٍ لما فيه، لا إضافة)؛ لا أسئلة للطالب؛ كل جملة ≤ ٢٢ كلمة؛ الأرقام بالأرقام العربية (٠١٢٣٤٥٦٧٨٩) ما لم ترد بغيرها؛ المصطلح الإنجليزي بين قوسين إن ورد في الكتاب؛ القوانين بالرموز العربية كما في الكتاب (مثل: م = ل × ض). الجدول اختياري (٢–٣ أعمدة) ويُترك فارغاً إن لم يناسب.",
     teacher ? `توجيهات المعلّم (لها الأولوية ما لم تخالف الشروط): ${teacher}` : "",
     `أعد JSON فقط بهذا الشكل: ${shape}`,
   ].filter(Boolean).join("\n");
@@ -76,22 +78,25 @@ function contentPrompt(layout: "cols" | "bg", cur: Any, grade: string, subject: 
 
 function cleanContent(layout: "cols" | "bg", raw: Any, cur: Any): Any | null {
   if (!raw || typeof raw !== "object") return null;
-  const n = layout === "cols" ? 4 : 3;
+  const n = 3;
   const cards = A(raw.cards).slice(0, n).map((k: Any) => ({
-    h: S(k?.h, 40), points: A(k?.points).slice(0, 3).map((p) => S(p, 160)).filter(Boolean),
-    formula: S(k?.formula, 80), art: S(k?.art, 320),
+    h: S(k?.h, 40), points: A(k?.points).slice(0, 4).map((p) => S(p, 190)).filter(Boolean),
+    formula: S(k?.formula, 90), art: S(k?.art, 320),
   })).filter((k: Any) => k.h && k.points.length);
   if (cards.length < n) return null;
-  const out: Any = { title: S(raw.title, 60) || S(cur.lesson, 60), cards };
-  if (layout === "bg" && raw.example && typeof raw.example === "object") {
+  const out: Any = { title: S(raw.title, 60) || S(cur.lesson, 60), objective: S(raw.objective, 170), cards };
+  out.terms = A(raw.terms).slice(0, 4).map((x: Any) => ({ t: S(x?.t, 40), d: S(x?.d, 150) })).filter((x: Any) => x.t && x.d);
+  if (raw.tip && typeof raw.tip === "object" && S(raw.tip.text)) out.tip = { kind: /انتبه/.test(S(raw.tip.kind)) ? "انتبه" : "تذكّر", text: S(raw.tip.text, 200) };
+  if (raw.example && typeof raw.example === "object") {
     const e = raw.example;
-    const head = A(e.head).slice(0, 3).map((x) => S(x, 30)), row = A(e.row).slice(0, 3).map((x) => S(x, 70));
+    const head = A(e.head).slice(0, 3).map((x) => S(x, 30)), row = A(e.row).slice(0, 3).map((x) => S(x, 80));
+    const ok = head.length === row.length && head.length >= 2;
     out.example = {
-      label: S(e.label, 30) || "مثال", lines: A(e.lines).slice(0, 3).map((x) => S(x, 90)).filter(Boolean),
-      head: head.length === row.length && head.length >= 2 ? head : [], row: head.length === row.length && head.length >= 2 ? row : [],
-      note: S(e.note, 160),
+      label: S(e.label, 34) || "مثال", lines: A(e.lines).slice(0, 3).map((x) => S(x, 140)).filter(Boolean),
+      steps: A(e.steps).slice(0, 5).map((x) => S(x, 140)).filter(Boolean),
+      head: ok ? head : [], row: ok ? row : [], note: S(e.note, 180),
     };
-    if (!out.example.lines.length && !out.example.row.length && !out.example.note) delete out.example;
+    if (!out.example.lines.length && !out.example.steps.length && !out.example.row.length && !out.example.note) delete out.example;
   }
   return out;
 }
@@ -124,13 +129,14 @@ export async function layeredInfographic(admin: Any, user: Any, st: Record<strin
       "ملخّص صفحات الدرس:\n" + String(ex.summary).slice(0, 6000),
       e.rules?.length ? "القواعد والتعريفات كما وردت:\n- " + e.rules.slice(0, 14).join("\n- ") : "",
       e.vocabulary?.length ? "المصطلحات:\n- " + e.vocabulary.slice(0, 14).map((v: Any) => v.ar + (v.def ? ": " + v.def : "")).join("\n- ") : "",
-      e.worked_examples?.length ? "أمثلة الدرس:\n- " + e.worked_examples.slice(0, 5).map((w: Any) => `${w.problem} ← ${w.answer}`).join("\n- ") : "",
+      e.figures?.length ? "الأشكال والأنشطة:\n- " + e.figures.slice(0, 8).join("\n- ") : "",
+      e.worked_examples?.length ? "أمثلة الدرس:\n- " + e.worked_examples.slice(0, 6).map((w: Any) => `${w.problem} ← ${w.answer}`).join("\n- ") : "",
     ].filter(Boolean).join("\n\n");
     const model = st.model_info_text || st.model_summary || "google/gemini-2.5-flash";
     const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Layered Infographic" },
-      body: JSON.stringify({ model, temperature: 0.2, max_tokens: 3000, response_format: { type: "json_object" },
+      body: JSON.stringify({ model, temperature: 0.2, max_tokens: 5000, response_format: { type: "json_object" },
         messages: [{ role: "system", content: contentPrompt(layout, cur, grade, subject, S(b.teacherPrompt, 800)) }, { role: "user", content: src }] }),
     }, { st, task: "summary" });
     const j = await r.json().catch(() => ({}));
