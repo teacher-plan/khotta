@@ -7172,7 +7172,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f181e2b';
+const KH_BUILD='d10bde9';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -11675,10 +11675,16 @@ function noorGuessSection(s,cls){
   const all=noorAllSections(s);
   return all.find(x=>(!g||x.label.includes(g)||x.course.includes(g))&&num&&new RegExp('(^|\\D)'+num+'\\s*$').test(noorAr2En(x.label)))||null;
 }
+// شعبة نور تخصّ صفّ الشعبة في الخطة؟ (بالاسم في عنوان الشعبة أو المقرّر)
+function noorGradeOk(x,grade){const g=NOOR_GRADES[+grade]||'';return !g||x.label.includes(g)||x.course.includes(g);}
 function noorSectionFor(s,classId){
   const m=(s&&s.cfg&&s.cfg.map)||{};
-  if(m[classId])return noorAllSections(s).find(x=>x.id===m[classId])||null;
   const c=c1AllClasses().find(x=>x.id===classId);
+  if(m[classId]){
+    const x=noorAllSections(s).find(x=>x.id===m[classId])||null;
+    // ربطٌ محفوظ بشعبةٍ من صفٍّ آخر (مثل «السابع - ٤» ← «التاسع - ٢») خطأ: يُتجاهل ويُخمَّن الصحيح
+    if(x&&(!c||noorGradeOk(x,c.grade)))return x;
+  }
   return c?noorGuessSection(s,c):null;
 }
 
@@ -11699,10 +11705,12 @@ async function noorAcctLoad(){
   }
   const classes=c1AllClasses();
   const all=noorAllSections(s);
-  const opts=sel=>'<option value="">— لا شيء —</option>'+all.map(x=>`<option value="${escAttr(x.id)}" ${sel===x.id?'selected':''}>${escHtml(x.course+' · '+x.label)}</option>`).join('');
+  // لكل شعبة في الخطة شُعَب صفّها فقط في نور (وكلّها إن لم نعرف الصفّ)، حتى لا تُربط «السابع» بـ«التاسع» خطأً
+  const opts=(sel,c)=>{const same=all.filter(x=>noorGradeOk(x,c.grade));
+    return '<option value="">— لا شيء —</option>'+(same.length?same:all).map(x=>`<option value="${escAttr(x.id)}" ${sel===x.id?'selected':''}>${escHtml(x.course+' · '+x.label)}</option>`).join('');};
   const rows=classes.map(c=>{
     const cur=noorSectionFor(s,c.id);
-    return `<div class="noor-maprow"><span>${escHtml(c.name)}</span><select class="acct-in" onchange="noorMapSet('${escJs(c.id)}',this.value)">${opts(cur&&cur.id)}</select></div>`;
+    return `<div class="noor-maprow"><span>${escHtml(c.name)}</span><select class="acct-in" onchange="noorMapSet('${escJs(c.id)}',this.value)">${opts(cur&&cur.id,c)}</select></div>`;
   }).join('');
   box.innerHTML=`<div class="sch-mine"><b><i class="ki ki-check" aria-hidden="true"></i> ${khG('حسابكِ','حسابك')} في نور مربوط</b><span dir="ltr">${escHtml(s.username)}</span>
       <span>${(s.courses||[]).map(c=>escHtml(c.name)+' ('+egArNum((c.sections||[]).length)+' شعب)').join('، ')||'لا مقرّرات'}</span></div>
@@ -12866,7 +12874,7 @@ async function noorPublishOpen(id){
   document.getElementById('today-modal-title').textContent='نشر في نور — '+l.name;
   document.getElementById('today-modal-body').innerHTML=`<div class="noor-sheet">
     ${pub?`<div class="plan-empty-card" style="margin-bottom:10px"><i class="ki ki-check" aria-hidden="true"></i> نُشر تحضير هذا الدرس في نور بتاريخ ${escHtml(pub.date||'')}. ${khG('تستطيعين','تستطيع')} إرفاق ملفاتٍ أخرى به، أو تحديد «التحضير في نور» لنشر تحضيرٍ جديد.</div>`:''}
-    ${s.courses.length>1?`<label class="noor-lbl">المقرّر في نور</label><select class="acct-in" id="noor-course" onchange="noorCtx.cid=this.value;noorLoadLessons()">${s.courses.map(c=>`<option value="${escAttr(c.cid)}" ${c.cid===cid?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>`:''}
+    ${s.courses.length>1?`<label class="noor-lbl">المقرّر في نور</label><select class="acct-in" id="noor-course" onchange="noorCtx.cid=this.value;noorLoadLessons();noorLoadSlots()">${s.courses.map(c=>`<option value="${escAttr(c.cid)}" ${c.cid===cid?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>`:''}
     <label class="noor-lbl">الدرس المقابل في نور</label>
     <select class="acct-in" id="noor-lesson"><option>يجلب دروس نور…</option></select>
     <div id="noor-lesson-note" class="acct-note"></div>
@@ -12888,8 +12896,10 @@ async function noorLoadLessons(refresh){
   const sel=document.getElementById('noor-lesson'),note=document.getElementById('noor-lesson-note');if(!sel||!noorCtx)return;
   const l=planFindLesson(noorCtx.id);
   sel.innerHTML='<option>يجلب دروس نور…</option>';
+  const ctx=noorCtx,cid=ctx.cid,tok=ctx.lesTok=(ctx.lesTok||0)+1;
   try{
-    const r=await noorCall({action:'lessons',cid:noorCtx.cid,refresh:!!refresh});
+    const r=await noorCall({action:'lessons',cid,refresh:!!refresh});
+    if(noorCtx!==ctx||ctx.lesTok!==tok||ctx.cid!==cid)return;
     noorCtx.lessons=r.lessons||[];
     const best=noorBestLesson(noorCtx.lessons,l,noorCtx.saved.cid===noorCtx.cid?noorCtx.saved.lesson:null);
     let html='<option value="">— '+khG('اختاري','اختر')+' الدرس —</option>',unit=null;
@@ -12900,21 +12910,24 @@ async function noorLoadLessons(refresh){
     sel.innerHTML=html+(unit!==null?'</optgroup>':'');
     note.innerHTML=best?(noorCtx.saved.lesson===best?'الدرس المحفوظ سابقاً':khG('تأكّدي','تأكّد')+' أن هذا هو الدرس الصحيح — يُحفظ اختيارك للمرّات القادمة.')
       :khG('اختاري','اختر')+' الدرس من القائمة. <a href="#" onclick="noorLoadLessons(true);return false">تحديث القائمة</a>';
-  }catch(e){sel.innerHTML='<option value="">تعذّر جلب الدروس</option>';note.textContent=e.message;}
+  }catch(e){if(noorCtx!==ctx||ctx.lesTok!==tok)return;sel.innerHTML='<option value="">تعذّر جلب الدروس</option>';note.textContent=e.message;}
 }
 async function noorLoadSlots(){
   const box=document.getElementById('noor-slots');if(!box||!noorCtx)return;
   const date=document.getElementById('noor-date').value;
   box.innerHTML='<p class="acct-note">يجلب حصص هذا اليوم من نور…</p>';
+  const ctx=noorCtx,cid=ctx.cid,tok=ctx.slotTok=(ctx.slotTok||0)+1;
+  ctx.slots=[];
   try{
-    const r=await noorCall({action:'slots',cid:noorCtx.cid,date});
+    const r=await noorCall({action:'slots',cid,date});
+    if(noorCtx!==ctx||ctx.slotTok!==tok||ctx.cid!==cid)return; // تغيّر المقرّر أو التاريخ أثناء الجلب
     noorCtx.slots=r.slots||[];
     if(!noorCtx.slots.length){box.innerHTML='<p class="acct-note">لا حصص لهذا المقرّر في هذا اليوم في نور — '+khG('اختاري','اختر')+' تاريخاً آخر.</p>';return;}
     const course=(noorSt.courses||[]).find(c=>c.cid===noorCtx.cid)||{sections:[]};
     noorCtx.slots.forEach(x=>{const sec=course.sections.find(z=>new RegExp('(^|\\D)'+x.section+'\\s*$').test(noorAr2En(z.label)));x.label=sec?sec.label:('الشعبة '+x.section);x.sid=sec?sec.id:'';});
     box.innerHTML='<p class="acct-note" style="margin:6px 0">الحصص التي يُنشر لها التحضير:</p>'+noorCtx.slots.map((x,i)=>
       `<label class="noor-it"><input type="checkbox" data-slot="${i}" ${x.has_prep?'':'checked'}> ${escHtml(x.label)} · ${escHtml(x.period)}${x.has_prep?' <span class="noor-req" style="background:#fdecc8;color:#8a5a00">عليها تحضير</span>':''}</label>`).join('');
-  }catch(e){box.innerHTML='<p class="acct-note">'+escHtml(e.message)+'</p>';}
+  }catch(e){if(noorCtx===ctx&&ctx.slotTok===tok)box.innerHTML='<p class="acct-note">'+escHtml(e.message)+'</p>';}
 }
 function noorProg(steps){
   const box=document.getElementById('noor-prog');if(!box)return;
