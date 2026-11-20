@@ -2345,6 +2345,7 @@ body:has(#page-fahim.active){overflow:hidden}
 .gmg-filters::-webkit-scrollbar{display:none}
 .gmg-filters button{flex:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);background:#fff;border:1.5px solid var(--border);border-radius:99px;padding:6px 14px;cursor:pointer}
 .gmg-filters button.on{color:#fff;background:var(--red-d);border-color:var(--red-d)}
+.ly-opts{margin:12px 0 4px;padding:12px;border:1.5px dashed var(--border);border-radius:12px;background:var(--card)}.ly-mode{display:grid;gap:8px;margin-bottom:10px}.ly-mode label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface)}.ly-mode label:has(input:checked){border-color:var(--olive-d);background:rgba(72,120,72,.08)}.ly-mode small{display:block;font-size:12px;color:var(--muted);margin-top:2px}.ly-edit{margin-top:12px}.ly-card{border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:10px;background:var(--surface)}.ly-in{max-width:none!important;width:100%;margin-top:6px}#ly-form{margin-top:10px}
 .gmg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px}
 .gmg-card{display:flex;flex-direction:column;gap:3px;text-align:start;font-family:inherit;background:#fff;border:2px solid var(--border);border-radius:14px;padding:6px 6px 9px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
 .gmg-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(42,21,3,.1)}
@@ -5532,13 +5533,26 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
     <label class="eg-lbl">توجيه إضافي (اختياري)</label>
     <textarea id="info-prompt" class="c1-select" style="max-width:none;width:100%;min-height:60px" placeholder="مثلاً: ركّزي على الألوان الأساسية..."></textarea>
     <div class="eg-hint">يُولَّد بمقاس عريض ثابت (١٦:٩) يملأ شاشة الحاسوب والآيباد عند العرض على الصف.</div>
+    <div class="ly-opts" id="ly-opts" hidden>
+      <div class="ly-mode">
+        <label><input type="radio" name="ly-mode" value="full"> <span><b>رسم كامل بالذكاء</b><small>الطريقة الحالية</small></span></label>
+        <label><input type="radio" name="ly-mode" value="ly" checked> <span><b>الذكاء يرسم، والمنصّة تكتب</b><small>تجريبي · إملاء صحيح دائماً · تعديل النص مجاني · أرخص</small></span></label>
+      </div>
+      <label class="eg-lbl">القالب</label>
+      <select id="ly-layout" class="c1-select"><option value="auto">تلقائي بحسب المادة</option><option value="cols">رسوم تشرح الأفكار (أربعة أعمدة)</option><option value="bg">خلفية ومحتوى ومثال محلول</option></select>
+    </div>
     <button class="eg-generate" onclick="infoGenerate()" data-kh-g="ولّدي الإنفوجرافيك|ولّد الإنفوجرافيك">ولّدي الإنفوجرافيك</button>
   </div>
 
   <div class="eg-card hidden" id="eg-info-result-card">
     <div class="eg-step-title">الإنفوجرافيك المُولّد</div>
     <div id="info-preview" style="text-align:center"></div>
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:12px">
+    <div class="ly-edit" id="ly-edit" hidden>
+      <div class="eg-result-actions"><button class="eg-export" onclick="lyFormOpen()">تعديل النص (مجاناً)</button><button class="eg-regen" onclick="lyRedraw()">إعادة رسم الرسوم</button></div>
+      <div class="eg-hint" id="ly-note"></div>
+      <div id="ly-form" hidden></div>
+    </div>
+    <div id="info-ai-edit" style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:12px">
       <label class="eg-lbl" data-kh-g="اطلبي تعديلاً على الصورة|اطلب تعديلاً على الصورة">اطلبي تعديلاً على الصورة</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input type="text" id="info-edit-prompt" class="c1-select" style="flex:1" placeholder="اكتبي التعديل المطلوب..." data-kh-gp="placeholder|اكتبي التعديل المطلوب...|اكتب التعديل المطلوب...">
@@ -16215,6 +16229,7 @@ function studioSetMode(m){
   if(m==='game'){try{gmGalleryRender();}catch(_){}}
   document.getElementById('studio-game-result-card').classList.toggle('hidden',m!=='game'||!gmItems.length);
   document.getElementById('studio-info-options-card').classList.toggle('hidden',m!=='info');
+  if(m==='info')lyOptsInit();
   document.getElementById('eg-info-result-card').classList.toggle('hidden',m!=='info'||!infoImage);
   const mc=document.getElementById('studio-mm-card');if(mc){mc.classList.toggle('hidden',m!=='mm');if(m==='mm')mmOpen();}
 }
@@ -16293,6 +16308,8 @@ function infoUndo(){
   toast('تم التبديل إلى النسخة الأخرى','ok');
 }
 async function infoGenerate(){
+  if(lyMode())return lyGenerate(false);
+  lyS=null;{const le=document.getElementById('ly-edit');if(le)le.hidden=true;const ai=document.getElementById('info-ai-edit');if(ai)ai.hidden=false;}
   const lessons=studioSelectedLessons();
   if(!lessons.length){toast(''+khG('اختاري','اختر')+' درساً أولاً',true);return;}
   const grade=String(studioGrade||''),subject=studioSubject||'';
@@ -16367,6 +16384,161 @@ async function infoSaveToLesson(){
   }catch(e){toast('تعذّر الحفظ في بطاقة الدرس',true);}
   finally{cyBusyDone();}
 }
+
+// ══ الإنفوجرافيك الطبقي «الذكاء يرسم، والمنصّة تكتب» (٢٠ نوفمبر — تجريبي لحساب المطوّر) ══
+// النموذج يرسم الرسوم بلا كلمات (1K)، والمحتوى JSON من مستخلص صفحات الكتاب، والمتصفّح
+// يكتب النصّ فوق الرسم بقالبٍ ثابت ثم يصوّره بـhtml2canvas (كالشهادات). تعديل النصّ مجاني.
+let lyS=null;               // {layout, content, art, cur_id}
+function lyIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
+function lyMode(){return lyIsOn()&&document.querySelector('input[name="ly-mode"]:checked')?.value==='ly';}
+function lyOptsInit(){
+  const o=document.getElementById('ly-opts');if(!o)return;
+  o.hidden=!lyIsOn();
+}
+const lyE=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function lyDocHtml(s){
+  const c=s.content||{},cards=c.cards||[];
+  const pts=k=>(k.points||[]).map(p=>`<p>${lyE(p)}</p>`).join('');
+  const fx=k=>k.formula?`<div class="eq">${lyE(k.formula)}</div>`:'';
+  const COL=['#3D7DB0','#2E8A57','#C57A1E','#7A5BA6'];
+  let body='';
+  if(s.layout==='cols'){
+    body=`<h1><span>${lyE(c.title)}</span></h1>`+cards.slice(0,4).map((k,i)=>
+      `<div class="col" style="right:${20+i*480}px"><span class="b" style="background:${COL[i]}">${lyE(k.h)}</span><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('');
+  }else{
+    const BG=['#DDEEF6','#FBE3E6','#FFF1CF'],e=c.example;
+    const ex=e?`<div class="c c3"><h2>${lyE(e.label||'مثال')}</h2><div class="fit">
+      ${(e.lines||[]).length?`<div class="v${e.lines.length===2?' verse':''}">${e.lines.map(l=>`<span>${lyE(l)}</span>`).join('')}</div>`:''}
+      ${(e.head||[]).length?`<table><tr>${e.head.map(h=>`<th>${lyE(h)}</th>`).join('')}</tr><tr>${e.row.map(v=>`<td>${lyE(v)}</td>`).join('')}</tr></table>`:''}
+      ${e.note?`<p class="cv">${lyE(e.note)}</p>`:''}</div></div>`:'';
+    body=`<div class="ct${e?'':' noex'}"><h1>${lyE(c.title)}</h1><div class="r">${cards.slice(0,3).map((k,i)=>
+      `<div class="c" style="background:${BG[i]}"><h2>${lyE(k.h)}</h2><div class="fit">${pts(k)}${fx(k)}</div></div>`).join('')}</div>${ex}</div>`;
+  }
+  return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=Amiri:wght@700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}html,body{width:1920px;height:1072px;overflow:hidden}
+body{font-family:'Tajawal',sans-serif;color:#24323A;--f:1}
+.st{position:relative;width:1920px;height:1072px;background:#FFF8EC center/1920px 1072px no-repeat}
+.fit{width:100%}
+p{font-size:calc(23px*var(--f));font-weight:700;line-height:1.55;margin-bottom:6px}
+.eq{display:inline-block;margin-top:6px;background:#fff;border:2px solid #E7DCC3;border-radius:14px;padding:6px 14px;font-size:calc(25px*var(--f));font-weight:900;line-height:1.6}
+/* cols */
+.cols h1{position:absolute;top:14px;left:480px;right:480px;text-align:center;font-size:56px;font-weight:900}
+.cols h1 span{background:#fff;border-radius:20px;padding:0 34px 6px;box-shadow:0 5px 0 rgba(36,50,58,.08)}
+.col{position:absolute;top:138px;width:440px;height:320px;padding:0 6px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.b{display:inline-block;font-size:28px;font-weight:900;color:#fff;border-radius:16px;padding:6px 18px 8px;margin-bottom:10px;white-space:nowrap}
+/* bg */
+.ct{position:absolute;left:380px;right:400px;top:110px;bottom:84px;display:flex;flex-direction:column;gap:14px}
+.ct h1{text-align:center;font-size:64px;font-weight:900}
+.r{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;min-height:0;flex:1}
+.bgl p{font-size:calc(26px*var(--f))}.noex p{font-size:calc(30px*var(--f))}
+.c{border-radius:22px;padding:14px 20px;border:2px solid rgba(255,255,255,.9);box-shadow:0 5px 0 rgba(42,42,56,.06);overflow:hidden;display:flex;flex-direction:column}.r .c .fit{flex:1;display:flex;flex-direction:column;justify-content:center}
+.c3{background:#E3F2E6;flex:0 0 auto;justify-content:center}
+h2{font-size:calc(30px*min(var(--f),1.15));font-weight:900;margin-bottom:6px}
+.v{font-family:'Tajawal',sans-serif;font-weight:800;font-size:calc(30px*var(--f));text-align:center;line-height:1.7;margin:2px 0 8px}
+.v span{display:inline-block;margin:0 22px}.v.verse{font-family:'Amiri',serif;font-weight:700;font-size:calc(40px*var(--f))}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:14px;overflow:hidden;font-size:calc(24px*var(--f));font-weight:700;text-align:center}
+th{background:#1F5F4E;color:#fff;font-weight:900;padding:8px}td{padding:10px 8px;border-top:1px solid #E3DCC9}
+td+td,th+th{border-right:1px solid #E3DCC9}
+.cv{margin-top:12px;color:#1F5F4E;font-weight:800}
+</style></head><body><div class="st ${s.layout==='cols'?'cols':'bgl'}" id="ly">${body}</div></body></html>`;
+}
+let _lyFrame=null;
+function lyFrame(){
+  if(_lyFrame&&_lyFrame.isConnected)return _lyFrame;
+  const f=document.createElement('iframe');
+  f.style.cssText='position:fixed;top:0;left:-30000px;width:1920px;height:1072px;border:none;opacity:0;pointer-events:none';
+  document.body.appendChild(f);_lyFrame=f;return f;
+}
+async function lyToJpg(s){
+  if(!(await certLoadH2C()))throw new Error('html2canvas');
+  const f=lyFrame(),d=f.contentDocument;
+  d.open();d.write(lyDocHtml(s));d.close();
+  const lk=d.querySelector('link[rel=stylesheet]');
+  if(lk)await new Promise(r=>{lk.addEventListener('load',r,{once:true});lk.addEventListener('error',r,{once:true});setTimeout(r,5000);});
+  try{await Promise.all(["700 20px Tajawal","800 20px Tajawal","900 20px Tajawal","700 20px Amiri"].map(x=>d.fonts.load(x,'نص')));await d.fonts.ready;}catch(e){}
+  const st=d.getElementById('ly');
+  // الرسم يُحمَّل صورةً أولاً (data: أو رابط عام) ثم يصير خلفية — html2canvas يرسم الخلفيات
+  await new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=im.onerror=r;im.src=s.art;setTimeout(r,12000);});
+  st.style.backgroundImage='url("'+s.art+'")';
+  // تصغير الخطّ حتى يتّسع النصّ لخاناته (لا قصّ صامتاً)
+  for(let f2=1.4;f2>=0.7;f2-=0.05){
+    d.body.style.setProperty('--f',f2.toFixed(2));
+    await new Promise(r=>setTimeout(r,30));
+    const over=[...d.querySelectorAll('.col,.c')].some(el=>el.scrollHeight>el.clientHeight+1);
+    if(!over)break;
+  }
+  await new Promise(r=>setTimeout(r,300));
+  const base=d.createElement('canvas');base.width=1920;base.height=1072;
+  base.style.cssText='position:absolute;left:-99999px;top:0;width:1920px;height:1072px';d.body.appendChild(base);
+  try{
+    const cv=await html2canvas(st,{canvas:base,scale:1,useCORS:true,allowTaint:false,backgroundColor:'#FFF8EC',width:1920,height:1072,foreignObjectRendering:false});
+    return cv.toDataURL('image/jpeg',0.92);
+  }finally{base.remove();}
+}
+async function lyShow(){
+  const raw=await lyToJpg(lyS);
+  infoImagePrevRaw=null;
+  await infoShowRaw(raw);
+  const ai=document.getElementById('info-ai-edit');if(ai)ai.hidden=true;
+  const le=document.getElementById('ly-edit');if(le){le.hidden=false;document.getElementById('ly-form').hidden=true;}
+  const n=document.getElementById('ly-note');if(n)n.textContent=lyS.cached?'الخلفية من رسمٍ سابقٍ لهذه الوحدة — بلا تكلفة رسم.':'';
+}
+async function lyGenerate(redraw){
+  const lessons=studioSelectedLessons();
+  if(!lessons.length){toast(''+khG('اختاري','اختر')+' درساً أولاً',true);return;}
+  const grade=String(studioGrade||''),subject=studioSubject||'';
+  const layout=document.getElementById('ly-layout')?.value||'auto';
+  const btn=document.querySelector('#studio-info-options-card .eg-generate');
+  if(btn&&!redraw){btn.disabled=true;btn.textContent='جاري التجهيز…';}
+  cyBusyLight(redraw?'يعيد رسم الرسوم…':'يقرأ صفحات الدرس من الكتاب...');
+  let images=[];
+  if(!redraw){try{images=await c1LessonBookImages(grade,subject,lessons[0].unit,lessons[0].name)||[];}catch(e){}}
+  cyBusyLight(redraw?'يعيد رسم الرسوم…':'يكتب المحتوى ويرسم الرسوم…');
+  let data=null,reason='';
+  try{
+    const body={layered:true,grade,subject,unit:lessons[0].unit,lessonNames:[lessons[0].name],images:images.slice(0,8),
+      teacherPrompt:(document.getElementById('info-prompt')?.value||'').trim()};
+    if(redraw){body.redraw=true;body.content=lyS.content;body.layout=lyS.layout;}
+    else if(layout!=='auto')body.layout=layout;
+    const r=await sb.functions.invoke('generate-infographic',{body});
+    if(!r.error&&r.data&&r.data.layered)data=r.data;else reason=(await c1FnErr(r))||'خطأ في الاتصال';
+  }catch(e){reason=String(e);}
+  if(!data){cyBusyLightDone();if(btn){btn.disabled=false;btn.textContent=''+khG('ولّدي','ولّد')+' الإنفوجرافيك';}
+    toast(c1ErrMsg(reason,'تعذّر توليد الإنفوجرافيك — '+khG('أعيدي','أعد')+' المحاولة.'),true);return;}
+  lyS={layout:data.layout,content:data.content,art:data.art,cur_id:data.cur_id,cached:!!data.cached};
+  cyBusyLight('يكتب النصّ فوق الرسم…');
+  try{await lyShow();}catch(e){toast('تعذّر تجهيز الصورة',true);}
+  cyBusyLightDone();
+  if(btn){btn.disabled=false;btn.textContent=''+khG('ولّدي','ولّد')+' الإنفوجرافيك';}
+  document.getElementById('eg-info-result-card').scrollIntoView({behavior:'smooth'});
+  toast(redraw?'أُعيد رسم الرسوم':'تم توليد الإنفوجرافيك','ok');qBump();
+}
+// محرّر النصّ — مجاني: لا نداء للذكاء، إعادة كتابة فوق الرسم نفسه
+function lyFormOpen(){
+  if(!lyS)return;const c=lyS.content,f=document.getElementById('ly-form');
+  const inp=(id,v,ph)=>`<input class="c1-select ly-in" id="${id}" value="${escAttr(v||'')}" placeholder="${ph}">`;
+  const ta=(id,v,ph)=>`<textarea class="c1-select ly-in" id="${id}" rows="3" placeholder="${ph}">${escHtml(v||'')}</textarea>`;
+  let h=`<label class="eg-lbl">العنوان</label>${inp('ly-t',c.title,'عنوان الدرس')}`;
+  c.cards.forEach((k,i)=>{h+=`<div class="ly-card"><label class="eg-lbl">البطاقة ${egArNum(i+1)}</label>${inp('ly-h'+i,k.h,'عنوان البطاقة')}${ta('ly-p'+i,(k.points||[]).join('\n'),'كل سطر نقطة')}${inp('ly-f'+i,k.formula,'قانون أو معادلة (اختياري)')}</div>`;});
+  const e=c.example;
+  if(e){h+=`<div class="ly-card"><label class="eg-lbl">${escHtml(e.label||'المثال')}</label>${ta('ly-el',(e.lines||[]).join('\n'),'سطور المثال')}${(e.head||[]).length?inp('ly-eh',(e.head||[]).join(' | '),'عناوين الجدول مفصولة بـ |')+inp('ly-er',(e.row||[]).join(' | '),'قيم الجدول مفصولة بـ |'):''}${inp('ly-en',e.note,'الخلاصة')}</div>`;}
+  h+=`<div class="eg-result-actions"><button class="eg-export" onclick="lyFormApply()">تطبيق التعديل (مجاناً)</button><button class="eg-regen" onclick="document.getElementById('ly-form').hidden=true">إلغاء</button></div>`;
+  f.innerHTML=h;f.hidden=false;f.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function lyFormApply(){
+  const v=id=>(document.getElementById(id)?.value||'').trim(),c=lyS.content;
+  c.title=v('ly-t')||c.title;
+  c.cards.forEach((k,i)=>{k.h=v('ly-h'+i)||k.h;k.points=v('ly-p'+i).split('\n').map(x=>x.trim()).filter(Boolean);k.formula=v('ly-f'+i);});
+  if(c.example){const e=c.example;e.lines=v('ly-el').split('\n').map(x=>x.trim()).filter(Boolean);
+    if(document.getElementById('ly-eh')){const hd=v('ly-eh').split('|').map(x=>x.trim()),rw=v('ly-er').split('|').map(x=>x.trim());if(hd.length===rw.length){e.head=hd;e.row=rw;}}
+    e.note=v('ly-en');}
+  cyBusyLight('يكتب النصّ من جديد…');
+  try{await lyShow();toast('طُبّق التعديل — بلا تكلفة','ok');}catch(e){toast('تعذّر تجهيز الصورة',true);}
+  cyBusyLightDone();
+}
+function lyRedraw(){if(!lyS)return;c1Confirm('إعادة رسم الرسوم تستهلك رسمةً جديدة (النصّ يبقى كما هو). متابعة؟').then(ok=>{if(ok)lyGenerate(true);});}
 
 // ══ خرائط المفاهيم المرسومة في الاستوديو (١٩ نوفمبر — تجريبي لحساب المطوّر) ══
 // تُرسم بنموذج الإنفوجرافيك بتعليماتٍ خاصة (generate-infographic ‹concept›)، ومحتواها من قراءة
