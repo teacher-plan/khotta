@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
   // 🔒 نفس نمط الحراسة في بقية وكلاء المراقبة (file-processor-monitor,
   // credit-monitor, system-health-check).
-  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   const startedAt = Date.now();
   const sb = createClient(

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   // 🔒 وكيلٌ إداريّ: يقرأ uploaded_by وأسماء الملفات ورسائل الأخطاء.
-  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,

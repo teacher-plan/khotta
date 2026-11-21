@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     // deno-lint-ignore no-explicit-any
     let user: any = null;
     const labAs = (req.headers.get("x-lab-as") || "").trim().toLowerCase();
-    if (labAs && (await isServiceRoleRequest(req))) {
+    if (labAs && isServiceRoleRequest(req)) {
       // مفتاح الخدمة صلاحيته كاملة أصلاً؛ نسمح بالتشخيص (lab_raw، قراءة GET فقط) لأي حساب مربوط
       // لتشخيص مشكلات ربط المعلمين بنور دون كلمات مرورهم.
       const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });

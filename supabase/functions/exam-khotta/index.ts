@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     // اختبارٌ من GitHub Actions: مفتاح الخدمة + x-lab-as (حساب مختبر) — بلا جلسة متصفّح
     let user: Any = null;
     const labAs = (req.headers.get("x-lab-as") || "").trim().toLowerCase();
-    if (labAs && (await isServiceRoleRequest(req))) {
+    if (labAs && isServiceRoleRequest(req)) {
       if (!LAB_EMAILS.includes(labAs)) return json({ error: "forbidden" }, 403);
       const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       user = (data?.users || []).find((u: Any) => String(u.email || "").toLowerCase() === labAs) || null;

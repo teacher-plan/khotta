@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
 
   // 🔒 نفس نمط الحراسة القائم لكل الوكلاء المجدولة (system-health-check
   // إلخ): يسبر request بمفتاح الخدمة فقط — لا نقطة نهايةٍ عامّة جديدة.
-  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
+  if (!isServiceRoleRequest(req)) return unauthorized(cors);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
   // ── المرحلة الثانية: الخطة نفسها (مفتاح الخدمة فقط — يستدعيها هذا الملف) ──
   if (action === "plan") {
-    if (!(await isServiceRoleRequest(req))) return json({ error: "unauthorized" }, 401);
+    if (!isServiceRoleRequest(req)) return json({ error: "unauthorized" }, 401);
     const { job_id, jwt, payload } = b;
     const { data: job } = await admin.from("c1_prep_jobs").select("*").eq("id", String(job_id || "")).maybeSingle();
     if (!job || job.status !== "running") return json({ ok: true, skipped: true });
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "run") {
-    if (!(await isServiceRoleRequest(req))) return json({ error: "unauthorized" }, 401);
+    if (!isServiceRoleRequest(req)) return json({ error: "unauthorized" }, 401);
     const batchId = String(b.batch_id || ""), jwt = String(b.jwt || "");
     const { data: busy } = await admin.from("c1_prep_jobs").select("id").eq("batch_id", batchId).eq("status", "running").limit(1);
     if (busy && busy.length) return json({ ok: true, busy: true });
