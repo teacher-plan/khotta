@@ -12169,7 +12169,7 @@ async function nlGoLesson(g,subj,ui,id){
 let nlAtt=null;
 function nlAttOpen(){
   const cs=(noorSt||{}).courses||[];
-  nlAtt={cid:(cs[0]||{}).cid||'',q:'',prep:null,lesson:'',games:null,all:false,pick:{},files:[],date:'',run:null};
+  nlAtt={cid:(cs[0]||{}).cid||'',q:'',prep:null,lesson:'',games:null,all:false,pick:{},files:[],date:'',run:null,shared:null,shAll:false,shUser:'',spick:{}};
   document.getElementById('nl-att-modal').classList.add('open');
   nlAttLessons();nlAttRender();
 }
@@ -12178,7 +12178,7 @@ async function nlAttLessons(){
   const cid=nlAtt&&nlAtt.cid;if(!cid||nl.lessons[cid]||nl.busy['ls'+cid])return;
   nl.busy['ls'+cid]=true;
   try{const r=await noorCall({action:'lessons',cid});nl.lessons[cid]=r.lessons||[];}catch(e){nl.lessons[cid]=[];toast(e.message,true);}
-  nl.busy['ls'+cid]=false;if(nlAtt){if(nlAtt.prep&&!nlAtt.lesson)nlAtt.lesson=noorBestLesson(nl.lessons[cid],{name:nlAtt.prep.title,unit:''},null)||'';nlAttRender();}
+  nl.busy['ls'+cid]=false;if(nlAtt){if(nlAtt.prep&&!nlAtt.lesson)nlAtt.lesson=nlAttPlanLesson(nlAtt.prep)||noorBestLesson(nl.lessons[cid],{name:nlAtt.prep.title,unit:''},null)||'';nlAttRender();}
 }
 // تحاضير المقرّر في نور مع تاريخ إنشائها (إن عُرف)، الأحدث أولاً
 function nlAttPreps(){
@@ -12197,8 +12197,10 @@ async function nlAttGames(){
 }
 function nlAttGameFor(g,t){return nlSame(g.lesson||'',t)||nlSame(g.title||'',t);}
 function nlAttPick(p){
-  const a=nlAtt;a.prep=p;a.pick={};a.files=[];a.run=null;
-  a.lesson=nl.lessons[a.cid]?(noorBestLesson(nl.lessons[a.cid],{name:p.title,unit:''},null)||''):'';
+  const a=nlAtt;a.prep=p;a.pick={};a.spick={};a.files=[];a.run=null;a.shAll=false;
+  // الدرس في شجرة نور: من بطاقة الدرس التي نُشر منها هذا التحضير أولاً (مؤكّد)، ثم بمطابقة الاسم
+  a.lesson=nlAttPlanLesson(p)||(nl.lessons[a.cid]?(noorBestLesson(nl.lessons[a.cid],{name:p.title,unit:''},null)||''):'');
+  nlAttShared();
   const days=nlCapDays(15);a.date=(days.find(x=>x.f<NL_CAP_F)||days[0]||{}).d||'';
   nlAttGames();
   (nlAtt.games||[]).forEach(g=>{if(nlAttGameFor(g,p.title))a.pick[g.id]=true;});
@@ -12209,7 +12211,26 @@ function nlAttAddFiles(inp){
   if(big.length)toast('أكبر من ٢٥ ميغابايت (حدّ نور): '+big.join('، '),true);
   inp.value='';nlAttRender();
 }
-function nlAttCount(){const a=nlAtt;return Object.values(a.pick).filter(Boolean).length+a.files.length;}
+function nlAttCount(){const a=nlAtt;return Object.values(a.pick).filter(Boolean).length+Object.values(a.spick).filter(Boolean).length+a.files.length;}
+// الدرس الذي نُشر له هذا التحضير من بطاقة الدرس في خطّة (يُحفظ في plan_state.noor)
+function nlAttPlanLesson(p){const ps=(profile&&profile.plan_state)||{};
+  for(const k in ps){const n=ps[k]&&ps[k].noor;if(n&&n.prep_id&&String(n.prep_id)===String(p.id)&&n.lesson_id&&(!n.cid||n.cid===nlAtt.cid))return String(n.lesson_id);}return '';}
+// مادة المقرّر وصفّه من اسمه في نور («الرياضيات / السابع»)
+function nlAttSubj(){const c=((noorSt||{}).courses||[]).find(x=>x.cid===nlAtt.cid)||{};
+  const [s,g]=String(c.name||'').split('/').map(x=>x.trim());const gi=NOOR_GRADES.indexOf(g||'');
+  return {subject:s||'',grade:gi>0?String(gi):'',gname:g||''};}
+// مكتبة خطّة المشتركة: تحاضير وألعاب وملخّصات كل المعلّمين لمادة المقرّر وصفّه
+async function nlAttShared(){
+  const a=nlAtt,{subject,grade}=nlAttSubj();a.shared=null;a.shErr='';
+  if(!subject||!grade){a.shared=[];a.shErr='لم نتعرّف على مادة المقرّر وصفّه من اسمه في نور.';return;}
+  try{const{data,error}=await sb.from('c1_shared_assets').select('id,user_id,uploader_name,kind,unit,lesson,title,template,image_url,created_at')
+      .eq('subject',subject).eq('grade',grade).in('kind',['prep','game','info']).order('created_at',{ascending:false}).limit(500);
+    if(error)throw error;if(nlAtt!==a)return;a.shared=data||[];}
+  catch(e){if(nlAtt!==a)return;a.shared=[];a.shErr='تعذّر جلب مكتبة خطّة: '+(e.message||'');}
+  nlAttRender();
+}
+function nlAttSharedFor(x,t){return nlSame(x.lesson||x.title||'',t)||(!!x.lesson&&noorTxt(x.lesson)===noorTxt(t));}
+const NL_SH_KIND={prep:['تحضير','ki-list','ملف Word'],game:['لعبة','ki-game','درس تفاعلي +٤٠'],info:['ملخّص','ki-book','PDF']};
 function nlAttRender(){
   const el=document.getElementById('nl-att-body');if(!el||!nlAtt)return;
   const a=nlAtt,cs=(noorSt||{}).courses||[],o=nl.ov;
@@ -12233,14 +12254,32 @@ function nlAttRender(){
     <div class="nl-sub-t"><i class="ki ki-game" aria-hidden="true"></i> ألعابك المحفوظة باسم الدرس</div>
     ${a.games===null?nlLoading('يجلب ألعابك…'):(mine.length?mine.map(gRow).join(''):'<div class="nl-gap">لا لعبة محفوظة باسم هذا الدرس.</div>')}
     ${a.games&&others.length?`<button class="nl-att-more" onclick="nlAtt.all=!nlAtt.all;nlAttRender()">${a.all?'إخفاء بقية الألعاب':'عرض كل ألعابي ('+egArNum(others.length)+')'}</button>${a.all?others.map(gRow).join(''):''}`:''}
+    ${nlAttSharedHtml()}
     <div class="nl-sub-t"><i class="ki ki-clip" aria-hidden="true"></i> ملفات من ${khG('جهازكِ','جهازك')}</div>
     <label class="nl-att-drop"><input type="file" multiple onchange="nlAttAddFiles(this)" hidden><i class="ki ki-upload" aria-hidden="true"></i> اختيار ملفات (صور، PDF، Word، عروض…)<small>تُرفع كلها دفعةً واحدة · حتى ٢٥ ميغابايت للملف</small></label>
     ${a.files.map((f,i)=>`<div class="nl-att-row"><i class="ki ki-clip" aria-hidden="true"></i><span>${escHtml(f.name)}<small>${egArNum((f.size/1048576).toFixed(1))} ميغابايت</small></span><button class="nl-att-x" aria-label="إزالة" onclick="nlAtt.files.splice(${i},1);nlAttRender()">×</button></div>`).join('')}
     <div class="nl-sub-t"><i class="ki ki-calendar" aria-hidden="true"></i> تاريخ النشر في نور</div>
     <select class="nl-in" onchange="nlAtt.date=this.value;nlAttRender()">${days.map(x=>`<option value="${x.d}" ${x.d===a.date?'selected':''}>${nlDayName(x.d)} ${nlShort(x.d)}${x.d===o.today?' (اليوم)':''} — ${x.f>=NL_CAP_F?'ممتلئ':'متاح '+egArNum(NL_CAP_F-x.f)+' من '+egArNum(NL_CAP_F)}</option>`).join('')}</select>
-    <details class="nl-att-adv"><summary>الدرس في شجرة نور</summary>${lessons?`<select class="nl-in" onchange="nlAtt.lesson=this.value">${a.lesson?'':'<option value="">— اختر —</option>'}${lessons.map(l=>`<option value="${escAttr(l.id)}" ${a.lesson===l.id?'selected':''}>${escHtml(l.name)} — ${escHtml(l.unit)}</option>`).join('')}</select>`:nlLoading('يجلب دروس نور…')}</details>
+    ${lessons&&!a.lesson?`<div class="nl-gap" style="background:#FCEDE8;color:#8C2E1B"><i class="ki ki-alert" aria-hidden="true"></i> لم نعرف تلقائياً درس هذا التحضير في شجرة نور. ${khG('اختاري','اختر')} الدرس من القائمة أدناه ليُفعَّل الرفع.</div>`:''}
+    <details class="nl-att-adv" ${lessons&&!a.lesson?'open':''}><summary>الدرس في شجرة نور${a.lesson&&lessons?': '+escHtml((lessons.find(l=>l.id===a.lesson)||{}).name||''):''}</summary>${lessons?`<select class="nl-in" onchange="nlAtt.lesson=this.value;nlAttRender()">${a.lesson?'':'<option value="">— اختر —</option>'}${lessons.map(l=>`<option value="${escAttr(l.id)}" ${a.lesson===l.id?'selected':''}>${escHtml(l.name)} — ${escHtml(l.unit)}</option>`).join('')}</select>`:nlLoading('يجلب دروس نور…')}</details>
     ${n>left?`<div class="nl-gap" style="background:#FCEDE8;color:#8C2E1B"><i class="ki ki-alert" aria-hidden="true"></i> ${egArNum(n)} ملفاً والمتاح بهذا التاريخ ${egArNum(left)}: ما زاد لن تُحتسب له نقاط. ${khG('اختاري','اختر')} يوماً آخر أو أقلّ.</div>`:''}
-    <div class="nl-actions"><button class="nl-btn gold" style="flex:1;justify-content:center" ${n&&a.lesson?'':'disabled'} onclick="nlAttGo()"><i class="ki ki-upload" aria-hidden="true"></i> ارفع ${n?egArNum(n)+' ':''}إلى نور</button></div>`;
+    <div class="nl-actions"><button class="nl-btn gold" style="flex:1;justify-content:center" ${n&&a.lesson?'':'disabled'} onclick="nlAttGo()"><i class="ki ki-upload" aria-hidden="true"></i> ${!n?'اختر ملفاً واحداً على الأقل':!a.lesson?'اختر الدرس في شجرة نور أولاً':'ارفع '+egArNum(n)+' إلى نور'}</button></div>`;
+}
+function nlAttSharedHtml(){
+  const a=nlAtt,p=a.prep;
+  const head=`<div class="nl-sub-t"><i class="ki ki-folder" aria-hidden="true"></i> من مكتبة خطّة المشتركة</div>`;
+  if(a.shared===null)return head+nlLoading('يجلب التحاضير والألعاب والملخّصات…');
+  if(a.shErr&&!a.shared.length)return head+`<div class="nl-gap">${escHtml(a.shErr)}</div>`;
+  const me=currentUser&&currentUser.id;
+  const users=[...new Map(a.shared.map(x=>[x.user_id,x.uploader_name||'معلّم'])).entries()];
+  const byUser=a.shared.filter(x=>!a.shUser||(a.shUser==='me'?x.user_id===me:x.user_id===a.shUser));
+  const mine=byUser.filter(x=>nlAttSharedFor(x,p.title)),rest=byUser.filter(x=>!nlAttSharedFor(x,p.title));
+  const ord={prep:0,info:1,game:2};mine.sort((x,y)=>(ord[x.kind]-ord[y.kind])||String(y.created_at).localeCompare(String(x.created_at)));
+  const row=x=>{const k=NL_SH_KIND[x.kind]||['ملف','ki-clip',''];
+    return `<label class="nl-att-row"><input type="checkbox" ${a.spick[x.id]?'checked':''} onchange="nlAtt.spick['${escJs(x.id)}']=this.checked;nlAttRender()"><i class="ki ${k[1]}" aria-hidden="true"></i><span>${k[0]}: ${escHtml(x.kind==='game'?(x.title||x.lesson||''):(x.lesson||x.title||''))}<small>${escHtml(x.uploader_name||'معلّم')}${x.user_id===me?' (أنت)':''} · ${nlShort(String(x.created_at||'').slice(0,10))}${x.kind==='game'&&typeof GM_TPL_LBL!=='undefined'&&GM_TPL_LBL[x.template]?' · '+escHtml(GM_TPL_LBL[x.template]):''}</small></span>${x.kind==='info'&&x.image_url?`<a class="nl-att-x" style="display:grid;place-items:center;text-decoration:none" href="${escAttr(x.image_url)}" target="_blank" rel="noopener" aria-label="معاينة" onclick="event.stopPropagation()"><i class="ki ki-eye" aria-hidden="true"></i></a>`:''}<em class="nl-pill ok">${k[2]}</em></label>`;};
+  return head+`<select class="nl-in" onchange="nlAtt.shUser=this.value;nlAttRender()"><option value="">كل الحسابات (${egArNum(users.length)})</option><option value="me" ${a.shUser==='me'?'selected':''}>حسابي فقط</option>${users.filter(([id])=>id!==me).map(([id,n])=>`<option value="${escAttr(id)}" ${a.shUser===id?'selected':''}>${escHtml(n)}</option>`).join('')}</select>
+    ${mine.length?mine.map(row).join(''):`<div class="nl-gap">لا ملفات في المكتبة باسم هذا الدرس${a.shUser?' لهذا الحساب':''}.</div>`}
+    ${rest.length?`<button class="nl-att-more" onclick="nlAtt.shAll=!nlAtt.shAll;nlAttRender()">${a.shAll?'إخفاء بقية ملفات المادة':'عرض كل ملفات المادة في المكتبة ('+egArNum(rest.length)+')'}</button>${a.shAll?rest.map(row).join(''):''}`:''}`;
 }
 function nlAttRunHtml(){
   const r=nlAtt.run,ok=r.items.filter(x=>x.st==='ok').length;
@@ -12254,6 +12293,7 @@ async function nlAttGo(retry){
   if(!retry){
     const items=[];
     (a.games||[]).forEach(g=>{if(a.pick[g.id])items.push({k:'g',g,name:'درس تفاعلي: '+(g.title||g.lesson||a.prep.title),st:'wait'});});
+    (a.shared||[]).forEach(s=>{if(a.spick[s.id])items.push({k:'s',s,name:(NL_SH_KIND[s.kind]||['ملف'])[0]+': '+((s.kind==='game'?s.title:s.lesson)||s.lesson||s.title||a.prep.title)+(s.uploader_name?' — '+s.uploader_name:''),st:'wait'});});
     a.files.forEach(f=>items.push({k:'f',f,name:f.name,st:'wait'}));
     if(!items.length)return;
     if(!await c1Confirm('رفع '+egArNum(items.length)+' ملفاً إلى تحضير «'+a.prep.title+'» في نور بتاريخ '+a.date+' لكل شعب '+c.name+'؟'))return;
@@ -12271,13 +12311,29 @@ async function nlAttGo(retry){
         const gn=(g.content&&g.content.groupNames)||gmGroupNames;
         const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||a.prep.title,{solo:true});
         file={blob:noorScormZip(await html.text(),g.title||a.prep.title),name:'lesson.zip'};title=x.name;kind='Scorm';
+      }else if(x.k==='s'){
+        // من مكتبة خطّة: التحضير ← Word، اللعبة ← درس تفاعلي (SCORM)، الملخّص ← PDF
+        const{data:row,error}=await sb.from('c1_shared_assets').select('*').eq('id',x.s.id).maybeSingle();
+        if(error||!row)throw new Error('لم نجد الملف في مكتبة خطّة');
+        const nm=row.lesson||row.title||a.prep.title,safe=t=>String(t||'').replace(/[\\/:*?"<>|]/g,'').slice(0,80),sj=nlAttSubj();
+        if(row.kind==='prep'){
+          if(!row.content)throw new Error('التحضير فارغ');
+          file={blob:khZipBlob(planDocx(row.content,{subject:sj.subject,grade:sj.gname,unit:row.unit||'',lesson:nm,teacher:row.uploader_name||'',date:''})),name:'تحضير - '+safe(nm)+'.docx'};title='تحضير درس '+nm;
+        }else if(row.kind==='game'){
+          const gc=row.content||{};if(!row.template||!(gc.items||[]).length)throw new Error('اللعبة بلا أسئلة');
+          const html=await gmBuildStandalone(row.template,gc.items,gc.groupNames||gmGroupNames,row.title||nm,{solo:true});
+          file={blob:noorScormZip(await html.text(),row.title||nm),name:'lesson.zip'};title='درس تفاعلي: '+(row.title||nm);kind='Scorm';
+        }else{
+          if(!row.image_url)throw new Error('الملخّص بلا صورة');
+          file={blob:await noorImgPdf(row.image_url),name:'ملخص - '+safe(nm)+'.pdf'};title='ملخّص درس '+nm;
+        }
       }else{file={blob:x.f,name:x.f.name.replace(/[\\/:*?"<>|]/g,'')||'file'};title=x.f.name.replace(/\.[^.]+$/,'');}
       await noorCall({action:'upload',cid:c.cid,prep_id:a.prep.id,lesson_id:a.lesson,title,date:a.date,sections:secs,criteria:[],filename:file.name,kind},file);
       x.st='ok';
       o.fByDate=o.fByDate||{};o.fByDate[a.date]=(o.fByDate[a.date]||0)+1;
       if(a.date===o.today){o.caps.files++;if(kind==='Scorm')o.caps.scorm++;}
       if(kind==='Scorm')(o.scorms=o.scorms||[]).push({cid:c.cid,title,publish:a.date});
-    }catch(e){x.st='err';x.msg=e.message||'تعذّر';}
+    }catch(e){x.st='err';x.msg=(e.message||'تعذّر')+(e.code&&e.code!=='net'?' ['+e.code+']':'');console.error('nlAtt upload',x.name,e);}
     nlAttRender();
   }
   a.run.busy=false;nlAttRender();
