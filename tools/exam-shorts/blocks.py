@@ -40,8 +40,13 @@ def CHIPS(*xs):
     return '<div class="chips">' + ''.join(f'<span class="mark">{x}</span>' for x in xs) + '</div>'
 
 
-def STEP(t, n, html):
-    return f'<div class="steprow" data-t="{t}" data-fx="up"><span class="mark">الخطوة {n}</span><span style="flex:1;text-align:center">{html}</span></div>'
+def STEPL(t, label, html, size=28):
+    return (f'<div class="steprow" data-t="{t}" data-fx="up" style="font-size:{size}px"><span class="mark">{label}</span>'
+            f'<span style="flex:1;text-align:center">{html}</span></div>')
+
+
+def STEP(t, n, html, size=28):
+    return STEPL(t, f'الخطوة {n}', html, size)
 
 
 def ANS(t, html, size=38):
@@ -76,3 +81,50 @@ def PV(cols, target, decider, t_target, t_dec):
         fx = (f' data-t="{t_target}" data-fx="tgt"' if i == target else f' data-t="{t_dec}" data-fx="dec"' if i == decider else '')
         out.append(f'<div class="pvc"><div class="pvlab">{PLACES[p]}</div><div class="pvbox"{fx}>{d}</div></div>')
     return f'<div class="card" style="padding:12px 8px 14px"><div class="pv">{"".join(out)}</div></div>'
+
+
+def FR(a, b, size=None):
+    """كسر عمودي (بسط فوق مقام)."""
+    st = f' style="font-size:{size}px"' if size else ''
+    return f'<span class="frac"{st}><span>{a}</span><span>{b}</span></span>'
+
+
+def OPEN(ep, skill, qcard, t_card=0):
+    """افتتاح قصير: شارة السلسلة والحلقة، ثم المهارة، وبطاقة السؤال الأول من الثانية الأولى."""
+    return STACK(T(0, f'<span class="pill">٤٠ من ٤٠ • الحلقة {ep}</span>', cls='center'),
+                 T(0.2, skill, cls='title', style='font-size:56px;line-height:1.15'),
+                 qcard,
+                 T(0.6, 'أ. عيسى الحارثي • من امتحان الوزارة', 'fade', 'center', 'font-weight:800;font-size:19px;color:var(--mut)'),
+                 gap=18)
+
+
+def MISTAKE(head, t, wrong, why, right, t_right):
+    """⚠️ خطأ شائع: الجواب الخاطئ مشطوباً وسببه، ثم الصحيح."""
+    return STACK(head,
+                 f'<div class="card" data-t="{t}" data-fx="up"><div class="qhd" style="background:#B3261E"><b style="font-size:28px">⚠️ خطأ شائع</b></div>'
+                 f'<div class="center" style="padding:14px 14px 6px"><span style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:4px 14px;font-weight:900;font-size:28px;color:#B3261E">'
+                 f'<span class="mark" style="background:#B3261E;color:#fff;border-color:#B3261E;font-size:15px;vertical-align:middle">✗ خطأ</span> {wrong}</span></div>'
+                 f'<div class="center" style="padding:0 16px 14px;font-weight:800;font-size:21px;line-height:1.5">{why}</div></div>',
+                 ANS(t_right, f'✓ الصحيح: {right}', 34), gap=22)
+
+
+def CHALLENGE(q, sub, t_comment, t_like, t_follow, t_share, t_bye):
+    return STACK(T(0, 'دورك! ✍️', cls='title', style='font-size:58px;line-height:1.1'),
+                 '<div class="card" data-t="0.4" data-fx="up"><div class="hd" style="font-size:30px">سؤال التحدّي</div>'
+                 f'<div class="center" style="padding:14px 16px 6px;font-weight:900;font-size:30px">{q}</div>'
+                 f'<div class="center" style="padding:0 16px 14px;font-weight:800;font-size:23px">{sub}</div></div>',
+                 T(t_comment, '💬 اكتب جوابك في التعليقات', 'fade', 'center', 'font-weight:900;font-size:24px'),
+                 '<div style="display:flex;gap:10px;justify-content:center">'
+                 f'<span class="pill w" data-t="{t_like}" style="font-size:21px">👍 إعجاب</span>'
+                 f'<span class="pill w" data-t="{t_follow}" style="font-size:21px">🔔 متابعة</span>'
+                 f'<span class="pill" data-t="{t_share}" style="font-size:21px">↗ مشاركة</span></div>',
+                 T(t_bye, '<span class="pill" style="background:var(--ink)">نلتقي غداً في سؤالٍ جديد</span>', 'fade', 'center'),
+                 T(t_bye, 'إعداد: أ. عيسى الحارثي', 'fade', 'center', 'font-weight:800;font-size:20px'), gap=20)
+
+
+CTA_NARR = 'واكتب جوابك في التعليقات. وإذا استفدت من الحلقة، اضغط زر الإعجاب، وتابع القناة، وشارك المقطع مع زملائك. ونلتقي غداً إن شاء الله في سؤال جديد.'
+
+
+def CHALLENGE_AT(q, sub):
+    """سؤال التحدّي بأزمنة مربوطة بكلمات التعليق القياسي (CTA_NARR)."""
+    return CHALLENGE(q, sub, '@واكتب جوابك', '@اضغط زر', '@وتابع القناة', '@وشارك المقطع', '@ونلتقي')

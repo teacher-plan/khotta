@@ -32,6 +32,15 @@ for (let i = 0; i < D.length; i++) {
       if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible' || (e.matches('.pill,.mark,.pvlab,.pvbox') && e.scrollWidth > e.clientWidth + 1))
         out.push(`نصّ يفيض عن إطاره: ${name(e)}`);
     });
+    // سطرٌ واحد: رؤوس الأسئلة والشارات وخطوات الحل لا تلتفّ (الكسور العمودية مستثناة)
+    sc.querySelectorAll('.qhd b,.mark,.steprow>span:last-child,.nw').forEach(e => {
+      if (e.querySelector('.frac')) return;
+      const rg = document.createRange(); rg.selectNodeContents(e);
+      const fs = parseFloat(getComputedStyle(e).fontSize);
+      const tops = [...rg.getClientRects()].filter(q => q.width > 1).map(q => q.top);
+      const lines = tops.sort((x, y) => x - y).reduce((n, t, k, a) => n + (k && t - a[k - 1] > fs * 0.8 ? 1 : 0), tops.length ? 1 : 0);
+      if (lines > 1) out.push(`نصّ التفّ على سطرين: ${name(e)}`);
+    });
     // الزينة (الدفاتر والأقلام والدوائر) لا تلمس المحتوى ولا الشارة العلوية
     const deco = [...document.querySelectorAll('.doodle,.blob,.ring')];
     const tag = document.querySelector('#top .tag');

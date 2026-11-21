@@ -27,6 +27,30 @@ def dur_ms(f):
     return int(float(out) * 1000)
 
 
+def pauses(f):
+    """نهايات الوقفات في المقطع (ثوانٍ)."""
+    r = subprocess.run(['ffmpeg', '-i', f, '-af', 'silencedetect=n=-30dB:d=0.15', '-f', 'null', '-'], capture_output=True, text=True)
+    return [float(x) for x in re.findall(r'silence_end: ([0-9.]+)', r.stderr)]
+
+
+def anchor_times(html, text, dur_s, ends):
+    """data-t="@كلمة" ← زمن نطق الكلمة: موضعها في نصّ التعليق نسبةً إلى طوله × مدّة المقطع،
+    ثم يُلصق بأقرب نهاية وقفة قبله أو بعده بقليل (بداية الجملة التي فيها الكلمة)."""
+    plain = re.sub(r'\[[^\]]*\]\s*', '', text)
+
+    def at(m):
+        key = m.group(1)
+        i = plain.find(key)
+        if i < 0:
+            raise SystemExit(f'مرساة غير موجودة في التعليق: «{key}»')
+        t = dur_s * i / max(1, len(plain))
+        near = [e for e in ends if -0.9 <= e - t <= 0.6]
+        if near:
+            t = min(near, key=lambda e: abs(e - t))
+        return f'data-t="{max(0.0, t - 0.05):.2f}"'
+    return re.sub(r'data-t="@([^"]+)"', at, html)
+
+
 def main(ep_file, img_dir, aud_dir, out):
     spec = importlib.util.spec_from_file_location('ep', ep_file)
     ep = importlib.util.module_from_spec(spec)
@@ -41,7 +65,14 @@ def main(ep_file, img_dir, aud_dir, out):
         p = os.path.join(img_dir, m.group(1) + '.png')
         return 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()
 
-    scenes = ''.join(f'<section class="scene">{re.sub(r"\{\{img:(\w+)\}\}", img, s)}</section>\n' for s in ep.SCENES)
+    narr = getattr(ep, 'NARRATION', None)
+    src = []
+    for k, sc in enumerate(ep.SCENES):
+        if narr and 'data-t="@' in sc:
+            f = os.path.join(aud_dir, mp3[k])
+            sc = anchor_times(sc, narr[k], dur_ms(f) / 1000, pauses(f))
+        src.append(sc)
+    scenes = ''.join(f'<section class="scene">{re.sub(r"\{\{img:(\w+)\}\}", img, s)}</section>\n' for s in src)
     html = open(os.path.join(HERE, 'template.html'), encoding='utf-8').read()
     html = html.replace('__TAG__', ep.TAG).replace('__SCENES__', scenes).replace('__DURS__', json.dumps(durs))
     open(out, 'w', encoding='utf-8').write(html)
