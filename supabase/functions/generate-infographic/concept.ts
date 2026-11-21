@@ -7,7 +7,7 @@
 // deno-lint-ignore no-explicit-any
 type Any = any;
 
-export const CONCEPT_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
+export const CONCEPT_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com", "abdulrahman.demo@khotati.com"];
 
 const TYPES: Record<string, string> = {
   concept: "خريطة مفاهيم (Novak): المفهوم الأشمل في الأعلى، والمفاهيم الأخصّ تحته طبقةً بعد طبقة، كل مفهوم داخل شكلٍ بيضاوي أو مستطيل مدوّر، وتصل بينها أسهم تحمل «عبارة ربط» قصيرة فوق السهم (مثل: يتكوّن من، يؤدّي إلى، من أنواعه، يُستخدم في) بحيث تُقرأ كل علاقة جملةً مفيدة. أضف وصلةً عرضية واحدة أو اثنتين بين فرعين مختلفين إن كانت العلاقة موجودة فعلاً في الدرس.",

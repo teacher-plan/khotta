@@ -14,7 +14,7 @@ import { curFor, readCache, bookKey } from "../_shared/lessonExtract.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
-const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
+const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com", "abdulrahman.demo@khotati.com"];
 const MM_VERSION = 1;
 const mmKey = (curId: number | string) => `mindmaps/${curId}.json`;
 const cors = {

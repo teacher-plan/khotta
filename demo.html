@@ -16738,7 +16738,8 @@ async function infoSaveToLesson(){
 // النموذج يرسم الرسوم بلا كلمات (1K)، والمحتوى JSON من مستخلص صفحات الكتاب، والمتصفّح
 // يكتب النصّ فوق الرسم بقالبٍ ثابت ثم يصوّره بـhtml2canvas (كالشهادات). تعديل النصّ مجاني.
 let lyS=null;               // {layout, content, art, cur_id}
-function lyIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
+// أُلغي خيار الإنفوجرافيك الهجين (٢١ نوفمبر — طلب الأستاذ عيسى): الرسم الكامل بدقة 2K وحده
+function lyIsOn(){return false;}
 function lyMode(){return lyIsOn()&&document.querySelector('input[name="ly-mode"]:checked')?.value==='ly';}
 function lyOptsInit(){
   const o=document.getElementById('ly-opts');if(!o)return;
@@ -16929,9 +16930,11 @@ const CM_OPTS={
   aspect:{t:'المقاس',o:[['3:4','عمودي — ورقة A4'],['16:9','أفقي — للعرض'],['1:1','مربع']]},
   student:{t:'النسخة',o:[['full','كاملة'],['gaps','للطالب — بفراغات']],h:'نسخة الطالب تترك صناديق فارغة يكملها من ذاكرته بعد الدرس؛ الاسترجاع يثبّت التعلّم أكثر من إعادة القراءة.'},
 };
-let cmS={key:'',m:'ly',ly:null,opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
+let cmS={key:'',m:'full',ly:null,opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
 const _mmFired={};
-function mmIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
+// الخرائط الذهنية المرسومة: حسابات المختبر + حساب الأستاذ عبدالرحمن العامري (٢١ نوفمبر)
+const MM_EXTRA=['abdulrahman.demo@khotati.com'];
+function mmIsOn(){return (typeof nlIsLab==='function'&&nlIsLab())||(!KH_DEMO&&!!(currentUser&&MM_EXTRA.includes(String(currentUser.email||'').toLowerCase())));}
 function mmLesson(){const l=studioSelectedLessons()[0];return l?{grade:String(studioGrade||''),subject:studioSubject||'',unit:l.unit||'',lesson:l.name}:null;}
 // بعد قراءة صفحات الدرس في التحضير: يُبنى هيكل المفاهيم في الخلفية (مرّةً لكل درس في الجلسة)
 function mmPrebuild(grade,subject,unit,lesson){
@@ -16950,7 +16953,6 @@ function cmDraw(){
   const L=mmLesson();if(!L){box.innerHTML='<div class="eg-hint">'+khG('اختاري','اختر')+' درساً أولاً.</div>';return;}
   const o=cmS.opt,ty=CM_OPTS.type.o.find(x=>x[0]===o.type);
   box.innerHTML=`<div class="cm-steps"><b>١</b> ${khG('اختاري','اختر')} نوع الخريطة <b>٢</b> ${khG('حدّدي','حدّد')} الشكل <b>٣</b> ${khG('ارسميها','ارسمها')} ثم ${khG('عدّليها','عدّلها')} ${cmS.m==='ly'?'نصوصها':'بالوصف'} أو ${khG('نزّليها','نزّلها')}</div>
-  <div class="cm-meth"><button class="${cmS.m==='ly'?'on':''}" onclick="cmS.m='ly';cmS.img=null;cmS.ly=null;cmDraw()"><b>الذكاء يرسم، والمنصّة تكتب</b><small>إملاء صحيح دائماً · تعديل مجاني · أرخص</small></button><button class="${cmS.m!=='ly'?'on':''}" onclick="cmS.m='full';cmS.img=null;cmS.ly=null;cmDraw()"><b>رسم كامل بالذكاء</b><small>الطريقة السابقة</small></button></div>
   <div class="cm-types">${CM_OPTS.type.o.map(([v,t])=>`<button class="${o.type===v?'on':''}" onclick="cmSet('type','${v}')">${t}</button>`).join('')}</div>
   <div class="cm-why"><b>${ty[1]}:</b> ${ty[2]}</div>
   <div class="cm-grid"><div class="cm-opts">
