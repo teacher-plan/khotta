@@ -1226,6 +1226,9 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
    ويتحرّك معها العارض ويُظهر الخطة تحت السبورة. الحلّ المعتمد: تثبيت body نفسه (position:fixed) وإعادة موضع التمرير عند الإغلاق. */
 html.live-lock,html.live-lock body{overflow:hidden!important;overscroll-behavior:none;height:100%}
 html.live-lock body{position:fixed;inset-inline:0;width:100%;top:var(--live-lock-top,0)}
+/* قفل الصفحة خلف النوافذ المنبثقة: body ثابتٌ بطوله الكامل (بلا height:100% ولا overflow) فتبقى الخطة مرئيةً في موضعها تحت النافذة */
+html.m-lock{overflow:hidden}
+html.m-lock body{position:fixed;inset-inline:0;width:100%;top:var(--m-lock-top,0)}
 #live-body,#live-view .lv-vbody,.lb-pop{overscroll-behavior:contain}
 #live-stage.on{display:block}
 /* سبورة الصف: خلفية خضراء داكنة بنقشة غبار طباشير خفيفة (::before) بدل
@@ -15733,7 +15736,8 @@ function liveScrollLock(on){
   const h=document.documentElement;
   if(on){
     if(h.classList.contains('live-lock'))return;
-    _liveLockY=window.scrollY||h.scrollTop||0;
+    // إن كانت نافذةٌ منبثقة قد ثبّتت الصفحة (m-lock) فموضع التمرير الحقيقي محفوظٌ عندها، وscrollY صفر
+    _liveLockY=h.classList.contains('m-lock')?_mLockY:(window.scrollY||h.scrollTop||0);
     h.style.setProperty('--live-lock-top',(-_liveLockY)+'px');
     h.classList.add('live-lock');
   }else if(h.classList.contains('live-lock')){
@@ -15744,11 +15748,15 @@ function liveScrollLock(on){
 // ── قفل الصفحة خلف أي نافذة منبثقة (.c1-modal) ── على iPad يبقى إصبع المعلّم يسحب الخطة
 //    تحت النافذة، فيرسم Safari خلفيتها المعتّمة (backdrop-filter) ناقصةً وتتحرّك النافذة
 //    مع التمرير حتى تخرج من الشاشة. نستعمل القفل نفسه المعتمد للحصة الحية (html.live-lock).
-let _mLocked=false;
+let _mLocked=false,_mLockY=0;
 function c1ModalLockSync(){
   const open=!!document.querySelector('.c1-modal.open'),h=document.documentElement;
-  if(open&&!_mLocked&&!h.classList.contains('live-lock')){liveScrollLock(true);_mLocked=true;}
-  else if(!open&&_mLocked){_mLocked=false;const ls=document.getElementById('live-stage');if(!(ls&&ls.classList.contains('on')))liveScrollLock(false);}
+  if(open&&!_mLocked&&!h.classList.contains('live-lock')){
+    _mLockY=window.scrollY||h.scrollTop||0;h.style.setProperty('--m-lock-top',(-_mLockY)+'px');h.classList.add('m-lock');_mLocked=true;
+  }else if(!open&&_mLocked){
+    _mLocked=false;h.classList.remove('m-lock');h.style.removeProperty('--m-lock-top');
+    if(!h.classList.contains('live-lock'))window.scrollTo(0,_mLockY);   // بدء الحصة من النافذة: قفل الحصة ورث الموضع
+  }
 }
 (function(){
   const go=()=>{const mo=new MutationObserver(c1ModalLockSync);document.querySelectorAll('.c1-modal').forEach(m=>mo.observe(m,{attributes:true,attributeFilter:['class']}));};
