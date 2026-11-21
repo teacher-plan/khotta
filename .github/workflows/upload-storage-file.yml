@@ -35,7 +35,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # دفعةٌ من ملفات مرفقات الدروس: local_path = MANIFEST:<مسار ملف البيان> (tools/lesson_attach)
+      - name: رفع دفعة مرفقات الدروس
+        if: startsWith(inputs.local_path, 'MANIFEST:')
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: mkdsnnfkkdwdkywnwnjh
+          LOCAL_PATH: ${{ inputs.local_path }}
+        run: |
+          set -euo pipefail
+          SERVICE_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" | jq -r '[.[] | select(.name=="service_role")][0].api_key')
+          echo "::add-mask::$SERVICE_KEY"
+          export SERVICE_KEY SUPABASE_URL="https://$REF.supabase.co"
+          npm i --no-save --silent playwright@1.49.1
+          npx playwright install --with-deps chromium >/dev/null
+          node tools/lesson_attach/run.mjs "${LOCAL_PATH#MANIFEST:}"
+
       - name: رفع الملف
+        if: ${{ !startsWith(inputs.local_path, 'MANIFEST:') }}
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: mkdsnnfkkdwdkywnwnjh
