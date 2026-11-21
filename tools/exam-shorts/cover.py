@@ -10,15 +10,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def main(ep, skill, qs, img, out):
     data = 'data:image/png;base64,' + base64.b64encode(open(img, 'rb').read()).decode()
     scene = STACK(
-        T(0, '<span class="pill" style="font-size:26px">٤٠ من ٤٠</span>', cls='center'),
-        T(0, f'الحلقة {ep}', cls='center', style='font-weight:900;font-size:30px'),
-        T(0, skill, cls='title', style='font-size:84px;line-height:1.1'),
+        T(0, f'<span class="pill" style="font-size:26px">٤٠ من ٤٠ • الحلقة {ep}</span>', cls='center'),
+        T(0, skill, cls='title', style=f'font-size:{84 if len(skill) <= 12 else 60}px;line-height:1.1'),
         '<div data-deco="1" style="height:10px;width:240px;margin:-14px auto 0;background:var(--coral);border-radius:6px"></div>',
-        T(0, f'<div class="card" style="padding:6px;transform:rotate(-1.5deg)"><img src="{data}" style="width:100%;display:block"></div>'),
+        T(0, f'<div class="card" style="padding:6px;transform:rotate(-1.5deg)"><img src="{data}" style="width:100%;max-height:230px;object-fit:contain;display:block"></div>'),
         T(0, f'<span class="pill w" style="font-size:22px">{qs} • امتحان الوزارة</span>', cls='center'),
         T(0, AVATAR),
         T(0, 'أ. عيسى الحارثي • رياضيات الصف السابع', cls='center', style='font-weight:900;font-size:21px'),
-        gap=18, justify='center')
+        gap=16 if len(skill) <= 12 else 12, justify='center')
     html = open(os.path.join(HERE, 'template.html'), encoding='utf-8').read()
     html = html.replace('__TAG__', 'سلسلة حلّ امتحانات الوزارة').replace('__SCENES__', f'<section class="scene">{scene}</section>').replace('__DURS__', json.dumps([1000]))
     tmp = out + '.html'

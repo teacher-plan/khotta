@@ -1,4 +1,5 @@
 # لبنات مشاهد «٤٠ من ٤٠» — مشتركة بين كل الحلقات حتى تبقى الجودة البصرية ثابتة.
+import re
 # كل مشهد عمودٌ واحد (STACK) تتتابع عناصره بمسافة ثابتة، فلا تراكب. لا مواضع مطلقة داخل المشهد.
 # بعد البناء: node check.mjs <الحلقة.html> يجب أن يطبع ✓ قبل التصيير.
 
@@ -105,7 +106,7 @@ def MISTAKE(head, t, wrong, why, right, t_right):
                  f'<div class="center" style="padding:14px 14px 6px"><span style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:4px 14px;font-weight:900;font-size:28px;color:#B3261E">'
                  f'<span class="mark" style="background:#B3261E;color:#fff;border-color:#B3261E;font-size:15px;vertical-align:middle">✗ خطأ</span> {wrong}</span></div>'
                  f'<div class="center" style="padding:0 16px 14px;font-weight:800;font-size:21px;line-height:1.5">{why}</div></div>',
-                 ANS(t_right, f'✓ الصحيح: {right}', 34), gap=22)
+                 ANS(t_right, f'✓ الصحيح: {right}', 34 if len(re.sub(r'<[^>]+>', '', right)) < 14 else 28), gap=22)
 
 
 def CHALLENGE(q, sub, t_comment, t_like, t_follow, t_share, t_bye):
@@ -128,3 +129,27 @@ CTA_NARR = 'واكتب جوابك في التعليقات. وإذا استفدت
 def CHALLENGE_AT(q, sub):
     """سؤال التحدّي بأزمنة مربوطة بكلمات التعليق القياسي (CTA_NARR)."""
     return CHALLENGE(q, sub, '@واكتب جوابك', '@اضغط زر', '@وتابع القناة', '@وشارك المقطع', '@ونلتقي')
+
+
+def GRID(cols, rows, shaded, t):
+    """شبكة مربّعات؛ يُظلَّل أول shaded مربّعاً (بترتيب الصفوف) في الثانية t."""
+    cells = ''.join(f'<div class="gc" data-t="{t}" data-fx="dec"></div>' if k < shaded else '<div class="gc"></div>'
+                    for k in range(cols * rows))
+    return f'<div class="grid" style="grid-template-columns:repeat({cols},44px);width:{cols * 44 + 6}px">{cells}</div>'
+
+
+def PYR(rows):
+    """هرم أعداد. rows: [[(القيمة، الزمن أو None)…]…] من الأعلى؛ الترتيب من اليمين كما في الامتحان."""
+    out = []
+    for r in rows:
+        bs = ''.join(f'<div class="b">{v if tt is None else f"<span data-t=\"{tt}\" data-fx=\"pop\">{v}</span>"}</div>' for v, tt in r)
+        out.append(f'<div class="r">{bs}</div>')
+    return f'<div class="pyr">{"".join(out)}</div>'
+
+
+def BARS(shapes):
+    """أشكال من ٦ أجزاء (عمودان × ٣ صفوف). shapes: عدد الأجزاء المظلّلة في كل شكل، من اليمين."""
+    out = []
+    for n in shapes:
+        out.append('<div class="bar">' + ''.join(f'<i class="{"on" if k < n else ""}"></i>' for k in range(6)) + '</div>')
+    return f'<div class="bars">{"".join(out)}</div>'

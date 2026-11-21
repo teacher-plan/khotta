@@ -33,7 +33,7 @@ for (let i = 0; i < D.length; i++) {
         out.push(`نصّ يفيض عن إطاره: ${name(e)}`);
     });
     // سطرٌ واحد: رؤوس الأسئلة والشارات وخطوات الحل لا تلتفّ (الكسور العمودية مستثناة)
-    sc.querySelectorAll('.qhd b,.mark,.steprow>span:last-child,.nw').forEach(e => {
+    sc.querySelectorAll('.qhd b,.mark,.steprow>span:last-child,.nw,.ans').forEach(e => {
       if (e.querySelector('.frac')) return;
       const rg = document.createRange(); rg.selectNodeContents(e);
       const fs = parseFloat(getComputedStyle(e).fontSize);
@@ -41,6 +41,10 @@ for (let i = 0; i < D.length; i++) {
       const lines = tops.sort((x, y) => x - y).reduce((n, t, k, a) => n + (k && t - a[k - 1] > fs * 0.8 ? 1 : 0), tops.length ? 1 : 0);
       if (lines > 1) out.push(`نصّ التفّ على سطرين: ${name(e)}`);
     });
+    // رأس السؤال: بين العنوان وشارة الدرجة ١٢ بكسل على الأقل
+    sc.querySelectorAll('.qhd').forEach(h => { const b = h.querySelector('b'), m = h.querySelector('.mark'); if (!b || !m) return;
+      const gap = b.getBoundingClientRect().left - m.getBoundingClientRect().right;
+      if (gap < 12) out.push(`رأس مزدحم: ${name(b)} (${Math.round(gap)} بكسل)`); });
     // الزينة (الدفاتر والأقلام والدوائر) لا تلمس المحتوى ولا الشارة العلوية
     const deco = [...document.querySelectorAll('.doodle,.blob,.ring')];
     const tag = document.querySelector('#top .tag');
