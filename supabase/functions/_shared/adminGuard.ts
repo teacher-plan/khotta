@@ -9,21 +9,41 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export function isServiceRoleRequest(req: Request): boolean {
+// التحقّق بالتوقيع لا بالقراءة: كان الحارس يفكّ حمولة الرمز ويقبل أيّ رمزٍ
+// مكتوبٍ فيه role=service_role دون التحقّق من توقيعه — فالحماية كانت كلّها
+// على بوّابة Supabase (verify_jwt). الآن: مطابقةٌ حرفية لمفتاح البيئة، وإلا
+// يُعرض الرمز على PostgREST نفسه (الذي يتحقّق من التوقيع) مرّةً واحدة،
+// ويُحفظ الحكم في ذاكرة الدالّة فلا يتكرّر النداء.
+const _svcVerdict = new Map<string, boolean>();
+function _claimsRole(auth: string): string {
+  try {
+    const [, payload] = auth.split(".");
+    if (!payload) return "";
+    const c = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return c && typeof c === "object" ? String(c.role || "") : "";
+  } catch { return ""; }
+}
+export async function isServiceRoleRequest(req: Request): Promise<boolean> {
   const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const auth = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
   if (!auth) return false;
   if (svc && auth === svc) return true;
+  const looksService = auth.startsWith("sb_secret_") || _claimsRole(auth) === "service_role";
+  if (!looksService) return false;
+  if (_svcVerdict.has(auth)) return _svcVerdict.get(auth)!;
+  let ok = false;
   try {
-    const [, payload] = auth.split(".");
-    if (!payload) return false;
-    const claims = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    // التحقّق من أنه كائنٌ فعلاً: JSON.parse("null") و‎parse("5")‎ يمرّان
-    // ثم يرمي الوصولُ إلى الخاصية — والرمي داخل حارسٍ يعني ٥٠٠ لا ٤٠١.
-    return !!claims && typeof claims === "object" && claims.role === "service_role";
-  } catch {
-    return false;
-  }
+    const url = Deno.env.get("SUPABASE_URL")!;
+    // جدولٌ لا يقرؤه إلا مفتاح الخدمة: رمزٌ مزوَّر أو مفتاح anon لا يمرّ
+    const r = await fetch(`${url}/rest/v1/agent_registry?select=id&limit=1`, {
+      headers: { apikey: auth, Authorization: "Bearer " + auth },
+    });
+    ok = r.ok;
+    try { await r.text(); } catch { /* تجاهُل */ }
+  } catch { ok = false; }
+  if (_svcVerdict.size > 50) _svcVerdict.clear();
+  _svcVerdict.set(auth, ok);
+  return ok;
 }
 
 // ردٌّ موحَّد: لا يُفصح إن كان المفتاح خاطئاً أم ناقصاً.
@@ -47,7 +67,7 @@ export function unauthorized(cors: Record<string, string>): Response {
 export interface OpsAuth { ok: boolean; isService: boolean; userId?: string; email?: string }
 
 export async function authorizeOps(req: Request): Promise<OpsAuth> {
-  if (isServiceRoleRequest(req)) return { ok: true, isService: true };
+  if (await isServiceRoleRequest(req)) return { ok: true, isService: true };
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return { ok: false, isService: false };
   try {

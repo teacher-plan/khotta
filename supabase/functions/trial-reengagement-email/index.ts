@@ -101,7 +101,7 @@ async function sendMail(to: string, subject: string, html: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (!isServiceRoleRequest(req)) return unauthorized(cors);
+  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
 
   try {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);

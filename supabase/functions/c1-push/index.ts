@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
     // ══ نداءات القاعدة (مفتاح الخدمة) ══
     // للمشروع صيغتان لمفتاح الخدمة (JWT قديم و«sb_secret_…»)، فالتحقّق بالصلاحية لا بالحروف (adminGuard)
-    if (isServiceRoleRequest(req)) {
+    if ((await isServiceRoleRequest(req))) {
       if (!v) return json({ error: "vapid_missing" }, 500);
       const mode = String(b.mode || "");
 

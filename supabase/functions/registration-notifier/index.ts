@@ -15,6 +15,7 @@
 // الأسرار: TELEGRAM_BOT_TOKEN و TELEGRAM_CHAT_ID
 // يتطلّب: 20260813_registration_notifier.sql (عمود notified_at)
 // ════════════════════════════════════════════════════════════════
+import { isServiceRoleRequest } from "../_shared/adminGuard.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
 import { startRun, finishRun } from "../_shared/agentRun.ts";
@@ -134,14 +135,8 @@ Deno.serve(async (req) => {
   // القديم و«sb_secret_…» الجديد — والمُشغِّل يرسل ما في الخزانة بينما البيئة
   // تحقن الأخرى، فتفشل المطابقة النصّية على مفتاحين صحيحين كليهما. نتحقّق من
   // الصلاحية لا من الحروف: أي حاملٍ دورُه service_role يُقبل.
-  const auth = (req.headers.get("Authorization") || "").replace("Bearer ", "").trim();
-  const isServiceRole = auth === svc || (() => {
-    try {
-      const [, payload] = auth.split(".");
-      return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))).role === "service_role";
-    } catch { return false; }
-  })();
-  if (!auth || !isServiceRole) return json({ error: "unauthorized" }, 401);
+  // التحقّق بالتوقيع عبر الحارس المشترك (كان هنا فكٌّ للحمولة بلا تحقّق من التوقيع)
+  if (!(await isServiceRoleRequest(req))) return json({ error: "unauthorized" }, 401);
 
   // Phase 1.5: DB_WEBHOOK إن حملت حمولةً (record لاحقاً)، وإلا مسحٌ احتياطي
   // (ON_DEMAND/CRON خارجي — لا جدولة pg_cron مؤكَّدة له، انظر التقرير).

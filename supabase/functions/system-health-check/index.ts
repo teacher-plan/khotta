@@ -415,7 +415,7 @@ Deno.serve(async (req) => {
   // 🔒 وكيلٌ إداريّ: يسبر دوالَّ أخرى ويكتب في تلجرام نيابةً عن المشرف.
   // ملاحظة: سبرُه للدوال يبقى بمفتاح anon، و401 عنده = صحّة (سطر ٧١)،
   // فإقفالُ daily-summary وcredit-monitor لا يجعلهما «معطوبتين» عنده.
-  if (!isServiceRoleRequest(req)) return unauthorized(cors);
+  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
 
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,

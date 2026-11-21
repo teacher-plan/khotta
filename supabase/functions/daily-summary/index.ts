@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   // 🔒 وكيلٌ إداريّ: يجمع بيانات كل المعلّمات ويرسلها إلى تلجرام.
-  if (!isServiceRoleRequest(req)) return unauthorized(cors);
+  if (!(await isServiceRoleRequest(req))) return unauthorized(cors);
 
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
