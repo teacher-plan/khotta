@@ -7202,7 +7202,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='ac8e174';
+const KH_BUILD='5d7c50f';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -9380,7 +9380,10 @@ function buildUnitsFromRows(rows,semester,subject){
   const unitsMap={};const order=[];
   sorted.forEach(r=>{
     if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
-    unitsMap[r.unit].push({id:stableLessonId(semester,subject,r.grade,r.unit,r.lesson),name:r.lesson});
+    // الدرس نفسه قد يتكرّر في أكثر من كتاب (كتاب الطالب وكتاب النشاط) — يظهر مرّة واحدة
+    const id=stableLessonId(semester,subject,r.grade,r.unit,r.lesson);
+    if(unitsMap[r.unit].some(x=>x.id===id))return;
+    unitsMap[r.unit].push({id,name:r.lesson});
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
@@ -9635,31 +9638,35 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
     const semester=profile.semester||'الفصل الأول';
     const curRows=await c1Curriculum(semester,subject,grade,'unit,lesson,sort,page,book_no');
     if(!curRows||!curRows.length)return null;
-    const bookNos=[...new Set(curRows.map(r=>r.book_no||1))];
+    // كل الكتب التي فيها الدرس (كتاب الطالب أولاً ثم كتاب النشاط)، بلا تجاوز عشرين صفحة
+    const bookNos=[...new Set(curRows.map(r=>r.book_no||1))].sort((a,b)=>a-b);
+    const images=[],seen={};
     for(const bookNo of bookNos){
-      const sorted=curRows.filter(r=>(r.book_no||1)===bookNo).sort((a,b)=>(a.sort||0)-(b.sort||0));
-      const idx=sorted.findIndex(r=>r.unit===unitName&&r.lesson===lessonName);
-      if(idx<0)continue;
-      const start=parseInt(sorted[idx].page);if(!start)continue;
+      const rowsB=curRows.filter(r=>(r.book_no||1)===bookNo);
+      const row=rowsB.find(r=>r.unit===unitName&&r.lesson===lessonName);
+      if(!row)continue;
+      const start=parseInt(row.page);if(!start)continue;
       const bs=await c1Ref('book_sources',`${semester}|${subject}|${grade}|${bookNo}`,async()=>{
         const{data,error}=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).eq('book_no',bookNo).maybeSingle();
         return error?null:(data||false);   // false = «لا مصدر» وهي نتيجة صالحة تُخزَّن
       });
       if(!bs||!bs.base_path||!bs.page_count)continue;
       const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
-      let end=pageCount;
-      for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+      // نهاية الدرس: قبل أقرب صفحة بدايةٍ لدرسٍ آخر بعده في الكتاب نفسه (لا التالي في الترتيب:
+      // قصص Graded readers في آخر كتاب النشاط تكسر تتابع الصفحات)
+      const nexts=rowsB.map(r=>parseInt(r.page)).filter(n=>n&&n>start);
+      let end=nexts.length?Math.min(...nexts)-1:pageCount;
+      if(bookNo>1)end=Math.min(end,start+3);   // كتاب النشاط: صفحات قليلة لكل درس
       if(end<start)end=start;
       const pub=sheet=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
-      const images=[],seen={};
       // عشرون: الحدّ نفسه في summarize-lesson-pages. لو زاد أحدهما عن الآخر
       // قُصّت الصفحات في الطرف الأضيق صامتةً وخرج الملخّص ناقصاً بلا إشارة.
       for(let bp=start;bp<=end&&images.length<20;bp++){
         const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
         const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
       }
-      if(images.length)return images;
     }
+    if(images.length)return images;
     return null;
   }catch(e){return null;}
 }
