@@ -126,7 +126,8 @@ async function measure(admin: any) {
       const c = await findCopies(admin, pages, 0);
       copies = { objects: c.count, bytes: c.bytes };
     } catch (e) {
-      r2.error = String((e as Error).message || e);
+      console.error("r2_list:", e);
+      r2.error = "list_failed";
     }
   }
   return {
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < c.names.length; i += 100) {
         const chunk = c.names.slice(i, i + 100).map((x) => x.name);
         const { data, error } = await admin.storage.from("library-files").remove(chunk);
-        if (error) return json({ error: "remove_failed", detail: error.message, deleted, freed_bytes: freed }, 502);
+        if (error) { console.error("remove_failed:", error.message); return json({ error: "remove_failed", deleted, freed_bytes: freed }, 502); }
         for (const o of data || []) { deleted++; freed += sizeOf.get(o.name) || 0; }
       }
       await admin.from("storage_usage_snapshots").delete().gte("id", 0); // القياس القديم لم يعد صحيحاً
@@ -181,6 +182,6 @@ Deno.serve(async (req) => {
     return json({ error: "bad_action" }, 400);
   } catch (e) {
     console.error("storage-usage:", e);
-    return json({ error: "server_error", detail: String((e as Error).message || e) }, 500);
+    return json({ error: "server_error" }, 500);
   }
 });
