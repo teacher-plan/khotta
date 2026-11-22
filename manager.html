@@ -418,6 +418,17 @@ button:disabled:active,[role="button"][aria-disabled="true"]:active{scale:1}
 .adm-bar{height:6px;background:var(--kt-color-surface-elevated);border-radius:9px;margin-top:8px;overflow:hidden}
 .adm-bar i{display:block;height:100%;width:0;background:var(--kt-color-success);transition:width .4s}
 .adm-bar i.w{background:var(--kt-color-warning)}.adm-bar i.e{background:var(--kt-color-error)}
+.adm-st{margin-bottom:var(--kt-space-4)}.adm-st-g{display:grid;grid-template-columns:1fr 1fr;gap:var(--kt-space-4)}
+@media(max-width:700px){.adm-st-g{grid-template-columns:1fr}}
+.adm-st-box{border:1px solid var(--kt-color-surface-elevated);border-radius:var(--kt-radius-md);padding:12px 14px}
+.adm-st-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;font-size:14px}
+.adm-st-h small{font-weight:600;color:var(--kt-color-text-muted);font-size:12px}
+.adm-st-row{margin-top:10px;font-size:12.5px}.adm-st-row .t{display:flex;justify-content:space-between;gap:8px}
+.adm-st-row .t b{unicode-bidi:isolate}.adm-st-row .t>span:first-child{white-space:nowrap;font-weight:700}.adm-st-row .t>span:last-child{text-align:left}
+.adm-st-top{margin-top:10px;font-size:11.5px;color:var(--kt-color-text-muted);line-height:1.9}
+.adm-st-top span{display:inline-block;margin-inline-end:10px}
+.adm-st-note{font-size:11.5px;color:var(--kt-color-text-muted);margin-top:10px;line-height:1.8}
+.adm-st-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:12.5px}
 .adm-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:var(--kt-space-4)}
 @media(max-width:900px){.adm-grid{grid-template-columns:1fr}}
 .adm-att{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--kt-color-surface-elevated);font-size:13.5px}
@@ -4112,6 +4123,11 @@ html body .violtype-tab-btn.active{background:var(--kt-color-brand-primary)!impo
         <div class="kt-card adm-kpi"><div class="adm-kpi-l">تحاضير هذا الأسبوع</div><div class="adm-kpi-v" id="adm-k-preps">—</div><div class="adm-kpi-s" id="adm-k-preps-s"></div></div>
         <div class="kt-card adm-kpi"><div class="adm-kpi-l">تكلفة الذكاء الاصطناعي (الشهر)</div><div class="adm-kpi-v" id="ktcc-kpi-cost">—</div><div class="adm-kpi-s" id="adm-k-cost-s"></div><div class="adm-bar"><i id="adm-k-cost-bar"></i></div></div>
       </div>
+      <!-- التخزين (٢٢ نوفمبر): Supabase المجانية حدّها ١ غيغابايت ملفات و٥٠٠ ميغابايت قاعدة
+           بيانات، والهدف ألّا نتجاوز ٦٠٪ منهما. الملفات الثقيلة على Cloudflare R2. -->
+      <div class="kt-card adm-st" id="adm-st"><div class="kt-card-header"><h3 class="kt-card-title">مساحة التخزين</h3>
+        <button class="adm-orb-rf" onclick="admStorageLoad(true)" title="قياس الآن" aria-label="قياس التخزين الآن">↻</button></div>
+        <div id="adm-st-body"><div class="kt-state"><div class="kt-state-text">جارٍ القياس…</div></div></div></div>
       <div class="adm-grid">
         <div class="kt-card"><div class="kt-card-header"><h3 class="kt-card-title">يحتاج انتباهك</h3></div><div id="adm-attn"><div class="kt-state"><div class="kt-state-text">جارٍ التحميل…</div></div></div></div>
         <div class="kt-card"><div class="kt-card-header"><h3 class="kt-card-title">نشاط المعلّمين — آخر ١٤ يوماً</h3></div><div id="adm-chart" class="adm-chart"></div><div class="adm-chart-note">عدد المعلّمين الذين استخدموا المنصّة كل يوم</div></div>
@@ -4749,6 +4765,28 @@ const KH_R2_RE=/^(books|teacher-guides)\//;
     if(t&&t.tagName==='IMG'&&t.src&&t.src.indexOf(KH_R2)===0&&!t.dataset.khFb){
       t.dataset.khFb='1';t.src=SUPABASE_URL+'/storage/v1/object/public/'+t.src.slice(KH_R2.length);}},true);
 })();
+// ══ رفع ملفات المكتبة الثقيلة إلى R2 مباشرةً (٢٢ نوفمبر) ══
+// صفحات الكتب وأدلّة المعلّم وملفات المكتبة PDF كانت تُرفع إلى Supabase (حدّه
+// المجاني ١ غيغابايت للملفات كلها) ثم تُنسخ إلى R2. الآن تُرفع إلى R2 بالمسار
+// نفسه تحت library-files/ فتقرؤها المسالك القائمة كما هي (R2 أولاً). يرجع null
+// إن تعذّر R2 فيُكمل المتصل إلى Supabase كما كان، فلا يتوقّف رفع كتاب.
+let _libR2Off=false;
+async function libUploadR2(path,blob,contentType){
+  if(_libR2Off)return null;
+  try{
+    const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'sign_library',path,size:blob.size,contentType}});
+    if(error||!data||!data.putUrl){_libR2Off=true;return null;}
+    const put=await fetch(data.putUrl,{method:'PUT',headers:{'Content-Type':data.contentType},body:blob});
+    return put.ok?data.publicUrl:null;
+  }catch(e){return null;}
+}
+// أسماء الملفات المرفوعة على R2 تحت مجلّد (لتخطّي صفحاتٍ رُفعت في محاولةٍ سابقة)
+async function libListR2(prefix){
+  try{
+    const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'list_library',prefix}});
+    return(!error&&data&&data.items)||[];
+  }catch(e){return[];}
+}
 let currentUser=null,displayName='';
 let googleAccessToken=null;   // توكن Google لرفع الملفات على Drive
 let driveFolderId=null;       // مجلد التطبيق داخل درايف المستخدم
@@ -6415,8 +6453,7 @@ async function mc1LoadStorage(force){
   try{
     const{data:allowed}=await sb.from('allowed_emails').select('email').eq('cycle','cycle1');
     const{data:profs}=await sb.from('cycle1_profiles').select('id,email,data');
-    const{data:files,error:filesErr}=await sb.from('user_files').select('user_id,size_bytes');
-    if(filesErr)throw filesErr;
+    const files=await admFetchAll(()=>sb.from('user_files').select('user_id,size_bytes').order('id'));
     const{data:limits,error:limErr}=await sb.from('user_storage_limits').select('user_id,limit_bytes');
     if(limErr)throw limErr;
     const{data:budgetRows,error:budgetErr}=await sb.rpc('admin_get_ai_budget_usage');
@@ -6596,6 +6633,7 @@ async function prepUploadGuide(){
     let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
     if(!blob)return false;
     for(let a=1;a<=tries;a++){
+      if(await libUploadR2(base+'/p'+p+'.jpg',blob,'image/jpeg'))return true;
       try{
         const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});
         if(!error)return true;
@@ -14865,6 +14903,19 @@ function admQuick(k){
 function admAttnRow(color,text,btn,on){
   return `<div class="adm-att"><span class="dot" style="background:${color}"></span><span>${text}</span><button onclick="${on}">${btn}</button></div>`;
 }
+// Supabase تُرجع ١٠٠٠ صفٍّ على الأكثر في الطلب الواحد مهما كان limit(): كان مجموع
+// تكلفة الشهر ونشاط ١٤ يوماً واستهلاك المعلّمين يُحسب من أول ألف صفٍّ فقط
+// فيظهر أقلّ من الحقيقة. هذه تجلب الصفحات كلها (ألفاً ألفاً) حتى maxPages.
+async function admFetchAll(build,maxPages){
+  const out=[];
+  for(let i=0;i<(maxPages||100);i++){
+    const{data,error}=await build().range(i*1000,i*1000+999);
+    if(error)throw error;
+    out.push(...(data||[]));
+    if(!data||data.length<1000)break;
+  }
+  return out;
+}
 async function admDashLoad(){
   const now=Date.now(),d7=new Date(now-7*864e5).toISOString(),d14=new Date(now-14*864e5).toISOString();
   const mStart=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
@@ -14894,7 +14945,7 @@ async function admDashLoad(){
     set('adm-k-preps',count==null?'—':ADM_N(count));set('adm-k-preps-s','مولَّدة بالذكاء الاصطناعي');
   }catch(e){}
   try{
-    const{data:rows}=await sb.from('ai_cost_log').select('cost_usd').gte('created_at',mStart).limit(20000);
+    const rows=await admFetchAll(()=>sb.from('ai_cost_log').select('cost_usd').gte('created_at',mStart).order('id'));
     const{data:bs}=await sb.from('ai_settings').select('value').eq('key','admin_monthly_budget_usd').maybeSingle();
     const budget=Number(bs&&bs.value)||30;
     if(rows&&rows.length){
@@ -14920,9 +14971,14 @@ async function admDashLoad(){
     const sb2=document.getElementById('adm-sb-sug');if(sb2){sb2.hidden=!count;sb2.textContent=ADM_N(count);}
     if(count)attn.push(admAttnRow('var(--kt-color-info)',`${ADM_N(count)} اقتراح جديد من المعلّمين`,'قراءة',"admOpenSuggestions()"));
   }catch(e){}
+  // مساحة Supabase نفسها (حدّ الخطة المجانية) — قبل حصص المعلّمين
+  try{
+    const st=await admStorageLoad(false);
+    if(st&&st.sbPct>=ADM_ST_SAFE)attn.unshift(admAttnRow(st.sbPct>=80?'var(--kt-color-error)':'var(--kt-color-warning)',`تخزين Supabase بلغ ${ADM_N(Math.round(st.sbPct))}٪ من الخطة المجانية`+(st.cp&&st.cp.objects?' — يمكن تحرير '+admFmtB(st.cp.bytes):''),'عرض',"document.getElementById('adm-st').scrollIntoView({behavior:'smooth'})"));
+  }catch(e){}
   // التخزين
   try{
-    const{data:files}=await sb.from('user_files').select('user_id,size_bytes');
+    const files=await admFetchAll(()=>sb.from('user_files').select('user_id,size_bytes').order('id'));
     const{data:lims}=await sb.from('user_storage_limits').select('user_id,limit_bytes');
     const used={};(files||[]).forEach(f=>{used[f.user_id]=(used[f.user_id]||0)+(Number(f.size_bytes)||0);});
     const lim={};(lims||[]).forEach(l=>{lim[l.user_id]=l.limit_bytes;});
@@ -14933,7 +14989,7 @@ async function admDashLoad(){
   if(box)box.innerHTML=attn.length?attn.join(''):'<div class="kt-state"><div class="kt-state-text">لا شيء يحتاج انتباهك الآن ✓</div></div>';
   // نشاط ١٤ يوماً: عدد المستخدمين المختلفين يومياً من usage_tracking
   try{
-    const{data}=await sb.from('usage_tracking').select('user_id,timestamp').gte('timestamp',d14).limit(50000);
+    const data=await admFetchAll(()=>sb.from('usage_tracking').select('user_id,timestamp').gte('timestamp',d14).order('timestamp'),50);
     const days=[];for(let i=13;i>=0;i--){const d=new Date(now-i*864e5);days.push(d.toLocaleDateString('en-CA',{timeZone:'Asia/Muscat'}));}
     const per={};days.forEach(d=>per[d]=new Set());
     (data||[]).forEach(r=>{const d=new Date(r.timestamp).toLocaleDateString('en-CA',{timeZone:'Asia/Muscat'});if(per[d])per[d].add(r.user_id);});
@@ -14941,6 +14997,72 @@ async function admDashLoad(){
     const el=document.getElementById('adm-chart');
     if(el)el.innerHTML=days.map((d,i)=>`<div class="c" title="${d}: ${vals[i]}"><b>${vals[i]?ADM_N(vals[i]):''}</b><i style="height:${Math.round(vals[i]/mx*100)}%"></i><span>${ADM_N(+d.slice(8))}</span></div>`).join('');
   }catch(e){}
+}
+// ══ مساحة التخزين في الرئيسية (٢٢ نوفمبر) ══
+// تقرأ الدالّة storage-usage (للمشرف): ملفات Supabase وقاعدة بياناتها مقابل حدود
+// الخطة المجانية، ومجموع ملفات Cloudflare R2 بعدّها فعلاً، وكم من صفحات الكتب ما
+// زال مكرّراً على Supabase بعد نسخه إلى R2 (يُحرَّر بزرّ). الوحدات عشرية (١٠٠٠)
+// كما تحسبها Supabase وCloudflare في حدودهما.
+const ADM_ST_SAFE=60; // هدفنا: ألّا تتجاوز Supabase ٦٠٪ من أي حدّ
+function admFmtB(n){
+  n=Number(n)||0;const f=(v,d)=>Number(v.toFixed(d)).toLocaleString('ar-EG');
+  if(n>=1e9)return f(n/1e9,2)+' غيغابايت';
+  if(n>=1e6)return f(n/1e6,n>=1e8?0:1)+' ميغابايت';
+  if(n>=1e3)return f(n/1e3,0)+' كيلوبايت';
+  return f(n,0)+' بايت';
+}
+function admStRow(label,used,limit,warnAt,errAt){
+  const pct=limit?used/limit*100:0,cls=pct>=errAt?'e':pct>=warnAt?'w':'';
+  const p=pct<1&&used>0?'أقل من ١':ADM_N(Math.round(pct));
+  return `<div class="adm-st-row"><div class="t"><span>${label}</span><span><b>${admFmtB(used)}</b> من ${admFmtB(limit)} (${p}٪)</span></div><div class="adm-bar"><i class="${cls}" style="width:${Math.min(100,Math.max(pct,used>0?1:0)).toFixed(1)}%"></i></div></div>`;
+}
+const ADM_ST_NAMES={'library-files':'المكتبة','user-files':'ملفات المعلّمين','books':'صفحات الكتب','teacher-guides':'أدلّة المعلّم','c1-preps':'ملخّصات وإنفوجرافيك','c1-library':'مشاركات المعلّمين','game-sfx':'أصوات الألعاب','book-cache':'كتبٌ مؤقتة','library-pdfs':'ملفات المكتبة PDF'};
+function admStName(k){const parts=String(k||'').split('/');const last=parts[parts.length-1];return ADM_ST_NAMES[last]||ADM_ST_NAMES[k]||(/^[0-9a-f-]{36}$/.test(last)?'ملفات معلّم':last||'—');}
+let ADM_ST=null;
+async function admStorageLoad(force){
+  const box=document.getElementById('adm-st-body');if(!box)return;
+  if(force)box.innerHTML='<div class="kt-state"><div class="kt-state-text">جارٍ القياس… (قد يستغرق دقيقة)</div></div>';
+  let d;
+  try{
+    const{data,error}=await sb.functions.invoke('storage-usage',{body:{action:'get',force:!!force}});
+    if(error||!data||data.error)throw new Error((data&&data.error)||(error&&error.message)||'');
+    d=ADM_ST=data;
+  }catch(e){box.innerHTML='<div class="kt-state"><div class="kt-state-text">تعذّر قياس التخزين الآن.</div></div>';return null;}
+  const S=d.supabase||{},R=d.r2||{};
+  const sbTop=(S.folders||[]).filter(f=>f.bytes>0).slice(0,4).map(f=>`<span>${escHtml(admStName(f.folder))}: ${admFmtB(f.bytes)}</span>`).join('');
+  const r2Top=(R.folders||[]).filter(f=>f.bytes>0).slice(0,4).map(f=>`<span>${escHtml(admStName(f.folder))}: ${admFmtB(f.bytes)}</span>`).join('');
+  const cp=d.copies;
+  const sbPct=Math.max(S.storage_bytes/S.storage_limit_bytes,S.db_bytes/S.db_limit_bytes)*100;
+  let r2Html;
+  if(!R.configured)r2Html='<div class="adm-st-note">لم تُضبط مفاتيح R2 في دوالّ Supabase بعد.</div>';
+  else if(R.error)r2Html=`<div class="adm-st-note">تعذّر عدّ ملفات R2 (${escHtml(R.error)}).</div>`;
+  else r2Html=admStRow('الملفات',R.bytes,R.limit_bytes,70,90)+`<div class="adm-st-top">${ADM_N(R.objects)} ملف${r2Top?' · '+r2Top:''}</div>`;
+  box.innerHTML=`<div class="adm-st-g">
+    <div class="adm-st-box"><div class="adm-st-h">Supabase <small>الخطة المجانية</small></div>
+      ${admStRow('الملفات',S.storage_bytes,S.storage_limit_bytes,ADM_ST_SAFE,80)}
+      ${admStRow('قاعدة البيانات',S.db_bytes,S.db_limit_bytes,ADM_ST_SAFE,80)}
+      ${sbTop?`<div class="adm-st-top">${sbTop}</div>`:''}
+      ${cp&&cp.objects?`<div class="adm-st-act"><span>${ADM_N(cp.objects)} صفحة كتاب (${admFmtB(cp.bytes)}) لها نسخة على R2 ويمكن حذفها من Supabase.</span><button class="kt-btn kt-btn-secondary" onclick="admStorageFree()">تحرير المساحة</button></div>`:''}
+    </div>
+    <div class="adm-st-box"><div class="adm-st-h">Cloudflare R2 <small>المجاني حتى ١٠ غيغابايت</small></div>${r2Html}</div>
+  </div>
+  <div class="adm-st-note">الهدف أن تبقى Supabase تحت ${ADM_N(ADM_ST_SAFE)}٪ (الشريط يصفرّ عندها ويحمرّ عند ٨٠٪). آخر قياس: ${new Date(d.measured_at).toLocaleString('ar-OM',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'long'})}.</div>`;
+  return{sbPct,cp};
+}
+async function admStorageFree(){
+  const cp=ADM_ST&&ADM_ST.copies;if(!cp||!cp.objects)return;
+  if(!await uiConfirm(`حذف ${ADM_N(cp.objects)} صفحة (${admFmtB(cp.bytes)}) من Supabase؟\nكل صفحةٍ منها لها نسخةٌ بالحجم نفسه على Cloudflare R2، والمنصّة تقرأ من R2 أصلاً، فلا يتغيّر شيءٌ عند المعلّمين. الحذف من Supabase لا يُتراجع عنه، والنسخة على R2 تبقى.`))return;
+  const box=document.getElementById('adm-st-body');
+  let total=0,bytes=0;
+  for(let round=0;round<40;round++){
+    if(box)box.innerHTML=`<div class="kt-state"><div class="kt-state-text">يُحرّر المساحة… حُذفت ${ADM_N(total)} صفحة (${admFmtB(bytes)})</div></div>`;
+    const{data,error}=await sb.functions.invoke('storage-usage',{body:{action:'free_copies'}});
+    if(error||!data||data.error){toast('توقّف التحرير بعد '+ADM_N(total)+' صفحة — أعد المحاولة',true);break;}
+    total+=data.deleted;bytes+=data.freed_bytes;
+    if(!data.remaining||!data.deleted)break;
+  }
+  if(total)toast('✅ حُرّرت '+admFmtB(bytes)+' من Supabase');
+  admStorageLoad(true);
 }
 function admOpenRegs(){ADM_T.tab='reg';ADM_T.chip='all';showPage('c1teachers');}
 function admOpenSuggestions(){
@@ -17405,6 +17527,7 @@ async function segUploadAndSegment(file){
     const{data}=await sb.storage.from('library-files').list(base,{limit:1000});
     for(const f of (data||[])){const m=/^p(\d+)\.jpg$/.exec(f.name||'');if(m&&(f.metadata?.size||0)>0)already.add(+m[1]);}
   }catch(e){}
+  for(const f of await libListR2(base+'/')){const m=/^p(\d+)\.jpg$/.exec(f.name||'');if(m&&f.size>0)already.add(+m[1]);}
   if(already.size)st.textContent='↻ وُجدت '+egToArabic(already.size)+' صفحة مرفوعة سابقاً — تُتخطّى.';
 
   /* صفحةٌ تتعثّر لا تُسقط الكتاب كلّه: تُجمَّع وتُعاد في جولةٍ ثانية، وما بقي
@@ -17416,6 +17539,7 @@ async function segUploadAndSegment(file){
     let blob;try{blob=await ltRenderPageBlob(pdf,p,850,0.6);}catch(e){}
     if(!blob)return false;
     for(let a=1;a<=tries;a++){
+      if(await libUploadR2(base+'/p'+p+'.jpg',blob,'image/jpeg'))return true;
       try{
         const{error}=await sb.storage.from('library-files').upload(base+'/p'+p+'.jpg',blob,{upsert:true,contentType:'image/jpeg',cacheControl:'max-age=31536000, immutable'});
         if(!error)return true;
@@ -17963,10 +18087,14 @@ async function saveLibFile(){
     document.getElementById('lib-add-progress').style.display='block';
     try{
       const path=`${Date.now()}_${Math.random().toString(36).slice(2,9)}.pdf`;
+      const r2url=await libUploadR2('library-pdfs/'+path,file,'application/pdf');
+      if(r2url){url=r2url;fileType='pdf';}
+      else{
       const{error}=await sb.storage.from('library-files').upload(path,file,{cacheControl:'3600',upsert:false,onUploadProgress:(p)=>{const pct=Math.round(p.loaded/p.total*100);document.getElementById('lib-add-bar').style.width=pct+'%';document.getElementById('lib-add-pct').textContent=pct+'%';}});
       if(error){toast('فشل الرفع: '+error.message,true);btn.disabled=false;btn.textContent='حفظ ✅';return;}
       const{data:pub}=sb.storage.from('library-files').getPublicUrl(path);
       url=pub.publicUrl;fileType='pdf';
+      }
     }catch(e){toast('خطأ أثناء الرفع',true);const b=document.getElementById('lib-add-save');b.disabled=false;b.textContent='حفظ ✅';return;}
   }else if(method==='youtube'){
     url=document.getElementById('lib-add-url').value.trim();
