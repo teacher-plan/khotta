@@ -28,15 +28,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: supabase/setup-cli@v1
-        with: { version: 3.2.0 }
-      - name: r2test
-        run: |
-          supabase functions deploy r2-files --project-ref mkdsnnfkkdwdkywnwnjh --yes >/dev/null 2>&1 || true
-          K=$(supabase projects api-keys --project-ref mkdsnnfkkdwdkywnwnjh -o json | jq -r '.[]|select(.name=="service_role")|.api_key')
-          echo "::add-mask::$K"
-          echo "R2TEST>$(curl -s -X POST 'https://mkdsnnfkkdwdkywnwnjh.supabase.co/functions/v1/r2-files?selftest=1' -H "Authorization: Bearer $K" -H "apikey: $K" -d '{}')"
-        env: { SUPABASE_ACCESS_TOKEN: "${{ secrets.SUPABASE_ACCESS_TOKEN }}" }
       - name: قراءة الأخطاء
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
