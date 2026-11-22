@@ -392,9 +392,14 @@ Deno.serve(async (req) => {
 
     if (action === "publish_prep") {
       const c = course(b.cid);
-      if (!c || !b.lesson_id || !b.title || !/^\d{4}-\d{2}-\d{2}$/.test(String(b.date || "")) || !Array.isArray(b.slots) || !b.slots.length) {
+      const D = /^\d{4}-\d{2}-\d{2}$/;
+      // أيامٌ متعددة (حتى ٢٠ كواجهة نور)، أو يومٌ واحد بالصيغة القديمة date + slots
+      const dates = (Array.isArray(b.dates) && b.dates.length ? b.dates : [{ date: b.date, slots: b.slots }]).slice(0, 20)
+        .map((d: Any) => ({ date: String(d?.date || ""), slots: (Array.isArray(d?.slots) ? d.slots : []).map((s: Any) => ({ lts: String(s.lts), timeslot: String(s.timeslot) })) }));
+      if (!c || !b.lesson_id || !b.title || !dates.length || dates.some((d: Any) => !D.test(d.date) || !d.slots.length)) {
         return json({ error: "bad_input", message: "بيانات النشر ناقصة (الدرس أو التاريخ أو الحصص)." }, 400);
       }
+      b.date = dates[0].date; b.slots = dates[0].slots;
       const out = await run(async (x) => {
         const before = new Set((await x.preps(c.cid)).map((p) => p.id));
         const r = await x.publishPrep({
@@ -402,7 +407,7 @@ Deno.serve(async (req) => {
           slots: b.slots.map((s: Any) => ({ lts: String(s.lts), timeslot: String(s.timeslot) })),
           criteria: (b.criteria || []).map(String), taxonomy: (b.taxonomy || []).map(String),
           strategies: (b.strategies || []).map(String), aids: (b.aids || []).map(String),
-          fields: b.fields || {},
+          fields: b.fields || {}, dates, showWeekly: b.show_weekly !== false, allowShare: !!b.allow_share,
         });
         const after = await x.preps(c.cid);
         const added = after.filter((p) => !before.has(p.id));

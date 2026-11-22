@@ -892,6 +892,13 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
 .noor-sheet .acct-in{margin-bottom:4px}
 .noor-lbl{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 4px}
 .noor-it{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:6px;font-size:13px;cursor:pointer;background:var(--card)}
+.noor-day{border:1.5px solid var(--border);border-radius:14px;padding:10px 12px;margin-top:8px;background:var(--surface)}
+.noor-day-h{display:flex;align-items:center;gap:8px}.noor-day-h b{white-space:nowrap;font-size:13px}
+.noor-day-x{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:#fff;color:#A0341F;font-size:18px;cursor:pointer;flex:none}
+.noor-adv{margin-top:12px;border:1.5px dashed var(--border);border-radius:14px;padding:8px 12px}.noor-adv summary{cursor:pointer;font-weight:800;font-size:13px}
+.noor-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}.noor-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12.5px;cursor:pointer;background:var(--surface)}
+.noor-chip:has(input:checked){border-color:#1F7A4D;background:rgba(31,122,77,.08)}.noor-ta{width:100%;font-family:inherit;line-height:1.7;resize:vertical}
+
 .noor-it input{width:17px;height:17px;flex:none;accent-color:#1F7A4D}
 .noor-req{font-size:10.5px;font-weight:800;background:#e3f2ea;color:#1F7A4D;border-radius:99px;padding:1px 8px;margin-inline-start:auto}
 .noor-prog{margin-top:10px}
@@ -12974,9 +12981,10 @@ async function noorPublishOpen(id){
     <label class="noor-lbl">الدرس المقابل في نور</label>
     <select class="acct-in" id="noor-lesson"><option>يجلب دروس نور…</option></select>
     <div id="noor-lesson-note" class="acct-note"></div>
-    <label class="noor-lbl">تاريخ الحصة</label>
-    <input class="acct-in" type="date" id="noor-date" value="${escAttr(pub&&pub.date||noorToday())}" onchange="noorLoadSlots()" style="direction:ltr">
-    <div id="noor-slots" class="noor-slots"></div>
+    <label class="noor-lbl">أيام نشر التحضير <span class="acct-note" style="font-weight:600">— كواجهة نور: الدرس الواحد قد يمتدّ على أكثر من يوم (حتى ٢٠)</span></label>
+    <div id="noor-days"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="pl-btn" type="button" onclick="noorDayAdd(true)"><i class="ki ki-plus" aria-hidden="true"></i> اليوم الدراسي التالي</button><button class="pl-btn" type="button" onclick="noorDayAdd(false)"><i class="ki ki-calendar" aria-hidden="true"></i> يومٌ بتاريخ آخر</button></div>
+    <details class="noor-adv" id="noor-adv"><summary>خيارات التحضير في نور (العنوان، الأهداف، الاستراتيجيات، الوسائل، الحقول…)</summary><div id="noor-adv-body"></div></details>
     <label class="noor-lbl">ما يُنشر</label>
     <div class="noor-items">${items.map(it=>`<label class="noor-it"><input type="checkbox" data-k="${it.k}" ${it.on?'checked':''}> ${escHtml(it.t)}${it.lock?' <span class="noor-req">أساسي</span>':''}</label>`).join('')}</div>
     <div id="noor-prog" class="noor-prog"></div>
@@ -12985,8 +12993,69 @@ async function noorPublishOpen(id){
       <button class="pl-btn" onclick="todayModalClose()">إغلاق</button>
     </div></div>`;
   document.getElementById('today-modal').classList.add('open');
+  noorCtx.days=[{date:pub&&pub.date||noorToday(),slots:[],sel:null}];
+  noorCtx.form=noorFormInit(st.prep,l);
+  noorDaysRender();noorAdvRender();
   noorLoadLessons();
   noorLoadSlots();
+}
+// ══ أيام النشر (date1…date20 في نور): لكل يومٍ تاريخه وحصصه ══
+function noorDaysRender(){
+  const box=document.getElementById('noor-days');if(!box||!noorCtx)return;
+  const D=noorCtx.days;
+  box.innerHTML=D.map((d,i)=>`<div class="noor-day"><div class="noor-day-h"><b>اليوم ${egArNum(i+1)}</b>
+      <input class="acct-in" type="date" value="${escAttr(d.date)}" onchange="noorCtx.days[${i}].date=this.value;noorCtx.days[${i}].sel=null;noorLoadSlots(${i})" style="direction:ltr;flex:1">
+      ${D.length>1?`<button class="noor-day-x" type="button" aria-label="حذف اليوم" onclick="noorCtx.days.splice(${i},1);noorDaysRender()">×</button>`:''}</div>
+    <div class="noor-slots" id="noor-slots-${i}">${noorSlotsHtml(i)}</div></div>`).join('');
+}
+function noorSlotsHtml(i){
+  const d=noorCtx.days[i];
+  if(d.loading)return '<p class="acct-note">يجلب حصص هذا اليوم من نور…</p>';
+  if(d.err)return '<p class="acct-note">'+escHtml(d.err)+'</p>';
+  if(!d.slots.length)return '<p class="acct-note">لا حصص لهذا المقرّر في هذا اليوم في نور — '+khG('اختاري','اختر')+' تاريخاً آخر.</p>';
+  return d.slots.map((x,j)=>`<label class="noor-it"><input type="checkbox" ${d.sel[j]?'checked':''} onchange="noorCtx.days[${i}].sel[${j}]=this.checked"> ${escHtml(x.label)} · ${escHtml(x.period)}${x.has_prep?' <span class="noor-req" style="background:#fdecc8;color:#8a5a00">عليها تحضير</span>':''}</label>`).join('');
+}
+function noorDayAdd(next){
+  const D=noorCtx.days;if(D.length>=20){toast('نور يسمح بعشرين يوماً للتحضير الواحد',true);return;}
+  const last=D[D.length-1].date||noorToday();
+  const date=next?(noorSchoolDays(new Date(new Date(last).getTime()+864e5).toLocaleDateString('en-CA'),1)[0]):last;
+  D.push({date,slots:[],sel:null});noorDaysRender();noorLoadSlots(D.length-1);
+}
+// ══ خيارات التحضير كما في نموذج نور، مُعبّأةً من تحضير خطة، وقابلةً للتعديل ══
+const NOOR_TAX=[['604','التذكُّر'],['605','التقييم'],['606','الإبداع']];
+const NOOR_STRAT=['الفصل المقلوب','التعلم التعاوني','التعلم التشاركي','التعلم الذاتي','التعلم بالاكتشاف','التعلم المبني على حل المشكلات','التعلم المبني على المشاريع','التعلم المبني على اللعب','التعلم بالنمذجة','التعلم المتمايز','الخرائط الذهنية','العصف الذهني'];
+const NOOR_AIDS=['الكتاب','كتب الكترونية','السبورة التقليدية','السبورة الذكية','الأقلام','جهاز عرض البيانات','جهاز الحاسب','صورة توضيحية','عروض تقديمية','نماذج مجسمة','الوسائط المتعددة (سمعية - بصرية)','الوسائط الاجتماعية'];
+const NOOR_TXT=[['objective','أهداف الدرس'],['lesson_vocabulary','المفردات'],['pre_learning','التعلم القبلي'],['description','التهيئة (الوصف)'],['thinking_skills','إجراءات التدريس'],['activities','الأنشطة'],['formative_assessment','التقويم التكويني'],['closing_assessment','التقويم الختامي'],['weekly_study_plan_comments','ملاحظات الخطة الأسبوعية']];
+function noorPlain(h){return String(h||'').replace(/<li[^>]*>/gi,'\n- ').replace(/<\/(p|li|ol|ul)>|<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\n{2,}/g,'\n').trim();}
+function noorFormInit(plan,l){
+  const m=noorPrepFields(plan,l.name);
+  const txt={};NOOR_TXT.forEach(([k])=>{txt[k]=k==='objective'?m.fields.objective:noorPlain(m.fields[k]);});
+  return {title:'',m,txt,orig:{...txt},tax:new Set(m.taxonomy),st:new Set(m.strategies),ai:new Set(m.aids),
+    st_other:m.fields.strategies_other||'',ai_other:m.fields.teaching_aids_other||'',weekly:true,share:false};
+}
+function noorAdvRender(){
+  const b=document.getElementById('noor-adv-body');if(!b||!noorCtx)return;const f=noorCtx.form;
+  const chk=(set,list,key)=>`<div class="noor-chips">${list.map((t,i)=>{const v=Array.isArray(t)?t[0]:String(i),n=Array.isArray(t)?t[1]:t;
+    return `<label class="noor-chip"><input type="checkbox" ${f[key].has(v)?'checked':''} onchange="noorCtx.form.${key}[this.checked?'add':'delete']('${v}')"> ${escHtml(n)}</label>`;}).join('')}</div>`;
+  b.innerHTML=`<label class="noor-lbl">عنوان التحضير</label><input class="acct-in" id="noor-f-title" value="${escAttr(f.title)}" placeholder="اسم الدرس كما في نور (افتراضياً)" oninput="noorCtx.form.title=this.value">
+    <label class="noor-lbl">تصنيف الأهداف</label>${chk(f.tax,NOOR_TAX,'tax')}
+    <label class="noor-lbl">استراتيجيات التدريس</label>${chk(f.st,NOOR_STRAT,'st')}
+    <input class="acct-in" placeholder="استراتيجيات أخرى" value="${escAttr(f.st_other)}" oninput="noorCtx.form.st_other=this.value">
+    <label class="noor-lbl">الوسائل التعليمية</label>${chk(f.ai,NOOR_AIDS,'ai')}
+    <input class="acct-in" placeholder="وسائل أخرى" value="${escAttr(f.ai_other)}" oninput="noorCtx.form.ai_other=this.value">
+    ${NOOR_TXT.map(([k,t])=>`<label class="noor-lbl">${t}</label><textarea class="acct-in noor-ta" rows="${k==='thinking_skills'||k==='activities'?5:3}" oninput="noorCtx.form.txt['${k}']=this.value">${escHtml(f.txt[k])}</textarea>`).join('')}
+    <label class="noor-it"><input type="checkbox" ${f.weekly?'checked':''} onchange="noorCtx.form.weekly=this.checked"> عرض في الخطة الأسبوعية</label>
+    <label class="noor-it"><input type="checkbox" ${f.share?'checked':''} onchange="noorCtx.form.share=this.checked"> السماح بمشاركة التحضير مع المعلّمين</label>
+    <p class="acct-note">الحقول مُعبّأة من تحضيرك في خطة. ما لم ${khG('تعدّليه','تعدّله')} يُرسل بتنسيقه الكامل.</p>`;
+}
+// الحقول بالصيغة التي يقبلها نور: غير المعدَّل بتنسيقه الأصلي، والمعدَّل فقراتٍ بسيطة
+function noorFormPayload(){
+  const f=noorCtx.form,out={...f.m.fields};
+  NOOR_TXT.forEach(([k])=>{if(f.txt[k]!==f.orig[k])out[k]=k==='objective'?f.txt[k]:String(f.txt[k]||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>'<p>'+escHtml(x)+'</p>').join('');});
+  out.strategies_other=f.st_other;out.teaching_aids_other=f.ai_other;
+  if(f.st_other&&!f.st.has('18'))f.st.add('18');
+  if(f.ai_other&&!f.ai.has('13'))f.ai.add('13');
+  return {fields:out,taxonomy:[...f.tax],strategies:[...f.st],aids:[...f.ai],show_weekly:f.weekly,allow_share:f.share};
 }
 async function noorLoadLessons(refresh){
   const sel=document.getElementById('noor-lesson'),note=document.getElementById('noor-lesson-note');if(!sel||!noorCtx)return;
@@ -13008,22 +13077,24 @@ async function noorLoadLessons(refresh){
       :khG('اختاري','اختر')+' الدرس من القائمة. <a href="#" onclick="noorLoadLessons(true);return false">تحديث القائمة</a>';
   }catch(e){if(noorCtx!==ctx||ctx.lesTok!==tok)return;sel.innerHTML='<option value="">تعذّر جلب الدروس</option>';note.textContent=e.message;}
 }
-async function noorLoadSlots(){
-  const box=document.getElementById('noor-slots');if(!box||!noorCtx)return;
-  const date=document.getElementById('noor-date').value;
-  box.innerHTML='<p class="acct-note">يجلب حصص هذا اليوم من نور…</p>';
-  const ctx=noorCtx,cid=ctx.cid,tok=ctx.slotTok=(ctx.slotTok||0)+1;
-  ctx.slots=[];
+// حصص يومٍ واحد (أو كل الأيام عند تغيير المقرّر)
+async function noorLoadSlots(i){
+  if(!noorCtx)return;
+  if(i==null){noorCtx.days.forEach((d,k)=>{d.sel=null;noorLoadSlots(k);});return;}
+  const ctx=noorCtx,d=ctx.days[i];if(!d)return;
+  const cid=ctx.cid,date=d.date,tok=d.tok=(d.tok||0)+1;
+  d.loading=true;d.err='';d.slots=[];
+  const paint=()=>{const b=document.getElementById('noor-slots-'+ctx.days.indexOf(d));if(b)b.innerHTML=noorSlotsHtml(ctx.days.indexOf(d));};
+  paint();
   try{
     const r=await noorCall({action:'slots',cid,date});
-    if(noorCtx!==ctx||ctx.slotTok!==tok||ctx.cid!==cid)return; // تغيّر المقرّر أو التاريخ أثناء الجلب
-    noorCtx.slots=r.slots||[];
-    if(!noorCtx.slots.length){box.innerHTML='<p class="acct-note">لا حصص لهذا المقرّر في هذا اليوم في نور — '+khG('اختاري','اختر')+' تاريخاً آخر.</p>';return;}
-    const course=(noorSt.courses||[]).find(c=>c.cid===noorCtx.cid)||{sections:[]};
-    noorCtx.slots.forEach(x=>{const sec=course.sections.find(z=>new RegExp('(^|\\D)'+x.section+'\\s*$').test(noorAr2En(z.label)));x.label=sec?sec.label:('الشعبة '+x.section);x.sid=sec?sec.id:'';});
-    box.innerHTML='<p class="acct-note" style="margin:6px 0">الحصص التي يُنشر لها التحضير:</p>'+noorCtx.slots.map((x,i)=>
-      `<label class="noor-it"><input type="checkbox" data-slot="${i}" ${x.has_prep?'':'checked'}> ${escHtml(x.label)} · ${escHtml(x.period)}${x.has_prep?' <span class="noor-req" style="background:#fdecc8;color:#8a5a00">عليها تحضير</span>':''}</label>`).join('');
-  }catch(e){if(noorCtx===ctx&&ctx.slotTok===tok)box.innerHTML='<p class="acct-note">'+escHtml(e.message)+'</p>';}
+    if(noorCtx!==ctx||d.tok!==tok||ctx.cid!==cid||d.date!==date)return; // تغيّر المقرّر أو التاريخ أثناء الجلب
+    d.slots=r.slots||[];
+    const course=(noorSt.courses||[]).find(c=>c.cid===ctx.cid)||{sections:[]};
+    d.slots.forEach(x=>{const sec=course.sections.find(z=>new RegExp('(^|\\D)'+x.section+'\\s*$').test(noorAr2En(z.label)));x.label=sec?sec.label:('الشعبة '+x.section);x.sid=sec?sec.id:'';});
+    if(!d.sel)d.sel=d.slots.map(x=>!x.has_prep);
+  }catch(e){if(noorCtx===ctx&&d.tok===tok)d.err=e.message;}
+  d.loading=false;paint();
 }
 function noorProg(steps){
   const box=document.getElementById('noor-prog');if(!box)return;
@@ -13034,16 +13105,19 @@ async function noorPublishRun(){
   const c=noorCtx;if(!c)return;
   const id=c.id,st=planGet(id),l=planFindLesson(id);
   const lessonId=document.getElementById('noor-lesson').value;
-  const date=document.getElementById('noor-date').value;
   const ks=[...document.querySelectorAll('.noor-items input:checked')].map(x=>x.dataset.k);
-  const slots=[...document.querySelectorAll('#noor-slots input[data-slot]:checked')].map(x=>c.slots[+x.dataset.slot]);
+  // كل يومٍ بحصصه المحدّدة؛ الأيام بلا حصصٍ محدّدة تُستبعد، وأولها تاريخ التحضير في خطة
+  const days=c.days.map(d=>({date:d.date,slots:(d.slots||[]).filter((_,j)=>d.sel&&d.sel[j])})).filter(d=>d.date&&d.slots.length)
+    .sort((a,b)=>a.date.localeCompare(b.date)).filter((d,i,a)=>!i||a[i-1].date!==d.date);
+  const date=(days[0]&&days[0].date)||(c.days[0]&&c.days[0].date)||noorToday();
+  const slots=days.flatMap(d=>d.slots);
   if(!lessonId){toast(khG('اختاري','اختر')+' الدرس المقابل في نور',true);return;}
   const newPrep=ks.includes('prep');
   if(newPrep&&!slots.length){toast(khG('حدّدي','حدّد')+' حصةً واحدةً على الأقل',true);return;}
   if(!newPrep&&!(st.noor&&st.noor.prep_id)){toast('التحضير في نور أساسي للنشر الأول',true);return;}
   const lessonNm=(c.lessons.find(x=>x.id===lessonId)||{}).name||l.name;
   // تشغيلٌ جديد إن تغيّر ما يُنشر؛ وإلا يُكمل من حيث فشل (لا يُعيد ما نجح)
-  const sig=[lessonId,date,ks.join(','),slots.map(x=>x.lts).join(',')].join('|');
+  const sig=[lessonId,days.map(d=>d.date+':'+d.slots.map(x=>x.lts).join('.')).join(','),ks.join(',')].join('|');
   if(!c.run||c.run.sig!==sig){
     c.run={sig,prep_id:newPrep?'':st.noor.prep_id,done:{},steps:[
       ...(newPrep?[{k:'prep',t:'نشر التحضير في نور',st:'wait'}]:[]),
@@ -13076,11 +13150,13 @@ async function noorPublishRun(){
     s.st='run';s.msg='';noorProg(run.steps);
     try{
       if(s.k==='prep'){
-        const m=noorPrepFields(st.prep,l.name);
-        const r=await noorCall({action:'publish_prep',cid:c.cid,lesson_id:lessonId,title:lessonNm,date,
-          slots:slots.map(x=>({lts:x.lts,timeslot:x.timeslot})),criteria,taxonomy:m.taxonomy,strategies:m.strategies,aids:m.aids,fields:m.fields});
+        const m=noorFormPayload();
+        const r=await noorCall({action:'publish_prep',cid:c.cid,lesson_id:lessonId,title:(c.form.title||'').trim()||lessonNm,date,
+          slots:days[0].slots.map(x=>({lts:x.lts,timeslot:x.timeslot})),
+          dates:days.map(d=>({date:d.date,slots:d.slots.map(x=>({lts:x.lts,timeslot:x.timeslot}))})),
+          criteria,taxonomy:m.taxonomy,strategies:m.strategies,aids:m.aids,fields:m.fields,show_weekly:m.show_weekly,allow_share:m.allow_share});
         run.prep_id=r.prep_id;
-        await planSetState(id,{noor:{prep_id:r.prep_id,cid:c.cid,lesson_id:lessonId,date,at:new Date().toISOString(),files:{}}});
+        await planSetState(id,{noor:{prep_id:r.prep_id,cid:c.cid,lesson_id:lessonId,date,dates:days.map(d=>d.date),at:new Date().toISOString(),files:{}}});
       }else{
         if(!run.prep_id)throw new Error('انشر التحضير أولاً');
         if(s.hw){
