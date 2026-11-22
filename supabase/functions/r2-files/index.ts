@@ -43,6 +43,26 @@ Deno.serve(async (req) => {
     return json({ put: put.status, public_get: pub, delete: del.status });
   }
 
+  // نسخ ملفات Supabase إلى R2 (للإدارة بمفتاح الخدمة): يعيد روابط رفعٍ موقّعة لما ينقص R2 فقط
+  // (أو حجمه مختلف)، فينزّل المشغّل الملف من Supabase ويرفعه مباشرةً — بلا ذاكرةٍ في الدالة.
+  if (isServiceRoleRequest(req) && new URL(req.url).searchParams.get("mirror") === "1") {
+    const r2m = new AwsClient({ accessKeyId: KEY, secretAccessKey: SEC, service: "s3", region: "auto" });
+    const bm = await req.json().catch(() => ({}));
+    const items: { key: string; size: number; type?: string }[] = Array.isArray(bm.items) ? bm.items.slice(0, 50) : [];
+    const out = await Promise.all(items.map(async (it) => {
+      const key = String(it.key || "");
+      if (!/^(library-files|user-files)\//.test(key) || key.includes("..")) return { key, skip: "bad" };
+      const url = `https://${ACC}.r2.cloudflarestorage.com/${BUCKET}/${key.split("/").map(encodeURIComponent).join("/")}`;
+      const h = await r2m.fetch(url, { method: "HEAD" }).catch(() => null);
+      if (h && h.ok && Number(h.headers.get("content-length")) === Number(it.size)) return { key, skip: "exists" };
+      const u = new URL(url); u.searchParams.set("X-Amz-Expires", "3600");
+      const type = String(it.type || "application/octet-stream").slice(0, 120);
+      const sgn = await r2m.sign(new Request(u, { method: "PUT", headers: { "Content-Type": type } }), { aws: { signQuery: true } });
+      return { key, putUrl: sgn.url, type };
+    }));
+    return json({ items: out });
+  }
+
   const authHeader = req.headers.get("Authorization") || "";
   const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: authHeader } },
