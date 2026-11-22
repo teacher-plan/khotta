@@ -102,5 +102,25 @@ ffmpeg -i $S/raw.mp4 -c:v libx264 -crf 26 -preset slow -pix_fmt yuv420p -c:a aac
 - [x] الصوت: صوت الأستاذ عيسى المنسوخ بالعامية العُمانية (٢٠ نوفمبر).
 - [x] الحلقة ١ (فكّ الأقواس + التقريب) بالصيغة الحالية: قيّمها الأستاذ عيسى **٩٠٪** (٢٠ نوفمبر)، وملاحظاتٌ أخرى تأتي مع الحلقات القادمة.
 - [x] اعتماد اسم السلسلة: «٤٠ من ٤٠».
-- [ ] النشر: YouTube Shorts بـ `tools/presentations/youtube_upload.py` (رأسي ≤ ٣ دقائق يُعامل Short تلقائياً). أما Instagram فلا ربط له بعد، فإمّا يُنشر يدوياً من الملف، أو يُربط حساب أعمال بواجهة Instagram Graph API.
+- [x] النشر (٢٣ نوفمبر، القسم ٦): YouTube Shorts بـ `tools/presentations/youtube_upload.py` (رأسي ≤ ٣ دقائق يُعامل Short تلقائياً). أما Instagram فلا ربط له بعد، فإمّا يُنشر يدوياً من الملف، أو يُربط حساب أعمال بواجهة Instagram Graph API.
 - [ ] جدولة يومية (مهمّة مجدولة تُنتج الحلقة التالية وترسلها للمراجعة قبل النشر).
+
+## ٦. النشر (٢٣ نوفمبر)
+- **Drive:** مجلد «سلسلة ٤٠ من ٤٠ — رياضيات الصف السابع» (`1JG9aitKD1hgIJ6MJ0q1riwwjqab-rbnO`) فيه الحلقات ٠–١٤ بالجودة الأصلية 1080p، بأسماء «٤٠ من ٤٠ - الحلقة N - المهارة.mp4». الرفع بـ `tools/presentations/drive_upload.py` (موصّل Drive في المحادثة لا يقبل أكثر من نحو ٣ ميغابايت للملف).
+- **YouTube:** قائمة «٤٠ من ٤٠». المقدّمة (الحلقة ٠) `J25LQKR8dPI` عامة؛ والحلقات ١–١٤ رُفعت **خاصّة** بـ `youtube_upload.py` (العنوان: «المهارة | ٤٠ من ٤٠ • الحلقة N • امتحان الوزارة رياضيات الصف السابع #Shorts»، والوصف فيه السؤالان وسؤال التحدّي)، ويجعلها الأستاذ عيسى عامة حسب جدول النشر من YouTube Studio:
+  - الحلقة ١: https://youtu.be/3mXctaQ785Y
+  - الحلقة ٢: https://youtu.be/GMjJyhJsJeA
+  - الحلقة ٣: https://youtu.be/PXjktPJpuTs
+  - الحلقة ٤: https://youtu.be/Ho5YkYYxfFs
+  - الحلقة ٥: https://youtu.be/jU8MZVf-OMg
+  - الحلقة ٦: https://youtu.be/zTKUz5_6gvI
+  - الحلقة ٧: https://youtu.be/cmuY5yVQi5w
+  - الحلقة ٨: https://youtu.be/QJDuUvjkLHs
+  - الحلقة ٩: https://youtu.be/NLZy2kF55uQ
+  - الحلقة ١٠: https://youtu.be/F2I7B1bXxLw
+  - الحلقة ١١: https://youtu.be/UUOMa0BMTIg
+  - الحلقة ١٢: https://youtu.be/wBPmduaZSVs
+  - الحلقة ١٣: https://youtu.be/wRw4c7g-lrY
+  - الحلقة ١٤: https://youtu.be/x3gsMIwUalo
+- **صفحة الحفظ:** https://claude.ai/artifact/Wa3N6cro7Yi5f491ZEdxKH (الحلقات بجودتها الكاملة مع أغلفتها، وزرّ حفظ مرتّب).
+- المفاتيح (`GDRIVE_CLIENT_ID`، `GDRIVE_CLIENT_SECRET`، `GDRIVE_REFRESH_TOKEN`، `YOUTUBE_REFRESH_TOKEN`) مكانها متغيّرات بيئة «Default» فقط، لا المحادثة ولا المستودع. عميل OAuth: «khotta-upload» في مشروع Google Cloud «Drive».
