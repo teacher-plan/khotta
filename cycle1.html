@@ -9682,7 +9682,9 @@ async function c1BookSummary(lessonId,grade,subject,unitName,lessonName){
   if(!lessonId)return null;
   await c1AssetsLoad();
   const cached=c1Asset(lessonId).book_summary;
-  if(cached)return cached;
+  // الإنجليزية: ملخّصٌ قديم كُتب بالعربية (قبل تعليمات المادة) يُهمَل ويُعاد بالإنجليزية
+  const enStale=cached&&/إنجليزي|انجليزي|english/i.test(String(subject||''))&&(String(cached).match(/[\u0600-\u06FF]/g)||[]).length>String(cached).length*0.3;
+  if(cached&&!enStale)return cached;
   const images=await c1LessonBookImages(grade,subject,unitName,lessonName);
   if(!images||!images.length)return null;
   try{

@@ -11,6 +11,7 @@
 //   bg   — خلفية بشخصيتين وزخارف ومساحة فارغة للمحتوى (اللغات والرياضيات والتربية
 //          الإسلامية…)، وتُحفظ لكل وحدة فتُعاد بلا تكلفة رسمٍ لبقية دروسها.
 // ════════════════════════════════════════════════════════════════
+import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
 import { refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
@@ -30,6 +31,7 @@ export function layoutFor(subject: string): "cols" | "bg" {
 // زخارف الخلفية بحسب المادة (بلا حروف ولا أرقام — النموذج يرسمها مشوّهة)
 function bgDecor(subject: string): string {
   if (/رياض/.test(subject)) return "playful math decorations: a set square, a ruler, a protractor, colorful geometric shapes (triangles, circles, cubes), stars and sparkles";
+  if (isEnglishSubject(subject)) return "colorful books, a globe, a pencil, an empty speech bubble, a lightbulb, ABC-style toy blocks without letters, stars";
   if (/عربية|لغة|أدب|نحو|بلاغ/.test(subject)) return "an open book, a quill and inkwell, a lightbulb, an empty speech bubble, subtle Arabic geometric arabesque patterns in the corners";
   if (/إسلام|اسلام|قرآن|دين/.test(subject)) return "a softly drawn mosque silhouette, a Ramadan-style lantern, an open book on a wooden stand, crescent and stars, subtle Islamic geometric patterns in the corners";
   if (/انجليز|إنجليز|English/i.test(subject)) return "colorful books, a globe, a pencil, an empty speech bubble, a lightbulb, stars";
@@ -73,6 +75,7 @@ function contentPrompt(layout: "cols" | "bg", cur: Any, grade: string, subject: 
     "الشروط: عربية فصحى سليمة إملائياً؛ انقل التعريفات والقواعد والمصطلحات والأرقام كما وردت؛ لا تُضف معلومة علمية ليست في المستخلص (الشرح إعادة صياغةٍ لما فيه، لا إضافة)؛ لا أسئلة للطالب؛ كل جملة ≤ ٢٢ كلمة؛ الأرقام بالأرقام العربية (٠١٢٣٤٥٦٧٨٩) ما لم ترد بغيرها؛ المصطلح الإنجليزي بين قوسين إن ورد في الكتاب؛ القوانين بالرموز العربية كما في الكتاب (مثل: م = ل × ض). الجدول اختياري (٢–٣ أعمدة) ويُترك فارغاً إن لم يناسب.",
     teacher ? `توجيهات المعلّم (لها الأولوية ما لم تخالف الشروط): ${teacher}` : "",
     `أعد JSON فقط بهذا الشكل: ${shape}`,
+    subjectRules(subject, "infographic"),
   ].filter(Boolean).join("\n");
 }
 

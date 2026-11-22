@@ -10,6 +10,7 @@
 // النشر: تلقائي عبر GitHub Actions
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
+import { withSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseAiJson } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: system },
+            { role: "system", content: withSubject(system, cur.subject, "plan") },
             { role: "user", content: userContent },
           ],
           response_format: { type: "json_object" },

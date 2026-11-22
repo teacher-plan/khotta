@@ -6,6 +6,7 @@
 // والأسهم والنصوص بدقّة. نموذج الصور يرسم خلفيةً مزخرفة بلا كتابة بالنمط المختار،
 // تُحفظ للوحدة والنمط والمقاس فتُعاد بلا تكلفة. بلا رسوم ← بلا نداء صور إطلاقاً.
 // ════════════════════════════════════════════════════════════════
+import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
 import { refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
@@ -80,6 +81,7 @@ const STYLE: Record<string, string> = {
 function bgDecor(subject: string): string {
   if (/رياض/.test(subject)) return "rulers, set squares, protractors, colorful geometric shapes, stars";
   if (/علوم|أحياء|كيمياء|فيزياء/.test(subject)) return "leaves, plants, a microscope, test tubes, atoms shapes, a magnifying glass, stars";
+  if (isEnglishSubject(subject)) return "colorful books, a globe, pencils, empty speech bubbles, a lightbulb, stars";
   if (/عربية|لغة|أدب/.test(subject)) return "open books, a quill and inkwell, a lightbulb, empty speech bubbles, subtle arabesque patterns";
   if (/إسلام|اسلام|قرآن/.test(subject)) return "a lantern, crescent and stars, an open book on a wooden stand, subtle Islamic geometric patterns";
   if (/دراسات|جغراف|تاريخ/.test(subject)) return "a globe, a compass, a folded map, palm trees, a falaj water channel, Omani fort silhouette";
@@ -137,6 +139,7 @@ export async function layeredConcept(admin: Any, user: Any, st: Record<string, s
       young ? "الطلاب صغار (الصفوف ١–٤): كلمات قليلة سهلة." : "",
       S(o.extra, 600) ? `توجيهات المعلّم (لها الأولوية ما لم تخالف الشروط): ${S(o.extra, 600)}` : "",
       `أعد JSON فقط بهذا الشكل: ${shapeFor(type, detail)}`,
+      subjectRules(subject, "infographic"),
     ].filter(Boolean).join("\n");
     const model = st.model_mindmap || st.model_summary || "google/gemini-2.5-flash";
     const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {

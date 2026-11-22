@@ -8,10 +8,11 @@
 // النشر: تلقائي عبر GitHub Actions
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
+import { withSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
-import { curFor, bookExtract, readCache, bookKey, EXTRACT_VERSION } from "../_shared/lessonExtract.ts";
+import { curFor, bookExtract, readCache, bookKey, EXTRACT_VERSION, extractVersionFor } from "../_shared/lessonExtract.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
     const cur = grade && subject && lesson ? await curFor(admin, grade, subject, unit, lesson).catch(() => null) : null;
     if (cur) {
       const c = await readCache(admin, bookKey(cur.id));
-      if (c && c.v === EXTRACT_VERSION && c.summary) return json({ summary: c.summary, cached: true });
+      if (c && c.v === extractVersionFor(subject) && c.summary) return json({ summary: c.summary, cached: true });
     }
 
     // حصة اقتصادية (نص) رغم أن المدخل صور — المخرج نص قصير فقط
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: system },
+          { role: "system", content: withSubject(system, subject, "summary") },
           { role: "user", content: userContent },
         ],
         temperature: 0.2,
