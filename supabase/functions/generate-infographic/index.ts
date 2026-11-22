@@ -7,6 +7,7 @@
 // النشر:  supabase functions deploy generate-infographic
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
+import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
@@ -155,6 +156,7 @@ Deno.serve(async (req) => {
 
     // محتوى الطلب: النص + صفحات الدرس المرجعية (إن وُجدت)
     if (cmPrompt) userPrompt = cmPrompt;
+    if (isEnglishSubject(subject)) userPrompt += "\n\n" + subjectRules(subject, "infographic");
     const genContent: unknown[] = [{ type: "text", text: userPrompt }];
     for (const u of bookImages) genContent.push({ type: "image_url", image_url: { url: u } });
 
