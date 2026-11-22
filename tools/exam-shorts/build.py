@@ -66,11 +66,15 @@ def main(ep_file, img_dir, aud_dir, out):
         return 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()
 
     narr = getattr(ep, 'NARRATION', None)
-    # ألفاظ مرفوضة (SERIES.md «ألفاظ مُلزِمة»): تبي ← تريد، مو ← ما/ليس، باكر ← غداً
+    # ألفاظ مرفوضة (SERIES.md «ألفاظ مُلزِمة»): تبي ← تريد، مو ← ما/ليس، باكر ← غداً، يقولون ← يقولوا
     for k, tx in enumerate(narr or []):
         bad = re.findall(r'(?<!\S)(تبي|مو|باكر)(?!\S)', tx)
         if bad:
             print(f'⚠️ مشهد {k + 1}: ألفاظ مرفوضة في التعليق: {"، ".join(bad)} — صحّحها قبل توليد الصوت', file=sys.stderr)
+        # جمع المضارع بلا نون: يقولوا لا يقولون (يكون/تكون مفرد فلا يُعدّ)
+        nun = [w for w in re.findall(r'(?<!\S)([وف]?[يت]\S{2,}ون)(?=[\s،.؟]|$)', tx) if not re.fullmatch(r'[وف]?[يت]كون', w)]
+        if nun:
+            print(f'⚠️ مشهد {k + 1}: أفعال بنون الجمع: {"، ".join(nun)} — اكتبها بلا نون (يقولوا، يكتبوا)', file=sys.stderr)
     src = []
     for k, sc in enumerate(ep.SCENES):
         if narr and 'data-t="@' in sc:
