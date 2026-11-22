@@ -6458,6 +6458,34 @@ function storagePath(fileName){
   const ext=(String(fileName||'').match(/\.[A-Za-z0-9]{1,8}$/)||[''])[0].toLowerCase();
   return currentUser.id+'/'+crypto.randomUUID()+ext;
 }
+// رفع إلى Cloudflare R2: null يعني «ارجع إلى Supabase» (غير مضبوط أو تعذّر الرفع)
+let _r2Off=false;
+async function storageUploadR2(file,fileName,kind){
+  if(_r2Off)return null;
+  try{
+    const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'sign_upload',fileName,size:file.size,contentType:file.type||'application/octet-stream'}});
+    if(error||!data||!data.putUrl){
+      const why=(data&&data.error)||'';
+      if(why==='quota_exceeded'){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return false;}
+      _r2Off=true;return null;
+    }
+    const put=await fetch(data.putUrl,{method:'PUT',headers:{'Content-Type':data.contentType},body:file});
+    if(!put.ok){console.warn('R2 PUT',put.status);return null;}
+    const{error:rowErr}=await sb.from('user_files').insert({user_id:currentUser.id,path:data.path,size_bytes:file.size,kind,file_name:fileName});
+    if(rowErr){try{await sb.functions.invoke('r2-files',{body:{action:'delete',path:data.path}});}catch(e){}return null;}
+    const url=data.publicUrl;
+    return{path:data.path,name:fileName,size:file.size,viewLink:url,previewLink:url,downloadLink:url};
+  }catch(e){console.warn('storageUploadR2',e);return null;}
+}
+// تنزيل ملفٍّ مرفوع أيّاً كان مكانه (R2 أو Supabase)
+async function storageDownload(path,url){
+  if(String(path||'').startsWith('r2:')){
+    const r=await fetch(url||('https://files.khotati.com/'+String(path).slice(3)));
+    if(!r.ok)return{data:null,error:new Error('HTTP '+r.status)};
+    return{data:await r.blob(),error:null};
+  }
+  return sb.storage.from('user-files').download(path);
+}
 async function storageUpload(file,fileName,kind){
   if(file.size>ACH_MAX_FILE_SIZE){toast('الملف أكبر من الحد المسموح',true);return null;}
   try{
@@ -6466,6 +6494,11 @@ async function storageUpload(file,fileName,kind){
     // رسالةٌ لا تكشف رقم الحصّة ولا المستهلَك — فقط أن المساحة امتلأت،
     // مطابقةً لروح "بلا إشعارٍ بالمساحة المتاحة".
     if(!allowed){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return null;}
+    // R2 أولاً (files.khotati.com): رابط رفعٍ موقَّع من الخادم، والحصّة تُفحص هناك أيضاً.
+    // إن لم يُضبط R2 بعد (not_configured) أو تعذّر، نكمل إلى Supabase كما كان.
+    const r2=await storageUploadR2(file,fileName,kind);
+    if(r2===false)return null;   // امتلأت الحصّة: لا نرجع إلى Supabase
+    if(r2)return r2;
     const path=storagePath(fileName);
     const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
     if(upErr){
@@ -6487,6 +6520,9 @@ async function storageUpload(file,fileName,kind){
 }
 async function storageDelete(path){
   if(!path)return false;
+  if(String(path).startsWith('r2:')){
+    try{const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'delete',path}});return !error&&!!(data&&data.ok);}catch(e){return false;}
+  }
   try{
     await sb.storage.from('user-files').remove([path]);
     await sb.from('user_files').delete().eq('user_id',currentUser.id).eq('path',path);
@@ -7209,7 +7245,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='a69a877';
+const KH_BUILD='17cdc69';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -13199,7 +13235,7 @@ async function noorPublishRun(){
         if(/^att\d+$/.test(s.k)){
           const f=(planGet(id).files||[])[+s.k.slice(3)];
           if(!f||!f.path)throw new Error('لم نجد المرفق — ربما حُذف من البطاقة');
-          const{data:blob,error}=await sb.storage.from('user-files').download(f.path);
+          const{data:blob,error}=await storageDownload(f.path,f.downloadLink||f.viewLink);
           if(error||!blob)throw new Error('تعذّر تنزيل المرفق من التخزين');
           if(blob.size>25*1024*1024)throw new Error('المرفق أكبر من ٢٥ ميغابايت (حدّ نور)');
           const base=String(f.name||'مرفق').replace(/\.[^.]+$/,'');
