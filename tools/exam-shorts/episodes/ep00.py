@@ -10,11 +10,11 @@ AR = '١٢٣٤٥٦٧٨٩'
 num = lambda k: ''.join('٠١٢٣٤٥٦٧٨٩'[int(c)] for c in str(k))
 
 NARRATION = [
-    'السلام عليكم يا طلاب الصف السابع. تبي تجيب أربعين من أربعين في امتحان الرياضيات؟ هذي السلسلة لك.',
+    'السلام عليكم يا طلاب الصف السابع. تريد تجيب أربعين من أربعين في امتحان الرياضيات؟ هذي السلسلة لك.',
     'في سلسلة أربعين من أربعين، نحلّ امتحان حقيقي من امتحانات الوزارة، سؤال سؤال، ونشرح كل سؤال بطريقة واضحة.',
     'كل حلقة فيها سؤالين. أول شي نتعلّم القاعدة، وبعدين نحلّ خطوة خطوة، وننبّهك على الخطأ الشائع، وفي الأخير سؤال تحدّي تجاوب عليه في التعليقات.',
     'ثلاث عشرة حلقة تغطّي مهارات الامتحان: الكسور، والنسبة المئوية، والجبر، والزوايا، والمساحة، وغيرها.',
-    'والهدف مو بس نحلّ الامتحان. الهدف إنك تفهم طريقة الحل، عشان تحلّ أي سؤال يشبهه.',
+    'والهدف ما بس تحفظ الأجوبة. الهدف إنك تفهم طريقة الحل، عشان تحلّ أي سؤال يشبهه.',
     'تابع القناة، وفعّل التنبيهات، وشارك السلسلة مع زملائك. يالله نبدأ من الحلقة الأولى.',
 ]
 
@@ -24,7 +24,7 @@ ROW = lambda t, icon, txt: (f'<div class="steprow" data-t="{t}" data-fx="up" sty
 SCENES = [
     STACK(T(0, AVATAR),
           T(0.3, '<span class="pill w" style="font-size:24px">أ. عيسى الحارثي</span>', cls='center'),
-          T('@تبي تجيب', 'تبي تجيب ٤٠ من ٤٠؟', cls='center', style='font-weight:900;font-size:30px'),
+          T('@تريد تجيب', 'تريد تجيب ٤٠ من ٤٠؟', cls='center', style='font-weight:900;font-size:30px'),
           T('@هذي السلسلة', '٤٠ من ٤٠', cls='title', style='font-size:86px;line-height:1.1'),
           '<div data-deco="1" data-t="@هذي السلسلة" data-fx="wipe" style="height:9px;width:240px;margin:-12px auto 0;background:var(--coral);border-radius:6px"></div>',
           T('@هذي السلسلة', 'رياضيات الصف السابع', 'fade', 'center', 'font-weight:800;font-size:22px;color:var(--mut)'), gap=18),
@@ -43,7 +43,7 @@ SCENES = [
               f'<span class="mark" data-t="@مهارات الامتحان" data-fx="pop" style="font-size:17px;padding:4px 10px">{num(k + 1)} • {s}</span>'
               for k, s in enumerate(SKILLS)) + '</div>', gap=24),
     STACK(T(0, 'الهدف', cls='title', style='font-size:56px;line-height:1.1'),
-          T('@مو بس', '<span class="wrongbox" style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:6px 16px;font-weight:900;font-size:26px;color:#B3261E">ليس حفظ الجواب فقط</span>', cls='center'),
+          T('@ما بس', '<span class="wrongbox" style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:6px 16px;font-weight:900;font-size:26px;color:#B3261E">ليس حفظ الأجوبة فقط</span>', cls='center'),
           ANS('@الهدف إنك', 'أن تفهم طريقة الحل', 36),
           T('@عشان تحلّ', '<span class="pill">فتحلّ أي سؤالٍ يشبهه</span>', cls='center'), gap=26),
     STACK(T(0, 'تابعنا! 🔔', cls='title', style='font-size:58px;line-height:1.1'),

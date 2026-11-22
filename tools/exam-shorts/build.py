@@ -66,6 +66,11 @@ def main(ep_file, img_dir, aud_dir, out):
         return 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()
 
     narr = getattr(ep, 'NARRATION', None)
+    # ألفاظ مرفوضة (SERIES.md «ألفاظ مُلزِمة»): تبي ← تريد، مو ← ما/ليس، باكر ← غداً
+    for k, tx in enumerate(narr or []):
+        bad = re.findall(r'(?<!\S)(تبي|مو|باكر)(?!\S)', tx)
+        if bad:
+            print(f'⚠️ مشهد {k + 1}: ألفاظ مرفوضة في التعليق: {"، ".join(bad)} — صحّحها قبل توليد الصوت', file=sys.stderr)
     src = []
     for k, sc in enumerate(ep.SCENES):
         if narr and 'data-t="@' in sc:
