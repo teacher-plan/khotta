@@ -33,7 +33,7 @@ for (let i = 0; i < D.length; i++) {
         out.push(`نصّ يفيض عن إطاره: ${name(e)}`);
     });
     // سطرٌ واحد: رؤوس الأسئلة والشارات وخطوات الحل لا تلتفّ (الكسور العمودية مستثناة)
-    sc.querySelectorAll('.qhd b,.mark,.steprow>span:last-child,.nw,.ans').forEach(e => {
+    sc.querySelectorAll('.qhd b,.mark,.steprow>span:last-child,.nw,.ans,.wrongbox').forEach(e => {
       if (e.querySelector('.frac')) return;
       const rg = document.createRange(); rg.selectNodeContents(e);
       const fs = parseFloat(getComputedStyle(e).fontSize);

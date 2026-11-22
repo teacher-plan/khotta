@@ -19,10 +19,16 @@ def T(t, html, fx='pop', cls='', style=''):
     return f'<div data-t="{t}" data-fx="{fx}" class="{cls}" style="{style}">{html}</div>'
 
 
-def QCARD(n, marks, img, t=0):
-    """بطاقة السؤال: رأسه ودرجته وصورته من الامتحان."""
-    return (f'<div class="card" data-t="{t}" data-fx="up"><div class="qhd"><b>السؤال {n}</b><span class="mark">{marks}</span></div>'
-            f'<img class="qimg" src="{{{{img:{img}}}}}" style="border-bottom:0"></div>')
+def QCARD(n, marks, img, t=0, title=''):
+    """بطاقة السؤال: رأسه (وعنوانه إن كانت الصورة رسماً فقط) ودرجته وصورته من الامتحان (بارتفاعٍ أقصى ثابت)."""
+    head = f'السؤال {n}' + (f' • {title}' if title else '')
+    return (f'<div class="card" data-t="{t}" data-fx="up"><div class="qhd"><b>{head}</b><span class="mark">{marks}</span></div>'
+            f'<img class="qimg" src="{{{{img:{img}}}}}" style="border-bottom:0;max-height:250px;object-fit:contain;background:#fff"></div>')
+
+
+def MIX(w, a, b):
+    """عدد كسري: العدد الصحيح ثم الكسر، لا يُكسر بين سطرين."""
+    return f'<span class="nw">{w} {FR(a, b)}</span>'
 
 
 def HEAD(title, marks):
@@ -103,7 +109,7 @@ def MISTAKE(head, t, wrong, why, right, t_right):
     """⚠️ خطأ شائع: الجواب الخاطئ مشطوباً وسببه، ثم الصحيح."""
     return STACK(head,
                  f'<div class="card" data-t="{t}" data-fx="up"><div class="qhd" style="background:#B3261E"><b style="font-size:28px">⚠️ خطأ شائع</b></div>'
-                 f'<div class="center" style="padding:14px 14px 6px"><span style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:4px 14px;font-weight:900;font-size:28px;color:#B3261E">'
+                 f'<div class="center" style="padding:14px 14px 6px"><span class="wrongbox" style="display:inline-block;border:3px dashed #B3261E;border-radius:12px;background:#FDECEA;padding:4px 14px;font-weight:900;font-size:28px;color:#B3261E">'
                  f'<span class="mark" style="background:#B3261E;color:#fff;border-color:#B3261E;font-size:15px;vertical-align:middle">✗ خطأ</span> {wrong}</span></div>'
                  f'<div class="center" style="padding:0 16px 14px;font-weight:800;font-size:21px;line-height:1.5">{why}</div></div>',
                  ANS(t_right, f'✓ الصحيح: {right}', 34 if len(re.sub(r'<[^>]+>', '', right)) < 14 else 28), gap=22)
