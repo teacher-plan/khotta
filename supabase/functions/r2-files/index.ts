@@ -9,6 +9,7 @@
 //          R2_PUBLIC_BASE (اختياري، الافتراضي https://files.khotati.com)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
+import { isServiceRoleRequest } from "../_shared/adminGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,17 @@ export const R2_PREFIX = "r2:"; // يُميَّز به المسار في user_fi
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (!ACC || !KEY || !SEC || !BUCKET) return json({ error: "not_configured" }, 503);
+
+  // فحصٌ ذاتي للإدارة فقط (مفتاح الخدمة): رفعٌ ثم قراءةٌ عامة ثم حذف لملفٍّ تجريبي.
+  if (isServiceRoleRequest(req) && new URL(req.url).searchParams.get("selftest") === "1") {
+    const r2t = new AwsClient({ accessKeyId: KEY, secretAccessKey: SEC, service: "s3", region: "auto" });
+    const key = `user-files/_selftest/${crypto.randomUUID()}.txt`;
+    const url = `https://${ACC}.r2.cloudflarestorage.com/${BUCKET}/${key}`;
+    const put = await r2t.fetch(url, { method: "PUT", body: "ok", headers: { "Content-Type": "text/plain" } });
+    const pub = await fetch(`${PUBLIC}/${key}`).then((r) => r.status).catch(() => 0);
+    const del = await r2t.fetch(url, { method: "DELETE" });
+    return json({ put: put.status, public_get: pub, delete: del.status });
+  }
 
   const authHeader = req.headers.get("Authorization") || "";
   const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
