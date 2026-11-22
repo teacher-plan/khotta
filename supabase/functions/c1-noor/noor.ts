@@ -345,18 +345,21 @@ export class Noor {
   async publishPrep(p: {
     enc: string; lessonId: string; title: string; date: string; weekId?: string;
     slots: { lts: string; timeslot: string }[]; criteria: string[];
+    // أيامٌ متعددة كواجهة نور (حتى ٢٠ يوماً: date1…date20)، لكلٍّ تاريخه وحصصه؛ وإلا يومٌ واحد من date/slots
+    dates?: { date: string; slots: { lts: string; timeslot: string }[] }[];
+    showWeekly?: boolean; allowShare?: boolean;
     taxonomy: string[]; strategies: string[]; aids: string[];
     fields: Record<string, string>; // objective, lesson_vocabulary, description, pre_learning, thinking_skills, activities, formative_assessment, closing_assessment, weekly_study_plan_comments
   }) {
     const page = await this.req(`/teacher/courses/add_preparation/cid:${p.enc}`);
     const csrf = (page.text.match(/name="data\[Token\]\[csrf_token\]"[^>]*value="([^"]+)"/) || [])[1] || "";
-    let week = p.weekId || "";
-    if (!week) {
-      for (const m of page.text.matchAll(/<option value="(\d+)">[^<]*?(\d{4}-\d{2}-\d{2})[^<]*?(\d{4}-\d{2}-\d{2})\s*<\/option>/g)) {
-        if (p.date >= m[2] && p.date <= m[3]) { week = m[1]; break; }
-      }
-    }
-    if (!week) throw new NoorError("no_week", p.date);
+    const weeks = [...page.text.matchAll(/<option value="(\d+)">[^<]*?(\d{4}-\d{2}-\d{2})[^<]*?(\d{4}-\d{2}-\d{2})\s*<\/option>/g)].map((m) => ({ id: m[1], from: m[2], to: m[3] }));
+    const weekOf = (d: string) => weeks.find((w) => d >= w.from && d <= w.to)?.id || "";
+    const days = (p.dates && p.dates.length ? p.dates : [{ date: p.date, slots: p.slots }]).slice(0, 20);
+    const dayWeeks = days.map((d, i) => (i === 0 && p.weekId) || weekOf(d.date));
+    const miss = days.findIndex((_, i) => !dayWeeks[i]);
+    if (miss >= 0) throw new NoorError("no_week", days[miss].date);
+    const week = dayWeeks[0];
     const fd = new FormData();
     const add = (k: string, v: string) => fd.append(k, v);
     add("_method", "POST");
@@ -375,17 +378,21 @@ export class Noor {
     for (const k of ["lesson_vocabulary", "description", "thinking_skills", "formative_assessment", "closing_assessment", "weekly_study_plan_comments"]) {
       add(`data[Preparation][${k}]`, p.fields[k] || "");
     }
-    add("data[Preparation][show_in_weekly_study_plan]", "1");
+    add("data[Preparation][show_in_weekly_study_plan]", p.showWeekly === false ? "0" : "1");
     add("data[Preparation][semester_plan]", "0");
     add("data[Preparation][lesson_id]", p.lessonId);
     add("data[Preparation][pre_learning]", p.fields.pre_learning || "");
     add("data[Preparation][activities]", p.fields.activities || "");
-    add("data[Preparation][allowSharePreparations]", "0");
-    add("data[plane][date1][publish_date]", p.date);
-    add("data[plane][date1][week_id]", week);
-    p.slots.forEach((s) => add("data[plane][date1][timeslot][]", s.timeslot));
+    add("data[Preparation][allowSharePreparations]", p.allowShare ? "1" : "0");
+    add("data[Prepration][publish_to]", "0");
     add("data[Preparation][global]", "0");
-    p.slots.forEach((s) => add("data[plane][date1][lectures_timeslots_id][]", s.lts));
+    days.forEach((d, i) => {
+      const k = `data[plane][date${i + 1}]`;
+      add(`${k}[publish_date]`, d.date);
+      add(`${k}[week_id]`, dayWeeks[i]);
+      d.slots.forEach((s) => add(`${k}[timeslot][]`, s.timeslot));
+      d.slots.forEach((s) => add(`${k}[lectures_timeslots_id][]`, s.lts));
+    });
     const r = await this.req(`/teacher/courses/add_preparation/cid:${p.enc}`, { method: "POST", body: fd });
     return { status: r.status, url: r.url, week };
   }
