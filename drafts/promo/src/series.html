@@ -1,0 +1,303 @@
+<!doctype html><html lang="ar"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&family=Tajawal:wght@500;800&family=IBM+Plex+Mono:wght@500&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style></head><body>
+<canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// «وقتك استثمار» — 35 s kinetic poster (style 1, ref techhalla-498547). 120 BPM, beat = 0.5 s.
+// OFF/BPM are set from the music analysis so the beat grid lands on the track's downbeats.
+const OFF=+(Q.get('off')||0),BPM=+(Q.get('bpm')||120);
+const MW=W*.86;
+const mono=(s,x,y,size,col,o={})=>txt(s,x,y,size*u,col,Object.assign({f:'IBM Plex Mono',w:500,ltr:true,ls:4*u},o));
+
+// a word that slams in from below (spring + smear), misregisters on impact, and leaves upward fast
+function slam(s,t,t0,t1,y,max,col,o={}){
+  if(t<t0-.05||t>t1+.25)return;const lt=t-t0+.05,p=under(lt,18,.55),out=ein(seg(t,t1,t1+.22));
+  const size=fit(s,max*u,o.mw||MW,o);const yy=y+(1-p)*360*u-out*420*u;
+  X.save();if(o.clip!==false){X.beginPath();X.rect(0,y-size*1.25,W,size*1.6);X.clip()}
+  X.globalAlpha=1-out*.3;
+  txt(s,cx,yy,size,col,o);X.restore();}
+function ticks(t,y,a=1,col=P.green){X.save();X.fillStyle=col;const n=V?30:48,gap=(W*.72)/n;for(let i=0;i<n;i++){const h=(6+16*Math.abs(Math.sin(i*1.7+t*9)))*u;X.globalAlpha=a*(.5+.5*seg(t%0.5,0,.05));X.fillRect(W*.14+i*gap,y-h/2,5*u,h)}X.restore()}
+function corner(t,label,col=P.cream){const beat=Math.min(78,Math.floor(t*2)+1+(t>=15?1:0));mono(label,W*.06,H*.07,24,col,{al:'left',a:.6});mono(String(beat).padStart(2,'0')+' / 78',W*.94,H*.07,24,P.gold,{al:'right',a:.8});}
+
+// --- scenes ---
+function S1(t){X.fillStyle=P.dark;X.fillRect(0,0,W,H);
+ // clock: hands spin, digits run 22:00 → 23:40
+ const ccx=cx,ccy=V?H*.27:H*.25,R=(V?150:110)*u,a=crit(t,6);
+ X.save();X.globalAlpha=a;X.strokeStyle=P.cream;X.lineWidth=6*u;X.beginPath();X.arc(ccx,ccy,R,0,7);X.stroke();
+ for(let i=0;i<12;i++){const an=i/12*Math.PI*2;X.fillStyle=i%3?P.line:P.gold;X.fillRect(ccx+Math.cos(an)*R*.82-3*u,ccy+Math.sin(an)*R*.82-3*u,6*u,6*u)}
+ const mins=mix(0,100,seg(t,.3,5));const hr=(22+mins/60)%12,mn=mins%60;
+ const hand=(ang,len,w,c)=>{X.strokeStyle=c;X.lineWidth=w;X.lineCap='round';X.beginPath();X.moveTo(ccx,ccy);X.lineTo(ccx+Math.sin(ang)*len,ccy-Math.cos(ang)*len);X.stroke()};
+ hand(hr/12*Math.PI*2,R*.5,10*u,P.cream);hand(mn/60*Math.PI*2,R*.75,6*u,P.coral);X.restore();
+ const hh=22+Math.floor(mins/60),mm=Math.floor(mins%60);mono(`${hh}:${String(mm).padStart(2,'0')}`,ccx,ccy+R+60*u,40,P.gold,{a});
+ const y=V?H*.6:H*.68;
+ slam('الساعة العاشرة مساءً',t,.5,2.4,y,140,P.cream);
+ slam('والتحضير لم ينتهِ بعد',t,2.5,4.85,y,140,P.cream);
+ ticks(t,V?H*.75:H*.85,a);corner(t,'KHOTTAH · 22:00');}
+
+const PILE=['تحضير الدرس','ملخّص','عرض تقديمي','ورقة عمل','نشاط','شهادات','تصحيح','جدول الحصص'];
+const PC=[P.green,P.gold,P.coral,P.crim,P.cream,P.green,P.gold,P.coral];
+function S2(t){X.fillStyle=P.dark;X.fillRect(0,0,W,H);const r=rnd(9);
+ const bw=(V?700:620)*u,bh=(V?96:70)*u,base=V?H*.82:H*.9;const fall=ein(seg(t,10.4,10.95));
+ PILE.forEach((s,i)=>{const t0=5+i*.45,p=under(t-t0,17,.5);const rot=(r()-.5)*.18,dx=(r()-.5)*(V?120:220)*u;if(t<t0)return;
+  const y=base-(i+1)*bh*1.02-(1-p)*H*.9+fall*(H*.6+i*40*u),x=cx+dx+fall*(i%2?1:-1)*300*u;
+  X.save();X.translate(x,y+bh/2);X.rotate(rot*p+fall*(i%2?.6:-.6));X.fillStyle=PC[i];rr(-bw/2,-bh/2,bw,bh,18*u);X.fill();
+  txt(s,0,bh*.2,(V?52:44)*u,PC[i]===P.cream?P.dark:(PC[i]===P.gold?P.dark:P.white),{w:900});X.restore()});
+ // shake on each landing
+ const y2=V?H*.2:H*.26;slam('كلَّ ليلة.',t,9.0,10.85,y2,V?230:190,P.coral,{trail:P.gold});
+ corner(t,'KHOTTAH · TO-DO ×'+Math.min(8,Math.max(0,Math.floor((t-5)/.45)+1)));}
+
+function S3(t){X.fillStyle='#000';X.fillRect(0,0,W,H);if(t<11.5){mono('·',cx,cy,40,P.cream,{a:.5});return}
+ X.fillStyle=P.dark;X.fillRect(0,0,W,H);
+ const lines=[['ماذا لو',11.5,P.cream],['عاد مساؤك',12.5,P.cream],['لك؟',13.5,P.gold]];
+ const gap=(V?260:210)*u,y0=cy-gap+70*u;
+ lines.forEach(([s,t0,c],i)=>{const out=t>14.75;slam(s,t,t0,out?14.75:99,y0+i*gap,V?190:170,c)});
+ ticks(t,V?H*.85:H*.9,.7);corner(t,'KHOTTAH · ?');}
+
+function S4(t){const lt=t-15;
+ X.fillStyle=P.dark;X.fillRect(0,0,W,H);
+ const r=expo(seg(lt,0,.35)),r2=expo(seg(lt,.18,.5));X.fillStyle=P.coral;X.fillRect(0,H*(1-r),W,H*r);X.fillStyle=P.dark;X.fillRect(0,H*(1-r2),W,H*r2);
+ const cam=1+.05*crit(lt-.3,4);X.save();X.translate(cx,cy);X.scale(cam,cam);X.translate(-cx,-cy);
+ const p=under(lt-.25,16,.6),size=(V?330:420)*u,y=cy+size*.28;
+ X.save();X.beginPath();X.rect(0,H*(1-r2),W,H);X.clip();X.translate(0,160*u*(1-p));
+ txt(LOGO,cx,y,size,P.cream);X.restore();
+ // L-bracket
+ const bw=(V?.42:.3)*W,bh=size*.95,b1=crit(lt-.5,16),b2=crit(lt-.62,16);
+ X.fillStyle=P.coral;X.fillRect(cx+bw,y-bh,22*u,bh*b1);X.fillRect(cx+bw+22*u,y-22*u,-bw*.8*b2,22*u);
+ X.fillStyle=P.green;X.fillRect(cx-bw,y-bh,6*u,bh*.9*b2);X.fillRect(cx-bw,y-bh,bw*.7*b2,6*u);
+ const a=seg(lt,.9,1.3);mono('KHOTTAH',cx,y+110*u,46,P.gold,{a,ls:26*u});
+ const a2=seg(lt,1.5,1.9);txt('منصّةٌ عُمانية للمعلّم',cx,y+(V?230:200)*u,(V?64:56)*u,P.cream,{w:700,a:a2});
+ X.restore();
+ const ex=ein(seg(lt,3.75,4));if(ex>0){X.fillStyle=P.green;X.fillRect(0,0,W*ex,H)}}
+
+const BEN=[
+ {s:['التحضير','من كتابك أنت'],c:'ذكاءٌ اصطناعي من منهجك',bg:P.dark,fg:P.cream,ac:P.gold,d:1.5},
+ {s:['حضّر مرّة','لكلّ الشُّعب'],c:'درسٌ واحد · شُعبٌ كثيرة',bg:P.green,fg:P.white,ac:P.dark,d:1.5},
+ {s:['انشر في نور','بضغطة زرّ واحدة'],c:'اربط حسابك مرّة · وانشر التحضير ومرفقاته',bg:P.cream,fg:P.dark,ac:P.green,d:6,noor:1},
+ {s:['يعمل','بلا إنترنت'],c:'OFFLINE ✓',bg:P.dark,fg:P.cream,ac:P.coral,d:1.5,ic:2},
+ {s:['مساءً على الحاسوب','صباحاً في الجوّال'],c:'SYNC ↻',bg:P.gold,fg:P.dark,ac:P.crim,d:1.5,ic:3}];
+function icon(i,x,y,k,col){X.save();X.translate(x,y);X.scale(k*u,k*u);X.strokeStyle=col;X.fillStyle=col;X.lineWidth=8;X.lineCap='round';X.lineJoin='round';
+ if(i===0){rr(-70,-90,140,180,12);X.stroke();X.beginPath();X.moveTo(0,-90);X.lineTo(0,90);X.stroke();[-50,-20,10].forEach(yy=>{X.beginPath();X.moveTo(-50,yy);X.lineTo(-15,yy);X.stroke();X.beginPath();X.moveTo(15,yy);X.lineTo(50,yy);X.stroke()})}
+ if(i===1){for(let j=0;j<5;j++){rr(-110+j*45,-60+((j%2)*20),36,120,8);X.fill()}}
+ if(i===2){X.beginPath();X.arc(0,30,18,0,7);X.fill();[60,100].forEach((r2,j)=>{X.beginPath();X.arc(0,30,r2,-Math.PI*.8,-Math.PI*.2);X.stroke()});X.beginPath();X.moveTo(-110,-90);X.lineTo(110,110);X.stroke()}
+ if(i===3){rr(-120,-80,150,100,10);X.stroke();X.beginPath();X.moveTo(-140,40);X.lineTo(50,40);X.stroke();rr(70,-50,60,110,10);X.stroke()}
+ X.restore()}
+// the «نشر في نور» button: a cursor presses it on the beat and it turns into a confirmation
+function noorBtn(x,y,k,bt){if(k<=0)return;const bw=(V?640:560)*u,bh=(V?150:120)*u,pr=bt>.85&&bt<1.0?Math.sin((bt-.85)/.15*Math.PI):0,done=bt>=.95;
+ X.save();X.translate(x,y);X.scale(k*(1-.06*pr),k*(1-.06*pr));X.shadowColor='rgba(26,15,9,.25)';X.shadowBlur=40*u;X.shadowOffsetY=16*u;
+ X.fillStyle=done?P.green:P.dark;rr(-bw/2,-bh/2,bw,bh,bh/2);X.fill();X.shadowColor='transparent';
+ txt(done?'✓  نُشر في نور':'نشر في نور',0,bh*.17,(V?60:50)*u,P.white);X.restore();
+ if(done){const r=crit(bt-.95,9);X.save();X.strokeStyle=P.green;X.globalAlpha=1-r;X.lineWidth=6*u;rr(x-bw/2-40*u*r,y-bh/2-40*u*r,bw+80*u*r,bh+80*u*r,bh/2+40*u*r);X.stroke();X.restore()}
+ // cursor glides in and taps
+ const c=crit(bt-.35,7),mx=x+bw*.3+(1-c)*260*u,my=y+bh*.25+(1-c)*220*u;if(bt>.3&&bt<1.6){X.save();X.translate(mx,my);const s2=(V?1.6:1.3)*u*(1-.15*pr);X.scale(s2,s2);X.beginPath();X.moveTo(0,0);X.lineTo(0,46);X.lineTo(12,35);X.lineTo(21,55);X.lineTo(29,51);X.lineTo(20,32);X.lineTo(35,32);X.closePath();X.fillStyle='#111';X.fill();X.strokeStyle='#fff';X.lineWidth=3;X.stroke();X.restore()}}
+// ═══ Noor scene (6 s = 12 beats): the cursor presses «نشر في نور», four steps tick on the beat ═══
+const NOOR_ROWS=['نشر التحضير في نور','نشر الواجبات في نور','نشر الدرس التفاعلي','نشر المرفقات'];
+const NT0=1.5,NDT=.5,NDONE=NT0+NDT*4; // ticks at 1.5, 2.0, 2.5, 3.0 → done 3.5
+function checkMark(x,y,s,d,col,lw){if(d<=0)return;const pts=[[-.3,.02],[-.08,.24],[.32,-.22]].map(([a,b])=>[x+a*s,y+b*s]);
+ const L1=Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1]),L2=Math.hypot(pts[2][0]-pts[1][0],pts[2][1]-pts[1][1]);
+ X.save();X.strokeStyle=col;X.lineWidth=lw;X.lineCap='round';X.lineJoin='round';X.setLineDash([(L1+L2)*d,L1+L2]);X.beginPath();X.moveTo(...pts[0]);X.lineTo(...pts[1]);X.lineTo(...pts[2]);X.stroke();X.restore()}
+function spinner(x,y,r,t,col){X.save();X.strokeStyle=col;X.lineWidth=r*.28;X.lineCap='round';const a=t*9;X.beginPath();X.arc(x,y,r,a,a+Math.PI*1.3);X.stroke();X.restore()}
+function noorScene(k){
+ // layout
+ const Lh={tx:W*.93,ty1:H*.40,ty2:H*.40+150*u,tcy:H*.40+250*u,ts1:120,ts2:96,px:W*.06,py:H*.13,pw:W*.44,ph:H*.74,al:'right'};
+ const Lv={tx:cx,ty1:H*.17,ty2:H*.17+125*u,tcy:H*.935,ts1:118,ts2:92,px:W*.06,py:H*.29,pw:W*.88,ph:H*.58,al:'center'};
+ const L=V?Lv:Lh;
+ // title
+ const p1=under(k-.05,17,.65),p2=under(k-.2,17,.65),s1=fit('انشر في نور',L.ts1*u,V?W*.88:W*.4),s2=fit('بضغطة زرّ واحدة',L.ts2*u,V?W*.88:W*.4);
+ X.save();X.beginPath();X.rect(0,L.ty1-s1*1.2,W,s1*1.55);X.clip();txt('انشر في نور',L.tx,L.ty1+(1-p1)*s1*1.6,s1,P.dark,{al:L.al});X.restore();
+ X.save();X.beginPath();X.rect(0,L.ty2-s2*1.2,W,s2*1.55);X.clip();txt('بضغطة زرّ واحدة',L.tx,L.ty2+(1-p2)*s2*1.6,s2,P.green,{al:L.al});X.restore();
+ const ca=seg(k,.6,.9);txt('اربط حسابك مرّة واحدة، وانشر كلّ شيء معاً',L.tx,L.tcy,(V?40:36)*u,P.dark,{f:'Tajawal',w:800,al:L.al,a:ca*.85});
+ // panel
+ const pin=under(k-.12,13,.75);if(pin<=0)return;const {px,py,pw,ph}=L;
+ X.save();X.globalAlpha=cl(pin*2);X.translate(px+pw/2,py+ph/2+(1-pin)*60*u);X.scale(.94+.06*pin,.94+.06*pin);X.translate(-(px+pw/2),-(py+ph/2));
+ X.save();X.shadowColor='rgba(61,36,22,.22)';X.shadowBlur=70*u;X.shadowOffsetY=28*u;X.fillStyle='#FFFDF8';rr(px,py,pw,ph,40*u);X.fill();X.restore();
+ const pad=44*u,R0=px+pw-pad;
+ // header
+ const done=k>=NDONE;
+ txt('نشر الدرس في نور',R0,py+86*u,(V?50:44)*u,P.dark,{al:'right'});
+ txt('الكسور العشرية · الصف السابع',R0,py+138*u,(V?32:28)*u,'#8a7c68',{f:'Tajawal',w:800,al:'right'});
+ // status chip (left of header)
+ const chipT=done?'✓ اكتمل النشر':'حسابك مرتبط',chW=measure(chipT,(V?30:26)*u,{f:'Tajawal',w:800})+44*u,chH=(V?58:52)*u,chX=px+pad,chY=py+60*u;
+ const cp=done?under(k-NDONE,16,.6):1;X.save();X.translate(chX+chW/2,chY+chH/2);X.scale(done?.8+.2*cp:1,done?.8+.2*cp:1);X.fillStyle=done?P.green:'#E7F0E6';rr(-chW/2,-chH/2,chW,chH,chH/2);X.fill();
+ txt(chipT,0,chH*.2,(V?30:26)*u,done?P.white:P.green,{f:'Tajawal',w:800});X.restore();
+ X.fillStyle='rgba(61,36,22,.1)';X.fillRect(px+pad,py+176*u,pw-2*pad,2*u);
+ // rows
+ const rowTop=py+200*u,btnH=(V?130:112)*u,rowsH=ph-(rowTop-py)-btnH-2*pad,rh=rowsH/4,bx=(V?64:56)*u;
+ NOOR_ROWS.forEach((lab,i)=>{const ry=rowTop+i*rh,ymid=ry+rh/2,a=crit(k-.35-i*.08,12);if(a<=0)return;
+  const tick=NT0+i*NDT,act=k>=tick-.3&&k<tick,ok=k>=tick,tq=under(k-tick,18,.55),dq=seg(k,tick,tick+.18);
+  X.save();X.globalAlpha*=a;X.translate((1-a)*-40*u,0);
+  // row highlight sweep when it ticks
+  if(ok){const sw=crit(k-tick,7);X.fillStyle='rgba(91,143,91,'+(.10*(1-seg(k,tick+.5,tick+1.6))+.05)+')';rr(px+pad*.5+(pw-pad)*(1-sw),ry+8*u,(pw-pad)*sw,rh-16*u,18*u);X.fill()}
+  // checkbox (right side, RTL)
+  const cbx=R0-bx,cby=ymid-bx/2;
+  if(ok){X.save();X.translate(cbx+bx/2,cby+bx/2);const sc=.7+.3*tq;X.scale(sc,sc);X.fillStyle=P.green;rr(-bx/2,-bx/2,bx,bx,14*u);X.fill();X.restore();checkMark(cbx+bx/2,cby+bx/2,bx*.9,dq,P.white,7*u)}
+  else{X.strokeStyle=act?P.green:'rgba(61,36,22,.35)';X.lineWidth=4*u;rr(cbx,cby,bx,bx,14*u);X.stroke()}
+  // label
+  txt(lab,cbx-28*u,ymid+(V?17:15)*u,(V?46:40)*u,ok?P.dark:'rgba(61,36,22,.55)',{w:900,al:'right'});
+  // status on the left
+  if(act)spinner(px+pad+26*u,ymid,15*u,k,P.green);
+  if(ok)txt('تمّ',px+pad,ymid+12*u,(V?34:30)*u,P.green,{f:'Tajawal',w:800,al:'left',a:seg(k,tick+.05,tick+.25)});
+  if(i<3){X.fillStyle='rgba(61,36,22,.07)';X.fillRect(px+pad,ry+rh,pw-2*pad,2*u)}
+  X.restore()});
+ // button
+ const byy=py+ph-pad-btnH,bxx=px+pad,bww=pw-2*pad;const press=k>.95&&k<1.12?Math.sin((k-.95)/.17*Math.PI):0;
+ const busy=k>=1.05&&!done;
+ X.save();X.translate(bxx+bww/2,byy+btnH/2);X.scale(1-.04*press,1-.04*press);
+ X.fillStyle=done?P.green:P.dark;rr(-bww/2,-btnH/2,bww,btnH,btnH/2);X.fill();
+ if(busy){const pr=seg(k,1.05,NDONE);X.save();rr(-bww/2,-btnH/2,bww,btnH,btnH/2);X.clip();X.fillStyle=P.green;X.fillRect(bww/2-bww*pr,-btnH/2,bww*pr,btnH);X.restore()}
+ const bl=done?'✓  نُشر في نور':busy?'ينشر في نور…':'نشر في نور';txt(bl,0,btnH*.17,(V?54:46)*u,P.white);X.restore();
+ if(done){const r=crit(k-NDONE,6);X.save();X.strokeStyle=P.green;X.globalAlpha=(1-r)*.8;X.lineWidth=6*u;rr(bxx-30*u*r,byy-30*u*r,bww+60*u*r,btnH+60*u*r,btnH/2+30*u*r);X.stroke();X.restore()}
+ X.restore();
+ // cursor: glides to the button, taps on the beat (1.0), then drifts away
+ const c=crit(k-.45,6),lv=crit(k-1.35,5),mx=bxx+bww*.1+(1-c)*300*u-lv*520*u,my=byy+btnH*.55+(1-c)*260*u+lv*40*u;
+ if(k>.4&&k<2.6){X.save();X.globalAlpha=1-lv;X.translate(mx,my);const s3=(V?1.7:1.4)*u*(1-.15*press);X.scale(s3,s3);X.beginPath();X.moveTo(0,0);X.lineTo(0,46);X.lineTo(12,35);X.lineTo(21,55);X.lineTo(29,51);X.lineTo(20,32);X.lineTo(35,32);X.closePath();X.fillStyle='#111';X.fill();X.strokeStyle='#fff';X.lineWidth=3;X.stroke();X.restore()}
+}
+const BST=[];{let a=0;BEN.forEach(b=>{BST.push(a);a+=b.d})}
+function S5(t){const lt=t-19;let i=0;while(i<BEN.length-1&&lt>=BST[i+1])i++;const bt=lt-BST[i],B=BEN[i];
+ // smash-pan: next card pushes in from the left (RTL forward)
+ const pin=i>0?1-expo(seg(bt,0,.28)):0;
+ const draw=(j,off)=>{const b=BEN[j];X.save();X.translate(off,0);X.fillStyle=b.bg;X.fillRect(0,0,W,H);
+  const k=j===i?bt:b.d;const s1=fit(b.s[0],(V?150:150)*u,MW),s2=fit(b.s[1],(V?150:150)*u,MW);
+  const yA=V?H*.58:H*.5,yB=yA+(V?190:170)*u;
+  const p1=under(k-.05,17,.6),p2=under(k-.2,17,.6);
+  if(b.noor){noorScene(k);X.restore();return}
+  X.save();X.beginPath();X.rect(0,yA-s1*1.2,W,s1*1.55);X.clip();txt(b.s[0],cx,yA+(1-p1)*s1*1.6,s1,b.fg);X.restore();X.save();X.beginPath();X.rect(0,yB-s2*1.2,W,s2*1.55);X.clip();txt(b.s[1],cx,yB+(1-p2)*s2*1.6,s2,b.ac);X.restore();
+  if(b.noor)noorBtn(cx,V?H*.3:H*.24,crit(k-.05,12),k);else icon(b.ic??j,cx,V?H*.3:H*.22,(V?1.2:.75)*crit(k-.1,12),b.ac);
+  (/[\u0600-\u06FF]/.test(b.c)?txt(b.c,cx,V?H*.86:H*.88,36*u,b.fg,{f:'Tajawal',w:800,a:seg(k,.4,.6)}):mono(b.c,cx,V?H*.86:H*.88,30,b.fg,{a:seg(k,.4,.6)}));
+  X.restore()};
+ // outgoing card slides right, incoming arrives from the left
+ if(pin>0)draw(i-1,W*(1-pin));
+ draw(i,-W*pin);corner(t,'KHOTTAH · 0'+(i+1)+' / 05',B.fg);}
+
+function S6(t){const lt=t-27;X.fillStyle=P.dark;X.fillRect(0,0,W,H);
+ const y1=V?H*.36:H*.36,y2=V?H*.55:H*.6,y3=V?H*.75:H*.83;
+ slam('وقتك',t,27,99,y1,V?170:150,P.cream);
+ slam('استثمار',t,27.5,99,y2,V?250:260,P.gold,{trail:P.coral});
+ slam('لا استهلاك.',t,29.0,99,y3,V?130:110,P.cream);
+ // strike through «استهلاك»
+ const st=expo(seg(lt,2.9,3.2));if(st>0){const w=measure('استهلاك',(V?130:110)*u)*1.05;X.fillStyle=P.coral;X.fillRect(cx-w*.62+w*(1-st)*0,y3-(V?40:34)*u,w*st,12*u)}
+ ticks(t,V?H*.9:H*.94,.6);corner(t,'KHOTTAH · ROI');
+ const ex=expo(seg(lt,4.0,4.25));if(ex>0){X.fillStyle=P.cream;X.beginPath();X.arc(cx,cy,Math.hypot(W,H)*.6*ex,0,7);X.fill()}}
+
+function S7(t){const lt=t-32;X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ const tw=(V?620:520)*u,ty=V?H*.3:H*.3;
+ tilesAt(cx,ty,tw).forEach((T,i)=>{const p=under(lt-.02-i*.05,15,.6);drawTile(T,{sc:p,a:cl(p*3)})});
+ const p=under(lt-.35,16,.7),size=(V?260:200)*u,y=ty+tw*.5*.56+size*.85;
+ X.save();X.beginPath();X.rect(0,y-size*1.2,W,size*1.45);X.clip();txt(LOGO,cx,y+(1-p)*size*1.4,size,P.brown);X.restore();
+ const b=under(lt-.7,15,.7),bw=(V?560:460)*u,bh=(V?120:96)*u,by=y+(V?130:95)*u;
+ X.save();X.translate(cx,by+bh/2);X.scale(b,b);X.fillStyle=P.green;rr(-bw/2,-bh/2,bw,bh,bh/2);X.fill();txt('ابدأ اليوم',0,bh*.18,(V?58:48)*u,P.white);X.restore();
+ mono('khotati.com',cx,by+bh+(V?90:70)*u,V?40:34,P.brown,{a:seg(lt,1.0,1.3),ls:6*u});}
+
+// timing locked to the track (120 BPM, phase 0): silence 15.0–15.75, drop 16.0, last hit 32.0
+// The Noor card holds 4 s (2 bars) longer; the music gets the same 2 bars repeated at 24.0 (see mk script).
+// ═══════════ Feature series: four 20 s clips, ?clip=1..4 — same identity as «وقتك استثمار» ═══════════
+const CLIP=+(Q.get('clip')||1);
+const CL={
+ 1:{h:['التحضير جاهز…','والنشر في نور يأخذ وقتك؟'],tag:'النشر في نور',st:['أربع خطوات','بضغطة زرّ واحدة'],end:'انشر في نور بضغطة زرّ'},
+ 2:{h:['صفحات الكتاب أمامك…','والتحضير لم يُكتب بعد؟'],tag:'التحضير الذكي',st:['من كتابك أنت','وأنت تراجعه وتعدّله'],end:'التحضير من كتابك أنت'},
+ 3:{h:['حصة احتياط مفاجئة؟','ولا نشاط جاهز؟'],tag:'حصص الاحتياط',st:['ثلاثون نشاطاً جاهزاً','بلا تحضير ولا ورق'],end:'حصةٌ جاءتك فجأة؟ نشاطها جاهز'},
+ 4:{h:['نجمةٌ لكلّ طالب…','وشهادةٌ باسمه؟'],tag:'طلابي',st:['نجمةٌ بلمسة','وشهادةٌ من عمل الطالب'],end:'حفّز طلابك بلمسة'}}[CLIP];
+const SH={};['reserve'].forEach(n=>{const im=new Image();im.src=n+'.webp';SH[n]=im});
+window.ready=window.ready.then(()=>Promise.all(Object.values(SH).map(im=>im.decode()))).then(()=>true);
+function cornerS(t,col=P.cream){mono('KHOTTAH · '+String(CLIP).padStart(2,'0')+' / 04',W*.06,H*.07,24,col,{al:'left',a:.6});mono(String(Math.min(40,Math.floor(t*2)+1)).padStart(2,'0')+' / 40',W*.94,H*.07,24,P.gold,{al:'right',a:.8})}
+function cursorAt(x,y,s,a=1){X.save();X.globalAlpha*=a;X.translate(x,y);X.scale(s,s);X.beginPath();X.moveTo(0,0);X.lineTo(0,46);X.lineTo(12,35);X.lineTo(21,55);X.lineTo(29,51);X.lineTo(20,32);X.lineTo(35,32);X.closePath();X.fillStyle='#111';X.fill();X.strokeStyle='#fff';X.lineWidth=3;X.stroke();X.restore()}
+function panel(px,py,pw,ph,a,sc){X.save();X.globalAlpha*=a;X.translate(px+pw/2,py+ph/2);X.scale(sc,sc);X.translate(-(px+pw/2),-(py+ph/2));X.shadowColor='rgba(61,36,22,.22)';X.shadowBlur=70*u;X.shadowOffsetY=28*u;X.fillStyle='#FFFDF8';rr(px,py,pw,ph,40*u);X.fill();X.restore()}
+// side title used by the demo scenes (right column in landscape, top in portrait)
+function sideTitle(k,a,b){const tx=V?cx:W*.93,al=V?'center':'right',y1=V?H*.17:H*.42,y2=y1+(V?125:140)*u;
+ const s1=fit(a,(V?110:110)*u,V?W*.88:W*.4),s2=fit(b,(V?88:90)*u,V?W*.88:W*.4),p1=under(k-.05,17,.65),p2=under(k-.2,17,.65);
+ X.save();X.beginPath();X.rect(0,y1-s1*1.2,W,s1*1.55);X.clip();txt(a,tx,y1+(1-p1)*s1*1.6,s1,P.dark,{al});X.restore();
+ X.save();X.beginPath();X.rect(0,y2-s2*1.2,W,s2*1.55);X.clip();txt(b,tx,y2+(1-p2)*s2*1.6,s2,P.green,{al});X.restore()}
+const PL=()=>V?{px:W*.06,py:H*.29,pw:W*.88,ph:H*.6}:{px:W*.06,py:H*.13,pw:W*.44,ph:H*.74};
+
+// ── demo 2: book page → AI → lesson prep with four sections filling on the beat
+function demoPrep(k){X.fillStyle=P.cream;X.fillRect(0,0,W,H);sideTitle(k,'التحضير الذكي','من صفحات كتابك');
+ const {px,py,pw,ph}=PL(),pin=under(k-.12,13,.75);if(pin<=0)return;panel(px,py,pw,ph,cl(pin*2),.94+.06*pin);
+ X.save();X.globalAlpha=cl(pin*2);const pad=40*u,R0=px+pw-pad;
+ // book page (top strip)
+ const bh=ph*.3,by=py+pad;X.fillStyle='#F3EAD6';rr(px+pad,by,pw-2*pad,bh,22*u);X.fill();
+ txt('صفحة الكتاب',R0-20*u,by+52*u,(V?36:30)*u,P.brown,{f:'Tajawal',w:800,al:'right'});
+ for(let i=0;i<4;i++){const w=(pw-2*pad-60*u)*(i%2?.78:.95);X.fillStyle='rgba(61,36,22,.18)';rr(R0-20*u-w,by+80*u+i*34*u,w,12*u,6*u);X.fill()}
+ // scan beam across the page (0.9–1.6)
+ const sc=seg(k,.9,1.6);if(sc>0&&sc<1){X.save();rr(px+pad,by,pw-2*pad,bh,22*u);X.clip();const sx=R0-(pw-2*pad)*sc;X.fillStyle='rgba(91,143,91,.25)';X.fillRect(sx,by,24*u,bh);X.fillStyle=P.green;X.fillRect(sx,by,4*u,bh);X.restore()}
+ // AI chip
+ const ay=by+bh+50*u,ap=under(k-1.5,16,.6);X.save();X.translate(px+pw/2,ay);X.scale(ap,ap);X.fillStyle=P.dark;rr(-90*u,-30*u,180*u,60*u,30*u);X.fill();txt('AI  ✦',0,11*u,30*u,P.gold,{f:'IBM Plex Mono',w:500,ltr:true});X.restore();
+ // four sections tick 2.0, 2.5, 3.0, 3.5
+ const secs=['الأهداف','التهيئة','الأنشطة','التقويم'],top=ay+60*u,rh=(py+ph-pad-top)/4,bx=(V?60:52)*u;
+ secs.forEach((s,i)=>{const t0=2+i*.5,ry=top+i*rh,ym=ry+rh/2,a=crit(k-1.6-i*.06,12);if(a<=0)return;const ok=k>=t0;
+  X.save();X.globalAlpha*=a;
+  if(ok){X.save();X.translate(R0-bx/2,ym);const q=.7+.3*under(k-t0,18,.55);X.scale(q,q);X.fillStyle=P.green;rr(-bx/2,-bx/2,bx,bx,13*u);X.fill();X.restore();checkMark(R0-bx/2,ym,bx*.9,seg(k,t0,t0+.18),P.white,6.5*u)}
+  else{X.strokeStyle='rgba(61,36,22,.3)';X.lineWidth=4*u;rr(R0-bx,ym-bx/2,bx,bx,13*u);X.stroke()}
+  txt(s,R0-bx-24*u,ym+14*u,(V?44:38)*u,ok?P.dark:'rgba(61,36,22,.5)',{w:900,al:'right'});
+  // text lines being written
+  const wr=seg(k,t0-.35,t0+.1),lw=(pw-2*pad-bx-260*u);X.fillStyle=ok?'rgba(91,143,91,.35)':'rgba(61,36,22,.12)';rr(px+pad,ym-6*u,lw*wr,12*u,6*u);X.fill();
+  X.restore()});
+ X.restore()}
+
+// ── demo 3: «فاجئني» on the reserve screen → a ready activity card pops out
+function demoReserve(k){X.fillStyle=P.cream;X.fillRect(0,0,W,H);sideTitle(k,'حصص الاحتياط','نشاطٌ جاهز بلمسة');
+ const {px,py,pw,ph}=PL(),pin=under(k-.12,13,.75);if(pin<=0)return;panel(px,py,pw,ph,cl(pin*2),.94+.06*pin);
+ const im=SH.reserve,pad=24*u,iw=pw-2*pad,ihh=ph-2*pad;X.save();X.globalAlpha=cl(pin*2);rr(px+pad,py+pad,iw,ihh,26*u);X.clip();
+ // the real screen, panning gently
+ const ar=iw/ihh;let sw=im.naturalWidth,sh=sw/ar;if(sh>im.naturalHeight){sh=im.naturalHeight;sw=sh*ar}const sy=(im.naturalHeight-sh)*cl(k/6)*.4,sx=(im.naturalWidth-sw)/2;
+ X.drawImage(im,sx,sy,sw,sh,px+pad,py+pad,iw,ihh);
+ // dim + activity card after the tap
+ const pop=under(k-1.7,14,.7);if(k>1.6){X.fillStyle='rgba(26,15,9,'+(.45*cl(pop))+')';X.fillRect(px,py,pw,ph);
+  const cw=iw*.86,ch=(V?520:460)*u,ccx=px+pw/2,ccy=py+ph/2;X.save();X.translate(ccx,ccy);X.scale(.85+.15*pop,.85+.15*pop);X.globalAlpha*=cl(pop*1.5);
+  X.fillStyle='#FFFDF8';rr(-cw/2,-ch/2,cw,ch,32*u);X.fill();X.fillStyle=P.crim;rr(-cw/2,-ch/2,cw,18*u,9*u);X.fill();
+  const R=cw/2-40*u;txt('تحدٍّ تنافسي',R,-ch/2+80*u,(V?34:30)*u,P.crim,{f:'Tajawal',w:800,al:'right'});
+  txt('الكرسي الساخن: كنوز عُمان',R,-ch/2+170*u,fit('الكرسي الساخن: كنوز عُمان',(V?60:52)*u,cw-80*u),P.dark,{al:'right'});
+  ['بلا تحضير','بلا ورق','يعمل بلا إنترنت'].forEach((c,i)=>{const q=under(k-2.3-i*.5,16,.6);const w=measure(c,(V?32:28)*u,{f:'Tajawal',w:800})+44*u;const x0=R-[0,1,2].slice(0,i).reduce((s2,j)=>s2+measure(['بلا تحضير','بلا ورق','يعمل بلا إنترنت'][j],(V?32:28)*u,{f:'Tajawal',w:800})+64*u,0);
+   if(q>0){X.save();X.translate(x0-w/2,-ch/2+260*u);X.scale(q,q);X.fillStyle=[P.green,P.gold,P.coral][i];rr(-w/2,-28*u,w,56*u,28*u);X.fill();txt(c,0,10*u,(V?32:28)*u,P.white,{f:'Tajawal',w:800});X.restore()}});
+  const bq=under(k-3.8,15,.7);X.save();X.translate(0,ch/2-80*u);X.scale(bq,bq);X.fillStyle=P.green;rr(-cw/2+40*u,-44*u,cw-80*u,88*u,44*u);X.fill();txt('▶  ابدأ النشاط',0,14*u,(V?40:34)*u,P.white);X.restore();
+  X.restore()}
+ X.restore();
+ // cursor taps the red «فاجئني» bar on the beat (1.5)
+ const c=crit(k-.6,6),tx=px+pw*.5,ty=py+pad+ihh*(V?.17:.2),lv=crit(k-1.8,6),pr=k>1.45&&k<1.62?Math.sin((k-1.45)/.17*Math.PI):0;
+ if(k>.5&&k<2.6){cursorAt(tx+(1-c)*280*u-lv*500*u,ty+(1-c)*300*u+lv*80*u,(V?1.6:1.3)*u*(1-.15*pr),1-lv);if(pr>0){X.save();X.strokeStyle=P.coral;X.globalAlpha=pr;X.lineWidth=5*u;X.beginPath();X.arc(tx,ty,50*u*(1.2-pr*.2),0,7);X.stroke();X.restore()}}}
+
+// ── demo 4: stars pop on the beat → a certificate for the top student
+const KIDS=['مريم','سالم','جواهر','يوسف','ريّان','نور'];
+function demoStars(k){X.fillStyle=P.cream;X.fillRect(0,0,W,H);sideTitle(k,'طلابي','نجمةٌ بلمسة');
+ const {px,py,pw,ph}=PL(),pin=under(k-.12,13,.75);if(pin<=0)return;panel(px,py,pw,ph,cl(pin*2),.94+.06*pin);
+ X.save();X.globalAlpha=cl(pin*2);const pad=40*u,cols=2,rows=3,gw=(pw-2*pad-(cols-1)*24*u)/cols,gh=(ph-2*pad-(rows-1)*24*u)/rows;
+ const taps=[[0,1.4],[2,1.9],[4,2.4],[0,2.9],[4,3.4],[4,3.9]];// [kid, time]
+ KIDS.slice(0,cols*rows).forEach((n,i)=>{const r_=Math.floor(i/cols),c_=i%cols,x=px+pw-pad-(c_+1)*gw-c_*24*u,y=py+pad+r_*(gh+24*u),a=crit(k-.3-i*.06,12);if(a<=0)return;
+  const st=[12,8,15,9,19,11][i]+taps.filter(([kd,tt])=>kd===i&&k>=tt).length,last=Math.max(-9,...taps.filter(([kd,tt])=>kd===i&&k>=tt).map(x2=>x2[1]));
+  X.save();X.globalAlpha*=a;X.fillStyle='#F6EEDC';rr(x,y,gw,gh,22*u);X.fill();
+  txt(n,x+gw-30*u,y+(V?80:66)*u,(V?52:40)*u,P.dark,{al:'right'});
+  const bump=under(k-last,18,.5),sx=x+(V?70:52)*u,sy=y+gh-(V?80:56)*u;X.save();X.translate(sx,sy);const bs=k-last<.4?1+.35*(1-bump):1;X.scale(bs,bs);X.fillStyle=P.gold;star(0,0,(V?44:32)*u);X.restore();
+  txt(egNum(st),x+(V?130:96)*u,y+gh-(V?62:42)*u,(V?56:40)*u,P.dark,{al:'left',w:900});
+  if(k-last>=0&&k-last<.7){txt('+١',sx,sy-50*u-60*u*seg(k-last,0,.7),(V?40:34)*u,P.green,{a:1-seg(k-last,.3,.7)})}
+  X.restore()});
+ // certificate for the top student (ريّان)
+ const cq=under(k-4.6,13,.75);if(cq>0){X.fillStyle='rgba(26,15,9,'+(.4*cl(cq))+')';rr(px,py,pw,ph,40*u);X.fill();
+  const cw=pw*.86,ch=ph*(V?.62:.7);X.save();X.translate(px+pw/2,py+ph/2);X.scale(.85+.15*cq,.85+.15*cq);X.globalAlpha*=cl(cq*1.5);
+  X.fillStyle='#FFFDF8';rr(-cw/2,-ch/2,cw,ch,18*u);X.fill();X.strokeStyle=P.gold;X.lineWidth=6*u;rr(-cw/2+20*u,-ch/2+20*u,cw-40*u,ch-40*u,10*u);X.stroke();
+  txt('شهادة تميّز',0,-ch/2+130*u,(V?72:62)*u,P.gold);txt('يُهدى إلى الطالب',0,-ch/2+200*u,(V?32:28)*u,'#8a7c68',{f:'Tajawal',w:800});
+  txt('ريّان',0,-ch/2+300*u,(V?84:72)*u,P.dark);X.fillStyle=P.gold;star(0,ch/2-130*u,52*u);txt(egNum(22),0,ch/2-120*u,(V?30:26)*u,P.dark,{w:900});
+  X.restore()}
+ X.restore()}
+function star(x,y,r){X.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr2=i%2?r*.45:r;X.lineTo(x+Math.cos(a)*rr2,y+Math.sin(a)*rr2)}X.closePath();X.fill()}
+function egNum(n){return String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d])}
+
+// ── clip timeline (20 s, 40 beats): hook 0–2.75 · blink · logo+tag 3–5 · demo 5–12 · statement 12–15 · lockup 15–20
+function hook(t){X.fillStyle=P.dark;X.fillRect(0,0,W,H);const y=V?H*.5:H*.56;
+ slam(CL.h[0],t,.25,1.35,y,V?130:130,P.cream);slam(CL.h[1],t,1.5,2.7,y,V?120:120,P.gold);ticks(t,V?H*.75:H*.85,1);cornerS(t)}
+function logoTag(t){const lt=t-2.75;X.fillStyle=P.dark;X.fillRect(0,0,W,H);
+ const r=expo(seg(lt,0,.3)),r2=expo(seg(lt,.15,.45));X.fillStyle=P.coral;X.fillRect(0,H*(1-r),W,H*r);X.fillStyle=P.dark;X.fillRect(0,H*(1-r2),W,H*r2);
+ const p=under(lt-.25,16,.6),size=(V?300:360)*u,y=cy+size*.2;X.save();X.beginPath();X.rect(0,H*(1-r2),W,H);X.clip();X.translate(0,160*u*(1-p));txt(LOGO,cx,y,size,P.cream);X.restore();
+ const b1=crit(lt-.45,16),bw=(V?.4:.27)*W,bh=size*.95;X.fillStyle=P.coral;X.fillRect(cx+bw,y-bh,20*u,bh*b1);X.fillStyle=P.green;X.fillRect(cx-bw,y-bh,6*u,bh*.9*b1);X.fillRect(cx-bw,y-bh,bw*.7*b1,6*u);
+ const tq=under(lt-.8,15,.7),tw=measure(CL.tag,(V?60:52)*u)+80*u,th=(V?100:88)*u;X.save();X.translate(cx,y+(V?140:120)*u);X.scale(tq,tq);X.fillStyle=P.gold;rr(-tw/2,-th/2,tw,th,th/2);X.fill();txt(CL.tag,0,th*.2,(V?60:52)*u,P.dark);X.restore();
+ const ex=ein(seg(lt,2.0,2.25));if(ex>0){X.fillStyle=P.cream;X.fillRect(0,0,W*ex,H)}}
+function statement(t){const lt=t-12;X.fillStyle=P.dark;X.fillRect(0,0,W,H);const y1=V?H*.45:H*.45,y2=y1+(V?190:170)*u;
+ slam(CL.st[0],t,12.0,99,y1,V?140:140,P.cream);slam(CL.st[1],t,12.5,99,y2,V?120:120,P.gold);ticks(t,V?H*.8:H*.88,.7);cornerS(t);
+ const ex=expo(seg(lt,2.75,3.0));if(ex>0){X.fillStyle=P.cream;X.beginPath();X.arc(cx,cy,Math.hypot(W,H)*.6*ex,0,7);X.fill()}}
+function lockup(t){const lt=t-15;X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ const tw=(V?560:460)*u,ty=V?H*.28:H*.27;tilesAt(cx,ty,tw).forEach((T,i)=>{const p=under(lt-.02-i*.05,15,.6);drawTile(T,{sc:p,a:cl(p*3)})});
+ const p=under(lt-.35,16,.7),size=(V?240:180)*u,y=ty+tw*.5*.56+size*.85;X.save();X.beginPath();X.rect(0,y-size*1.2,W,size*1.45);X.clip();txt(LOGO,cx,y+(1-p)*size*1.4,size,P.brown);X.restore();
+ const e=CL.end,es=fit(e,(V?60:50)*u,W*.86),eq=crit(lt-.6,9);X.save();X.beginPath();X.rect(0,y+20*u,W,es*1.6);X.clip();txt(e,cx,y+20*u+es*1.15+(1-eq)*es*1.5,es,P.brown,{w:700});X.restore();
+ const b=under(lt-.9,15,.7),bw=(V?520:420)*u,bh=(V?110:90)*u,by=y+es*1.6+(V?70:50)*u;X.save();X.translate(cx,by+bh/2);X.scale(b,b);X.fillStyle=P.green;rr(-bw/2,-bh/2,bw,bh,bh/2);X.fill();txt('ابدأ اليوم',0,bh*.18,(V?54:44)*u,P.white);X.restore();
+ mono('khotati.com',cx,by+bh+(V?80:60)*u,V?38:32,P.brown,{a:seg(lt,1.2,1.5),ls:6*u})}
+function demo(t){const k=t-5;if(CLIP===1){X.fillStyle=P.cream;X.fillRect(0,0,W,H);noorScene(k)}else if(CLIP===2)demoPrep(k);else if(CLIP===3)demoReserve(k);else demoStars(k);cornerS(t,P.dark)}
+function render(T){const t=T;if(t<2.75)hook(t);else if(t<5)logoTag(t);else if(t<12)demo(t);else if(t<15)statement(t);else lockup(t)}
+</script></body></html>
