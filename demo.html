@@ -6465,12 +6465,16 @@ async function storageUploadR2(file,fileName,kind){
   try{
     const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'sign_upload',fileName,size:file.size,contentType:file.type||'application/octet-stream'}});
     if(error||!data||!data.putUrl){
-      const why=(data&&data.error)||'';
+      // supabase-js يُخفي جسم الردّ غير الناجح في error.context — وفيه السبب
+      let why=(data&&data.error)||'';
+      if(!why&&error&&error.context&&error.context.json){try{why=(await error.context.clone().json()).error||'';}catch(_){}}
       if(why==='quota_exceeded'){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return false;}
-      _r2Off=true;return null;
+      // Supabase احتياطٌ فقط إن لم يُضبط R2 أصلاً: عطلٌ عابر لا يملأ مخزن Supabase (١ غيغابايت للمنصّة كلها)
+      if(why==='not_configured'){_r2Off=true;return null;}
+      toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;
     }
     const put=await fetch(data.putUrl,{method:'PUT',headers:{'Content-Type':data.contentType},body:file});
-    if(!put.ok){console.warn('R2 PUT',put.status);return null;}
+    if(!put.ok){console.warn('R2 PUT',put.status);toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;}
     const{error:rowErr}=await sb.from('user_files').insert({user_id:currentUser.id,path:data.path,size_bytes:file.size,kind,file_name:fileName});
     if(rowErr){try{await sb.functions.invoke('r2-files',{body:{action:'delete',path:data.path}});}catch(e){}return null;}
     const url=data.publicUrl;
@@ -6497,7 +6501,7 @@ async function storageUpload(file,fileName,kind){
     // R2 أولاً (files.khotati.com): رابط رفعٍ موقَّع من الخادم، والحصّة تُفحص هناك أيضاً.
     // إن لم يُضبط R2 بعد (not_configured) أو تعذّر، نكمل إلى Supabase كما كان.
     const r2=await storageUploadR2(file,fileName,kind);
-    if(r2===false)return null;   // امتلأت الحصّة: لا نرجع إلى Supabase
+    if(r2===false)return null;   // امتلأت الحصّة أو تعذّر R2 مؤقتاً: لا نرجع إلى Supabase
     if(r2)return r2;
     const path=storagePath(fileName);
     const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
@@ -7245,7 +7249,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='17cdc69';
+const KH_BUILD='c4bd778';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
