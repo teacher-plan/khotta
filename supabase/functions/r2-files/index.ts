@@ -72,6 +72,40 @@ Deno.serve(async (req) => {
     return json({ putUrl: signed.url, contentType: type, path: R2_PREFIX + key, publicUrl: `${PUBLIC}/${key}` });
   }
 
+  // ملفات المكتبة الثقيلة من لوحة الإدارة (صفحات الكتب وأدلّة المعلّم وملفات
+  // المكتبة PDF) تُرفع إلى R2 مباشرةً تحت library-files/ بالمسار نفسه الذي كانت
+  // تأخذه في Supabase، فتقرؤها كل المسالك الحالية (R2 أولاً). للمشرف وحده.
+  if (b.action === "sign_library" || b.action === "list_library") {
+    const { data: isAdmin } = await userClient.rpc("is_app_admin");
+    if (!isAdmin) return json({ error: "forbidden" }, 403);
+    const path = String(b.path || b.prefix || "");
+    if (!/^(books|teacher-guides|library-pdfs)\/[A-Za-z0-9._\-\/]*$/.test(path) || path.includes("..")) {
+      return json({ error: "bad_path" }, 400);
+    }
+    const key = "library-files/" + path;
+    if (b.action === "list_library") {
+      const u = new URL(`https://${ACC}.r2.cloudflarestorage.com/${BUCKET}`);
+      u.searchParams.set("list-type", "2");
+      u.searchParams.set("prefix", key);
+      u.searchParams.set("max-keys", "1000");
+      const r = await r2.fetch(u.toString());
+      if (!r.ok) return json({ error: "list_failed" }, 502);
+      const xml = await r.text();
+      const items = [...xml.matchAll(/<Key>([^<]*)<\/Key>[\s\S]*?<Size>(\d+)<\/Size>/g)]
+        .map((m) => ({ name: m[1].slice(key.length).replace(/^\//, ""), size: Number(m[2]) }));
+      return json({ items });
+    }
+    const size = Number(b.size) || 0;
+    if (size <= 0 || size > MAX) return json({ error: "bad_size" }, 400);
+    const type = String(b.contentType || "application/octet-stream").slice(0, 120);
+    const u = new URL(objUrl(key));
+    u.searchParams.set("X-Amz-Expires", "600");
+    const signed = await r2.sign(new Request(u, { method: "PUT", headers: { "Content-Type": type } }), {
+      aws: { signQuery: true },
+    });
+    return json({ putUrl: signed.url, contentType: type, publicUrl: `${PUBLIC}/${key}` });
+  }
+
   if (b.action === "delete") {
     const path = String(b.path || "");
     if (!path.startsWith(R2_PREFIX + "user-files/" + user.id + "/")) return json({ error: "forbidden" }, 403);
