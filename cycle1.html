@@ -12871,8 +12871,26 @@ function noorToday(){
   if(d.getDay()===5)d.setDate(d.getDate()+2);else if(d.getDay()===6)d.setDate(d.getDate()+1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function noorEnKey(unit,name){
+  const n=String(name||''),u=String(unit||'')+' '+n;
+  if(!/\b(lesson|graded reader|learning club|welcome|optional)/i.test(n+' '+unit))return null;
+  let uk='';const m=u.match(/\bunit\s*(\d+)/i),c=u.match(/learning\s*club\s*(\d*)/i);
+  if(c)uk='lc'+(c[1]||'1');else if(m)uk='u'+m[1];else if(/welcome/i.test(u))uk='w';
+  let lk='';const lm=n.replace(/^.*:\s*(?=(lesson|graded|optional))/i,'').match(/^\s*lesson\s*(\d+)/i)||n.match(/\blesson\s*(\d+)/i);
+  if(/graded\s*reader/i.test(n))lk='gr';else if(/optional/i.test(n))lk='opt';else if(lm)lk='l'+lm[1];
+  return lk?{u:uk,l:lk}:null;
+}
 function noorBestLesson(lessons,l,saved){
-  if(saved&&lessons.some(x=>x.id===saved))return saved;
+  const sv=saved&&lessons.some(x=>x.id===saved)?saved:null;
+  // الإنجليزية (Team Together): أسماء الدروس تتكرّر في كل وحدة (Lesson 2: Story…) ونور يسمّيها
+  // «Unit1: Talent show: Lesson2» — فالمطابقة بمفتاح (الوحدة، رقم الدرس) لا بالاسم، وتتقدّم على ربطٍ محفوظ قديم.
+  const ek=noorEnKey(l.unit,l.name);
+  if(ek){
+    if(!ek.u)return sv; // وحدةٌ مجهولة: لا نخمّن
+    const hit=lessons.find(x=>{const k=noorEnKey(x.unit,x.name);return k&&k.u===ek.u&&k.l===ek.l;});
+    return hit?hit.id:sv;
+  }
+  if(sv)return sv;
   const t=noorTxt(l.name),n=noorNums(l.name),u=noorTxt(l.unit||'');
   let best=null,bs=0;
   for(const x of lessons){
