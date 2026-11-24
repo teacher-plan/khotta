@@ -10019,8 +10019,10 @@ function table(rows, widths, opts = {}) {
   const body = rows.map((r, ri) => {
     const head = ri === 0 && opts.header;
     return `<w:tr>${r.map((c, ci) => cell(
-      typeof c === 'string'
-        ? P(c, { size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
+      // نصٌّ عادي ← فقرة؛ أمّا ما بُني فقراتِ وورد جاهزة (يبدأ بـ ‎<w:‎) فيُدرج كما هو —
+      // كانت الخلايا الجاهزة (الاستراتيجيات والمصادر والمفاهيم، والتوقيع) تُهرَّب نصاً فيظهر كود XML في وورد
+      typeof c === 'string' && !c.startsWith('<w:')
+        ? P(c,{ size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
         : c, widths[ci], head ? PAPER : (opts.zebra && ri % 2 ? 'FFFDF9' : null)
     )).join('')}</w:tr>`;
   }).join('');
