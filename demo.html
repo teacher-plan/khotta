@@ -6699,7 +6699,7 @@ function C1_SECTIONS(){return [
 // بوّابة الأقسام حسب الحلقة: cy='both' يعني يظهر للحلقتين، وهو حال كل الأقسام
 // اليوم — فالتصفية أدناه بلا أثرٍ إطلاقاً على ما تراه معلّمة الحلقة الأولى.
 // أُضيفت الآلية فقط ليُمكن لاحقاً قصرُ قسمٍ على حلقةٍ بعينها بتعديل حرفٍ واحد.
-function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlIsLab()));}
+function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlNoorOn()));}
 function c1Board(open){
   const b=document.getElementById('c1-board');
   if(!open){b.classList.remove('open');return;}
@@ -7249,7 +7249,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='5ea6146';
+const KH_BUILD='aa28d18';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -11940,6 +11940,9 @@ async function noorImpApply(){
 // الدالّة c1-noor ترفض أفعال lab_* من أي حسابٍ آخر، فإخفاء القسم هنا راحةٌ لا حماية.
 const NL_EMAILS=['xx@y.com','teacherplane2026project@gmail.com'];
 function nlIsLab(){return !KH_DEMO&&!!(currentUser&&NL_EMAILS.includes(String(currentUser.email||'').toLowerCase()));}
+// قسم «منصّة نور» وحده (بلا بقية أدوات المختبر): حسابات المختبر + أ. سمير عبد المعز (٢٤ نوفمبر)
+const NL_NOOR_EXTRA=['samiradelmoeaz77@gmail.com'];
+function nlNoorOn(){return nlIsLab()||(!KH_DEMO&&!!(currentUser&&NL_NOOR_EXTRA.includes(String(currentUser.email||'').toLowerCase())));}
 const nl={tab:'pts',ov:null,st:null,stCid:'',lessons:{},gen:null,post:null,ai:{},dev:null,busy:{}};
 const NL_TABS=[['pts','لوحة النقاط',''],['week','حصص الأسبوع',''],['stu','تحليل الطلاب',''],['gen','مولّد الواجب الذكي',''],['room','غرفة نقاش',''],['dev','وصول المطوّر','']];
 const nlN=n=>egArNum(Math.round(+n||0).toLocaleString('en-US'));
@@ -11951,7 +11954,7 @@ function nlLoading(t){return `<div class="nl-load"><span class="nl-spin"></span>
 
 async function nlRender(){
   const root=document.getElementById('nl-root');if(!root)return;
-  if(!nlIsLab()){root.innerHTML='';return;}
+  if(!nlNoorOn()){root.innerHTML='';return;}
   let s;
   try{s=await noorStatus();}catch(e){root.innerHTML=`<div class="nl-card"><p class="sub">${escHtml(e.message)}</p></div>`;return;}
   if(!s.linked){
