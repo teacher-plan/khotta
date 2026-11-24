@@ -6699,7 +6699,7 @@ function C1_SECTIONS(){return [
 // بوّابة الأقسام حسب الحلقة: cy='both' يعني يظهر للحلقتين، وهو حال كل الأقسام
 // اليوم — فالتصفية أدناه بلا أثرٍ إطلاقاً على ما تراه معلّمة الحلقة الأولى.
 // أُضيفت الآلية فقط ليُمكن لاحقاً قصرُ قسمٍ على حلقةٍ بعينها بتعديل حرفٍ واحد.
-function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlIsLab()));}
+function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlNoorOn()));}
 function c1Board(open){
   const b=document.getElementById('c1-board');
   if(!open){b.classList.remove('open');return;}
@@ -7249,7 +7249,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='5ea6146';
+const KH_BUILD='aa28d18';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -7454,10 +7454,10 @@ function newClsRender(){
     note.textContent='';
   }else{
     const taken=newClsTaken(newCls.g);
-    secBox.innerHTML=[1,2,3,4,5,6,7,8].map(n=>{
+    secBox.innerHTML=Array.from({length:20},(_,i)=>i+1).map(n=>{
       const t=taken.has(n);
       return `<button type="button" class="chip ${newCls.n===n?'sel':''}" ${t?'disabled style="opacity:.4;cursor:not-allowed"':''}
-        onclick="${t?'':'newClsPickSec('+n+')'}">${'١٢٣٤٥٦٧٨'[n-1]}</button>`;
+        onclick="${t?'':'newClsPickSec('+n+')'}">${c1SecAr(n)}</button>`;
     }).join('');
     note.textContent=taken.size?'الأرقام الباهتة شُعَبٌ '+khG('لديكِ','لديك')+' أصلاً في هذا الصف.':'';
   }
@@ -7529,7 +7529,7 @@ async function newClsSave(){
   if(c1AllClasses().some(c=>c.id===id)){toast('هذه الشعبة موجودةٌ '+khG('لديكِ','لديك')+' أصلاً',true);return;}
   const students=newCls.stu.map(s=>s.trim()).filter(Boolean);
   const cls={
-    id,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,
+    id,name:gradeName(g)+'/'+c1SecAr(n),num:n,g,
     color:C1_CLS_COLORS[c1AllClasses().length%C1_CLS_COLORS.length],
     subjects:subs.slice(),students,
   };
@@ -8760,12 +8760,12 @@ function suRender(){
     const d=suData[suActive];
     const gname=gradeName(suActive);
     const focus=window._suFocus;
-    // مربعات الشعب الثماني الجاهزة
-    const tiles=[...Array(8)].map((_,i)=>{
+    // مربعات الشعب الجاهزة (١–٢٠)
+    const tiles=[...Array(20)].map((_,i)=>{
       const n=i+1;
       const sec=d.secs[n];
       const cls=['sec-tile',sec&&sec.sel?'sel':'',sec&&sec.sel&&sec.subjects.length?'hasS':'',focus===suActive+'-'+n?'focus':''].join(' ');
-      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+'١٢٣٤٥٦٧٨'[i]+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':''+khG('اختاري','اختر')+' المادة'):'')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
+      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+c1SecAr(i+1)+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':''+khG('اختاري','اختر')+' المادة'):'')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
     }).join('');
     // صندوق مواد الشعبة قيد التحديد
     let subjBox='';
@@ -8775,7 +8775,7 @@ function suRender(){
       if(sec&&sec.sel){
         const _subs=subjectsForGrade(suActive,suRender);
         const _note=_subs.length?'':subjectsNotice(suActive);
-        subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي '+khG('تدرّسينها','تدرّسها')+' لشعبة <b>'+gname+'/'+'١٢٣٤٥٦٧٨'[n-1]+'</b>؟</div>'
+        subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي '+khG('تدرّسينها','تدرّسها')+' لشعبة <b>'+gname+'/'+c1SecAr(n)+'</b>؟</div>'
           +_note
           +'<div class="subj-grid">'+_subs.map(sub=>{
             const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
@@ -8845,14 +8845,15 @@ function suRender(){
       +'<button class="c1-mbtn go" onclick="suFinish()">تأكيد وبدء الاستخدام</button></div></div>';
   }
 }
+function c1SecAr(n){return String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function suBuildClasses(){
   const out=[];let colorIdx=0;
   for(const g of suGrades){
     const d=suData[g];if(!d)continue;
-    for(let n=1;n<=8;n++){
+    for(let n=1;n<=20;n++){
       const sec=d.secs[n];
       if(sec&&sec.sel&&sec.subjects.length){
-        out.push({id:'c1g'+g+'s'+n,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+        out.push({id:'c1g'+g+'s'+n,name:gradeName(g)+'/'+c1SecAr(n),num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
       }
     }
   }
@@ -11940,6 +11941,9 @@ async function noorImpApply(){
 // الدالّة c1-noor ترفض أفعال lab_* من أي حسابٍ آخر، فإخفاء القسم هنا راحةٌ لا حماية.
 const NL_EMAILS=['xx@y.com','teacherplane2026project@gmail.com'];
 function nlIsLab(){return !KH_DEMO&&!!(currentUser&&NL_EMAILS.includes(String(currentUser.email||'').toLowerCase()));}
+// قسم «منصّة نور» وحده (بلا بقية أدوات المختبر): حسابات المختبر + أ. سمير عبد المعز (٢٤ نوفمبر)
+const NL_NOOR_EXTRA=['samiradelmoeaz77@gmail.com'];
+function nlNoorOn(){return nlIsLab()||(!KH_DEMO&&!!(currentUser&&NL_NOOR_EXTRA.includes(String(currentUser.email||'').toLowerCase())));}
 const nl={tab:'pts',ov:null,st:null,stCid:'',lessons:{},gen:null,post:null,ai:{},dev:null,busy:{}};
 const NL_TABS=[['pts','لوحة النقاط',''],['week','حصص الأسبوع',''],['stu','تحليل الطلاب',''],['gen','مولّد الواجب الذكي',''],['room','غرفة نقاش',''],['dev','وصول المطوّر','']];
 const nlN=n=>egArNum(Math.round(+n||0).toLocaleString('en-US'));
@@ -11951,7 +11955,7 @@ function nlLoading(t){return `<div class="nl-load"><span class="nl-spin"></span>
 
 async function nlRender(){
   const root=document.getElementById('nl-root');if(!root)return;
-  if(!nlIsLab()){root.innerHTML='';return;}
+  if(!nlNoorOn()){root.innerHTML='';return;}
   let s;
   try{s=await noorStatus();}catch(e){root.innerHTML=`<div class="nl-card"><p class="sub">${escHtml(e.message)}</p></div>`;return;}
   if(!s.linked){
