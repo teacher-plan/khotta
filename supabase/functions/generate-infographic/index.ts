@@ -7,6 +7,7 @@
 // النشر:  supabase functions deploy generate-infographic
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
+import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     // إطلاقاً (تحقّقٌ بمسح شامل لكل نداءات هذه الدالة)، فقبولها من العميل
     // كان يسمح لمن يستدعي الدالة مباشرةً (بلا واجهة) بطلب 4K — الأغلى —
     // بنفس نقطة الرصيد الواحدة التي تُخصم قبل قراءة هذا السطر.
-    const size = "2K";
+    const size = "1K";
     const aspect = ["9:16", "3:4", "1:1", "16:9", "21:9", "2:3", "4:3"].includes(b.aspect) ? b.aspect : "9:16";
     // وضع التعديل: صورة موجودة + تعليمات تغيير موضعي
     const editPrompt = String(b.editPrompt || "").slice(0, 1000);
@@ -155,6 +156,7 @@ Deno.serve(async (req) => {
 
     // محتوى الطلب: النص + صفحات الدرس المرجعية (إن وُجدت)
     if (cmPrompt) userPrompt = cmPrompt;
+    if (isEnglishSubject(subject)) userPrompt += "\n\n" + subjectRules(subject, "infographic");
     const genContent: unknown[] = [{ type: "text", text: userPrompt }];
     for (const u of bookImages) genContent.push({ type: "image_url", image_url: { url: u } });
 

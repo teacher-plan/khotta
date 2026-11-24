@@ -531,7 +531,7 @@ body.inapp #c1-budget-btn{display:flex}
   #wk-sheet .tt-mobile{display:block}
 }
 /* منتقي الخلية */
-.c1-modal{position:fixed;inset:0;z-index:941;background:rgba(48,24,0,.5);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
+.c1-modal{position:fixed;inset:0;z-index:941;background:rgba(48,24,0,.5);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;overscroll-behavior:contain}
 .c1-modal.open{display:flex}
 .c1-mbox{background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(48,24,0,.3)}
 .c1-mbox.wide{max-width:640px;position:relative;overflow:hidden;
@@ -892,6 +892,13 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
 .noor-sheet .acct-in{margin-bottom:4px}
 .noor-lbl{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 4px}
 .noor-it{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:6px;font-size:13px;cursor:pointer;background:var(--card)}
+.noor-day{border:1.5px solid var(--border);border-radius:14px;padding:10px 12px;margin-top:8px;background:var(--surface)}
+.noor-day-h{display:flex;align-items:center;gap:8px}.noor-day-h b{white-space:nowrap;font-size:13px}
+.noor-day-x{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:#fff;color:#A0341F;font-size:18px;cursor:pointer;flex:none}
+.noor-adv{margin-top:12px;border:1.5px dashed var(--border);border-radius:14px;padding:8px 12px}.noor-adv summary{cursor:pointer;font-weight:800;font-size:13px}
+.noor-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}.noor-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12.5px;cursor:pointer;background:var(--surface)}
+.noor-chip:has(input:checked){border-color:#1F7A4D;background:rgba(31,122,77,.08)}.noor-ta{width:100%;font-family:inherit;line-height:1.7;resize:vertical}
+
 .noor-it input{width:17px;height:17px;flex:none;accent-color:#1F7A4D}
 .noor-req{font-size:10.5px;font-weight:800;background:#e3f2ea;color:#1F7A4D;border-radius:99px;padding:1px 8px;margin-inline-start:auto}
 .noor-prog{margin-top:10px}
@@ -1226,6 +1233,9 @@ body:has(#live-stage.on) #c1-offbar,body:has(#gm-stage-bg[style*="flex"]) #c1-of
    ويتحرّك معها العارض ويُظهر الخطة تحت السبورة. الحلّ المعتمد: تثبيت body نفسه (position:fixed) وإعادة موضع التمرير عند الإغلاق. */
 html.live-lock,html.live-lock body{overflow:hidden!important;overscroll-behavior:none;height:100%}
 html.live-lock body{position:fixed;inset-inline:0;width:100%;top:var(--live-lock-top,0)}
+/* قفل الصفحة خلف النوافذ المنبثقة: body ثابتٌ بطوله الكامل (بلا height:100% ولا overflow) فتبقى الخطة مرئيةً في موضعها تحت النافذة */
+html.m-lock{overflow:hidden}
+html.m-lock body{position:fixed;inset-inline:0;width:100%;top:var(--m-lock-top,0)}
 #live-body,#live-view .lv-vbody,.lb-pop{overscroll-behavior:contain}
 #live-stage.on{display:block}
 /* سبورة الصف: خلفية خضراء داكنة بنقشة غبار طباشير خفيفة (::before) بدل
@@ -6448,6 +6458,38 @@ function storagePath(fileName){
   const ext=(String(fileName||'').match(/\.[A-Za-z0-9]{1,8}$/)||[''])[0].toLowerCase();
   return currentUser.id+'/'+crypto.randomUUID()+ext;
 }
+// رفع إلى Cloudflare R2: null يعني «ارجع إلى Supabase» (غير مضبوط أو تعذّر الرفع)
+let _r2Off=false;
+async function storageUploadR2(file,fileName,kind){
+  if(_r2Off)return null;
+  try{
+    const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'sign_upload',fileName,size:file.size,contentType:file.type||'application/octet-stream'}});
+    if(error||!data||!data.putUrl){
+      // supabase-js يُخفي جسم الردّ غير الناجح في error.context — وفيه السبب
+      let why=(data&&data.error)||'';
+      if(!why&&error&&error.context&&error.context.json){try{why=(await error.context.clone().json()).error||'';}catch(_){}}
+      if(why==='quota_exceeded'){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return false;}
+      // Supabase احتياطٌ فقط إن لم يُضبط R2 أصلاً: عطلٌ عابر لا يملأ مخزن Supabase (١ غيغابايت للمنصّة كلها)
+      if(why==='not_configured'){_r2Off=true;return null;}
+      toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;
+    }
+    const put=await fetch(data.putUrl,{method:'PUT',headers:{'Content-Type':data.contentType},body:file});
+    if(!put.ok){console.warn('R2 PUT',put.status);toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;}
+    const{error:rowErr}=await sb.from('user_files').insert({user_id:currentUser.id,path:data.path,size_bytes:file.size,kind,file_name:fileName});
+    if(rowErr){try{await sb.functions.invoke('r2-files',{body:{action:'delete',path:data.path}});}catch(e){}return null;}
+    const url=data.publicUrl;
+    return{path:data.path,name:fileName,size:file.size,viewLink:url,previewLink:url,downloadLink:url};
+  }catch(e){console.warn('storageUploadR2',e);return null;}
+}
+// تنزيل ملفٍّ مرفوع أيّاً كان مكانه (R2 أو Supabase)
+async function storageDownload(path,url){
+  if(String(path||'').startsWith('r2:')){
+    const r=await fetch(url||('https://files.khotati.com/'+String(path).slice(3)));
+    if(!r.ok)return{data:null,error:new Error('HTTP '+r.status)};
+    return{data:await r.blob(),error:null};
+  }
+  return sb.storage.from('user-files').download(path);
+}
 async function storageUpload(file,fileName,kind){
   if(file.size>ACH_MAX_FILE_SIZE){toast('الملف أكبر من الحد المسموح',true);return null;}
   try{
@@ -6456,6 +6498,11 @@ async function storageUpload(file,fileName,kind){
     // رسالةٌ لا تكشف رقم الحصّة ولا المستهلَك — فقط أن المساحة امتلأت،
     // مطابقةً لروح "بلا إشعارٍ بالمساحة المتاحة".
     if(!allowed){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return null;}
+    // R2 أولاً (files.khotati.com): رابط رفعٍ موقَّع من الخادم، والحصّة تُفحص هناك أيضاً.
+    // إن لم يُضبط R2 بعد (not_configured) أو تعذّر، نكمل إلى Supabase كما كان.
+    const r2=await storageUploadR2(file,fileName,kind);
+    if(r2===false)return null;   // امتلأت الحصّة أو تعذّر R2 مؤقتاً: لا نرجع إلى Supabase
+    if(r2)return r2;
     const path=storagePath(fileName);
     const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
     if(upErr){
@@ -6477,6 +6524,9 @@ async function storageUpload(file,fileName,kind){
 }
 async function storageDelete(path){
   if(!path)return false;
+  if(String(path).startsWith('r2:')){
+    try{const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'delete',path}});return !error&&!!(data&&data.ok);}catch(e){return false;}
+  }
   try{
     await sb.storage.from('user-files').remove([path]);
     await sb.from('user_files').delete().eq('user_id',currentUser.id).eq('path',path);
@@ -7199,7 +7249,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='f29dca3';
+const KH_BUILD='c4bd778';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -9377,7 +9427,10 @@ function buildUnitsFromRows(rows,semester,subject){
   const unitsMap={};const order=[];
   sorted.forEach(r=>{
     if(!unitsMap[r.unit]){unitsMap[r.unit]=[];order.push(r.unit);}
-    unitsMap[r.unit].push({id:stableLessonId(semester,subject,r.grade,r.unit,r.lesson),name:r.lesson});
+    // الدرس نفسه قد يتكرّر في أكثر من كتاب (كتاب الطالب وكتاب النشاط) — يظهر مرّة واحدة
+    const id=stableLessonId(semester,subject,r.grade,r.unit,r.lesson);
+    if(unitsMap[r.unit].some(x=>x.id===id))return;
+    unitsMap[r.unit].push({id,name:r.lesson});
   });
   return order.map(u=>({name:u,lessons:unitsMap[u]}));
 }
@@ -9632,31 +9685,35 @@ async function c1LessonBookImages(grade,subject,unitName,lessonName){
     const semester=profile.semester||'الفصل الأول';
     const curRows=await c1Curriculum(semester,subject,grade,'unit,lesson,sort,page,book_no');
     if(!curRows||!curRows.length)return null;
-    const bookNos=[...new Set(curRows.map(r=>r.book_no||1))];
+    // كل الكتب التي فيها الدرس (كتاب الطالب أولاً ثم كتاب النشاط)، بلا تجاوز عشرين صفحة
+    const bookNos=[...new Set(curRows.map(r=>r.book_no||1))].sort((a,b)=>a-b);
+    const images=[],seen={};
     for(const bookNo of bookNos){
-      const sorted=curRows.filter(r=>(r.book_no||1)===bookNo).sort((a,b)=>(a.sort||0)-(b.sort||0));
-      const idx=sorted.findIndex(r=>r.unit===unitName&&r.lesson===lessonName);
-      if(idx<0)continue;
-      const start=parseInt(sorted[idx].page);if(!start)continue;
+      const rowsB=curRows.filter(r=>(r.book_no||1)===bookNo);
+      const row=rowsB.find(r=>r.unit===unitName&&r.lesson===lessonName);
+      if(!row)continue;
+      const start=parseInt(row.page);if(!start)continue;
       const bs=await c1Ref('book_sources',`${semester}|${subject}|${grade}|${bookNo}`,async()=>{
         const{data,error}=await sb.from('book_sources').select('*').eq('grade',String(grade)).eq('subject',subject).eq('semester',semester).eq('book_no',bookNo).maybeSingle();
         return error?null:(data||false);   // false = «لا مصدر» وهي نتيجة صالحة تُخزَّن
       });
       if(!bs||!bs.base_path||!bs.page_count)continue;
       const offset=bs.offset_pages||1,pageCount=bs.page_count,base=bs.base_path;
-      let end=pageCount;
-      for(let j=idx+1;j<sorted.length;j++){const np=parseInt(sorted[j].page);if(np&&np>start){end=np-1;break;}}
+      // نهاية الدرس: قبل أقرب صفحة بدايةٍ لدرسٍ آخر بعده في الكتاب نفسه (لا التالي في الترتيب:
+      // قصص Graded readers في آخر كتاب النشاط تكسر تتابع الصفحات)
+      const nexts=rowsB.map(r=>parseInt(r.page)).filter(n=>n&&n>start);
+      let end=nexts.length?Math.min(...nexts)-1:pageCount;
+      if(bookNo>1)end=Math.min(end,start+3);   // كتاب النشاط: صفحات قليلة لكل درس
       if(end<start)end=start;
       const pub=sheet=>sb.storage.from('library-files').getPublicUrl(base+'/p'+sheet+'.jpg').data.publicUrl;
-      const images=[],seen={};
       // عشرون: الحدّ نفسه في summarize-lesson-pages. لو زاد أحدهما عن الآخر
       // قُصّت الصفحات في الطرف الأضيق صامتةً وخرج الملخّص ناقصاً بلا إشارة.
       for(let bp=start;bp<=end&&images.length<20;bp++){
         const sheet=bp+offset-1;if(sheet<1||sheet>pageCount)continue;
         const u=pub(sheet);if(seen[u])continue;seen[u]=1;images.push(u);
       }
-      if(images.length)return images;
     }
+    if(images.length)return images;
     return null;
   }catch(e){return null;}
 }
@@ -9666,7 +9723,9 @@ async function c1BookSummary(lessonId,grade,subject,unitName,lessonName){
   if(!lessonId)return null;
   await c1AssetsLoad();
   const cached=c1Asset(lessonId).book_summary;
-  if(cached)return cached;
+  // الإنجليزية: ملخّصٌ قديم كُتب بالعربية (قبل تعليمات المادة) يُهمَل ويُعاد بالإنجليزية
+  const enStale=cached&&/إنجليزي|انجليزي|english/i.test(String(subject||''))&&(String(cached).match(/[\u0600-\u06FF]/g)||[]).length>String(cached).length*0.3;
+  if(cached&&!enStale)return cached;
   const images=await c1LessonBookImages(grade,subject,unitName,lessonName);
   if(!images||!images.length)return null;
   try{
@@ -12170,7 +12229,7 @@ async function nlGoLesson(g,subj,ui,id){
 let nlAtt=null;
 function nlAttOpen(){
   const cs=(noorSt||{}).courses||[];
-  nlAtt={cid:(cs[0]||{}).cid||'',q:'',prep:null,lesson:'',games:null,all:false,pick:{},files:[],date:'',run:null};
+  nlAtt={cid:(cs[0]||{}).cid||'',q:'',prep:null,lesson:'',games:null,all:false,pick:{},files:[],date:'',run:null,shared:null,shAll:false,shUser:'',spick:{}};
   document.getElementById('nl-att-modal').classList.add('open');
   nlAttLessons();nlAttRender();
 }
@@ -12179,7 +12238,7 @@ async function nlAttLessons(){
   const cid=nlAtt&&nlAtt.cid;if(!cid||nl.lessons[cid]||nl.busy['ls'+cid])return;
   nl.busy['ls'+cid]=true;
   try{const r=await noorCall({action:'lessons',cid});nl.lessons[cid]=r.lessons||[];}catch(e){nl.lessons[cid]=[];toast(e.message,true);}
-  nl.busy['ls'+cid]=false;if(nlAtt){if(nlAtt.prep&&!nlAtt.lesson)nlAtt.lesson=noorBestLesson(nl.lessons[cid],{name:nlAtt.prep.title,unit:''},null)||'';nlAttRender();}
+  nl.busy['ls'+cid]=false;if(nlAtt){if(nlAtt.prep&&!nlAtt.lesson)nlAtt.lesson=nlAttPlanLesson(nlAtt.prep)||noorBestLesson(nl.lessons[cid],{name:nlAtt.prep.title,unit:''},null)||'';nlAttRender();}
 }
 // تحاضير المقرّر في نور مع تاريخ إنشائها (إن عُرف)، الأحدث أولاً
 function nlAttPreps(){
@@ -12198,8 +12257,10 @@ async function nlAttGames(){
 }
 function nlAttGameFor(g,t){return nlSame(g.lesson||'',t)||nlSame(g.title||'',t);}
 function nlAttPick(p){
-  const a=nlAtt;a.prep=p;a.pick={};a.files=[];a.run=null;
-  a.lesson=nl.lessons[a.cid]?(noorBestLesson(nl.lessons[a.cid],{name:p.title,unit:''},null)||''):'';
+  const a=nlAtt;a.prep=p;a.pick={};a.spick={};a.files=[];a.run=null;a.shAll=false;
+  // الدرس في شجرة نور: من بطاقة الدرس التي نُشر منها هذا التحضير أولاً (مؤكّد)، ثم بمطابقة الاسم
+  a.lesson=nlAttPlanLesson(p)||(nl.lessons[a.cid]?(noorBestLesson(nl.lessons[a.cid],{name:p.title,unit:''},null)||''):'');
+  nlAttShared();
   const days=nlCapDays(15);a.date=(days.find(x=>x.f<NL_CAP_F)||days[0]||{}).d||'';
   nlAttGames();
   (nlAtt.games||[]).forEach(g=>{if(nlAttGameFor(g,p.title))a.pick[g.id]=true;});
@@ -12210,7 +12271,26 @@ function nlAttAddFiles(inp){
   if(big.length)toast('أكبر من ٢٥ ميغابايت (حدّ نور): '+big.join('، '),true);
   inp.value='';nlAttRender();
 }
-function nlAttCount(){const a=nlAtt;return Object.values(a.pick).filter(Boolean).length+a.files.length;}
+function nlAttCount(){const a=nlAtt;return Object.values(a.pick).filter(Boolean).length+Object.values(a.spick).filter(Boolean).length+a.files.length;}
+// الدرس الذي نُشر له هذا التحضير من بطاقة الدرس في خطّة (يُحفظ في plan_state.noor)
+function nlAttPlanLesson(p){const ps=(profile&&profile.plan_state)||{};
+  for(const k in ps){const n=ps[k]&&ps[k].noor;if(n&&n.prep_id&&String(n.prep_id)===String(p.id)&&n.lesson_id&&(!n.cid||n.cid===nlAtt.cid))return String(n.lesson_id);}return '';}
+// مادة المقرّر وصفّه من اسمه في نور («الرياضيات / السابع»)
+function nlAttSubj(){const c=((noorSt||{}).courses||[]).find(x=>x.cid===nlAtt.cid)||{};
+  const [s,g]=String(c.name||'').split('/').map(x=>x.trim());const gi=NOOR_GRADES.indexOf(g||'');
+  return {subject:s||'',grade:gi>0?String(gi):'',gname:g||''};}
+// مكتبة خطّة المشتركة: تحاضير وألعاب وملخّصات كل المعلّمين لمادة المقرّر وصفّه
+async function nlAttShared(){
+  const a=nlAtt,{subject,grade}=nlAttSubj();a.shared=null;a.shErr='';
+  if(!subject||!grade){a.shared=[];a.shErr='لم نتعرّف على مادة المقرّر وصفّه من اسمه في نور.';return;}
+  try{const{data,error}=await sb.from('c1_shared_assets').select('id,user_id,uploader_name,kind,unit,lesson,title,template,image_url,created_at')
+      .eq('subject',subject).eq('grade',grade).in('kind',['prep','game','info']).order('created_at',{ascending:false}).limit(500);
+    if(error)throw error;if(nlAtt!==a)return;a.shared=data||[];}
+  catch(e){if(nlAtt!==a)return;a.shared=[];a.shErr='تعذّر جلب مكتبة خطّة: '+(e.message||'');}
+  nlAttRender();
+}
+function nlAttSharedFor(x,t){return nlSame(x.lesson||x.title||'',t)||(!!x.lesson&&noorTxt(x.lesson)===noorTxt(t));}
+const NL_SH_KIND={prep:['تحضير','ki-list','ملف Word'],game:['لعبة','ki-game','درس تفاعلي +٤٠'],info:['ملخّص','ki-book','PDF']};
 function nlAttRender(){
   const el=document.getElementById('nl-att-body');if(!el||!nlAtt)return;
   const a=nlAtt,cs=(noorSt||{}).courses||[],o=nl.ov;
@@ -12234,14 +12314,32 @@ function nlAttRender(){
     <div class="nl-sub-t"><i class="ki ki-game" aria-hidden="true"></i> ألعابك المحفوظة باسم الدرس</div>
     ${a.games===null?nlLoading('يجلب ألعابك…'):(mine.length?mine.map(gRow).join(''):'<div class="nl-gap">لا لعبة محفوظة باسم هذا الدرس.</div>')}
     ${a.games&&others.length?`<button class="nl-att-more" onclick="nlAtt.all=!nlAtt.all;nlAttRender()">${a.all?'إخفاء بقية الألعاب':'عرض كل ألعابي ('+egArNum(others.length)+')'}</button>${a.all?others.map(gRow).join(''):''}`:''}
+    ${nlAttSharedHtml()}
     <div class="nl-sub-t"><i class="ki ki-clip" aria-hidden="true"></i> ملفات من ${khG('جهازكِ','جهازك')}</div>
     <label class="nl-att-drop"><input type="file" multiple onchange="nlAttAddFiles(this)" hidden><i class="ki ki-upload" aria-hidden="true"></i> اختيار ملفات (صور، PDF، Word، عروض…)<small>تُرفع كلها دفعةً واحدة · حتى ٢٥ ميغابايت للملف</small></label>
     ${a.files.map((f,i)=>`<div class="nl-att-row"><i class="ki ki-clip" aria-hidden="true"></i><span>${escHtml(f.name)}<small>${egArNum((f.size/1048576).toFixed(1))} ميغابايت</small></span><button class="nl-att-x" aria-label="إزالة" onclick="nlAtt.files.splice(${i},1);nlAttRender()">×</button></div>`).join('')}
     <div class="nl-sub-t"><i class="ki ki-calendar" aria-hidden="true"></i> تاريخ النشر في نور</div>
     <select class="nl-in" onchange="nlAtt.date=this.value;nlAttRender()">${days.map(x=>`<option value="${x.d}" ${x.d===a.date?'selected':''}>${nlDayName(x.d)} ${nlShort(x.d)}${x.d===o.today?' (اليوم)':''} — ${x.f>=NL_CAP_F?'ممتلئ':'متاح '+egArNum(NL_CAP_F-x.f)+' من '+egArNum(NL_CAP_F)}</option>`).join('')}</select>
-    <details class="nl-att-adv"><summary>الدرس في شجرة نور</summary>${lessons?`<select class="nl-in" onchange="nlAtt.lesson=this.value">${a.lesson?'':'<option value="">— اختر —</option>'}${lessons.map(l=>`<option value="${escAttr(l.id)}" ${a.lesson===l.id?'selected':''}>${escHtml(l.name)} — ${escHtml(l.unit)}</option>`).join('')}</select>`:nlLoading('يجلب دروس نور…')}</details>
+    ${lessons&&!a.lesson?`<div class="nl-gap" style="background:#FCEDE8;color:#8C2E1B"><i class="ki ki-alert" aria-hidden="true"></i> لم نعرف تلقائياً درس هذا التحضير في شجرة نور. ${khG('اختاري','اختر')} الدرس من القائمة أدناه ليُفعَّل الرفع.</div>`:''}
+    <details class="nl-att-adv" ${lessons&&!a.lesson?'open':''}><summary>الدرس في شجرة نور${a.lesson&&lessons?': '+escHtml((lessons.find(l=>l.id===a.lesson)||{}).name||''):''}</summary>${lessons?`<select class="nl-in" onchange="nlAtt.lesson=this.value;nlAttRender()">${a.lesson?'':'<option value="">— اختر —</option>'}${lessons.map(l=>`<option value="${escAttr(l.id)}" ${a.lesson===l.id?'selected':''}>${escHtml(l.name)} — ${escHtml(l.unit)}</option>`).join('')}</select>`:nlLoading('يجلب دروس نور…')}</details>
     ${n>left?`<div class="nl-gap" style="background:#FCEDE8;color:#8C2E1B"><i class="ki ki-alert" aria-hidden="true"></i> ${egArNum(n)} ملفاً والمتاح بهذا التاريخ ${egArNum(left)}: ما زاد لن تُحتسب له نقاط. ${khG('اختاري','اختر')} يوماً آخر أو أقلّ.</div>`:''}
-    <div class="nl-actions"><button class="nl-btn gold" style="flex:1;justify-content:center" ${n&&a.lesson?'':'disabled'} onclick="nlAttGo()"><i class="ki ki-upload" aria-hidden="true"></i> ارفع ${n?egArNum(n)+' ':''}إلى نور</button></div>`;
+    <div class="nl-actions"><button class="nl-btn gold" style="flex:1;justify-content:center" ${n&&a.lesson?'':'disabled'} onclick="nlAttGo()"><i class="ki ki-upload" aria-hidden="true"></i> ${!n?'اختر ملفاً واحداً على الأقل':!a.lesson?'اختر الدرس في شجرة نور أولاً':'ارفع '+egArNum(n)+' إلى نور'}</button></div>`;
+}
+function nlAttSharedHtml(){
+  const a=nlAtt,p=a.prep;
+  const head=`<div class="nl-sub-t"><i class="ki ki-folder" aria-hidden="true"></i> من مكتبة خطّة المشتركة</div>`;
+  if(a.shared===null)return head+nlLoading('يجلب التحاضير والألعاب والملخّصات…');
+  if(a.shErr&&!a.shared.length)return head+`<div class="nl-gap">${escHtml(a.shErr)}</div>`;
+  const me=currentUser&&currentUser.id;
+  const users=[...new Map(a.shared.map(x=>[x.user_id,x.uploader_name||'معلّم'])).entries()];
+  const byUser=a.shared.filter(x=>!a.shUser||(a.shUser==='me'?x.user_id===me:x.user_id===a.shUser));
+  const mine=byUser.filter(x=>nlAttSharedFor(x,p.title)),rest=byUser.filter(x=>!nlAttSharedFor(x,p.title));
+  const ord={prep:0,info:1,game:2};mine.sort((x,y)=>(ord[x.kind]-ord[y.kind])||String(y.created_at).localeCompare(String(x.created_at)));
+  const row=x=>{const k=NL_SH_KIND[x.kind]||['ملف','ki-clip',''];
+    return `<label class="nl-att-row"><input type="checkbox" ${a.spick[x.id]?'checked':''} onchange="nlAtt.spick['${escJs(x.id)}']=this.checked;nlAttRender()"><i class="ki ${k[1]}" aria-hidden="true"></i><span>${k[0]}: ${escHtml(x.kind==='game'?(x.title||x.lesson||''):(x.lesson||x.title||''))}<small>${escHtml(x.uploader_name||'معلّم')}${x.user_id===me?' (أنت)':''} · ${nlShort(String(x.created_at||'').slice(0,10))}${x.kind==='game'&&typeof GM_TPL_LBL!=='undefined'&&GM_TPL_LBL[x.template]?' · '+escHtml(GM_TPL_LBL[x.template]):''}</small></span>${x.kind==='info'&&x.image_url?`<a class="nl-att-x" style="display:grid;place-items:center;text-decoration:none" href="${escAttr(x.image_url)}" target="_blank" rel="noopener" aria-label="معاينة" onclick="event.stopPropagation()"><i class="ki ki-eye" aria-hidden="true"></i></a>`:''}<em class="nl-pill ok">${k[2]}</em></label>`;};
+  return head+`<select class="nl-in" onchange="nlAtt.shUser=this.value;nlAttRender()"><option value="">كل الحسابات (${egArNum(users.length)})</option><option value="me" ${a.shUser==='me'?'selected':''}>حسابي فقط</option>${users.filter(([id])=>id!==me).map(([id,n])=>`<option value="${escAttr(id)}" ${a.shUser===id?'selected':''}>${escHtml(n)}</option>`).join('')}</select>
+    ${mine.length?mine.map(row).join(''):`<div class="nl-gap">لا ملفات في المكتبة باسم هذا الدرس${a.shUser?' لهذا الحساب':''}.</div>`}
+    ${rest.length?`<button class="nl-att-more" onclick="nlAtt.shAll=!nlAtt.shAll;nlAttRender()">${a.shAll?'إخفاء بقية ملفات المادة':'عرض كل ملفات المادة في المكتبة ('+egArNum(rest.length)+')'}</button>${a.shAll?rest.map(row).join(''):''}`:''}`;
 }
 function nlAttRunHtml(){
   const r=nlAtt.run,ok=r.items.filter(x=>x.st==='ok').length;
@@ -12255,6 +12353,7 @@ async function nlAttGo(retry){
   if(!retry){
     const items=[];
     (a.games||[]).forEach(g=>{if(a.pick[g.id])items.push({k:'g',g,name:'درس تفاعلي: '+(g.title||g.lesson||a.prep.title),st:'wait'});});
+    (a.shared||[]).forEach(s=>{if(a.spick[s.id])items.push({k:'s',s,name:(NL_SH_KIND[s.kind]||['ملف'])[0]+': '+((s.kind==='game'?s.title:s.lesson)||s.lesson||s.title||a.prep.title)+(s.uploader_name?' — '+s.uploader_name:''),st:'wait'});});
     a.files.forEach(f=>items.push({k:'f',f,name:f.name,st:'wait'}));
     if(!items.length)return;
     if(!await c1Confirm('رفع '+egArNum(items.length)+' ملفاً إلى تحضير «'+a.prep.title+'» في نور بتاريخ '+a.date+' لكل شعب '+c.name+'؟'))return;
@@ -12272,13 +12371,29 @@ async function nlAttGo(retry){
         const gn=(g.content&&g.content.groupNames)||gmGroupNames;
         const html=await gmBuildStandalone(g.template,(g.content&&g.content.items)||[],gn,g.title||a.prep.title,{solo:true});
         file={blob:noorScormZip(await html.text(),g.title||a.prep.title),name:'lesson.zip'};title=x.name;kind='Scorm';
+      }else if(x.k==='s'){
+        // من مكتبة خطّة: التحضير ← Word، اللعبة ← درس تفاعلي (SCORM)، الملخّص ← PDF
+        const{data:row,error}=await sb.from('c1_shared_assets').select('*').eq('id',x.s.id).maybeSingle();
+        if(error||!row)throw new Error('لم نجد الملف في مكتبة خطّة');
+        const nm=row.lesson||row.title||a.prep.title,safe=t=>String(t||'').replace(/[\\/:*?"<>|]/g,'').slice(0,80),sj=nlAttSubj();
+        if(row.kind==='prep'){
+          if(!row.content)throw new Error('التحضير فارغ');
+          file={blob:khZipBlob(planDocx(row.content,{subject:sj.subject,grade:sj.gname,unit:row.unit||'',lesson:nm,teacher:row.uploader_name||'',date:''})),name:'تحضير - '+safe(nm)+'.docx'};title='تحضير درس '+nm;
+        }else if(row.kind==='game'){
+          const gc=row.content||{};if(!row.template||!(gc.items||[]).length)throw new Error('اللعبة بلا أسئلة');
+          const html=await gmBuildStandalone(row.template,gc.items,gc.groupNames||gmGroupNames,row.title||nm,{solo:true});
+          file={blob:noorScormZip(await html.text(),row.title||nm),name:'lesson.zip'};title='درس تفاعلي: '+(row.title||nm);kind='Scorm';
+        }else{
+          if(!row.image_url)throw new Error('الملخّص بلا صورة');
+          file={blob:await noorImgPdf(row.image_url),name:'ملخص - '+safe(nm)+'.pdf'};title='ملخّص درس '+nm;
+        }
       }else{file={blob:x.f,name:x.f.name.replace(/[\\/:*?"<>|]/g,'')||'file'};title=x.f.name.replace(/\.[^.]+$/,'');}
       await noorCall({action:'upload',cid:c.cid,prep_id:a.prep.id,lesson_id:a.lesson,title,date:a.date,sections:secs,criteria:[],filename:file.name,kind},file);
       x.st='ok';
       o.fByDate=o.fByDate||{};o.fByDate[a.date]=(o.fByDate[a.date]||0)+1;
       if(a.date===o.today){o.caps.files++;if(kind==='Scorm')o.caps.scorm++;}
       if(kind==='Scorm')(o.scorms=o.scorms||[]).push({cid:c.cid,title,publish:a.date});
-    }catch(e){x.st='err';x.msg=e.message||'تعذّر';}
+    }catch(e){x.st='err';x.msg=(e.message||'تعذّر')+(e.code&&e.code!=='net'?' ['+e.code+']':'');console.error('nlAtt upload',x.name,e);}
     nlAttRender();
   }
   a.run.busy=false;nlAttRender();
@@ -12797,8 +12912,26 @@ function noorToday(){
   if(d.getDay()===5)d.setDate(d.getDate()+2);else if(d.getDay()===6)d.setDate(d.getDate()+1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function noorEnKey(unit,name){
+  const n=String(name||''),u=String(unit||'')+' '+n;
+  if(!/\b(lesson|graded reader|learning club|welcome|optional)/i.test(n+' '+unit))return null;
+  let uk='';const m=u.match(/\bunit\s*(\d+)/i),c=u.match(/learning\s*club\s*(\d*)/i);
+  if(c)uk='lc'+(c[1]||'1');else if(m)uk='u'+m[1];else if(/welcome/i.test(u))uk='w';
+  let lk='';const lm=n.replace(/^.*:\s*(?=(lesson|graded|optional))/i,'').match(/^\s*lesson\s*(\d+)/i)||n.match(/\blesson\s*(\d+)/i);
+  if(/graded\s*reader/i.test(n))lk='gr';else if(/optional/i.test(n))lk='opt';else if(lm)lk='l'+lm[1];
+  return lk?{u:uk,l:lk}:null;
+}
 function noorBestLesson(lessons,l,saved){
-  if(saved&&lessons.some(x=>x.id===saved))return saved;
+  const sv=saved&&lessons.some(x=>x.id===saved)?saved:null;
+  // الإنجليزية (Team Together): أسماء الدروس تتكرّر في كل وحدة (Lesson 2: Story…) ونور يسمّيها
+  // «Unit1: Talent show: Lesson2» — فالمطابقة بمفتاح (الوحدة، رقم الدرس) لا بالاسم، وتتقدّم على ربطٍ محفوظ قديم.
+  const ek=noorEnKey(l.unit,l.name);
+  if(ek){
+    if(!ek.u)return sv; // وحدةٌ مجهولة: لا نخمّن
+    const hit=lessons.find(x=>{const k=noorEnKey(x.unit,x.name);return k&&k.u===ek.u&&k.l===ek.l;});
+    return hit?hit.id:sv;
+  }
+  if(sv)return sv;
   const t=noorTxt(l.name),n=noorNums(l.name),u=noorTxt(l.unit||'');
   let best=null,bs=0;
   for(const x of lessons){
@@ -12916,9 +13049,9 @@ async function noorPublishOpen(id){
     <label class="noor-lbl">الدرس المقابل في نور</label>
     <select class="acct-in" id="noor-lesson"><option>يجلب دروس نور…</option></select>
     <div id="noor-lesson-note" class="acct-note"></div>
-    <label class="noor-lbl">تاريخ الحصة</label>
-    <input class="acct-in" type="date" id="noor-date" value="${escAttr(pub&&pub.date||noorToday())}" onchange="noorLoadSlots()" style="direction:ltr">
-    <div id="noor-slots" class="noor-slots"></div>
+    <label class="noor-lbl">أيام نشر التحضير <span class="acct-note" style="font-weight:600">— كواجهة نور: الدرس الواحد قد يمتدّ على أكثر من يوم (حتى ٢٠)</span></label>
+    <div id="noor-days"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="pl-btn" type="button" onclick="noorDayAdd(true)"><i class="ki ki-plus" aria-hidden="true"></i> اليوم الدراسي التالي</button><button class="pl-btn" type="button" onclick="noorDayAdd(false)"><i class="ki ki-calendar" aria-hidden="true"></i> يومٌ بتاريخ آخر</button></div>
     <label class="noor-lbl">ما يُنشر</label>
     <div class="noor-items">${items.map(it=>`<label class="noor-it"><input type="checkbox" data-k="${it.k}" ${it.on?'checked':''}> ${escHtml(it.t)}${it.lock?' <span class="noor-req">أساسي</span>':''}</label>`).join('')}</div>
     <div id="noor-prog" class="noor-prog"></div>
@@ -12927,8 +13060,69 @@ async function noorPublishOpen(id){
       <button class="pl-btn" onclick="todayModalClose()">إغلاق</button>
     </div></div>`;
   document.getElementById('today-modal').classList.add('open');
+  noorCtx.days=[{date:pub&&pub.date||noorToday(),slots:[],sel:null}];
+  noorCtx.form=noorFormInit(st.prep,l);
+  noorDaysRender();
   noorLoadLessons();
   noorLoadSlots();
+}
+// ══ أيام النشر (date1…date20 في نور): لكل يومٍ تاريخه وحصصه ══
+function noorDaysRender(){
+  const box=document.getElementById('noor-days');if(!box||!noorCtx)return;
+  const D=noorCtx.days;
+  box.innerHTML=D.map((d,i)=>`<div class="noor-day"><div class="noor-day-h"><b>اليوم ${egArNum(i+1)}</b>
+      <input class="acct-in" type="date" value="${escAttr(d.date)}" onchange="noorCtx.days[${i}].date=this.value;noorCtx.days[${i}].sel=null;noorLoadSlots(${i})" style="direction:ltr;flex:1">
+      ${D.length>1?`<button class="noor-day-x" type="button" aria-label="حذف اليوم" onclick="noorCtx.days.splice(${i},1);noorDaysRender()">×</button>`:''}</div>
+    <div class="noor-slots" id="noor-slots-${i}">${noorSlotsHtml(i)}</div></div>`).join('');
+}
+function noorSlotsHtml(i){
+  const d=noorCtx.days[i];
+  if(d.loading)return '<p class="acct-note">يجلب حصص هذا اليوم من نور…</p>';
+  if(d.err)return '<p class="acct-note">'+escHtml(d.err)+'</p>';
+  if(!d.slots.length)return '<p class="acct-note">لا حصص لهذا المقرّر في هذا اليوم في نور — '+khG('اختاري','اختر')+' تاريخاً آخر.</p>';
+  return d.slots.map((x,j)=>`<label class="noor-it"><input type="checkbox" ${d.sel[j]?'checked':''} onchange="noorCtx.days[${i}].sel[${j}]=this.checked"> ${escHtml(x.label)} · ${escHtml(x.period)}${x.has_prep?' <span class="noor-req" style="background:#fdecc8;color:#8a5a00">عليها تحضير</span>':''}</label>`).join('');
+}
+function noorDayAdd(next){
+  const D=noorCtx.days;if(D.length>=20){toast('نور يسمح بعشرين يوماً للتحضير الواحد',true);return;}
+  const last=D[D.length-1].date||noorToday();
+  const date=next?(noorSchoolDays(new Date(new Date(last).getTime()+864e5).toLocaleDateString('en-CA'),1)[0]):last;
+  D.push({date,slots:[],sel:null});noorDaysRender();noorLoadSlots(D.length-1);
+}
+// ══ خيارات التحضير كما في نموذج نور، مُعبّأةً من تحضير خطة، وقابلةً للتعديل ══
+const NOOR_TAX=[['604','التذكُّر'],['605','التقييم'],['606','الإبداع']];
+const NOOR_STRAT=['الفصل المقلوب','التعلم التعاوني','التعلم التشاركي','التعلم الذاتي','التعلم بالاكتشاف','التعلم المبني على حل المشكلات','التعلم المبني على المشاريع','التعلم المبني على اللعب','التعلم بالنمذجة','التعلم المتمايز','الخرائط الذهنية','العصف الذهني'];
+const NOOR_AIDS=['الكتاب','كتب الكترونية','السبورة التقليدية','السبورة الذكية','الأقلام','جهاز عرض البيانات','جهاز الحاسب','صورة توضيحية','عروض تقديمية','نماذج مجسمة','الوسائط المتعددة (سمعية - بصرية)','الوسائط الاجتماعية'];
+const NOOR_TXT=[['objective','أهداف الدرس'],['lesson_vocabulary','المفردات'],['pre_learning','التعلم القبلي'],['description','التهيئة (الوصف)'],['thinking_skills','إجراءات التدريس'],['activities','الأنشطة'],['formative_assessment','التقويم التكويني'],['closing_assessment','التقويم الختامي'],['weekly_study_plan_comments','ملاحظات الخطة الأسبوعية']];
+function noorPlain(h){return String(h||'').replace(/<li[^>]*>/gi,'\n- ').replace(/<\/(p|li|ol|ul)>|<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\n{2,}/g,'\n').trim();}
+function noorFormInit(plan,l){
+  const m=noorPrepFields(plan,l.name);
+  const txt={};NOOR_TXT.forEach(([k])=>{txt[k]=k==='objective'?m.fields.objective:noorPlain(m.fields[k]);});
+  return {title:'',m,txt,orig:{...txt},tax:new Set(m.taxonomy),st:new Set(m.strategies),ai:new Set(m.aids),
+    st_other:m.fields.strategies_other||'',ai_other:m.fields.teaching_aids_other||'',weekly:true,share:false};
+}
+function noorAdvRender(){
+  const b=document.getElementById('noor-adv-body');if(!b||!noorCtx)return;const f=noorCtx.form;
+  const chk=(set,list,key)=>`<div class="noor-chips">${list.map((t,i)=>{const v=Array.isArray(t)?t[0]:String(i),n=Array.isArray(t)?t[1]:t;
+    return `<label class="noor-chip"><input type="checkbox" ${f[key].has(v)?'checked':''} onchange="noorCtx.form.${key}[this.checked?'add':'delete']('${v}')"> ${escHtml(n)}</label>`;}).join('')}</div>`;
+  b.innerHTML=`<label class="noor-lbl">عنوان التحضير</label><input class="acct-in" id="noor-f-title" value="${escAttr(f.title)}" placeholder="اسم الدرس كما في نور (افتراضياً)" oninput="noorCtx.form.title=this.value">
+    <label class="noor-lbl">تصنيف الأهداف</label>${chk(f.tax,NOOR_TAX,'tax')}
+    <label class="noor-lbl">استراتيجيات التدريس</label>${chk(f.st,NOOR_STRAT,'st')}
+    <input class="acct-in" placeholder="استراتيجيات أخرى" value="${escAttr(f.st_other)}" oninput="noorCtx.form.st_other=this.value">
+    <label class="noor-lbl">الوسائل التعليمية</label>${chk(f.ai,NOOR_AIDS,'ai')}
+    <input class="acct-in" placeholder="وسائل أخرى" value="${escAttr(f.ai_other)}" oninput="noorCtx.form.ai_other=this.value">
+    ${NOOR_TXT.map(([k,t])=>`<label class="noor-lbl">${t}</label><textarea class="acct-in noor-ta" rows="${k==='thinking_skills'||k==='activities'?5:3}" oninput="noorCtx.form.txt['${k}']=this.value">${escHtml(f.txt[k])}</textarea>`).join('')}
+    <label class="noor-it"><input type="checkbox" ${f.weekly?'checked':''} onchange="noorCtx.form.weekly=this.checked"> عرض في الخطة الأسبوعية</label>
+    <label class="noor-it"><input type="checkbox" ${f.share?'checked':''} onchange="noorCtx.form.share=this.checked"> السماح بمشاركة التحضير مع المعلّمين</label>
+    <p class="acct-note">الحقول مُعبّأة من تحضيرك في خطة. ما لم ${khG('تعدّليه','تعدّله')} يُرسل بتنسيقه الكامل.</p>`;
+}
+// الحقول بالصيغة التي يقبلها نور: غير المعدَّل بتنسيقه الأصلي، والمعدَّل فقراتٍ بسيطة
+function noorFormPayload(){
+  const f=noorCtx.form,out={...f.m.fields};
+  NOOR_TXT.forEach(([k])=>{if(f.txt[k]!==f.orig[k])out[k]=k==='objective'?f.txt[k]:String(f.txt[k]||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>'<p>'+escHtml(x)+'</p>').join('');});
+  out.strategies_other=f.st_other;out.teaching_aids_other=f.ai_other;
+  if(f.st_other&&!f.st.has('18'))f.st.add('18');
+  if(f.ai_other&&!f.ai.has('13'))f.ai.add('13');
+  return {fields:out,taxonomy:[...f.tax],strategies:[...f.st],aids:[...f.ai],show_weekly:f.weekly,allow_share:f.share};
 }
 async function noorLoadLessons(refresh){
   const sel=document.getElementById('noor-lesson'),note=document.getElementById('noor-lesson-note');if(!sel||!noorCtx)return;
@@ -12950,22 +13144,24 @@ async function noorLoadLessons(refresh){
       :khG('اختاري','اختر')+' الدرس من القائمة. <a href="#" onclick="noorLoadLessons(true);return false">تحديث القائمة</a>';
   }catch(e){if(noorCtx!==ctx||ctx.lesTok!==tok)return;sel.innerHTML='<option value="">تعذّر جلب الدروس</option>';note.textContent=e.message;}
 }
-async function noorLoadSlots(){
-  const box=document.getElementById('noor-slots');if(!box||!noorCtx)return;
-  const date=document.getElementById('noor-date').value;
-  box.innerHTML='<p class="acct-note">يجلب حصص هذا اليوم من نور…</p>';
-  const ctx=noorCtx,cid=ctx.cid,tok=ctx.slotTok=(ctx.slotTok||0)+1;
-  ctx.slots=[];
+// حصص يومٍ واحد (أو كل الأيام عند تغيير المقرّر)
+async function noorLoadSlots(i){
+  if(!noorCtx)return;
+  if(i==null){noorCtx.days.forEach((d,k)=>{d.sel=null;noorLoadSlots(k);});return;}
+  const ctx=noorCtx,d=ctx.days[i];if(!d)return;
+  const cid=ctx.cid,date=d.date,tok=d.tok=(d.tok||0)+1;
+  d.loading=true;d.err='';d.slots=[];
+  const paint=()=>{const b=document.getElementById('noor-slots-'+ctx.days.indexOf(d));if(b)b.innerHTML=noorSlotsHtml(ctx.days.indexOf(d));};
+  paint();
   try{
     const r=await noorCall({action:'slots',cid,date});
-    if(noorCtx!==ctx||ctx.slotTok!==tok||ctx.cid!==cid)return; // تغيّر المقرّر أو التاريخ أثناء الجلب
-    noorCtx.slots=r.slots||[];
-    if(!noorCtx.slots.length){box.innerHTML='<p class="acct-note">لا حصص لهذا المقرّر في هذا اليوم في نور — '+khG('اختاري','اختر')+' تاريخاً آخر.</p>';return;}
-    const course=(noorSt.courses||[]).find(c=>c.cid===noorCtx.cid)||{sections:[]};
-    noorCtx.slots.forEach(x=>{const sec=course.sections.find(z=>new RegExp('(^|\\D)'+x.section+'\\s*$').test(noorAr2En(z.label)));x.label=sec?sec.label:('الشعبة '+x.section);x.sid=sec?sec.id:'';});
-    box.innerHTML='<p class="acct-note" style="margin:6px 0">الحصص التي يُنشر لها التحضير:</p>'+noorCtx.slots.map((x,i)=>
-      `<label class="noor-it"><input type="checkbox" data-slot="${i}" ${x.has_prep?'':'checked'}> ${escHtml(x.label)} · ${escHtml(x.period)}${x.has_prep?' <span class="noor-req" style="background:#fdecc8;color:#8a5a00">عليها تحضير</span>':''}</label>`).join('');
-  }catch(e){if(noorCtx===ctx&&ctx.slotTok===tok)box.innerHTML='<p class="acct-note">'+escHtml(e.message)+'</p>';}
+    if(noorCtx!==ctx||d.tok!==tok||ctx.cid!==cid||d.date!==date)return; // تغيّر المقرّر أو التاريخ أثناء الجلب
+    d.slots=r.slots||[];
+    const course=(noorSt.courses||[]).find(c=>c.cid===ctx.cid)||{sections:[]};
+    d.slots.forEach(x=>{const sec=course.sections.find(z=>new RegExp('(^|\\D)'+x.section+'\\s*$').test(noorAr2En(z.label)));x.label=sec?sec.label:('الشعبة '+x.section);x.sid=sec?sec.id:'';});
+    if(!d.sel)d.sel=d.slots.map(x=>!x.has_prep);
+  }catch(e){if(noorCtx===ctx&&d.tok===tok)d.err=e.message;}
+  d.loading=false;paint();
 }
 function noorProg(steps){
   const box=document.getElementById('noor-prog');if(!box)return;
@@ -12976,16 +13172,19 @@ async function noorPublishRun(){
   const c=noorCtx;if(!c)return;
   const id=c.id,st=planGet(id),l=planFindLesson(id);
   const lessonId=document.getElementById('noor-lesson').value;
-  const date=document.getElementById('noor-date').value;
   const ks=[...document.querySelectorAll('.noor-items input:checked')].map(x=>x.dataset.k);
-  const slots=[...document.querySelectorAll('#noor-slots input[data-slot]:checked')].map(x=>c.slots[+x.dataset.slot]);
+  // كل يومٍ بحصصه المحدّدة؛ الأيام بلا حصصٍ محدّدة تُستبعد، وأولها تاريخ التحضير في خطة
+  const days=c.days.map(d=>({date:d.date,slots:(d.slots||[]).filter((_,j)=>d.sel&&d.sel[j])})).filter(d=>d.date&&d.slots.length)
+    .sort((a,b)=>a.date.localeCompare(b.date)).filter((d,i,a)=>!i||a[i-1].date!==d.date);
+  const date=(days[0]&&days[0].date)||(c.days[0]&&c.days[0].date)||noorToday();
+  const slots=days.flatMap(d=>d.slots);
   if(!lessonId){toast(khG('اختاري','اختر')+' الدرس المقابل في نور',true);return;}
   const newPrep=ks.includes('prep');
   if(newPrep&&!slots.length){toast(khG('حدّدي','حدّد')+' حصةً واحدةً على الأقل',true);return;}
   if(!newPrep&&!(st.noor&&st.noor.prep_id)){toast('التحضير في نور أساسي للنشر الأول',true);return;}
   const lessonNm=(c.lessons.find(x=>x.id===lessonId)||{}).name||l.name;
   // تشغيلٌ جديد إن تغيّر ما يُنشر؛ وإلا يُكمل من حيث فشل (لا يُعيد ما نجح)
-  const sig=[lessonId,date,ks.join(','),slots.map(x=>x.lts).join(',')].join('|');
+  const sig=[lessonId,days.map(d=>d.date+':'+d.slots.map(x=>x.lts).join('.')).join(','),ks.join(',')].join('|');
   if(!c.run||c.run.sig!==sig){
     c.run={sig,prep_id:newPrep?'':st.noor.prep_id,done:{},steps:[
       ...(newPrep?[{k:'prep',t:'نشر التحضير في نور',st:'wait'}]:[]),
@@ -13018,11 +13217,13 @@ async function noorPublishRun(){
     s.st='run';s.msg='';noorProg(run.steps);
     try{
       if(s.k==='prep'){
-        const m=noorPrepFields(st.prep,l.name);
-        const r=await noorCall({action:'publish_prep',cid:c.cid,lesson_id:lessonId,title:lessonNm,date,
-          slots:slots.map(x=>({lts:x.lts,timeslot:x.timeslot})),criteria,taxonomy:m.taxonomy,strategies:m.strategies,aids:m.aids,fields:m.fields});
+        const m=noorFormPayload();
+        const r=await noorCall({action:'publish_prep',cid:c.cid,lesson_id:lessonId,title:(c.form.title||'').trim()||lessonNm,date,
+          slots:days[0].slots.map(x=>({lts:x.lts,timeslot:x.timeslot})),
+          dates:days.map(d=>({date:d.date,slots:d.slots.map(x=>({lts:x.lts,timeslot:x.timeslot}))})),
+          criteria,taxonomy:m.taxonomy,strategies:m.strategies,aids:m.aids,fields:m.fields,show_weekly:m.show_weekly,allow_share:m.allow_share});
         run.prep_id=r.prep_id;
-        await planSetState(id,{noor:{prep_id:r.prep_id,cid:c.cid,lesson_id:lessonId,date,at:new Date().toISOString(),files:{}}});
+        await planSetState(id,{noor:{prep_id:r.prep_id,cid:c.cid,lesson_id:lessonId,date,dates:days.map(d=>d.date),at:new Date().toISOString(),files:{}}});
       }else{
         if(!run.prep_id)throw new Error('انشر التحضير أولاً');
         if(s.hw){
@@ -13038,7 +13239,7 @@ async function noorPublishRun(){
         if(/^att\d+$/.test(s.k)){
           const f=(planGet(id).files||[])[+s.k.slice(3)];
           if(!f||!f.path)throw new Error('لم نجد المرفق — ربما حُذف من البطاقة');
-          const{data:blob,error}=await sb.storage.from('user-files').download(f.path);
+          const{data:blob,error}=await storageDownload(f.path,f.downloadLink||f.viewLink);
           if(error||!blob)throw new Error('تعذّر تنزيل المرفق من التخزين');
           if(blob.size>25*1024*1024)throw new Error('المرفق أكبر من ٢٥ ميغابايت (حدّ نور)');
           const base=String(f.name||'مرفق').replace(/\.[^.]+$/,'');
@@ -15637,8 +15838,10 @@ function liveOpen(classId,subject,lessonId){
   c1ThemeColor('#141416');
   document.getElementById('live-stage').classList.add('on');
   document.body.style.overflow='hidden';
+  // جلب صفحات الكتاب يبدأ قبل الرسم الأول: liveLoadBook يرفع علامة التحميل فوراً،
+  // فتظهر بلاطة «يجري تحضيرها…» بدل ومضة «لا مرفقات لهذا الدرس بعد» حتى تصل الصفحات.
+  liveLoadBook();
   liveRenderLauncher();
-  liveLoadBook(); // صفحات الكتاب تُجلب تلقائياً وتُضاف للمرفقات فور جاهزيتها
   liveFsHint();
 }
 // تنبيهٌ يوجّه المعلّمة إلى زرّ ملء الشاشة عند بدء كل حصّة — نبضٌ مستمر
@@ -15676,7 +15879,8 @@ function liveScrollLock(on){
   const h=document.documentElement;
   if(on){
     if(h.classList.contains('live-lock'))return;
-    _liveLockY=window.scrollY||h.scrollTop||0;
+    // إن كانت نافذةٌ منبثقة قد ثبّتت الصفحة (m-lock) فموضع التمرير الحقيقي محفوظٌ عندها، وscrollY صفر
+    _liveLockY=h.classList.contains('m-lock')?_mLockY:(window.scrollY||h.scrollTop||0);
     h.style.setProperty('--live-lock-top',(-_liveLockY)+'px');
     h.classList.add('live-lock');
   }else if(h.classList.contains('live-lock')){
@@ -15684,6 +15888,23 @@ function liveScrollLock(on){
     window.scrollTo(0,_liveLockY);
   }
 }
+// ── قفل الصفحة خلف أي نافذة منبثقة (.c1-modal) ── على iPad يبقى إصبع المعلّم يسحب الخطة
+//    تحت النافذة، فيرسم Safari خلفيتها المعتّمة (backdrop-filter) ناقصةً وتتحرّك النافذة
+//    مع التمرير حتى تخرج من الشاشة. نستعمل القفل نفسه المعتمد للحصة الحية (html.live-lock).
+let _mLocked=false,_mLockY=0;
+function c1ModalLockSync(){
+  const open=!!document.querySelector('.c1-modal.open'),h=document.documentElement;
+  if(open&&!_mLocked&&!h.classList.contains('live-lock')){
+    _mLockY=window.scrollY||h.scrollTop||0;h.style.setProperty('--m-lock-top',(-_mLockY)+'px');h.classList.add('m-lock');_mLocked=true;
+  }else if(!open&&_mLocked){
+    _mLocked=false;h.classList.remove('m-lock');h.style.removeProperty('--m-lock-top');
+    if(!h.classList.contains('live-lock'))window.scrollTo(0,_mLockY);   // بدء الحصة من النافذة: قفل الحصة ورث الموضع
+  }
+}
+(function(){
+  const go=()=>{const mo=new MutationObserver(c1ModalLockSync);document.querySelectorAll('.c1-modal').forEach(m=>mo.observe(m,{attributes:true,attributeFilter:['class']}));};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();
+})();
 function liveClose(){
   liveScrollLock(false);
   document.getElementById('live-stage').classList.remove('on');
@@ -16667,7 +16888,8 @@ async function infoSaveToLesson(){
 // النموذج يرسم الرسوم بلا كلمات (1K)، والمحتوى JSON من مستخلص صفحات الكتاب، والمتصفّح
 // يكتب النصّ فوق الرسم بقالبٍ ثابت ثم يصوّره بـhtml2canvas (كالشهادات). تعديل النصّ مجاني.
 let lyS=null;               // {layout, content, art, cur_id}
-function lyIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
+// أُلغي خيار الإنفوجرافيك الهجين (٢١ نوفمبر — طلب الأستاذ عيسى): الرسم الكامل بدقة 2K وحده
+function lyIsOn(){return false;}
 function lyMode(){return lyIsOn()&&document.querySelector('input[name="ly-mode"]:checked')?.value==='ly';}
 function lyOptsInit(){
   const o=document.getElementById('ly-opts');if(!o)return;
@@ -16858,9 +17080,11 @@ const CM_OPTS={
   aspect:{t:'المقاس',o:[['3:4','عمودي — ورقة A4'],['16:9','أفقي — للعرض'],['1:1','مربع']]},
   student:{t:'النسخة',o:[['full','كاملة'],['gaps','للطالب — بفراغات']],h:'نسخة الطالب تترك صناديق فارغة يكملها من ذاكرته بعد الدرس؛ الاسترجاع يثبّت التعلّم أكثر من إعادة القراءة.'},
 };
-let cmS={key:'',m:'ly',ly:null,opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
+let cmS={key:'',m:'full',ly:null,opt:{type:'concept',style:'cartoon',detail:'2',art:'rich',colors:'vivid',aspect:'3:4',student:'full',links:true,extra:''},img:null,prev:null,busy:false};
 const _mmFired={};
-function mmIsOn(){return typeof nlIsLab==='function'&&nlIsLab();}
+// الخرائط الذهنية المرسومة: حسابات المختبر + حساب الأستاذ عبدالرحمن العامري (٢١ نوفمبر)
+const MM_EXTRA=['abdulrahman.demo@khotati.com'];
+function mmIsOn(){return (typeof nlIsLab==='function'&&nlIsLab())||(!KH_DEMO&&!!(currentUser&&MM_EXTRA.includes(String(currentUser.email||'').toLowerCase())));}
 function mmLesson(){const l=studioSelectedLessons()[0];return l?{grade:String(studioGrade||''),subject:studioSubject||'',unit:l.unit||'',lesson:l.name}:null;}
 // بعد قراءة صفحات الدرس في التحضير: يُبنى هيكل المفاهيم في الخلفية (مرّةً لكل درس في الجلسة)
 function mmPrebuild(grade,subject,unit,lesson){
@@ -16879,7 +17103,6 @@ function cmDraw(){
   const L=mmLesson();if(!L){box.innerHTML='<div class="eg-hint">'+khG('اختاري','اختر')+' درساً أولاً.</div>';return;}
   const o=cmS.opt,ty=CM_OPTS.type.o.find(x=>x[0]===o.type);
   box.innerHTML=`<div class="cm-steps"><b>١</b> ${khG('اختاري','اختر')} نوع الخريطة <b>٢</b> ${khG('حدّدي','حدّد')} الشكل <b>٣</b> ${khG('ارسميها','ارسمها')} ثم ${khG('عدّليها','عدّلها')} ${cmS.m==='ly'?'نصوصها':'بالوصف'} أو ${khG('نزّليها','نزّلها')}</div>
-  <div class="cm-meth"><button class="${cmS.m==='ly'?'on':''}" onclick="cmS.m='ly';cmS.img=null;cmS.ly=null;cmDraw()"><b>الذكاء يرسم، والمنصّة تكتب</b><small>إملاء صحيح دائماً · تعديل مجاني · أرخص</small></button><button class="${cmS.m!=='ly'?'on':''}" onclick="cmS.m='full';cmS.img=null;cmS.ly=null;cmDraw()"><b>رسم كامل بالذكاء</b><small>الطريقة السابقة</small></button></div>
   <div class="cm-types">${CM_OPTS.type.o.map(([v,t])=>`<button class="${o.type===v?'on':''}" onclick="cmSet('type','${v}')">${t}</button>`).join('')}</div>
   <div class="cm-why"><b>${ty[1]}:</b> ${ty[2]}</div>
   <div class="cm-grid"><div class="cm-opts">

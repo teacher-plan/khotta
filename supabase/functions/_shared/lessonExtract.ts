@@ -7,6 +7,7 @@
 // يُخزَّن في library-files/book-extracts/{curriculum.id}.json، فيأخذه كل معلّمٍ بعد الأول
 // جاهزاً بلا تكلفة، وتستعمله دالة exam-khotta نصّاً بدل ٢٠ صورة في كل اختبار.
 // ════════════════════════════════════════════════════════════════
+import { withSubject, subjectRules, isEnglishSubject } from "./subjectProfile.ts";
 import { orFetch, ensureVision } from "./ai.ts";
 import { parseAiJson } from "./aiJson.ts";
 import { logAiCost } from "./quota.ts";
@@ -14,6 +15,8 @@ import { logAiCost } from "./quota.ts";
 // deno-lint-ignore no-explicit-any
 type Any = any;
 export const EXTRACT_VERSION = 1;
+// الإنجليزية: نسخة ٢ — ما خُزّن قبلها كان بالعربية فيُعاد استخراجه بالإنجليزية
+export const extractVersionFor = (subject: string) => (isEnglishSubject(subject) ? 2 : EXTRACT_VERSION);
 export const guideKey = (guideId: number | string, curId: number | string) => `guide-summaries/${guideId}-${curId}.json`;
 export const bookKey = (curId: number | string) => `book-extracts/${curId}.json`;
 
@@ -52,7 +55,7 @@ export async function bookExtract(admin: Any, st: Record<string, string>, apiKey
   images: string[], meta: { grade: string | number; subject: string; userId?: string }): Promise<Any | null> {
   const key = bookKey(cur.id);
   const cached = await readCache(admin, key);
-  if (cached && cached.v === EXTRACT_VERSION && cached.summary) return cached;
+  if (cached && cached.v === extractVersionFor(meta.subject) && cached.summary) return cached;
   if (!images.length) return null;
   const model = ensureVision(st.model_book_extract || st.model_summary || st.vision_model || "google/gemini-2.5-flash", "google/gemini-2.5-flash");
   const system = [
@@ -71,7 +74,7 @@ export async function bookExtract(admin: Any, st: Record<string, string>, apiKey
     method: "POST",
     headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Lesson Page Extractor" },
     body: JSON.stringify({
-      model, messages: [{ role: "system", content: system }, { role: "user", content }],
+      model, messages: [{ role: "system", content: withSubject(system, meta.subject, "extract") }, { role: "user", content }],
       temperature: 0.1, max_tokens: 12000, response_format: { type: "json_object" }, reasoning: { max_tokens: 1024 },
     }),
   }, { st, task: "summary" });
@@ -80,7 +83,7 @@ export async function bookExtract(admin: Any, st: Record<string, string>, apiKey
   if (meta.userId) await logAiCost(admin, meta.userId, "book-extract", "text", model, j?.usage);
   const p = parseAiJson(String(j?.choices?.[0]?.message?.content || ""));
   if (!p.ok || !p.value || typeof p.value.summary !== "string" || !p.value.summary.trim()) return null;
-  const out = { v: EXTRACT_VERSION, lesson: cur.lesson, unit: cur.unit, summary: p.value.summary.trim(), exam: p.value.exam || {}, model, at: new Date().toISOString(), pages: images.length };
+  const out = { v: extractVersionFor(meta.subject), lesson: cur.lesson, unit: cur.unit, summary: p.value.summary.trim(), exam: p.value.exam || {}, model, at: new Date().toISOString(), pages: images.length };
   await admin.storage.from("library-files").upload(key, new Blob([JSON.stringify(out)], { type: "application/json" }), { upsert: true, contentType: "application/json" });
   return out;
 }
@@ -118,7 +121,7 @@ export async function guideContextFor(admin: Any, st: Record<string, string>, ap
     const { data: guide } = await admin.from("teacher_guides").select("id,base_path,page_count,offset_pages,toc")
       .eq("grade", parseInt(grade)).eq("subject", subject).eq("semester", cur.semester).maybeSingle();
     if (!guide || !guide.base_path || !Array.isArray(guide.toc)) return "";
-    const cacheKey = guideKey(guide.id, cur.id);
+    const cacheKey = isEnglishSubject(subject) ? guideKey(guide.id, cur.id).replace(/\.json$/, "-en.json") : guideKey(guide.id, cur.id);
     const cached = await admin.storage.from("library-files").download(cacheKey);
     if (!cached.error && cached.data) { const t = await cached.data.text(); if (t.length > 20) return t; }
 
@@ -158,7 +161,8 @@ export async function guideContextFor(admin: Any, st: Record<string, string>, ap
             "انقل رموز الأهداف التعليمية حرفياً كما طُبعت (لا تخترع رمزاً). انقل التفاصيل كما وردت: أرقام التمارين، أسماء الأنشطة، الأخطاء الشائعة، المفردات بالعربية والإنجليزية، والأزمنة إن ذُكرت.",
             "الحقل الذي لا يرد في الدليل اتركه فارغاً (\"\" أو []). الأرقام بالعربية-الهندية.",
             `أعد JSON فقط بهذا الشكل: ${shape}`,
-          ].join("\n") },
+            subjectRules(subject, "extract"),
+          ].filter(Boolean).join("\n") },
           { role: "user", content: [{ type: "text", text: `صفحات دليل المعلم لدرس: ${lesson}` }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))] },
         ],
         response_format: { type: "json_object" }, temperature: 0.1, max_tokens: 12000, reasoning: { max_tokens: 1024 },

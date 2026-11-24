@@ -6,6 +6,7 @@
 // النشر:  supabase functions deploy generate-lesson-plan
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
+import { withSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: fast ? FAST : withImages ? model : (st.model_plan || st.ai_model || "google/gemini-2.5-flash"),
           messages: [
-            { role: "system", content: system },
+            { role: "system", content: withSubject(system, subject, "plan") },
             { role: "user", content: withImages && images.length ? userContent : userMsg },
           ],
           response_format: { type: "json_object" },

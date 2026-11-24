@@ -9,6 +9,7 @@
 //   OPENROUTER_API_KEY = مفتاح OpenRouter (sk-or-v1-...)
 //   (SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY متوفّران تلقائياً)
 // ════════════════════════════════════════════════════════════════
+import { withSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { parseAiJson, requireArray } from "../_shared/aiJson.ts";
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: system },
+          { role: "system", content: withSubject(system, subject, "exam") },
           { role: "user", content: userMsg },
         ],
         response_format: { type: "json_object" },

@@ -6,6 +6,7 @@
 //   الشعاعية دائماً + نوعٌ أو نوعان يلائمان طبيعة الدرس (شجرية للتصنيف، تدفّق للإجراءات).
 // يُخزَّن في library-files/mindmaps/{curriculum.id}.json فيأخذه كل معلّمٍ بعده جاهزاً.
 // ════════════════════════════════════════════════════════════════
+import { withSubject, isEnglishSubject } from "../_shared/subjectProfile.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { takeQuota, refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch } from "../_shared/ai.ts";
@@ -16,6 +17,7 @@ import { curFor, readCache, bookKey } from "../_shared/lessonExtract.ts";
 type Any = any;
 const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com", "abdulrahman.demo@khotati.com"];
 const MM_VERSION = 1;
+const mmVersion = (subject: string) => (isEnglishSubject(subject) ? 2 : MM_VERSION);
 const mmKey = (curId: number | string) => `mindmaps/${curId}.json`;
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -70,7 +72,7 @@ Deno.serve(async (req) => {
 
     if (!b.force) {
       const c = await readCache(admin, mmKey(cur.id));
-      if (c && c.v === MM_VERSION && Array.isArray(c.maps) && c.maps.length) return json({ ...c, cached: true });
+      if (c && c.v === mmVersion(subject) && Array.isArray(c.maps) && c.maps.length) return json({ ...c, cached: true });
     }
     // المصدر: ما قرأه التحضير من صفحات الدرس — لا نقرأ الصور مرّةً أخرى
     const ex = await readCache(admin, bookKey(cur.id));
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
     const r = await orFetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json", "HTTP-Referer": "https://khotati.com", "X-Title": "Khotta Mind Maps" },
-      body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: src }], temperature: 0.3, max_tokens: 4000, response_format: { type: "json_object" } }),
+      body: JSON.stringify({ model, messages: [{ role: "system", content: withSubject(system, subject, "mindmap") }, { role: "user", content: src }], temperature: 0.3, max_tokens: 4000, response_format: { type: "json_object" } }),
     }, { st, task: "summary" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return await refund({ error: "provider_error", detail: String(j?.error?.message || "").slice(0, 200) }, 502);
@@ -117,7 +119,7 @@ Deno.serve(async (req) => {
     const raw: Any = p.ok ? p.value : null;
     const maps = (Array.isArray(raw?.maps) ? raw.maps : []).map(clean).filter(Boolean);
     if (!maps.some((m: Any) => m.type === "radial")) return await refund({ error: "bad_output" }, 502);
-    const out = { v: MM_VERSION, cur_id: cur.id, lesson: cur.lesson, unit: cur.unit, grade, subject, icon: String(raw?.icon || "").slice(0, 8), maps, model, at: new Date().toISOString() };
+    const out = { v: mmVersion(subject), cur_id: cur.id, lesson: cur.lesson, unit: cur.unit, grade, subject, icon: String(raw?.icon || "").slice(0, 8), maps, model, at: new Date().toISOString() };
     await admin.storage.from("library-files").upload(mmKey(cur.id), new Blob([JSON.stringify(out)], { type: "application/json" }), { upsert: true, contentType: "application/json" });
     return json(out);
   } catch (e) {
