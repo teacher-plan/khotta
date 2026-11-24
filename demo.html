@@ -7249,7 +7249,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='c4bd778';
+const KH_BUILD='5ea6146';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -10020,8 +10020,10 @@ function table(rows, widths, opts = {}) {
   const body = rows.map((r, ri) => {
     const head = ri === 0 && opts.header;
     return `<w:tr>${r.map((c, ci) => cell(
-      typeof c === 'string'
-        ? P(c, { size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
+      // نصٌّ عادي ← فقرة؛ أمّا ما بُني فقراتِ وورد جاهزة (يبدأ بـ ‎<w:‎) فيُدرج كما هو —
+      // كانت الخلايا الجاهزة (الاستراتيجيات والمصادر والمفاهيم، والتوقيع) تُهرَّب نصاً فيظهر كود XML في وورد
+      typeof c === 'string' && !c.startsWith('<w:')
+        ? P(c,{ size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
         : c, widths[ci], head ? PAPER : (opts.zebra && ri % 2 ? 'FFFDF9' : null)
     )).join('')}</w:tr>`;
   }).join('');
