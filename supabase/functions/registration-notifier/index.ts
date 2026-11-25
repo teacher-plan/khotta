@@ -69,7 +69,7 @@ function waLink(phone: string): string {
 // رسالة الترحيب — نصّها نفسه المستعمل في لوحة الإدارة، فلا تختلف صياغتان
 // لمعلّمتين حسب المكان الذي أُرسلت منه.
 const STAGE_LBL: Record<string, string> = {
-  "cycle1": "الحلقة الأولى (١–٤)", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
+  "cycle1": "الحلقة الأولى (١–٤)", "5-12": "الصفوف ٥–١٢", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
 };
 function stageLbl(st?: string): string { return STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
 function welcomeText(name: string, stage?: string): string {

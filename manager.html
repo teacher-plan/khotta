@@ -13485,10 +13485,10 @@ function ref_expiryCell(email){
   const color=d<=7?'#e0803a':'var(--green,#3ecf8e)';
   return `<span style="color:${color};font-weight:600">${d} يوم</span>`;
 }
-const ref_stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 الحلقة الثانية',['10-12']:'🎓 ما بعد الأساسي'};
+const ref_stageLabel={cycle1:'🧒 الحلقة الأولى',['5-12']:'📘 الصفوف ٥–١٢',['5-9']:'📘 الحلقة الثانية',['10-12']:'🎓 ما بعد الأساسي'};
 
 // ══ عزل الحلقات ══
-const ref_SCOPE_STAGES={cycle1:['cycle1'],post:['5-9','10-12']};
+const ref_SCOPE_STAGES={cycle1:['cycle1'],post:['5-12','5-9','10-12']};
 const ref_SCOPE_LABEL={cycle1:'الحلقة الأولى',post:'ما بعد الحلقة الأولى',all:'كل الحلقات'};
 // صفحة واحدة لكل المراحل منذ ١٧ نوفمبر (page='landing')، والأسماء القديمة للزيارات السابقة
 const ref_SCOPE_PAGE={cycle1:['cycle1-landing','landing'],post:['cycle2-landing','landing']};
@@ -13516,7 +13516,7 @@ function ref_syncScopeUI(){
   if(note)note.textContent=`تعرض الجداول والأرقام أدناه بيانات: ${ref_SCOPE_LABEL[ref_cycleScope]}`;
   const sel=document.getElementById('manual-reg-stage');
   if(sel){
-    const stages=ref_cycleScope==='all'?['cycle1','5-9','10-12']:ref_SCOPE_STAGES[ref_cycleScope];
+    const stages=ref_cycleScope==='all'?['cycle1','5-12','5-9','10-12']:ref_SCOPE_STAGES[ref_cycleScope];
     sel.innerHTML=stages.map(s=>`<option value="${s}">${ref_stageLabel[s]}</option>`).join('');
   }
 }
@@ -14170,12 +14170,13 @@ function ref_renderOverviewTab(){
     <div class="kpi-card"><div class="kpi-icon">🗓️</div><div class="kpi-num">${thisMonthCount}</div><div class="kpi-label">تسجيلات هذا الشهر</div></div>
   `;
 
-  const stages=ref_cycleScope==='all'?['cycle1','5-9','10-12']:ref_SCOPE_STAGES[ref_cycleScope];
+  const stages=ref_cycleScope==='all'?['cycle1','5-12','5-9','10-12']:ref_SCOPE_STAGES[ref_cycleScope];
   const stageGrid=document.getElementById('overview-stage-grid');
   if(!total){
     stageGrid.innerHTML=`<div class="empty">لا توجد بيانات في ${ref_SCOPE_LABEL[ref_cycleScope]} بعد</div>`;
   }else{
-    stageGrid.innerHTML=stages.map(s=>{
+    // القيمتان القديمتان (٥–٩ و١٠–١٢) تظهران فقط إن بقي عليهما تسجيل
+    stageGrid.innerHTML=stages.filter(s=>s==='cycle1'||s==='5-12'||regs.some(r=>r.stage===s)).map(s=>{
       const count=regs.filter(r=>r.stage===s).length;
       const pct=total?Math.round((count/total)*100):0;
       return `<div class="stage-card">
@@ -15240,7 +15241,7 @@ function admTRender(){
         <div class="adm-t-av reg">${escHtml(admTInit(r.name))}</div>
         <div class="adm-t-main"><div class="n">${escHtml(r.name||'—')}</div>
           <div class="e" dir="ltr">${escHtml(r.email||'بلا بريد')}${r.phone?' · '+escHtml(r.phone):''}</div>
-          <div class="s">${escHtml({cycle1:'الصفوف ١–٤','5-9':'الصفوف ٥–٩','10-12':'الصفوف ١٠–١٢'}[r.stage]||r.stage||'')} · ${new Date(r.created_at).toLocaleDateString('ar-OM',{day:'numeric',month:'short'})}</div></div>
+          <div class="s">${escHtml({cycle1:'الصفوف ١–٤','5-12':'الصفوف ٥–١٢','5-9':'الصفوف ٥–٩','10-12':'الصفوف ١٠–١٢'}[r.stage]||r.stage||'')} · ${new Date(r.created_at).toLocaleDateString('ar-OM',{day:'numeric',month:'short'})}</div></div>
         <div class="adm-t-st"><span class="adm-pill ${r.payment_status==='paid'?'ok':'warn'}">${r.payment_status==='paid'?'دفع':'بانتظار الدفع'}</span></div>
         <div class="adm-t-act">
           ${r.email?`<button class="kt-btn kt-btn-primary adm-t-go" id="activate-btn-${Number(r.id)}" onclick="admTActivate(${i},'paid')">تفعيل</button>`:''}
@@ -15318,7 +15319,7 @@ function admTAddOpen(){
     <label>الاسم<input id="adm-t-a-name" autocomplete="off"></label>
     <label>الهاتف<input id="adm-t-a-phone" type="tel" dir="ltr" placeholder="9XXXXXXX"></label>
     <label>البريد الإلكتروني<input id="adm-t-a-email" type="email" dir="ltr" placeholder="name@gmail.com"></label>
-    <label>الصفوف<select id="adm-t-a-stage"><option value="cycle1">الصفوف ١–٤</option><option value="5-9">الصفوف ٥–٩</option><option value="10-12">الصفوف ١٠–١٢</option></select></label>
+    <label>الصفوف<select id="adm-t-a-stage"><option value="cycle1">الصفوف ١–٤</option><option value="5-12">الصفوف ٥–١٢</option></select></label>
     <label>الدفع<select id="adm-t-a-paid"><option value="1">دفع الاشتراك</option><option value="0">لم يدفع بعد</option></select></label>
     <p class="hint">يُنشأ الحساب ببريده، وتصله بيانات الدخول على البريد نفسه.</p>
     <div class="row">

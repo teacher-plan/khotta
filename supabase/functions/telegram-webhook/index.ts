@@ -132,7 +132,7 @@ function _waNum(p: string): string {
   return d ? (d.length === 8 ? "968" + d : d) : "";
 }
 const _STAGE_LBL: Record<string, string> = {
-  "cycle1": "الحلقة الأولى (١–٤)", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
+  "cycle1": "الحلقة الأولى (١–٤)", "5-12": "الصفوف ٥–١٢", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
 };
 function _stageLbl(st?: string): string { return _STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
 function _welcomeText(n: string, stage?: string): string {
