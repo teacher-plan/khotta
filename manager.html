@@ -1910,10 +1910,15 @@ body.lp .page.active{animation:lpPage .25s ease}
 }
 
 /* نسب أعمدة كل جدولٍ في قسم الإحالات — مجموعها ١٠٠٪ */
-#tab-links th:nth-child(1),#tab-links td:nth-child(1){width:14%;}
-#tab-links th:nth-child(2),#tab-links td:nth-child(2){width:44%;}
-#tab-links th:nth-child(3),#tab-links td:nth-child(3){width:12%;}
+#tab-links th:nth-child(1),#tab-links td:nth-child(1){width:16%;}
+#tab-links th:nth-child(2),#tab-links td:nth-child(2){width:38%;}
+#tab-links th:nth-child(3),#tab-links td:nth-child(3){width:16%;}
 #tab-links th:nth-child(4),#tab-links td:nth-child(4){width:18%;}
+#tab-links .ref-amt{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+#tab-links .ref-amt b{white-space:nowrap}
+#tab-links .ref-amt .copy-btn{padding:4px 8px}
+#tab-links .ref-link-cell{flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+#tab-links .ref-link-text{max-width:100%;overflow-wrap:anywhere}
 #tab-links th:nth-child(5),#tab-links td:nth-child(5){width:12%;}
 
 #tab-data th:nth-child(1),#tab-data td:nth-child(1){width:13%;}
@@ -4311,13 +4316,13 @@ html body .violtype-tab-btn.active{background:var(--kt-color-brand-primary)!impo
         <div class="form-row">
           <input id="new-friend-name" type="text" placeholder="اسم الصديق"/>
           <input id="new-friend-phone" type="tel" placeholder="رقم الهاتف (اختياري)" dir="ltr" style="text-align:right"/>
-          <input id="new-friend-commission" type="number" placeholder="نسبة العمولة %" value="20"/>
+          <input id="new-friend-commission" type="number" min="0" step="0.5" placeholder="المبلغ لكل مشترك (ر.ع)" value="5"/>
           <button class="btn-gold" id="add-friend-btn" onclick="ref_addFriend()">➕ إنشاء رابط</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الاسم</th><th>الرابط</th><th>نسبة العمولة</th><th>تاريخ الإنشاء</th><th></th></tr></thead>
+          <thead><tr><th>الاسم</th><th>الرابط</th><th>لكل مشترك</th><th>تاريخ الإنشاء</th><th></th></tr></thead>
           <tbody id="ref_friends-table-body"><tr><td colspan="5"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
@@ -13255,11 +13260,25 @@ let ref_payouts=[];
 async function ref_loadPayouts(){
   try{const{data,error}=await sb.from('referral_payouts').select('*').order('paid_at',{ascending:false});if(!error)ref_payouts=data||[];}catch(e){}
 }
-// عمولة تسجيلٍ مدفوع: على المبلغ المدفوع فعلاً (paid_amount)، والسعر الحالي
-// احتياطاً لتسجيلٍ قديم بلا مبلغ.
+// العمولة مبلغٌ ثابت لكل صديق (commission_amount ر.ع لكل مشترك يدفع عبر
+// رابطه) لا نسبةٌ من السعر. ويُثبَّت على التسجيل لحظة تأكيد الدفع
+// (referral_commission)، فتعديل مبلغ الصديق لاحقاً لا يغيّر ما استحقّه سابقاً.
+function ref_friendAmount(f){
+  if(f&&f.commission_amount!=null)return Number(f.commission_amount)||0;
+  return Math.round((Number(f&&f.commission_rate)||0)/100*ref_subscriptionPrice*100)/100;
+}
 function ref_regCommission(r,f){
-  const amt=r.paid_amount!=null?Number(r.paid_amount):ref_subscriptionPrice;
-  return amt*(Number(f.commission_rate)||0)/100;
+  return r.referral_commission!=null?Number(r.referral_commission):ref_friendAmount(f);
+}
+async function ref_editFriendAmount(id){
+  const f=ref_friends.find(x=>x.id===id);if(!f)return;
+  const v=prompt(`مبلغ العمولة لكل مشترك يدفع عبر رابط «${f.name}» (ر.ع):\n(لا يغيّر عمولات المشتركين الذين أُكّد دفعهم سابقاً)`,ref_friendAmount(f));
+  if(v===null)return;
+  const amount=Number(String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  if(!(amount>=0)){alert('❌ أدخل مبلغاً صحيحاً');return;}
+  const{error}=await sb.from('referrers').update({commission_amount:amount}).eq('id',id);
+  if(error){alert('❌ '+error.message);return;}
+  await ref_loadFriends();ref_renderFinanceTab();ref_renderOverviewTab();
 }
 // رصيد الصديق عبر كل الحلقات: المستحق − المدفوع له. الدفعات لا تخصّ حلقة،
 // فالرصيد لا يتبع فلتر الحلقة (وإلا ظهرت دفعةٌ واحدة مخصومةً مرتين).
@@ -13311,13 +13330,14 @@ async function ref_loadFriends(){
 async function ref_addFriend(){
   const name=document.getElementById('new-friend-name').value.trim();
   const phone=document.getElementById('new-friend-phone').value.trim();
-  const commission=Number(document.getElementById('new-friend-commission').value)||20;
+  const amount=Number(document.getElementById('new-friend-commission').value);
+  if(!(amount>=0)||document.getElementById('new-friend-commission').value===''){alert('أدخل مبلغ العمولة لكل مشترك (ر.ع)');return;}
   if(!name){alert('أدخل اسم الصديق');return;}
   const code=ref_makeCode(name);
   const btn=document.getElementById('add-friend-btn');
   btn.disabled=true;btn.textContent='⏳...';
   try{
-    const{error}=await sb.from('referrers').insert({name,phone:phone||null,code,commission_rate:commission});
+    const{error}=await sb.from('referrers').insert({name,phone:phone||null,code,commission_amount:amount});
     if(error){
       if(error.code==='23505')alert('❌ الرابط مستخدم من قبل (نفس الاسم الأول) — جرّب اسماً مختلفاً');
       else alert('فشل الإضافة: '+error.message);
@@ -13325,7 +13345,7 @@ async function ref_addFriend(){
     }
     document.getElementById('new-friend-name').value='';
     document.getElementById('new-friend-phone').value='';
-    document.getElementById('new-friend-commission').value='20';
+    document.getElementById('new-friend-commission').value='5';
     await ref_loadFriends();
     ref_renderFinanceTab();
     ref_renderOverviewTab();
@@ -13378,7 +13398,7 @@ function ref_renderFriendsTable(){
         <button class="copy-btn" onclick="ref_copyLink('${escHtml(f.code)}')" title="نسخ رابط صفحة التسجيل">📋 نسخ الرابط</button>
         <span id="copy-msg-${f.code}" style="font-size:11px;color:var(--green);font-weight:700"></span>
       </div></td>
-      <td>${f.commission_rate}%${Number(f.commission_rate)<5?' <span title="نسبة منخفضة على غير العادة — تأكّد منها" style="color:var(--red)">⚠️</span>':''}</td>
+      <td><div class="ref-amt"><b>${ref_friendAmount(f).toFixed(2)} ر.ع</b><button class="copy-btn" onclick="ref_editFriendAmount(${Number(f.id)})" title="تعديل مبلغ العمولة" aria-label="تعديل مبلغ العمولة">✏️</button></div></td>
       <td>${new Date(f.created_at).toLocaleDateString('ar-OM')}</td>
       <td><button class="delete-btn" onclick="ref_deleteFriend(${f.id})">✕</button></td>
     </tr>`).join('');
@@ -14061,7 +14081,7 @@ function ref_renderFinanceTab(){
       <td class="cell-name">${escHtml(r.friend.name)}</td>
       <td>${r.referredCount}</td>
       <td>${r.paidCount}</td>
-      <td><b>${r.totalCommission.toFixed(2)} ر.ع</b> <span style="color:var(--muted);font-size:11px">(${r.friend.commission_rate}%)</span></td>
+      <td><b>${r.totalCommission.toFixed(2)} ر.ع</b> <div style="color:var(--muted);font-size:11px">${ref_friendAmount(r.friend).toFixed(2)} × مشترك</div></td>
       <td>${status}${b.paidOut>0?`<div style="color:var(--muted);font-size:11px;margin-top:3px">دُفع له ${b.paidOut.toFixed(2)} ر.ع</div>`:''}</td>
       <td><div class="ref-actions-cell">${b.owed>0?`<button class="action-btn primary" onclick="ref_recordPayout('${code}')">تسجيل دفعة</button>`:''}${hasPay?`<button class="action-btn" onclick="ref_undoLastPayout('${code}')" title="حذف آخر دفعة مسجّلة">↩︎ تراجع</button>`:''}</div></td>
     </tr>`;
@@ -14087,7 +14107,10 @@ async function ref_editRegistrationEmail(id){
 async function ref_markRegistrationPaid(id,status){
   // المبلغ وتاريخ الدفع يُثبَّتان لحظة التأكيد: العمولة تُحسب عليهما، فلا
   // يغيّرها تعديل السعر لاحقاً. وإلغاء الدفع يمحوهما.
-  const patch={payment_status:status,paid_amount:status==='paid'?ref_subscriptionPrice:null,paid_at:status==='paid'?new Date().toISOString():null};
+  const reg=ref_registrations.find(x=>x.id===id);
+  const fr=reg&&reg.referred_by?ref_friends.find(f=>f.code===reg.referred_by):null;
+  const patch={payment_status:status,paid_amount:status==='paid'?ref_subscriptionPrice:null,paid_at:status==='paid'?new Date().toISOString():null,
+    referral_commission:status==='paid'&&fr?ref_friendAmount(fr):null};
   if(status==='paid'){
     // إسنادٌ لأي تذكيرٍ حوّلها: نُسجّل المرحلة التي كانت عليها هذه اللحظة
     // فقط (لا نُعيدها لاحقاً عند إلغاء الدفع كي لا يضيع رقم الإسناد الأصلي).

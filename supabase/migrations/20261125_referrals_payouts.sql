@@ -59,3 +59,13 @@ update public.pre_registrations
    set paid_amount = (select value::numeric from app_settings where key='subscription_price'),
        paid_at = coalesce(paid_at, created_at)
  where payment_status='paid' and paid_amount is null;
+
+-- ٥) (٢٥ نوفمبر — طلب الأستاذ عيسى) عمولة بمبلغ ثابت لكل صديق بدل النسبة:
+--    commission_amount ر.ع لكل مشترك يدفع عبر رابطه، ويُثبَّت المبلغ على
+--    التسجيل لحظة تأكيد الدفع (referral_commission) فلا يغيّره تعديلٌ لاحق.
+--    الأصدقاء الحاليون: المبلغ = نسبتهم × السعر الحالي.
+alter table public.referrers add column if not exists commission_amount numeric check (commission_amount >= 0);
+update public.referrers set commission_amount = round(coalesce(commission_rate,20)/100.0 * (select value::numeric from app_settings where key='subscription_price'), 2) where commission_amount is null;
+alter table public.pre_registrations add column if not exists referral_commission numeric;
+update public.pre_registrations p set referral_commission = f.commission_amount
+  from public.referrers f where p.referred_by = f.code and p.payment_status='paid' and p.referral_commission is null;
