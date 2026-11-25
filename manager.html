@@ -1933,12 +1933,15 @@ body.lp .page.active{animation:lpPage .25s ease}
 #tab-accounts th:nth-child(6),#tab-accounts td:nth-child(6){width:16%;}
 #tab-accounts th:nth-child(7),#tab-accounts td:nth-child(7){width:28%;}
 
-#tab-finance th:nth-child(1),#tab-finance td:nth-child(1){width:22%;}
-#tab-finance th:nth-child(2),#tab-finance td:nth-child(2){width:15%;}
-#tab-finance th:nth-child(3),#tab-finance td:nth-child(3){width:17%;}
-#tab-finance th:nth-child(4),#tab-finance td:nth-child(4){width:18%;}
-#tab-finance th:nth-child(5),#tab-finance td:nth-child(5){width:14%;}
-#tab-finance th:nth-child(6),#tab-finance td:nth-child(6){width:14%;}
+#tab-finance th:nth-child(1),#tab-finance td:nth-child(1){width:18%;}
+#tab-finance th:nth-child(2),#tab-finance td:nth-child(2){width:11%;}
+#tab-finance th:nth-child(3),#tab-finance td:nth-child(3){width:12%;}
+#tab-finance th:nth-child(4),#tab-finance td:nth-child(4){width:17%;}
+#tab-finance th:nth-child(5),#tab-finance td:nth-child(5){width:21%;}
+#tab-finance th:nth-child(6),#tab-finance td:nth-child(6){width:21%;}
+#tab-finance .status-badge{white-space:normal;line-height:1.5}
+#tab-finance .ref-actions-cell{flex-direction:column;align-items:stretch}
+#tab-finance .ref-actions-cell .action-btn{padding:6px 8px}
 #page-referrals tr:last-child td{border-bottom:none;}
 #page-referrals .cell-name{font-weight:800;}
 #page-referrals .ref-link-cell{display:flex;align-items:center;gap:8px;}
@@ -4403,7 +4406,7 @@ html body .violtype-tab-btn.active{background:var(--kt-color-brand-primary)!impo
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>الصديق</th><th>عدد المُحالين</th><th>اشتراكات مدفوعة</th><th>المستحقات (العمولة)</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th>الصديق</th><th>المُحالون</th><th>دفعوا</th><th>العمولة</th><th>الرصيد (كل الحلقات)</th><th></th></tr></thead>
           <tbody id="finance-table-body"><tr><td colspan="6"><div class="loading">⏳ جاري التحميل...</div></td></tr></tbody>
         </table>
       </div>
@@ -13248,6 +13251,44 @@ async function saveSchool(){
 let ref_friends=[];
 let ref_registrations=[];
 let ref_pageViewsCount=null;
+let ref_payouts=[];
+async function ref_loadPayouts(){
+  try{const{data,error}=await sb.from('referral_payouts').select('*').order('paid_at',{ascending:false});if(!error)ref_payouts=data||[];}catch(e){}
+}
+// عمولة تسجيلٍ مدفوع: على المبلغ المدفوع فعلاً (paid_amount)، والسعر الحالي
+// احتياطاً لتسجيلٍ قديم بلا مبلغ.
+function ref_regCommission(r,f){
+  const amt=r.paid_amount!=null?Number(r.paid_amount):ref_subscriptionPrice;
+  return amt*(Number(f.commission_rate)||0)/100;
+}
+// رصيد الصديق عبر كل الحلقات: المستحق − المدفوع له. الدفعات لا تخصّ حلقة،
+// فالرصيد لا يتبع فلتر الحلقة (وإلا ظهرت دفعةٌ واحدة مخصومةً مرتين).
+function ref_friendBalance(code){
+  const f=ref_friends.find(x=>x.code===code);if(!f)return{earned:0,paidOut:0,owed:0};
+  const earned=ref_registrations.filter(r=>r.referred_by===code&&r.payment_status==='paid').reduce((s,r)=>s+ref_regCommission(r,f),0);
+  const paidOut=ref_payouts.filter(p=>p.referrer_code===code).reduce((s,p)=>s+Number(p.amount||0),0);
+  const r2=x=>Math.round(x*100)/100;
+  return{earned:r2(earned),paidOut:r2(paidOut),owed:r2(Math.max(0,earned-paidOut))};
+}
+async function ref_recordPayout(code){
+  const f=ref_friends.find(x=>x.code===code);if(!f)return;
+  const b=ref_friendBalance(code);
+  const v=prompt(`تسجيل دفعة عمولة لـ«${f.name}»\nالمستحق حالياً: ${b.owed.toFixed(2)} ر.ع\n\nالمبلغ المدفوع (ر.ع):`,b.owed.toFixed(2));
+  if(v===null)return;
+  const amount=Number(String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  if(!(amount>0)){alert('❌ أدخل مبلغاً أكبر من صفر');return;}
+  const{error}=await sb.from('referral_payouts').insert({referrer_code:code,amount});
+  if(error){alert('❌ تعذّر التسجيل: '+error.message);return;}
+  await ref_loadPayouts();ref_renderFinanceTab();ref_renderOverviewTab();
+  toast('✅ سُجّلت دفعة '+amount.toFixed(2)+' ر.ع');
+}
+async function ref_undoLastPayout(code){
+  const p=ref_payouts.find(x=>x.referrer_code===code);if(!p)return;
+  if(!confirm(`حذف آخر دفعة (${Number(p.amount).toFixed(2)} ر.ع بتاريخ ${new Date(p.paid_at).toLocaleDateString('ar-OM')})؟`))return;
+  const{error}=await sb.from('referral_payouts').delete().eq('id',p.id);
+  if(error){alert('❌ '+error.message);return;}
+  await ref_loadPayouts();ref_renderFinanceTab();ref_renderOverviewTab();
+}
 
 function ref_switchTab(name,btn){
   const bar=btn.closest('.tabs-bar');
@@ -13272,8 +13313,7 @@ async function ref_addFriend(){
   const phone=document.getElementById('new-friend-phone').value.trim();
   const commission=Number(document.getElementById('new-friend-commission').value)||20;
   if(!name){alert('أدخل اسم الصديق');return;}
-  let code=name.trim().split(' ')[0].replace(/[^a-zA-Z0-9؀-ۿ]/g,'').toLowerCase();
-  if(!code)code='friend'+Date.now();
+  const code=ref_makeCode(name);
   const btn=document.getElementById('add-friend-btn');
   btn.disabled=true;btn.textContent='⏳...';
   try{
@@ -13293,8 +13333,22 @@ async function ref_addFriend(){
     btn.disabled=false;btn.textContent='➕ إنشاء رابط';
   }
 }
+// كود الرابط: حروفٌ لاتينية وأرقام فقط. الحروف العربية في الرابط تُقطع كثيراً
+// في واتساب وإنستغرام (يتوقّف الرابط عندها فتضيع الإحالة)، والكود المأخوذ
+// من الاسم الأول وحده يتكرّر. فاسمٌ لاتيني → أول كلمة، وإلا كودٌ قصير عشوائي،
+// ويُضاف رقمٌ عند التكرار.
+function ref_makeCode(name){
+  let base=String(name||'').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+  if(base.length<3){const A='abcdefghjkmnpqrstuvwxyz23456789';base='k';for(let i=0;i<5;i++)base+=A[Math.floor(Math.random()*A.length)];}
+  const taken=new Set(ref_friends.map(f=>String(f.code).toLowerCase()));
+  let code=base,i=2;while(taken.has(code))code=base+(i++);
+  return code;
+}
 async function ref_deleteFriend(id){
-  if(!confirm('حذف هذا الصديق؟ (لن يؤثر على بيانات من سجّلوا سابقاً عبر رابطه)'))return;
+  const f=ref_friends.find(x=>x.id===id);
+  const n=f?ref_registrations.filter(r=>r.referred_by===f.code).length:0;
+  const owed=f?ref_friendBalance(f.code).owed:0;
+  if(!confirm('حذف هذا الصديق؟'+(n?`\nسجّل عبر رابطه ${n} معلّم — تبقى بياناتهم، لكن عمولته تختفي من الإدارة المالية.`:'')+(owed>0?`\n⚠️ له مستحقات غير مدفوعة: ${owed.toFixed(2)} ر.ع`:'')))return;
   await sb.from('referrers').delete().eq('id',id);
   await ref_loadFriends();
   ref_renderFinanceTab();
@@ -13302,11 +13356,13 @@ async function ref_deleteFriend(id){
 }
 // صفحة الحجز تختلف بالحلقة: رابطُ الحلقة الثانية يضع معلّمةَ الأولى في
 // الجدول الخطأ، فيصلها حسابٌ لا يفتح موادّها. لكل حلقةٍ رابطُها.
-function ref_copyLink(code,scope){
-  const link=`${location.origin}${ref_SCOPE_LANDING[scope]}?ref=${code}`;
+// صفحة تسجيلٍ واحدة لكل المراحل منذ ١٧ نوفمبر: رابطٌ واحد لكل صديق،
+// والمعلّم يختار مرحلته في النموذج.
+function ref_copyLink(code){
+  const link=`${location.origin}/landing.html?ref=${encodeURIComponent(code)}`;
   const done=()=>{
     const el=document.getElementById('copy-msg-'+code);
-    if(el){el.textContent='✅ نُسخ رابط '+ref_SCOPE_LABEL[scope];setTimeout(()=>el.textContent='',1800);}
+    if(el){el.textContent='✅ نُسخ';setTimeout(()=>el.textContent='',1800);}
   };
   if(navigator.clipboard)navigator.clipboard.writeText(link).then(done,()=>prompt('انسخ الرابط:',link));
   else prompt('انسخ الرابط:',link);
@@ -13319,11 +13375,10 @@ function ref_renderFriendsTable(){
       <td class="cell-name">${escHtml(f.name)}</td>
       <td><div class="ref-link-cell">
         <span class="ref-link-text">?ref=${escHtml(f.code)}</span>
-        <button class="copy-btn" onclick="ref_copyLink('${f.code}','cycle1')" title="رابط الحلقة الأولى">📋 الحلقة الأولى</button>
-        <button class="copy-btn" onclick="ref_copyLink('${f.code}','post')" title="رابط ما بعد الحلقة الأولى">📋 ما بعدها</button>
+        <button class="copy-btn" onclick="ref_copyLink('${escHtml(f.code)}')" title="نسخ رابط صفحة التسجيل">📋 نسخ الرابط</button>
         <span id="copy-msg-${f.code}" style="font-size:11px;color:var(--green);font-weight:700"></span>
       </div></td>
-      <td>${f.commission_rate}%</td>
+      <td>${f.commission_rate}%${Number(f.commission_rate)<5?' <span title="نسبة منخفضة على غير العادة — تأكّد منها" style="color:var(--red)">⚠️</span>':''}</td>
       <td>${new Date(f.created_at).toLocaleDateString('ar-OM')}</td>
       <td><button class="delete-btn" onclick="ref_deleteFriend(${f.id})">✕</button></td>
     </tr>`).join('');
@@ -13415,7 +13470,6 @@ const ref_stageLabel={cycle1:'🧒 الحلقة الأولى',['5-9']:'📘 ال
 // ══ عزل الحلقات ══
 const ref_SCOPE_STAGES={cycle1:['cycle1'],post:['5-9','10-12']};
 const ref_SCOPE_LABEL={cycle1:'الحلقة الأولى',post:'ما بعد الحلقة الأولى',all:'كل الحلقات'};
-const ref_SCOPE_LANDING={cycle1:'/landing.html',post:'/landing.html'};
 // صفحة واحدة لكل المراحل منذ ١٧ نوفمبر (page='landing')، والأسماء القديمة للزيارات السابقة
 const ref_SCOPE_PAGE={cycle1:['cycle1-landing','landing'],post:['cycle2-landing','landing']};
 let ref_cycleScope=localStorage.getItem('kh_cycle_scope')||'cycle1';
@@ -13778,6 +13832,11 @@ async function ref_doActivate(regId,plan,trialEndDate){
     await ref_loadRegistrations();
     ref_renderAccountsTab();
     if(typeof admTLoad==='function')admTLoad();
+    // تفعيلٌ مدفوع (٥ أشهر) لتسجيلٍ لم يُؤكَّد دفعه: بدون هذا التأكيد لا
+    // تُحتسب عمولة الصديق المُحيل ولا يدخل الاشتراك في الأرباح.
+    if(!trial&&r.payment_status!=='paid'&&confirm(`هل استلمت دفعة «${r.name}»؟\nتأكيد الدفع يحتسب الاشتراك في الأرباح${r.referred_by?' وعمولة الصديق المُحيل':''}.`)){
+      await ref_markRegistrationPaid(regId,'paid');r.payment_status='paid';
+    }
     const isPaid=r.payment_status==='paid';
     const endDateLabel=data.expires_at?new Date(data.expires_at).toLocaleDateString('ar-OM'):'';
     showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone,trial,isPaid,endDateLabel);
@@ -13951,35 +14010,36 @@ function ref_computeFinanceRows(){
   const rows=ref_friends.map(f=>{
     const referredRows=regs.filter(r=>r.referred_by===f.code);
     const paidRows=referredRows.filter(r=>r.payment_status==='paid');
-    const totalCommission=Math.round(paidRows.length*price*(f.commission_rate/100)*100)/100;
-    return{friend:f,referredCount:referredRows.length,paidCount:paidRows.length,totalCommission};
+    const totalCommission=Math.round(paidRows.reduce((s,r)=>s+ref_regCommission(r,f),0)*100)/100;
+    return{friend:f,referredCount:referredRows.length,paidCount:paidRows.length,totalCommission,bal:ref_friendBalance(f.code)};
   });
-  const payoutKey=c=>'payout_'+(ref_cycleScope==='all'?'':ref_cycleScope+'_')+c;
-  const totalOwed=Math.round(rows.filter(r=>localStorage.getItem(payoutKey(r.friend.code))!=='1').reduce((s,r)=>s+r.totalCommission,0)*100)/100;
-  const totalPaidAll=regs.filter(r=>r.payment_status==='paid').length;
-  const totalRevenue=Math.round(totalPaidAll*price*100)/100;
+  // المستحق غير المدفوع: من سجلّ الدفعات في القاعدة، عبر كل الحلقات
+  const totalOwed=Math.round(rows.reduce((s,r)=>s+r.bal.owed,0)*100)/100;
+  const paidRegsAll=regs.filter(r=>r.payment_status==='paid');
+  const totalPaidAll=paidRegsAll.length;
+  const totalRevenue=Math.round(paidRegsAll.reduce((s,r)=>s+(r.paid_amount!=null?Number(r.paid_amount):price),0)*100)/100;
   const totalCommissionAll=Math.round(rows.reduce((s,r)=>s+r.totalCommission,0)*100)/100;
   // تكلفة المستخدم التشغيلية: حصّة الذكاء الاصطناعي المتّفق عليها لكل معلّمة
   // مشتركة (١٠ ر.ع) — تُحتسب فقط على المشتركات المدفوعات فعلياً، لا على كل
   // المسجّلين.
   const OPERATIONAL_COST_PER_USER=10;
   const totalOperationalCost=Math.round(totalPaidAll*OPERATIONAL_COST_PER_USER*100)/100;
-  // تكلفة السيرفر: قيمة خطة Pro في Supabase (~١٠ ر.ع/شهر)، ثابتة تقريباً على
-  // مدار فصلٍ دراسيٍّ من ٤ أشهر — لا تتغيّر بعدد المشتركات.
-  const SERVER_COST_PER_MONTH=10;
+  // تكلفة السيرفر: المشروع على خطة Supabase المجانية (Free) حالياً، فلا
+  // تكلفة شهرية. تُعدَّل هذه القيمة يوم الترقية إلى Pro (~١٠ ر.ع/شهر).
+  const SERVER_COST_PER_MONTH=0;
   const SEMESTER_MONTHS=4;
   const serverCostPerSemester=SERVER_COST_PER_MONTH*SEMESTER_MONTHS;
   const netProfit=Math.round((totalRevenue-totalCommissionAll-totalOperationalCost-serverCostPerSemester)*100)/100;
-  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,serverCostPerSemester,netProfit,payoutKey,regs};
+  return{rows,totalOwed,totalRevenue,totalCommissionAll,totalOperationalCost,serverCostPerSemester,netProfit,regs};
 }
 
 function ref_renderFinanceTab(){
-  const{rows,totalOwed,totalRevenue,totalCommissionAll,serverCostPerSemester,netProfit,payoutKey,regs}=ref_computeFinanceRows();
+  const{rows,totalOwed,totalRevenue,totalCommissionAll,serverCostPerSemester,netProfit,regs}=ref_computeFinanceRows();
   document.getElementById('finance-stats-row').innerHTML=`
     <div class="stat-card"><div class="stat-num green">${totalRevenue.toFixed(2)} ر.ع</div><div class="stat-label">💰 مجموع الأرباح (الإجمالي)</div></div>
     <div class="stat-card"><div class="stat-num">${netProfit.toFixed(2)} ر.ع</div><div class="stat-label">📈 صافي الربح بعد العمولات</div></div>
     <div class="stat-card"><div class="stat-num gold">${totalCommissionAll.toFixed(2)} ر.ع</div><div class="stat-label">🤝 إجمالي مستحقات الأصدقاء</div></div>
-    <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">⏳ مستحق غير مدفوع بعد</div></div>
+    <div class="stat-card"><div class="stat-num red">${totalOwed.toFixed(2)} ر.ع</div><div class="stat-label">⏳ مستحق غير مدفوع بعد (كل الحلقات)</div></div>
     <div class="stat-card"><div class="stat-num">${serverCostPerSemester.toFixed(2)} ر.ع</div><div class="stat-label">🖥️ تكلفة السيرفر في الفصل الدراسي</div></div>
     <div class="stat-card"><div class="stat-num">${ref_friends.length}</div><div class="stat-label">عدد الأصدقاء النشطين</div></div>
     <div class="stat-card"><div class="stat-num gold">${regs.filter(r=>r.referred_by).length}</div><div class="stat-label">إجمالي الإحالات</div></div>
@@ -13992,23 +14052,20 @@ function ref_renderFinanceTab(){
   if(!rows.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">أضف أصدقاءً أولاً من تبويب "روابط الأصدقاء"</div></td></tr>';return;}
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty">لا توجد نتائج مطابقة للبحث</div></td></tr>';return;}
   tbody.innerHTML=filtered.map(r=>{
-    const paidOut=localStorage.getItem(payoutKey(r.friend.code))==='1';
+    const b=r.bal,code=escHtml(r.friend.code).replace(/'/g,'&#39;');
+    const hasPay=ref_payouts.some(p=>p.referrer_code===r.friend.code);
+    const status=b.owed>0
+      ?`<span class="status-badge pending">⏳ مستحق ${b.owed.toFixed(2)} ر.ع</span>`
+      :(b.earned>0?'<span class="status-badge paid">✅ مدفوعة كاملة</span>':'<span style="color:var(--muted)">—</span>');
     return `<tr>
       <td class="cell-name">${escHtml(r.friend.name)}</td>
       <td>${r.referredCount}</td>
       <td>${r.paidCount}</td>
       <td><b>${r.totalCommission.toFixed(2)} ر.ع</b> <span style="color:var(--muted);font-size:11px">(${r.friend.commission_rate}%)</span></td>
-      <td>${paidOut?'<span class="status-badge paid">✅ تم الدفع</span>':'<span class="status-badge pending">⏳ بانتظار الدفع</span>'}</td>
-      <td><button class="action-btn ${paidOut?'done':''}" onclick="ref_togglePayout('${r.friend.code}')">${paidOut?'✓ مدفوعة':'تأكيد الدفع'}</button></td>
+      <td>${status}${b.paidOut>0?`<div style="color:var(--muted);font-size:11px;margin-top:3px">دُفع له ${b.paidOut.toFixed(2)} ر.ع</div>`:''}</td>
+      <td><div class="ref-actions-cell">${b.owed>0?`<button class="action-btn primary" onclick="ref_recordPayout('${code}')">تسجيل دفعة</button>`:''}${hasPay?`<button class="action-btn" onclick="ref_undoLastPayout('${code}')" title="حذف آخر دفعة مسجّلة">↩︎ تراجع</button>`:''}</div></td>
     </tr>`;
   }).join('');
-}
-function ref_togglePayout(code){
-  const key='payout_'+(ref_cycleScope==='all'?'':ref_cycleScope+'_')+code;
-  const cur=localStorage.getItem(key)==='1';
-  if(cur)localStorage.removeItem(key);else localStorage.setItem(key,'1');
-  ref_renderFinanceTab();
-  ref_renderOverviewTab();
 }
 
 async function ref_editRegistrationEmail(id){
@@ -14028,7 +14085,9 @@ async function ref_editRegistrationEmail(id){
 }
 
 async function ref_markRegistrationPaid(id,status){
-  const patch={payment_status:status};
+  // المبلغ وتاريخ الدفع يُثبَّتان لحظة التأكيد: العمولة تُحسب عليهما، فلا
+  // يغيّرها تعديل السعر لاحقاً. وإلغاء الدفع يمحوهما.
+  const patch={payment_status:status,paid_amount:status==='paid'?ref_subscriptionPrice:null,paid_at:status==='paid'?new Date().toISOString():null};
   if(status==='paid'){
     // إسنادٌ لأي تذكيرٍ حوّلها: نُسجّل المرحلة التي كانت عليها هذه اللحظة
     // فقط (لا نُعيدها لاحقاً عند إلغاء الدفع كي لا يضيع رقم الإسناد الأصلي).
@@ -14125,7 +14184,7 @@ async function ref_initReferralsPage(){
   ref_syncScopeUI();
   // السعر يُنتظر مع البقية لا بعدها: رسالة واتساب في جدول المسجّلات تحمله،
   // فلو رُسم الجدول قبل وصوله لبقيت الروابط تطلب السعر الافتراضي صامتةً.
-  await Promise.all([ref_loadSubPrice(),ref_loadFriends(),ref_loadRegistrations(),ref_loadPageViews()]);
+  await Promise.all([ref_loadSubPrice(),ref_loadFriends(),ref_loadRegistrations(),ref_loadPageViews(),ref_loadPayouts()]);
   ref_renderDataTab();
   ref_renderFinanceTab();
   ref_renderOverviewTab();
