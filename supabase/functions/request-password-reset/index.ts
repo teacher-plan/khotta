@@ -37,7 +37,8 @@ const ADMIN_EMAIL = "teacherplane2026project@gmail.com";
 // ويملك الحساب. الخيارات مغلقةٌ في قائمةٍ نعرفها.
 const REDIRECT: Record<string, string> = {
   cycle1: "https://khotati.com/cycle1.html",
-  main: "https://khotati.com/",
+  // الصفوف ٥–١٢ على المنصّة نفسها (cycle1.html) — الجذر نسخةٌ قديمة مهجورة
+  main: "https://khotati.com/cycle1.html",
 };
 
 Deno.serve(async (req) => {
