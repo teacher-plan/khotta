@@ -82,7 +82,7 @@ const SESSION_MS = 25 * 60e3;
 const HW_DAY_CAP = 20; // حدّ نور: أسئلة الواجبات والاختبارات المحتسبة لكل تاريخ نشر
 
 // ══ مختبر نور — حساباتٌ تجريبية فقط؛ لا يراه أي معلّمٍ آخر ولا تقبله الدالّة منه ══
-const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com"];
+const LAB_EMAILS = ["xx@y.com", "teacherplane2026project@gmail.com", "samiradelmoeaz77@gmail.com"];
 // المستكشف قراءةٌ فقط: يُرفض أي مسارٍ قد يُغيّر شيئاً حتى لو كان GET
 // المستكشف من GitHub يفتح صفحات النماذج (add/create/edit) بطلب GET فقط لقراءة حقولها
 const RAW_BLOCK_SVC = /delete|remove|logout|publish|archive|trash|toggle|save|update|set_|mark|send|upload|approve|reject|copy|move|restore|import|reset|grade/i;

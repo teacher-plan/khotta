@@ -3180,12 +3180,14 @@ body:has(#page-fahim.active){overflow:hidden}
 .gm-nw-score div{font-size:32px;font-weight:800;padding:6px 20px;border-radius:14px;border:3px solid var(--tc);background:rgba(10,5,30,.6);box-shadow:0 0 12px var(--tc)}
 .gm-nw-score div.cur{transform:scale(1.08);box-shadow:0 0 22px var(--tc),inset 0 0 14px var(--tc)}
 /* الشاشة الكبيرة */
-.gm-nw-dim{position:absolute;inset:0;z-index:20;background:rgba(5,2,18,.72);backdrop-filter:blur(3px);opacity:0;transition:opacity .35s}
-.gm-nw-dim.show{opacity:1}
-.gm-nw-screen{position:absolute;z-index:21;left:50%;top:50%;width:1180px;min-height:520px;margin-left:-590px;transform:translate(0,-50%) scale(.6);opacity:0;transition:transform .5s cubic-bezier(.3,1.5,.5,1),opacity .3s;
+/* الطبقتان مخفيّتان بالشفافية لا بالإزالة، فكانتا تلتقطان كل ضغطةٍ فوق زرّ «دوِّر!»
+   ولا يحدث شيء. لا تستقبلان الضغط إلا وهما ظاهرتان. */
+.gm-nw-dim{position:absolute;inset:0;z-index:20;background:rgba(5,2,18,.72);backdrop-filter:blur(3px);opacity:0;transition:opacity .35s;pointer-events:none}
+.gm-nw-dim.show{opacity:1;pointer-events:auto}
+.gm-nw-screen{pointer-events:none;position:absolute;z-index:21;left:50%;top:50%;width:1180px;min-height:520px;margin-left:-590px;transform:translate(0,-50%) scale(.6);opacity:0;transition:transform .5s cubic-bezier(.3,1.5,.5,1),opacity .3s;
   border-radius:34px;padding:70px 70px 50px;background:linear-gradient(160deg,#1B0E48,#0B0624);border:6px solid #FFC93C;box-shadow:0 0 40px rgba(255,201,60,.6),inset 0 0 40px rgba(255,201,60,.18);text-align:center}
 .gm-nw-st.port .gm-nw-screen{width:820px;margin-left:-410px;padding:70px 40px 44px}
-.gm-nw-screen.show{opacity:1;transform:translate(0,-50%) scale(1)}
+.gm-nw-screen.show{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto}
 .gm-nw-screen::before{content:'';position:absolute;inset:12px;border-radius:24px;pointer-events:none;background:radial-gradient(circle,#FFE9A8 0 4px,transparent 5px) 0 0/34px 34px;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:6px;opacity:.85;animation:gmKnwChase .6s steps(2) infinite}
 .gm-nw-badge{position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-size:34px;font-weight:800;padding:6px 30px;border-radius:999px;background:var(--tc,#FF3DCB);box-shadow:0 0 20px var(--tc,#FF3DCB);white-space:nowrap}
 .gm-nw-q{font-family:'Lalezar','Baloo Bhaijaan 2',Tahoma;font-size:var(--qs,64px);line-height:1.35;color:#fff;text-shadow:0 0 18px rgba(46,230,255,.55);margin:10px 0 40px}
@@ -6479,12 +6481,16 @@ async function storageUploadR2(file,fileName,kind){
   try{
     const{data,error}=await sb.functions.invoke('r2-files',{body:{action:'sign_upload',fileName,size:file.size,contentType:file.type||'application/octet-stream'}});
     if(error||!data||!data.putUrl){
-      const why=(data&&data.error)||'';
+      // supabase-js يُخفي جسم الردّ غير الناجح في error.context — وفيه السبب
+      let why=(data&&data.error)||'';
+      if(!why&&error&&error.context&&error.context.json){try{why=(await error.context.clone().json()).error||'';}catch(_){}}
       if(why==='quota_exceeded'){toast('امتلأت مساحة '+khG('تخزينكِ','تخزينك')+' — '+khG('احذفي','احذف')+' ملفاتٍ قديمة أو '+khG('راسلي','راسل')+' الإدارة',true);return false;}
-      _r2Off=true;return null;
+      // Supabase احتياطٌ فقط إن لم يُضبط R2 أصلاً: عطلٌ عابر لا يملأ مخزن Supabase (١ غيغابايت للمنصّة كلها)
+      if(why==='not_configured'){_r2Off=true;return null;}
+      toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;
     }
     const put=await fetch(data.putUrl,{method:'PUT',headers:{'Content-Type':data.contentType},body:file});
-    if(!put.ok){console.warn('R2 PUT',put.status);return null;}
+    if(!put.ok){console.warn('R2 PUT',put.status);toast('تعذّر رفع الملف الآن — '+khG('أعيدي','أعد')+' المحاولة بعد قليل',true);return false;}
     const{error:rowErr}=await sb.from('user_files').insert({user_id:currentUser.id,path:data.path,size_bytes:file.size,kind,file_name:fileName});
     if(rowErr){try{await sb.functions.invoke('r2-files',{body:{action:'delete',path:data.path}});}catch(e){}return null;}
     const url=data.publicUrl;
@@ -6511,7 +6517,7 @@ async function storageUpload(file,fileName,kind){
     // R2 أولاً (files.khotati.com): رابط رفعٍ موقَّع من الخادم، والحصّة تُفحص هناك أيضاً.
     // إن لم يُضبط R2 بعد (not_configured) أو تعذّر، نكمل إلى Supabase كما كان.
     const r2=await storageUploadR2(file,fileName,kind);
-    if(r2===false)return null;   // امتلأت الحصّة: لا نرجع إلى Supabase
+    if(r2===false)return null;   // امتلأت الحصّة أو تعذّر R2 مؤقتاً: لا نرجع إلى Supabase
     if(r2)return r2;
     const path=storagePath(fileName);
     const{error:upErr}=await sb.storage.from('user-files').upload(path,file,{contentType:file.type||undefined});
@@ -6709,7 +6715,7 @@ function C1_SECTIONS(){return [
 // بوّابة الأقسام حسب الحلقة: cy='both' يعني يظهر للحلقتين، وهو حال كل الأقسام
 // اليوم — فالتصفية أدناه بلا أثرٍ إطلاقاً على ما تراه معلّمة الحلقة الأولى.
 // أُضيفت الآلية فقط ليُمكن لاحقاً قصرُ قسمٍ على حلقةٍ بعينها بتعديل حرفٍ واحد.
-function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlIsLab()));}
+function c1Sections(){return C1_SECTIONS().filter(s=>(!s.cy||s.cy==='both'||s.cy===APP_CYCLE)&&(!s.lab||nlNoorOn()));}
 function c1Board(open){
   const b=document.getElementById('c1-board');
   if(!open){b.classList.remove('open');return;}
@@ -7259,7 +7265,7 @@ let _demoBusyGuard=null;
 const ADMIN_WA='96876787595';   // رقم إدارة المنصّة بصيغة دولية بلا +
 // ختم النسخة — تكتبه GitHub Actions عند كل نشر. الصفحة تُخزَّن في عامل الخدمة،
 // فقد تعمل المعلّمة على نسخةٍ قديمة وتُبلّغ عن علّةٍ أُصلحت. الختم يحسم ذلك.
-const KH_BUILD='17cdc69';
+const KH_BUILD='2aec52a';
 let acctRoster={},acctCls=null,acctDelCls=new Set();
 function acctRenderRoster(){
   const grid=document.getElementById('roster-cls-grid');
@@ -7464,10 +7470,10 @@ function newClsRender(){
     note.textContent='';
   }else{
     const taken=newClsTaken(newCls.g);
-    secBox.innerHTML=[1,2,3,4,5,6,7,8].map(n=>{
+    secBox.innerHTML=Array.from({length:20},(_,i)=>i+1).map(n=>{
       const t=taken.has(n);
       return `<button type="button" class="chip ${newCls.n===n?'sel':''}" ${t?'disabled style="opacity:.4;cursor:not-allowed"':''}
-        onclick="${t?'':'newClsPickSec('+n+')'}">${'١٢٣٤٥٦٧٨'[n-1]}</button>`;
+        onclick="${t?'':'newClsPickSec('+n+')'}">${c1SecAr(n)}</button>`;
     }).join('');
     note.textContent=taken.size?'الأرقام الباهتة شُعَبٌ '+khG('لديكِ','لديك')+' أصلاً في هذا الصف.':'';
   }
@@ -7539,7 +7545,7 @@ async function newClsSave(){
   if(c1AllClasses().some(c=>c.id===id)){toast('هذه الشعبة موجودةٌ '+khG('لديكِ','لديك')+' أصلاً',true);return;}
   const students=newCls.stu.map(s=>s.trim()).filter(Boolean);
   const cls={
-    id,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,
+    id,name:gradeName(g)+'/'+c1SecAr(n),num:n,g,
     color:C1_CLS_COLORS[c1AllClasses().length%C1_CLS_COLORS.length],
     subjects:subs.slice(),students,
   };
@@ -8770,12 +8776,12 @@ function suRender(){
     const d=suData[suActive];
     const gname=gradeName(suActive);
     const focus=window._suFocus;
-    // مربعات الشعب الثماني الجاهزة
-    const tiles=[...Array(8)].map((_,i)=>{
+    // مربعات الشعب الجاهزة (١–٢٠)
+    const tiles=[...Array(20)].map((_,i)=>{
       const n=i+1;
       const sec=d.secs[n];
       const cls=['sec-tile',sec&&sec.sel?'sel':'',sec&&sec.sel&&sec.subjects.length?'hasS':'',focus===suActive+'-'+n?'focus':''].join(' ');
-      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+'١٢٣٤٥٦٧٨'[i]+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':''+khG('اختاري','اختر')+' المادة'):'')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
+      return '<button class="'+cls+'" onclick="suSecTap('+n+')">'+gname+'/'+c1SecAr(i+1)+'<small>'+(sec&&sec.sel?(sec.subjects.length?sec.subjects.length+' مادة':''+khG('اختاري','اختر')+' المادة'):'')+'</small><span class="cnt">'+(sec&&sec.subjects.length?sec.subjects.join('، ').slice(0,18):'')+'</span></button>';
     }).join('');
     // صندوق مواد الشعبة قيد التحديد
     let subjBox='';
@@ -8785,7 +8791,7 @@ function suRender(){
       if(sec&&sec.sel){
         const _subs=subjectsForGrade(suActive,suRender);
         const _note=_subs.length?'':subjectsNotice(suActive);
-        subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي '+khG('تدرّسينها','تدرّسها')+' لشعبة <b>'+gname+'/'+'١٢٣٤٥٦٧٨'[n-1]+'</b>؟</div>'
+        subjBox='<div class="sec-subj-box"><div class="t">ما المادة التي '+khG('تدرّسينها','تدرّسها')+' لشعبة <b>'+gname+'/'+c1SecAr(n)+'</b>؟</div>'
           +_note
           +'<div class="subj-grid">'+_subs.map(sub=>{
             const cc=SUBJ_COLORS[sub]||['#D86048','#A83030'];
@@ -8855,14 +8861,15 @@ function suRender(){
       +'<button class="c1-mbtn go" onclick="suFinish()">تأكيد وبدء الاستخدام</button></div></div>';
   }
 }
+function c1SecAr(n){return String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function suBuildClasses(){
   const out=[];let colorIdx=0;
   for(const g of suGrades){
     const d=suData[g];if(!d)continue;
-    for(let n=1;n<=8;n++){
+    for(let n=1;n<=20;n++){
       const sec=d.secs[n];
       if(sec&&sec.sel&&sec.subjects.length){
-        out.push({id:'c1g'+g+'s'+n,name:gradeName(g)+'/'+'١٢٣٤٥٦٧٨'[n-1],num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
+        out.push({id:'c1g'+g+'s'+n,name:gradeName(g)+'/'+c1SecAr(n),num:n,g,color:C1_CLS_COLORS[colorIdx++%C1_CLS_COLORS.length],subjects:sec.subjects.slice()});
       }
     }
   }
@@ -10030,8 +10037,10 @@ function table(rows, widths, opts = {}) {
   const body = rows.map((r, ri) => {
     const head = ri === 0 && opts.header;
     return `<w:tr>${r.map((c, ci) => cell(
-      typeof c === 'string'
-        ? P(c, { size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
+      // نصٌّ عادي ← فقرة؛ أمّا ما بُني فقراتِ وورد جاهزة (يبدأ بـ ‎<w:‎) فيُدرج كما هو —
+      // كانت الخلايا الجاهزة (الاستراتيجيات والمصادر والمفاهيم، والتوقيع) تُهرَّب نصاً فيظهر كود XML في وورد
+      typeof c === 'string' && !c.startsWith('<w:')
+        ? P(c,{ size: head ? 11.5 : 11, bold: head, color: head ? RED : INK, after: 0 })
         : c, widths[ci], head ? PAPER : (opts.zebra && ri % 2 ? 'FFFDF9' : null)
     )).join('')}</w:tr>`;
   }).join('');
@@ -11948,6 +11957,9 @@ async function noorImpApply(){
 // الدالّة c1-noor ترفض أفعال lab_* من أي حسابٍ آخر، فإخفاء القسم هنا راحةٌ لا حماية.
 const NL_EMAILS=['xx@y.com','teacherplane2026project@gmail.com'];
 function nlIsLab(){return !KH_DEMO&&!!(currentUser&&NL_EMAILS.includes(String(currentUser.email||'').toLowerCase()));}
+// قسم «منصّة نور» وحده (بلا بقية أدوات المختبر): حسابات المختبر + أ. سمير عبد المعز (٢٤ نوفمبر)
+const NL_NOOR_EXTRA=['samiradelmoeaz77@gmail.com'];
+function nlNoorOn(){return nlIsLab()||(!KH_DEMO&&!!(currentUser&&NL_NOOR_EXTRA.includes(String(currentUser.email||'').toLowerCase())));}
 const nl={tab:'pts',ov:null,st:null,stCid:'',lessons:{},gen:null,post:null,ai:{},dev:null,busy:{}};
 const NL_TABS=[['pts','لوحة النقاط',''],['week','حصص الأسبوع',''],['stu','تحليل الطلاب',''],['gen','مولّد الواجب الذكي',''],['room','غرفة نقاش',''],['dev','وصول المطوّر','']];
 const nlN=n=>egArNum(Math.round(+n||0).toLocaleString('en-US'));
@@ -11959,7 +11971,7 @@ function nlLoading(t){return `<div class="nl-load"><span class="nl-spin"></span>
 
 async function nlRender(){
   const root=document.getElementById('nl-root');if(!root)return;
-  if(!nlIsLab()){root.innerHTML='';return;}
+  if(!nlNoorOn()){root.innerHTML='';return;}
   let s;
   try{s=await noorStatus();}catch(e){root.innerHTML=`<div class="nl-card"><p class="sub">${escHtml(e.message)}</p></div>`;return;}
   if(!s.linked){
@@ -21043,7 +21055,48 @@ function g3Diff(a,b){
 }
 // ─ «انظر وتذكّر» بأسلوب الكاميرا والصور الفورية (١٩ نوفمبر): الجملة صورة بولارويد على حبلٍ بمشابك، وميض كاميرا ثم
 //   تَبهت الكلمة ويُطلب تذكّرها، والخيارات صورٌ فورية مائلة. الإجابة تُظهِر الكلمة كأنها تتحمّض. الفروق تُعلَّم كما هي ─
+// ── إصلاح خيارات «انظر وتذكّر» ──
+// النموذج كثيراً ما يكرّر الكلمة الصحيحة في الخيارات الأربعة (أو يكتبها
+// بتشكيلٍ مختلف فقط)، فتبدو كلّها متشابهة ولا خطأ فيها. نُبقي الصحيحة مرّةً
+// واحدة، ونحذف كل خيارٍ يطابقها أو يطابق غيره بعد حذف التشكيل، ونكمل الناقص
+// بأخطاءٍ إملائيةٍ شائعة تُولَّد بقواعد ثابتة.
+var GM_SP_STRIP=/[ً-ْٰـ]/g;
+function gmSpNorm(s){return String(s||'').replace(GM_SP_STRIP,'').trim();}
+function gmSpMutations(w){
+  var out=[],add=function(x){if(x&&x!==w)out.push(x);};
+  var last=w.slice(-1),body=w.slice(0,-1);
+  if(last==='ة'){add(body+'ه');add(body+'ت');}
+  if(last==='ه'&&w.length>2)add(body+'ة');
+  if(last==='ى')add(body+'ي');
+  if(last==='ي'&&w.length>2)add(body+'ى');
+  if(/ا$/.test(w)&&w.length>3)add(w.slice(0,-1)+'ن');
+  var hasAl=w.indexOf('ال')===0&&w.length>3,stem=hasAl?w.slice(2):w,pre=hasAl?'ال':'';
+  if(hasAl&&'تثدذرزسشصضطظلن'.indexOf(stem[0])>=0)add('ا'+stem);
+  if(stem[0]==='ا'){add(pre+'أ'+stem.slice(1));add(pre+'إ'+stem.slice(1));}
+  if(stem[0]==='أ'||stem[0]==='إ')add(pre+'ا'+stem.slice(1));
+  if(stem[0]==='آ')add(pre+'ءا'+stem.slice(1));
+  var SW={'ث':'س','س':'ث','ذ':'ز','ز':'ذ','ض':'ظ','ظ':'ض','ت':'ط','ط':'ت','ص':'س','ق':'ك','ئ':'ء','ؤ':'ء','ح':'ه'};
+  for(var i=pre.length;i<w.length;i++){var r=SW[w[i]];if(r){add(w.slice(0,i)+r+w.slice(i+1));}}
+  for(var j=pre.length+1;j<w.length-1;j++){if('اوي'.indexOf(w[j])>=0){add(w.slice(0,j)+w.slice(j+1));break;}}
+  if(stem.length>=3&&'اأإآ'.indexOf(stem[0])<0&&stem[1]!=='ا')add(pre+stem[0]+'ا'+stem.slice(1));
+  return out;
+}
+function gmSpellFix(items){
+  return (items||[]).map(function(it){
+    if(!it||!Array.isArray(it.c))return it;
+    var right=String(it.c[it.a||0]||it.w||'').trim(),rn=gmSpNorm(right);
+    if(!rn)return it;
+    var seen={},wrong=[];seen[rn]=1;
+    it.c.forEach(function(x){var n=gmSpNorm(x);if(n&&!seen[n]){seen[n]=1;wrong.push(String(x).trim());}});
+    if(wrong.length<3)gmSpMutations(gmSpNorm(right)).forEach(function(x){if(wrong.length<3&&!seen[x]){seen[x]=1;wrong.push(x);}});
+    wrong=wrong.slice(0,3);
+    var c=wrong.concat([right]);
+    for(var k=c.length-1;k>0;k--){var m=Math.floor(Math.random()*(k+1)),t=c[k];c[k]=c[m];c[m]=t;}
+    var o={};for(var p in it)o[p]=it[p];o.c=c;o.a=c.indexOf(right);return o;
+  });
+}
 function gmRunFlash(qs){
+  qs=gmSpellFix(qs);
   var run=++gmRun3;
   if(!gmT.on)gmKitReset(gmTeamsN);
   var qi=0,LOOK=+(GM_OPT&&GM_OPT.look)||3;

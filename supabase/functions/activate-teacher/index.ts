@@ -239,7 +239,9 @@ Deno.serve(async (req) => {
       .eq("id", regId);
     if (uErr) console.error("activate-teacher: تعذّر حفظ account_email:", uErr.message);
 
-    const link = cycle === "cycle1" ? "https://khotati.com/cycle1.html" : "https://khotati.com/";
+    // منصّة المعلّمين كلّها cycle1.html (الصفوف ١–١٢) — khotati.com/ (index.html)
+    // نسخةٌ قديمة مهجورة، فلا يُرسَل إليها أحد.
+    const link = "https://khotati.com/cycle1.html";
     const mail = await sendMail(
       email,
       plan === "trial" ? "حسابكِ التجريبي في منصّة خُطّة" : "تفعيل حسابكِ في منصّة خُطّة",
