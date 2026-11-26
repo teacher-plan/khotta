@@ -8,6 +8,7 @@
 //   action:"remove"                   ← يزيل الشعار.
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Put } from "../_shared/r2.ts";
 import { orFetch, pickVisionModel } from "../_shared/ai.ts";
 import { logAiCost } from "../_shared/quota.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
@@ -53,9 +54,12 @@ Deno.serve(async (req) => {
       const bin = Uint8Array.from(atob(png.split(",")[1] || ""), (c) => c.charCodeAt(0));
       if (bin.length > MAX_PNG) return json({ error: "too_large" }, 413);
       const key = `school-logos/${school.id}-${Date.now()}.png`;
-      const { error } = await admin.storage.from("library-files").upload(key, new Blob([bin], { type: "image/png" }), { upsert: true, contentType: "image/png", cacheControl: "31536000" });
-      if (error) return json({ error: "upload_failed" }, 500);
-      const url = admin.storage.from("library-files").getPublicUrl(key).data.publicUrl;
+      let url = await r2Put("library-files/" + key, bin, "image/png");
+      if (!url) {
+        const { error } = await admin.storage.from("library-files").upload(key, new Blob([bin], { type: "image/png" }), { upsert: true, contentType: "image/png", cacheControl: "31536000" });
+        if (error) return json({ error: "upload_failed" }, 500);
+        url = admin.storage.from("library-files").getPublicUrl(key).data.publicUrl;
+      }
       await admin.from("c1_schools").update({ logo_url: url, logo_at: new Date().toISOString(), ...(pos ? { logo_pos: pos } : {}), ...(size ? { logo_size: size } : {}) }).eq("id", school.id);
       return json({ ok: true, logo_url: url });
     }

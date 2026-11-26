@@ -155,3 +155,15 @@ jobs:
           fi
 
           exit $fail
+
+      # R2 هو التخزين الأساسي: الصفحات المرفوعة تُنسخ إليه فوراً (لا تنتظر الفحص الأسبوعي)
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: 3.2.0 }
+      - name: Copy new pages to R2
+        env: { SUPABASE_ACCESS_TOKEN: "${{ secrets.SUPABASE_ACCESS_TOKEN }}" }
+        run: |
+          SVC=$(supabase projects api-keys --project-ref mkdsnnfkkdwdkywnwnjh -o json | jq -r '.[]|select(.name=="service_role")|.api_key')
+          echo "::add-mask::$SVC"
+          pip install -q requests
+          SVC="$SVC" python3 tools/storage/mirror_r2.py
