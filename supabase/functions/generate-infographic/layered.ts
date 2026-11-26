@@ -12,6 +12,7 @@
 //          الإسلامية…)، وتُحفظ لكل وحدة فتُعاد بلا تكلفة رسمٍ لبقية دروسها.
 // ════════════════════════════════════════════════════════════════
 import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
+import { r2Put, r2Exists, r2PublicUrl } from "../_shared/r2.ts";
 import { refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
@@ -105,6 +106,7 @@ function cleanContent(layout: "cols" | "bg", raw: Any, cur: Any): Any | null {
 }
 
 async function storageUrl(admin: Any, key: string): Promise<string> {
+  if (await r2Exists("library-files/" + key)) return r2PublicUrl("library-files/" + key);
   const { data } = await admin.storage.from("library-files").list(key.split("/").slice(0, -1).join("/"), { search: key.split("/").pop() });
   if (!A(data).some((o: Any) => o.name === key.split("/").pop())) return "";
   return admin.storage.from("library-files").getPublicUrl(key).data.publicUrl;
@@ -181,7 +183,7 @@ export async function layeredInfographic(admin: Any, user: Any, st: Record<strin
       const b64 = img.split(",")[1] || "";
       const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const ct = (img.match(/^data:([^;]+)/) || [])[1] || "image/png";
-      await admin.storage.from("library-files").upload(bgKey, new Blob([bin], { type: ct }), { upsert: true, contentType: ct, cacheControl: "31536000" });
+      if (!(await r2Put("library-files/" + bgKey, bin, ct))) await admin.storage.from("library-files").upload(bgKey, new Blob([bin], { type: ct }), { upsert: true, contentType: ct, cacheControl: "31536000" });
     } catch (e) { console.error("layered bg cache", String(e)); }
   }
   return json({ layered: true, layout, content, art: img, cached: false, cur_id: cur.id });

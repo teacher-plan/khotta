@@ -8,6 +8,7 @@
 // المخزن المطلوب: bucket عام باسم library-files (موجود أصلاً)
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Put } from "../_shared/r2.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -155,6 +156,8 @@ Deno.serve(async (req) => {
     if (!isPdf) return json({ error: "not_pdf", ctype }, 415);
 
     const path = `book-cache/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.pdf`;
+    const r2url = await r2Put("library-files/" + path, buf, "application/pdf", "public, max-age=600");
+    if (r2url) return json({ url: r2url, bytes: buf.byteLength, path });
     const { error: upErr } = await admin.storage.from("library-files").upload(path, buf, {
       cacheControl: "600",
       contentType: "application/pdf",

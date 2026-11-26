@@ -6423,14 +6423,29 @@ const sb=KH_DEMO?(function(){
 // Supabase كما هي حتى يتحوّل الرفع. صفحةٌ لم تُنسخ بعد (كتابٌ رُفع للتوّ) تُحمَّل
 // تلقائياً من Supabase عند فشلها، فلا تظهر صورةٌ مكسورة أبداً.
 const KH_R2='https://files.khotati.com/';
-const KH_R2_RE=/^(books|teacher-guides)\//;
+const KH_R2_RE=/^(?!.*\.json$)./; // كل الملفات (عدا ملفات JSON النصية التي تبقى في Supabase)
 if(!KH_DEMO)(function(){
   const from=sb.storage.from.bind(sb.storage);
+  // Cloudflare R2 هو التخزين الأساسي للملفات (٢٦ نوفمبر): الرفع والحذف والروابط تمرّ به،
+  // وSupabase للبيانات النصية والجداول. تعذّر R2 ← يرجع الرفع إلى Supabase كما كان.
+  const enc=p=>String(p).split('/').map(encodeURIComponent).join('/');
   sb.storage.from=b=>{const o=from(b);
-    if(b==='library-files'&&o&&o.getPublicUrl){const g=o.getPublicUrl.bind(o);
+    if((b==='library-files'||b==='user-files')&&o&&o.getPublicUrl){const g=o.getPublicUrl.bind(o),up=o.upload.bind(o),rm=o.remove.bind(o);
       o.getPublicUrl=(p,opt)=>{const r=g(p,opt);
-        if(!opt&&KH_R2_RE.test(String(p||'')))r.data.publicUrl=KH_R2+'library-files/'+String(p).split('/').map(encodeURIComponent).join('/');
-        return r;};}
+        if(!opt&&KH_R2_RE.test(String(p||'')))r.data.publicUrl=KH_R2+b+'/'+enc(p);
+        return r;};
+      o.upload=async(p,body,opt)=>{opt=opt||{};
+        if(!/\.json$/i.test(String(p))&&body&&body.size)try{
+          const type=opt.contentType||body.type||'application/octet-stream';
+          const cc=/^\d+$/.test(String(opt.cacheControl||''))?'public, max-age='+opt.cacheControl:(opt.cacheControl||'public, max-age=3600');
+          const{data:s,error:e}=await sb.functions.invoke('r2-files',{body:{action:'sign_put',bucket:b,path:p,size:body.size,contentType:type,cacheControl:cc}});
+          if(!e&&s&&s.putUrl){const r=await fetch(s.putUrl,{method:'PUT',body,headers:{'Content-Type':s.contentType,'Cache-Control':s.cacheControl}});
+            if(r.ok){if(opt.onUploadProgress)try{opt.onUploadProgress({loaded:body.size,total:body.size});}catch(_){}
+              return{data:{path:p,fullPath:b+'/'+p},error:null};}}
+        }catch(_){}
+        return up(p,body,opt);};
+      o.remove=async paths=>{try{await sb.functions.invoke('r2-files',{body:{action:'remove',bucket:b,paths}});}catch(_){}
+        return rm(paths);};}
     return o;};
   document.addEventListener('error',e=>{const t=e.target;
     if(t&&t.tagName==='IMG'&&t.src&&t.src.indexOf(KH_R2)===0&&!t.dataset.khFb){
