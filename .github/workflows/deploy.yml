@@ -35,7 +35,7 @@ jobs:
     needs: check
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -67,6 +67,19 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+      # deploy-pages يسأل عن الحزمة فور رفعها، وواجهة GitHub أحياناً لا تراها بعد
+      # («Found 0 artifacts») فيفشل النشر عشوائياً. ننتظر قليلاً، ونعيد مرّةً
+      # واحدة بعد مهلةٍ أطول إن فشلت المحاولة الأولى.
+      - name: Wait for artifact
+        run: sleep 20
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait before retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
