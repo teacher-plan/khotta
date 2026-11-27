@@ -111,14 +111,15 @@ async function labAi(admin: Any, user: Any, b: Any) {
   const rules = "قواعد نقاط نور: سؤال واجب/اختبار ٥ نقاط (+٢ إن كان عامّاً في البنك) وحدّه ٢٠ سؤالاً لكل تاريخ نشر؛ ملف مرفق ١٥ نقطة (+١٠٪ مشاركة مع المدرسة، +٣٠٪ في المكتبة العامة) وحدّ الملفات ١٠ يومياً؛ درس تفاعلي سكورم ٤٠ نقطة؛ فيديو يوتيوب ١٠؛ موضوع نقاش ٢٠ بحسب نسبة ردود الطلاب؛ فصل افتراضي ١٠٠ بحسب الحضور؛ رسالة ١ (حدّ ٥ يومياً) عند قراءتها. كل نشاط يُضرب في نسبة تفاعل الطلاب، والمكرّر والفارغ لا يُحتسب وقد يُصفّر النقاط، وحذف المحتوى يحذف نقاطه. البطاقات: أفضل ٥٪ في المدرسة ماسية، ٤٠٪ ذهبية، ٥٥٪ خضراء.";
   let system = "", user_ = "", jsonOut = false, maxT = 1500;
   if (task === "coach") {
-    system = [base, rules, "أمامك بيانات المعلّم الحالية من نور (النقاط اليومية، ما نُشر اليوم مقابل الحدود، تغطية تحضير حصص الأسبوع، تفاعل الطلاب مع الواجبات).",
-      "اكتب «خطة اليوم لرفع النقاط» بعناوين Markdown (##) وقوائم قصيرة:",
-      "## أين تقف (٣ نقاط بالأرقام: الاتجاه، الفجوة مع أنشط معلّمي المدرسة، ما تبقّى من حدود اليوم)",
-      "## افعل اليوم (٣–٥ خطوات مرتّبة بالأثر، لكل خطوةٍ النقاط المتوقّعة تقريباً وكيف تُنفّذ من خُطّة)",
-      "## ارفع تفاعل الطلاب (لأنه المضاعِف: ٢–٣ أفكار عملية مرتبطة بالأرقام)",
-      "## تجنّب (ما يُسقط النقاط)",
-      "في البيانات plan: خطة اليوم محسوبةٌ بدقة من أرقام نور، وفي المنصّة لكل بندٍ منها زرّ تنفيذ. اجعل «افعل اليوم» على ترتيبها نفسه ولا تناقضها، وأضف ما يرفع تفاعل الطلاب.",
-      "لا تخترع أرقاماً غير الموجودة. ٢٠٠–٣٥٠ كلمة."].join("\n");
+    // المدرّب يُرجع أوامر قابلة للتنفيذ لا نصّاً: كل فعلٍ من نوعٍ معروف وبدرسٍ منسوخٍ
+    // من قوائم candidates (ما هو ممكنٌ فعلاً الآن)، فتعرضه المنصّة بزرّ تنفيذٍ مباشر.
+    jsonOut = true; maxT = 1800;
+    system = [base, rules,
+      "أمامك بيانات المعلّم الحيّة من نور، وفيها candidates: قوائم بما يمكن تنفيذه فعلاً الآن (دروس بلا واجب، دروس تفاعلية جاهزة للرفع، أحدث التحاضير لإرفاق الملفات، دروس بلا تحضير، الدروس الأخيرة، والمتّسع لكل يومٍ في حدود الأسئلة والملفات)، وplan: خطةٌ محسوبةٌ آلياً.",
+      "رتّب أفضل ٣–٦ أفعال لرفع النقاط اليوم والأيام القريبة، وأعد JSON فقط بهذا الشكل:",
+      '{"summary":"سطران أو ثلاثة: أين يقف بالأرقام وما أهمّ فرصةٍ اليوم","actions":[{"type":"hw|attach|scorm|room|prep|message","lesson":"اسم الدرس منسوخاً حرفياً من القائمة","n":12,"date":"YYYY-MM-DD","points":84,"why":"سطرٌ واحد: لماذا هذا الفعل الآن"}],"tips":["نصيحة قصيرة لرفع تفاعل الطلاب"]}',
+      "القواعد: hw يختار lesson من lessons_without_homework أو recent_lessons، وn ≤ q_left في التاريخ المختار (حدّ ٢٠). attach من recent_preps، وn ≤ files_left في التاريخ (حدّ ١٠). scorm من scorm_ready. prep من lessons_without_prep. room من recent_lessons (موضوع نقاش ٢٠ نقطة، مفيدٌ إن مضى أسبوع على آخر غرفة). message رسالةٌ للطلاب (نقطة لكل قارئ، حدّ ٥ يومياً) بلا lesson. date من capacity فقط. points تقدير قبل ضرب نسبة التفاعل: السؤال ٧، الملف ١٥، التفاعلي ٤٠، الموضوع ٢٠.",
+      "لا تخترع درساً ولا تاريخاً ولا رقماً غير موجود. خاطب المعلّم بالمذكّر. tips من ١ إلى ٣."].join("\n");
     user_ = "البيانات:\n" + data;
   } else if (task === "students") {
     system = [base, "أمامك تحليلٌ مجمّع لتفاعل طلاب المعلّم مع واجبات نور (بلا أسماء: معرّفات رقمية وفئات).",
@@ -163,6 +164,15 @@ async function labAi(admin: Any, user: Any, b: Any) {
   if (!jsonOut) return text ? json({ text }) : json({ error: "bad_output", message: "لم يُرجع النموذج نصاً." }, 502);
   const p = parseAiJson<Any>(text);
   if (!p.ok) return json({ error: "bad_output", message: "تعذّر قراءة ردّ النموذج، أعد المحاولة." }, 502);
+  if (task === "coach") {
+    const T = ["hw", "attach", "scorm", "room", "prep", "message"];
+    const v = p.value || {};
+    const actions = (Array.isArray(v.actions) ? v.actions : []).filter((x: Any) => x && T.includes(String(x.type))).slice(0, 8)
+      .map((x: Any) => ({ type: String(x.type), lesson: String(x.lesson || "").slice(0, 160), n: Math.max(0, Math.min(20, Math.round(+x.n || 0))),
+        date: /^\d{4}-\d{2}-\d{2}$/.test(String(x.date || "")) ? String(x.date) : "", points: Math.max(0, Math.round(+x.points || 0)), why: String(x.why || "").slice(0, 300) }));
+    if (!actions.length && !v.summary) return json({ error: "bad_output", message: "لم يُرجع المدرّب خطةً صالحة، أعد المحاولة." }, 502);
+    return json({ summary: String(v.summary || "").slice(0, 600), actions, tips: (Array.isArray(v.tips) ? v.tips : []).slice(0, 3).map((t: Any) => String(t).slice(0, 240)) });
+  }
   if (task === "hw") {
     const items = (Array.isArray(p.value?.items) ? p.value.items : []).filter((q: Any) => q && q.text && Array.isArray(q.choices) && q.choices.length >= 2)
       .map((q: Any) => ({ text: String(q.text), choices: q.choices.slice(0, 6).map(String), answer: Math.max(1, Math.min(q.choices.length, +q.answer || 1)) }));

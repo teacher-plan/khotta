@@ -4752,6 +4752,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-plan-b small{font-size:11.5px;color:#5C7470;line-height:1.7}
 .nl-plan-p{font-weight:900;color:#A2741A;font-size:14px;white-space:nowrap}
 .nl-plan-list .nl-btn{padding:8px 12px;font-size:12px;white-space:nowrap}
+.nl-tips{margin:0;padding-inline-start:20px;font-size:12.5px;line-height:1.9;color:var(--nl-ink)}
 .nl-ph{grid-column:1/-1;margin-top:4px;padding:12px;border-radius:12px;background:var(--nl-soft);border:1px solid var(--nl-line)}
 .nl-ph-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .nl-ph-top b{font-size:13px}
@@ -12083,9 +12084,9 @@ function nlPts(){
     <div class="nl-tiers"><span class="${tk==='g'?'on g':''}">خضراء · أفضل ٥٥٪</span><span class="${tk==='y'?'on y':''}">ذهبية · أفضل ٤٠٪</span><span class="${tk==='d'?'on d':''}">ماسية · أفضل ٥٪</span></div></div>
   <div class="nl-card h6"><h3><i class="ki ki-list" aria-hidden="true"></i> آخر ما نُشر في نور</h3><p class="sub">${egArNum(o.totals.hw)} واجباً · ${egArNum(o.totals.files)} ملفاً · ${egArNum(o.totals.scorm)} درساً تفاعلياً هذا الفصل.</p>
     <ul class="nl-feed">${(o.recent||[]).slice(0,25).map(r=>`<li><span class="nl-ico">${r.kind==='hw'?'<i class="ki ki-pen" aria-hidden="true"></i>':r.kind==='scorm'?'<i class="ki ki-game" aria-hidden="true"></i>':'<i class="ki ki-clip" aria-hidden="true"></i>'}</span><span class="t" title="${escAttr(r.title)}">${escHtml(r.title)}</span>${r.q?`<span class="nl-pill mid">${egArNum(r.q)} س</span>`:''}<span class="d">${nlShort(r.at)}</span></li>`).join('')||'<li>لا شيء بعد</li>'}</ul></div>
-  <div class="nl-card"><h3><i class="ki ki-brain" aria-hidden="true"></i> مدرّب النقاط الذكي</h3><p class="sub">يقرأ أرقامك الحيّة من نور (الحدود، الأسبوع، تفاعل الطلاب إن حُمّل) ويكتب لك خطة اليوم.</p>
+  <div class="nl-card"><h3><i class="ki ki-brain" aria-hidden="true"></i> مدرّب النقاط الذكي</h3><p class="sub">يقرأ أرقامك الحيّة من نور (الحدود، الأسبوع، تفاعل الطلاب إن حُمّل)، ويقترح أفعالاً لكلٍّ منها زرّ تنفيذٍ مباشر.</p>
     <div class="nl-actions"><button class="nl-btn ai" id="nl-coach-btn" onclick="nlCoach()"><i class="ki ki-sparkle" aria-hidden="true"></i> ${nl.ai.coach?'أعد التحليل':'حلّل وضعي واكتب خطة اليوم'}</button></div>
-    ${nl.ai.coach?`<div class="nl-md">${fhMd(nl.ai.coach)}</div>`:''}</div>
+    ${nlCoachHtml()}</div>
   </div>`;
 }
 // ── مساعد النقاط: خطة اليوم بأفعالٍ محسوبة وأزرار تنفيذ مباشرة (٢٧ نوفمبر) ──
@@ -12094,6 +12095,8 @@ function nlPts(){
 // بالنقاط المتوقّعة قبل ضرب نسبة تفاعل الطلاب. والزرّ يفتح المسار الموجود
 // نفسه معبّأً (الدرس والعدد والتاريخ)، فيراجع المعلّم ثم ينشر.
 const NL_PTS={q:7,file:15,scorm:40,topic:20};
+// تمييز العدد: ٣–١٠ «أسئلة»، وما سواها «سؤالاً» (١١ فأكثر)
+const nlQn=n=>egArNum(n)+(n>=3&&n<=10?' أسئلة':n===1?' سؤال':n===2?' سؤالان':' سؤالاً');
 function nlPlanCourse(){return ((noorSt||{}).courses||[])[0]||null;}
 function nlPlanPrepsNewest(cid){
   const o=nl.ov||{};const meta=(o.preps||[]).filter(p=>p.cid===cid);
@@ -12135,11 +12138,11 @@ function nlPlanActions(){
   const gaps=nlPrepGaps();const g=gaps&&gaps.missing&&gaps.missing[0];
   const qd=qLeft>=5?{d:today,left:qLeft}:nlPlanDay('q',5);
   if(qd){const n=Math.min(20,qd.left);
-    if(g)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${g.title}» بتاريخ ${nlPlanWhen(qd.d)}`,
+    if(g)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${nlQn(n)} لدرس «${g.title}» بتاريخ ${nlPlanWhen(qd.d)}`,
       why:`لهذا الدرس تحضيرٌ في نور بلا واجب${gaps.missing.length>1?` (ومعه ${egArNum(gaps.missing.length-1)} دروس أخرى)`:''}. ${egArNum(n)} سؤالاً تكمل حدّ ذلك اليوم: ٧ نقاط للسؤال حين يحلّه الطلاب.`,
       btn:'ولّد الأسئلة',fn:`nlPhOpen('${escJs(g.title)}',${n},'${qd.d}')`});
     else{const k=nlPlanSubjects()[0],pk=k?nlPlanPick(k):{},l=pk.last||pk.next;
-      if(l)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${l.name}» بتاريخ ${nlPlanWhen(qd.d)}`,
+      if(l)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${nlQn(n)} لدرس «${l.name}» بتاريخ ${nlPlanWhen(qd.d)}`,
         why:`بتاريخ ${nlPlanWhen(qd.d)} متّسعٌ لـ${egArNum(qd.left)} سؤالاً.`,btn:'ولّد الأسئلة',fn:`nlPhOpen('${escJs(l.name)}',${n},'${qd.d}')`});}}
   // ٥) غرفة نقاش: إن لم يُنشأ موضوعٌ منذ ٧ أيام
   const rooms=nl.room&&nl.room.rooms;
@@ -12169,8 +12172,8 @@ function nlPlanCard(){
     <ol class="nl-plan-list">${acts.map((a,i)=>`<li class="${a.k}"><span class="nl-plan-n">${a.k==='warn'?'<i class="ki ki-alert" aria-hidden="true"></i>':egArNum(i+1-(acts[0]&&acts[0].k==='warn'?1:0))}</span>
       <div class="nl-plan-b"><b>${escHtml(a.ttl)}</b><small>${escHtml(a.why)}</small></div>
       ${a.pts?`<span class="nl-plan-p" dir="ltr">+${nlN(a.pts)}</span>`:''}
-      ${a.href?`<a class="nl-btn ghost" href="${escAttr(a.href)}" target="_blank" rel="noopener">${escHtml(a.btn)} ↗</a>`:(a.k==='hw'&&nl.ph)?'':`<button class="nl-btn ${a.k==='prep'?'ghost':'gold'}" ${a.id?`id="${a.id}"`:''} onclick="${a.fn}">${escHtml(a.btn)}</button>`}
-      ${a.k==='hw'&&nl.ph?nlPhPanel():''}</li>`).join('')}</ol>
+      ${a.href?`<a class="nl-btn ghost" href="${escAttr(a.href)}" target="_blank" rel="noopener">${escHtml(a.btn)} ↗</a>`:(a.k==='hw'&&nl.ph&&nl.ph.src==='plan')?'':`<button class="nl-btn ${a.k==='prep'?'ghost':'gold'}" ${a.id?`id="${a.id}"`:''} onclick="${a.fn}">${escHtml(a.btn)}</button>`}
+      ${a.k==='hw'&&nl.ph&&nl.ph.src==='plan'?nlPhPanel():''}</li>`).join('')}</ol>
     ${!acts.length&&!loading?'<div class="nl-gap"><i class="ki ki-check" aria-hidden="true"></i> استنفدت حدود اليوم ولا مهام معلّقة. عُد غداً.</div>':''}
     ${loading?nlLoading('يكمل المطابقة (الدروس التفاعلية، التحاضير، غرف النقاش)…'):''}
   </div>`;
@@ -12193,9 +12196,9 @@ function nlPhPanel(){
   </div>`;
 }
 function nlPhRender(){if(nl.tab==='pts')nlBody();}
-async function nlPhOpen(name,n,date){
+async function nlPhOpen(name,n,date,src){
   const c=nlPlanCourse();if(!c){toast('لا مقرّر في نور',true);return;}
-  nl.ph={name,n,date,cid:c.cid,items:null,busy:'يبحث عن الدرس في شجرة نور…',err:'',done:null};nlPhRender();
+  nl.ph={src:src||'plan',name,n,date,cid:c.cid,items:null,busy:'يبحث عن الدرس في شجرة نور…',err:'',done:null};nlPhRender();
   try{
     if(!nl.lessons[c.cid]){const r=await noorCall({action:'lessons',cid:c.cid});nl.lessons[c.cid]=r.lessons||[];}
     const ls=nl.lessons[c.cid],k=nlLessonKey(name);
@@ -12235,6 +12238,58 @@ async function nlPhPublish(){
   }catch(e){h.err=e.message||'تعذّر النشر';if(e.code==='daily_cap'&&e.data&&e.data.suggest)h.date=e.data.suggest;}
   h.busy='';nlPhRender();
 }
+// ── المدرّب الذكي بأوامر تنفيذ: ما يُسمح له باقتراحه، وتحويل ردّه إلى أزرار ──
+function nlCoachRecent(){
+  const out=[];nlPlanSubjects().forEach(k=>{const pk=nlPlanPick(k);[pk.last,pk.next].forEach(l=>{if(l&&!out.some(x=>x.name===l.name))out.push({key:k,name:l.name,unit:l.unit,when:l===pk.last?'last':'next'});});});
+  return out;
+}
+function nlCoachCandidates(){
+  const o=nl.ov,c=nlPlanCourse();const gaps=nlPrepGaps();
+  const rooms=(nl.room&&nl.room.rooms)||[];
+  return {
+    capacity:nlCapDays(10).map(x=>({date:x.d,day:nlDayName(x.d),q_left:Math.max(0,NL_CAP_Q-x.q),files_left:Math.max(0,NL_CAP_F-x.f)})),
+    lessons_without_homework:((gaps&&gaps.missing)||[]).slice(0,8).map(g=>g.title),
+    recent_lessons:nlCoachRecent().map(l=>l.name),
+    recent_preps:c?nlPlanPrepsNewest(c.cid).slice(0,6).map(p=>String(p.title).replace(/\s*\(\d+\)\s*$/,'')):[],
+    scorm_ready:(nl.ns||[]).filter(l=>l.game).map(l=>l.name),
+    lessons_without_prep:(nl.np||[]).filter(l=>l.kprep).slice(0,6).map(l=>l.name),
+    last_room:rooms.map(r=>r.created).sort().pop()||null
+  };
+}
+const NL_AI_ICO={hw:'pen',attach:'clip',scorm:'game',room:'chat',prep:'book',message:'megaphone'};
+// يحوّل أمر المدرّب إلى زرّ يعمل — والدرس يُطابَق مع القوائم الحيّة، فإن لم يُطابَق لا يظهر زرّ
+function nlCoachResolve(a,i){
+  const o=nl.ov,c=nlPlanCourse();const days=nlCapDays(15);
+  const day=k=>{const d=days.find(x=>x.d===a.date);const cap=k==='q'?NL_CAP_Q:NL_CAP_F;
+    const ok=d&&(cap-(k==='q'?d.q:d.f))>0;return ok?d.d:((nlPlanDay(k,1)||{}).d||o.today);};
+  if(a.type==='hw'){
+    const known=[...(((nlPrepGaps()||{}).missing)||[]).map(g=>g.title),...nlCoachRecent().map(l=>l.name)];
+    if(!known.some(t=>nlSame(t,a.lesson)||noorNorm(t)===noorNorm(a.lesson)))return null;
+    const d=day('q');const left=NL_CAP_Q-(((o.qByDate||{})[d])||0);const n=Math.max(1,Math.min(a.n||left,left,20));
+    return {btn:'ولّد الأسئلة',fn:`nlPhOpen('${escJs(a.lesson)}',${n},'${d}','ai${i}')`,ttl:`انشر واجباً من ${nlQn(n)} لدرس «${a.lesson}» بتاريخ ${nlPlanWhen(d)}`};}
+  if(a.type==='attach'&&c){const p=nlPlanPrepsNewest(c.cid).find(x=>nlSame(x.title,a.lesson)||noorNorm(x.title).includes(noorNorm(a.lesson)));
+    if(p)return {btn:'اختر الملفات',fn:`nlPlanAttach('${escJs(c.cid)}','${escJs(String(p.id))}')`,ttl:`أرفق ${egArNum(a.n||1)} ملفات لدرس «${a.lesson}» بتاريخ ${nlPlanWhen(day('f'))}`};}
+  if(a.type==='scorm'){const k=(nl.ns||[]).findIndex(l=>l.game&&nlSame(l.name,a.lesson));
+    if(k>=0)return {btn:'ارفعه الآن',fn:`nlScormUp(${k})`,id:'nl-sc-'+k,ttl:`ارفع الدرس التفاعلي «${nl.ns[k].name}»`};}
+  if(a.type==='prep'){const l=(nl.np||[]).find(x=>nlSame(x.name,a.lesson));
+    if(l)return {btn:'افتح بطاقة الدرس',fn:`nlGoLesson(${l.g},'${escJs(l.subj)}',${l.ui},'${escJs(l.id)}')`,ttl:`انشر تحضير «${l.name}» في نور`};}
+  if(a.type==='room'){const l=nlCoachRecent().find(x=>nlSame(x.name,a.lesson))||nlCoachRecent()[0];
+    if(l)return {btn:'اكتب السؤال',fn:`nlPlanRoom('${escJs(l.key)}','${l.when}',{name:'${escJs(l.name)}',unit:'${escJs(l.unit||'')}'})`,ttl:`أنشئ موضوع نقاش لدرس «${l.name}»`};}
+  if(a.type==='message')return {btn:'اكتب الرسالة في نور',href:'https://lms.moe.gov.om/teacher/messages/compose',ttl:'أرسل رسالة قصيرة لطلابك'};
+  return null;
+}
+function nlCoachHtml(){
+  const r=nl.ai.coach;if(!r)return '';
+  if(typeof r==='string')return `<div class="nl-md">${fhMd(r)}</div>`;
+  const rows=(r.actions||[]).map((a,i)=>({a,x:nlCoachResolve(a,i),i}));
+  return `${r.summary?`<div class="nl-gap" style="margin-top:10px">${escHtml(r.summary)}</div>`:''}
+    <ol class="nl-plan-list">${rows.map(({a,x,i})=>`<li><span class="nl-plan-n"><i class="ki ki-${NL_AI_ICO[a.type]||'sparkle'}" aria-hidden="true"></i></span>
+      <div class="nl-plan-b"><b>${escHtml(x?x.ttl:(a.lesson||a.type))}</b><small>${escHtml(a.why||'')}${x?'':' — لم نجد هذا الدرس في قوائمك الحيّة، فلا زرّ له.'}</small></div>
+      ${a.points?`<span class="nl-plan-p" dir="ltr">+${nlN(a.points)}</span>`:''}
+      ${!x?'':x.href?`<a class="nl-btn ghost" href="${escAttr(x.href)}" target="_blank" rel="noopener">${escHtml(x.btn)} ↗</a>`:(nl.ph&&nl.ph.src==='ai'+i)?'':`<button class="nl-btn gold" ${x.id?`id="${x.id}"`:''} onclick="${x.fn}">${escHtml(x.btn)}</button>`}
+      ${nl.ph&&nl.ph.src==='ai'+i?nlPhPanel():''}</li>`).join('')}</ol>
+    ${(r.tips||[]).length?`<b class="sub" style="display:block;margin:12px 0 4px">لرفع تفاعل الطلاب (يضاعف كل نقاطك)</b><ul class="nl-tips">${r.tips.map(t=>`<li>${escHtml(t)}</li>`).join('')}</ul>`:''}`;
+}
 async function nlPlanRooms(){
   const r=nl.room=nl.room||{};if(r.rooms||nl.busy.room)return;
   nl.busy.room=true;
@@ -12247,8 +12302,8 @@ function nlPlanAttach(cid,prepId){
   const p=nlAttPreps().find(x=>String(x.id)===String(prepId));
   if(p)nlAttPick(p);else nlAttRender();
 }
-async function nlPlanRoom(key,when){
-  const r=nl.room=nl.room||{};r.key=key;r.when=when;r.q=null;r.done=null;
+async function nlPlanRoom(key,when,lesson){
+  const r=nl.room=nl.room||{};r.key=key;r.when=when;r.q=null;r.done=null;r.custom=lesson||null;
   nlTab('room');
   for(let i=0;i<40&&!r.lectures&&!r.lecErr;i++)await new Promise(z=>setTimeout(z,150));
   await nlRoomGen();
@@ -12282,8 +12337,8 @@ async function nlCoach(){
   const data={today:o.today,points:{today:o.score.today,semester:o.score.semester,total:o.score.total,card:o.score.card,daily:(o.score.daily||[]).slice(-10)},
     caps_today:o.caps,limits:{questions:20,files:10},season_totals:o.totals,school_top_teachers:(o.score.teachers||[]).map(t=>t.pts),
     week_prep:wk,students:nlStuDigest(),
-    plan:(nlPlanActions()||[]).map(a=>({action:a.ttl,points:a.pts}))};
-  try{const r=await noorCall({action:'lab_ai',task:'coach',data});nl.ai.coach=r.text;}
+    plan:(nlPlanActions()||[]).map(a=>({action:a.ttl,points:a.pts})),candidates:nlCoachCandidates()};
+  try{const r=await noorCall({action:'lab_ai',task:'coach',data});nl.ai.coach=r;}
   catch(e){toast(e.message,true);}
   if(nl.tab==='pts')nlBody();
 }
@@ -12847,10 +12902,10 @@ async function nlRoomInit(){
   }catch(e){r.lecErr=e.message;}
   nl.busy.room=false;if(nl.tab==='room')nlBody();
 }
-function nlRoomSet(k,v,quiet){const r=nl.room=nl.room||{};r[k]=v;if(k==='when'||k==='key'){r.q=null;r.done=null;}if(!quiet&&nl.tab==='room')nlBody();}
+function nlRoomSet(k,v,quiet){const r=nl.room=nl.room||{};r[k]=v;if(k==='when'||k==='key'){r.q=null;r.done=null;r.custom=null;}if(!quiet&&nl.tab==='room')nlBody();}
 function nlRoomSec(id,on){const r=nl.room;r.sel=r.sel||{};r.sel[id]=on;}
 async function nlRoomGen(){
-  const r=nl.room||{};const pk=nlPlanPick(r.key);const l=r.when==='next'?pk.next:pk.last;if(!l)return;
+  const r=nl.room||{};const pk=nlPlanPick(r.key);const l=r.custom||(r.when==='next'?pk.next:pk.last);if(!l)return;
   const [g,sub]=String(r.key).split('|');
   const b=document.getElementById('nl-r-go');if(b){b.disabled=true;b.textContent='يكتب السؤال…';}
   try{r.q=await noorCall({action:'lab_ai',task:'room',lesson:l.name,unit:l.unit,grade:'الصف '+(NOOR_GRADES[+g]||g),subject:sub,when:r.when,hint:r.hint||''});r.done=null;}
