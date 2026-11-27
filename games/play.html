@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>لعبة | خُطّتي</title>
+<link rel="stylesheet" href="games.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="title">لعبة</h1>
+    <nav class="switch" id="switch" aria-label="طريقة اللعب"></nav>
+  </header>
+  <div class="status">
+    <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+    <span class="pill" id="score" aria-live="polite"></span>
+  </div>
+  <main class="stage" id="stage"></main>
+
+<!-- محتوى تجريبي. في المنصّة سيُقرأ من Supabase أو من ?src=ملف.json -->
+<script type="application/json" id="demo">
+{
+  "version": 1,
+  "title": "مراجعة سريعة: العمليات والقياس",
+  "settings": { "shuffle": true, "perRound": 4 },
+  "items": [
+    { "q": "٣ + ٤ × ٢ =", "a": "١١", "wrong": ["١٤", "٩"] },
+    { "q": "نصف العدد ١٨", "a": "٩", "wrong": ["٦", "٣٦"] },
+    { "q": "٢٥٪ من ٤٠", "a": "١٠", "wrong": ["٢٥", "١٥"] },
+    { "q": "مكعّب العدد ٢", "a": "٨", "wrong": ["٦", "٤"] },
+    { "q": "محيط مربّع طول ضلعه ٥ سم", "a": "٢٠ سم", "wrong": ["٢٥ سم", "١٠ سم"] },
+    { "q": "مساحة مستطيل بُعداه ٣ سم و ٥ سم", "a": "١٥ سم²", "wrong": ["١٦ سم²", "٨ سم²"] },
+    { "q": "العدد الأوّلي بين ٢٠ و ٢٥", "a": "٢٣", "wrong": ["٢١", "٢٥"] },
+    { "q": "المضاعف المشترك الأصغر للعددين ٣ و ٤", "a": "١٢", "wrong": ["٧", "٢٤"] }
+  ]
+}
+</script>
+<script src="engine.js"></script>
+<script>
+(async function () {
+  let content = null;
+  const src = new URLSearchParams(location.search).get('src');
+  // نقبل ملفات من النطاق نفسه فقط: لا نحمّل محتوى من مواقع أخرى.
+  if (src && /^[\w\-\/]+\.json$/.test(src)) {
+    try { content = await (await fetch(src, { cache: 'no-cache' })).json(); } catch (e) { content = null; }
+  }
+  if (!content) content = JSON.parse(document.getElementById('demo').textContent);
+  Games.mount(content);
+})();
+</script>
+</body>
+</html>
