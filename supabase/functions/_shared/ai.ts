@@ -29,6 +29,10 @@ function waitMs(attempt: number, retryAfter: string | null) {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const DEADLINE_MS = 125000;
+const timeoutResp = () =>
+  new Response(JSON.stringify({ error: { message: "timeout: the model took too long" } }),
+    { status: 504, headers: { "Content-Type": "application/json" } });
 
 // ═══ مفاتيح متعدّدة ═══
 // مفتاحٌ واحد يعني نقطة انهيارٍ واحدة: نفاد رصيده أو تعطّل حسابه يوقف المنصّة
@@ -137,9 +141,19 @@ export async function orFetch(url: string, init: RequestInit, opts?: OrOpts): Pr
     const req = key ? withKey(init, key) : init;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       let r: Response;
+      // ٢٧ نوفمبر: سقفٌ زمنيّ للنداء كله. المنصّة تقتل الدالة عند ١٥٠ ثانية
+      // (546) قبل أن يُستردّ رصيد المعلّم أو تُكتب له رسالةٌ مفهومة؛ فنقطع
+      // نحن قبلها ونُرجع ٥٠٤ يعالجه المستدعي كأيّ عطلٍ من المزوّد.
+      const left = DEADLINE_MS - (Date.now() - started);
+      if (left < 5000) return last || timeoutResp();
       try {
-        r = await fetch(url, req);
+        const tsig = AbortSignal.timeout(left);
+        r = await fetch(url, { ...req, signal: req.signal ? AbortSignal.any([req.signal, tsig]) : tsig });
       } catch (e) {
+        if ((e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError") {
+          console.warn(`openrouter: انتهت المهلة بعد ${Date.now() - started}ms`);
+          return timeoutResp();
+        }
         lastErr = e;
         // انقطاع شبكة بين الحافة والمزوّد — يستحقّ محاولةً أخرى.
         if (attempt === MAX_ATTEMPTS) break;
@@ -174,7 +188,7 @@ export async function orFetch(url: string, init: RequestInit, opts?: OrOpts): Pr
 // معلّمةٍ تراسل الإدارة وأخرى تظنّ العطل في جهازها فتترك المنصة.
 export function orErrCode(status: number, msg: string): string {
   if (status === 402 || /credit|quota|insufficient|balance|payment/i.test(msg)) return "no_credit";
-  if (status === 429) return "busy";
+  if (status === 429 || status === 504 || /^timeout/i.test(msg)) return "busy";
   return "provider_error";
 }
 
