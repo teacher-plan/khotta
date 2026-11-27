@@ -7,6 +7,7 @@
 // النشر: supabase functions deploy activate-teacher
 // ════════════════════════════════════════════════════════════════
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { genderPick, teacherGender, type Gender } from "../_shared/gender.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -61,8 +62,9 @@ function expiryFor(plan: string, customDate?: string): string {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-function mailHtml(name: string, email: string, password: string, link: string, plan = "paid") {
+function mailHtml(name: string, email: string, password: string, link: string, plan = "paid", gender: Gender = "f") {
   const trial = plan === "trial";
+  const g = genderPick(gender);
   const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
   return `<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#F3EDE3;font-family:Tahoma,Arial,sans-serif;color:#2A1503">
 <div style="max-width:520px;margin:24px auto;background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:26px">
@@ -70,8 +72,8 @@ function mailHtml(name: string, email: string, password: string, link: string, p
   <h1 style="font-size:22px;margin:6px 0 4px">أهلاً ${esc(name)} 👋</h1>
   <p style="font-size:14px;line-height:1.9;color:#7A6A58;margin:0 0 18px">
     ${trial
-      ? "فُتِح لكِ حسابٌ تجريبيّ في منصّة «خُطّة» للحلقة الأولى لمدّة ١٤ يوماً، تستخدمين فيه المنصّة كاملةً بلا نقص. هذه بيانات دخولكِ:"
-      : "فُعِّل حسابكِ في منصّة «خُطّة» للحلقة الأولى. هذه بيانات دخولكِ:"}</p>
+      ? `فُتِح ${g("لكِ","لك")} حسابٌ تجريبيّ في منصّة «خُطّة» لمدّة ١٤ يوماً، ${g("تستخدمين","تستخدم")} فيه المنصّة كاملةً بلا نقص. هذه بيانات ${g("دخولكِ","دخولك")}:`
+      : `فُعِّل ${g("حسابكِ","حسابك")} في منصّة «خُطّة». هذه بيانات ${g("دخولكِ","دخولك")}:`}</p>
   <div style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:12px;padding:14px;margin-bottom:16px">
     <div style="font-size:12px;color:#7A6A58">البريد الإلكتروني</div>
     <div style="font-size:15px;font-weight:bold;direction:ltr;text-align:left;margin-bottom:10px">${esc(email)}</div>
@@ -79,9 +81,9 @@ function mailHtml(name: string, email: string, password: string, link: string, p
     <div style="font-size:19px;font-weight:bold;letter-spacing:2px;direction:ltr;text-align:left">${esc(password)}</div>
   </div>
   <a href="${esc(link)}" style="display:block;text-align:center;background:#C9453B;color:#fff;text-decoration:none;
-     font-weight:bold;font-size:15px;padding:13px;border-radius:12px">ادخلي إلى حسابكِ</a>
+     font-weight:bold;font-size:15px;padding:13px;border-radius:12px">${g("ادخلي إلى حسابكِ","ادخل إلى حسابك")}</a>
   <p style="font-size:12px;line-height:1.9;color:#7A6A58;margin:16px 0 0">
-    ننصحكِ بتغيير كلمة المرور بعد أول دخول. وإن واجهتكِ أي مشكلة فراسلينا وسنساعدكِ فوراً.</p>
+    ${g("ننصحكِ","ننصحك")} بتغيير كلمة المرور بعد أول دخول. وإن ${g("واجهتكِ","واجهتك")} أي مشكلة ${g("فراسلينا وسنساعدكِ","فراسلنا وسنساعدك")} فوراً.</p>
 </div></body></html>`;
 }
 
@@ -179,7 +181,7 @@ Deno.serve(async (req) => {
     const { data: claimed, error: claimErr } = await admin.from("pre_registrations")
       .update({ account_email: claimMark })
       .eq("id", regId).is("account_email", null)
-      .select("id,name,email,stage").maybeSingle();
+      .select("id,name,email,stage,gender").maybeSingle();
     if (claimErr) { console.error("server_error:", claimErr.message); return json({ error: "server_error" }, 500); }
     if (!claimed) {
       // لم يُرجَع صفّ = طلبٌ آخر (أو تفعيلٌ سابق) سبقنا إلى الحجز
@@ -205,8 +207,11 @@ Deno.serve(async (req) => {
 
     // email_confirm: البريد معروفٌ منها ومؤكَّدٌ بالدفع، فطلب تأكيدٍ ثانٍ
     // خطوةٌ تُسقِط معلّماتٍ عند أول عقبة.
+    // صيغة المخاطبة المختارة في التسجيل تُحفظ في الحساب، فترثها المنصّة عند أول دخول
+    const gender = teacherGender(reg.gender, reg.stage);
     const { data: created, error: cErr } = await admin.auth.admin.createUser({
       email, password, email_confirm: true,
+      ...(reg.gender === "m" || reg.gender === "f" ? { user_metadata: { teacher_gender: reg.gender } } : {}),
     });
     if (cErr || !created?.user) {
       await release();
@@ -244,8 +249,8 @@ Deno.serve(async (req) => {
     const link = "https://khotati.com/cycle1.html";
     const mail = await sendMail(
       email,
-      plan === "trial" ? "حسابكِ التجريبي في منصّة خُطّة" : "تفعيل حسابكِ في منصّة خُطّة",
-      mailHtml(reg.name || "معلّمتنا", email, password, link, plan),
+      plan === "trial" ? (gender === "f" ? "حسابكِ التجريبي في منصّة خُطّة" : "حسابك التجريبي في منصّة خُطّة") : (gender === "f" ? "تفعيل حسابكِ في منصّة خُطّة" : "تفعيل حسابك في منصّة خُطّة"),
+      mailHtml(reg.name || (gender === "f" ? "معلّمتنا" : "معلّمنا"), email, password, link, plan, gender),
     );
     // نفس ملاحظة وضع الاختبار: كان السبب يظهر للمشرف مرّةً واحدة في المتصفح
     // ثم يضيع — الآن يبقى في سجلّات الدالة لفحصه لاحقاً بلا اعتماد على أن

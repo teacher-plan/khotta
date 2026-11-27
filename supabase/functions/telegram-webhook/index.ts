@@ -6,6 +6,7 @@ import {
   sendTelegram, editTelegram, sendTelegramOps, sendTelegramPayment, editTelegramPayment,
   setOpsBotCommands, setMainBotCommands, setPaymentBotCommands,
 } from "../_shared/telegram.ts";
+import { genderPick, teacherGender } from "../_shared/gender.ts";
 
 // ═══ قائمة أوامر بوت العمليات الأصلية (زرّ "/" في تلغرام) ═══
 // قيدٌ من تلغرام: اسم الأمر يقبل حروفاً إنجليزية صغيرة وأرقاماً و_ فقط
@@ -135,13 +136,14 @@ const _STAGE_LBL: Record<string, string> = {
   "cycle1": "الحلقة الأولى (١–٤)", "5-12": "الصفوف ٥–١٢", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
 };
 function _stageLbl(st?: string): string { return _STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
-function _welcomeText(n: string, stage?: string): string {
+function _welcomeText(n: string, stage?: string, gender?: string | null): string {
   const nm = String(n || "").trim();
+  const g = genderPick(teacherGender(gender, stage));
   return [
-    nm ? `أهلاً بكِ ${nm} 🌸` : "أهلاً بكِ 🌸", "",
-    `وصلَنا حجزُ مقعدكِ في منصّة «خُطّة» — ${_stageLbl(stage)}، وسعدنا بانضمامكِ.`, "",
-    "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.", "",
-    "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
+    nm ? `أهلاً ${g("بكِ", "بك")} ${nm} 🌸` : `أهلاً ${g("بكِ", "بك")} 🌸`, "",
+    `وصلَنا حجزُ ${g("مقعدكِ", "مقعدك")} في منصّة «خُطّة» — ${_stageLbl(stage)}، وسعدنا ${g("بانضمامكِ", "بانضمامك")}.`, "",
+    `سنتواصل ${g("معكِ لتفعيل اشتراككِ", "معك لتفعيل اشتراكك")} مع بداية أول أسبوع دوام بإذن الله، ${g("ويصلكِ حسابُكِ", "ويصلك حسابُك")} جاهزاً.`, "",
+    `وإلى ذلك الحين، أيُّ استفسارٍ يخطر ${g("لكِ فاكتبيه", "لك فاكتبه")} هنا — ${g("نجيبكِ", "نجيبك")} بسرور 🌷`,
   ].join("\n");
 }
 async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?: string }> {
@@ -150,7 +152,7 @@ async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?:
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const { data, error } = await sb.from("pre_registrations")
-    .select("id,name,phone,stage")
+    .select("id,name,phone,stage,gender")
     .eq("payment_status", "pending")
     .is("welcomed_at", null)
     .order("created_at", { ascending: true })      // الأقدم أولاً: هي أطولهنّ انتظاراً
@@ -180,7 +182,7 @@ async function sendPendingList(): Promise<{ ok: boolean; listed: number; error?:
   const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
   for (const r of page) {
     rows.push([{ text: `🌸 ${(r.name || "بلا اسم").slice(0, 26)}`,
-      url: `https://wa.me/${_waNum(r.phone || "")}?text=${encodeURIComponent(_welcomeText(r.name || "", r.stage))}` }]);
+      url: `https://wa.me/${_waNum(r.phone || "")}?text=${encodeURIComponent(_welcomeText(r.name || "", r.stage, r.gender))}` }]);
   }
   if (page.length) {
     rows.push([{ text: `✅ رحّبتُ بهؤلاء (${page.length})`,
@@ -220,32 +222,33 @@ function _payWaNum(p: string): string {
 // (URL-encoded) — ومع خمسة أزرارٍ في رسالةٍ واحدة كان هذا وحده يكفي
 // لتجاوز حدّ تلغرام لحجم لوحة الأزرار (BUTTON reply markup is too long)،
 // فلا يصل شيءٌ للمعلّمة ولا للمشرف. راجع أيضاً PAY_PAGE أدناه.
-const PAY_REMINDERS: Array<{ label: string; text: (nm: string, price: number) => string }> = [
+type _G = (f: string, m: string) => string;
+const PAY_REMINDERS: Array<{ label: string; text: (nm: string, price: number, g: _G) => string }> = [
   {
     label: "الأول",
-    text: (nm, price) => [
+    text: (nm, price, g) => [
       nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "",
-      "بقي أسبوعٌ واحد على بداية العام الدراسي — ومنصة «خُطّتي الفصلية» معكِ لتبدئي عامكِ بلا فوضى صفٍّ ولا تشتت، وذهنٍ مرتاح من بداية الفصل حتى نهايته.", "",
-      "كوني من أوائل المشتركات وتميّزي بتوظيف أحدث وسائل الذكاء الاصطناعي في كل حصة. ✨", "",
-      `حوّلي قيمة الاشتراك (${price} ريالاً عُمانياً) على *${_payNum}*، وأرسلي صورة الإيصال هنا ليُفعَّل حسابكِ فوراً 📌`,
+      `بقي أسبوعٌ واحد على بداية العام الدراسي — ومنصة «خُطّة» ${g("معكِ لتبدئي عامكِ", "معك لتبدأ عامك")} بلا فوضى صفٍّ ولا تشتت، وذهنٍ مرتاح من بداية الفصل حتى نهايته.`, "",
+      `${g("كوني من أوائل المشتركات وتميّزي", "كن من أوائل المشتركين وتميّز")} بتوظيف أحدث وسائل الذكاء الاصطناعي في كل حصة. ✨`, "",
+      `${g("حوّلي", "حوّل")} قيمة الاشتراك (${price} ريالاً عُمانياً) على *${_payNum}*، ${g("وأرسلي", "وأرسل")} صورة الإيصال هنا ليُفعَّل ${g("حسابكِ", "حسابك")} فوراً 📌`,
     ].join("\n"),
   },
   {
     label: "الثاني",
-    text: (nm, price) => [
+    text: (nm, price, g) => [
       nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "",
-      "نعلم أن قرار الاشتراك يحتاج وقتاً — لذا وفّرنا لكِ تجربةً مجانية لاختبار ميزات منصة «خُطّتي الفصلية» بنفسكِ قبل أن تقرّري.", "",
-      "جرّبي كيف تُدار الحصة بلا فوضى ولا تشتت، وكيف يوظَّف الذكاء الاصطناعي في تحضيرها. ✨", "",
-      `وإن أعجبتكِ، فتفعيل الحساب الكامل يتم بتحويل قيمة الاشتراك (${price} ريالاً عُمانياً) على نفس الرقم *${_payNum}*، وإرسال صورة الإيصال هنا 📌`,
+      `نعلم أن قرار الاشتراك يحتاج وقتاً — لذا وفّرنا ${g("لكِ", "لك")} تجربةً مجانية لاختبار ميزات منصة «خُطّة» ${g("بنفسكِ قبل أن تقرّري", "بنفسك قبل أن تقرّر")}.`, "",
+      `${g("جرّبي", "جرّب")} كيف تُدار الحصة بلا فوضى ولا تشتت، وكيف يوظَّف الذكاء الاصطناعي في تحضيرها. ✨`, "",
+      `وإن ${g("أعجبتكِ", "أعجبتك")}، فتفعيل الحساب الكامل يتم بتحويل قيمة الاشتراك (${price} ريالاً عُمانياً) على نفس الرقم *${_payNum}*، وإرسال صورة الإيصال هنا 📌`,
     ].join("\n"),
   },
   {
     label: "الثالث",
-    text: (nm) => [
+    text: (nm, _p, g) => [
       nm ? `مرحباً ${nm} 🌟` : "مرحباً 🌟", "",
-      "لم نسمع منكِ بعد — وربما لديكِ سؤالٌ لم يجد إجابته، أو فقط لم تتسنَّ لكِ الفرصة بعد وسط انشغال هذه الأيام.", "",
-      "نحن هنا لأي استفسار، ونودّ أن تبدئي عامكِ الدراسي معنا. 📌", "",
-      "اكتبي لنا سؤالكِ أو ما يشغلكِ، وسنجيبكِ بسرور 🌷",
+      `لم نسمع ${g("منكِ", "منك")} بعد — وربما ${g("لديكِ", "لديك")} سؤالٌ لم يجد إجابته، أو فقط لم تتسنَّ ${g("لكِ", "لك")} الفرصة بعد وسط انشغال هذه الأيام.`, "",
+      `نحن هنا لأي استفسار، ونودّ أن ${g("تبدئي عامكِ", "تبدأ عامك")} الدراسي معنا. 📌`, "",
+      `${g("اكتبي لنا سؤالكِ أو ما يشغلكِ، وسنجيبكِ", "اكتب لنا سؤالك أو ما يشغلك، وسنجيبك")} بسرور 🌷`,
     ].join("\n"),
   },
 ];
@@ -275,7 +278,7 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
   // ثانيةً بعد أيام لو لم تدفع بعد. فالترتيب يضع من لم تُتابَع قطّ أولاً،
   // ومن تابعناها ينتقلن لآخر الطابور بدل أن يختفين نهائياً كالترحيب.
   const { data, error } = await sb.from("pre_registrations")
-    .select("id,name,phone,stage")
+    .select("id,name,phone,stage,gender")
     .eq("payment_status", "pending")
     .eq("payment_reminder_stage", stage)
     .order("payment_followup_at", { ascending: true, nullsFirst: true })
@@ -300,7 +303,7 @@ async function sendPaymentList(stage: number): Promise<{ ok: boolean; listed: nu
   const rows: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
   for (const r of page) {
     rows.push([{ text: `💳 ${(r.name || "بلا اسم").slice(0, 26)}`,
-      url: `https://wa.me/${_payWaNum(r.phone || "")}?text=${encodeURIComponent(reminder.text(r.name || "", price))}` }]);
+      url: `https://wa.me/${_payWaNum(r.phone || "")}?text=${encodeURIComponent(reminder.text(r.name || "", price, genderPick(teacherGender(r.gender, r.stage))))}` }]);
   }
   if (page.length) {
     rows.push([{ text: `✅ تابعتُ هؤلاء (${page.length})`,
@@ -456,7 +459,7 @@ async function handleCallbackQuery(
       // التدقيق. لا تنفيذ آمناً وموثوقاً لإعادة معالجة ملفٍ فاشل جاهزاً
       // اليوم (يتطلّب تصميماً أكبر: أي معالجٍ لأي نوع ملف، وبأي حدود إعادة
       // محاولة) — الزرّ الآن يصرّح بذلك بدل الادّعاء.
-      return "⚠️ إعادة المعالجة التلقائية غير مُفعَّلة بعد — راجعي الملفات العالقة يدوياً من لوحة الإدارة.";
+      return "⚠️ إعادة المعالجة التلقائية غير مُفعَّلة بعد — راجع الملفات العالقة يدوياً من لوحة الإدارة.";
 
     default:
       return "❓ أمر غير معروف";
