@@ -7052,12 +7052,12 @@ async function mc1GoldenLoadStats(){
     document.getElementById('mc1g-kpi-reuses').textContent=reuses.length;
 
     const FN={info:'generate-infographic',game:'generate-game-content',prep:'generate-lesson-plan'};
-    const{data:costData}=await sb.from('ai_cost_log').select('function_name,cost_usd')
-      .in('function_name',Object.values(FN)).not('cost_usd','is',null);
+    // ai_cost_log مغلقٌ عن الواجهة — الملخّص من دالة المشرف (٢٧ نوفمبر)
+    const{data:costData}=await sb.rpc('admin_ai_cost_summary',{});
     const avgCost={};
     for(const k in FN){
-      const vals=(costData||[]).filter(c=>c.function_name===FN[k]).map(c=>c.cost_usd);
-      avgCost[k]=vals.length?vals.reduce((s,v)=>s+v,0)/vals.length:0;
+      const r=(costData||[]).find(c=>c.function_name===FN[k]);
+      avgCost[k]=r&&r.avg_usd!=null?Number(r.avg_usd):0;
     }
     const{data:rateRow}=await sb.from('ai_settings').select('value').eq('key','usd_omr_rate').maybeSingle();
     const rate=parseFloat(rateRow&&rateRow.value)||0.3845;
@@ -15049,11 +15049,13 @@ async function admDashLoad(){
   }catch(e){}
   // التحاضير والتكلفة
   try{
-    const{count}=await sb.from('ai_cost_log').select('id',{count:'exact',head:true}).eq('function_name','generate-lesson-plan').gte('created_at',d7);
-    set('adm-k-preps',count==null?'—':ADM_N(count));set('adm-k-preps-s','مولَّدة بالذكاء الاصطناعي');
+    const{data:cs,error:ce}=await sb.rpc('admin_ai_cost_summary',{p_since:d7});
+    const pr=(cs||[]).find(c=>c.function_name==='generate-lesson-plan');
+    set('adm-k-preps',ce?'—':ADM_N(pr?Number(pr.n):0));set('adm-k-preps-s','مولَّدة بالذكاء الاصطناعي');
   }catch(e){}
   try{
-    const rows=await admFetchAll(()=>sb.from('ai_cost_log').select('cost_usd').gte('created_at',mStart).order('id'));
+    const{data:ms}=await sb.rpc('admin_ai_cost_summary',{p_since:mStart});
+    const rows=(ms||[]).filter(r=>Number(r.n_costed)>0).map(r=>({cost_usd:r.total_usd}));
     const{data:bs}=await sb.from('ai_settings').select('value').eq('key','admin_monthly_budget_usd').maybeSingle();
     const budget=Number(bs&&bs.value)||30;
     if(rows&&rows.length){
