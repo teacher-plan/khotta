@@ -4743,16 +4743,31 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-feed{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto}
 .nl-plan{border-color:#E8CF8E;background:linear-gradient(180deg,#FFFCF3,#fff 120px)}
 .nl-plan-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
-.nl-plan-list li{display:grid;grid-template-columns:30px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--nl-line);border-radius:14px;background:#fff}
-.nl-plan-list li.warn{background:#FCEDE8;border-color:#F0C2B5}
+.nl-plan-list>li{display:grid;grid-template-columns:30px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--nl-line);border-radius:14px;background:#fff}
+.nl-plan-list>li.warn{background:#FCEDE8;border-color:#F0C2B5}
 .nl-plan-n{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--nl-soft);color:var(--nl-deep);font-weight:900;font-size:13px}
-.nl-plan-list li.warn .nl-plan-n{background:#C2452D;color:#fff}
+.nl-plan-list>li.warn .nl-plan-n{background:#C2452D;color:#fff}
 .nl-plan-b{min-width:0;display:flex;flex-direction:column;gap:2px}
 .nl-plan-b b{font-size:13.5px;line-height:1.6}
 .nl-plan-b small{font-size:11.5px;color:#5C7470;line-height:1.7}
 .nl-plan-p{font-weight:900;color:#A2741A;font-size:14px;white-space:nowrap}
 .nl-plan-list .nl-btn{padding:8px 12px;font-size:12px;white-space:nowrap}
-@media(max-width:640px){.nl-plan-list li{grid-template-columns:30px minmax(0,1fr) auto}.nl-plan-list .nl-btn{grid-column:2/-1;justify-self:start}}
+.nl-ph{grid-column:1/-1;margin-top:4px;padding:12px;border-radius:12px;background:var(--nl-soft);border:1px solid var(--nl-line)}
+.nl-ph-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.nl-ph-top b{font-size:13px}
+.nl-ph-x,.nl-ph-del{border:none;background:transparent;cursor:pointer;color:#8C2E1B;font-size:14px;padding:2px 6px;border-radius:8px;flex:none}
+.nl-ph-x:hover,.nl-ph-del:hover{background:#FCEDE8}
+.nl-ph-q{margin:0;padding-inline-start:20px;display:grid;gap:8px;max-height:360px;overflow:auto}
+.nl-ph-q li{font-size:12.5px;line-height:1.7}
+.nl-ph-q .t{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.nl-ph-q .t span{flex:1;min-width:0}
+.nl-ph-q .c{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.nl-ph-q .c span{background:#fff;border:1px solid var(--nl-line);border-radius:8px;padding:2px 8px;font-size:11.5px}
+.nl-ph-q .c span.ok{background:#E3F4EC;border-color:#8FCFB2;font-weight:800}
+.nl-ph-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:12px}
+.nl-ph-row label{display:flex;gap:6px;align-items:center;font-weight:700}
+.nl-ph-row .nl-in{padding:6px 8px;font-size:12px}
+@media(max-width:640px){.nl-plan-list>li{grid-template-columns:30px minmax(0,1fr) auto}.nl-plan-list>li>.nl-btn{grid-column:2/-1;justify-self:start}}
 .nl-feed li{display:flex;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px dashed var(--nl-line);font-size:12.5px}
 .nl-feed li:last-child{border-bottom:none}
 .nl-ico{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;background:var(--nl-soft)}
@@ -12122,10 +12137,10 @@ function nlPlanActions(){
   if(qd){const n=Math.min(20,qd.left);
     if(g)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${g.title}» بتاريخ ${nlPlanWhen(qd.d)}`,
       why:`لهذا الدرس تحضيرٌ في نور بلا واجب${gaps.missing.length>1?` (ومعه ${egArNum(gaps.missing.length-1)} دروس أخرى)`:''}. ${egArNum(n)} سؤالاً تكمل حدّ ذلك اليوم: ٧ نقاط للسؤال حين يحلّه الطلاب.`,
-      btn:'ولّد الأسئلة',fn:`nlPlanHw(0,${n},'${qd.d}')`});
+      btn:'ولّد الأسئلة',fn:`nlPhOpen('${escJs(g.title)}',${n},'${qd.d}')`});
     else{const k=nlPlanSubjects()[0],pk=k?nlPlanPick(k):{},l=pk.last||pk.next;
       if(l)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${l.name}» بتاريخ ${nlPlanWhen(qd.d)}`,
-        why:`بتاريخ ${nlPlanWhen(qd.d)} متّسعٌ لـ${egArNum(qd.left)} سؤالاً.`,btn:'ولّد الأسئلة',fn:`nlPlanHwLesson('${escJs(l.name)}',${n},'${qd.d}')`});}}
+        why:`بتاريخ ${nlPlanWhen(qd.d)} متّسعٌ لـ${egArNum(qd.left)} سؤالاً.`,btn:'ولّد الأسئلة',fn:`nlPhOpen('${escJs(l.name)}',${n},'${qd.d}')`});}}
   // ٥) غرفة نقاش: إن لم يُنشأ موضوعٌ منذ ٧ أيام
   const rooms=nl.room&&nl.room.rooms;
   if(rooms){const last=rooms.map(r=>r.created).sort().pop()||'';
@@ -12154,10 +12169,71 @@ function nlPlanCard(){
     <ol class="nl-plan-list">${acts.map((a,i)=>`<li class="${a.k}"><span class="nl-plan-n">${a.k==='warn'?'<i class="ki ki-alert" aria-hidden="true"></i>':egArNum(i+1-(acts[0]&&acts[0].k==='warn'?1:0))}</span>
       <div class="nl-plan-b"><b>${escHtml(a.ttl)}</b><small>${escHtml(a.why)}</small></div>
       ${a.pts?`<span class="nl-plan-p" dir="ltr">+${nlN(a.pts)}</span>`:''}
-      ${a.href?`<a class="nl-btn ghost" href="${escAttr(a.href)}" target="_blank" rel="noopener">${escHtml(a.btn)} ↗</a>`:`<button class="nl-btn ${a.k==='prep'?'ghost':'gold'}" ${a.id?`id="${a.id}"`:''} onclick="${a.fn}">${escHtml(a.btn)}</button>`}</li>`).join('')}</ol>
+      ${a.href?`<a class="nl-btn ghost" href="${escAttr(a.href)}" target="_blank" rel="noopener">${escHtml(a.btn)} ↗</a>`:(a.k==='hw'&&nl.ph)?'':`<button class="nl-btn ${a.k==='prep'?'ghost':'gold'}" ${a.id?`id="${a.id}"`:''} onclick="${a.fn}">${escHtml(a.btn)}</button>`}
+      ${a.k==='hw'&&nl.ph?nlPhPanel():''}</li>`).join('')}</ol>
     ${!acts.length&&!loading?'<div class="nl-gap"><i class="ki ki-check" aria-hidden="true"></i> استنفدت حدود اليوم ولا مهام معلّقة. عُد غداً.</div>':''}
     ${loading?nlLoading('يكمل المطابقة (الدروس التفاعلية، التحاضير، غرف النقاش)…'):''}
   </div>`;
+}
+// ── الواجب داخل المساعد نفسه: توليدٌ ومراجعةٌ ونشرٌ بلا انتقالٍ إلى «مولّد الواجب» ──
+function nlPhPanel(){
+  const h=nl.ph;const days=nlCapDays(10).filter(x=>x.q<NL_CAP_Q);
+  const used=((nl.ov.qByDate||{})[h.date])||0,room=Math.max(0,NL_CAP_Q-used);
+  return `<div class="nl-ph">
+    <div class="nl-ph-top"><b>واجب: ${escHtml(h.name)}</b><button class="nl-ph-x" onclick="nlPhClose()" aria-label="إغلاق">✕</button></div>
+    ${h.err?`<div class="nl-gap" style="background:#FCEDE8;color:#8C2E1B">${escHtml(h.err)}</div>`:''}
+    ${h.busy?nlLoading(h.busy):''}
+    ${h.items?`<ol class="nl-ph-q">${h.items.map((q,i)=>`<li><div class="t"><span>${escHtml(q.text)}</span><button class="nl-ph-del" onclick="nlPhDel(${i})" title="حذف السؤال">✕</button></div>
+      <div class="c">${q.choices.map((c,j)=>`<span class="${j+1===q.answer?'ok':''}">${escHtml(c)}</span>`).join('')}</div></li>`).join('')}</ol>
+      <div class="nl-ph-row"><label>تاريخ النشر <select class="nl-in" onchange="nlPhDate(this.value)">${days.map(x=>`<option value="${x.d}" ${x.d===h.date?'selected':''}>${nlPlanWhen(x.d)} — متاح ${egArNum(NL_CAP_Q-x.q)}</option>`).join('')}</select></label>
+        <span class="sub">${egArNum(h.items.length)} سؤالاً${h.items.length>room?` · يتجاوز المتاح (${egArNum(room)})`:''}</span></div>
+      <div class="nl-actions"><button class="nl-btn gold" id="nl-ph-pub" onclick="nlPhPublish()" ${h.items.length&&!h.busy?'':'disabled'}><i class="ki ki-upload" aria-hidden="true"></i> انشر في نور (+${nlN(h.items.length*NL_PTS.q)})</button>
+        <button class="nl-btn ghost" onclick="nlPhGen()" ${h.busy?'disabled':''}>أسئلة أخرى</button></div>`:''}
+    ${h.done?`<div class="nl-gap"><i class="ki ki-check" aria-hidden="true"></i> نُشر الواجب في نور.${h.done.url?` <a href="${escAttr(h.done.url)}" target="_blank" rel="noopener">افتحه ↗</a>`:''}</div>`:''}
+  </div>`;
+}
+function nlPhRender(){if(nl.tab==='pts')nlBody();}
+async function nlPhOpen(name,n,date){
+  const c=nlPlanCourse();if(!c){toast('لا مقرّر في نور',true);return;}
+  nl.ph={name,n,date,cid:c.cid,items:null,busy:'يبحث عن الدرس في شجرة نور…',err:'',done:null};nlPhRender();
+  try{
+    if(!nl.lessons[c.cid]){const r=await noorCall({action:'lessons',cid:c.cid});nl.lessons[c.cid]=r.lessons||[];}
+    const ls=nl.lessons[c.cid],k=nlLessonKey(name);
+    const l=ls.find(x=>nlLessonKey(x.name)===k)||ls.find(x=>{const y=nlLessonKey(x.name);return y.length>=6&&(y.includes(k)||k.includes(y));});
+    if(!l)throw new Error('لم نجد الدرس «'+name+'» في شجرة دروس نور.');
+    nl.ph.lesson=l;
+  }catch(e){nl.ph.busy='';nl.ph.err=e.message||'تعذّر';nlPhRender();return;}
+  await nlPhGen();
+}
+async function nlPhGen(){
+  const h=nl.ph;if(!h||!h.lesson)return;
+  const c=((noorSt||{}).courses||[]).find(x=>x.cid===h.cid)||{};
+  const [subject,grade]=String(c.name||'').split('/').map(x=>x.trim());
+  h.busy='يكتب '+egArNum(h.n)+' سؤالاً من الدرس…';h.err='';h.done=null;nlPhRender();
+  try{const r=await noorCall({action:'lab_ai',task:'hw',lesson:h.lesson.name,unit:h.lesson.unit,grade,subject,n:h.n,level:'متوسط'});h.items=r.items;}
+  catch(e){h.err=e.message||'تعذّر توليد الأسئلة';}
+  h.busy='';nlPhRender();
+}
+function nlPhDel(i){const h=nl.ph;if(!h||!h.items)return;h.items.splice(i,1);nlPhRender();}
+function nlPhDate(v){if(nl.ph){nl.ph.date=v;nlPhRender();}}
+function nlPhClose(){nl.ph=null;nlPhRender();}
+async function nlPhPublish(){
+  const h=nl.ph;if(!h||!h.items||!h.items.length)return;
+  const c=((noorSt||{}).courses||[]).find(x=>x.cid===h.cid);if(!c)return;
+  const used=((nl.ov&&nl.ov.qByDate)||{})[h.date]||0;
+  if(used+h.items.length>NL_CAP_Q&&!await c1Confirm(`بتاريخ ${h.date} ${egArNum(used)} سؤالاً، وهذا الواجب ${egArNum(h.items.length)}. ما زاد على ٢٠ لا يُحتسب. انشر على أي حال؟`))return;
+  if(!await c1Confirm(`نشر «واجب: ${h.lesson.name}» (${egArNum(h.items.length)} سؤالاً) بتاريخ ${nlPlanWhen(h.date)} لكل شعب ${c.name}؟`))return;
+  h.busy='ينشر في نور…';nlPhRender();
+  const due=noorSchoolDays(h.date,6)[5]+' 23:59';
+  try{
+    const r=await noorCall({action:'homework',cid:c.cid,title:'واجب: '+h.lesson.name,publish:noorHwPublishAt(h.date),due,lesson_id:h.lesson.id,sections:(c.sections||[]).map(x=>x.id),items:h.items});
+    h.done={url:r.qurl||''};h.items=null;
+    nl.ov.qByDate=nl.ov.qByDate||{};nl.ov.qByDate[h.date]=(nl.ov.qByDate[h.date]||0)+(r.count||0);
+    (nl.ov.hwTitles=nl.ov.hwTitles||[]).push({cid:c.cid,title:'واجب: '+h.lesson.name,publish:h.date});
+    toast('نُشر الواجب في نور','ok');
+    nlLoadOverview();
+  }catch(e){h.err=e.message||'تعذّر النشر';if(e.code==='daily_cap'&&e.data&&e.data.suggest)h.date=e.data.suggest;}
+  h.busy='';nlPhRender();
 }
 async function nlPlanRooms(){
   const r=nl.room=nl.room||{};if(r.rooms||nl.busy.room)return;
@@ -12170,21 +12246,6 @@ function nlPlanAttach(cid,prepId){
   nlAttOpen();nlAtt.cid=cid;nlAttLessons();
   const p=nlAttPreps().find(x=>String(x.id)===String(prepId));
   if(p)nlAttPick(p);else nlAttRender();
-}
-async function nlPlanHwSetup(n,date){
-  const g=nl.gen;g.n=n;g.date=date;g.items=null;g.done=null;nl.post=null;nlBody();
-  if(g.lesson){await nlGenRun();toast('راجع الأسئلة، ثم «انشر في نور»','ok');}
-}
-async function nlPlanHw(i,n,date){
-  await nlGapGen(i);await nlPlanHwSetup(n,date);
-}
-async function nlPlanHwLesson(name,n,date){
-  nl.gen=nl.gen||{};const c=nlPlanCourse();if(c)nl.gen.cid=c.cid;
-  nlTab('gen');await nlGenInit();
-  const ls=nl.lessons[nl.gen.cid]||[];const k=nlLessonKey(name);
-  const best=ls.find(l=>nlLessonKey(l.name)===k)||ls.find(l=>{const x=nlLessonKey(l.name);return x.length>=6&&(x.includes(k)||k.includes(x));});
-  if(best)nl.gen.lesson=best.id;else toast('لم نجد الدرس في شجرة نور — اختره من القائمة',true);
-  await nlPlanHwSetup(n,date);
 }
 async function nlPlanRoom(key,when){
   const r=nl.room=nl.room||{};r.key=key;r.when=when;r.q=null;r.done=null;
