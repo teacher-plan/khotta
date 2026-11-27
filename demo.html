@@ -4741,6 +4741,18 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
 .nl-md .fh-li{display:block;padding-inline-start:16px;position:relative}
 .nl-md .fh-li::before{content:'◆';position:absolute;inset-inline-start:0;color:var(--nl-mint);font-size:9px;top:2px}
 .nl-feed{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto}
+.nl-plan{border-color:#E8CF8E;background:linear-gradient(180deg,#FFFCF3,#fff 120px)}
+.nl-plan-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.nl-plan-list li{display:grid;grid-template-columns:30px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--nl-line);border-radius:14px;background:#fff}
+.nl-plan-list li.warn{background:#FCEDE8;border-color:#F0C2B5}
+.nl-plan-n{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--nl-soft);color:var(--nl-deep);font-weight:900;font-size:13px}
+.nl-plan-list li.warn .nl-plan-n{background:#C2452D;color:#fff}
+.nl-plan-b{min-width:0;display:flex;flex-direction:column;gap:2px}
+.nl-plan-b b{font-size:13.5px;line-height:1.6}
+.nl-plan-b small{font-size:11.5px;color:#5C7470;line-height:1.7}
+.nl-plan-p{font-weight:900;color:#A2741A;font-size:14px;white-space:nowrap}
+.nl-plan-list .nl-btn{padding:8px 12px;font-size:12px;white-space:nowrap}
+@media(max-width:640px){.nl-plan-list li{grid-template-columns:30px minmax(0,1fr) auto}.nl-plan-list .nl-btn{grid-column:2/-1;justify-self:start}}
 .nl-feed li{display:flex;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px dashed var(--nl-line);font-size:12.5px}
 .nl-feed li:last-child{border-bottom:none}
 .nl-ico{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;background:var(--nl-soft)}
@@ -12033,6 +12045,7 @@ function nlPts(){
   const daysTo=next&&avg7?Math.ceil((next.pts-sc.total+1)/avg7):null;
   const tier=(sc.card||'');const tk=/ماس/.test(tier)?'d':/ذهب/.test(tier)?'y':'g';
   return `<div class="nl-grid nl-reveal">
+  ${nlPlanCard()}
   <div class="nl-card h8"><h3><i class="ki ki-chart" aria-hidden="true"></i> مسار نقاطك — آخر ١٥ يوماً</h3><p class="sub">الأعمدة: نقاط كل يوم · الخط: مجموع الفصل التراكمي. القفزة بدأت مع النشر من خُطّة.</p>${nlChart(sc.daily||[],sc.cumulative||[])}
     <div class="nl-legend"><span><i style="background:#3FB59C"></i>نقاط اليوم</span><span><i style="background:#C9962B"></i>التراكمي</span></div></div>
   <div class="nl-card h4"><h3><i class="ki ki-target" aria-hidden="true"></i> حدود اليوم في نور</h3><p class="sub">نور تحتسب بتاريخ النشر، وما زاد على الحدّ يضيع بلا نقاط.</p>
@@ -12059,6 +12072,125 @@ function nlPts(){
     <div class="nl-actions"><button class="nl-btn ai" id="nl-coach-btn" onclick="nlCoach()"><i class="ki ki-sparkle" aria-hidden="true"></i> ${nl.ai.coach?'أعد التحليل':'حلّل وضعي واكتب خطة اليوم'}</button></div>
     ${nl.ai.coach?`<div class="nl-md">${fhMd(nl.ai.coach)}</div>`:''}</div>
   </div>`;
+}
+// ── مساعد النقاط: خطة اليوم بأفعالٍ محسوبة وأزرار تنفيذ مباشرة (٢٧ نوفمبر) ──
+// لا تخمين: كل اقتراحٍ يُحسب من أرقام نور الحيّة (ما نُشر بتاريخ كل يوم مقابل
+// الحدود، الدروس بلا تحضير أو درسٍ تفاعلي أو واجب، آخر غرفة نقاش)، ويُرتَّب
+// بالنقاط المتوقّعة قبل ضرب نسبة تفاعل الطلاب. والزرّ يفتح المسار الموجود
+// نفسه معبّأً (الدرس والعدد والتاريخ)، فيراجع المعلّم ثم ينشر.
+const NL_PTS={q:7,file:15,scorm:40,topic:20};
+function nlPlanCourse(){return ((noorSt||{}).courses||[])[0]||null;}
+function nlPlanPrepsNewest(cid){
+  const o=nl.ov||{};const meta=(o.preps||[]).filter(p=>p.cid===cid);
+  return (o.prepOpts||[]).filter(p=>p.cid===cid).map(p=>{const m=meta.find(x=>x.id===p.id)||meta.find(x=>noorNorm(x.title)===noorNorm(p.title));return {...p,created:(m&&m.created)||''};})
+    .sort((x,y)=>String(y.created).localeCompare(String(x.created)));
+}
+function nlPlanDay(kind,need){
+  // أقرب يومٍ دراسي (من اليوم) فيه متّسعٌ لـ need على الأقل في حدّ الأسئلة أو الملفات
+  const cap=kind==='q'?NL_CAP_Q:NL_CAP_F;
+  const ds=nlCapDays(15);const x=ds.find(d=>cap-(kind==='q'?d.q:d.f)>=(need||1))||ds.find(d=>(kind==='q'?d.q:d.f)<cap);
+  return x?{d:x.d,left:cap-(kind==='q'?x.q:x.f)}:null;
+}
+function nlPlanWhen(d){const o=nl.ov;return d===o.today?'اليوم':nlDayName(d)+' '+nlShort(d);}
+function nlPlanActions(){
+  const o=nl.ov;if(!o)return null;
+  const acts=[],c=o.caps,today=o.today;
+  let fLeft=Math.max(0,NL_CAP_F-c.files);
+  const qLeft=Math.max(0,NL_CAP_Q-c.q);
+  // ١) تجاوز حدّ الأسئلة اليوم: نقاطٌ ضائعة
+  if(c.q>NL_CAP_Q){const nd=nlPlanDay('q',1);
+    acts.push({k:'warn',ico:'alert',pts:0,ttl:`نُشر بتاريخ اليوم ${egArNum(c.q)} سؤالاً والحدّ ${egArNum(NL_CAP_Q)}`,
+      why:`${egArNum(c.q-NL_CAP_Q)} سؤالاً لا تُحتسب. انقل الواجب الأخير إلى ${nd?nlPlanWhen(nd.d):'يومٍ آخر'} من صفحة الواجبات في نور.`,
+      btn:'افتح واجباتي في نور',href:'https://lms.moe.gov.om/teacher/homeworks'});}
+  // ٢) دروسٌ تفاعلية لعبتها جاهزة: ٤٠ نقطة، وتأخذ من حدّ الملفات
+  (nl.ns||[]).forEach((l,i)=>{if(!l.game)return;
+    const dd=fLeft>0?today:(nlPlanDay('f',1)||{}).d;if(fLeft>0)fLeft--;
+    acts.push({k:'scorm',ico:'game',pts:NL_PTS.scorm,ttl:`ارفع الدرس التفاعلي «${l.name}»`,
+      why:`لعبته جاهزة في خُطّة، تُرفق بتحضيره في نور بتاريخ ${nlPlanWhen(dd||today)}.`,btn:'ارفعه الآن',fn:`nlScormUp(${i})`,id:'nl-sc-'+i});});
+  // ٣) ملفات مرفقة حتى الحدّ اليومي
+  const course=nlPlanCourse();
+  if(course){const preps=nlPlanPrepsNewest(course.cid);const p=preps[0];
+    if(p){const n=fLeft>0?fLeft:0,nd=n?null:nlPlanDay('f',1);
+      if(n)acts.push({k:'att',ico:'clip',pts:n*NL_PTS.file,ttl:`أرفق ${egArNum(n)} ملفات لدرس «${String(p.title).replace(/\s*\(\d+\)\s*$/,'')}»`,
+        why:`بتاريخ اليوم ${egArNum(c.files)} من ${egArNum(NL_CAP_F)} ملفات؛ ${egArNum(n)} ملفات تكمل الحدّ (١٥ نقطة لكلّ ملف، +١٠٪ إن شاركته مع المدرسة).`,
+        btn:'اختر الملفات',fn:`nlPlanAttach('${escJs(course.cid)}','${escJs(String(p.id))}')`});
+      else if(nd)acts.push({k:'att',ico:'clip',pts:nd.left*NL_PTS.file,ttl:`حدّ الملفات اليوم مكتمل — جهّز ${egArNum(nd.left)} ملفات بتاريخ ${nlPlanWhen(nd.d)}`,
+        why:'نور تحتسب الملف بتاريخ نشره، فاختر التاريخ في نافذة الإرفاق.',btn:'جدولها الآن',fn:`nlPlanAttach('${escJs(course.cid)}','${escJs(String(p.id))}')`});}}
+  // ٤) واجبٌ يملأ حدّ الأسئلة: لدرسٍ له تحضير بلا واجب، وإلا آخر درس
+  const gaps=nlPrepGaps();const g=gaps&&gaps.missing&&gaps.missing[0];
+  const qd=qLeft>=5?{d:today,left:qLeft}:nlPlanDay('q',5);
+  if(qd){const n=Math.min(20,qd.left);
+    if(g)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${g.title}» بتاريخ ${nlPlanWhen(qd.d)}`,
+      why:`لهذا الدرس تحضيرٌ في نور بلا واجب${gaps.missing.length>1?` (ومعه ${egArNum(gaps.missing.length-1)} دروس أخرى)`:''}. ${egArNum(n)} سؤالاً تكمل حدّ ذلك اليوم: ٧ نقاط للسؤال حين يحلّه الطلاب.`,
+      btn:'ولّد الأسئلة',fn:`nlPlanHw(0,${n},'${qd.d}')`});
+    else{const k=nlPlanSubjects()[0],pk=k?nlPlanPick(k):{},l=pk.last||pk.next;
+      if(l)acts.push({k:'hw',ico:'pen',pts:n*NL_PTS.q,ttl:`انشر واجباً من ${egArNum(n)} سؤالاً لدرس «${l.name}» بتاريخ ${nlPlanWhen(qd.d)}`,
+        why:`بتاريخ ${nlPlanWhen(qd.d)} متّسعٌ لـ${egArNum(qd.left)} سؤالاً.`,btn:'ولّد الأسئلة',fn:`nlPlanHwLesson('${escJs(l.name)}',${n},'${qd.d}')`});}}
+  // ٥) غرفة نقاش: إن لم يُنشأ موضوعٌ منذ ٧ أيام
+  const rooms=nl.room&&nl.room.rooms;
+  if(rooms){const last=rooms.map(r=>r.created).sort().pop()||'';
+    const age=last?Math.floor((Date.parse(today)-Date.parse(last.slice(0,10)))/864e5):null;
+    if(age===null||age>=7){const k=nlPlanSubjects()[0],pk=k?nlPlanPick(k):{},l=pk.last||pk.next;
+      if(l)acts.push({k:'room',ico:'chat',pts:NL_PTS.topic,ttl:`أنشئ موضوع نقاش لدرس «${l.name}»`,
+        why:last?`آخر غرفة نقاش قبل ${egArNum(age)} أيام. الموضوع ٢٠ نقطة بحسب نسبة ردود الطلاب، ويرفع تفاعلهم الذي يضاعف كل نقاطك.`:'لا غرف نقاش لك بعد. الموضوع ٢٠ نقطة بحسب نسبة ردود الطلاب.',
+        btn:'اكتب السؤال',fn:`nlPlanRoom('${escJs(k)}','${pk.last?'last':'next'}')`});}}
+  // ٦) تحاضير فاتت وهي جاهزة في خُطّة: شرطٌ لإرفاق الملفات والدروس التفاعلية
+  const np=(nl.np||[]).filter(l=>l.grp==='past'&&l.kprep);
+  if(np.length){const l=np[0];acts.push({k:'prep',ico:'book',pts:0,ttl:`انشر تحضير «${l.name}» في نور`,
+    why:`تحضيره جاهز في خُطّة${np.length>1?` (و${egArNum(np.length-1)} دروس أخرى مثله)`:''}. التحضير لا يُحتسب نقاطاً، لكن الملفات والدروس التفاعلية تُرفق به.`,
+    btn:'افتح بطاقة الدرس',fn:`nlGoLesson(${l.g},'${escJs(l.subj)}',${l.ui},'${escJs(l.id)}')`});}
+  const order={warn:0};acts.sort((a,b)=>(order[a.k]??1)-(order[b.k]??1)||b.pts-a.pts);
+  return acts;
+}
+function nlPlanCard(){
+  const o=nl.ov;if(!o)return '';
+  if(!nl.room||(!nl.room.rooms&&!nl.busy.room&&!nl.room.lecErr))setTimeout(nlPlanRooms,0);
+  const acts=nlPlanActions()||[];
+  const total=acts.reduce((s,a)=>s+(a.pts||0),0);
+  const loading=!nl.np||!nl.ns||!(nl.room&&nl.room.rooms);
+  return `<div class="nl-card nl-plan"><h3><i class="ki ki-target" aria-hidden="true"></i> مساعد النقاط — خطة اليوم ${nlDayName(o.today)} ${nlShort(o.today)}</h3>
+    <p class="sub">محسوبةٌ من أرقامك الحيّة في نور ومرتّبةٌ بالنقاط. كل زرٍّ يفتح المهمة معبّأةً، ${khG('فتراجعين','فتراجع')} ثم ${khG('تنشرين','تنشر')}. النقاط تقديرية قبل ضرب نسبة تفاعل الطلاب.</p>
+    ${total?`<div class="nl-pot"><b dir="ltr">+${nlN(total)}</b><span>نقطة إن ${khG('نفّذتِ','نفّذت')} الخطة كاملة</span></div>`:''}
+    <ol class="nl-plan-list">${acts.map((a,i)=>`<li class="${a.k}"><span class="nl-plan-n">${a.k==='warn'?'<i class="ki ki-alert" aria-hidden="true"></i>':egArNum(i+1-(acts[0]&&acts[0].k==='warn'?1:0))}</span>
+      <div class="nl-plan-b"><b>${escHtml(a.ttl)}</b><small>${escHtml(a.why)}</small></div>
+      ${a.pts?`<span class="nl-plan-p" dir="ltr">+${nlN(a.pts)}</span>`:''}
+      ${a.href?`<a class="nl-btn ghost" href="${escAttr(a.href)}" target="_blank" rel="noopener">${escHtml(a.btn)} ↗</a>`:`<button class="nl-btn ${a.k==='prep'?'ghost':'gold'}" ${a.id?`id="${a.id}"`:''} onclick="${a.fn}">${escHtml(a.btn)}</button>`}</li>`).join('')}</ol>
+    ${!acts.length&&!loading?'<div class="nl-gap"><i class="ki ki-check" aria-hidden="true"></i> استنفدت حدود اليوم ولا مهام معلّقة. عُد غداً.</div>':''}
+    ${loading?nlLoading('يكمل المطابقة (الدروس التفاعلية، التحاضير، غرف النقاش)…'):''}
+  </div>`;
+}
+async function nlPlanRooms(){
+  const r=nl.room=nl.room||{};if(r.rooms||nl.busy.room)return;
+  nl.busy.room=true;
+  try{const y=await noorCall({action:'lab_rooms'});r.rooms=y.rooms||[];if(r.pid==null)r.pid=r.rooms[0]?r.rooms[0].pid:'';}
+  catch(e){r.lecErr=e.message;r.rooms=[];}
+  nl.busy.room=false;if(nl.tab==='pts')nlBody();
+}
+function nlPlanAttach(cid,prepId){
+  nlAttOpen();nlAtt.cid=cid;nlAttLessons();
+  const p=nlAttPreps().find(x=>String(x.id)===String(prepId));
+  if(p)nlAttPick(p);else nlAttRender();
+}
+async function nlPlanHwSetup(n,date){
+  const g=nl.gen;g.n=n;g.date=date;g.items=null;g.done=null;nl.post=null;nlBody();
+  if(g.lesson){await nlGenRun();toast('راجع الأسئلة، ثم «انشر في نور»','ok');}
+}
+async function nlPlanHw(i,n,date){
+  await nlGapGen(i);await nlPlanHwSetup(n,date);
+}
+async function nlPlanHwLesson(name,n,date){
+  nl.gen=nl.gen||{};const c=nlPlanCourse();if(c)nl.gen.cid=c.cid;
+  nlTab('gen');await nlGenInit();
+  const ls=nl.lessons[nl.gen.cid]||[];const k=nlLessonKey(name);
+  const best=ls.find(l=>nlLessonKey(l.name)===k)||ls.find(l=>{const x=nlLessonKey(l.name);return x.length>=6&&(x.includes(k)||k.includes(x));});
+  if(best)nl.gen.lesson=best.id;else toast('لم نجد الدرس في شجرة نور — اختره من القائمة',true);
+  await nlPlanHwSetup(n,date);
+}
+async function nlPlanRoom(key,when){
+  const r=nl.room=nl.room||{};r.key=key;r.when=when;r.q=null;r.done=null;
+  nlTab('room');
+  for(let i=0;i<40&&!r.lectures&&!r.lecErr;i++)await new Promise(z=>setTimeout(z,150));
+  await nlRoomGen();
 }
 function nlChart(daily,cum){
   const W=640,H=200,P=28;const map={};daily.forEach(x=>map[x.d]=x.v);
@@ -12088,7 +12220,8 @@ async function nlCoach(){
   const wk=nlWeekStats();
   const data={today:o.today,points:{today:o.score.today,semester:o.score.semester,total:o.score.total,card:o.score.card,daily:(o.score.daily||[]).slice(-10)},
     caps_today:o.caps,limits:{questions:20,files:10},season_totals:o.totals,school_top_teachers:(o.score.teachers||[]).map(t=>t.pts),
-    week_prep:wk,students:nlStuDigest()};
+    week_prep:wk,students:nlStuDigest(),
+    plan:(nlPlanActions()||[]).map(a=>({action:a.ttl,points:a.pts}))};
   try{const r=await noorCall({action:'lab_ai',task:'coach',data});nl.ai.coach=r.text;}
   catch(e){toast(e.message,true);}
   if(nl.tab==='pts')nlBody();
