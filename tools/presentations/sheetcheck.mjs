@@ -9,6 +9,7 @@ for (const f of process.argv.slice(2)) {
   const p = await b.newPage({ viewport: { width: 900, height: 1200 } });
   await p.goto('file://' + path.resolve(f));
   await p.evaluate(() => document.fonts.ready);
+  await p.evaluate(() => window.__fit || null);   // ترقيم صفحات المخزن التلقائي
   const res = await p.evaluate(() => {
     const out = [];
     document.querySelectorAll('.page').forEach((pg, pi) => {

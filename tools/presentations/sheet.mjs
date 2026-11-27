@@ -7,6 +7,7 @@ const b = await chromium.launch();
 const p = await b.newPage({ deviceScaleFactor: 2, viewport: { width: 900, height: 1200 } });
 await p.goto('file://' + path.resolve(file));
 await p.evaluate(() => document.fonts.ready);
+await p.evaluate(() => window.__fit || null);   // ترقيم صفحات المخزن التلقائي (store_theme.py)
 const pages = await p.$$('.page');
 const base = path.basename(file, '.html');
 for (let i = 0; i < pages.length; i++) {

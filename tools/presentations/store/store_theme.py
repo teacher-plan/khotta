@@ -128,9 +128,74 @@ footer{color:var(--k-muted);border-top-color:var(--k-red-d)}footer .url{color:va
 .op{color:var(--k-muted)}.v{color:var(--k-red-d);text-decoration:none}
 .page svg,.page img{filter:none}
 '''
-_store_base_build = build
+# ── راحة البصر (طلب الأستاذ عيسى): هامش جانبي ١٥ ملم، ٤ ملم بين الكتل، حشوٌ داخلي ≥ ٢٫٥ ملم، و ≥ ٦ ملم قبل التذييل ──
+SPACE_CSS = r'''
+:root{--k:1}
+.page .body{padding:calc(4.5mm*var(--k)) calc(9mm + 6mm*var(--k)) 6mm;gap:calc(4mm*var(--k))}
+header.st{padding-left:calc(9mm + 6mm*var(--k));padding-right:calc(9mm + 6mm*var(--k))}
+.goal{margin:calc(3.5mm*var(--k)) calc(9mm + 6mm*var(--k)) 0;padding:calc(2.6mm*var(--k)) 4.5mm}
+footer{margin:auto calc(9mm + 6mm*var(--k)) 0;padding:2.4mm 0 6mm}
+.sec{gap:calc(2.4mm*var(--k))}
+.tx{line-height:calc(1.55 + .25*var(--k))}
+.rule{padding:calc(3mm*var(--k)) 4.5mm;line-height:calc(1.55 + .25*var(--k))}
+.exh{padding:calc(2.6mm*var(--k)) 4.5mm}
+.ex td{padding:calc(1.6mm*var(--k)) 3.5mm}
+.ans{padding:calc(2mm*var(--k)) 4.5mm}
+.warn{padding:calc(3mm*var(--k)) 4.5mm;gap:calc(2.2mm*var(--k))}
+.pr{padding:calc(3mm*var(--k)) 4.5mm}.pr ol{gap:calc(1.6mm*var(--k)) 6mm;line-height:1.75}.pa{line-height:1.75}
+.tb th,.tb td{padding:calc(1.8mm*var(--k)) 3.5mm}
+.qq{padding:calc(3mm*var(--k)) 4.5mm}
+.mc{gap:calc(2.6mm*var(--k)) 6mm}.mc>span{padding:calc(1.2mm*var(--k)) 4mm calc(1.2mm*var(--k)) 2.5mm;line-height:1.9}.mc>span:has(.fr){padding-block:calc(2.2mm*var(--k))}
+.gt th{padding:calc(1.6mm*var(--k)) 4mm}.gt td{padding:calc(1.8mm*var(--k)) 4mm}
+.ki{padding:calc(1.1mm*var(--k)) 0}
+.lvl{margin-top:calc(1.5mm*var(--k));padding:calc(1.8mm*var(--k)) 4.5mm}
+.sbar{margin-bottom:1.5mm}
+'''
+# ── ترقيمٌ تلقائي للصفحات: الكتلة التي لا تتّسع لها الصفحة تنتقل كاملةً إلى التالية (أو إلى صفحةٍ جديدة
+#    بالرأس نفسه). لا يُقسَم سؤالٌ ولا قسم، ولا يبقى عنوان مستوى وحيداً في ذيل صفحة، وصفحات نموذج الإجابة
+#    مجموعةٌ مستقلّة لا يختلط بها شيء. يعمل في المتصفّح بعد تحميل الخطوط، فتنتظره sheet.mjs و sheetcheck.mjs (window.__fit).
+FIT_JS = r'''<script>
+// الأولوية: (١) المسافات المريحة كاملة (--k = ١) ← (٢) ضغطٌ متدرّج حتى حدٍّ أدنى مريح (--k = ٠٫٧٥:
+// ٣ ملم بين الكتل، هامش ١٣٫٥ ملم) دون زيادة الصفحات ← (٣) إن لم يكفِ، تنتقل الكتلة كاملةً إلى صفحةٍ تالية.
+window.__fit=(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{
+ const root=document.documentElement;
+ const orig=[...document.querySelectorAll('.page')].map(p=>p.outerHTML).join('');
+ const host=document.body;
+ const over=b=>{const l=b.lastElementChild;if(!l)return false;
+   return l.getBoundingClientRect().bottom>b.getBoundingClientRect().bottom-parseFloat(getComputedStyle(b).paddingBottom)+.5;};
+ const reset=()=>{document.querySelectorAll('.page').forEach(p=>p.remove());host.insertAdjacentHTML('afterbegin',orig);};
+ const anyOver=()=>[...document.querySelectorAll('.page .body')].some(over);
+ // لكل درجة ضغط: نرقّم (ننقل الكتل الزائدة إلى التالية)، ونختار أقلّ عددٍ من الصفحات، ثم أوسع المسافات بينها.
+ const flow=()=>{let pages=[...document.querySelectorAll('.page')];
+  for(let i=0;i<pages.length;i++){const pg=pages[i],body=pg.querySelector('.body');let guard=0;
+   while(over(body)&&body.children.length>1&&guard++<60){
+    let nx=pages[i+1];
+    if(!nx||nx.dataset.g!==pg.dataset.g){nx=pg.cloneNode(true);nx.querySelector('.body').innerHTML='';pg.after(nx);pages.splice(i+1,0,nx);}
+    const nb=nx.querySelector('.body');nb.insertBefore(body.lastElementChild,nb.firstChild);
+    while(body.children.length>1&&body.lastElementChild.matches('.lvl,.kh'))nb.insertBefore(body.lastElementChild,nb.firstChild);}}
+  // سحبٌ إلى الخلف: ما يتّسع له آخر صفحةٍ سابقة من أوّل التالية يصعد إليها، ثم تُحذف الصفحات الفارغة
+  for(let i=0;i<pages.length-1;i++){const b=pages[i].querySelector('.body'),nb=pages[i+1].querySelector('.body');
+   if(pages[i+1].dataset.g!==pages[i].dataset.g)continue;
+   while(nb.firstElementChild){const el=nb.firstElementChild;b.appendChild(el);if(over(b)){nb.insertBefore(el,nb.firstChild);break;}}}
+  pages=pages.filter(pg=>{if(!pg.querySelector('.body').children.length){pg.remove();return false;}return true;});
+  return pages.length;};
+ let best=null;
+ for(const k of [1,.95,.9,.85,.8,.75,.7]){reset();root.style.setProperty('--k',k);const n=flow();
+   if(!best||n<best.n)best={k,n};}
+ reset();root.style.setProperty('--k',best.k);return flow();});
+</script>'''
 def build(out, title, pages):
     global CSS
     if STORE_CSS not in CSS:
-        CSS += STORE_CSS + (BRAND_CSS if STORE_BRAND else '')
-    return _store_base_build(out, title, pages)
+        CSS += STORE_CSS + (BRAND_CSS if STORE_BRAND else '') + SPACE_CSS
+    # مجموعة الصفحة = رأسها: صفحات الطالب معاً، وصفحات نموذج الإجابة معاً
+    groups, html = {}, []
+    for hd, body in pages:
+        g = groups.setdefault(hd, len(groups))
+        html.append(f'<section class="page" data-g="{g}">{hd}<div class="body">{body}</div>{FOOT}</section>')
+    html = ''.join(html)
+    text = re.sub(r'<[^>]+>', ' ', html)
+    bad = [m.group(0) for m in BAD_DASH.finditer(text)]
+    assert not bad, f'شَرطة فاصلة: {bad[:3]}'
+    open(out, 'w', encoding='utf-8').write(f'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>{title}</title><style>{CSS}</style></head><body>{html}{FIT_JS}</body></html>')
+    print(out)
