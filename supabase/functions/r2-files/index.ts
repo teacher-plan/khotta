@@ -92,6 +92,29 @@ Deno.serve(async (req) => {
     return json({ putUrl: signed.url, contentType: type, path: R2_PREFIX + key, publicUrl: `${PUBLIC}/${key}` });
   }
 
+  // رفعٌ/حذفٌ عامّ بديلٌ عن storage.upload/remove في الواجهتين — بالقواعد نفسها التي كانت في سياسات Supabase:
+  // الإدارة: أي مسار في library-files/user-files. المعلّم: مكتبة c1-library، وصور تحضيره c1-preps/<معرّفه>/.
+  if (b.action === "sign_put" || b.action === "remove") {
+    const bucket = String(b.bucket || ""), paths: string[] = (b.action === "remove" ? (b.paths || []) : [b.path]).map(String).slice(0, 50);
+    if (!["library-files", "user-files"].includes(bucket) || !paths.length || paths.some((p) => !p || p.includes("..") || p.startsWith("/"))) return json({ error: "bad_input" }, 400);
+    const { data: isAdmin } = await userClient.rpc("is_app_admin");
+    const ok = (p: string) => !!isAdmin || (bucket === "library-files" && ((b.action === "sign_put" && p.startsWith("c1-library/")) || p.startsWith(`c1-preps/${user.id}/`)));
+    if (!paths.every(ok)) return json({ error: "forbidden" }, 403);
+    if (b.action === "remove") {
+      await Promise.all(paths.map((p) => r2.fetch(objUrl(`${bucket}/${p}`), { method: "DELETE" }).catch(() => null)));
+      return json({ ok: true });
+    }
+    const size = Number(b.size) || 0;
+    if (size <= 0 || size > MAX) return json({ error: "bad_size" }, 400);
+    const key = `${bucket}/${paths[0]}`;
+    const type = String(b.contentType || "application/octet-stream").slice(0, 120);
+    const cache = String(b.cacheControl || "public, max-age=3600").slice(0, 80);
+    const u = new URL(objUrl(key));
+    u.searchParams.set("X-Amz-Expires", "600");
+    const signed = await r2.sign(new Request(u, { method: "PUT", headers: { "Content-Type": type, "Cache-Control": cache } }), { aws: { signQuery: true } });
+    return json({ putUrl: signed.url, contentType: type, cacheControl: cache, publicUrl: `${PUBLIC}/${key.split("/").map(encodeURIComponent).join("/")}` });
+  }
+
   // ملفات المكتبة الثقيلة من لوحة الإدارة (صفحات الكتب وأدلّة المعلّم وملفات
   // المكتبة PDF) تُرفع إلى R2 مباشرةً تحت library-files/ بالمسار نفسه الذي كانت
   // تأخذه في Supabase، فتقرؤها كل المسالك الحالية (R2 أولاً). للمشرف وحده.

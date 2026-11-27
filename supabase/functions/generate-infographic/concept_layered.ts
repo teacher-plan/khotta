@@ -7,6 +7,7 @@
 // تُحفظ للوحدة والنمط والمقاس فتُعاد بلا تكلفة. بلا رسوم ← بلا نداء صور إطلاقاً.
 // ════════════════════════════════════════════════════════════════
 import { subjectRules, isEnglishSubject } from "../_shared/subjectProfile.ts";
+import { r2Put, r2Exists, r2PublicUrl } from "../_shared/r2.ts";
 import { refundQuota, logAiCost } from "../_shared/quota.ts";
 import { orFetch, orErrCode } from "../_shared/ai.ts";
 import { parseAiJson } from "../_shared/aiJson.ts";
@@ -98,6 +99,7 @@ function bgPrompt(subject: string, unit: string, style: string, aspect: string):
 }
 
 async function publicIfExists(admin: Any, key: string): Promise<string> {
+  if (await r2Exists("library-files/" + key)) return r2PublicUrl("library-files/" + key);
   const dir = key.split("/").slice(0, -1).join("/"), name = key.split("/").pop();
   const { data } = await admin.storage.from("library-files").list(dir, { search: name });
   return A(data).some((o: Any) => o.name === name) ? admin.storage.from("library-files").getPublicUrl(key).data.publicUrl : "";
@@ -182,7 +184,7 @@ export async function layeredConcept(admin: Any, user: Any, st: Record<string, s
   try {
     const bin = Uint8Array.from(atob(img.split(",")[1] || ""), (c) => c.charCodeAt(0));
     const ct = (img.match(/^data:([^;]+)/) || [])[1] || "image/png";
-    await admin.storage.from("library-files").upload(key, new Blob([bin], { type: ct }), { upsert: true, contentType: ct, cacheControl: "31536000" });
+    if (!(await r2Put("library-files/" + key, bin, ct))) await admin.storage.from("library-files").upload(key, new Blob([bin], { type: ct }), { upsert: true, contentType: ct, cacheControl: "31536000" });
   } catch (e) { console.error("cm bg cache", String(e)); }
   return json({ cmLayered: true, type, map, art: img, cached: false });
 }

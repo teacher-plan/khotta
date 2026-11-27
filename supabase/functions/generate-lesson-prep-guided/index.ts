@@ -11,6 +11,7 @@
 // الأسرار: OPENROUTER_API_KEY
 // ════════════════════════════════════════════════════════════════
 import { withSubject } from "../_shared/subjectProfile.ts";
+import { r2Put } from "../_shared/r2.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseAiJson } from "../_shared/aiJson.ts";
 import { orFetch, ensureVision, orErrCode } from "../_shared/ai.ts";
@@ -183,12 +184,14 @@ Deno.serve(async (req) => {
     try {
       const docxBytes = await buildGenericDocx(String(attempt.content.title || cur.lesson), cleanSections);
       const docxPath = `generated-preps/${curriculumId}.docx`;
-      const { error: docxUpErr } = await admin.storage.from("library-files").upload(docxPath, docxBytes, {
+      const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      docxUrl = await r2Put("library-files/" + docxPath, docxBytes, DOCX, "public, max-age=300");
+      const { error: docxUpErr } = docxUrl ? { error: null } : await admin.storage.from("library-files").upload(docxPath, docxBytes, {
         contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         upsert: true,
       });
       if (docxUpErr) console.error("docx_upload_failed:", docxUpErr.message);
-      else docxUrl = admin.storage.from("library-files").getPublicUrl(docxPath).data.publicUrl;
+      else if (!docxUrl) docxUrl = admin.storage.from("library-files").getPublicUrl(docxPath).data.publicUrl;
     } catch (e) {
       console.error("docx_build_failed:", String(e));
     }
