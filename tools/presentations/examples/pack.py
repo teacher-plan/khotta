@@ -1,5 +1,8 @@
 # قالب «حزمة الدرس» للمخزن المشترك: ورقة عمل + اختبار قصير + نموذج إجابة.
 # يُنفَّذ بعد summary2.py و area_sum.py (exec)، فيرث الرأس والتذييل والخطوط وقاعدة «لا شَرطة فاصلة».
+# ملفات المخزن تُطبع دائماً بقالب المخزن (store_theme.py).
+if 'STORE_CSS' not in globals():
+    exec(open(os.path.join(KIT, 'store', 'store_theme.py'), encoding='utf-8').read())
 # المحتوى أصليّ من إعدادنا، مبنيّ على أهداف الدرس وأخطائه الشائعة في دليل المعلّم، وبأرقامٍ غير أرقام تمارين الكتاب.
 
 def student_bar(extra=''):
@@ -28,7 +31,7 @@ def gtable(head, rows):
 
 def key_item(n, steps, ans):
     rows = ''.join(f'<tr><td class="e">{e}</td><td class="r">{r}</td></tr>' for e, r in steps)
-    return f'<div class="ki"><span class="qn">{a(n)}</span><div><table>{rows}</table><div class="ka">✔ {ans}</div></div></div>'
+    return f'<div class="ki"><span class="qn">{a(n)}</span><div><table>{rows}</table><div class="ka">✓ {ans}</div></div></div>'
 
 def score_box(total): return f'<div class="score"><b>الدرجة</b><span><i></i>من {a(total)}</span></div>'
 

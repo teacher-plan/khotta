@@ -98,3 +98,8 @@ def build(out, title, pages):
         html = re.sub(r'&(lt|gt);', lambda m: f'&#x200e;&{m[1]};&#x200e;', html)
     open(out, 'w', encoding='utf-8').write(f'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>{title}</title><style>{CSS}</style></head><body>{html}</body></html>')
     print(out)
+
+# «مخزن خُطّة» (KH_STORE=1): نسخة الطباعة بالأبيض والأسود، ورأس المادة والعام الدراسي، وتذييل حقوق المنصّة.
+# بلا المتغيّر تبقى ملخّصات الأستاذ عيسى كما هي (التذييل بالاسمين — CLAUDE.md).
+if os.environ.get('KH_STORE'):
+    exec(open(os.path.join(KIT, 'store', 'store_theme.py'), encoding='utf-8').read())
