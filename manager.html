@@ -6618,7 +6618,7 @@ async function prepScopeChanged(){
   const{semester,grade,subject}=prepScope();
   const status=document.getElementById('prep-guide-status');
   const controls=document.getElementById('prep-guide-controls');
-  if(!grade||!subject){status.textContent='اختاري الفصل والصف والمادة أولاً';controls.style.display='none';return;}
+  if(!grade||!subject){status.textContent='اختر الفصل والصف والمادة أولاً';controls.style.display='none';return;}
   controls.style.display='block';
   status.textContent='يجري التحميل…';
   try{
@@ -6634,8 +6634,8 @@ async function prepScopeChanged(){
 function prepRenderGuideStatus(){
   const status=document.getElementById('prep-guide-status');
   const idxBtn=document.getElementById('prep-index-btn');
-  if(!prepGuide){status.textContent='لا يوجد دليل معلمٍ مرفوع لهذا النطاق بعد — ارفعي ملف PDF';idxBtn.style.display='none';return;}
-  const map={uploaded:'⬆️ مرفوع — لم تُطابَق فهرسه بعد',indexing:'⏳ تجري المطابقة الآن…',indexed:'✅ تمّت مطابقة الفهرس',index_failed:'❌ فشلت المطابقة — أعيدي المحاولة'};
+  if(!prepGuide){status.textContent='لا يوجد دليل معلمٍ مرفوع لهذا النطاق بعد — ارفع ملف PDF';idxBtn.style.display='none';return;}
+  const map={uploaded:'⬆️ مرفوع — لم تُطابَق فهرسه بعد',indexing:'⏳ تجري المطابقة الآن…',indexed:'✅ تمّت مطابقة الفهرس',index_failed:'❌ فشلت المطابقة — أعد المحاولة'};
   status.textContent=map[prepGuide.status]||prepGuide.status;
   // زرّ إعادة المطابقة يبقى متاحاً حتى بعد النجاح: قد تظهر دروسٌ ناقصة
   // بعد إصلاح خوارزمية المطابقة (كما وقع فعلاً)، فتحتاج معلمةٌ العودة
@@ -6649,8 +6649,8 @@ async function prepUploadGuide(){
   const file=document.getElementById('prep-guide-file').files[0];
   const{semester,grade,subject}=prepScope();
   const status=document.getElementById('prep-guide-progress');
-  if(!file){status.textContent='❌ اختاري ملف PDF أولاً';return;}
-  if(!grade||!subject){status.textContent='❌ اختاري الصف والمادة أولاً';return;}
+  if(!file){status.textContent='❌ اختر ملف PDF أولاً';return;}
+  if(!grade||!subject){status.textContent='❌ اختر الصف والمادة أولاً';return;}
   if(!/\.pdf$/i.test(file.name)){status.textContent='❌ الملف يجب أن يكون PDF';return;}
   let pdf;
   try{await loadPdfJs();const buf=await file.arrayBuffer();pdf=await pdfjsLib.getDocument({data:buf}).promise;}
@@ -6676,7 +6676,7 @@ async function prepUploadGuide(){
     status.textContent='⬆️ الصفحة '+egToArabic(p)+' من '+egToArabic(N)+'...';
     if(!await putPage(p,3))failed.push(p);
   }
-  if(failed.length){status.textContent='⚠️ تعذّر رفع '+egToArabic(failed.length)+' صفحة — أعيدي رفع الملف لإكمالها.';}
+  if(failed.length){status.textContent='⚠️ تعذّر رفع '+egToArabic(failed.length)+' صفحة — أعد رفع الملف لإكمالها.';}
   try{
     const{data,error}=await sb.from('teacher_guides').upsert({
       semester,grade:Number(grade),subject,base_path:base,page_count:N,offset_pages:1,status:'uploaded',
@@ -6741,7 +6741,7 @@ async function prepMatchAll(redoAll){
   const{data:guides,error}=await q;
   if(error){log.innerHTML='<span style="color:#B23">تعذّر جلب الأدلة: '+escHtml(error.message||'')+'</span>';return;}
   const todo=(guides||[]).filter(g=>redoAll?true:g.status!=='indexed');
-  if(!todo.length){log.innerHTML='لا أدلة تحتاج مطابقة (كلها مطابَقة سلفاً — استعملي «إعادة مطابقة الكل» لإعادتها).';return;}
+  if(!todo.length){log.innerHTML='لا أدلة تحتاج مطابقة (كلها مطابَقة سلفاً — استعمل «إعادة مطابقة الكل» لإعادتها).';return;}
   if(!await uiConfirm('ستُطابَق '+egToArabic(todo.length)+' أدلة، وكلٌّ منها يستغرق نحو دقيقة.\nلا تُغلقي الصفحة أثناء التنفيذ. متابعة؟'))return;
   btn.disabled=true;
   let ok=0,failed=0;
@@ -11707,7 +11707,7 @@ async function loadAnalytics(){
         msgs.slice(0,30).map(m=>`<tr><td>${escHtml(m.title||'رسالة')}</td><td style="color:var(--muted)">${m.created_at?new Date(m.created_at).toLocaleDateString('ar'):'—'}</td></tr>`).join('')
       }</tbody></table><div class="an-detail-note">آخر ٣٠ رسالة من أصل ${msgs.length.toLocaleString('ar')} — التفاصيل الكاملة في قسم «التواصل».</div>`
       :'<div class="an-detail-note">لا رسائل بعد.</div>');
-    anSetDetail('c2-survey-res','إجابات الاستبيانات',`<div class="an-detail-note">${(surveyRes?.length||0).toLocaleString('ar')} إجابة تراكمية عبر كل الاستبيانات منذ إنشاء المنصّة. لتفاصيل استبيانٍ بعينه، افتحي قسم «الاستبيانات».</div>`);
+    anSetDetail('c2-survey-res','إجابات الاستبيانات',`<div class="an-detail-note">${(surveyRes?.length||0).toLocaleString('ar')} إجابة تراكمية عبر كل الاستبيانات منذ إنشاء المنصّة. لتفاصيل استبيانٍ بعينه، افتح قسم «الاستبيانات».</div>`);
     anSetDetail('c2-lib-files','ملفات المكتبة',libFilesList.length
       ?`<table class="an-detail-table"><thead><tr><th>المادة</th><th>الصف</th><th>النوع</th></tr></thead><tbody>${
         libFilesList.slice(0,30).map(f=>`<tr><td>${escHtml(f.subject||'—')}</td><td>${escHtml(f.grade||'—')}</td><td>${f.content_type==='exam'?'اختبار':'ملف'}</td></tr>`).join('')
@@ -11777,7 +11777,7 @@ function anShowDetail(key){
   const e=anDetailStore[key];
   const bg=document.getElementById('an-detail-modal-bg');
   document.getElementById('an-detail-title').textContent=e?e.title:'—';
-  document.getElementById('an-detail-body').innerHTML=e?e.html:'<div class="an-detail-note">لم تُحمَّل البيانات بعد — اضغطي «تحديث البيانات».</div>';
+  document.getElementById('an-detail-body').innerHTML=e?e.html:'<div class="an-detail-note">لم تُحمَّل البيانات بعد — اضغط «تحديث البيانات».</div>';
   bg.classList.remove('hidden');
 }
 function anCloseDetail(){document.getElementById('an-detail-modal-bg').classList.add('hidden');}
@@ -13589,23 +13589,27 @@ async function ref_openChangePriceDialog(){
 }
 // رقم استقبال التحويلات — يظهر في رسالة الدعوة للدفع
 const REF_PAYMENT_NUMBER='76787595';
+// صيغة المخاطبة في رسائل واتساب: اختيار المعلّم في نموذج التسجيل، وإلا فمرحلته
+// (معلّمات الحلقة الأولى نساءٌ كلّهنّ). مثل _shared/gender.ts في الخادم.
+function refG(r){const g=r&&r.gender;return g==='m'||g==='f'?g:((r&&r.stage)==='cycle1'?'f':'m');}
+const refPick=g=>(f,m)=>g==='f'?f:m;
 
 // رسالة جاهزة تُفتح مع واتساب: كتابتها يدوياً لكل مسجّلة يعني اختلاف الصياغة
 // من واحدةٍ لأخرى ونسيان رقم التحويل أحياناً. السعر يُقرأ من الإعداد لا يُثبَّت
 // هنا، وإلا لبقيت الرسالة تطلب مبلغاً قديماً بعد تغييره من زرّ السعر.
-function ref_paymentMessage(name){
-  const n=(name||'').trim();
+function ref_paymentMessage(name,gg){
+  const n=(name||'').trim(),g=refPick(gg||'f');
   return [
     n?`مرحباً ${n} 🌸`:'مرحباً 🌸',
     '',
-    'أهلاً بكِ في منصة «خُطّتي الفصلية» — سعدنا بتسجيلكِ.',
+    `أهلاً ${g('بكِ','بك')} في منصة «خُطّة» — سعدنا ${g('بتسجيلكِ','بتسجيلك')}.`,
     '',
     `لتفعيل حسابك يتبقّى تحويل مبلغ ${ref_subscriptionPrice} ريالاً عُمانياً، وهو اشتراك الفصل الدراسي كاملاً.`,
     '',
     'طريقة الدفع:',
     `• تحويل على الرقم: ${REF_PAYMENT_NUMBER}`,
     '',
-    'وبعد التحويل أرسلي صورة الإيصال هنا ليُفعَّل حسابك 🌷'
+    `وبعد التحويل ${g('أرسلي','أرسل')} صورة الإيصال هنا ليُفعَّل حسابك 🌷`
   ].join('\n');
 }
 
@@ -13614,16 +13618,17 @@ function ref_paymentMessage(name){
    وأهي منصّةٌ جادّة أم صفحةٌ عابرة. وموعدٌ صريح («أول أسبوع دوام») يحوّل
    الانتظار من قلقٍ إلى ترقّب. ولا نذكر المبلغ هنا: الترحيب الذي يطلب مالاً
    في سطره الأول ليس ترحيباً — للدفع رسالتُه ووقتُه. */
-function ref_welcomeMessage(name){
-  const n=(name||'').trim();
+const REF_STAGE_LBL={'cycle1':'الحلقة الأولى (١–٤)','5-12':'الصفوف ٥–١٢','5-9':'الحلقة الثانية (٥–٩)','10-12':'ما بعد الأساسي (١٠–١٢)'};
+function ref_welcomeMessage(name,gg,stage){
+  const n=(name||'').trim(),g=refPick(gg||'f');
   return [
-    n?`أهلاً بكِ ${n} 🌸`:'أهلاً بكِ 🌸',
+    n?`أهلاً ${g('بكِ','بك')} ${n} 🌸`:`أهلاً ${g('بكِ','بك')} 🌸`,
     '',
-    'وصلَنا حجزُ مقعدكِ في منصّة «خُطّتي الفصلية» — الحلقة الأولى، وسعدنا بانضمامكِ.',
+    `وصلَنا حجزُ ${g('مقعدكِ','مقعدك')} في منصّة «خُطّة» — ${REF_STAGE_LBL[stage]||'مرحلة غير محدّدة'}، وسعدنا ${g('بانضمامكِ','بانضمامك')}.`,
     '',
-    'سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.',
+    `سنتواصل ${g('معكِ لتفعيل اشتراككِ','معك لتفعيل اشتراكك')} مع بداية أول أسبوع دوام بإذن الله، ${g('ويصلكِ حسابُكِ','ويصلك حسابُك')} جاهزاً.`,
     '',
-    'وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷'
+    `وإلى ذلك الحين، أيُّ استفسارٍ يخطر ${g('لكِ فاكتبيه','لك فاكتبه')} هنا — ${g('نجيبكِ','نجيبك')} بسرور 🌷`
   ].join('\n');
 }
 function ref_waNumber(phone){
@@ -13632,49 +13637,49 @@ function ref_waNumber(phone){
   if(p.length===8)p='968'+p;
   return p;
 }
-function ref_whatsappLink(phone,name){
-  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_paymentMessage(name))}`;
+function ref_whatsappLink(phone,name,g){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_paymentMessage(name,g))}`;
 }
-function ref_welcomeLink(phone,name){
-  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_welcomeMessage(name))}`;
+function ref_welcomeLink(phone,name,g,stage){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_welcomeMessage(name,g,stage))}`;
 }
-function ref_activationMessage(name){
-  const n=(name||'').trim();
+function ref_activationMessage(name,gg){
+  const n=(name||'').trim(),g=refPick(gg||'f');
   return [
-    n?`أهلاً بكِ ${n} 🌟`:'أهلاً بكِ 🌟',
+    n?`أهلاً ${g('بكِ','بك')} ${n} 🌟`:`أهلاً ${g('بكِ','بك')} 🌟`,
     '',
-    'تمّ تفعيل حسابكِ في منصّة «خُطّتي الفصلية»، ووصلتكِ بيانات تسجيل الدخول عبر بريدكِ الإلكتروني.',
+    `تمّ تفعيل ${g('حسابكِ','حسابك')} في منصّة «خُطّة»، ${g('ووصلتكِ','ووصلتك')} بيانات تسجيل الدخول عبر ${g('بريدكِ','بريدك')} الإلكتروني.`,
     '',
-    'نتمنّى لكِ فصلاً دراسياً متميّزاً 🌸',
+    `نتمنّى ${g('لكِ','لك')} فصلاً دراسياً متميّزاً 🌸`,
     '',
-    'ونستقبل استفساراتكِ في أي وقت.'
+    `ونستقبل ${g('استفساراتكِ','استفساراتك')} في أي وقت.`
   ].join('\n');
 }
-function ref_activationLink(phone,name){
-  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_activationMessage(name))}`;
+function ref_activationLink(phone,name,g){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_activationMessage(name,g))}`;
 }
 // isPaid تفرّق بين حالتين حقيقيّتين: معلّمةٌ لم تدفع بعد (الرسالة الافتراضية
 // — تحثّها على الدفع لتفعيل الاشتراك)، ومعلّمةٌ دفعت فعلاً لكن التفعيل تمّ
 // بنوع "تجريبي" (تاريخ نهايةٍ مخصَّص بدل خمسة أشهر مباشرة) — لا يصحّ أن
 // تُطالَب بالدفع مجدداً. endDateLabel يعرض تاريخ الانتهاء الفعلي المُختار
 // بدل افتراض ٣٠/٨ دائماً، الآن بعد أن صار قابلاً للتغيير.
-function ref_trialActivationMessage(name,isPaid,endDateLabel){
-  const n=(name||'').trim();
+function ref_trialActivationMessage(name,isPaid,endDateLabel,gg){
+  const n=(name||'').trim(),g=refPick(gg||'f');
   const dateTxt=endDateLabel?`حتى ${endDateLabel}`:'لفترةٍ محدودة';
   return [
-    n?`أهلاً بكِ ${n} 🌟`:'أهلاً بكِ 🌟',
+    n?`أهلاً ${g('بكِ','بك')} ${n} 🌟`:`أهلاً ${g('بكِ','بك')} 🌟`,
     '',
-    'تمّ تفعيل حسابكِ التجريبي في منصّة «خُطّتي الفصلية»، ووصلتكِ بيانات تسجيل الدخول عبر بريدكِ الإلكتروني.',
+    `تمّ تفعيل ${g('حسابكِ','حسابك')} التجريبي في منصّة «خُطّة»، ${g('ووصلتكِ','ووصلتك')} بيانات تسجيل الدخول عبر ${g('بريدكِ','بريدك')} الإلكتروني.`,
     '',
     isPaid
-      ? `حسابكِ متاحٌ ${dateTxt}، وسنُكمل تفعيل اشتراككِ الكامل معكِ قبل ذلك — لا حاجة لتحويل أي مبلغٍ إضافي، فقد استلمنا اشتراككِ بالفعل.`
-      : `حسابكِ التجريبي متاحٌ ${dateTxt} — جرّبي المنصة بحرّية، وللاستمرار بعدها يكفي تحويل قيمة الاشتراك.`,
+      ? `${g('حسابكِ','حسابك')} متاحٌ ${dateTxt}، وسنُكمل تفعيل ${g('اشتراككِ الكامل معكِ','اشتراكك الكامل معك')} قبل ذلك — لا حاجة لتحويل أي مبلغٍ إضافي، فقد استلمنا ${g('اشتراككِ','اشتراكك')} بالفعل.`
+      : `${g('حسابكِ','حسابك')} التجريبي متاحٌ ${dateTxt} — ${g('جرّبي','جرّب')} المنصة بحرّية، وللاستمرار بعدها يكفي تحويل قيمة الاشتراك.`,
     '',
-    'نتمنّى لكِ فصلاً دراسياً متميّزاً 🌸 ونستقبل استفساراتكِ في أي وقت.'
+    `نتمنّى ${g('لكِ','لك')} فصلاً دراسياً متميّزاً 🌸 ونستقبل ${g('استفساراتكِ','استفساراتك')} في أي وقت.`
   ].join('\n');
 }
-function ref_trialActivationLink(phone,name,isPaid,endDateLabel){
-  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_trialActivationMessage(name,isPaid,endDateLabel))}`;
+function ref_trialActivationLink(phone,name,isPaid,endDateLabel,g){
+  return `https://wa.me/${ref_waNumber(phone)}?text=${encodeURIComponent(ref_trialActivationMessage(name,isPaid,endDateLabel,g))}`;
 }
 
 function ref_renderDataTab(){
@@ -13717,11 +13722,11 @@ function ref_renderDataTab(){
       <td>${status}</td>
       <td style="white-space:nowrap;text-align:center">
         <span style="position:relative;display:inline-block;margin-left:4px">
-          <a href="${ref_welcomeLink(r.phone,r.name)}" target="_blank" title="${r.welcomed_at?'رُحِّب بها بتاريخ '+new Date(r.welcomed_at).toLocaleDateString('ar-OM'):'واتساب — رسالة ترحيب بالحجز'}" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#C8A03C;border-radius:50%;text-decoration:none;font-size:15px${r.welcomed_at?';opacity:.55':''}">🌸</a>
+          <a href="${ref_welcomeLink(r.phone,r.name,refG(r),r.stage)}" target="_blank" title="${r.welcomed_at?'رُحِّب بها بتاريخ '+new Date(r.welcomed_at).toLocaleDateString('ar-OM'):'واتساب — رسالة ترحيب بالحجز'}" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#C8A03C;border-radius:50%;text-decoration:none;font-size:15px${r.welcomed_at?';opacity:.55':''}">🌸</a>
           ${r.welcomed_at?'<span style="position:absolute;bottom:-2px;left:-2px;width:14px;height:14px;background:#2E7D32;border-radius:50%;border:2px solid var(--panel,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#fff">✓</span>':''}
         </span>
         <span style="position:relative;display:inline-block;margin-left:4px">
-          <a href="${ref_whatsappLink(r.phone,r.name)}" target="_blank" title="${r.payment_followup_at?'آخر متابعة دفعٍ بتاريخ '+new Date(r.payment_followup_at).toLocaleDateString('ar-OM'):'واتساب — رسالة الدفع الجاهزة'}" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#25D366;border-radius:50%;text-decoration:none${r.payment_followup_at?';opacity:.55':''}">
+          <a href="${ref_whatsappLink(r.phone,r.name,refG(r))}" target="_blank" title="${r.payment_followup_at?'آخر متابعة دفعٍ بتاريخ '+new Date(r.payment_followup_at).toLocaleDateString('ar-OM'):'واتساب — رسالة الدفع الجاهزة'}" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:#25D366;border-radius:50%;text-decoration:none${r.payment_followup_at?';opacity:.55':''}">
             <svg viewBox="0 0 24 24" fill="white" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785a9.87 9.87 0 0 1-5.031-1.378l-3.741.982.998-3.648a9.86 9.86 0 0 1-1.51-5.26C2.766 6.94 7.4 2.505 12.05 2.505c5.45 0 9.884 4.434 9.886 9.884-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
           </a>
           ${r.payment_followup_at?'<span style="position:absolute;bottom:-2px;left:-2px;width:14px;height:14px;background:#2E7D32;border-radius:50%;border:2px solid var(--panel,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#fff">✓</span>':''}
@@ -13778,10 +13783,10 @@ function _copyCredField(text,btn){
     document.body.removeChild(ta);
   }
 }
-function showActivationCreds(email,password,mailed,mailReason,name,phone,isTrial,isPaid,endDateLabel){
+function showActivationCreds(email,password,mailed,mailReason,name,phone,isTrial,isPaid,endDateLabel,g){
   const bg=document.createElement('div');
   bg.className='modal-bg';
-  const waLink=isTrial?ref_trialActivationLink(phone,name,isPaid,endDateLabel):ref_activationLink(phone,name);
+  const waLink=isTrial?ref_trialActivationLink(phone,name,isPaid,endDateLabel,g):ref_activationLink(phone,name,g);
   const waBtn=phone?`<a class="action-btn primary" style="text-align:center;text-decoration:none;display:block" href="${waLink}" target="_blank">📱 إشعارها عبر واتساب</a>`:'';
   bg.innerHTML=`<div class="modal" style="max-width:400px">
     <h3 style="margin-bottom:6px">${mailed?'✅ فُعِّل الحساب وأُرسلت البيانات':'✅ فُعِّل الحساب — لم يُرسَل البريد'}</h3>
@@ -13821,7 +13826,7 @@ function ref_openTrialDateModal(regId,r){
   bg.className='modal-bg';
   bg.innerHTML=`<div class="modal" style="max-width:360px">
     <h3 style="margin-bottom:10px">📅 تاريخ نهاية التجربة</h3>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">لـ ${escHtml(r.name)} — اختاري التاريخ الذي ينتهي عنده الحساب التجريبي.</p>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">لـ ${escHtml(r.name)} — اختر التاريخ الذي ينتهي عنده الحساب التجريبي.</p>
     <input type="date" id="trial-date-input" value="2026-08-30" min="${_todayISODate()}" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Cairo',sans-serif;font-size:14px;box-sizing:border-box" oninput="ref_updateTrialDaysHint()"/>
     <div id="trial-days-hint" style="margin-top:10px;font-size:13px;font-weight:700;color:var(--gold)"></div>
     <div style="display:flex;gap:10px;margin-top:18px">
@@ -13847,7 +13852,7 @@ function ref_updateTrialDaysHint(){
 async function ref_confirmTrialActivation(regId){
   const input=document.getElementById('trial-date-input');
   const val=input?input.value:'';
-  if(!val){alert('اختاري تاريخاً أولاً');return;}
+  if(!val){alert('اختر تاريخاً أولاً');return;}
   const today=new Date();today.setHours(0,0,0,0);
   if(new Date(val+'T00:00:00')<today){alert('لا يمكن اختيار تاريخٍ في الماضي');return;}
   document.querySelector('.modal-bg')?.remove();
@@ -13884,11 +13889,11 @@ async function ref_doActivate(regId,plan,trialEndDate){
     }
     const isPaid=r.payment_status==='paid';
     const endDateLabel=data.expires_at?new Date(data.expires_at).toLocaleDateString('ar-OM'):'';
-    showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone,trial,isPaid,endDateLabel);
+    showActivationCreds(data.email,data.password,data.mailed,data.mailReason,r.name,r.phone,trial,isPaid,endDateLabel,refG(r));
     // فتحٌ تلقائي لواتساب بضغطةٍ واحدة — يبقى زرّ "إشعارها عبر واتساب" في
     // النافذة كبديلٍ يدوي إن حجب المتصفح الفتح التلقائي (Safari تحديداً
     // قد يفعل هذا أحياناً بعد نداء شبكةٍ غير متزامن).
-    if(r.phone)window.open(trial?ref_trialActivationLink(r.phone,r.name,isPaid,endDateLabel):ref_activationLink(r.phone,r.name),'_blank');
+    if(r.phone)window.open(trial?ref_trialActivationLink(r.phone,r.name,isPaid,endDateLabel,refG(r)):ref_activationLink(r.phone,r.name,refG(r)),'_blank');
   }catch(e){
     alert('❌ تعذّر التفعيل: '+(e.message||''));
     if(btn){btn.disabled=false;btn.textContent=trial?'🕒 تجريبي حتى بدء الدوام':'⚡ تفعيل الحساب';}
@@ -17688,7 +17693,7 @@ async function segUploadAndSegment(file){
   // وصفحةٌ غائبة تعني درساً يُنسب إلى الصفحة الخطأ أو يسقط صامتاً — ثم تُبنى
   // عليه خطةُ كل معلّمة. الإكمال أولاً، ثم التقطيع.
   if(failed.length){
-    st.textContent+=' (لم يُشغَّل التقطيع — أكملي الصفحات الناقصة أولاً)';
+    st.textContent+=' (لم يُشغَّل التقطيع — أكمل الصفحات الناقصة أولاً)';
     return;
   }
   // مباشرةً: التقطيع الذكي (segRun يقرأ نفس المختارات ويجد الكتاب المسجّل)
@@ -17793,7 +17798,7 @@ function segManualStart(){
   const bookNo=segIsFirstCycle?(parseInt(document.getElementById('seg-book-no').value)||1):1;
   if(!grade||!subject){toast('اختر الصف والمادة أولاً',true);return;}
   segCtx={grade,semester,subject,bookNo,base:null,offset:1,pageCount:0};
-  document.getElementById('seg-status').textContent='✏️ اكتبي أسماء الوحدات والدروس ثم اعتمدي — بلا كتاب ولا صفحات';
+  document.getElementById('seg-status').textContent='✏️ اكتب أسماء الوحدات والدروس ثم اعتمد — بلا كتاب ولا صفحات';
   segRenderReview([]);
   segAddUnit();
 }
@@ -18491,7 +18496,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     let running = false;
     window[name] = function(...args){
       if (running) {
-        try { toast('العملية جارية — انتظري انتهاءها', true); } catch(e) {}
+        try { toast('العملية جارية — انتظر انتهاءها', true); } catch(e) {}
         return;
       }
       running = true;

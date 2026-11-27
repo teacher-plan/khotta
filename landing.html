@@ -309,7 +309,7 @@ h2{font-size:clamp(27px,3.8vw,42px);margin-bottom:12px;text-wrap:balance}
   font-family:var(--disp);font-weight:600;font-size:13.5px;cursor:pointer;text-align:center;line-height:1.6;transition:.16s}
 .stage-chip:hover{border-color:#FFD98A}
 .stage-chip.sel{background:linear-gradient(135deg,#FFD98A,#E8A93D);border-color:#FFD98A;color:#3A2408}
-@media(max-width:420px){.stage-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:420px){.stage-grid:not(.g-grid){grid-template-columns:minmax(0,1fr)}}
 .submit{width:100%;border:none;border-radius:14px;padding:17px;font-family:var(--disp);font-size:16.5px;font-weight:700;cursor:pointer;color:#3A2408;
   background:linear-gradient(135deg,#FFD98A,#E8A93D);box-shadow:0 10px 28px rgba(232,169,61,.3);transition:.17s;margin-top:8px}
 .submit:hover:not(:disabled){transform:translateY(-2px)}
@@ -369,7 +369,7 @@ h2{font-size:clamp(27px,3.8vw,42px);margin-bottom:12px;text-wrap:balance}
       <h1><span class="l"><span>من صفحة الكتاب</span></span><span class="l"><span>إلى حصّةٍ جاهزة</span></span></h1>
       <p class="lede">ترفع صفحات درسك، فتُعدّ لك «خُطّة» خطّة الدرس وملخّصاً مرسوماً ولعبةً لشاشة الصف وأسئلة تقويم، على المنهج العُمانيّ من الصف الأول إلى الثاني عشر.</p>
       <div class="cta-row">
-        <button class="btn btn-1" onclick="goReg()">سجّل / سجّلي مجّاناً</button>
+        <button class="btn btn-1" onclick="goReg()">سجّل مجّاناً</button>
         <a class="btn btn-2" href="#tour"><svg class="ic"><use href="#p-play-circle"/></svg>شاهد المنصّة</a>
       </div>
       <div class="note"><svg class="ic"><use href="#p-check-circle"/></svg>التسجيل لا يُلزم بشيء، ونتواصل معك لتفعيل الحساب</div>
@@ -557,6 +557,11 @@ h2{font-size:clamp(27px,3.8vw,42px);margin-bottom:12px;text-wrap:balance}
             <div class="field"><label for="r-email">البريد الإلكتروني <span class="req">*</span></label>
               <input type="email" id="r-email" dir="ltr" style="text-align:right" autocomplete="email" placeholder="example@email.com" oninput="checkForm()"/>
               <div class="hint">عليه يُفعَّل الحساب</div></div>
+            <div class="field"><label>كيف نخاطبك؟ <span class="req">*</span></label>
+              <div class="stage-grid g-grid">
+                <button type="button" class="stage-chip g-chip" data-g="m" onclick="selectGender('m',this)">معلّم</button>
+                <button type="button" class="stage-chip g-chip" data-g="f" onclick="selectGender('f',this)">معلّمة</button>
+              </div></div>
             <div class="field"><label>المرحلة التي تُدرّسها <span class="req">*</span></label>
               <div class="stage-grid">
                 <button type="button" class="stage-chip" data-stage="cycle1" onclick="selectStage('cycle1',this)">الحلقة الأولى<br/>الصفوف ١ – ٤</button>
@@ -633,7 +638,16 @@ const STAGES=['cycle1','5-12'];
 let selectedStage='';
 function selectStage(stage,btn){
   selectedStage=stage;
-  document.querySelectorAll('.stage-chip').forEach(b=>b.classList.remove('sel'));
+  document.querySelectorAll('.stage-chip:not(.g-chip)').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  checkForm();
+}
+// صيغة المخاطبة تُحفظ مع التسجيل: بها تُكتب رسائل الترحيب والتفعيل
+// والبريد قبل أول دخول، وترثها المنصّة عند الدخول فلا تسأل مرّةً أخرى.
+let selectedGender='';
+function selectGender(g,btn){
+  selectedGender=g;
+  document.querySelectorAll('.g-chip').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
   checkForm();
 }
@@ -654,7 +668,7 @@ const validPhone=p=>/^[79]\d{7}$/.test(normPhone(p));
 const validEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e||'').trim());
 const val=id=>(document.getElementById(id).value||'').trim();
 function checkForm(){
-  const ok=val('r-name').length>=3&&validPhone(val('r-phone'))&&validEmail(val('r-email'))&&!!selectedStage;
+  const ok=val('r-name').length>=3&&validPhone(val('r-phone'))&&validEmail(val('r-email'))&&!!selectedGender&&!!selectedStage;
   document.getElementById('r-btn').disabled=!ok;return ok;
 }
 function msg(t,k){const m=document.getElementById('r-msg');m.textContent=t;m.className='reg-msg'+(k?' '+k:'');}
@@ -663,6 +677,7 @@ async function submitReg(){
   if(name.length<3)return msg('يُرجى إدخال الاسم الكامل','err');
   if(!validPhone(phone))return msg('يُرجى إدخال رقم عُمانيّ صحيح (يبدأ بـ ٧ أو ٩ ومكوَّن من ٨ أرقام)','err');
   if(!validEmail(email))return msg('يُرجى إدخال بريدٍ إلكترونيّ صحيح','err');
+  if(!selectedGender)return msg('يُرجى اختيار «معلّم» أو «معلّمة»','err');
   if(!selectedStage)return msg('يُرجى اختيار المرحلة التي تُدرّسها','err');
   // حارسٌ على المرحلة لا على الزرّ: صفٌّ بمرحلةٍ لا تخصّ هذه الصفحة يختلط
   // بجدول مرحلةٍ أخرى، ولا يظهر الخطأ إلا يوم يُفعَّل حسابٌ خاطئ.
@@ -673,7 +688,7 @@ async function submitReg(){
   try{
     const{error}=await sb.rpc('register_teacher',{
       p_name:name,p_phone:normPhone(phone),p_email:email,p_stage:selectedStage,
-      p_referred_by:khRefGet()});
+      p_referred_by:khRefGet(),p_gender:selectedGender});
     if(error)throw error;
     document.getElementById('form-card').style.display='none';
     document.getElementById('done').style.display='block';

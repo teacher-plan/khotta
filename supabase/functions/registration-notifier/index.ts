@@ -18,6 +18,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendTelegram } from "../_shared/telegram.ts";
 import { startRun, finishRun } from "../_shared/agentRun.ts";
+import { genderPick, teacherGender } from "../_shared/gender.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,7 @@ interface Reg {
   phone?: string;
   email?: string;
   stage?: string;
+  gender?: string | null;
   referred_by?: string | null;
   created_at?: string;
 }
@@ -72,16 +74,17 @@ const STAGE_LBL: Record<string, string> = {
   "cycle1": "الحلقة الأولى (١–٤)", "5-12": "الصفوف ٥–١٢", "5-9": "الحلقة الثانية (٥–٩)", "10-12": "ما بعد الأساسي (١٠–١٢)",
 };
 function stageLbl(st?: string): string { return STAGE_LBL[String(st || "")] || "مرحلة غير محدّدة"; }
-function welcomeText(name: string, stage?: string): string {
+function welcomeText(name: string, stage?: string, gender?: string | null): string {
   const n = String(name || "").trim();
+  const g = genderPick(teacherGender(gender, stage));
   return [
-    n ? `أهلاً بكِ ${n} 🌸` : "أهلاً بكِ 🌸",
+    n ? `أهلاً ${g("بكِ", "بك")} ${n} 🌸` : `أهلاً ${g("بكِ", "بك")} 🌸`,
     "",
-    `وصلَنا حجزُ مقعدكِ في منصّة «خُطّة» — ${stageLbl(stage)}، وسعدنا بانضمامكِ.`,
+    `وصلَنا حجزُ ${g("مقعدكِ", "مقعدك")} في منصّة «خُطّة» — ${stageLbl(stage)}، وسعدنا ${g("بانضمامكِ", "بانضمامك")}.`,
     "",
-    "سنتواصل معكِ لتفعيل اشتراككِ مع بداية أول أسبوع دوام بإذن الله، ويصلكِ حسابُكِ جاهزاً.",
+    `سنتواصل ${g("معكِ لتفعيل اشتراككِ", "معك لتفعيل اشتراكك")} مع بداية أول أسبوع دوام بإذن الله، ${g("ويصلكِ حسابُكِ", "ويصلك حسابُك")} جاهزاً.`,
     "",
-    "وإلى ذلك الحين، أيُّ استفسارٍ يخطر لكِ فاكتبيه هنا — نجيبكِ بسرور 🌷",
+    `وإلى ذلك الحين، أيُّ استفسارٍ يخطر ${g("لكِ فاكتبيه", "لك فاكتبه")} هنا — ${g("نجيبكِ", "نجيبك")} بسرور 🌷`,
   ].join("\n");
 }
 
@@ -95,7 +98,7 @@ function buildMessage(r: Reg, rank: number | null): string {
   const lines = [
     `🎉 <b>حجز جديد — ${escHtml(stageLbl(r.stage))}</b>`,
     "",
-    `👩‍🏫 <b>${name}</b>`,
+    `${r.gender === "m" ? "👨‍🏫" : "👩‍🏫"} <b>${name}</b>`,
     wa ? `📱 <a href="${wa}">${phone}</a>` : `📱 ${phone}`,
     `✉️ ${email}`,
   ];
@@ -114,7 +117,7 @@ function buildMessage(r: Reg, rank: number | null): string {
   // بدل أن تنتظر حتى تفتح لوحة الإدارة على الحاسوب.
   if (wa) {
     lines.push("");
-    lines.push(`<a href="${wa}?text=${encodeURIComponent(welcomeText(r.name || "", r.stage))}">🌸 إرسال الترحيب</a>`);
+    lines.push(`<a href="${wa}?text=${encodeURIComponent(welcomeText(r.name || "", r.stage, r.gender))}">🌸 إرسال الترحيب</a>`);
   }
 
   return lines.join("\n");
@@ -156,7 +159,7 @@ Deno.serve(async (req) => {
     // ── رسالة مجمّعة واحدة بكل حجزٍ لم يُبلَّغ عنه (تعويض ما فات) ──
     if (body?.digest === true) {
       const { data: pend } = await sb.from("pre_registrations")
-        .select("id,name,phone,email,stage,referred_by,created_at")
+        .select("id,name,phone,email,stage,gender,referred_by,created_at")
         .is("notified_at", null).order("created_at", { ascending: true }).limit(60);
       const list = (pend || []) as Reg[];
       if (!list.length) { await finishRun(sb, run, { status: "SUCCESS", resultSummary: "digest: لا شيء" }); return json({ ok: true, sent: 0 }); }
@@ -181,14 +184,14 @@ Deno.serve(async (req) => {
       // نقرأ الصف من الجدول لا من الحمولة: الحمولة نصٌّ يصل من الخارج، وقراءةُ
       // المصدر تضمن أننا لا نُرسل عن حجزٍ لا وجود له، وتُظهر notified_at الحقيقي.
       const { data } = await sb.from("pre_registrations")
-        .select("id,name,phone,email,stage,referred_by,created_at,notified_at")
+        .select("id,name,phone,email,stage,gender,referred_by,created_at,notified_at")
         .eq("id", hooked.id).maybeSingle();
       if (data && !data.notified_at) rows = [data];
     } else {
       // المسح الاحتياطيّ: الأقدم أولاً ليصل ترتيب الرسائل كترتيب الحجوزات.
       // وسقفٌ خمسون يمنع سيلاً يُغرق المحادثة لو تعطّل الخطّاف طويلاً.
       const { data } = await sb.from("pre_registrations")
-        .select("id,name,phone,email,stage,referred_by,created_at")
+        .select("id,name,phone,email,stage,gender,referred_by,created_at")
         .is("notified_at", null)
         .order("created_at", { ascending: true }).limit(50);
       rows = data || [];

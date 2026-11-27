@@ -7,6 +7,7 @@
 // يدوياً عبر net.http_post بمفتاح الخدمة من الخزانة أو مستقبلاً بجدولة.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
+import { genderPick, teacherGender, type Gender } from "../_shared/gender.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -20,7 +21,8 @@ function esc(s: string) {
   return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }
 
-function reengageHtml(name: string) {
+function reengageHtml(name: string, gender: Gender = "f") {
+  const g = genderPick(gender);
   const feature = (svgPath: string, title: string, desc: string) => `
     <tr><td style="padding:10px 0;vertical-align:top">
       <table role="presentation" width="100%"><tr>
@@ -44,41 +46,41 @@ function reengageHtml(name: string) {
   <div style="font-size:12px;font-weight:bold;letter-spacing:2px;color:#A83030">منصة خُطّة</div>
   <h1 style="font-size:22px;margin:8px 0 6px">تبقّى يومٌ واحدٌ فقط، ${esc(name)} ⏳</h1>
   <p style="font-size:14.5px;line-height:1.95;color:#7A6A58;margin:0 0 18px">
-    لاحظنا أنّكِ لم تدخلي حسابكِ التجريبي في «خُطّة» منذ فترة، وتجربتكِ المجانية على وشك الانتهاء غداً.
-    قبل أن تفوتكِ، أحببنا تذكيركِ بما تحصلين عليه، وبعرضٍ لا يتكرر لبداية الفصل.</p>
+    لاحظنا ${g("أنّكِ لم تدخلي حسابكِ","أنّك لم تدخل حسابك")} التجريبي في «خُطّة» منذ فترة، ${g("وتجربتكِ","وتجربتك")} المجانية على وشك الانتهاء غداً.
+    قبل أن ${g("تفوتكِ","تفوتك")}، أحببنا ${g("تذكيركِ بما تحصلين","تذكيرك بما تحصل")} عليه، وبعرضٍ لا يتكرر لبداية الفصل.</p>
 
   <div style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:14px;padding:18px 16px;margin-bottom:20px;text-align:center">
     <div style="font-size:13px;color:#7A6A58;margin-bottom:4px">عرض بداية العام الدراسي</div>
     <div style="font-size:26px;font-weight:bold;color:#A83030">١٥ ريالاً فقط <span style="font-size:14px;font-weight:normal;color:#7A6A58">للفصل الدراسي كاملاً</span></div>
   </div>
 
-  <p style="font-size:14.5px;font-weight:bold;color:#2A1503;margin:0 0 4px">احصلي على:</p>
+  <p style="font-size:14.5px;font-weight:bold;color:#2A1503;margin:0 0 4px">${g("احصلي","احصل")} على:</p>
   <table role="presentation" width="100%" style="margin-bottom:8px">
     ${feature("M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z",
       "تحاضير الحلقة الأولى بمطابقة منصّة نور",
-      "توليد تحضيرٍ كاملٍ من دليل المعلم وكتاب الطالب معاً بالذكاء الاصطناعي، على نفس الهيكل المعتمد رسمياً في منصّة نور — تنسخينه مباشرةً بلا إعادة صياغة.")}
+      `توليد تحضيرٍ كاملٍ من دليل المعلم وكتاب الطالب معاً بالذكاء الاصطناعي، على نفس الهيكل المعتمد رسمياً في منصّة نور — ${g("تنسخينه","تنسخه")} مباشرةً بلا إعادة صياغة.`)}
     ${feature("M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z",
       "تحضير الدروس من الكتاب مباشرة",
       "خطط دروسٍ جاهزة، وبطاقات وأنشطة وانفوجرافيك تُولَّد من صفحات الكتاب نفسها في دقائق.")}
     ${feature("M3 3v18h18M7 15l4-4 4 4 5-6",
-      "متابعة الطالبات بالنجوم والسجلّ",
-      "رصدُ سلوك كل طالبةٍ وتحصيلها بلمسةٍ واحدة، مع لوحة صدارةٍ تحفّزهنّ تلقائياً.")}
+      g("متابعة الطالبات بالنجوم والسجلّ","متابعة الطلاب بالنجوم والسجلّ"),
+      g("رصدُ سلوك كل طالبةٍ وتحصيلها بلمسةٍ واحدة، مع لوحة صدارةٍ تحفّزهنّ تلقائياً.","رصدُ سلوك كل طالبٍ وتحصيله بلمسةٍ واحدة، مع لوحة صدارةٍ تحفّزهم تلقائياً."))}
     ${feature("M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z",
       "٣٠ نشاط احتياطٍ جاهزاً بلا إنترنت",
       "لحصص الانتظار أو انقطاع الشبكة — نشاطٌ مناسبٌ لكل موقف، جاهزٌ فوراً.")}
     ${feature("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4.2 12a7.8 7.8 0 0 1 .4-2.4l-1.7-1.3 1.5-2.6 2 .6a8 8 0 0 1 2-1.2l.3-2.1h3l.3 2.1a8 8 0 0 1 2 1.2l2-.6 1.5 2.6-1.7 1.3a7.8 7.8 0 0 1 0 4.8l1.7 1.3-1.5 2.6-2-.6a8 8 0 0 1-2 1.2l-.3 2.1h-3l-.3-2.1a8 8 0 0 1-2-1.2l-2 .6-1.5-2.6 1.7-1.3a7.8 7.8 0 0 1-.4-2.4z",
       "شهاداتٌ تلقائية",
-      "شهادات تفوّقٍ وتميّزٍ تُصمَّم وتُصدَر تلقائياً من بيانات كل طالبة.")}
+      g("شهادات تفوّقٍ وتميّزٍ تُصمَّم وتُصدَر تلقائياً من بيانات كل طالبة.","شهادات تفوّقٍ وتميّزٍ تُصمَّم وتُصدَر تلقائياً من بيانات كل طالب."))}
     ${feature("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v6l4.2 2.5 1-1.6-3.2-1.9V7z",
-      "خُطّة AI — مرشدكِ التربوي",
-      "استشيريها في أي موقفٍ صفّي أو إداري، وهي تعرف صفوفكِ وطالباتكِ فعلياً.")}
+      g("خُطّة AI — مرشدكِ التربوي","خُطّة AI — مرشدك التربوي"),
+      g("استشيريها في أي موقفٍ صفّي أو إداري، وهي تعرف صفوفكِ وطالباتكِ فعلياً.","استشِرها في أي موقفٍ صفّي أو إداري، وهي تعرف صفوفك وطلابك فعلياً."))}
   </table>
 
   <a href="https://khotati.com/cycle1.html" style="display:block;text-align:center;background:#C9453B;color:#fff;text-decoration:none;
-     font-weight:bold;font-size:15.5px;padding:14px;border-radius:12px;margin-top:6px">ادخلي إلى حسابكِ الآن</a>
+     font-weight:bold;font-size:15.5px;padding:14px;border-radius:12px;margin-top:6px">${g("ادخلي إلى حسابكِ الآن","ادخل إلى حسابك الآن")}</a>
 
   <p style="font-size:12px;line-height:1.9;color:#7A6A58;margin:18px 0 0;text-align:center">
-    استغلّي العرض قبل انتهاء التجربة غداً — وإن واجهتكِ أي صعوبةٍ في الدخول، راسلينا وسنساعدكِ فوراً. 🌸</p>
+    ${g("استغلّي","استغلّ")} العرض قبل انتهاء التجربة غداً — وإن ${g("واجهتكِ","واجهتك")} أي صعوبةٍ في الدخول، ${g("راسلينا وسنساعدكِ","راسلنا وسنساعدك")} فوراً. 🌸</p>
 </div></body></html>`;
 }
 
@@ -133,8 +135,10 @@ Deno.serve(async (req) => {
 
     const { data: profs } = await admin.from("cycle1_profiles").select("id,data");
     const nameById = new Map<string, string>();
-    (profs || []).forEach((p: { id: string; data?: { display_name?: string } }) => {
+    const genderById = new Map<string, Gender>();
+    (profs || []).forEach((p: { id: string; data?: { display_name?: string; teacher_gender?: string } }) => {
       if (p.data?.display_name) nameById.set(p.id, p.data.display_name);
+      genderById.set(p.id, teacherGender(p.data?.teacher_gender, "cycle1"));
     });
 
     // ما أُرسل بنجاحٍ من قبل لا يُعاد — الجدول هو ضمان عدم التكرار عند أي
@@ -144,15 +148,16 @@ Deno.serve(async (req) => {
     const skipped = alreadySent.size;
 
     const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
-    const targets: { email: string; name: string }[] = [];
+    const targets: { email: string; name: string; gender: Gender }[] = [];
     for (const email of emailSet) {
       if (alreadySent.has(email)) continue;
       const u = usersByEmail.get(email);
       const lastMs = u?.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : null;
       const inactive = !u || lastMs === null || lastMs < twoDaysAgo;
       if (inactive) {
-        const name = (u && nameById.get(u.id)) || "معلّمتنا الفاضلة";
-        targets.push({ email, name });
+        const gender: Gender = (u && genderById.get(u.id)) || "f";
+        const name = (u && nameById.get(u.id)) || (gender === "f" ? "معلّمتنا الفاضلة" : "معلّمنا الفاضل");
+        targets.push({ email, name, gender });
       }
     }
 
@@ -165,7 +170,7 @@ Deno.serve(async (req) => {
       let sent = 0, failed = 0;
       const failures: string[] = [];
       for (const t of targets) {
-        const r = await sendMail(t.email, "يومٌ واحدٌ يفصلكِ عن نهاية تجربتكِ في «خُطّة» 🌸", reengageHtml(t.name));
+        const r = await sendMail(t.email, t.gender === "f" ? "يومٌ واحدٌ يفصلكِ عن نهاية تجربتكِ في «خُطّة» 🌸" : "يومٌ واحدٌ يفصلك عن نهاية تجربتك في «خُطّة» 🌸", reengageHtml(t.name, t.gender));
         await admin.from("trial_reengagement_log").upsert({
           email: t.email, status: r.sent ? "sent" : "failed", reason: r.reason || null, sent_at: new Date().toISOString(),
         });

@@ -6,6 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isServiceRoleRequest, unauthorized } from "../_shared/adminGuard.ts";
 import { startRun, finishRun } from "../_shared/agentRun.ts";
+import { genderPick, teacherGender, type Gender } from "../_shared/gender.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -20,27 +21,28 @@ function esc(s: string) {
 }
 
 // نفس قالب رسائل المنصّة الحقيقي (activate-teacher/index.ts) — لا قالبٌ جديد.
-function alertHtml(name: string, pct: number) {
+function alertHtml(name: string, pct: number, gender: Gender = "f") {
+  const g = genderPick(gender);
   return `<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#F3EDE3;font-family:Tahoma,Arial,sans-serif;color:#2A1503">
 <div style="max-width:520px;margin:24px auto;background:#FFFDF9;border:1.5px solid #E3D2BD;border-radius:18px;padding:26px">
   <div style="font-size:12px;font-weight:bold;letter-spacing:2px;color:#A83030">منصة خُطّة</div>
-  <h1 style="font-size:22px;margin:6px 0 4px">مرحباً بكِ ${esc(name)} 🌸</h1>
+  <h1 style="font-size:22px;margin:6px 0 4px">مرحباً ${g("بكِ","بك")} ${esc(name)} 🌸</h1>
   <p style="font-size:14px;line-height:1.9;color:#7A6A58;margin:0 0 18px">
-    نودّ إعلامكِ بأنكِ استخدمتِ <b style="color:#2A1503">${pct}٪</b> من حصّة الذكاء الاصطناعي المخصّصة لكِ لهذا الفصل الدراسي في منصّة خُطّتي الفصلية.</p>
+    نودّ ${g("إعلامكِ بأنكِ استخدمتِ","إعلامك بأنك استخدمت")} <b style="color:#2A1503">${pct}٪</b> من حصّة الذكاء الاصطناعي المخصّصة ${g("لكِ","لك")} لهذا الفصل الدراسي في منصّة خُطّة.</p>
   <div style="background:#FBF4EA;border:1.5px solid #E3D2BD;border-radius:12px;padding:14px;margin-bottom:16px">
-    <div style="font-size:12px;color:#7A6A58;margin-bottom:6px">رصيدكِ المستهلَك</div>
+    <div style="font-size:12px;color:#7A6A58;margin-bottom:6px">${g("رصيدكِ","رصيدك")} المستهلَك</div>
     <div style="background:#E3D2BD;border-radius:8px;height:10px;overflow:hidden">
       <div style="background:#C9453B;height:100%;width:${pct}%"></div>
     </div>
     <div style="font-size:12px;color:#7A6A58;margin-top:8px">${pct}٪ مُستهلَك</div>
   </div>
   <p style="font-size:14px;line-height:1.9;color:#7A6A58;margin:0 0 18px">
-    نُقدّر حقّاً حماسكِ في الاستفادة من أدوات التحضير والألعاب والانفوجرافيك — هذا بالضبط ما صُمّمت من أجله المنصّة!<br><br>
-    نُذكّركِ فقط حتى تكون الصورة واضحةً أمامك، ولا داعي لأي قلق: يمكنكِ الاستمرار في الاستخدام بشكل طبيعي، وفي حال وصل رصيدكِ للحدّ الأقصى سيصلكِ إشعارٌ آخر بذلك.</p>
+    نُقدّر حقّاً ${g("حماسكِ","حماسك")} في الاستفادة من أدوات التحضير والألعاب والانفوجرافيك — هذا بالضبط ما صُمّمت من أجله المنصّة!<br><br>
+    ${g("نُذكّركِ","نُذكّرك")} فقط حتى تكون الصورة واضحةً أمامك، ولا داعي لأي قلق: ${g("يمكنكِ","يمكنك")} الاستمرار في الاستخدام بشكل طبيعي، وفي حال وصل ${g("رصيدكِ","رصيدك")} للحدّ الأقصى ${g("سيصلكِ","سيصلك")} إشعارٌ آخر بذلك.</p>
   <a href="https://khotati.com/cycle1.html" style="display:block;text-align:center;background:#C9453B;color:#fff;text-decoration:none;
      font-weight:bold;font-size:15px;padding:13px;border-radius:12px">متابعة رصيدي</a>
   <p style="font-size:12px;line-height:1.9;color:#7A6A58;margin:16px 0 0">
-    يمكنكِ متابعة رصيدكِ في أي وقت من أعلى الصفحة، بجانب أيقونة حسابكِ.</p>
+    ${g("يمكنكِ متابعة رصيدكِ","يمكنك متابعة رصيدك")} في أي وقت من أعلى الصفحة، بجانب أيقونة ${g("حسابكِ","حسابك")}.</p>
 </div></body></html>`;
 }
 
@@ -99,9 +101,9 @@ Deno.serve(async (req) => {
 
     const uids = [...rowsByUser.keys()];
     const { data: teacherRows } = await sb.from("cycle1_profiles").select("id, email, data").in("id", uids);
-    const teacherById = new Map<string, { email: string; name: string | null }>();
+    const teacherById = new Map<string, { email: string; name: string | null; gender: Gender }>();
     (teacherRows || []).forEach((t: { id: string; email: string; data: Record<string, unknown> | null }) => {
-      teacherById.set(t.id, { email: t.email, name: (t.data?.display_name as string) || null });
+      teacherById.set(t.id, { email: t.email, name: (t.data?.display_name as string) || null, gender: teacherGender(t.data?.teacher_gender as string, "cycle1") });
     });
 
     const emails = [...new Set([...teacherById.values()].map((t) => t.email.toLowerCase()))];
@@ -141,9 +143,9 @@ Deno.serve(async (req) => {
     for (const [uid, used, ps] of toNotify) {
       const t = teacherById.get(uid);
       if (!t?.email) continue;
-      const name = t.name || "معلّمتنا";
+      const name = t.name || (t.gender === "f" ? "معلّمتنا" : "معلّمنا");
       const pct = Math.min(100, Math.round((used / budgetUsd) * 100));
-      const r = await sendMail(t.email, "تنبيهٌ لطيف بشأن رصيد الذكاء الاصطناعي 🌙", alertHtml(name, pct));
+      const r = await sendMail(t.email, "تنبيهٌ لطيف بشأن رصيد الذكاء الاصطناعي 🌙", alertHtml(name, pct, t.gender));
       await sb.from("budget_alerts").upsert({
         user_id: uid, period_start: ps,
         alert_80_sent_at: r.sent ? new Date().toISOString() : null,

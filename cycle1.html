@@ -620,6 +620,15 @@ body.inapp #c1-budget-btn{display:flex}
 .amsg-date{font-size:11.5px;color:var(--muted);margin-top:10px}
 .amsg-row{justify-content:space-between}
 .amsg-go{background:linear-gradient(135deg,var(--red),var(--red-d))!important;flex:1;max-width:220px}
+.kg-box{text-align:center;max-width:380px}
+.kg-box h3{margin:0 0 6px}
+.kg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.kg-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:16px 10px;border-radius:14px;border:2px solid var(--border);background:var(--surface);font-family:inherit;cursor:pointer;color:var(--ink);transition:border-color .15s,transform .15s}
+.kg-opt b{font-size:17px}
+.kg-opt span{font-size:12px;color:var(--muted)}
+.kg-opt:hover{border-color:var(--red)}
+.kg-opt:active{transform:scale(.97)}
+.kg-opt.sel{border-color:var(--red);background:rgba(201,69,59,.07)}
 .c1-mbtn{border:none;border-radius:10px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
 .c1-mbtn.go{background:linear-gradient(135deg,var(--olive),var(--olive-d));color:#fff}
 .c1-mbtn.go:disabled{opacity:.45;cursor:not-allowed}
@@ -5140,7 +5149,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <button class="c1-mbtn no" id="tour-back" onclick="tourBack()">السابق</button>
       <button class="c1-mbtn go" id="tour-next" onclick="tourNext()">التالي</button>
     </div>
-    <button type="button" class="tour-skip" onclick="tourEnd()">تخطّي الجولة</button>
+    <button type="button" class="tour-skip" onclick="tourEnd()" data-kh-g="تخطّي الجولة|تخطَّ الجولة">تخطّي الجولة</button>
   </div>
 </div>
 
@@ -5148,6 +5157,17 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
      كان كلُّ نسيانٍ يمرّ بالإدارة: تُعاد كلمة المرور من لوحة الإحالات وتُنقل
      يدوياً. والمعلّمة داخلة أصلاً حين تفتح هذه القائمة، فجلستُها نفسها هي
      إثبات هُويّتها — لا حاجة لبريدٍ ولا لانتظار ردٍّ من أحد. -->
+<!-- صيغة المخاطبة: سؤالٌ واحدٌ بزرّين. يظهر مرّةً لمن لم يختر بعد، ومن القائمة متى شاء -->
+<div class="c1-modal" id="kg-modal" onclick="if(event.target===this)khGenderClose()">
+  <div class="c1-mbox kg-box">
+    <h3>كيف تحبّ أن نخاطبك؟</h3>
+    <p class="acct-note">تُكتب بها رسائل المنصّة وأزرارها ونصائحها لك.</p>
+    <div class="kg-row">
+      <button type="button" class="kg-opt" data-g="m" onclick="khGenderPick('m')"><b>معلّم</b><span>اضغط، اختر، حسابك</span></button>
+      <button type="button" class="kg-opt" data-g="f" onclick="khGenderPick('f')"><b>معلّمة</b><span>اضغطي، اختاري، حسابكِ</span></button>
+    </div>
+  </div>
+</div>
 <div class="c1-modal" id="pw-modal" onclick="if(event.target===this)pwClose()">
   <div class="c1-mbox">
     <h3>تغيير كلمة المرور</h3>
@@ -6211,7 +6231,7 @@ body.demo #page-fahim.active .wrap{height:calc(var(--vvh,100dvh) - var(--db-h,56
       <input type="text" id="cert-reason" class="cert-input" placeholder="مثال: لحفظه سورة الفاتحة كاملة" oninput="certRefreshSoon()"/>
     </div>
     <div id="cert-batch-wrap" class="hidden">
-      <div class="grp">من تُكرّمين؟ <span style="font-weight:400" id="cert-pick-count"></span></div>
+      <div class="grp"><span data-kh-g="من تُكرّمين؟|من تُكرّم؟">من تُكرّمين؟</span> <span style="font-weight:400" id="cert-pick-count"></span></div>
       <div class="cert-pick-tools">
         <button type="button" onclick="certPickAll(1)">الكل</button>
         <button type="button" onclick="certPickStarred()">من له نجوم</button>
@@ -6702,17 +6722,44 @@ function khApplyGender(){
 }
 /* تغيير طريقة المخاطبة — سؤالٌ واحدٌ وحفظ، بلا شاشةٍ جديدة.
    لا معنى له في الحلقة الأولى (خطابها مؤنّثٌ ثابت)، فالزرّ مخفيٌّ هناك. */
-async function changeGender(){
-  const cur=khTeacherGender()==='f'?'معلّمة':'معلّم';
-  const ans=(prompt('كيف نخاطبك؟ اكتب: معلم أو معلمة\n(الحالي: '+cur+')',cur)||'').trim();
-  if(!ans)return;
-  const g=/معلمة|معلّمة|انثى|أنثى/.test(ans)?'f':/معلم|معلّم|ذكر/.test(ans)?'m':'';
-  if(!g){toast('اكتب «معلم» أو «معلمة»',true);return;}
-  khSetGender(g);
+function changeGender(){
   const m=document.getElementById('c1-menu');if(m)m.classList.remove('open');
-  if(!await cy1Save({teacher_gender:g},'يحفظ'))return;
+  khGenderOpen();
+}
+function khGenderOpen(){
+  const md=document.getElementById('kg-modal');if(!md)return;
+  md.querySelectorAll('.kg-opt').forEach(b=>b.classList.toggle('sel',!!khGender&&b.dataset.g===khGender));
+  md.classList.add('open');
+}
+function khGenderClose(){
+  const md=document.getElementById('kg-modal');if(md)md.classList.remove('open');
+  // إغلاقٌ بلا اختيار: لا نسأل مرّةً أخرى على هذا الجهاز، والقائمة تبقى متاحة
+  try{localStorage.setItem('kh_g_asked','1');}catch(e){}
+}
+async function khGenderPick(g){
+  const prev=khGender;
+  khSetGender(g);
+  const md=document.getElementById('kg-modal');if(md)md.classList.remove('open');
+  try{localStorage.setItem('kh_g_asked','1');}catch(e){}
+  if(!await cy1Save({teacher_gender:g},'يحفظ')){khSetGender(prev);return;}
   khApplyGender();
-  toast('صرنا نخاطبك بصيغة '+(g==='m'?'المذكّر':'المؤنّث'),'ok');
+  try{if(typeof renderYawmi==='function')renderYawmi();}catch(e){}
+  toast(g==='m'?'صرنا نخاطبك بصيغة المذكّر':'صرنا نخاطبكِ بصيغة المؤنّث','ok');
+}
+/* عند الدخول: من اختار في نموذج التسجيل يرث اختياره (يحفظه activate-teacher في
+   الحساب) فلا يُسأل. ومن لم يختر قطّ يُسأل مرّةً واحدة بعد ظهور المنصّة. */
+function khGenderOnLogin(){
+  if(profile&&(profile.teacher_gender==='m'||profile.teacher_gender==='f'))return;
+  const meta=currentUser&&currentUser.user_metadata&&currentUser.user_metadata.teacher_gender;
+  if(meta==='m'||meta==='f'){
+    khSetGender(meta);khApplyGender();
+    cy1Save({teacher_gender:meta},'').catch(()=>{});
+    return;
+  }
+  // معلّمٌ جديدٌ في معالج الإعداد: لا نقاطعه، ونسأله في الدخول التالي
+  if(!profile||!profile.setupDone)return;
+  let asked=false;try{asked=localStorage.getItem('kh_g_asked')==='1';}catch(e){}
+  if(!asked)setTimeout(()=>{if(!document.querySelector('.c1-modal.open'))khGenderOpen();},1800);
 }
 // ══ الأقسام — تُفعَّل واحداً واحداً مع البناء ══
 // built:true = قسم جاهز له صفحة | built:false = قادم (يظهر باهتاً في اللوحة)
@@ -7132,6 +7179,7 @@ async function afterAuth(session){
   // الخطاب يُضبط هنا: بعد معرفة الحلقة وقراءة الملف، وقبل أوّل رسمٍ للتطبيق
   khSetGender(profile.teacher_gender);
   khApplyGender();
+  khGenderOnLogin();
   // يُسجَّل هنا لا عند إدخال كلمة المرور: المقصود «كم مرّةً دخلت المعلّمة
   // المنصة» لا «كم مرّةً كتبت كلمة مرورها» — والمعلّمات يبقين مسجّلات دخولٍ
   // ويفتحن التطبيق مراراً. وهو بعد اجتياز التحقق فلا تُحسب محاولةٌ مرفوضة.
@@ -22409,7 +22457,7 @@ async function achDelete(id){
 function C1_GUIDE(){return {
   yawmi:{ds:'نقطة انطلاقك كل صباح. تعرض حصص اليوم والغد من جدولك، وبطاقة الدرس القادم بأجزائه الأربعة: الخطة، الملخص البصري، اللعبة، العرض التقديمي. وتحتها مفكرتك ونجوم الصدارة.',
     tip:'زر «إنشاء التحضير» يجمع للدرس ثلاث خطط وثلاثة ملخصات من أوائل من '+khC('حضّرنه','حضّروه')+'، ثم يُعطي كل '+khC('معلمة بعدهنّ','معلم بعدهم')+' واحدة منها — فيصلك جاهزاً في لحظة بلا انتظار. ولو لم يعجبك ما وصلك فزر «نسخة خاصة» يولّد تحضيراً من عندك.'},
-  plan:{ds:'وحدات مادتك ودروسها كما رُفعت من المنهج. من بطاقة كل درس '+khG('تُنشئين','تُنشئ')+' لعبته وملخصه وعرضه، وتُرفقين ملفاتك، و'+khG('تُعلّمين','تُعلّم')+' ما '+khG('أنجزتِ','أنجزت')+'ه لكل شعبة.',
+  plan:{ds:'وحدات مادتك ودروسها كما رُفعت من المنهج. من بطاقة كل درس '+khG('تُنشئين','تُنشئ')+' لعبته وملخصه وعرضه، و'+khG('تُرفقين','تُرفق')+' ملفاتك، و'+khG('تُعلّمين','تُعلّم')+' ما '+khG('أنجزتِ','أنجزت')+'ه لكل شعبة.',
     tip:'«'+khG('ابدئي','ابدأ')+' الحصة» تفتح شاشة الحصة الحية بكل مرفقات الدرس وأدوات الصف في مكان واحد.'},
   studio:{ds:'مصنع الألعاب والملخصات البصرية. '+khG('تختارين','تختار')+' الدرس والقالب فتُبنى اللعبة من محتوى الكتاب، ولك أن ت'+khG('عدّلي','عدّل')+' أسئلتها و'+khG('تُبدّلي','تُبدّل')+' شكلها.',
     tip:'ما '+khG('تُنشئينه','تُنشئه')+' هنا يرتبط ببطاقة درسه في الخطة تلقائياً.'},
