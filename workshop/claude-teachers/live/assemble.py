@@ -11,7 +11,7 @@ def find(dirs, pat):
 def read(p):
     return open(p, encoding="utf-8", errors="ignore").read()
 tpl = next(p for p in find(UP, "*.html") if 'id="skill"' in read(p) and 'id="data"' in read(p))
-src = re.sub(r'(<script type="text/markdown" id="skill">).*?(' + re.escape(END) + ')', r"\1\2", read(tpl), count=1, flags=re.S)
+src = re.sub(r'(<script type="text/markdown" ' + 'id="skill">).*?(' + re.escape(END) + ')', r"\1\2", read(tpl), count=1, flags=re.S)
 items = []
 pdfs = [p for p in find(UP, "*.pdf")]
 if pdfs:
@@ -23,8 +23,8 @@ for prefix, kind in [("عرض", "deck"), ("ملخص", "summary"), ("لعبة", "
 mime = {".html": "text/html", ".htm": "text/html", ".pdf": "application/pdf"}
 data = dict(META, items=[{"kind": k, "name": os.path.basename(p), "mime": mime.get(os.path.splitext(p)[1].lower(), "application/octet-stream"),
                           "b64": base64.b64encode(open(p, "rb").read()).decode()} for k, p in items])
-tag = '<script type="application/json" id="data">'
-i = src.index(tag) + len(tag); j = src.index(END, i)
+tag = '<script type="application/json" ' + 'id="data">'
+i = src.rindex(tag) + len(tag); j = src.index(END, i)
 html = src[:i] + json.dumps(data, ensure_ascii=False).replace("<", "\\u003c") + src[j:]
 name = re.sub(r'[\\/:*?"<>|]', "-", META["title"] or "الحصة")
 out = os.path.join(OUT, "حصة-" + name + ".html")

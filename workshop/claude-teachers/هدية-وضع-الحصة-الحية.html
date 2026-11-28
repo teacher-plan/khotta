@@ -8,11 +8,13 @@
 
 هذا الملف قالب «وضع الحصة الحية»: صفحة واحدة تجمع مرفقات الدرس، وفوقها لوحة الحصة (المؤقّت، والهدوء، والقرعة، والنجوم، والقلم).
 
-إذا أرفقه المعلّم في محادثة فيها مخرجات درس (عرض، أو ملخّص، أو لعبة، أو كتاب تفاعلي)، أو مع ملف مهارته، فبعد أن تُنهي المخرجات:
+إذا أرفقه المعلّم في محادثة فيها مخرجات درس (عرض، أو ملخّص، أو لعبة، أو كتاب تفاعلي)، فبعد أن تُنهي المخرجات:
 1. **لا تكتب الصفحة بنفسك.** تأكّد أن كل مخرج محفوظ ملفاً في مجلد المخرجات باسم يبدأ بنوعه: `عرض-…html`، `ملخص-…html`، `لعبة-…html`، `كتاب-تفاعلي-…html`.
 2. شغّل السكربت التالي كما هو في بيئة تنفيذ الأكواد، بعد أن تملأ `META` فقط: عنوان الدرس، والمادة، والصف، والوحدة، وهدفين من أهداف الدرس، واترك `students` فارغة. فيضع ملف الدرس المرفق وآخر نسخة من كل مخرج داخل هذا القالب، ويكتب `حصة-(عنوان الدرس).html`.
 3. قدّم الصفحة للتنزيل، وقل له: «افتحها في المتصفّح. ومن داخلها تضيف ملفات أخرى بزرّ «إضافة مرفق»، وتكتب أسماء طلابك من «بيانات الحصة»، ثم تضغط «حفظ»».
 4. إن لم تتوفّر بيئة تنفيذ الأكواد، فقدّم المخرجات ملفات وقل له: «افتح ملف وضع الحصة الحية في المتصفّح، وأضف ملفاتك بزرّ «إضافة مرفق»، ثم «حفظ»».
+
+وإن طلب المعلّم «اجمع كل شيء في ملف واحد» في محادثة فيها ملف البداية «ابدأ-هنا»، فاتّبع القسم ٤ من ملف البداية: هذا الملف هو القالب الذي تُبنى عليه أداته.
 
 ```python
 # يجمع مخرجات الدرس في صفحة الحصة الحية (يُشغَّل في بيئة كلود).
@@ -28,7 +30,7 @@ def find(dirs, pat):
 def read(p):
     return open(p, encoding="utf-8", errors="ignore").read()
 tpl = next(p for p in find(UP, "*.html") if 'id="skill"' in read(p) and 'id="data"' in read(p))
-src = re.sub(r'(<script type="text/markdown" id="skill">).*?(' + re.escape(END) + ')', r"\1\2", read(tpl), count=1, flags=re.S)
+src = re.sub(r'(<script type="text/markdown" ' + 'id="skill">).*?(' + re.escape(END) + ')', r"\1\2", read(tpl), count=1, flags=re.S)
 items = []
 pdfs = [p for p in find(UP, "*.pdf")]
 if pdfs:
@@ -40,8 +42,8 @@ for prefix, kind in [("عرض", "deck"), ("ملخص", "summary"), ("لعبة", "
 mime = {".html": "text/html", ".htm": "text/html", ".pdf": "application/pdf"}
 data = dict(META, items=[{"kind": k, "name": os.path.basename(p), "mime": mime.get(os.path.splitext(p)[1].lower(), "application/octet-stream"),
                           "b64": base64.b64encode(open(p, "rb").read()).decode()} for k, p in items])
-tag = '<script type="application/json" id="data">'
-i = src.index(tag) + len(tag); j = src.index(END, i)
+tag = '<script type="application/json" ' + 'id="data">'
+i = src.rindex(tag) + len(tag); j = src.index(END, i)
 html = src[:i] + json.dumps(data, ensure_ascii=False).replace("<", "\\u003c") + src[j:]
 name = re.sub(r'[\\/:*?"<>|]', "-", META["title"] or "الحصة")
 out = os.path.join(OUT, "حصة-" + name + ".html")
@@ -263,7 +265,7 @@ function board(){
   var date=new Date().toLocaleDateString('ar-OM-u-nu-arab',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var obj=(D.objectives||[]).length?'<div class="obj">🎯 '+D.objectives.slice(0,3).map(esc).join(' · ')+'</div>':'';
   var h='<div class="launch"><div class="head"><div class="title">'+esc(D.title||'الحصة الحية')+'</div><div class="date">'+date+(D.unit?' · '+esc(D.unit):'')+'</div>'+obj+'</div>';
-  if(!D.items.length)h+=HAS_SKILL?'<div class="empty"><h3>أهلاً بك في وضع الحصة الحية 🎁</h3><p>أضف مرفقات درسك بزرّ «إضافة مرفق»، واكتب بيانات الحصة، ثم «حفظ».<br>أو أرفق هذا الملف لكلود مع مهارتك، فيملؤه لك بمخرجات الدرس.</p></div>':'<div class="empty"><h3>لا مرفقات لهذا الدرس بعد</h3><p>اضغط «إضافة مرفق» لإضافة ملفاتك، ثم «حفظ».</p></div>';
+  if(!D.items.length)h+=HAS_SKILL?'<div class="empty"><h3>أهلاً بك في وضع الحصة الحية 🎁</h3><p>أضف مرفقات درسك بزرّ «إضافة مرفق»، واكتب بيانات الحصة، ثم «حفظ».<br>أو أرفقه لكلود في محادثة درسك، فيملؤه لك بالمخرجات.</p></div>':'<div class="empty"><h3>لا مرفقات لهذا الدرس بعد</h3><p>اضغط «إضافة مرفق» لإضافة ملفاتك، ثم «حفظ».</p></div>';
   else h+='<div class="launch-h">مرفقات الدرس — اضغط لعرضها بملء الشاشة</div>';
   h+='<div class="tiles">';
   D.items.forEach(function(it,i){var k=KIND[it.kind]||KIND.file;
@@ -367,7 +369,7 @@ function applyInfo(){D.title=$('fTitle').value.trim();D.subject=$('fSubject').va
   picked=[];setDirty(true);heading();home();}
 function heading(){$('clsNm').textContent=[D.cls,D.subject].filter(Boolean).join(' · ')||'الحصة الحية';$('lesNm').textContent=D.title||'';document.title=D.title?'حصة: '+D.title:'الحصة الحية';}
 function savePage(){closePops();
-  var open='<script type="application/json" id="data">',i=SRC.indexOf(open),j=SRC.indexOf('<\/script>',i);
+  var open='<script type="application/json" '+'id="data">',i=SRC.lastIndexOf(open),j=SRC.indexOf('<\/script>',i);
   var json=JSON.stringify(D).replace(/</g,'\\u003c');
   var html=SRC.slice(0,i+open.length)+json+SRC.slice(j);
   var a=document.createElement('a'),t=(D.title||'الحصة').replace(/[\\\/:*?"<>|]/g,'-');

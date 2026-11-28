@@ -217,7 +217,7 @@ function board(){
   var date=new Date().toLocaleDateString('ar-OM-u-nu-arab',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var obj=(D.objectives||[]).length?'<div class="obj">🎯 '+D.objectives.slice(0,3).map(esc).join(' · ')+'</div>':'';
   var h='<div class="launch"><div class="head"><div class="title">'+esc(D.title||'الحصة الحية')+'</div><div class="date">'+date+(D.unit?' · '+esc(D.unit):'')+'</div>'+obj+'</div>';
-  if(!D.items.length)h+=HAS_SKILL?'<div class="empty"><h3>أهلاً بك في وضع الحصة الحية 🎁</h3><p>أضف مرفقات درسك بزرّ «إضافة مرفق»، واكتب بيانات الحصة، ثم «حفظ».<br>أو أرفق هذا الملف لكلود مع مهارتك، فيملؤه لك بمخرجات الدرس.</p></div>':'<div class="empty"><h3>لا مرفقات لهذا الدرس بعد</h3><p>اضغط «إضافة مرفق» لإضافة ملفاتك، ثم «حفظ».</p></div>';
+  if(!D.items.length)h+=HAS_SKILL?'<div class="empty"><h3>أهلاً بك في وضع الحصة الحية 🎁</h3><p>أضف مرفقات درسك بزرّ «إضافة مرفق»، واكتب بيانات الحصة، ثم «حفظ».<br>أو أرفقه لكلود في محادثة درسك، فيملؤه لك بالمخرجات.</p></div>':'<div class="empty"><h3>لا مرفقات لهذا الدرس بعد</h3><p>اضغط «إضافة مرفق» لإضافة ملفاتك، ثم «حفظ».</p></div>';
   else h+='<div class="launch-h">مرفقات الدرس — اضغط لعرضها بملء الشاشة</div>';
   h+='<div class="tiles">';
   D.items.forEach(function(it,i){var k=KIND[it.kind]||KIND.file;
@@ -321,7 +321,7 @@ function applyInfo(){D.title=$('fTitle').value.trim();D.subject=$('fSubject').va
   picked=[];setDirty(true);heading();home();}
 function heading(){$('clsNm').textContent=[D.cls,D.subject].filter(Boolean).join(' · ')||'الحصة الحية';$('lesNm').textContent=D.title||'';document.title=D.title?'حصة: '+D.title:'الحصة الحية';}
 function savePage(){closePops();
-  var open='<script type="application/json" id="data">',i=SRC.indexOf(open),j=SRC.indexOf('<\/script>',i);
+  var open='<script type="application/json" '+'id="data">',i=SRC.lastIndexOf(open),j=SRC.indexOf('<\/script>',i);
   var json=JSON.stringify(D).replace(/</g,'\\u003c');
   var html=SRC.slice(0,i+open.length)+json+SRC.slice(j);
   var a=document.createElement('a'),t=(D.title||'الحصة').replace(/[\\\/:*?"<>|]/g,'-');
