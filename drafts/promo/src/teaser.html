@@ -1,0 +1,142 @@
+<!doctype html><html lang="ar"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&family=Tajawal:wght@500;800&family=IBM+Plex+Mono:wght@500&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#000}canvas{display:block;max-width:100vw;max-height:100vh}</style></head><body>
+<canvas id="c"></canvas>
+<script src="common.js"></script>
+<script>
+// «وقتك استثمار» — 35 s kinetic poster (style 1, ref techhalla-498547). 120 BPM, beat = 0.5 s.
+// OFF/BPM are set from the music analysis so the beat grid lands on the track's downbeats.
+const OFF=+(Q.get('off')||0),BPM=+(Q.get('bpm')||120);
+const MW=W*.86;
+const mono=(s,x,y,size,col,o={})=>txt(s,x,y,size*u,col,Object.assign({f:'IBM Plex Mono',w:500,ltr:true,ls:4*u},o));
+
+// a word that slams in from below (spring + smear), misregisters on impact, and leaves upward fast
+function slam(s,t,t0,t1,y,max,col,o={}){
+  if(t<t0-.05||t>t1+.25)return;const lt=t-t0+.05,p=under(lt,18,.55),out=ein(seg(t,t1,t1+.22));
+  const size=fit(s,max*u,o.mw||MW,o);const yy=y+(1-p)*360*u-out*420*u;
+  X.save();if(o.clip!==false){X.beginPath();X.rect(0,y-size*1.25,W,size*1.6);X.clip()}
+  X.globalAlpha=1-out*.3;
+  txt(s,cx,yy,size,col,o);X.restore();}
+function ticks(t,y,a=1,col=P.green){X.save();X.fillStyle=col;const n=V?30:48,gap=(W*.72)/n;for(let i=0;i<n;i++){const h=(6+16*Math.abs(Math.sin(i*1.7+t*9)))*u;X.globalAlpha=a*(.5+.5*seg(t%0.5,0,.05));X.fillRect(W*.14+i*gap,y-h/2,5*u,h)}X.restore()}
+function checkMark(x,y,s,d,col,lw){if(d<=0)return;const pts=[[-.3,.02],[-.08,.24],[.32,-.22]].map(([a,b])=>[x+a*s,y+b*s]);
+ const L1=Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1]),L2=Math.hypot(pts[2][0]-pts[1][0],pts[2][1]-pts[1][1]);
+ X.save();X.strokeStyle=col;X.lineWidth=lw;X.lineCap='round';X.lineJoin='round';X.setLineDash([(L1+L2)*d,L1+L2]);X.beginPath();X.moveTo(...pts[0]);X.lineTo(...pts[1]);X.lineTo(...pts[2]);X.stroke();X.restore()}
+function spinner(x,y,r,t,col){X.save();X.strokeStyle=col;X.lineWidth=r*.28;X.lineCap='round';const a=t*9;X.beginPath();X.arc(x,y,r,a,a+Math.PI*1.3);X.stroke();X.restore()}
+function spinner(x,y,r,t,col){X.save();X.strokeStyle=col;X.lineWidth=r*.28;X.lineCap='round';const a=t*9;X.beginPath();X.arc(x,y,r,a,a+Math.PI*1.3);X.stroke();X.restore()}
+// ═══ «ما بعد الورشة» — 35 s teaser for the workshop trainees. Track b: tense intro, silence 15–15.75, drop 16.0, last hit 32.0 ═══
+const LESSON='الكسور العشرية';
+const OUTS=[{n:'تحضير الدرس',m:'الأهداف · التهيئة · الأنشطة · التقويم',c:'#5B8F5B',ic:'prep'},{n:'العرض التفاعلي',m:'عرضٌ يُفتح بملء الشاشة',c:'#5C7038',ic:'slides'},
+ {n:'ملخّص الطالب',m:'ورقة PDF للطباعة',c:'#C8A03C',ic:'info'},{n:'فيديو الدرس',m:'شرحٌ بالتعليق الصوتي',c:'#B03040',ic:'video'},
+ {n:'اللعبة التعليمية',m:'تُلعب في الصف',c:'#8b5cf6',ic:'game'},{n:'صفحات الكتاب',m:'من كتاب الطالب',c:'#8A5030',ic:'book'}];
+function cursorAt(x,y,s,a=1){if(a<=0)return;X.save();X.globalAlpha*=a;X.translate(x,y);X.scale(s,s);X.beginPath();X.moveTo(0,0);X.lineTo(0,46);X.lineTo(12,35);X.lineTo(21,55);X.lineTo(29,51);X.lineTo(20,32);X.lineTo(35,32);X.closePath();X.fillStyle='#111';X.fill();X.strokeStyle='#fff';X.lineWidth=3;X.stroke();X.restore()}
+function ico(k,x,y,s,col){X.save();X.translate(x,y);X.scale(s,s);X.strokeStyle=col;X.fillStyle=col;X.lineWidth=2.2;X.lineCap='round';X.lineJoin='round';
+ if(k==='prep'){rr(-8,-10,16,20,2);X.stroke();[-5,-1,3].forEach(yy=>{X.beginPath();X.moveTo(-4,yy);X.lineTo(4,yy);X.stroke()})}
+ if(k==='slides'){rr(-10,-8,20,13,2);X.stroke();X.beginPath();X.moveTo(0,5);X.lineTo(0,9);X.moveTo(-4,10);X.lineTo(4,10);X.stroke()}
+ if(k==='info'){X.beginPath();X.arc(0,0,10,0,7);X.stroke();X.fillRect(-1.2,-1,2.4,7);X.beginPath();X.arc(0,-5,1.5,0,7);X.fill()}
+ if(k==='video'){rr(-10,-8,20,16,3);X.stroke();X.beginPath();X.moveTo(-3,-4);X.lineTo(5,0);X.lineTo(-3,4);X.closePath();X.fill()}
+ if(k==='game'){rr(-11,-6,22,12,6);X.stroke();X.beginPath();X.moveTo(-6,-2);X.lineTo(-6,2);X.moveTo(-8,0);X.lineTo(-4,0);X.stroke();X.beginPath();X.arc(5,-1,1.4,0,7);X.arc(7.5,2,1.4,0,7);X.fill()}
+ if(k==='book'){X.beginPath();X.moveTo(0,-7);X.lineTo(0,9);X.moveTo(0,-7);X.quadraticCurveTo(-6,-10,-10,-8);X.lineTo(-10,8);X.quadraticCurveTo(-6,6,0,9);X.quadraticCurveTo(6,6,10,8);X.lineTo(10,-8);X.quadraticCurveTo(6,-10,0,-7);X.stroke()}
+ X.restore()}
+function cornerT(t,label,col=P.cream){mono(label,W*.06,H*.07,24,col,{al:'left',a:.6});mono(String(Math.min(70,Math.floor(t*2)+1)).padStart(2,'0')+' / 70',W*.94,H*.07,24,P.gold,{al:'right',a:.8})}
+
+// 0–4 · hook
+function T1(t){X.fillStyle=P.dark;X.fillRect(0,0,W,H);const y=V?H*.52:H*.56;
+ slam('بعد الورشة…',t,.5,1.85,y,V?170:170,P.cream);slam('يكفي اسمُ الدرس.',t,2.0,3.85,y,V?150:150,P.gold);ticks(t,V?H*.75:H*.85,1);cornerT(t,'WORKSHOP · KHOTTAH')}
+// 4–11 · the lesson name is typed, then sent
+function T2(t){const lt=t-4;X.fillStyle=P.dark;X.fillRect(0,0,W,H);cornerT(t,'WORKSHOP · PROMPT');
+ const bw=V?W*.88:W*.62,bh=(V?150:130)*u,bx=cx-bw/2,by=cy-bh/2,a=under(lt,13,.75);
+ X.save();X.globalAlpha=cl(a*2);X.translate(cx,cy);X.scale(.92+.08*a,.92+.08*a);X.translate(-cx,-cy);
+ X.fillStyle='#2A1C14';rr(bx,by,bw,bh,bh/2);X.fill();X.strokeStyle='rgba(241,227,200,.18)';X.lineWidth=2*u;rr(bx,by,bw,bh,bh/2);X.stroke();
+ const full='الدرس التالي: '+LESSON,n=Math.round(full.length*seg(lt,.6,4.6)),shown=full.slice(0,n),fs=(V?52:50)*u,tx=bx+bw-60*u;
+ if(n===0)txt('اكتب اسم الدرس…',tx,cy+fs*.35,fs,'rgba(241,227,200,.35)',{w:700,al:'right'});
+ else txt(shown,tx,cy+fs*.35,fs,P.cream,{w:700,al:'right'});
+ const cw=n?measure(shown,fs,{w:700}):measure('اكتب اسم الدرس…',fs,{w:700})*0;if(Math.floor(lt*2.5)%2===0||(lt>.6&&lt<4.6)){X.fillStyle=P.gold;X.fillRect(tx-cw-10*u,cy-fs*.55,4*u,fs*1.1)}
+ // send button (left end, RTL)
+ const sb=bh*.7,sx=bx+bh*.5,pr=lt>5.9&&lt<6.1?Math.sin((lt-5.9)/.2*Math.PI):0,sent=lt>=6.0;X.save();X.translate(sx,cy);X.scale(1-.12*pr,1-.12*pr);X.fillStyle=sent?P.green:(n===full.length?P.gold:'rgba(241,227,200,.2)');X.beginPath();X.arc(0,0,sb/2,0,7);X.fill();
+ X.strokeStyle=P.dark;X.lineWidth=5*u;X.lineCap='round';X.beginPath();X.moveTo(sb*.18,0);X.lineTo(-sb*.2,0);X.moveTo(-sb*.04,-sb*.16);X.lineTo(-sb*.2,0);X.lineTo(-sb*.04,sb*.16);X.stroke();X.restore();
+ X.restore();
+ const c=crit(lt-4.9,6);if(lt>4.8&&lt<6.9)cursorAt(sx+(1-c)*300*u+8*u,cy+(1-c)*240*u+8*u,(V?1.6:1.3)*u*(1-.15*pr),1-seg(lt,6.5,6.9));
+ if(sent){const q=seg(lt,6.1,6.4);spinner(cx+(V?200:230)*u,cy+bh+70*u,16*u,lt,P.gold);txt('يُجهَّز كلّ شيء…',cx-20*u,cy+bh+84*u,(V?44:40)*u,P.cream,{f:'Tajawal',w:800,a:q})}
+ slam('اسمُ الدرس فقط',t,4.2,10.8,V?H*.3:H*.24,V?110:90,P.gold,{clip:true})}
+// 11–15 · the outputs arrive on the beat
+function T3(t){const lt=t-11;X.fillStyle=P.dark;X.fillRect(0,0,W,H);cornerT(t,'WORKSHOP · OUTPUT ×'+Math.min(6,Math.max(0,Math.floor((lt-.5)/.5)+1)));
+ slam('ويصلك كلّ شيء:',t,11.0,14.6,V?H*.18:H*.2,V?110:100,P.cream);
+ const bw=(V?760:720)*u,bh=(V?104:84)*u,gap=(V?22:16)*u,top=V?H*.27:H*.29,col=V?1:2,cwid=V?bw:(bw*2+gap)/1;
+ const out=ein(seg(lt,3.45,3.95));
+ OUTS.forEach((o,i)=>{const t0=.5+i*.5,p=under(lt-t0,17,.55);if(p<=0)return;
+  const r_=V?i:Math.floor(i/2),c_=V?0:i%2,x=V?cx-bw/2:(c_===0?cx+gap/2:cx-gap/2-bw),y=top+r_*(bh+gap)+(V?0:0);
+  const fx=cx-bw/2,fy=cy-bh/2,xx=mix(x,fx,out),yy=mix(y,fy,out)-(1-p)*H*.25;
+  X.save();X.globalAlpha=cl(p*2)*(1-out*.9);X.fillStyle='#FBF8F0';rr(xx,yy,bw,bh,22*u);X.fill();X.fillStyle=o.c;rr(xx+bw-16*u,yy,16*u,bh,8*u);X.fill();
+  ico(o.ic,xx+bw-62*u,yy+bh/2,(V?2.4:2)*u,o.c);txt(o.n,xx+bw-110*u,yy+bh*.62,(V?46:38)*u,P.dark,{al:'right'});
+  const ok=lt>=t0+.12;X.fillStyle=P.green;X.beginPath();X.arc(xx+50*u,yy+bh/2,(V?28:24)*u,0,7);X.fill();checkMark(xx+50*u,yy+bh/2,(V?44:38)*u,seg(lt,t0+.12,t0+.3),P.white,5*u);X.restore()});
+ if(out>0){const s=mix(.4,1,out);X.save();X.globalAlpha=out;X.translate(cx,cy);X.scale(s,s);X.fillStyle='#FBF8F0';rr(-110*u,-140*u,220*u,280*u,22*u);X.fill();X.restore()}}
+// 16–27 · the lesson page, live-lesson style
+function stageRect(){const barH=(V?120:96)*u;return {barH,x:0,y:barH,w:W,h:H-barH}}
+function tileRects(){const {barH}=stageRect(),cols=V?2:3,rows=V?3:2,gw=V?W*.88:Math.min(W*.8,1500*u),g=(V?26:28)*u,tw=(gw-(cols-1)*g)/cols,th=(V?250:240)*u,top=V?barH+H*.27:barH+H*.33,x0=cx+gw/2;
+ return OUTS.map((o,i)=>{const r_=Math.floor(i/cols),c_=i%cols;return {x:x0-(c_+1)*tw-c_*g,y:top+r_*(th+g),w:tw,h:th}})}
+function tileDraw(o,R,a,hl){X.save();X.globalAlpha*=a;X.shadowColor='rgba(0,0,0,.25)';X.shadowBlur=30*u;X.shadowOffsetY=12*u;X.fillStyle='#FBF6EA';rr(R.x,R.y,R.w,R.h,24*u);X.fill();X.shadowColor='transparent';
+ X.save();rr(R.x,R.y,R.w,R.h,24*u);X.clip();X.fillStyle=o.c;X.fillRect(R.x,R.y,R.w,8*u);X.restore();
+ if(hl){X.strokeStyle=o.c;X.lineWidth=4*u;rr(R.x,R.y,R.w,R.h,24*u);X.stroke()}
+ const pad=30*u;ico(o.ic,R.x+R.w-pad-24*u,R.y+pad+30*u,(V?2.6:2.2)*u,o.c);
+ txt(o.n,R.x+R.w-pad,R.y+R.h-pad-50*u,fit(o.n,(V?48:42)*u,R.w-2*pad),P.dark,{al:'right'});
+ txt(o.m,R.x+R.w-pad,R.y+R.h-pad,fit(o.m,(V?28:25)*u,R.w-2*pad,{f:'Tajawal',w:800}),'#8a7c68',{f:'Tajawal',w:800,al:'right'});X.restore()}
+function liveBar(lt){const {barH}=stageRect(),d=crit(lt,10);X.save();X.translate(0,-(1-d)*barH);X.fillStyle='rgba(20,20,22,.92)';X.fillRect(0,0,W,barH);X.fillStyle='rgba(255,255,255,.08)';X.fillRect(0,barH-2*u,W,2*u);
+ const pad=(V?36:40)*u,mid=barH/2;txt('٧/أ · رياضيات',W-pad,mid+(V?12:10)*u,(V?36:30)*u,'#fff',{al:'right'});
+ if(!V)txt(LESSON,W-pad-300*u,mid+10*u,26*u,'rgba(255,255,255,.6)',{f:'Tajawal',w:800,al:'right'});
+ // tool buttons (left side)
+ const tools=['timer','quiet','pick','stars','fs'],bs=(V?66:58)*u;tools.forEach((k,i)=>{const bx=pad+i*(bs+12*u),q=crit(lt-.2-i*.05,12);X.save();X.globalAlpha=q;X.fillStyle='rgba(255,255,255,.1)';rr(bx,mid-bs/2,bs,bs,14*u);X.fill();
+  X.strokeStyle='#fff';X.fillStyle='#fff';X.lineWidth=2.6*u;X.lineCap='round';const ix=bx+bs/2,iy=mid,r=bs*.24;
+  if(k==='timer'){X.beginPath();X.arc(ix,iy+2*u,r,0,7);X.stroke();X.beginPath();X.moveTo(ix,iy+2*u);X.lineTo(ix,iy-r*.5);X.stroke()}
+  if(k==='quiet'){X.beginPath();for(let j=-1;j<=1;j++){X.moveTo(ix+j*r*.55,iy+r);X.lineTo(ix+j*r*.55,iy-r*(j===0?1:.7))}X.stroke()}
+  if(k==='pick'){rr(ix-r,iy-r,2*r,2*r,4*u);X.stroke();X.beginPath();X.arc(ix-r*.4,iy-r*.4,2.4*u,0,7);X.arc(ix+r*.4,iy+r*.4,2.4*u,0,7);X.fill()}
+  if(k==='stars'){X.beginPath();for(let j=0;j<10;j++){const an=-Math.PI/2+j*Math.PI/5,rad=j%2?r*.45:r;X.lineTo(ix+Math.cos(an)*rad,iy+Math.sin(an)*rad)}X.closePath();X.stroke()}
+  if(k==='fs'){[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy])=>{X.beginPath();X.moveTo(ix+sx*r,iy+sy*r*.3);X.lineTo(ix+sx*r,iy+sy*r);X.lineTo(ix+sx*r*.3,iy+sy*r);X.stroke()})}
+  X.restore()});X.restore()}
+function T4(t){const lt=t-16,{barH}=stageRect();
+ X.fillStyle='#000';X.fillRect(0,0,W,H);const sa=crit(lt,8);X.save();X.globalAlpha=sa;const g=X.createLinearGradient(0,barH,0,H);g.addColorStop(0,'#2A1C14');g.addColorStop(1,'#140C07');X.fillStyle=g;X.fillRect(0,barH,W,H-barH);X.restore();
+ // board head
+ const hy=V?barH+H*.1:barH+H*.11,p=under(lt-.3,16,.65),ts=(V?84:72)*u;X.save();X.beginPath();X.rect(0,hy-ts*1.2,W,ts*1.6);X.clip();txt(LESSON,cx,hy+(1-p)*ts*1.6,ts,'#FBF8F0');X.restore();
+ txt('الاثنين ١٤ ديسمبر · الوحدة الثالثة',cx,hy+(V?70:58)*u,(V?32:26)*u,'rgba(251,248,240,.68)',{f:'Tajawal',w:800,a:seg(lt,.6,.9)});
+ const ob='◎  يتعرّف الطالب الأجزاء من عشرة ومن مئة ويكتبها كسوراً عشرية';txt(ob,cx,hy+(V?130:106)*u,fit(ob,(V?32:26)*u,W*.86,{f:'Tajawal',w:800}),'rgba(251,248,240,.85)',{f:'Tajawal',w:800,a:seg(lt,.8,1.1)});
+ txt('مرفقات الدرس — اضغط لعرضها بملء الشاشة',cx,hy+(V?195:160)*u,(V?28:23)*u,'rgba(251,248,240,.5)',{f:'Tajawal',w:800,a:seg(lt,1.0,1.3)});
+ // tiles land on the beat: 1.0, 1.25 … (16th notes)
+ const R=tileRects();const op=OUTSEL(lt);
+ OUTS.forEach((o,i)=>{const q=under(lt-1.0-i*.25,15,.6);if(q<=0)return;const r0=R[i];X.save();X.translate(r0.x+r0.w/2,r0.y+r0.h/2+(1-q)*80*u);X.scale(.9+.1*q,.9+.1*q);X.translate(-(r0.x+r0.w/2),-(r0.y+r0.h/2));tileDraw(o,r0,cl(q*2),op.hover===i);X.restore()});
+ // opened attachment: zooms from its tile to the whole stage
+ if(op.open!==null){const r0=R[op.open],z=op.z,S={x:mix(r0.x,30*u,z),y:mix(r0.y,barH+30*u,z),w:mix(r0.w,W-60*u,z),h:mix(r0.h,H-barH-60*u,z)};
+  X.save();X.globalAlpha=cl(z*3);X.fillStyle=op.open===3?'#0E0A08':'#FBF6EA';rr(S.x,S.y,S.w,S.h,mix(24,18,z)*u);X.fill();X.save();rr(S.x,S.y,S.w,S.h,18*u);X.clip();
+  if(op.open===1)slide(S,op.k);else video(S,op.k);X.restore();X.restore()}
+ liveBar(lt);
+ // cursor path: → «العرض التفاعلي» (tap 4.0) · back (7.0) · → «فيديو الدرس» (tap 7.75) · back (10.25)
+ const cR1=R[1],cR3=R[3],P1=[cR1.x+cR1.w*.4,cR1.y+cR1.h*.55],P3=[cR3.x+cR3.w*.4,cR3.y+cR3.h*.55];
+ let mx,my,ca=1;const a1=crit(lt-3.1,6),a2=crit(lt-7.0,6);if(lt<7.0){mx=P1[0]+(1-a1)*320*u;my=P1[1]+(1-a1)*260*u}else{mx=mix(P1[0],P3[0],a2);my=mix(P1[1],P3[1],a2)}
+ const pr=[4.0,7.75].map(tp=>lt>tp-.08&&lt<tp+.1?Math.sin((lt-tp+.08)/.18*Math.PI):0).reduce((a,b)=>a+b,0);
+ if(lt>3.0&&lt<10.6&&!(op.open!==null&&op.z>.6))cursorAt(mx,my,(V?1.6:1.35)*u*(1-.15*pr),1)}
+function OUTSEL(lt){if(lt>=4.0&&lt<7.0){const z=lt<6.6?crit(lt-4.0,9):1-crit(lt-6.6,12);return {open:1,z,k:lt-4.0,hover:null}}
+ if(lt>=7.75&&lt<10.6){const z=lt<10.2?crit(lt-7.75,9):1-crit(lt-10.2,12);return {open:3,z,k:lt-7.75,hover:null}}
+ return {open:null,hover:lt>3.3&&lt<4.0?1:(lt>7.3&&lt<7.75?3:null)}}
+function slide(S,k){const pad=60*u,R0=S.x+S.w-pad;txt(LESSON,R0,S.y+pad+70*u,(V?70:64)*u,P.dark,{al:'right'});X.fillStyle=P.gold;X.fillRect(R0-260*u,S.y+pad+100*u,260*u,8*u);
+ // 10-part bar: one part shaded on the beat, then the label ٠٫١
+ const bw=Math.min(S.w-2*pad,(V?880:1100)*u),bh=(V?120:110)*u,bx=S.x+S.w/2-bw/2,by=S.y+S.h*.45;
+ for(let i=0;i<10;i++){const x=bx+bw-(i+1)*bw/10;X.strokeStyle=P.dark;X.lineWidth=4*u;X.strokeRect(x,by,bw/10,bh);if(i===0&&k>.9){X.fillStyle=P.coral;X.globalAlpha=crit(k-.9,10);X.fillRect(x+3*u,by+3*u,bw/10-6*u,bh-6*u);X.globalAlpha=1}}
+ const q=crit(k-1.4,9);txt('جزءٌ واحد من عشرة',bx+bw,by+bh+90*u,(V?50:44)*u,P.dark,{al:'right',a:q,w:700});
+ const q2=under(k-1.9,15,.6);X.save();X.translate(bx+120*u,by+bh+80*u);X.scale(q2,q2);txt('٠٫١',0,0,(V?110:96)*u,P.coral,{});X.restore();
+ txt('١ / ١٢',S.x+pad,S.y+S.h-pad*.7,(V?30:26)*u,'#8a7c68',{f:'Tajawal',w:800,al:'left'})}
+function video(S,k){const ccx=S.x+S.w/2,ccy=S.y+S.h*.45;txt(LESSON,ccx,S.y+S.h*.2,(V?64:56)*u,'#FBF8F0',{});
+ const pl=crit(k-.6,10),r=(V?80:70)*u;if(k<1.0){X.save();X.translate(ccx,ccy);X.scale(1+.2*(1-pl),1+.2*(1-pl));X.fillStyle='rgba(255,255,255,.15)';X.beginPath();X.arc(0,0,r,0,7);X.fill();X.fillStyle='#fff';X.beginPath();X.moveTo(-r*.3,-r*.45);X.lineTo(r*.5,0);X.lineTo(-r*.3,r*.45);X.closePath();X.fill();X.restore()}
+ else{// voice waveform while playing
+  X.fillStyle=P.gold;const n=40,ww=Math.min(S.w*.7,900*u);for(let i=0;i<n;i++){const h=(10+70*Math.abs(Math.sin(i*.8+k*7))*Math.abs(Math.sin(i*.33+k*2.3)))*u;X.fillRect(ccx-ww/2+i*ww/n,ccy-h/2,ww/n*.55,h)}
+  txt('شرحٌ بالتعليق الصوتي',ccx,ccy+(V?150:130)*u,(V?40:34)*u,'rgba(251,248,240,.8)',{f:'Tajawal',w:800})}
+ const pb=S.w-160*u,px=S.x+80*u,py=S.y+S.h-70*u,f=seg(k,1.0,2.6)*.35;X.fillStyle='rgba(255,255,255,.2)';rr(px,py,pb,10*u,5*u);X.fill();X.fillStyle=P.coral;rr(px+pb*(1-f),py,pb*f,10*u,5*u);X.fill()}
+// 27–32 · statement
+function T5(t){const lt=t-27;X.fillStyle=P.dark;X.fillRect(0,0,W,H);const y1=V?H*.42:H*.42,y2=y1+(V?200:180)*u;
+ slam('اسمُ الدرس فقط…',t,27.0,99,y1,V?140:140,P.cream);slam('والحصة كلّها جاهزة.',t,28.0,99,y2,V?130:130,P.gold);ticks(t,V?H*.8:H*.88,.7);cornerT(t,'WORKSHOP · OUTCOME');
+ const ex=expo(seg(lt,4.75,5.0));if(ex>0){X.fillStyle=P.cream;X.beginPath();X.arc(cx,cy,Math.hypot(W,H)*.6*ex,0,7);X.fill()}}
+// 32–35 · lockup
+function T6(t){const lt=t-32;X.fillStyle=P.cream;X.fillRect(0,0,W,H);
+ const tw=(V?300:240)*u,ty=V?H*.25:H*.22;tilesAt(cx,ty,tw).forEach((T,i)=>{const p=under(lt-.02-i*.04,15,.6);drawTile(T,{sc:p,a:cl(p*3)})});
+ const p=under(lt-.25,16,.7),s=(V?170:150)*u,y=ty+tw*.4+s*1.05;X.save();X.beginPath();X.rect(0,y-s*1.25,W,s*1.5);X.clip();txt('نلتقي في الورشة',cx,y+(1-p)*s*1.4,fit('نلتقي في الورشة',s,W*.88),P.brown);X.restore();
+ const q=crit(lt-.7,9);txt('إعداد: أ. عيسى الحارثي',cx,y+(V?120:100)*u,(V?54:46)*u,P.green,{w:700,a:q});
+ mono('KHOTTAH · khotati.com',cx,y+(V?210:180)*u,V?30:26,P.brown,{a:seg(lt,1.0,1.3)*.8,ls:6*u})}
+function render(T){const t=T;if(t<4)T1(t);else if(t<11)T2(t);else if(t<15)T3(t);else if(t<16){X.fillStyle='#000';X.fillRect(0,0,W,H);mono('·',cx,cy,40,P.cream,{a:.5*(Math.floor(t*4)%2)})}else if(t<27)T4(t);else if(t<32)T5(t);else T6(t)}
+</script></body></html>
