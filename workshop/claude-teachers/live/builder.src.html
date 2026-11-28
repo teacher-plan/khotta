@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>صانع صفحة الحصة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Baloo+Bhaijaan+2:wght@600;700;800&display=swap">
+<style>
+:root{--disp:'Baloo Bhaijaan 2','Cairo',Tahoma,sans-serif;--bg:#F7EEE2;--surface:#FFFDF9;--card:#FBF4EA;--border:#E3D2BD;--red:#D86048;--red-d:#A83030;--olive:#487848;--ink:#301800;--muted:#7A6350}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+button,input,textarea{font-family:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:28px 18px 60px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+header .logo{width:52px;height:52px;border-radius:16px;background:radial-gradient(ellipse at 50% -10%,#2b4a37,#1a3324 70%);display:grid;place-items:center;color:#FBF8F0;font-size:26px;flex:none}
+h1{font-family:var(--disp);font-size:30px;font-weight:800;line-height:1.2}
+header p{color:var(--muted);font-weight:700;font-size:14px}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:20px;margin-bottom:16px}
+.card h2{font-size:17px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card h2 .n{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:14px}
+.card .hint{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:13px;font-weight:800;margin-bottom:5px}
+label small{color:var(--muted);font-weight:700}
+input[type=text],textarea{width:100%;border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:10px 12px;font-size:14.5px;font-weight:600;color:var(--ink)}
+input[type=text]:focus,textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(216,96,72,.15)}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+.drop{border:2.5px dashed var(--border);border-radius:18px;background:var(--card);padding:26px 16px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:14px}
+.drop:hover,.drop.over{border-color:var(--red);background:#FFF6F1}
+.drop b{display:block;font-size:17px;font-weight:800;margin:6px 0 2px}
+.drop span{font-size:12.5px;color:var(--muted);font-weight:700}
+.drop .big{font-size:38px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.slot{position:relative;border:1.5px solid var(--border);border-radius:16px;background:#fff;padding:14px 14px 12px;overflow:hidden;min-height:118px;display:flex;flex-direction:column;gap:6px}
+.slot::before{content:'';position:absolute;top:0;inset-inline:0;height:4px;background:var(--tc)}
+.slot .t{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:7px}
+.slot .t i{font-style:normal;font-size:19px}
+.slot .f{font-size:12px;font-weight:700;color:var(--muted);word-break:break-all;flex:1}
+.slot.has .f{color:var(--olive)}
+.slot .act{display:flex;gap:6px}
+.slot .act button{flex:1;border:1.5px solid var(--border);background:var(--card);border-radius:10px;padding:6px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}
+.slot .act button.rm{flex:none;width:36px;color:var(--red-d)}
+.slot:not(.has) .act button.rm{display:none}
+.go{display:flex;gap:10px;flex-wrap:wrap;position:sticky;bottom:12px;background:rgba(247,238,226,.92);backdrop-filter:blur(8px);padding:12px;border-radius:18px;border:1.5px solid var(--border)}
+.go button{flex:1;min-width:200px;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.go .pri{background:var(--red);color:#fff}
+.go .sec{background:#1a3324;color:#FBF8F0}
+.go button:disabled{opacity:.45;cursor:not-allowed}
+.msg{font-size:13px;font-weight:700;color:var(--muted);text-align:center;margin-top:8px;min-height:20px}
+.msg.err{color:var(--red-d)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">🏫</div><div><h1>صانع صفحة الحصة</h1><p>اجمع مخرجات درسك في صفحة واحدة بوضع الحصة الحية: مؤقّت، وهدوء، وقرعة، ونجوم، وقلم.</p></div></header>
+
+  <div class="card">
+    <h2><span class="n">١</span>بيانات الحصة</h2>
+    <div class="hint">تظهر على السبّورة في أعلى الصفحة.</div>
+    <div class="grid">
+      <div><label>عنوان الدرس</label><input type="text" id="title" placeholder="مثال: ١-٤ الميل"></div>
+      <div><label>المادة</label><input type="text" id="subject" placeholder="مثال: الرياضيات"></div>
+      <div><label>الصف أو الشعبة</label><input type="text" id="cls" placeholder="مثال: العاشر ٢"></div>
+      <div><label>الوحدة <small>(اختياري)</small></label><input type="text" id="unit" placeholder="مثال: استخدام التمثيلات البيانية"></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><label>أهداف الدرس <small>(اختياري · هدف في كل سطر)</small></label><textarea id="obj" placeholder="أن يحسب الطالب ميل المستقيم"></textarea></div>
+      <div><label>أسماء الطلاب <small>(اختياري · اسم في كل سطر، للقرعة والنجوم)</small></label><textarea id="stu" placeholder="أحمد&#10;سالم&#10;مريم"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">٢</span>مرفقات الدرس</h2>
+    <div class="hint">اسحب كل ملفاتك هنا دفعة واحدة، وتتوزّع وحدها. أو اختر ملف كل مرفق من بطاقته.</div>
+    <div class="drop" id="drop"><div class="big">📥</div><b>اسحب ملفاتك هنا، أو اضغط للاختيار</b><span>العرض والملخّص واللعبة والكتاب التفاعلي (HTML) · ملف الدرس (PDF) · صور</span></div>
+    <input type="file" id="multi" multiple hidden accept=".html,.htm,.pdf,image/*">
+    <div class="slots" id="slots"></div>
+  </div>
+
+  <div class="go">
+    <button class="sec" id="prev" onclick="preview()">👀 معاينة الحصة</button>
+    <button class="pri" id="save" onclick="save()">💾 تنزيل صفحة الحصة</button>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+var RUNTIME=__RUNTIME__;
+var SLOTS=[
+ {k:'deck',nm:'العرض التفاعلي',ic:'🖥️',c:'#5C7038',acc:'.html,.htm,.pdf'},
+ {k:'summary',nm:'ملخص الدرس',ic:'📄',c:'#C8A03C',acc:'.html,.htm,.pdf,image/*'},
+ {k:'game',nm:'اللعبة التعليمية',ic:'🎮',c:'#8b5cf6',acc:'.html,.htm'},
+ {k:'book',nm:'الكتاب التفاعلي',ic:'📚',c:'#2E6F9E',acc:'.html,.htm'},
+ {k:'pages',nm:'صفحات الكتاب',ic:'📖',c:'#8A5030',acc:'.pdf,image/*'}];
+var files={};
+var $=function(id){return document.getElementById(id)};
+function paint(){
+  $('slots').innerHTML=SLOTS.map(function(s){var f=files[s.k];
+    return '<div class="slot'+(f?' has':'')+'" style="--tc:'+s.c+'"><div class="t"><i>'+s.ic+'</i>'+s.nm+'</div><div class="f">'+(f?'✓ '+esc(f.name):'لم يُضف بعد')+'</div><div class="act"><button onclick="choose(\''+s.k+'\')">'+(f?'تغيير':'اختيار ملف')+'</button><button class="rm" onclick="rm(\''+s.k+'\')" title="حذف">✕</button></div></div>';}).join('');
+  var n=Object.keys(files).length;$('prev').disabled=$('save').disabled=!n;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function rm(k){delete files[k];paint();}
+function choose(k){var s=SLOTS.filter(function(x){return x.k===k})[0],i=document.createElement('input');i.type='file';i.accept=s.acc;i.onchange=function(){if(i.files[0]){files[k]=i.files[0];paint();}};i.click();}
+function guess(f){
+  var n=f.name.toLowerCase(),html=/\.html?$/.test(n),pdf=/\.pdf$/.test(n),img=/^image\//.test(f.type);
+  if(/ملخ|summary|خلاص/.test(n))return 'summary';
+  if(html&&/لعب|game|مسابق|quiz|تحد/.test(n))return 'game';
+  if(html&&/كتاب|book/.test(n))return 'book';
+  if(/عرض|deck|slide|present|شرائح/.test(n))return 'deck';
+  if(pdf&&/صفحات|درس|lesson|pages/.test(n))return 'pages';
+  var order=html?['deck','summary','game','book']:pdf?['pages','summary','deck']:img?['summary','pages']:[];
+  for(var i=0;i<order.length;i++)if(!files[order[i]])return order[i];
+  return order[0]||null;
+}
+function addMany(list){var skipped=[];[].forEach.call(list,function(f){var k=guess(f);if(k)files[k]=f;else skipped.push(f.name);});paint();
+  msg(skipped.length?'لم أعرف أين أضع: '+skipped.join('، '):'تأكّد أن كل ملف في بطاقته الصحيحة، وغيّر ما يلزم.',!!skipped.length);}
+var drop=$('drop');
+drop.onclick=function(){$('multi').click()};
+$('multi').onchange=function(){addMany(this.files);this.value='';};
+['dragenter','dragover'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over')})});
+['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over')})});
+drop.addEventListener('drop',function(e){addMany(e.dataTransfer.files)});
+function msg(t,err){$('msg').textContent=t;$('msg').className='msg'+(err?' err':'');}
+function b64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1])};r.onerror=rej;r.readAsDataURL(file)});}
+function mimeOf(f){var n=f.name.toLowerCase();if(/\.html?$/.test(n))return 'text/html';if(/\.pdf$/.test(n))return 'application/pdf';return f.type||'application/octet-stream';}
+function lines(id){return $(id).value.split('\n').map(function(s){return s.trim()}).filter(Boolean);}
+function build(){
+  var ks=SLOTS.map(function(s){return s.k}).filter(function(k){return files[k]});
+  ks.sort(function(a,b){var o=['pages','deck','summary','game','book'];return o.indexOf(a)-o.indexOf(b)});
+  return Promise.all(ks.map(function(k){return b64(files[k])})).then(function(bs){
+    var d={title:$('title').value.trim(),subject:$('subject').value.trim(),cls:$('cls').value.trim(),unit:$('unit').value.trim(),objectives:lines('obj'),students:lines('stu'),
+      items:ks.map(function(k,i){return {kind:k,name:files[k].name,mime:mimeOf(files[k]),b64:bs[i]}})};
+    var json=JSON.stringify(d).replace(/</g,'\\u003c');
+    var t=(d.title||'الحصة الحية').replace(/[<&]/g,'');
+    return RUNTIME.replace('__TITLE__',function(){return t}).replace('__DATA__',function(){return json});
+  });
+}
+function preview(){msg('أجهّز المعاينة…');build().then(function(h){var u=URL.createObjectURL(new Blob([h],{type:'text/html'}));window.open(u,'_blank');msg('فُتحت المعاينة في تبويب جديد.');});}
+function save(){msg('أجهّز الملف…');build().then(function(h){var a=document.createElement('a'),t=($('title').value.trim()||'الحصة').replace(/[\\/:*?"<>|]/g,'-');
+  a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));a.download='حصة-'+t+'.html';document.body.appendChild(a);a.click();a.remove();
+  msg('✓ نُزّلت صفحة الحصة. افتحها في المتصفّح يوم الحصة، وتعمل دون إنترنت.');});}
+paint();
+</script>
+</body>
+</html>
