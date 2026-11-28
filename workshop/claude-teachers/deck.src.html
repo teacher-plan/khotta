@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>توظيف كلود للمعلّمين — أ. عيسى الحارثي</title>
+<style>
+/*FONTS*/
+:root{--navy:#14325c;--navy2:#0d2240;--ink:#1b2333;--mute:#5a6782;--amber:#f2b632;--amber2:#fff4d6;--teal:#12806a;--teal2:#e3f5ef;--red:#c0392b;--red2:#fdeceb;--blue2:#e8f0fb;--bg:#fbfaf6;--line:#d5deec}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0b1526;font-family:'Readex Pro',sans-serif;font-weight:500;color:var(--ink)}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);padding:64px 96px 70px;display:none;flex-direction:column;overflow:hidden}
+.slide.on{display:flex;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slide.dark{background:radial-gradient(circle at 80% 10%,#21497f,var(--navy2) 70%);color:#fff}
+.slide.dark h2,.slide.dark h1{color:#fff}
+h1{font-size:92px;line-height:1.2;color:var(--navy);font-weight:700}
+h2{font-size:60px;line-height:1.25;color:var(--navy);font-weight:700;margin-bottom:34px}
+h3{font-size:40px;color:var(--navy);font-weight:700;margin-bottom:14px}
+p,li{font-size:38px;line-height:1.6}
+ul,ol{padding-inline-start:52px}
+ol{list-style:arabic-indic}
+li{margin-bottom:12px}
+b,strong{font-weight:700}
+.kicker{display:inline-block;font-size:28px;font-weight:600;background:var(--amber);color:var(--navy2);padding:6px 22px;border-radius:40px;margin-bottom:26px;align-self:flex-start}
+.dark .kicker{background:var(--amber)}
+.big{font-size:56px;line-height:1.45;font-weight:600}
+.huge{font-size:120px;font-weight:700;line-height:1.15}
+.mute{color:var(--mute)}
+.dark .mute{color:#b9c8e0}
+.center{align-items:center;justify-content:center;text-align:center}
+.center .kicker{align-self:center}
+.grow{flex:1}
+.row{display:flex;gap:34px}
+.row>*{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.card{background:#fff;border:3px solid var(--line);border-radius:28px;padding:30px 34px}
+.card h3{font-size:38px}
+.card p,.card li{font-size:32px}
+.card.blue{background:var(--blue2);border-color:#bcd0ee}
+.card.amber{background:var(--amber2);border-color:#f0d88f}
+.card.teal{background:var(--teal2);border-color:#a8dccb}
+.card.red{background:var(--red2);border-color:#f1b9b3}
+.icon{font-size:70px;line-height:1;margin-bottom:12px}
+.st{opacity:0;transform:translateY(18px);transition:opacity .4s,transform .4s}
+.st.in{opacity:1;transform:none}
+.prompt{position:relative;background:#fff;border:3px dashed #7f97bf;border-radius:24px;padding:26px 34px 26px 34px;font-size:36px;line-height:1.6;white-space:pre-line}
+.prompt::before{content:"أمر";position:absolute;top:-22px;right:30px;background:var(--navy);color:#fff;font-size:22px;padding:2px 16px;border-radius:20px}
+.prompt.weak{border-color:#e39b93;background:#fff7f6}
+.prompt.weak::before{content:"أمر ضعيف";background:var(--red)}
+.prompt.good{border-color:#6cbfa6;background:#f5fcf9}
+.prompt.good::before{content:"أمر محدّد";background:var(--teal)}
+.copy{position:absolute;bottom:14px;left:16px;font:600 20px 'Readex Pro';background:var(--blue2);color:var(--navy);border:0;border-radius:14px;padding:6px 14px;cursor:pointer}
+.quote{font-size:60px;font-weight:700;line-height:1.45;color:var(--navy);border-inline-start:14px solid var(--amber);padding-inline-start:40px}
+.dark .quote{color:#fff}
+.tag{display:inline-block;font-size:26px;font-weight:600;padding:4px 16px;border-radius:16px;background:var(--blue2);color:var(--navy);margin-inline-end:10px}
+/* شريط سفلي */
+#bar{position:absolute;bottom:0;right:0;height:8px;background:var(--amber);transition:width .3s;z-index:5}
+#num{direction:rtl;unicode-bidi:plaintext;position:absolute;bottom:20px;left:34px;font-size:22px;color:#8a97ad;z-index:5}
+/* المؤقّت */
+.timer{display:flex;flex-direction:column;align-items:center;gap:22px}
+.timer .clock{direction:ltr;font-size:190px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+.timer.end .clock{color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.timer .btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{font:600 28px 'Readex Pro';background:var(--navy);color:#fff;border:0;border-radius:18px;padding:12px 26px;cursor:pointer}
+.btn.alt{background:var(--blue2);color:var(--navy)}
+/* عدّاد رفع الأيدي */
+.hands{display:flex;align-items:center;gap:18px;margin-top:6px}
+.hands .n{font-size:56px;font-weight:700;color:var(--navy);min-width:90px;text-align:center}
+.hands button{font:700 34px 'Readex Pro';width:62px;height:62px;border-radius:50%;border:0;background:var(--blue2);color:var(--navy);cursor:pointer}
+/* الدورة */
+.cycle{display:flex;align-items:center;justify-content:center;gap:20px;margin-top:30px}
+.cycle .s{background:#fff;border:4px solid var(--navy);border-radius:30px;padding:28px 30px;text-align:center;width:300px}
+.cycle .s .i{font-size:72px}
+.cycle .s b{display:block;font-size:42px;color:var(--navy)}
+.cycle .s span{font-size:27px;color:var(--mute);line-height:1.4;display:block;margin-top:6px}
+.cycle .ar{font-size:60px;color:var(--amber)}
+/* واجهة كلود */
+.ui{display:flex;height:520px;border:4px solid #c9d3e3;border-radius:26px;overflow:hidden;background:#fff;font-size:24px}
+.ui .side{width:300px;background:#f3f1ec;padding:22px;display:flex;flex-direction:column;gap:14px;border-inline-end:2px solid #e2ddd2}
+.ui .side div{background:#fff;border-radius:12px;padding:10px 14px}
+.ui .chat{flex:1;display:flex;flex-direction:column;padding:26px}
+.ui .msg{align-self:flex-start;background:#eef1f6;border-radius:18px;padding:14px 20px;max-width:80%;margin-bottom:14px}
+.ui .msg.me{align-self:flex-end;background:#f6efe0}
+.ui .box{margin-top:auto;border:2px solid #cfd6e2;border-radius:20px;padding:16px 18px;display:flex;gap:14px;align-items:center;color:#8590a6}
+.ui .box .plus{font-size:34px;color:var(--navy);font-weight:700}
+.ui .art{width:520px;background:#fbfcff;border-inline-start:2px solid #e2e6ee;padding:22px;display:flex;flex-direction:column;gap:12px}
+.ui .art .scr{flex:1;border-radius:14px;background:linear-gradient(160deg,#21497f,#14325c);color:#fff;display:grid;place-items:center;font-size:30px;font-weight:700}
+.pin{position:absolute;width:62px;height:62px;border-radius:50%;background:var(--amber);color:var(--navy2);font-size:34px;font-weight:700;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.25);border:4px solid #fff}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;margin-top:24px}
+.legend div{font-size:28px}
+.legend b{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--amber);color:var(--navy2);margin-inline-end:10px;font-size:24px}
+/* البيوت */
+.houses{display:flex;gap:26px;justify-content:center;align-items:flex-end}
+.houses svg{width:300px;height:280px;background:#fff;border:3px solid var(--line);border-radius:22px}
+.lvl{display:flex;flex-direction:column;gap:20px;margin-top:10px}
+.lvl .l{display:flex;align-items:center;gap:26px;background:#fff;border:3px solid var(--line);border-radius:24px;padding:20px 30px}
+.lvl .l .bar{height:28px;border-radius:14px;background:var(--amber)}
+.lvl .l .t{width:440px;font-size:34px;font-weight:600}
+.lvl .l .d{flex:1;font-size:30px;color:var(--mute)}
+/* بنك التعديلات */
+.refs .card{padding:20px 28px}.refs .icon{font-size:54px;margin-bottom:6px}.refs .card p{font-size:29px}
+.bank{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;flex:1}
+.bank .card{padding:24px 28px}
+.bank h3{font-size:36px;display:flex;align-items:center;gap:12px}
+.bank ol{padding-inline-start:40px}
+.bank li{font-size:27px;line-height:1.45;margin-bottom:10px}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-inline-start:78px;margin-bottom:22px}
+.steps li::before{content:counter(s,arabic-indic);position:absolute;right:0;top:2px;width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;font-size:30px;font-weight:700;display:grid;place-items:center}
+.dark .steps li::before{background:var(--amber);color:var(--navy2)}
+.agenda{display:grid;grid-template-columns:1fr 1fr;gap:16px 40px}
+.agenda div{font-size:31px;background:#fff;border:2px solid var(--line);border-radius:18px;padding:14px 22px;display:flex;gap:18px}
+.agenda span{color:var(--mute);font-size:27px;min-width:150px}
+.note{font-size:26px;color:var(--mute);margin-top:auto}
+.foot{position:absolute;bottom:26px;right:96px;left:96px;display:flex;justify-content:space-between;font-size:26px;color:#c9d6ea}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- ═════════ الافتتاح ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">ورشة تطبيقية</div>
+  <h1 style="font-size:118px">توظيف كلود<br>للمعلّمين</h1>
+  <p class="big mute" style="margin-top:26px">من الفكرة في رأسك… إلى محتوى صفّي جاهز</p>
+  <p style="margin-top:60px;font-size:36px">إعداد وتقديم: أ. عيسى الحارثي</p>
+</section>
+
+<section class="slide center">
+  <div class="icon" style="font-size:110px">👋</div>
+  <h1>أهلاً وسهلاً بكم</h1>
+  <p class="big" style="margin-top:30px">عيسى الحارثي · معلّم رياضيات</p>
+  <p class="big mute">وخبرة في توظيف كلود في مجالات كثيرة… وأهمّها التعليم</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">قبل أن نبدأ</div>
+  <h2>ارفعوا أيديكم 🙋</h2>
+  <div class="grid2" style="gap:26px 40px">
+    <div class="card st"><p>من منكم يستعمل أحد برامج الذكاء الاصطناعي <b>يومياً</b>؟</p><div class="hands"><button>−</button><span class="n">٠</span><button>+</button></div></div>
+    <div class="card st"><p>من استعمله في <b>تحضير درس</b> أو إعداد نشاط؟</p><div class="hands"><button>−</button><span class="n">٠</span><button>+</button></div></div>
+    <div class="card st"><p>من سمع بـ<b>كلود</b> أو جرّبه؟</p><div class="hands"><button>−</button><span class="n">٠</span><button>+</button></div></div>
+    <div class="card amber st"><p>من طلب شيئاً… فجاءت النتيجة <b>بعيدة عمّا كان في رأسه</b>؟ 🤔</p><div class="hands"><button>−</button><span class="n">٠</span><button>+</button></div></div>
+  </div>
+</section>
+
+<section class="slide center dark">
+  <p class="quote st" style="text-align:start">لماذا تأتي النتيجة أحياناً<br>غيرَ ما في رأسك؟</p>
+  <p class="big mute st" style="margin-top:40px">هذا سؤال اليوم… وسنجيب عنه معاً</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">ماذا سنخرج به اليوم؟</div>
+  <h2>كل معلّم يخرج بأدواته الخاصة</h2>
+  <div class="grid3" style="grid-template-columns:repeat(5,1fr);gap:20px">
+    <div class="card blue st center"><div class="icon">✍️</div><h3>أوامر محترفة</h3></div>
+    <div class="card st center"><div class="icon">🖥️</div><h3>عرض تفاعلي</h3></div>
+    <div class="card st center"><div class="icon">📄</div><h3>ملخّص للطالب</h3></div>
+    <div class="card st center"><div class="icon">🎮</div><h3>لعبة تعليمية</h3></div>
+    <div class="card st center"><div class="icon">📚</div><h3>كتاب تفاعلي</h3><p class="mute" style="font-size:24px">إن سمح الوقت</p></div>
+  </div>
+  <div class="card amber st" style="margin-top:34px;text-align:center"><p class="big">🎁 وفي النهاية: <b>مهارة</b> خاصة بك… ترسلها لكلود فيحضّر لك أي درس بالطريقة نفسها</p></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">خط سير اليوم</div>
+  <h2>برنامج الورشة</h2>
+  <div class="agenda">
+    <div><span>٨:٠٠</span>الترحيب والتعارف</div>
+    <div><span>١٠:٣٥</span>☕ استراحة</div>
+    <div><span>٨:٢٠</span>جولة في واجهة كلود</div>
+    <div><span>١٠:٥٥</span>بناء الملخّص</div>
+    <div><span>٨:٤٠</span>هندسة الأوامر</div>
+    <div><span>١١:٣٠</span>بناء اللعبة التعليمية</div>
+    <div><span>٩:٣٥</span>اختيار درسك</div>
+    <div><span>١٢:٠٥</span>🕌 صلاة الظهر</div>
+    <div><span>٩:٥٠</span>بناء العرض التفاعلي</div>
+    <div><span>١٢:٢٠</span>الكتاب التفاعلي ثم المهارة</div>
+  </div>
+</section>
+
+<!-- ═════════ واجهة كلود ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">الجزء الأول</div>
+  <h1>تعرّفوا على كلود</h1>
+  <p class="big mute" style="margin-top:20px">claude.ai · المتصفّح، والحاسوب، والهاتف</p>
+</section>
+
+<section class="slide">
+  <h2 style="margin-bottom:22px">واجهة كلود في دقيقة</h2>
+  <div style="position:relative">
+    <div class="ui">
+      <div class="side">
+        <div>✏️ محادثة جديدة</div>
+        <div>🗂️ المشاريع</div>
+        <div>💬 المحادثات السابقة</div>
+        <div style="margin-top:auto">⚙️ الإعدادات</div>
+      </div>
+      <div class="chat">
+        <div class="msg me">حضّر لي عرضاً تفاعلياً لدرس الكسور</div>
+        <div class="msg">بكل سرور! هذا العرض، جرّبه في النافذة المجاورة ←</div>
+        <div class="box"><span class="plus">+</span> اكتب طلبك هنا…  <span style="margin-inline-start:auto">⬆️</span></div>
+      </div>
+      <div class="art"><b style="font-size:24px;color:var(--navy)">نافذة الأعمال</b><div class="scr">الكسور 🍕</div></div>
+    </div>
+    <div class="pin st" style="top:20px;right:270px">١</div>
+    <div class="pin st" style="top:385px;right:300px">٢</div>
+    <div class="pin st" style="top:10px;left:250px">٣</div>
+    <div class="pin st" style="top:84px;right:270px">٤</div>
+  </div>
+  <div class="legend">
+    <div class="st"><b>١</b>محادثة جديدة لكل مهمة</div>
+    <div class="st"><b>٢</b>علامة + لإرفاق الملفات والصور</div>
+    <div class="st"><b>٣</b>نافذة الأعمال: ترى العرض وتجرّبه فوراً</div>
+    <div class="st"><b>٤</b>المشاريع: ملفات وتعليمات ثابتة</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ما يهمّنا اليوم من الواجهة</h2>
+  <div class="grid3">
+    <div class="card blue st"><div class="icon">📎</div><h3>الإرفاق</h3><p>صفحات الكتاب، صورة، لقطة شاشة، ملف PDF… كلها <b>مراجع</b> لطلبك.</p></div>
+    <div class="card teal st"><div class="icon">🪟</div><h3>نافذة الأعمال</h3><p>العرض واللعبة يظهران بجانب المحادثة: تجرّب، ثم تعدّل، ثم تنزّل الملف.</p></div>
+    <div class="card amber st"><div class="icon">🗂️</div><h3>المشروع</h3><p>مكان ثابت فيه مستودع الدروس والتعليمات، تبدأ منه كل محادثاتك.</p></div>
+  </div>
+  <div class="card red st" style="margin-top:30px"><p>👥 <b>الحساب مشترك بينكم:</b> اكتب اسمك في عنوان محادثتك · لا تغيّر الإعدادات · لا تكتب بيانات طلبة</p></div>
+</section>
+
+<!-- ═════════ هندسة الأوامر ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">الجزء الثاني</div>
+  <h1>هندسة الأوامر</h1>
+  <p class="big mute" style="margin-top:20px">لكن بطريقة مختلفة… سنبدأ بالورقة والقلم ✏️</p>
+</section>
+
+<section class="slide center">
+  <div class="kicker">تجربة ١</div>
+  <p class="big mute">خذ ورقة، ونفّذ هذا الأمر في ٣٠ ثانية:</p>
+  <p class="huge" style="margin:40px 0">«ارسم بيتاً»</p>
+  <div class="timer st" data-auto="30"><div class="clock">٠:٣٠</div></div>
+</section>
+
+<section class="slide">
+  <h2>كلّكم رسمتم بيتاً… ✅</h2>
+  <div class="houses">
+    <svg class="st" viewBox="0 0 300 280"><rect x="70" y="130" width="160" height="110" fill="#f4d9a8" stroke="#333" stroke-width="4"/><path d="M55 135 150 60 245 135Z" fill="#8a5a3b" stroke="#333" stroke-width="4"/><rect x="132" y="180" width="38" height="60" fill="#6b4a2b"/><rect x="88" y="152" width="34" height="30" fill="#bfe3ff" stroke="#333" stroke-width="3"/></svg>
+    <svg class="st" viewBox="0 0 300 280"><rect x="90" y="70" width="120" height="170" fill="#d9e6f2" stroke="#333" stroke-width="4"/><rect x="85" y="60" width="130" height="14" fill="#555"/><rect x="108" y="90" width="30" height="30" fill="#bfe3ff" stroke="#333" stroke-width="3"/><rect x="162" y="90" width="30" height="30" fill="#bfe3ff" stroke="#333" stroke-width="3"/><rect x="108" y="140" width="30" height="30" fill="#bfe3ff" stroke="#333" stroke-width="3"/><rect x="162" y="140" width="30" height="30" fill="#bfe3ff" stroke="#333" stroke-width="3"/><rect x="134" y="195" width="32" height="45" fill="#555"/></svg>
+    <svg class="st" viewBox="0 0 300 280"><rect x="60" y="140" width="180" height="100" fill="#fff" stroke="#333" stroke-width="4"/><path d="M45 145 150 80 255 145Z" fill="#9aa5b1" stroke="#333" stroke-width="4"/><rect x="190" y="70" width="24" height="50" fill="#a04030" stroke="#333" stroke-width="3"/><rect x="80" y="180" width="40" height="60" fill="#2e7d32"/><circle cx="185" cy="185" r="20" fill="#bfe3ff" stroke="#333" stroke-width="3"/></svg>
+    <svg class="st" viewBox="0 0 300 280"><path d="M50 240 150 70 250 240Z" fill="#f2c14e" stroke="#333" stroke-width="4"/><path d="M130 240 150 180 170 240Z" fill="#5d4037"/><line x1="20" y1="240" x2="280" y2="240" stroke="#7cb342" stroke-width="8"/></svg>
+  </div>
+  <p class="big st" style="text-align:center;margin-top:44px">لكن… <b>لا أحد منكم رسم بيتي</b> 🙂</p>
+  <p class="st mute" style="text-align:center">الأمر القصير نُفِّذ بنجاح، وكل واحد ملأ الفراغات <b>بخياله هو</b></p>
+</section>
+
+<section class="slide">
+  <div class="kicker">تجربة ٢</div>
+  <h2>الآن… ارسم هذا البيت</h2>
+  <div class="prompt good" style="font-size:42px">بيت من طابقين، سقفه مثلث أحمر،
+وفي منتصفه باب أزرق، وعلى جانبي الباب نافذتان مربّعتان،
+وعلى يمين البيت نخلة.</div>
+  <div class="timer st" data-auto="45" style="margin-top:40px"><div class="clock">٠:٤٥</div></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">تجربة ٣</div>
+  <h2>وهذا هو بيتي… «المرجع» 🖼️</h2>
+  <div class="row" style="align-items:center">
+    <svg viewBox="0 0 400 330" style="width:560px;height:460px;background:#fff;border:3px solid var(--line);border-radius:26px;flex:none">
+      <rect x="90" y="120" width="190" height="180" fill="#fbe9c8" stroke="#333" stroke-width="4"/>
+      <line x1="90" y1="210" x2="280" y2="210" stroke="#333" stroke-width="3"/>
+      <path d="M70 125 185 40 300 125Z" fill="#d6453d" stroke="#333" stroke-width="4"/>
+      <rect x="165" y="240" width="40" height="60" fill="#2f6fd6" stroke="#333" stroke-width="3"/>
+      <rect x="110" y="240" width="38" height="38" fill="#bfe3ff" stroke="#333" stroke-width="3"/>
+      <rect x="222" y="240" width="38" height="38" fill="#bfe3ff" stroke="#333" stroke-width="3"/>
+      <rect x="125" y="150" width="38" height="38" fill="#bfe3ff" stroke="#333" stroke-width="3"/>
+      <rect x="207" y="150" width="38" height="38" fill="#bfe3ff" stroke="#333" stroke-width="3"/>
+      <rect x="330" y="170" width="14" height="130" fill="#8d6e63"/>
+      <path d="M337 172 C300 150 290 170 280 185 M337 172 C370 145 385 165 392 182 M337 172 C320 135 300 135 292 140 M337 172 C355 132 375 132 385 140" stroke="#2e7d32" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <line x1="20" y1="300" x2="390" y2="300" stroke="#7cb342" stroke-width="8"/>
+    </svg>
+    <div>
+      <p class="big st">مع الوصف: اقتربتم كثيراً ✅</p>
+      <p class="big st">مع الصورة: <b>لا تحتاجون وصفاً طويلاً</b> أصلاً 🎯</p>
+      <p class="st mute" style="margin-top:20px">وهكذا يعمل الذكاء الاصطناعي تماماً</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ثلاثة مستويات لأي طلب</h2>
+  <div class="lvl">
+    <div class="l st"><div class="t">١. أمر قصير</div><div class="bar" style="width:220px"></div><div class="d">نتيجة جيدة… لكنها <b>فكرة النموذج</b> لا فكرتك</div></div>
+    <div class="l st"><div class="t">٢. أمر محدّد</div><div class="bar" style="width:420px"></div><div class="d">أقرب إلى ما تريد</div></div>
+    <div class="l st" style="border-color:var(--amber)"><div class="t">٣. أمر محدّد + مرجع</div><div class="bar" style="width:640px;background:var(--teal)"></div><div class="d"><b>أقرب ما يكون</b></div></div>
+  </div>
+  <p class="quote st" style="font-size:46px;margin-top:44px">كل فراغ تتركه في طلبك… يملؤه النموذج بذوقه هو.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">مفاجأة</div>
+  <h2>النماذج اليوم تفهمك بكلمات قليلة</h2>
+  <div class="row">
+    <div class="card st"><h3>بالأمس 🕰️</h3><p>كنّا نكتب كلمات مفتاحية، ونعيد الصياغة مرات حتى يفهم البرنامج.</p></div>
+    <div class="card teal st"><h3>اليوم 🚀</h3><p>طُوِّرت النماذج لتفهم <b>مقصدك</b> من جملة واحدة، وتكمل ما لم تقله بتخمين ذكي.</p></div>
+  </div>
+  <div class="card amber st" style="margin-top:30px"><p class="big" style="font-size:44px">إذن لماذا نتعلّم هندسة الأوامر؟<br><b>لأن «تخمين ذكي» ≠ «ما في رأسك»</b></p></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">تجربة حيّة</div>
+  <h2>الطلب نفسه… ثلاث مرات</h2>
+  <div style="display:flex;flex-direction:column;gap:34px">
+    <div class="prompt weak st">اعمل لعبة عن الكسور</div>
+    <div class="prompt st">اعمل لعبة لطلاب الصف الخامس عن جمع الكسور ذات المقامات المتشابهة، يلعبها فريقان على السبّورة الذكية، ١٠ أسئلة، مع لوحة نقاط.</div>
+    <div class="prompt good st">… وأرفقت لك صورة لعبة رأيتها على إنستغرام: أريد الشكل نفسه والألوان نفسها، وأسئلة من صفحات الكتاب المرفقة فقط.</div>
+  </div>
+</section>
+
+<section class="slide dark center">
+  <p class="quote" style="font-size:72px;text-align:start">قبل أن تكتب أيّ أمر…<br>اسأل نفسك:<br><span style="color:var(--amber)">ما مرجعي؟</span></p>
+</section>
+
+<section class="slide">
+  <h2 style="margin-bottom:24px">من أين يأتي المرجع؟</h2>
+  <div class="grid3 refs">
+    <div class="card blue st"><div class="icon">📱</div><h3>السوشيال ميديا</h3><p>منشور أو نشاط أعجبك: لقطة شاشة أو رابط.</p></div>
+    <div class="card st"><div class="icon">🖼️</div><h3>صورة</h3><p>شكل تريد محاكاته: تصميم، ورقة عمل، لوحة.</p></div>
+    <div class="card st"><div class="icon">🎬</div><h3>مقطع</h3><p>فيديو لفكرة أو حركة تريد بناء مثلها.</p></div>
+    <div class="card teal st"><div class="icon">📘</div><h3>الكتاب ودليل المعلّم</h3><p>المرجع الأهم لأي محتوى تعليمي.</p></div>
+    <div class="card amber st"><div class="icon">💭</div><h3>فكرة في خيالك</h3><p>ارسمها على ورقة وصوّرها، أو صِفها بالتفصيل.</p></div>
+    <div class="card red st"><div class="icon">❌</div><h3>لا مرجع؟</h3><p>إذن ستحصل على ما يتخيّله النموذج، لا ما تتخيّله أنت.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>كلما اتّضح تصوّرك… دقّ أمرك</h2>
+  <div class="row" style="align-items:stretch">
+    <div class="card blue">
+      <h3>عناصر الأمر المحدّد</h3>
+      <ol class="steps" style="margin-top:20px">
+        <li class="st"><b>المرجع:</b> ماذا أرفقت؟</li>
+        <li class="st"><b>المهمة:</b> ماذا تريد بالضبط؟</li>
+        <li class="st"><b>لمن:</b> أيّ صف؟ أيّ مستوى؟</li>
+        <li class="st"><b>الشكل:</b> كيف يبدو الناتج؟</li>
+        <li class="st"><b>الحدود:</b> ما الممنوع؟</li>
+      </ol>
+    </div>
+    <div class="card amber st" style="display:flex;flex-direction:column;justify-content:center">
+      <p class="big" style="font-size:44px">لا يلزم أن يكون الأمر طويلاً…<br><b>يلزم أن يكون واضحاً.</b></p>
+      <p class="mute" style="margin-top:24px">سطران بمرجع جيد أفضل من صفحة بلا مرجع.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">تمرين ١</div>
+  <h2>حوّل هذا الأمر إلى أمر محدّد</h2>
+  <div class="prompt weak" style="font-size:48px">سوّ لي مسابقة للطلاب</div>
+  <div class="prompt good st" style="margin-top:44px">أرفقت صفحات درس «حالات المادة» للصف السادس.
+اعمل مسابقة من ٨ أسئلة اختيار من متعدّد من هذه الصفحات فقط،
+يتنافس فيها فريقان على السبّورة، مع مؤقّت ٢٠ ثانية لكل سؤال.</div>
+  <div class="timer" data-min="3" style="margin-top:auto"><div class="btns"><button class="btn alt" data-t="180">⏱️ ٣ دقائق</button></div></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">تمرين ٢</div>
+  <h2>وهذا… أين المرجع؟</h2>
+  <div class="prompt weak" style="font-size:48px">صمّم لي ورقة عمل حلوة</div>
+  <div class="prompt good st" style="margin-top:44px">أرفقت صورة ورقة عمل أعجبني تصميمها، وصفحتين من درس «الجمع بإعادة التجميع».
+صمّم ورقة عمل بنفس التصميم، لصفحة A4 واحدة، فيها ٦ تمارين متدرّجة من الصفحتين،
+بخط كبير ومكان للإجابة، دون الإجابات.</div>
+  <div class="timer" style="margin-top:auto"><div class="btns"><button class="btn alt" data-t="180">⏱️ ٣ دقائق</button></div></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">تمرين ٣</div>
+  <h2>فكرة في خيالك… كيف تصفها؟</h2>
+  <p class="big">تخيّل نشاطاً تتمنّى أن تراه في حصّتك غداً.</p>
+  <ol class="steps" style="margin-top:20px">
+    <li class="st">ارسمه بسرعة على ورقة ✏️</li>
+    <li class="st">صوّره بالهاتف 📷</li>
+    <li class="st">اكتب أمراً من سطرين يرافق الصورة</li>
+  </ol>
+  <div class="timer" style="margin-top:auto"><div class="btns"><button class="btn alt" data-t="240">⏱️ ٤ دقائق</button></div></div>
+</section>
+
+<section class="slide dark center">
+  <p class="quote" style="font-size:70px;text-align:start">القاعدة الذهبية الثانية:<br><span style="color:var(--amber)">النتيجة الأولى مسوّدة…<br>لا نهاية.</span></p>
+</section>
+
+<!-- ═════════ اختيار الدرس ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">الجزء الثالث</div>
+  <h1>لنبدأ العمل الحقيقي</h1>
+  <p class="big mute" style="margin-top:20px">درسك أنت… من منهجك أنت</p>
+</section>
+
+<section class="slide">
+  <h2>جهّزت لكم مستودعاً للدروس 📚</h2>
+  <div class="row">
+    <div>
+      <ol class="steps">
+        <li class="st">افتح <b>مشروع الورشة</b> في كلود</li>
+        <li class="st">ابدأ <b>محادثة جديدة</b> واكتب اسمك في عنوانها</li>
+        <li class="st">اكتب: <b>«ابدأ»</b></li>
+        <li class="st">سيسألك كلود عن اسمك ومادتك وصفوفك</li>
+        <li class="st">يعرض عليك دروس منهجك… <b>اختر درساً واحداً</b></li>
+      </ol>
+    </div>
+    <div class="card teal st" style="flex:.8">
+      <div class="icon">🗂️</div>
+      <h3>في المستودع</h3>
+      <p>كل درس في ملف واحد:<br>صفحات <b>كتاب الطالب</b><br>+ صفحات <b>دليل المعلّم</b></p>
+      <p class="mute" style="margin-top:14px">وهذا هو المرجع لكل ما سنبنيه اليوم</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>طريقة العمل في كل مرحلة</h2>
+  <div class="cycle">
+    <div class="s st"><div class="i">🧾</div><b>اطلب</b><span>بأمر محدّد</span></div><div class="ar st">←</div>
+    <div class="s st"><div class="i">👀</div><b>جرّب</b><span>النتيجة الأولى مسوّدة</span></div><div class="ar st">←</div>
+    <div class="s st"><div class="i">🛠️</div><b>عدّل</b><span>من بنك التعديلات</span></div><div class="ar st">←</div>
+    <div class="s st" style="border-color:var(--amber)"><div class="i">📝</div><b>سجّل</b><span>ملاحظاتك النهائية</span></div>
+  </div>
+  <p class="big st" style="text-align:center;margin-top:50px">الملاحظات التي تسجّلها اليوم… ستصبح <b>مهارتك</b> في آخر الورشة 🎁</p>
+</section>
+
+<!-- ═════════ العرض التفاعلي ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">المرحلة ١</div>
+  <h1>🖥️ العرض التفاعلي</h1>
+</section>
+
+<section class="slide">
+  <h2>اطلب العرض التفاعلي</h2>
+  <div class="prompt">أنشئ عرضاً تفاعلياً لهذا الدرس من ملفه فقط، لحصة مدّتها ٤٠ دقيقة،
+يُعرض على السبّورة الذكية: شريحة واحدة في الشاشة، وتنقّل بالأسهم،
+وشرح بمثال محلول، ثم تمارين من الكتاب تظهر إجاباتها بزرّ.
+صفحة HTML واحدة، من اليمين إلى اليسار، بخط كبير.</div>
+  <p class="note">💡 أضف إن شئت: «وأرفقت لك صورة تصميم أعجبني»</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">بنك التعديلات · العرض التفاعلي</div>
+  <h2 style="margin-bottom:22px">اختر تعديلاً… وطبّقه على عرضك</h2>
+  <div class="bank">
+    <div class="card blue"><h3>🎨 بصرية</h3><ol>
+      <li>غيّر الألوان إلى ألوان هادئة تناسب عمر طلابي</li>
+      <li>كبّر خط المتن ليُقرأ من آخر الصف</li>
+      <li>أضف رسومات توضيحية للمفهوم بدل النص</li>
+      <li>أضف حركة خفيفة عند ظهور كل خطوة</li>
+      <li>ضع اسم المدرسة واسمي في الشريحة الأولى</li>
+    </ol></div>
+    <div class="card teal"><h3>🧠 تربوية</h3><ol>
+      <li>ابدأ بسؤال تهيئة يربط الدرس بحياة الطالب</li>
+      <li>رتّب العرض: أنا أشرح ← نحن نحلّ ← أنتم تحلّون</li>
+      <li>أضف خطأً شائعاً يكتشفه الطلاب</li>
+      <li>أضف سؤال «فكّر وناقش زميلك»</li>
+      <li>أنهِ العرض ببطاقة خروج من ٣ أسئلة</li>
+    </ol></div>
+    <div class="card amber"><h3>🛠️ تعليمية</h3><ol>
+      <li>أضف مؤقّتاً للتمارين</li>
+      <li>أضف زرّاً لاختيار طالب عشوائياً</li>
+      <li>أظهر خطوات الحل خطوة بخطوة عند النقر</li>
+      <li>أضف تمريناً للمتميّزين وآخر للمتعثّرين</li>
+      <li>أضف ملخّصاً من ٣ نقاط في النهاية</li>
+    </ol></div>
+  </div>
+</section>
+
+<section class="slide center">
+  <h2>⏱️ وقت التعديل</h2>
+  <div class="timer"><div class="clock">٢٠:٠٠</div><div class="btns">
+    <button class="btn alt" data-t="300">٥ د</button><button class="btn alt" data-t="600">١٠ د</button><button class="btn alt" data-t="900">١٥ د</button><button class="btn" data-t="1200">٢٠ د</button><button class="btn alt" data-t="1500">٢٥ د</button><button class="btn alt" data-t="0">⏹</button></div></div>
+</section>
+
+<section class="slide">
+  <h2>📝 سجّل ملاحظاتك</h2>
+  <p class="big">عندما ترضى عن عرضك، اكتب:</p>
+  <div class="prompt" style="margin-top:20px">سجّل ملاحظاتي على العرض التفاعلي: كل التعديلات التي رضيت بها،
+مكتوبة قواعدَ عامة تصلح لأي درس، تحت عنوان «ملاحظات العرض».</div>
+  <div class="card red st" style="margin-top:30px"><p>🔒 انسخ الملاحظات واحفظها عندك أيضاً (في ملف أو في هاتفك)… احتياطاً</p></div>
+</section>
+
+<!-- ═════════ استراحة ═════════ -->
+<section class="slide dark center">
+  <div class="icon" style="font-size:130px">☕</div>
+  <h1>استراحة</h1>
+  <div class="timer" style="margin-top:30px"><div class="clock" style="color:#fff">٢٠:٠٠</div><div class="btns"><button class="btn alt" data-t="1200">ابدأ</button></div></div>
+</section>
+
+<!-- ═════════ الملخّص ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">المرحلة ٢</div>
+  <h1>📄 ملخّص الدرس</h1>
+</section>
+
+<section class="slide">
+  <h2>اطلب الملخّص</h2>
+  <div class="prompt">أنشئ ملخّصاً لهذا الدرس للطالب من ملفه فقط:
+صفحة A4 واحدة للطباعة، فيها المفاهيم الأساسية في نقاط قصيرة،
+ومثال محلول بخطوات مشروحة، وسؤالان للتدرّب الذاتي.</div>
+  <p class="note">💡 جرّب أن ترفق صورة ملخّص أو ورقة أعجبتك من السوشيال ميديا</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">بنك التعديلات · الملخّص</div>
+  <h2 style="margin-bottom:22px">اختر تعديلاً… وطبّقه على ملخّصك</h2>
+  <div class="bank">
+    <div class="card blue"><h3>🎨 بصرية</h3><ol>
+      <li>اجعله مناسباً للطباعة بالأبيض والأسود</li>
+      <li>رتّبه في عمودين</li>
+      <li>أضف أيقونات صغيرة بجانب كل فكرة</li>
+      <li>ضع ترويسة فيها اسم المدرسة والصف</li>
+    </ol></div>
+    <div class="card teal"><h3>🧠 تربوية</h3><ol>
+      <li>حوّل المفاهيم إلى خريطة ذهنية</li>
+      <li>أضف مربّع «انتبه!» لخطأ شائع</li>
+      <li>أضف سؤال «اشرح بكلماتك»</li>
+      <li>اربط الدرس بالدرس السابق في سطر</li>
+    </ol></div>
+    <div class="card amber"><h3>🛠️ تعليمية</h3><ol>
+      <li>أضف جدولاً للمقارنة بين المفاهيم</li>
+      <li>أضف أسئلة بمستويات: ⭐ ⭐⭐ ⭐⭐⭐</li>
+      <li>ضع الإجابات مقلوبة أسفل الصفحة</li>
+      <li>أضف رمز QR يفتح العرض التفاعلي</li>
+    </ol></div>
+  </div>
+</section>
+
+<section class="slide center">
+  <h2>⏱️ وقت التعديل</h2>
+  <div class="timer"><div class="clock">١٥:٠٠</div><div class="btns">
+    <button class="btn alt" data-t="300">٥ د</button><button class="btn alt" data-t="600">١٠ د</button><button class="btn" data-t="900">١٥ د</button><button class="btn alt" data-t="1200">٢٠ د</button><button class="btn alt" data-t="0">⏹</button></div></div>
+  <div class="prompt" style="margin-top:50px;font-size:30px;text-align:start">ثم: سجّل ملاحظاتي على الملخّص قواعدَ عامة تحت عنوان «ملاحظات الملخّص».</div>
+</section>
+
+<!-- ═════════ اللعبة ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">المرحلة ٣</div>
+  <h1>🎮 اللعبة التعليمية</h1>
+</section>
+
+<section class="slide">
+  <h2>اطلب اللعبة</h2>
+  <div class="prompt">أنشئ لعبة تعليمية لهذا الدرس من ملفه فقط، يلعبها فريقان على السبّورة الذكية:
+١٠ أسئلة متدرّجة، ولوحة نقاط، وتغذية راجعة فورية، وشاشة للفائز.
+صفحة HTML واحدة تعمل دون إنترنت.</div>
+  <p class="note">💡 لعبة رأيتها في مقطع وأعجبتك؟ أرفق لقطة منها وقل: «بهذه الفكرة»</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">بنك التعديلات · اللعبة</div>
+  <h2 style="margin-bottom:22px">اختر تعديلاً… وطبّقه على لعبتك</h2>
+  <div class="bank">
+    <div class="card blue"><h3>🎨 بصرية</h3><ol>
+      <li>اجعل لكل فريق لوناً وشعاراً</li>
+      <li>أضف احتفالاً وأصواتاً عند الفوز</li>
+      <li>اجعل الأسئلة تظهر في بطاقات تنقلب</li>
+      <li>غيّر الطابع: فضاء، أو بحر، أو صحراء</li>
+    </ol></div>
+    <div class="card teal"><h3>🧠 تربوية</h3><ol>
+      <li>عند الخطأ: اعرض تلميحاً قبل الإجابة</li>
+      <li>اجعل الأسئلة متدرّجة من السهل إلى الصعب</li>
+      <li>أضف سؤالاً جماعياً يشارك فيه الجميع</li>
+      <li>في النهاية: اعرض الأسئلة التي أخطأ فيها الطلاب</li>
+    </ol></div>
+    <div class="card amber"><h3>🛠️ تعليمية</h3><ol>
+      <li>غيّر نوعها: عجلة دوّارة، أو مطابقة، أو سباق</li>
+      <li>أضف مؤقّتاً لكل سؤال</li>
+      <li>نقاط مضاعفة للأسئلة الصعبة</li>
+      <li>اجعل عدد الفرق يُختار من البداية</li>
+    </ol></div>
+  </div>
+</section>
+
+<section class="slide center">
+  <h2>⏱️ وقت التعديل</h2>
+  <div class="timer"><div class="clock">١٥:٠٠</div><div class="btns">
+    <button class="btn alt" data-t="300">٥ د</button><button class="btn alt" data-t="600">١٠ د</button><button class="btn" data-t="900">١٥ د</button><button class="btn alt" data-t="1200">٢٠ د</button><button class="btn alt" data-t="0">⏹</button></div></div>
+  <div class="prompt" style="margin-top:50px;font-size:30px;text-align:start">ثم: سجّل ملاحظاتي على اللعبة قواعدَ عامة تحت عنوان «ملاحظات اللعبة».</div>
+</section>
+
+<section class="slide dark center">
+  <div class="icon" style="font-size:130px">🕌</div>
+  <h1>صلاة الظهر</h1>
+</section>
+
+<!-- ═════════ الكتاب التفاعلي ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">المرحلة ٤ · إن سمح الوقت</div>
+  <h1>📚 الكتاب التفاعلي</h1>
+  <p class="big mute" style="margin-top:20px">صفحات الكتاب… تتحرّك وتدور وتُجرَّب</p>
+</section>
+
+<section class="slide">
+  <h2>تخيّل صفحة الكتاب… حيّة</h2>
+  <div class="grid2">
+    <div class="card blue st"><div class="icon">📐</div><h3>الرياضيات</h3><p>مجسّمات ثلاثية الأبعاد تدور بالفأرة، ومعادلة تتغيّر بمنزلق فيتغيّر رسمها.</p></div>
+    <div class="card teal st"><div class="icon">🧪</div><h3>الكيمياء</h3><p>تجربة يخلط فيها الطالب المواد ويرى التفاعل وتغيّر اللون.</p></div>
+    <div class="card amber st"><div class="icon">🧬</div><h3>الأحياء</h3><p>خلية ثلاثية الأبعاد ينقر الطالب على أجزائها ليتعرّفها.</p></div>
+    <div class="card red st"><div class="icon">⚡</div><h3>الفيزياء</h3><p>دائرة كهربائية يبنيها الطالب، أو بندول يغيّر طوله ويقيس زمنه.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>اطلب الكتاب التفاعلي</h2>
+  <div class="prompt">حوّل هذا الدرس إلى كتاب تفاعلي من صفحات: كل صفحة فكرة واحدة من الدرس،
+وفيها عنصر تفاعلي ثلاثي الأبعاد أو تجربة يتحكّم بها الطالب
+(تدوير، أو منزلق، أو سحب وإفلات)، مع سؤال تحقّق في نهاية كل صفحة.
+من ملف الدرس فقط، صفحة HTML واحدة.</div>
+  <div class="prompt" style="margin-top:34px;font-size:30px">ثم: سجّل ملاحظاتي على الكتاب التفاعلي قواعدَ عامة تحت عنوان «ملاحظات الكتاب».</div>
+</section>
+
+<!-- ═════════ المهارة ═════════ -->
+<section class="slide dark center">
+  <div class="kicker">الختام الكبير</div>
+  <h1>🎁 من ملاحظاتك… إلى مهارتك</h1>
+</section>
+
+<section class="slide">
+  <h2>اطلب من كلود أن يبني مهارتك</h2>
+  <div class="prompt">حوّل كل ملاحظاتي في هذه المحادثة إلى مهارة في ملف واحد باسم «مهارة-تحضير-دروس-[اسمي]».
+عندما أرسل هذا الملف في محادثة جديدة: اسألني عن اسم الدرس واطلب ملفه،
+ثم أنشئ العرض التفاعلي والملخّص واللعبة (والكتاب التفاعلي)
+بالقواعد نفسها التي اتفقنا عليها اليوم.</div>
+  <p class="note">📥 نزّل الملف واحفظه… فهو أداتك من اليوم</p>
+</section>
+
+<section class="slide">
+  <h2>وغداً… كيف تستعمل مهارتك؟</h2>
+  <div class="cycle">
+    <div class="s st"><div class="i">💬</div><b>محادثة جديدة</b><span>في أي حساب</span></div><div class="ar st">←</div>
+    <div class="s st"><div class="i">📎</div><b>أرفق ملفك</b><span>ملف المهارة</span></div><div class="ar st">←</div>
+    <div class="s st"><div class="i">📘</div><b>اسم الدرس</b><span>وملف صفحاته</span></div><div class="ar st">←</div>
+    <div class="s st" style="border-color:var(--teal)"><div class="i">✨</div><b>كل شيء جاهز</b><span>بطريقتك أنت</span></div>
+  </div>
+  <div class="card amber st" style="margin-top:44px;text-align:center"><p class="big">تجربة الآن: محادثة جديدة ← أرفق مهارتك ← درس آخر 🎯</p></div>
+</section>
+
+<section class="slide">
+  <h2>خلاصة اليوم</h2>
+  <ol class="steps">
+    <li class="st">النماذج تفهمك بكلمات قليلة… لكن <b>التحديد يقرّبك</b> مما تريد.</li>
+    <li class="st"><b>المرجع أولاً:</b> صورة، مقطع، منشور، صفحة كتاب، أو فكرة مرسومة.</li>
+    <li class="st"><b>النتيجة الأولى مسوّدة:</b> عدّل حتى تشبهك.</li>
+    <li class="st"><b>ما تكرّره احفظه:</b> ملاحظاتك تصبح مهارة.</li>
+    <li class="st">وأنت <b>المراجع الأخير</b> لكل ما يدخل صفّك.</li>
+  </ol>
+</section>
+
+<section class="slide dark center">
+  <div class="icon" style="font-size:120px">🌟</div>
+  <h1>شكراً لكم</h1>
+  <p class="big mute" style="margin-top:24px">نرجو تعبئة استبانة تقييم الورشة</p>
+  <p style="margin-top:50px;font-size:34px">أ. عيسى الحارثي</p>
+</section>
+
+<div id="bar"></div><div id="num"></div>
+</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage'),slides=[].slice.call(document.querySelectorAll('.slide')),cur=0;
+  function fit(){var s=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform='translate(-50%,-50%) scale('+s+')';}
+  addEventListener('resize',fit);fit();
+  function ar(n){return String(n).replace(/\d/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});}
+  function steps(s){return [].slice.call(s.querySelectorAll('.st'));}
+  function go(i,back){
+    i=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach(function(s,k){s.classList.toggle('on',k===i);});
+    steps(slides[i]).forEach(function(e){e.classList.toggle('in',!!back);});
+    cur=i;ui();
+    var t=slides[i].querySelector('.timer[data-auto]');if(t&&!back)start(t,+t.dataset.auto,false);
+    history.replaceState(null,'','#'+(i+1));
+  }
+  function next(){var h=steps(slides[cur]).filter(function(e){return !e.classList.contains('in');});
+    if(h.length){h[0].classList.add('in');ui();return;} if(cur<slides.length-1)go(cur+1);}
+  function prev(){var v=steps(slides[cur]).filter(function(e){return e.classList.contains('in');});
+    if(v.length){v[v.length-1].classList.remove('in');ui();return;} if(cur>0)go(cur-1,true);}
+  function ui(){document.getElementById('bar').style.width=((cur+1)/slides.length*100)+'%';
+    document.getElementById('num').textContent=ar(cur+1)+' / '+ar(slides.length);}
+  addEventListener('keydown',function(e){
+    if(['ArrowLeft','PageDown',' ','Enter'].indexOf(e.key)>-1){e.preventDefault();next();}
+    else if(['ArrowRight','PageUp','Backspace'].indexOf(e.key)>-1){e.preventDefault();prev();}
+    else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1);
+    else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  });
+  stage.addEventListener('click',function(e){
+    if(e.target.closest('button,.prompt'))return;
+    var r=stage.getBoundingClientRect();(e.clientX<r.left+r.width*0.25)?next():(e.clientX>r.right-r.width*0.15?prev():next());
+  });
+  // عدّاد الأيدي
+  document.querySelectorAll('.hands').forEach(function(h){var n=0,el=h.querySelector('.n'),b=h.querySelectorAll('button');
+    b[0].onclick=function(){n=Math.max(0,n-1);el.textContent=ar(n);};b[1].onclick=function(){n++;el.textContent=ar(n);};});
+  // نسخ الأوامر
+  document.querySelectorAll('.prompt').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='نسخ';
+    b.onclick=function(e){e.stopPropagation();var t=p.cloneNode(true);t.querySelector('.copy').remove();
+      navigator.clipboard&&navigator.clipboard.writeText(t.textContent.trim());b.textContent='✓ نُسخ';setTimeout(function(){b.textContent='نسخ';},1500);};p.appendChild(b);});
+  // المؤقّت
+  var AC;function beep(){try{AC=AC||new AudioContext();[0,.35,.7].forEach(function(d){var o=AC.createOscillator(),g=AC.createGain();o.frequency.value=880;o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(.25,AC.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d+.3);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+.3);});}catch(e){}}
+  function fmt(s){return ar(Math.floor(s/60))+':'+ar(String(s%60).padStart(2,'0'));}
+  function start(t,sec,snd){clearInterval(t._iv);t.classList.remove('end');var c=t.querySelector('.clock');
+    if(!c){c=document.createElement('div');c.className='clock';t.insertBefore(c,t.firstChild);}
+    var left=sec;c.textContent=fmt(left);if(!sec)return;
+    t._iv=setInterval(function(){left--;c.textContent=fmt(Math.max(left,0));if(left<=0){clearInterval(t._iv);t.classList.add('end');if(snd!==false)beep();}},1000);}
+  document.querySelectorAll('.timer button[data-t]').forEach(function(b){b.onclick=function(e){e.stopPropagation();start(b.closest('.timer'),+b.dataset.t);};});
+  var h=parseInt(location.hash.slice(1),10);go(h>0?h-1:0);
+})();
+</script>
+</body>
+</html>
