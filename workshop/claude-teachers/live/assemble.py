@@ -13,7 +13,7 @@ def read(p):
 tpl = next(p for p in find(UP, "*.html") if 'id="skill"' in read(p) and 'id="data"' in read(p))
 src = re.sub(r'(<script type="text/markdown" ' + 'id="skill">).*?(' + re.escape(END) + ')', r"\1\2", read(tpl), count=1, flags=re.S)
 items = []
-pdfs = [p for p in find(UP, "*.pdf")]
+pdfs = find(UP + [OUT], "صفحات-الدرس*.pdf") or find(UP, "*.pdf")
 if pdfs:
     items.append(("pages", sorted(pdfs, key=os.path.getmtime)[-1]))
 for prefix, kind in [("عرض", "deck"), ("ملخص", "summary"), ("لعبة", "game"), ("كتاب-تفاعلي", "book")]:
